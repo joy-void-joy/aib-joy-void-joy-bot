@@ -1,0 +1,225 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+**Note:** Modifying `CLAUDE.md` or `AGENTS.md` means modifying `.claude/CLAUDE.md` (this file).
+
+## Project Overview
+
+A forecasting bot for the [Metaculus AI Benchmarking Tournament](https://www.metaculus.com/aib/). Uses Claude Code with extended capabilities (web search, Python execution, etc.) to generate accurate predictions on forecasting questions.
+
+Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manager.
+
+### Important Context
+
+- **Submission is handled separately** — This codebase generates forecasts; a separate system handles submission to Metaculus
+- **No community predictions available** — The AIB tournament does not expose community predictions, so we cannot use them for sanity-checking
+- **CDF required for numeric questions** — Numeric and discrete questions require a 201-point CDF (cumulative distribution function), not just point estimates
+
+## Reference Files
+
+### Current Implementation (in worktrees/mcp-servers)
+- **src/aib/cli.py**: CLI entry point (`uv run forecast test <question_id>`)
+- **src/aib/agent/core.py**: Main forecasting agent orchestration using Claude Agent SDK
+- **src/aib/agent/subagents.py**: Subagent definitions (deep-researcher, estimator, etc.)
+- **src/aib/tools/**: MCP tool implementations (forecasting, sandbox, composition, markets)
+
+### Legacy Reference (in to_port/)
+- **to_port/main.py**: Original main entry point (pre-refactor)
+- **to_port/main_with_no_framework.py**: Reference implementation showing Metaculus API patterns and the forecasting loop. Intentionally rough—use to understand the API, not to copy directly.
+
+## Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run a test forecast (does not submit to Metaculus)
+uv run forecast test <question_id>
+
+# Add a new dependency (DO NOT modify pyproject.toml directly)
+uv add <package-name>
+
+# Format code
+uv run ruff format .
+
+# Lint code
+uv run ruff check .
+
+# Type check
+uv run pyright
+```
+
+## Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_tools.py
+
+# Run tests matching a pattern
+uv run pytest -k "test_forecast"
+```
+
+**Test organization:**
+- `tests/unit/` - Unit tests (mock external APIs)
+- `tests/integration/` - Integration tests (require API keys, use `@pytest.mark.integration`)
+
+## Debugging
+
+**When a forecast fails:**
+1. Check the notes folder (`notes/sessions/<session_id>/`) for intermediate reasoning
+2. Run with `--verbose` flag for detailed tool call logging
+3. Check API key configuration: missing keys log warnings at startup
+
+**Common issues:**
+- `METACULUS_TOKEN` not set → Metaculus API calls fail
+- `EXA_API_KEY` not set → Web search fails
+- Docker not running → Sandbox code execution fails
+
+**Inspecting tool outputs:**
+- Tool results are JSON-encoded; parse with `json.loads()` if debugging
+- Check `src/aib/tools/*.py` for expected input/output schemas
+
+## Git Workflow
+
+This project uses **git worktrees** (not regular branches) to develop multiple features in parallel.
+
+**IMPORTANT:** Never commit directly to `main`. Always work in a worktree.
+
+### Worktrees vs Branches
+
+- **`git checkout -b`**: Creates a branch but stays in the same directory. Switching branches changes all files in place.
+- **`git worktree add`**: Creates a new directory with its own working copy. Multiple branches can be worked on simultaneously in separate directories.
+
+### When implementing a feature:
+
+1. **Create a worktree** (or the user may have already created one):
+   ```bash
+   git worktree add ./worktrees/feat-name -b feat/feature-name
+   cd ./worktrees/feat-name
+   ```
+2. Make changes and create commits on that branch as needed
+3. Push the branch when the feature is complete
+4. Rebase to create atomic commits
+5. Create a PR for review
+6. **Clean up worktree** after merge:
+   ```bash
+   git worktree remove ./worktrees/feat-name
+   ```
+
+### If already in a worktree:
+Check with `git worktree list`. If you're already in a feature worktree, just work directly—no need to create another.
+
+**Note:** The `worktrees/` directory is gitignored.
+
+## Code Style & Dependencies
+
+### Primary Libraries
+- **claude-agent-sdk**: Primary framework for building agents
+- **pydantic**: For data validation and settings
+- **pydantic-ai**: Use when calling Claude outside of Agent SDK (never manually parse LLM output)
+- **pydantic-settings**: For configuration (not dotenv)
+
+### forecasting-tools Library Notes
+
+The `forecasting-tools` library has some type annotation limitations to be aware of:
+
+1. **Question type polymorphism**: `MetaculusApi.get_question_by_post_id()` and `get_questions_matching_filter()` return `MetaculusQuestion`, but the actual runtime objects are subclasses (`BinaryQuestion`, `NumericQuestion`, `MultipleChoiceQuestion`, etc.). Use `isinstance()` checks when accessing subclass-specific attributes.
+
+2. **`community_prediction_at_access_time`**: This attribute only exists on `BinaryQuestion`, not on the base `MetaculusQuestion`. Always check `isinstance(q, BinaryQuestion)` before accessing it.
+
+3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links (not `get_coherence_links_for_question`). Check method names with the `inspect_api.py` script.
+
+### Type Safety Requirements
+- **No bare `except Exception`** — always catch specific exceptions
+- **Every function must specify input and output types**
+- **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
+- Use `TypedDict` and Pydantic models for structured data
+- Never manually parse Claude/agent output — use structured outputs via pydantic
+
+### Error Handling Philosophy
+
+**MCP tools should:**
+- Return `{"content": [...], "is_error": True}` for recoverable errors (let agent retry/adapt)
+- Log exceptions with `logger.exception()` for debugging
+- Include actionable error messages (what failed, why, what to try)
+
+**Agent code should:**
+- Raise exceptions for unrecoverable errors (missing config, invalid state)
+- Use the `with_retry` decorator for transient failures (HTTP timeouts, rate limits)
+- Validate inputs early with Pydantic models
+
+**Never silently swallow errors** — either handle them meaningfully or let them propagate.
+
+### Tools
+- **uv**: Package manager. Use `uv add <package>` to install packages (never edit pyproject.toml directly)
+- **ruff**: Formatting and linting
+- **pyright**: Type checking
+
+## Helper Scripts
+
+The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.**
+
+If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
+
+**Write scripts in Python using [typer](https://typer.tiangolo.com/)** for consistent CLI interfaces with automatic help text and argument parsing. Use **[sh](https://sh.readthedocs.io/)** for shell commands instead of `subprocess`.
+
+This applies to any repetitive programmatic call, not just Python functions.
+
+### inspect_api.py
+
+Explore package APIs—never use `python -c "import ..."` or ad-hoc REPL commands.
+
+```bash
+# Show summary of a class (methods, properties, constants)
+uv run python .claude/scripts/inspect_api.py <module.Class>
+
+# Show signature of a specific method
+uv run python .claude/scripts/inspect_api.py <module.Class.method>
+
+# Show full help() output
+uv run python .claude/scripts/inspect_api.py <module.Class> --help-full
+```
+
+Examples:
+```bash
+uv run python .claude/scripts/inspect_api.py forecasting_tools.SmartSearcher
+uv run python .claude/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
+uv run python .claude/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
+```
+
+## Settings & Configuration
+
+All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
+
+## Planning & Documentation
+
+**PLAN.md** is the source of truth for what has been built and what remains. Keep it synchronized with reality:
+- **Reflect actual state**: PLAN.md must accurately describe what exists in the codebase, not aspirational designs
+- Mark completed items when finishing work (`[x]`)
+- Update architecture decisions as they evolve
+- Add new tasks discovered during implementation
+- Keep status indicators current (`[ ]` pending, `[x]` done, `[~]` in progress)
+- **No speculative code**: Don't include code snippets for unimplemented features—describe what to build, not how
+
+## Asking Questions
+
+**Always use the `AskUserQuestion` tool** instead of asking questions in plain text. This applies to:
+- Clarifying requirements or ambiguous instructions
+- Offering choices between implementation approaches
+- Confirming before destructive or irreversible actions
+- Any situation where you need user input before proceeding
+
+Even if the question is open-ended and just needs a text response, use `AskUserQuestion` with options that include a blank/custom input option. This allows the user to parse responses as structured notifications rather than scanning through conversation summaries.
+
+**Do not** embed questions in regular text responses—always route them through the tool.
+
+## When in Doubt
+
+Err on the side of asking questions (using `AskUserQuestion`) rather than making assumptions.
