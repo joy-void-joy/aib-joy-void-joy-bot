@@ -97,24 +97,32 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 - **`git checkout -b`**: Creates a branch but stays in the same directory. Switching branches changes all files in place.
 - **`git worktree add`**: Creates a new directory with its own working copy. Multiple branches can be worked on simultaneously in separate directories.
 
+### If already in a worktree:
+
+**You are typically already in a worktree subbranch.** Check with `git worktree list` to confirm. If you're in a feature worktree, just work directly—no need to create another worktree or branch out.
+
 ### When implementing a feature:
 
-1. **Create a worktree** (or the user may have already created one):
+1. **Create a worktree** (if the user hasn't already created one):
    ```bash
    git worktree add ./worktrees/feat-name -b feat/feature-name
    cd ./worktrees/feat-name
    ```
-2. Make changes and create commits on that branch as needed
-3. Push the branch when the feature is complete
-4. Rebase to create atomic commits
+2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together. This creates a clear history that will be rebased before merging.
+3. Push the branch when the feature is complete (or periodically for backup)
+4. **Rebase before merging** — Once the feature is complete, rebase to create semantically meaningful commits. Squash fixups, reorder for clarity, and write descriptive commit messages.
 5. Create a PR for review
 6. **Clean up worktree** after merge:
    ```bash
    git worktree remove ./worktrees/feat-name
    ```
 
-### If already in a worktree:
-Check with `git worktree list`. If you're already in a feature worktree, just work directly—no need to create another.
+### Commit Best Practices
+
+- **Commit early, commit often** — Don't wait until a feature is "done" to commit. Frequent commits provide checkpoints and make rebasing easier.
+- **Keep commits atomic** — Each commit should do one thing. If you need to describe your commit with "and", it should probably be two commits.
+- **History will be rebased** — Don't worry about perfect commit messages during development. The history will be cleaned up via interactive rebase before the PR is merged.
+- **Meaningful final commits** — After rebasing, each commit should tell a story: what changed and why. The final history should be easy to read and bisect.
 
 **Note:** The `worktrees/` directory is gitignored.
 
