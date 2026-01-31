@@ -422,10 +422,10 @@ async def _write_report(args: NotesInput) -> dict[str, Any]:
 
 
 async def _write_meta(args: NotesInput) -> dict[str, Any]:
-    """Create a process reflection note.
+    """Create a comprehensive process reflection note with markdown report.
 
-    Stores metadata about the forecasting process including tools used,
-    tools not used, missing tools, prompt issues, and suggestions.
+    Writes a detailed markdown file to notes/meta/<timestamp>_<slug>.md
+    and creates a linked Note for searchability.
     """
     # Validate required fields
     if not args.get("question_id"):
@@ -443,7 +443,136 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
     suggestions = args.get("suggestions", [])
     reflection = args.get("reflection", "")
 
-    # Build summary
+    # Create meta directory
+    meta_dir = NOTES_BASE_PATH / "meta"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename: <timestamp>_q<id>_<slug>.md
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    title_slug = _slugify(question_title) if question_title else "forecast"
+    filename = f"{timestamp}_q{question_id}_{title_slug}.md"
+    meta_path = meta_dir / filename
+
+    # Build comprehensive markdown content
+    md_lines = [
+        f"# Process Reflection: Q{question_id}",
+        "",
+    ]
+
+    if question_title:
+        md_lines.extend([f"**Question:** {question_title}", ""])
+
+    md_lines.extend([
+        f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+        "---",
+        "",
+    ])
+
+    # Executive summary
+    md_lines.extend([
+        "## Executive Summary",
+        "",
+        f"- **Tools Used:** {len(tools_used)}",
+        f"- **Effective Tools:** {len(effective_tools)}",
+        f"- **Tools Not Used:** {len(tools_not_used)}",
+        f"- **Missing Capabilities:** {len(tools_missing)}",
+        f"- **Prompt Issues:** {len(prompt_issues)}",
+        f"- **Suggestions:** {len(suggestions)}",
+        "",
+    ])
+
+    # Reflection section (up front for visibility)
+    if reflection:
+        md_lines.extend([
+            "## Reflection",
+            "",
+            reflection,
+            "",
+        ])
+
+    # Tools analysis
+    md_lines.extend([
+        "## Tool Usage Analysis",
+        "",
+        "### Tools Used",
+        "",
+    ])
+    if tools_used:
+        for tool_name in tools_used:
+            md_lines.append(f"- {tool_name}")
+    else:
+        md_lines.append("*No tools recorded*")
+    md_lines.append("")
+
+    if effective_tools:
+        md_lines.extend([
+            "### Effective Tools",
+            "",
+            "These tools provided the most value for this forecast:",
+            "",
+        ])
+        for tool_name in effective_tools:
+            md_lines.append(f"- {tool_name}")
+        md_lines.append("")
+
+    if tools_not_used:
+        md_lines.extend([
+            "### Tools Not Used",
+            "",
+            "Available tools that were not utilized:",
+            "",
+        ])
+        for tool_name in tools_not_used:
+            md_lines.append(f"- {tool_name}")
+        md_lines.append("")
+
+    if tools_missing:
+        md_lines.extend([
+            "### Missing Capabilities",
+            "",
+            "Tools or capabilities that would have been helpful:",
+            "",
+        ])
+        for tool_name in tools_missing:
+            md_lines.append(f"- {tool_name}")
+        md_lines.append("")
+
+    # Process issues and improvements
+    if prompt_issues or suggestions:
+        md_lines.extend([
+            "## Process Improvements",
+            "",
+        ])
+
+    if prompt_issues:
+        md_lines.extend([
+            "### Prompt Issues",
+            "",
+            "Confusion or unclear guidance encountered:",
+            "",
+        ])
+        for issue in prompt_issues:
+            md_lines.append(f"- {issue}")
+        md_lines.append("")
+
+    if suggestions:
+        md_lines.extend([
+            "### Suggestions",
+            "",
+            "Recommendations for system improvement:",
+            "",
+        ])
+        for suggestion in suggestions:
+            md_lines.append(f"- {suggestion}")
+        md_lines.append("")
+
+    # Write markdown file
+    markdown_content = "\n".join(md_lines)
+    meta_path.write_text(markdown_content, encoding="utf-8")
+    logger.info("Created meta report at %s", meta_path)
+
+    # Build summary for note
     summary_parts = [f"Used {len(tools_used)} tools"]
     if effective_tools:
         summary_parts.append(f"{len(effective_tools)} effective")
@@ -453,55 +582,8 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
         summary_parts.append(f"{len(prompt_issues)} issues")
     summary = ", ".join(summary_parts)
 
-    # Build detailed content
-    content_lines = ["## Process Reflection\n"]
-
-    if question_title:
-        content_lines.append(f"**Question:** {question_title}\n")
-
-    content_lines.append("### Tools Used")
-    for tool_name in tools_used:
-        content_lines.append(f"- {tool_name}")
-    content_lines.append("")
-
-    if effective_tools:
-        content_lines.append("### Effective Tools")
-        content_lines.append("Tools that provided the most value:")
-        for tool_name in effective_tools:
-            content_lines.append(f"- {tool_name}")
-        content_lines.append("")
-
-    if tools_not_used:
-        content_lines.append("### Tools Not Used")
-        for tool_name in tools_not_used:
-            content_lines.append(f"- {tool_name}")
-        content_lines.append("")
-
-    if tools_missing:
-        content_lines.append("### Tools Missing")
-        for tool_name in tools_missing:
-            content_lines.append(f"- {tool_name}")
-        content_lines.append("")
-
-    if prompt_issues:
-        content_lines.append("### Prompt Issues")
-        for issue in prompt_issues:
-            content_lines.append(f"- {issue}")
-        content_lines.append("")
-
-    if suggestions:
-        content_lines.append("### Suggestions")
-        for suggestion in suggestions:
-            content_lines.append(f"- {suggestion}")
-        content_lines.append("")
-
-    if reflection:
-        content_lines.append("### Reflection")
-        content_lines.append(reflection)
-
-    content = "\n".join(content_lines)
-
-    # Create note with question title in topic if available
+    # Create linked note for searchability
+    relative_path = f"meta/{filename}"
     topic = f"Process reflection for Q{question_id}"
     if question_title:
         topic = f"Process reflection: {question_title[:50]}"
@@ -510,12 +592,13 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
         type=NoteType.meta,
         topic=topic,
         summary=summary,
-        content=content,
+        content=f"See report: {relative_path}",
         question_id=question_id,
+        report_path=relative_path,
     )
 
     _save_note(note)
-    logger.info("Created meta note %s", note.id)
+    logger.info("Created meta note %s linking to %s", note.id, relative_path)
 
     return mcp_success(
         {
@@ -523,7 +606,9 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
             "type": "meta",
             "topic": note.topic,
             "summary": summary,
-            "message": "Process reflection note created successfully",
+            "report_path": str(meta_path),
+            "relative_path": relative_path,
+            "message": "Process reflection report created successfully",
         }
     )
 
