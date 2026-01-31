@@ -16,6 +16,12 @@ from claude_agent_sdk import (
     ThinkingBlock,
     ToolUseBlock,
 )
+from claude_agent_sdk.types import (
+    PermissionResultAllow,
+    PermissionRuleValue,
+    PermissionUpdate,
+    ToolPermissionContext,
+)
 
 from aib.agent.history import (
     format_history_for_context,
@@ -78,21 +84,33 @@ NOTES_BASE_PATH = Path("./notes")
 LOGS_BASE_PATH = Path("./logs")
 
 
-def setup_notes_folder(session_id: str) -> dict[str, Path]:
+@dataclasses.dataclass
+class NotesConfig:
+    """Notes folder configuration with explicit RW/RO separation."""
+
+    session: Path
+    research: Path
+    forecasts: Path
+    rw: list[Path]
+    ro: list[Path]
+
+    @property
+    def all_dirs(self) -> list[Path]:
+        return self.rw + self.ro
+
+
+def setup_notes_folder(session_id: str) -> NotesConfig:
     """Create session-specific notes folder structure.
 
-    Structure:
-    - notes/sessions/<session_id>/       (RW for this session)
-    - notes/research/                    (RO - all research)
-    - notes/research/<timestamp>/        (RW - this session's research)
-    - notes/forecasts/                   (RO - all forecasts)
-    - notes/forecasts/<timestamp>/       (RW - this session's forecast)
-
-    Folders are created empty - the agent decides what files to create.
-    Each note file should start with a one-line summary for quick scanning.
+    Structure (RW = this session can write, RO = read historical only):
+    - notes/sessions/<session_id>/       (RW)
+    - notes/research/<timestamp>/        (RW)
+    - notes/forecasts/<timestamp>/       (RW)
+    - notes/research/                    (RO)
+    - notes/forecasts/                   (RO)
 
     Returns:
-        Dict with paths for add_dirs config.
+        NotesConfig with RW and RO directories separated.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -106,13 +124,60 @@ def setup_notes_folder(session_id: str) -> dict[str, Path]:
     research_path.mkdir(parents=True, exist_ok=True)
     forecasts_path.mkdir(parents=True, exist_ok=True)
 
-    return {
-        "session": session_path,
-        "research_base": research_base,
-        "research": research_path,
-        "forecasts_base": forecasts_base,
-        "forecasts": forecasts_path,
-    }
+    return NotesConfig(
+        session=session_path,
+        research=research_path,
+        forecasts=forecasts_path,
+        rw=[session_path, research_path, forecasts_path],
+        ro=[research_base, forecasts_base],
+    )
+
+
+def create_permission_handler(
+    read_only_dirs: list[Path],
+) -> "CanUseTool":
+    """Create a permission handler that enforces read-only directories.
+
+    On the first tool call, adds deny rules for Edit/Write operations
+    on the specified directories. All subsequent calls pass through.
+    """
+    rules_added = False
+
+    async def can_use_tool(
+        _tool_name: str,
+        _tool_input: dict,
+        _context: ToolPermissionContext,
+    ) -> PermissionResultAllow:
+        nonlocal rules_added
+
+        if not rules_added:
+            rules_added = True
+            deny_rules = []
+            for ro_dir in read_only_dirs:
+                deny_rules.append(PermissionRuleValue("Edit", f"{ro_dir}/**"))
+                deny_rules.append(PermissionRuleValue("Write", f"{ro_dir}/**"))
+
+            return PermissionResultAllow(
+                updated_permissions=[
+                    PermissionUpdate(
+                        type="addRules",
+                        behavior="deny",
+                        rules=deny_rules,
+                        destination="session",
+                    )
+                ]
+            )
+
+        return PermissionResultAllow()
+
+    return can_use_tool
+
+
+# Type alias for the permission handler (avoids forward reference issues)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from claude_agent_sdk.types import CanUseTool
 
 
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
@@ -233,7 +298,7 @@ async def run_forecast(
 
     # Setup notes folder
     notes = setup_notes_folder(session_id)
-    logger.info("Notes folder: %s", notes["session"])
+    logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
     model_class, output_schema = get_output_schema_for_question(question_type)
@@ -267,6 +332,8 @@ async def run_forecast(
     thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
 
     with Sandbox() as sandbox:
+        permission_handler = create_permission_handler(read_only_dirs=notes.ro)
+
         options = ClaudeAgentOptions(
             model=settings.model,
             system_prompt={
@@ -274,32 +341,18 @@ async def run_forecast(
                 "preset": "claude_code",
                 "append": get_forecasting_system_prompt(),
             },
-            # Unlimited thinking tokens for deep reasoning
             max_thinking_tokens=None,
             permission_mode="bypassPermissions",
-            # MCP servers for research and code execution
+            can_use_tool=permission_handler,
             mcp_servers={
-                # In-process: forecasting tools (pure capabilities)
                 "forecasting": forecasting_server,
-                # In-process: Docker-based Python sandbox
                 "sandbox": sandbox.create_mcp_server(),
-                # In-process: composition tools (subquestion decomposition)
                 "composition": composition_server,
-                # In-process: prediction market tools
                 "markets": markets_server,
-                # In-process: notes browsing tools
                 "notes": notes_server,
             },
-            # Subagents for specialized research tasks
             agents=SUBAGENTS,
-            # Notes folder access
-            add_dirs=[
-                str(notes["session"]),  # RW - current session
-                str(notes["research_base"]),  # RO - all research
-                str(notes["research"]),  # RW - this session's research
-                str(notes["forecasts_base"]),  # RO - all forecasts
-                str(notes["forecasts"]),  # RW - this session's forecast
-            ],
+            add_dirs=[str(d) for d in notes.all_dirs],
             # Built-in tools + MCP tools (conditionally include spawn_subquestions)
             allowed_tools=[
                 # Built-in web tools
