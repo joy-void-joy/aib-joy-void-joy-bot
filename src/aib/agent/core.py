@@ -146,8 +146,10 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     - notes/sessions/<session_id>/              (RW)
     - notes/research/<question_id>/<timestamp>/ (RW)
     - notes/forecasts/<question_id>/<timestamp>/(RW)
+    - notes/meta/                               (RW)
     - notes/research/                           (RO)
     - notes/forecasts/                          (RO)
+    - notes/structured/                         (RO - notes tool writes here)
 
     Args:
         session_id: Unique session identifier.
@@ -163,17 +165,20 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     research_path = research_base / str(question_id) / timestamp
     forecasts_base = NOTES_BASE_PATH / "forecasts"
     forecasts_path = forecasts_base / str(question_id) / timestamp
+    meta_path = NOTES_BASE_PATH / "meta"
+    structured_path = NOTES_BASE_PATH / "structured"
 
     session_path.mkdir(parents=True, exist_ok=True)
     research_path.mkdir(parents=True, exist_ok=True)
     forecasts_path.mkdir(parents=True, exist_ok=True)
+    meta_path.mkdir(parents=True, exist_ok=True)
 
     return NotesConfig(
         session=session_path,
         research=research_path,
         forecasts=forecasts_path,
-        rw=[session_path, research_path, forecasts_path],
-        ro=[research_base, forecasts_base],
+        rw=[session_path, research_path, forecasts_path, meta_path],
+        ro=[research_base, forecasts_base, structured_path],
     )
 
 
@@ -678,48 +683,45 @@ async def run_forecast(
     metrics = get_metrics_summary()
     output.tool_metrics = metrics
 
-    # Search for meta notes and populate output.meta (required for top-level forecasts)
+    # Search for meta-reflection markdown files (required for top-level forecasts)
     if question_id is not None and question_id > 0:
-        from aib.tools.notes import _load_all_notes, NoteType
+        meta_dir = Path("./notes/meta")
+        meta_files = []
 
-        all_notes = _load_all_notes()
-        meta_notes = [
-            n
-            for n in all_notes
-            if n.type == NoteType.meta and n.question_id == question_id
-        ]
-        if meta_notes:
-            # Use most recent meta note
-            meta_notes.sort(key=lambda n: n.created_at, reverse=True)
-            meta_note = meta_notes[0]
+        if meta_dir.exists():
+            # Find files matching _q<question_id>_ pattern
+            pattern = f"_q{question_id}_"
+            meta_files = [f for f in meta_dir.glob("*.md") if pattern in f.name]
+            # Sort by filename (timestamp prefix) descending
+            meta_files.sort(key=lambda f: f.name, reverse=True)
 
-            # Extract subagents from tool metrics
-            subagents_used = []
-            if metrics and "by_tool" in metrics:
-                for tool_name in metrics["by_tool"]:
-                    if tool_name == "Task":
-                        subagents_used.append("(via Task)")
+        # Extract subagents from tool metrics
+        subagents_used = []
+        if metrics and "by_tool" in metrics:
+            for tool_name in metrics["by_tool"]:
+                if tool_name == "Task":
+                    subagents_used.append("(via Task)")
 
+        if meta_files:
+            meta_file = meta_files[0]
             output.meta = ForecastMeta(
-                meta_note_id=meta_note.id,
+                meta_file_path=str(meta_file),
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
                 subagents_used=subagents_used,
             )
-            logger.info("Found meta note %s for question %d", meta_note.id, question_id)
+            logger.info("Found meta-reflection %s for question %d", meta_file.name, question_id)
         else:
-            # Meta note is required - log error but don't fail the forecast
-            # (the agent already produced output, failing now would lose work)
+            # Meta-reflection is required - log error but don't fail the forecast
             logger.error(
-                "MISSING META NOTE for question %d. "
-                "Agent failed to call notes(mode='write_meta', ...) before final output. "
-                "This is a required step for tracking tool usage and process reflection.",
+                "MISSING META-REFLECTION for question %d. "
+                "Agent failed to write a meta-reflection to notes/meta/ before final output. "
+                "This is a required step for tracking process reflection.",
                 question_id,
             )
-            # Create a placeholder meta with warning
             output.meta = ForecastMeta(
-                meta_note_id="MISSING",
+                meta_file_path=None,
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
-                subagents_used=[],
+                subagents_used=subagents_used,
             )
 
     # Auto-save forecast to history (for top-level forecasts only)

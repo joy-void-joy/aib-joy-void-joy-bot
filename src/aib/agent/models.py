@@ -509,13 +509,12 @@ class NumericForecast(BaseModel):
 class ForecastMeta(BaseModel):
     """Lightweight reference to process reflection.
 
-    Full reflection details are stored in the meta note (use notes(mode='read', id=meta_note_id)
-    to retrieve). This model provides a quick reference and summary statistics.
+    Full reflection is stored as a markdown file in notes/meta/.
     """
 
-    meta_note_id: str | None = Field(
+    meta_file_path: str | None = Field(
         default=None,
-        description="ID of the write_meta note for full reflection.",
+        description="Path to meta-reflection markdown file in notes/meta/.",
     )
     tools_used_count: int = Field(
         default=0,

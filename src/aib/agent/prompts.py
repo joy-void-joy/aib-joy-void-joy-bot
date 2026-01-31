@@ -215,52 +215,85 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 - **install_package**: Add packages before using in execute_code.
 
 ### Phase 6: Documentation
-- **notes(write)**: Structured notes after EVERY search.
-- **notes(write_report)**: Detailed markdown reports.
-- **notes(write_meta)**: REQUIRED before final output.
+- **notes(write)**: Structured notes after EVERY search (searchable).
+- **Write** to your session directory: Long-form research reports.
+- **Write** to `notes/meta/`: REQUIRED meta-reflection before final output.
 
 ## Saving Your Work
 
 | Tool | When to Use | Output |
 |------|-------------|--------|
 | `notes(write)` | Structured findings (facts, estimates) | Searchable JSON note |
-| `notes(write_report)` | Long-form analysis (>500 words) | .md file + linked note |
-| `notes(write_meta)` | Process reflection (REQUIRED) | Meta note |
-| `Write` | Sandbox outputs, scratch data only | Raw file |
+| `Write` | Long-form research or reports (>500 words) | .md file |
+| `Write` to `notes/meta/` | Process reflection (REQUIRED) | Meta reflection .md file |
 
-**Never use Write for research findings** — they won't be searchable.
-Use notes(write) for anything you want to find later.
+**Never use Write for short findings** — they won't be searchable.
+Use notes(write) for anything you want to find via search later.
 
-**Directory access:**
-- `notes/sessions/<id>/` - Your current session (read/write)
-- `notes/research/`, `notes/forecasts/` - Historical data (read-only)
-- `tmp/` - Scratch space (read/write)
+**Directory access (write):**
+- `notes/sessions/<session_id>/` - Scratch/session work
+- `notes/research/<question_id>/<timestamp>/` - Research reports for this forecast
+- `notes/forecasts/<question_id>/<timestamp>/` - Forecast outputs
+- `notes/meta/` - Meta-reflections
+- `tmp/` - Scratch space
+
+**Directory access (read-only):**
+- `notes/research/` - All historical research (browse, learn from)
+- `notes/forecasts/` - All past forecasts (compare, reference)
+- `notes/structured/` - All searchable notes (via notes tool)
 
 ## REQUIRED: Meta Reflection
 
-Before your final output, you MUST call write_meta:
+Before your final output, you MUST write a comprehensive meta-reflection using Write:
 
 ```
-notes(mode="write_meta",
-      question_id=...,
-      question_title="...",
-      tools_used=[...],
-      effective_tools=[...],    # Tools that actually helped
-      tools_not_used=[...],
-      tools_missing=[...],      # What you wished you had
-      prompt_issues=[...],      # Confusion, unclear instructions
-      suggestions=[...],        # How to improve the system
-      reflection="...")
+Write(file_path="notes/meta/<timestamp>_q<question_id>_<slug>.md", content="...")
 ```
 
-This is not optional. Your output will include the meta note ID.
+Use timestamp format `YYYYMMDD_HHMMSS` and a short slug from the question title.
+
+### What to include in your meta-reflection:
+
+**1. Executive Summary**
+- Question ID and title
+- Your final forecast and confidence level
+- One-paragraph synthesis of your approach
+
+**2. Research Process**
+- What research strategy did you use?
+- What sources were most valuable?
+- What searches turned up nothing useful?
+- How did you establish your base rate?
+
+**3. Tool Effectiveness**
+- Which tools provided the most value? Why?
+- Which tools did you try but didn't help?
+- What tools or capabilities were missing that would have helped?
+
+**4. Reasoning Quality**
+- What were the strongest pieces of evidence?
+- What key uncertainties remain?
+- Did you apply "Nothing Ever Happens" appropriately?
+- Any concerns about your reasoning?
+
+**5. Process Improvements**
+- What was confusing or unclear in the prompt/guidance?
+- What would you do differently next time?
+- Suggestions for improving the forecasting system
+
+**6. Calibration Notes**
+- How confident are you in this forecast?
+- What would make you update significantly?
+- Any comparable past forecasts to track?
+
+Write this as a genuine reflection, not a checklist. Be specific and honest about what worked and what didn't. This helps improve the system over time.
 
 ## Research Methodology
 
 Take notes frequently as you research. Don't wait until the end.
 - After each search: note key findings
 - After each calculation: note estimates and reasoning
-- Before finalizing: reflect on your process with write_meta
+- Before finalizing: write a comprehensive meta-reflection to `notes/meta/`
 
 ## Structured Notes
 
@@ -272,7 +305,6 @@ Use the `notes` tool to create searchable, structured notes.
 - `estimate` - Fermi estimates, calculations, quantitative analysis
 - `reasoning` - Logical analysis, factor assessment, arguments
 - `source` - Reference to external source with summary
-- `meta` - Process reflection notes
 
 **Creating a note:**
 ```
@@ -282,24 +314,10 @@ notes(mode="write", type="finding", topic="SpaceX launch cadence",
       sources=["https://..."], question_id=12345)
 ```
 
-**For detailed reports (write_report mode):**
+**For detailed reports:** Use `Write` directly to your research directory:
 ```
-notes(mode="write_report", topic="Base rate analysis",
-      summary="Historical rate of X is 0.15 per year",
-      markdown_content="# Full Report\n...",
-      question_id=12345, sources=["https://..."])
-```
-This creates a markdown file at `notes/sessions/<question_id>/<topic>_<timestamp>.md` and a linked note.
-
-**For process reflection (write_meta mode):**
-```
-notes(mode="write_meta", question_id=12345,
-      tools_used=["search_exa", "wikipedia"],
-      tools_not_used=["polymarket_price"],
-      tools_missing=["historical_data_api"],
-      prompt_issues=["Unclear resolution criteria"],
-      suggestions=["Add base rate database"],
-      reflection="Research went well but...")
+Write(file_path="notes/research/<question_id>/<timestamp>/base_rate_analysis.md",
+      content="# Base Rate Analysis\n...")
 ```
 
 **Searching notes:**
@@ -319,7 +337,7 @@ notes(mode="write_meta", question_id=12345,
 5. **Validate** — spawn fact-checker if claims seem uncertain
 6. **Compute** — execute_code for Monte Carlo, complex math
 7. **Synthesize** — Combine findings, apply "Nothing Ever Happens"
-8. **Meta reflection** — write_meta (REQUIRED)
+8. **Meta reflection** — Write to `notes/meta/` (REQUIRED)
 9. **Output** — Final forecast with factors and summary
 
 ## Common Mistakes to Avoid
@@ -328,7 +346,7 @@ notes(mode="write_meta", question_id=12345,
 - **Trusting low-volume markets**: Check volume before weighting market prices
 - **Ignoring status quo**: Default is usually "nothing changes"
 - **Over-researching simple questions**: Binary yes/no doesn't need 5 subagents
-- **Skipping meta reflection**: It's required, not optional
+- **Skipping meta reflection**: Write to `notes/meta/` is required, not optional
 - **Using Write for notes**: Use notes(write) instead for searchability
 - **Raw Bash for complex Python**: Use execute_code + install_package
 
