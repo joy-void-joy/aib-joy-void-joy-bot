@@ -70,36 +70,22 @@ def display_forecast(output: ForecastOutput) -> None:
     print()
 
 
-def setup_logging(question_id: int, verbose: bool) -> Path:
-    """Configure logging to console and file.
+def setup_logging(question_id: int) -> Path:
+    """Configure logging to file only.
 
     Returns the path to the log file.
     """
-    level = logging.DEBUG if verbose else logging.INFO
-    fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s"
-    datefmt = "%H:%M:%S"
-
-    # Create log directory for this question
     log_dir = LOGS_BASE_PATH / str(question_id)
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Timestamped log file
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     log_file = log_dir / f"{timestamp}.log"
 
-    # Configure root logger with both console and file handlers
     root_logger = logging.getLogger()
-    root_logger.setLevel(level)
+    root_logger.setLevel(logging.DEBUG)
 
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-    console_handler.setFormatter(logging.Formatter(fmt, datefmt))
-    root_logger.addHandler(console_handler)
-
-    # File handler
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)  # Always capture DEBUG to file
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(
         logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     )
@@ -111,29 +97,23 @@ def setup_logging(question_id: int, verbose: bool) -> Path:
 @app.command()
 def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
-    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
     stream: Annotated[
         bool,
-        typer.Option("--stream", "-s", help="Stream thinking blocks as they arrive"),
+        typer.Option("--stream", "-s", help="Stream thinking/text in real time"),
     ] = False,
 ) -> None:
     """Test forecasting on a single question without submitting."""
-    log_file = setup_logging(question_id, verbose)
-    logger.info("Logging to %s", log_file)
+    log_file = setup_logging(question_id)
+    print(f"Logging to {log_file}")
 
     try:
         output = asyncio.run(run_forecast(question_id, stream_thinking=stream))
         display_forecast(output)
-
-        if verbose:
-            print("Full reasoning:")
-            print(output.reasoning)
-
     except httpx.HTTPStatusError as e:
-        logger.error("Failed to fetch question: %s", e)
+        print(f"Failed to fetch question: {e}")
         raise typer.Exit(1)
     except RuntimeError as e:
-        logger.error("Agent failed: %s", e)
+        print(f"Agent failed: {e}")
         raise typer.Exit(1)
 
 

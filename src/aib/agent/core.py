@@ -21,6 +21,7 @@ from claude_agent_sdk.types import (
     PermissionResultAllow,
     PermissionRuleValue,
     PermissionUpdate,
+    StreamEvent,
     ToolPermissionContext,
 )
 
@@ -83,58 +84,6 @@ NOTES_BASE_PATH = Path("./notes")
 
 # Logs folder base path
 LOGS_BASE_PATH = Path("./logs")
-
-# Block type display configuration
-_BLOCK_CONFIG = {
-    "thinking": {"emoji": "🧠", "label": "THINKING", "color": "\033[36m"},  # cyan
-    "text": {"emoji": "💬", "label": "TEXT", "color": "\033[32m"},  # green
-    "tool": {"emoji": "🔧", "label": "TOOL", "color": "\033[33m"},  # yellow
-}
-_RESET = "\033[0m"
-_DIM = "\033[2m"
-_BOLD = "\033[1m"
-
-
-def _print_block(
-    block_type: str,
-    *,
-    text: str | None = None,
-    name: str | None = None,
-    tool_id: str | None = None,
-    tool_input: dict | None = None,
-) -> None:
-    """Pretty print a block with emoji and formatting."""
-    config = _BLOCK_CONFIG.get(
-        block_type, {"emoji": "📦", "label": "BLOCK", "color": ""}
-    )
-    emoji = config["emoji"]
-    label = config["label"]
-    color = config["color"]
-
-    # Header line
-    header = f"\n{color}{_BOLD}{emoji} ━━━ {label} ━━━{_RESET}"
-
-    if block_type == "tool":
-        # Tool block: show name, id, and formatted input
-        print(header)
-        print(f"{color}  📛 Name:{_RESET} {name}")
-        if tool_id:
-            print(f"{_DIM}  🆔 ID: {tool_id}{_RESET}")
-        if tool_input:
-            print(f"{color}  📥 Input:{_RESET}")
-            formatted_input = json.dumps(tool_input, indent=4, ensure_ascii=False)
-            for line in formatted_input.split("\n"):
-                print(f"     {line}")
-    else:
-        # Text/thinking block: show full content
-        print(header)
-        if text:
-            # Indent content for readability
-            for line in text.split("\n"):
-                print(f"  {line}")
-
-    # Footer separator
-    print(f"{_DIM}{'─' * 50}{_RESET}")
 
 
 @dataclasses.dataclass
@@ -450,52 +399,39 @@ async def run_forecast(
                 "type": "json_schema",
                 "schema": output_schema,
             },
+            include_partial_messages=stream_thinking,
         )
 
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
 
             async for message in client.receive_messages():
-                if isinstance(message, AssistantMessage):
+                # Real-time streaming events
+                if isinstance(message, StreamEvent):
+                    delta = message.event.get("delta", {})
+                    delta_type = delta.get("type", "")
+                    if delta_type == "thinking_delta":
+                        print(delta.get("thinking", ""), end="", flush=True)
+                    elif delta_type == "text_delta":
+                        print(delta.get("text", ""), end="", flush=True)
+                    elif message.event.get("type") == "content_block_stop":
+                        print()  # Newline after block
+
+                # Completed messages
+                elif isinstance(message, AssistantMessage):
                     assistant_messages.append(message)
                     for block in message.content:
                         if isinstance(block, TextBlock):
                             collected_text.append(block.text)
-                            if stream_thinking:
-                                _print_block("text", text=block.text)
-                            else:
-                                logger.debug(
-                                    "Text: %s",
-                                    block.text[:200] + "..."
-                                    if len(block.text) > 200
-                                    else block.text,
-                                )
+                            logger.debug("Text: %.200s", block.text)
                         elif isinstance(block, ThinkingBlock):
-                            thinking_text = (
-                                block.thinking
-                                if hasattr(block, "thinking")
-                                else str(block)
-                            )
-                            collected_thinking.append(thinking_text)
-                            if stream_thinking:
-                                _print_block("thinking", text=thinking_text)
-                            else:
-                                logger.debug(
-                                    "Thinking: %s",
-                                    thinking_text[:200] + "..."
-                                    if len(thinking_text) > 200
-                                    else thinking_text,
-                                )
+                            collected_thinking.append(block.thinking)
+                            logger.debug("Thinking: %.200s", block.thinking)
                         elif isinstance(block, ToolUseBlock):
                             if stream_thinking:
-                                _print_block(
-                                    "tool",
-                                    name=block.name,
-                                    tool_id=block.id,
-                                    tool_input=block.input,
-                                )
-                            else:
-                                logger.debug("Tool: %s", dataclasses.asdict(block))
+                                print(f"\n🔧 {block.name}")
+                                print(json.dumps(block.input, indent=2))
+                            logger.debug("Tool: %s", block.name)
 
                 elif isinstance(message, ResultMessage):
                     result = message
