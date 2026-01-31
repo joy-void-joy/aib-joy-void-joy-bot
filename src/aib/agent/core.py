@@ -139,15 +139,19 @@ class NotesConfig:
         return self.rw + self.ro
 
 
-def setup_notes_folder(session_id: str) -> NotesConfig:
+def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     """Create session-specific notes folder structure.
 
     Structure (RW = this session can write, RO = read historical only):
-    - notes/sessions/<session_id>/       (RW)
-    - notes/research/<timestamp>/        (RW)
-    - notes/forecasts/<timestamp>/       (RW)
-    - notes/research/                    (RO)
-    - notes/forecasts/                   (RO)
+    - notes/sessions/<session_id>/              (RW)
+    - notes/research/<question_id>/<timestamp>/ (RW)
+    - notes/forecasts/<question_id>/<timestamp>/(RW)
+    - notes/research/                           (RO)
+    - notes/forecasts/                          (RO)
+
+    Args:
+        session_id: Unique session identifier.
+        question_id: Metaculus question/post ID (0 for sub-forecasts).
 
     Returns:
         NotesConfig with RW and RO directories separated.
@@ -156,9 +160,9 @@ def setup_notes_folder(session_id: str) -> NotesConfig:
 
     session_path = NOTES_BASE_PATH / "sessions" / session_id
     research_base = NOTES_BASE_PATH / "research"
-    research_path = research_base / timestamp
+    research_path = research_base / str(question_id) / timestamp
     forecasts_base = NOTES_BASE_PATH / "forecasts"
-    forecasts_path = forecasts_base / timestamp
+    forecasts_path = forecasts_base / str(question_id) / timestamp
 
     session_path.mkdir(parents=True, exist_ok=True)
     research_path.mkdir(parents=True, exist_ok=True)
@@ -403,7 +407,7 @@ async def run_forecast(
         raise ValueError("Either question_id or question_context must be provided")
 
     # Setup notes folder
-    notes = setup_notes_folder(session_id)
+    notes = setup_notes_folder(session_id, question_id)
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
