@@ -57,6 +57,12 @@ def display_forecast(output: ForecastOutput) -> None:
         print(f"Duration: {output.duration_seconds:.1f}s")
     if output.cost_usd:
         print(f"Cost: ${output.cost_usd:.4f}")
+    if output.tool_metrics:
+        metrics = output.tool_metrics
+        print(
+            f"Tools: {metrics.get('total_tool_calls', 0)} calls, "
+            f"{metrics.get('total_errors', 0)} errors"
+        )
     print()
 
 
@@ -64,7 +70,10 @@ def display_forecast(output: ForecastOutput) -> None:
 def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
-    stream: Annotated[bool, typer.Option("--stream", "-s", help="Stream thinking blocks as they arrive")] = False,
+    stream: Annotated[
+        bool,
+        typer.Option("--stream", "-s", help="Stream thinking blocks as they arrive"),
+    ] = False,
 ) -> None:
     """Test forecasting on a single question without submitting."""
     logging.basicConfig(
