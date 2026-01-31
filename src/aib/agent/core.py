@@ -5,7 +5,10 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from claude_agent_sdk.types import HookContext
 
 import httpx
 from claude_agent_sdk import (
@@ -13,16 +16,13 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ClaudeSDKClient,
     ContentBlock,
+    HookMatcher,
     ResultMessage,
+    SystemMessage,
     TextBlock,
     ThinkingBlock,
+    ToolResultBlock,
     ToolUseBlock,
-)
-from claude_agent_sdk.types import (
-    PermissionResultAllow,
-    PermissionRuleValue,
-    PermissionUpdate,
-    ToolPermissionContext,
 )
 
 from aib.agent.history import (
@@ -64,14 +64,36 @@ def print_block(block: ContentBlock) -> None:
     """Print a content block with appropriate emoji prefix."""
     match block:
         case ThinkingBlock():
-            text = block.thinking[:200] + "..." if len(block.thinking) > 200 else block.thinking
-            print(f"💭 {text}")
+            print(f"💭 {block.thinking}")
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            print(f"🔧 {block.name}")
+            input_str = json.dumps(block.input, indent=2) if block.input else ""
+            print(f"🔧 {block.name} [{block.id}]")
+            if input_str:
+                print(input_str)
+        case ToolResultBlock():
+            status = "❌" if block.is_error else "✅"
+            content_preview = _truncate_content(block.content, max_len=500)
+            print(f"{status} Result [{block.tool_use_id}]: {content_preview}")
         case _:
-            pass
+            print(f"❓ {type(block).__name__}: {block}")
+
+
+def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
+    """Truncate content for display, handling various content types."""
+    if content is None:
+        return "(empty)"
+    if isinstance(content, list):
+        # MCP-style content blocks
+        texts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                texts.append(item.get("text", ""))
+        content = "\n".join(texts)
+    if len(content) > max_len:
+        return content[:max_len] + "..."
+    return content
 
 
 def get_output_schema_for_question(
@@ -149,65 +171,107 @@ def setup_notes_folder(session_id: str) -> NotesConfig:
     )
 
 
-def create_permission_handler(
-    allowed_write_dirs: list[Path],
-) -> "CanUseTool":
-    """Create a permission handler with deny-by-default for file writes.
+def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
+    """Check if a file path is under one of the allowed directories."""
+    try:
+        path = Path(file_path).resolve()
+    except (OSError, ValueError):
+        return False
 
-    On the first tool call, adds:
-    1. Deny rules for Edit/Write on ./** (everything)
-    2. Allow rules for Edit/Write on specified directories only
+    for allowed in allowed_dirs:
+        try:
+            path.relative_to(allowed.resolve())
+            return True
+        except ValueError:
+            continue
+    return False
 
-    This prevents the agent from writing anywhere except explicitly allowed paths.
+
+def create_permission_hooks(
+    rw_dirs: list[Path],
+    ro_dirs: list[Path],
+) -> dict[str, Any]:
+    """Create permission hooks with directory-based access control.
+
+    Args:
+        rw_dirs: Directories where Write/Edit/Read are allowed
+        ro_dirs: Additional directories where only Read is allowed
+
+    Returns:
+        Hooks configuration dict for ClaudeAgentOptions.
     """
-    rules_added = False
+    all_readable = rw_dirs + ro_dirs
 
-    async def can_use_tool(
-        _tool_name: str,
-        _tool_input: dict,
-        _context: ToolPermissionContext,
-    ) -> PermissionResultAllow:
-        nonlocal rules_added
+    async def permission_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: "HookContext",
+    ) -> dict[str, Any]:
+        """Control tool access based on directory permissions."""
+        if input_data.get("hook_event_name") != "PreToolUse":
+            return {}
 
-        if not rules_added:
-            rules_added = True
+        tool_name = input_data.get("tool_name", "")
+        tool_input = input_data.get("tool_input", {})
+        hook_event = input_data["hook_event_name"]
 
-            # Deny everything first
-            deny_rules = [
-                PermissionRuleValue("Edit", "./**"),
-                PermissionRuleValue("Write", "./**"),
-            ]
+        def deny(reason: str) -> dict[str, Any]:
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": reason,
+                }
+            }
 
-            # Allow only specified directories
-            allow_rules = []
-            for rw_dir in allowed_write_dirs:
-                allow_rules.append(PermissionRuleValue("Edit", f"{rw_dir}/**"))
-                allow_rules.append(PermissionRuleValue("Write", f"{rw_dir}/**"))
+        def allow() -> dict[str, Any]:
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "permissionDecision": "allow",
+                }
+            }
 
-            return PermissionResultAllow(
-                updated_permissions=[
-                    PermissionUpdate(
-                        type="addRules",
-                        behavior="deny",
-                        rules=deny_rules,
-                        destination="session",
-                    ),
-                    PermissionUpdate(
-                        type="addRules",
-                        behavior="allow",
-                        rules=allow_rules,
-                        destination="session",
-                    ),
-                ]
-            )
+        # File write operations: only allowed in RW directories
+        if tool_name in ("Write", "Edit"):
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
 
-        return PermissionResultAllow()
+            if _path_is_under(file_path, rw_dirs):
+                return allow()
+            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
 
-    return can_use_tool
+        # Read: requires file_path, must be in readable directories
+        if tool_name == "Read":
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
 
+            if _path_is_under(file_path, all_readable):
+                return allow()
+            return deny(f"Read denied. Allowed: {[str(d) for d in all_readable]}")
 
-if TYPE_CHECKING:
-    from claude_agent_sdk.types import CanUseTool
+        # Glob/Grep: require explicit path in readable directories (no cwd default)
+        if tool_name in ("Glob", "Grep"):
+            file_path = tool_input.get("path", "")
+            if not file_path:
+                return deny(
+                    f"Path required for {tool_name}. "
+                    f"Specify path in: {[str(d) for d in all_readable]}"
+                )
+
+            if _path_is_under(file_path, all_readable):
+                return allow()
+            return deny(f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}")
+
+        # Auto-allow everything else (WebSearch, WebFetch, MCP tools, Task)
+        # These are already filtered by allowed_tools in options
+        return allow()
+
+    return {
+        "PreToolUse": [HookMatcher(hooks=[permission_hook])],  # type: ignore[list-item]
+    }
 
 
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
@@ -361,8 +425,9 @@ async def run_forecast(
 
     with Sandbox() as sandbox:
         # tmp/ for scratch work + session-specific notes directories
-        allowed_dirs = [Path("tmp")] + notes.rw
-        permission_handler = create_permission_handler(allowed_write_dirs=allowed_dirs)
+        rw_dirs = [Path("tmp")] + notes.rw
+        ro_dirs = notes.ro
+        hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
 
         options = ClaudeAgentOptions(
             model=settings.model,
@@ -371,9 +436,14 @@ async def run_forecast(
                 "preset": "claude_code",
                 "append": get_forecasting_system_prompt(),
             },
-            max_thinking_tokens=None,
+            max_thinking_tokens=64_000-1,
             permission_mode="bypassPermissions",
-            can_use_tool=permission_handler,
+            hooks=hooks,  # type: ignore[arg-type]
+            sandbox={
+                "enabled": True,
+                "autoAllowBashIfSandboxed": True,
+                "allowUnsandboxedCommands": False,
+            },
             mcp_servers={
                 "forecasting": forecasting_server,
                 "sandbox": sandbox.create_mcp_server(),
@@ -385,7 +455,8 @@ async def run_forecast(
             add_dirs=[str(d) for d in notes.all_dirs],
             # Built-in tools + MCP tools (conditionally include spawn_subquestions)
             allowed_tools=[
-                # Built-in web tools
+                # Built-in tools
+                "Bash",
                 "WebSearch",
                 "WebFetch",
                 # File tools for notes
@@ -448,10 +519,25 @@ async def run_forecast(
                                     collected_thinking.append(block.thinking)
                                 case ToolUseBlock():
                                     pass
+                                case ToolResultBlock():
+                                    pass
+                                case _:
+                                    logger.debug(
+                                        "Unhandled content block: %s", type(block).__name__
+                                    )
                     case ResultMessage():
                         result = message
                         if message.is_error:
                             raise RuntimeError(f"Agent error: {message.result}")
+                    case SystemMessage():
+                        logger.info(
+                            "System message [%s]: %s",
+                            message.subtype,
+                            json.dumps(message.data, indent=2),
+                        )
+                    case _:
+                        print(f"📨 {type(message).__name__}: {message}")
+                        logger.debug("Unhandled message type: %s", type(message).__name__)
 
     if result is None:
         raise RuntimeError("No result received from agent")
