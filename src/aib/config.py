@@ -45,20 +45,20 @@ class Settings(BaseSettings):
     # NOTE: Uses METACULUS_TOKEN (no AIB_ prefix) for compatibility with forecasting-tools library
     metaculus_token: str | None = Field(
         default=None,
-        alias="METACULUS_TOKEN",
+        validation_alias="METACULUS_TOKEN",
         description="Metaculus API token (reads from METACULUS_TOKEN env var)",
     )
 
     # === Search APIs ===
     # NOTE: No AIB_ prefix for external library compatibility
     exa_api_key: str | None = Field(
-        default=None, alias="EXA_API_KEY", description="Exa search API key"
+        default=None, validation_alias="EXA_API_KEY", description="Exa search API key"
     )
     asknews_client_id: str | None = Field(
-        default=None, alias="ASKNEWS_CLIENT_ID", description="AskNews client ID"
+        default=None, validation_alias="ASKNEWS_CLIENT_ID", description="AskNews client ID"
     )
     asknews_client_secret: str | None = Field(
-        default=None, alias="ASKNEWS_SECRET", description="AskNews client secret"
+        default=None, validation_alias="ASKNEWS_SECRET", description="AskNews client secret"
     )
 
     # === Model ===
