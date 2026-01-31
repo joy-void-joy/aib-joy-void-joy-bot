@@ -152,6 +152,35 @@ The `forecasting-tools` library has some type annotation limitations to be aware
 - Use `TypedDict` and Pydantic models for structured data
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 
+### Code as Documentation
+
+The codebase should read as a **monolithic source of truth**—understandable without any knowledge of its history.
+
+**The test:** Before adding a comment, ask: "Would this comment exist if the code had always been written this way?" If the answer is no—if you're only adding it because you modified the line—don't add it.
+
+**Do not:**
+- Add comments to explain modifications you made
+- Reference what code used to do (e.g., "Previously this returned None")
+- Add inline comments when changing a line (this is almost always explaining the change, not the code)
+- Use phrases like "now", "new", "updated", "fixed", or "changed" in comments
+
+**Do:**
+- Write comments that would make sense to someone who never saw previous versions
+- Use commit messages for change history, not code comments
+- Only add comments that document genuinely non-obvious behavior
+
+**Example — Bad:**
+```python
+env_file=(".env", ".env.local"),  # .env.local overrides .env
+```
+This comment was added because the line was changed. If the code had always supported multiple env files, no one would bother commenting that the second one overrides the first—that's standard behavior.
+
+**Example — Good:**
+```python
+env_file=(".env", ".env.local"),
+```
+No comment needed. The behavior is self-evident to anyone familiar with config file precedence.
+
 ### Error Handling Philosophy
 
 **MCP tools should:**
