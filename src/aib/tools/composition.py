@@ -6,7 +6,6 @@ These tools enable the main forecasting agent to:
 
 import asyncio
 import logging
-import statistics
 from typing import Any, Required, TypedDict
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
@@ -42,7 +41,7 @@ class SubQuestion(TypedDict, total=False):
     Attributes:
         question: The sub-question text.
         context: How this relates to the parent question.
-        weight: Weight in final aggregation (0-1), required for binary questions.
+        weight: Optional weight for agent's own synthesis (default: 1.0).
         type: Question type: "binary" (default), "numeric", or "multiple_choice".
         options: For multiple_choice questions, list of option labels.
         numeric_bounds: For numeric questions, dict with range_min, range_max, etc.
@@ -50,7 +49,7 @@ class SubQuestion(TypedDict, total=False):
 
     question: Required[str]
     context: str
-    weight: float
+    weight: float  # Optional, default 1.0; for agent's synthesis reference
     type: str  # "binary", "numeric", or "multiple_choice" (default: binary)
     options: list[str]  # For multiple_choice
     numeric_bounds: dict[str, Any]  # For numeric questions
@@ -60,7 +59,6 @@ class SpawnSubquestionsInput(TypedDict):
     """Input for spawn_subquestions tool."""
 
     subquestions: list[SubQuestion]
-    aggregation_method: str  # "weighted_average", "geometric_mean", "median", "all"
 
 
 # --- Output Schemas ---
@@ -70,18 +68,10 @@ class SubForecastResult(TypedDict):
     """Result from a single sub-forecast."""
 
     question: str
-    probability: float
-    reasoning: str
+    type: str
+    summary: str | None
     weight: float
-
-
-class AggregatedResult(TypedDict):
-    """Aggregated result from spawn_subquestions."""
-
-    subforecasts: list[SubForecastResult]
-    weighted_average: float
-    geometric_mean: float
-    median: float
+    error: str | None
 
 
 # --- Tools ---
@@ -92,9 +82,8 @@ class AggregatedResult(TypedDict):
     (
         "Decompose a forecasting question into sub-questions and forecast each in "
         "parallel. Each sub-question gets its own forecasting agent with full research "
-        "capabilities. Supports binary (default), numeric, and multiple_choice types. "
-        "Binary sub-questions return aggregated probability; other types return individual "
-        "results. Sub-forecasts cannot spawn further subquestions (prevents infinite recursion)."
+        "capabilities. Returns all individual sub-forecasts for you to synthesize. "
+        "No automatic aggregation — you decide how to combine results."
     ),
     SpawnSubquestionsInput,
 )
@@ -103,27 +92,16 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
     """Spawn parallel sub-forecasters for decomposed questions.
 
     Recursively calls run_forecast() for each sub-question with allow_spawn=False
-    to prevent infinite recursion.
+    to prevent infinite recursion. Returns all individual sub-forecasts without
+    aggregation — the calling agent decides how to synthesize results.
     """
     if _run_forecast_fn is None:
         return mcp_error("run_forecast not configured - call set_run_forecast_fn first")
 
     subquestions = args["subquestions"]
-    aggregation_method = args.get("aggregation_method", "weighted_average")
 
     if not subquestions:
         return mcp_error("No subquestions provided")
-
-    # Validate weights for binary sub-questions
-    binary_subquestions = [
-        sq for sq in subquestions if sq.get("type", "binary") == "binary"
-    ]
-    if binary_subquestions:
-        total_weight = sum(sq.get("weight", 0.0) for sq in binary_subquestions)
-        if abs(total_weight - 1.0) > 0.01:
-            return mcp_error(
-                f"Binary sub-question weights must sum to 1.0, got {total_weight}"
-            )
 
     async def run_subforecast(sq: SubQuestion) -> dict[str, Any]:
         """Execute a single sub-forecast."""
@@ -155,7 +133,7 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
                 "question": sq["question"],
                 "type": question_type,
                 "summary": result.summary,
-                "weight": sq.get("weight", 0.0),
+                "weight": sq.get("weight", 1.0),  # Default weight 1.0
                 "error": None,
             }
 
@@ -176,14 +154,14 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
                 "question": sq["question"],
                 "type": question_type,
                 "summary": None,
-                "weight": sq.get("weight", 0.0),
+                "weight": sq.get("weight", 1.0),
                 "error": str(e),
             }
 
     # Run all sub-forecasts in parallel
     results = await asyncio.gather(*[run_subforecast(sq) for sq in subquestions])
 
-    # Separate results by type and success status
+    # Separate results by success status
     errors = [r for r in results if r.get("error") is not None]
     successful = [r for r in results if r.get("error") is None]
 
@@ -191,73 +169,14 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
         error_msgs = [e["error"] for e in errors]
         return mcp_error(f"All sub-forecasts failed: {error_msgs}")
 
-    # Only aggregate binary questions
-    binary_results = [r for r in successful if r.get("type", "binary") == "binary"]
-
+    # Return all results without aggregation — agent synthesizes
     output: dict[str, Any] = {
         "subforecasts": list(results),
         "successful_count": len(successful),
         "failed_count": len(errors),
     }
 
-    # Aggregate binary probabilities if we have any
-    if binary_results:
-        probabilities = [r["probability"] for r in binary_results]
-        weights = [r["weight"] for r in binary_results]
-
-        # Re-normalize weights if some forecasts failed
-        total_weight = sum(weights)
-        if total_weight > 0 and abs(total_weight - 1.0) > 0.01:
-            weights = [w / total_weight for w in weights]
-
-        aggregated = aggregate_probabilities(probabilities, weights, aggregation_method)
-        output["aggregated_probability"] = aggregated
-        output["aggregation_method"] = aggregation_method
-
-    # For non-binary types, return individual results without aggregation
-    numeric_results = [
-        r for r in successful if r.get("type") in ("numeric", "discrete")
-    ]
-    if numeric_results:
-        output["numeric_subforecasts"] = numeric_results
-
-    mc_results = [r for r in successful if r.get("type") == "multiple_choice"]
-    if mc_results:
-        output["multiple_choice_subforecasts"] = mc_results
-
     return mcp_success(output)
-
-
-def aggregate_probabilities(
-    probabilities: list[float],
-    weights: list[float],
-    method: str = "weighted_average",
-) -> float:
-    """Aggregate sub-forecast probabilities.
-
-    Args:
-        probabilities: List of probability estimates (0-1)
-        weights: Corresponding weights (must sum to 1)
-        method: Aggregation method
-
-    Returns:
-        Aggregated probability
-    """
-    if method == "weighted_average":
-        return sum(p * w for p, w in zip(probabilities, weights, strict=True))
-    elif method == "geometric_mean":
-        # Geometric mean: product^(1/n), but weighted
-        # Use log transform for numerical stability
-        import math
-
-        log_probs = [
-            math.log(p) * w for p, w in zip(probabilities, weights, strict=True)
-        ]
-        return math.exp(sum(log_probs))
-    elif method == "median":
-        return statistics.median(probabilities)
-    else:
-        raise ValueError(f"Unknown aggregation method: {method}")
 
 
 # --- MCP Server ---

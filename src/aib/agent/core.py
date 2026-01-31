@@ -669,7 +669,7 @@ async def run_forecast(
     metrics = get_metrics_summary()
     output.tool_metrics = metrics
 
-    # Search for meta notes and populate output.meta
+    # Search for meta notes and populate output.meta (required for top-level forecasts)
     if question_id is not None and question_id > 0:
         from aib.tools.notes import _load_all_notes, NoteType
 
@@ -698,10 +698,19 @@ async def run_forecast(
             )
             logger.info("Found meta note %s for question %d", meta_note.id, question_id)
         else:
-            logger.warning(
-                "No meta note found for question %d. "
-                "Agent should call notes(mode='write_meta', ...) before final output.",
+            # Meta note is required - log error but don't fail the forecast
+            # (the agent already produced output, failing now would lose work)
+            logger.error(
+                "MISSING META NOTE for question %d. "
+                "Agent failed to call notes(mode='write_meta', ...) before final output. "
+                "This is a required step for tracking tool usage and process reflection.",
                 question_id,
+            )
+            # Create a placeholder meta with warning
+            output.meta = ForecastMeta(
+                meta_note_id="MISSING",
+                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                subagents_used=[],
             )
 
     # Auto-save forecast to history (for top-level forecasts only)
