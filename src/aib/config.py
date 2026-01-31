@@ -18,9 +18,12 @@ class Settings(BaseSettings):
     AIB-specific settings use the AIB_ prefix (e.g., AIB_MODEL, AIB_MAX_BUDGET_USD).
     """
 
+    # NOTE: We don't use env_prefix="AIB_" because of a pydantic-settings bug where
+    # dotenv files incorrectly apply the prefix to aliased fields. Instead, we
+    # explicitly add AIB_ to validation_alias for fields that need it.
+    # See: https://github.com/pydantic/pydantic-settings/issues/220
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),
-        env_prefix="AIB_",
         extra="ignore",
     )
 
@@ -64,92 +67,112 @@ class Settings(BaseSettings):
     # === Model ===
     model: str = Field(
         default="claude-opus-4-5-20251101",
+        validation_alias="AIB_MODEL",
         description="Claude model to use for forecasting",
     )
     max_thinking_tokens: int | None = Field(
         default=None,
+        validation_alias="AIB_MAX_THINKING_TOKENS",
         description="Max thinking tokens (None = unlimited)",
     )
 
     # === Sandbox ===
     docker_image: str = Field(
         default="ghcr.io/astral-sh/uv:python3.12-bookworm-slim",
+        validation_alias="AIB_DOCKER_IMAGE",
         description="Docker image for sandbox",
     )
     sandbox_memory_limit: str = Field(
         default="1g",
+        validation_alias="AIB_SANDBOX_MEMORY_LIMIT",
         description="Memory limit for sandbox container",
     )
     sandbox_volume_name: str = Field(
         default="aib-sandbox-workspace",
+        validation_alias="AIB_SANDBOX_VOLUME_NAME",
         description="Docker volume name for sandbox workspace",
     )
     sandbox_container_name: str = Field(
         default="aib-sandbox",
+        validation_alias="AIB_SANDBOX_CONTAINER_NAME",
         description="Docker container name for sandbox",
     )
 
     # === Paths ===
     notes_path: str = Field(
         default="./notes",
+        validation_alias="AIB_NOTES_PATH",
         description="Base path for notes folders",
     )
 
     # === Rate Limits ===
     metaculus_max_concurrent: int = Field(
         default=5,
+        validation_alias="AIB_METACULUS_MAX_CONCURRENT",
         description="Max concurrent Metaculus API requests",
     )
     search_max_concurrent: int = Field(
         default=3,
+        validation_alias="AIB_SEARCH_MAX_CONCURRENT",
         description="Max concurrent search requests",
     )
 
     # === Tool Defaults ===
     search_default_limit: int = Field(
         default=10,
+        validation_alias="AIB_SEARCH_DEFAULT_LIMIT",
         description="Default number of web search results",
     )
     news_default_limit: int = Field(
         default=10,
+        validation_alias="AIB_NEWS_DEFAULT_LIMIT",
         description="Default number of news results",
     )
     metaculus_default_limit: int = Field(
         default=20,
+        validation_alias="AIB_METACULUS_DEFAULT_LIMIT",
         description="Default number of Metaculus search results",
     )
     tournament_default_limit: int = Field(
         default=50,
+        validation_alias="AIB_TOURNAMENT_DEFAULT_LIMIT",
         description="Default number of tournament questions to list",
     )
     market_default_limit: int = Field(
         default=5,
+        validation_alias="AIB_MARKET_DEFAULT_LIMIT",
         description="Default number of market results to return",
     )
 
     # === Agent Limits ===
     max_budget_usd: float | None = Field(
         default=None,
+        validation_alias="AIB_MAX_BUDGET_USD",
         description="Maximum budget in USD for a single forecast (None = unlimited)",
     )
     max_turns: int | None = Field(
         default=None,
+        validation_alias="AIB_MAX_TURNS",
         description="Maximum agent turns for a single forecast (None = unlimited)",
     )
     subforecast_max_turns: int = Field(
         default=50,
+        validation_alias="AIB_SUBFORECAST_MAX_TURNS",
         description="Maximum turns for sub-forecasts spawned by spawn_subquestions",
     )
     subforecast_max_budget_usd: float = Field(
         default=5.0,
+        validation_alias="AIB_SUBFORECAST_MAX_BUDGET_USD",
         description="Maximum budget for each sub-forecast spawned by spawn_subquestions",
     )
     sandbox_timeout_seconds: int = Field(
         default=30,
+        validation_alias="AIB_SANDBOX_TIMEOUT_SECONDS",
         description="Timeout for code execution in sandbox",
     )
     http_timeout_seconds: int = Field(
         default=30,
+        validation_alias="AIB_HTTP_TIMEOUT_SECONDS",
         description="Timeout for HTTP requests to external APIs",
     )
 
