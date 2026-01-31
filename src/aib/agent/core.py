@@ -23,6 +23,7 @@ from claude_agent_sdk import (
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
+    UserMessage,
 )
 
 from aib.agent.history import (
@@ -520,7 +521,7 @@ async def run_forecast(
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
 
-            async for message in client.receive_messages():
+            async for message in client.receive_response():
                 match message:
                     case AssistantMessage():
                         assistant_messages.append(message)
@@ -549,6 +550,10 @@ async def run_forecast(
                             message.subtype,
                             json.dumps(message.data, indent=2),
                         )
+                    case UserMessage():
+                        if isinstance(message.content, list):
+                            for block in message.content:
+                                print_block(block)
                     case _:
                         print(f"📨 {type(message).__name__}: {message}")
                         logger.debug("Unhandled message type: %s", type(message).__name__)
