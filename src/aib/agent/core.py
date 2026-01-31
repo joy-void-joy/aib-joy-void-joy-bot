@@ -362,12 +362,18 @@ async def run_forecast(
                 "Read",
                 "Write",
                 "Glob",
-                # Forecasting tools (mcp__<server>__<tool>)
-                "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
-                "mcp__forecasting__list_tournament_questions",
-                "mcp__forecasting__search_metaculus",
-                "mcp__forecasting__get_coherence_links",
-                "mcp__forecasting__get_prediction_history",
+                # Metaculus tools (only if token is configured)
+                *(
+                    [
+                        "mcp__forecasting__get_metaculus_questions",
+                        "mcp__forecasting__list_tournament_questions",
+                        "mcp__forecasting__search_metaculus",
+                        "mcp__forecasting__get_coherence_links",
+                        "mcp__forecasting__get_prediction_history",
+                    ]
+                    if settings.metaculus_token
+                    else []
+                ),
                 # Search tools (only if credentials configured)
                 *(["mcp__forecasting__search_exa"] if settings.exa_api_key else []),
                 *(

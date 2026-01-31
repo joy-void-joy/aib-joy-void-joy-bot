@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
 
-    All settings can be overridden via environment variables with AIB_ prefix.
-    Example: AIB_MODEL=claude-sonnet-4-20250514
+    External API keys use standard names (METACULUS_TOKEN, EXA_API_KEY, etc.)
+    for compatibility with external libraries.
+
+    AIB-specific settings use the AIB_ prefix (e.g., AIB_MODEL, AIB_MAX_BUDGET_USD).
     """
 
     model_config = SettingsConfigDict(
@@ -27,11 +29,11 @@ class Settings(BaseSettings):
         """Warn at startup if API keys are missing (but don't fail)."""
         missing = []
         if not self.metaculus_token:
-            missing.append("METACULUS_TOKEN (or AIB_METACULUS_TOKEN)")
+            missing.append("METACULUS_TOKEN")
         if not self.exa_api_key:
-            missing.append("EXA_API_KEY (or AIB_EXA_API_KEY)")
+            missing.append("EXA_API_KEY")
         if not self.asknews_client_id or not self.asknews_client_secret:
-            missing.append("ASKNEWS_CLIENT_ID/SECRET (or AIB_ prefixed)")
+            missing.append("ASKNEWS_CLIENT_ID/ASKNEWS_SECRET")
 
         if missing:
             logger.warning(
@@ -40,16 +42,23 @@ class Settings(BaseSettings):
         return self
 
     # === Metaculus ===
+    # NOTE: Uses METACULUS_TOKEN (no AIB_ prefix) for compatibility with forecasting-tools library
     metaculus_token: str | None = Field(
         default=None,
-        description="Metaculus API token (also checks METACULUS_TOKEN env var)",
+        alias="METACULUS_TOKEN",
+        description="Metaculus API token (reads from METACULUS_TOKEN env var)",
     )
 
     # === Search APIs ===
-    exa_api_key: str | None = Field(default=None, description="Exa search API key")
-    asknews_client_id: str | None = Field(default=None, description="AskNews client ID")
+    # NOTE: No AIB_ prefix for external library compatibility
+    exa_api_key: str | None = Field(
+        default=None, alias="EXA_API_KEY", description="Exa search API key"
+    )
+    asknews_client_id: str | None = Field(
+        default=None, alias="ASKNEWS_CLIENT_ID", description="AskNews client ID"
+    )
     asknews_client_secret: str | None = Field(
-        default=None, description="AskNews client secret"
+        default=None, alias="ASKNEWS_SECRET", description="AskNews client secret"
     )
 
     # === Model ===
