@@ -12,6 +12,7 @@ from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
+    ContentBlock,
     ResultMessage,
     TextBlock,
     ThinkingBlock,
@@ -57,6 +58,20 @@ from aib.tools.sandbox import Sandbox
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
+
+
+def print_block(block: ContentBlock) -> None:
+    """Print a content block with appropriate emoji prefix."""
+    match block:
+        case ThinkingBlock():
+            text = block.thinking[:200] + "..." if len(block.thinking) > 200 else block.thinking
+            print(f"💭 {text}")
+        case TextBlock():
+            print(f"💬 {block.text}")
+        case ToolUseBlock():
+            print(f"🔧 {block.name}")
+        case _:
+            pass
 
 
 def get_output_schema_for_question(
@@ -421,22 +436,22 @@ async def run_forecast(
             await client.query(prompt)
 
             async for message in client.receive_messages():
-                if isinstance(message, AssistantMessage):
-                    assistant_messages.append(message)
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            collected_text.append(block.text)
-                            logger.debug("Text: %.200s", block.text)
-                        elif isinstance(block, ThinkingBlock):
-                            collected_thinking.append(block.thinking)
-                            logger.debug("Thinking: %.200s", block.thinking)
-                        elif isinstance(block, ToolUseBlock):
-                            logger.debug("Tool: %s", block.name)
-
-                elif isinstance(message, ResultMessage):
-                    result = message
-                    if message.is_error:
-                        raise RuntimeError(f"Agent error: {message.result}")
+                match message:
+                    case AssistantMessage():
+                        assistant_messages.append(message)
+                        for block in message.content:
+                            print_block(block)
+                            match block:
+                                case TextBlock():
+                                    collected_text.append(block.text)
+                                case ThinkingBlock():
+                                    collected_thinking.append(block.thinking)
+                                case ToolUseBlock():
+                                    pass
+                    case ResultMessage():
+                        result = message
+                        if message.is_error:
+                            raise RuntimeError(f"Agent error: {message.result}")
 
     if result is None:
         raise RuntimeError("No result received from agent")
