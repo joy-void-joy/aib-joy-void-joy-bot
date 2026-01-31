@@ -254,6 +254,28 @@ uv run python .claude/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_
 uv run python .claude/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
 ```
 
+### new_worktree.py
+
+Create a new git worktree with Claude session migration. Use this instead of manually running `git worktree add` when you want to preserve Claude Code context in the new worktree.
+
+```bash
+# Create new worktree branching from current branch
+uv run python .claude/scripts/new_worktree.py <worktree-name>
+
+# Migrate a specific session instead of most recent
+uv run python .claude/scripts/new_worktree.py <worktree-name> --session-id <uuid>
+
+# Skip uv sync (if you'll do it manually)
+uv run python .claude/scripts/new_worktree.py <worktree-name> --no-sync
+```
+
+The script:
+1. Creates a new worktree in the `tree/` directory with a new branch
+2. Runs `uv sync --all-groups --all-extras`
+3. Migrates the most recent Claude session to the new worktree
+
+After running, `cd` to the new worktree and run `claude --resume` to continue the session.
+
 ## Settings & Configuration
 
 All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
