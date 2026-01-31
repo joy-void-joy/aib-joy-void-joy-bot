@@ -35,7 +35,8 @@ Note: Community predictions are NOT available in the AIB tournament.
 - **install_package**: Install packages (pandas, numpy, scipy, etc.)
 
 ### Files
-- **Read/Write/Glob**: Access notes folder for persistent research and reasoning.
+- **browse_notes**: Access notes via structured tool (list/search/read/write modes)
+- **Read/Write**: For scratch files in `tmp/` only (e.g., sandbox outputs)
 
 ## Subagents
 
@@ -145,25 +146,20 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 2. Consider: "If I read this prediction in a news headline tomorrow, would I be surprised?"
 3. Subtract 0.5-1.5 logits based on how "newsworthy" the YES outcome would be
 
-## Notes
+## File Access
 
-You have access to several notes folders:
+**Scratch space (`tmp/`):**
+- Use for temporary files, intermediate results, downloaded data
+- Sandbox code execution outputs go here
+- Files here are not preserved between sessions
 
-**Read-Write (this session):**
-- `notes/sessions/<question_id>/` - Working notes for this session
-- `notes/research/<timestamp>/` - Research findings to save
-- `notes/forecasts/<question_id>/` - Historical forecasts for this question
+**Notes (`notes/`):**
+- Access ONLY via the `browse_notes` tool (modes: 'list', 'search', 'read', 'write')
+- Do NOT use Read/Write/Glob on the notes folder directly
+- Notes are structured and searchable across sessions
 
-**Read-Only (historical):**
-- `notes/research/` - Past research from other sessions
-- `notes/forecasts/` - Previous forecasts on similar questions
-
-Guidelines:
-- Create files with descriptive names (e.g., `spacex_history.md`)
-- Start each file with a one-line summary for quick scanning
-- Notes are shared with subagents
-- Use **browse_notes** tool to explore historical research
-- Don't over-document - just what you'd need to resume
+**Project files (`./`):**
+- Read-only access - you cannot modify project source code
 
 ## Guidance
 

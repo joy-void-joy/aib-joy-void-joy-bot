@@ -97,17 +97,13 @@ def setup_logging(question_id: int) -> Path:
 @app.command()
 def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
-    stream: Annotated[
-        bool,
-        typer.Option("--stream", "-s", help="Stream thinking/text in real time"),
-    ] = False,
 ) -> None:
     """Test forecasting on a single question without submitting."""
     log_file = setup_logging(question_id)
     print(f"Logging to {log_file}")
 
     try:
-        output = asyncio.run(run_forecast(question_id, stream_thinking=stream))
+        output = asyncio.run(run_forecast(question_id))
         display_forecast(output)
     except httpx.HTTPStatusError as e:
         print(f"Failed to fetch question: {e}")

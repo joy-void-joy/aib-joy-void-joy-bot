@@ -21,7 +21,6 @@ from claude_agent_sdk.types import (
     PermissionResultAllow,
     PermissionRuleValue,
     PermissionUpdate,
-    StreamEvent,
     ToolPermissionContext,
 )
 
@@ -136,12 +135,15 @@ def setup_notes_folder(session_id: str) -> NotesConfig:
 
 
 def create_permission_handler(
-    read_only_dirs: list[Path],
+    allowed_write_dirs: list[Path],
 ) -> "CanUseTool":
-    """Create a permission handler that enforces read-only directories.
+    """Create a permission handler with deny-by-default for file writes.
 
-    On the first tool call, adds deny rules for Edit/Write operations
-    on the specified directories. All subsequent calls pass through.
+    On the first tool call, adds:
+    1. Deny rules for Edit/Write on ./** (everything)
+    2. Allow rules for Edit/Write on specified directories only
+
+    This prevents the agent from writing anywhere except explicitly allowed paths.
     """
     rules_added = False
 
@@ -154,10 +156,18 @@ def create_permission_handler(
 
         if not rules_added:
             rules_added = True
-            deny_rules = []
-            for ro_dir in read_only_dirs:
-                deny_rules.append(PermissionRuleValue("Edit", f"{ro_dir}/**"))
-                deny_rules.append(PermissionRuleValue("Write", f"{ro_dir}/**"))
+
+            # Deny everything first
+            deny_rules = [
+                PermissionRuleValue("Edit", "./**"),
+                PermissionRuleValue("Write", "./**"),
+            ]
+
+            # Allow only specified directories
+            allow_rules = []
+            for rw_dir in allowed_write_dirs:
+                allow_rules.append(PermissionRuleValue("Edit", f"{rw_dir}/**"))
+                allow_rules.append(PermissionRuleValue("Write", f"{rw_dir}/**"))
 
             return PermissionResultAllow(
                 updated_permissions=[
@@ -166,7 +176,13 @@ def create_permission_handler(
                         behavior="deny",
                         rules=deny_rules,
                         destination="session",
-                    )
+                    ),
+                    PermissionUpdate(
+                        type="addRules",
+                        behavior="allow",
+                        rules=allow_rules,
+                        destination="session",
+                    ),
                 ]
             )
 
@@ -250,7 +266,6 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
-    stream_thinking: bool = False,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -258,7 +273,6 @@ async def run_forecast(
         question_id: Metaculus post ID (for top-level forecasts)
         question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
-        stream_thinking: Whether to print thinking blocks to stdout as they arrive
 
     Returns:
         ForecastOutput with the forecast results.
@@ -331,7 +345,9 @@ async def run_forecast(
     thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
 
     with Sandbox() as sandbox:
-        permission_handler = create_permission_handler(read_only_dirs=notes.ro)
+        # tmp/ for scratch work + session-specific notes directories
+        allowed_dirs = [Path("tmp")] + notes.rw
+        permission_handler = create_permission_handler(allowed_write_dirs=allowed_dirs)
 
         options = ClaudeAgentOptions(
             model=settings.model,
@@ -399,41 +415,13 @@ async def run_forecast(
                 "type": "json_schema",
                 "schema": output_schema,
             },
-            include_partial_messages=stream_thinking,
         )
 
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
 
-            current_block_type: str | None = None
-
             async for message in client.receive_messages():
-                # Real-time streaming events
-                if isinstance(message, StreamEvent):
-                    event_type = message.event.get("type", "")
-
-                    # Track block type for emoji prefix
-                    if event_type == "content_block_start":
-                        block = message.event.get("content_block", {})
-                        current_block_type = block.get("type")
-                        if current_block_type == "thinking":
-                            print("\n🧠 ", end="", flush=True)
-                        elif current_block_type == "text":
-                            print("\n💬 ", end="", flush=True)
-
-                    elif event_type == "content_block_delta":
-                        delta = message.event.get("delta", {})
-                        delta_type = delta.get("type", "")
-                        if delta_type == "thinking_delta":
-                            print(delta.get("thinking", ""), end="", flush=True)
-                        elif delta_type == "text_delta":
-                            print(delta.get("text", ""), end="", flush=True)
-
-                    elif event_type == "content_block_stop":
-                        current_block_type = None
-
-                # Completed messages
-                elif isinstance(message, AssistantMessage):
+                if isinstance(message, AssistantMessage):
                     assistant_messages.append(message)
                     for block in message.content:
                         if isinstance(block, TextBlock):
@@ -443,9 +431,6 @@ async def run_forecast(
                             collected_thinking.append(block.thinking)
                             logger.debug("Thinking: %.200s", block.thinking)
                         elif isinstance(block, ToolUseBlock):
-                            if stream_thinking:
-                                print(f"\n🔧 {block.name}")
-                                print(json.dumps(block.input, indent=2))
                             logger.debug("Tool: %s", block.name)
 
                 elif isinstance(message, ResultMessage):
