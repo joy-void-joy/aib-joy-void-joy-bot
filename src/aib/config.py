@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),  # .env.local overrides .env
         env_prefix="AIB_",
         extra="ignore",
     )
