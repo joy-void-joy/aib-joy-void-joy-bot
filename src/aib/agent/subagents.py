@@ -23,7 +23,6 @@ RESEARCH_TOOLS = [
     "mcp__forecasting__search_metaculus",
     "mcp__notes__notes",
     "Read",
-    "Write",
     "Glob",
 ]
 
@@ -33,8 +32,8 @@ ESTIMATOR_TOOLS = [
     "mcp__forecasting__search_news",
     "mcp__sandbox__execute_code",
     "mcp__sandbox__install_package",
+    "mcp__notes__notes",
     "Read",
-    "Write",
 ]
 
 # Tools for link explorer (searches across platforms)
@@ -49,7 +48,6 @@ LINK_EXPLORER_TOOLS = [
     "mcp__markets__polymarket_price",
     "mcp__notes__notes",
     "Read",
-    "Write",
 ]
 
 # Tools for fact checker
@@ -114,11 +112,13 @@ You can flexibly adapt your research based on what's needed:
 - Recent news (via search_news)
 
 ## Notes
-Use the `notes` tool to save structured findings:
+Use the `notes` tool to save structured findings as you research:
 - `notes(mode="write", type="finding", topic="...", summary="...", content="...")`
-- Types: research, finding, estimate, reasoning, source
-- For detailed reports: write `.md` to `notes/sessions/<id>/` and reference via `report_path`
+- `notes(mode="write_report", topic="...", summary="...", markdown_content="...", question_id=N)`
+- Types: research, finding, estimate, reasoning, source, meta
 - Search past notes: `notes(mode="search", query="...")`
+
+**Take notes frequently** - after each search, save key findings immediately.
 
 ## Output Format (JSON)
 
@@ -218,6 +218,10 @@ Can you estimate this multiple ways? Compare approaches.
 ### 5. Confidence Range
 Give not just a point estimate but a range.
 How wide depends on uncertainty in your inputs.
+
+### 6. Save Your Work
+Use the notes tool to save your estimates:
+- `notes(mode="write", type="estimate", topic="...", summary="...", content="...")`
 
 ## Output Format (JSON)
 

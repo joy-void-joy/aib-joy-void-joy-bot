@@ -32,6 +32,7 @@ class NoteType(str, Enum):
     estimate = "estimate"  # Fermi estimates, calculations, quantitative analysis
     reasoning = "reasoning"  # Logical analysis, factor assessment, arguments
     source = "source"  # Reference to external source with summary
+    meta = "meta"  # Process reflection notes
 
 
 class Note(BaseModel):
@@ -68,7 +69,7 @@ class NoteSummary(BaseModel):
 
 
 class NotesInput(TypedDict, total=False):
-    mode: Required[Literal["list", "search", "read", "write"]]
+    mode: Required[Literal["list", "search", "read", "write", "write_report", "write_meta"]]
     # For list
     type_filter: str  # Filter by NoteType
     question_id: int  # Filter by question
@@ -84,6 +85,15 @@ class NotesInput(TypedDict, total=False):
     sources: list[str]
     confidence: float
     report_path: str
+    # For write_report
+    markdown_content: str
+    # For write_meta
+    tools_used: list[str]
+    tools_not_used: list[str]
+    tools_missing: list[str]
+    prompt_issues: list[str]
+    suggestions: list[str]
+    reflection: str
 
 
 # --- Storage Helpers ---
@@ -142,7 +152,9 @@ def _note_to_summary(note: Note) -> NoteSummary:
         "Modes: 'list' shows note summaries (filterable by type/question), "
         "'search' finds notes by query (returns summaries only), "
         "'read' gets full note content by ID, "
-        "'write' creates a new structured note."
+        "'write' creates a new structured note, "
+        "'write_report' creates a markdown report file + linked note, "
+        "'write_meta' creates a process reflection note."
     ),
     {
         "mode": str,
@@ -157,6 +169,13 @@ def _note_to_summary(note: Note) -> NoteSummary:
         "sources": list,
         "confidence": float,
         "report_path": str,
+        "markdown_content": str,
+        "tools_used": list,
+        "tools_not_used": list,
+        "tools_missing": list,
+        "prompt_issues": list,
+        "suggestions": list,
+        "reflection": str,
     },
 )
 @tracked("notes")
@@ -184,8 +203,15 @@ async def notes_tool(args: NotesInput) -> dict[str, Any]:
         return await _read_note(note_id)
     elif mode == "write":
         return await _write_note(args)
+    elif mode == "write_report":
+        return await _write_report(args)
+    elif mode == "write_meta":
+        return await _write_meta(args)
     else:
-        return mcp_error(f"Unknown mode: {mode}. Use 'list', 'search', 'read', or 'write'.")
+        return mcp_error(
+            f"Unknown mode: {mode}. Use 'list', 'search', 'read', 'write', "
+            "'write_report', or 'write_meta'."
+        )
 
 
 async def _list_notes(
@@ -322,6 +348,160 @@ async def _write_note(args: NotesInput) -> dict[str, Any]:
             "type": note.type.value,
             "topic": note.topic,
             "message": "Note created successfully",
+        }
+    )
+
+
+def _slugify(text: str) -> str:
+    """Convert text to a filename-safe slug."""
+    slug = re.sub(r"[^\w\s-]", "", text.lower())
+    slug = re.sub(r"[-\s]+", "-", slug).strip("-")
+    return slug[:50]
+
+
+async def _write_report(args: NotesInput) -> dict[str, Any]:
+    """Create a markdown report file and linked note.
+
+    Writes markdown to notes/sessions/<question_id>/<topic_slug>_<timestamp>.md
+    and creates a Note with report_path pointing to the file.
+    """
+    # Validate required fields
+    required = ["topic", "summary", "markdown_content", "question_id"]
+    missing = [f for f in required if not args.get(f)]
+    if missing:
+        return mcp_error(f"write_report mode requires: {', '.join(missing)}")
+
+    topic = args.get("topic", "")
+    summary = args.get("summary", "")
+    markdown_content = args.get("markdown_content", "")
+    question_id = args.get("question_id")
+    sources = args.get("sources", [])
+
+    # Create session directory
+    session_dir = NOTES_BASE_PATH / "sessions" / str(question_id)
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    topic_slug = _slugify(topic)
+    filename = f"{topic_slug}_{timestamp}.md"
+    report_path = session_dir / filename
+
+    # Write markdown file
+    report_path.write_text(markdown_content, encoding="utf-8")
+    logger.info("Created report at %s", report_path)
+
+    # Create linked note
+    relative_path = f"sessions/{question_id}/{filename}"
+    note = Note(
+        type=NoteType.research,
+        topic=topic,
+        summary=summary,
+        content=f"See report: {relative_path}",
+        sources=sources,
+        question_id=question_id,
+        report_path=relative_path,
+    )
+
+    _save_note(note)
+    logger.info("Created note %s linking to report", note.id)
+
+    return mcp_success(
+        {
+            "id": note.id,
+            "topic": topic,
+            "report_path": str(report_path),
+            "relative_path": relative_path,
+            "message": "Report and linked note created successfully",
+        }
+    )
+
+
+async def _write_meta(args: NotesInput) -> dict[str, Any]:
+    """Create a process reflection note.
+
+    Stores metadata about the forecasting process including tools used,
+    tools not used, missing tools, prompt issues, and suggestions.
+    """
+    # Validate required fields
+    if not args.get("question_id"):
+        return mcp_error("write_meta mode requires: question_id")
+    if not args.get("tools_used"):
+        return mcp_error("write_meta mode requires: tools_used")
+
+    question_id = args.get("question_id")
+    tools_used = args.get("tools_used", [])
+    tools_not_used = args.get("tools_not_used", [])
+    tools_missing = args.get("tools_missing", [])
+    prompt_issues = args.get("prompt_issues", [])
+    suggestions = args.get("suggestions", [])
+    reflection = args.get("reflection", "")
+
+    # Build summary
+    summary_parts = [f"Used {len(tools_used)} tools"]
+    if tools_missing:
+        summary_parts.append(f"{len(tools_missing)} missing")
+    if prompt_issues:
+        summary_parts.append(f"{len(prompt_issues)} issues")
+    summary = ", ".join(summary_parts)
+
+    # Build detailed content
+    content_lines = ["## Process Reflection\n"]
+
+    content_lines.append("### Tools Used")
+    for tool_name in tools_used:
+        content_lines.append(f"- {tool_name}")
+    content_lines.append("")
+
+    if tools_not_used:
+        content_lines.append("### Tools Not Used")
+        for tool_name in tools_not_used:
+            content_lines.append(f"- {tool_name}")
+        content_lines.append("")
+
+    if tools_missing:
+        content_lines.append("### Tools Missing")
+        for tool_name in tools_missing:
+            content_lines.append(f"- {tool_name}")
+        content_lines.append("")
+
+    if prompt_issues:
+        content_lines.append("### Prompt Issues")
+        for issue in prompt_issues:
+            content_lines.append(f"- {issue}")
+        content_lines.append("")
+
+    if suggestions:
+        content_lines.append("### Suggestions")
+        for suggestion in suggestions:
+            content_lines.append(f"- {suggestion}")
+        content_lines.append("")
+
+    if reflection:
+        content_lines.append("### Reflection")
+        content_lines.append(reflection)
+
+    content = "\n".join(content_lines)
+
+    # Create note
+    note = Note(
+        type=NoteType.meta,
+        topic=f"Process reflection for Q{question_id}",
+        summary=summary,
+        content=content,
+        question_id=question_id,
+    )
+
+    _save_note(note)
+    logger.info("Created meta note %s", note.id)
+
+    return mcp_success(
+        {
+            "id": note.id,
+            "type": "meta",
+            "topic": note.topic,
+            "summary": summary,
+            "message": "Process reflection note created successfully",
         }
     )
 

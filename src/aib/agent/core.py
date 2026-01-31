@@ -232,8 +232,24 @@ def create_permission_hooks(
                 }
             }
 
-        # File write operations: only allowed in RW directories
-        if tool_name in ("Write", "Edit"):
+        # Deny Write tool - use notes tool instead
+        if tool_name == "Write":
+            return deny(
+                "Write tool not available. Use notes tool instead:\n"
+                "- notes(mode='write', ...) for structured notes\n"
+                "- notes(mode='write_report', ...) for markdown reports"
+            )
+
+        # Deny Bash tool - use sandbox or specialized tools
+        if tool_name == "Bash":
+            return deny(
+                "Bash not available in forecasting. Use:\n"
+                "- mcp__sandbox__execute_code for Python\n"
+                "- Glob/Grep for file search"
+            )
+
+        # File edit operations: only allowed in RW directories
+        if tool_name == "Edit":
             file_path = tool_input.get("file_path", "")
             if not file_path:
                 return {}  # Let SDK handle missing required param
@@ -456,12 +472,10 @@ async def run_forecast(
             # Built-in tools + MCP tools (conditionally include spawn_subquestions)
             allowed_tools=[
                 # Built-in tools
-                "Bash",
                 "WebSearch",
                 "WebFetch",
-                # File tools for notes
+                # File tools for notes (Read only, Write denied via hook)
                 "Read",
-                "Write",
                 "Glob",
                 # Metaculus tools (only if token is configured)
                 *(

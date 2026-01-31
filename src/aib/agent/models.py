@@ -506,6 +506,38 @@ class NumericForecast(BaseModel):
         }
 
 
+class ForecastMeta(BaseModel):
+    """Process reflection metadata from the forecasting run."""
+
+    tools_used: list[str] = Field(
+        description="Tools that were used during this forecast."
+    )
+    tools_not_used: list[str] | None = Field(
+        default=None,
+        description="Available tools that were not used (for reflection).",
+    )
+    tools_missing: list[str] | None = Field(
+        default=None,
+        description="Tools the agent wished it had access to.",
+    )
+    prompt_issues: list[str] | None = Field(
+        default=None,
+        description="Issues or ambiguities in the prompt or instructions.",
+    )
+    suggestions: list[str] | None = Field(
+        default=None,
+        description="Suggestions for improving the forecasting process.",
+    )
+    reflection: str | None = Field(
+        default=None,
+        description="Free-form reflection on the research process.",
+    )
+    meta_note_id: str | None = Field(
+        default=None,
+        description="ID of the write_meta note if created.",
+    )
+
+
 class ForecastOutput(BaseModel):
     """Full output from a forecasting run, including metadata."""
 
@@ -574,4 +606,8 @@ class ForecastOutput(BaseModel):
     tool_metrics: dict[str, object] | None = Field(
         default=None,
         description="Tool call metrics: call counts, durations, error rates.",
+    )
+    meta: ForecastMeta | None = Field(
+        default=None,
+        description="Process reflection metadata.",
     )

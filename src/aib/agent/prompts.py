@@ -154,16 +154,23 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 ## File Access
 
 **Scratch space (`tmp/`):**
-- Use for temporary files, intermediate results, downloaded data
-- Sandbox code execution outputs go here
-- Files here are not preserved between sessions
+- Read-only access to sandbox outputs
+- Use notes tool for all persistent storage
 
 **Notes (`notes/`):**
-- Use the `notes` tool for structured notes (JSON format, searchable)
-- For longer reports, write `.md` files to `notes/sessions/<question_id>/` then reference via `report_path`
+- Use `notes(mode="write", ...)` for structured findings
+- Use `notes(mode="write_report", ...)` for detailed markdown reports
+- Use `notes(mode="write_meta", ...)` to reflect on your research process
 
 **Project files (`./`):**
 - Read-only access - you cannot modify project source code
+
+## Research Methodology
+
+Take notes frequently as you research. Don't wait until the end.
+- After each search: note key findings
+- After each calculation: note estimates and reasoning
+- Before finalizing: reflect on your process with write_meta
 
 ## Structured Notes
 
@@ -175,6 +182,7 @@ Use the `notes` tool to create searchable, structured notes.
 - `estimate` - Fermi estimates, calculations, quantitative analysis
 - `reasoning` - Logical analysis, factor assessment, arguments
 - `source` - Reference to external source with summary
+- `meta` - Process reflection notes
 
 **Creating a note:**
 ```
@@ -184,9 +192,25 @@ notes(mode="write", type="finding", topic="SpaceX launch cadence",
       sources=["https://..."], question_id=12345)
 ```
 
-**For detailed reports:**
-1. Write a `.md` file to `notes/sessions/<question_id>/report_name.md`
-2. Create a note referencing it: `notes(mode="write", ..., report_path="sessions/12345/report_name.md")`
+**For detailed reports (write_report mode):**
+```
+notes(mode="write_report", topic="Base rate analysis",
+      summary="Historical rate of X is 0.15 per year",
+      markdown_content="# Full Report\n...",
+      question_id=12345, sources=["https://..."])
+```
+This creates a markdown file at `notes/sessions/<question_id>/<topic>_<timestamp>.md` and a linked note.
+
+**For process reflection (write_meta mode):**
+```
+notes(mode="write_meta", question_id=12345,
+      tools_used=["search_exa", "wikipedia"],
+      tools_not_used=["polymarket_price"],
+      tools_missing=["historical_data_api"],
+      prompt_issues=["Unclear resolution criteria"],
+      suggestions=["Add base rate database"],
+      reflection="Research went well but...")
+```
 
 **Searching notes:**
 - `notes(mode="list")` - See all notes
