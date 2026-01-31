@@ -276,6 +276,30 @@ The script:
 
 After running, `cd` to the new worktree and run `claude --resume` to continue the session.
 
+### feedback_collect.py
+
+Collect calibration data from resolved forecasts. Used by the `/feedback-loop` command to gather metrics before analysis.
+
+```bash
+# Collect from default tournament (AIB Spring 2026)
+uv run python .claude/scripts/feedback_collect.py
+
+# Collect from specific tournament
+uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
+
+# Collect all resolved questions (ignore last run timestamp)
+uv run python .claude/scripts/feedback_collect.py --all-time
+
+# Collect only questions resolved after a date
+uv run python .claude/scripts/feedback_collect.py --since 2026-01-01
+```
+
+The script:
+1. Fetches resolved questions from Metaculus
+2. Matches them to forecasts in `notes/forecasts/`
+3. Computes Brier scores, log scores, and calibration buckets
+4. Saves metrics to `notes/feedback_loop/<timestamp>_metrics.json`
+
 ## Settings & Configuration
 
 All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
