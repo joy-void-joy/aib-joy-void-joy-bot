@@ -32,6 +32,7 @@ from aib.agent.history import (
 )
 from aib.agent.models import (
     Forecast,
+    ForecastMeta,
     ForecastOutput,
     MultipleChoiceForecast,
     NumericForecast,
@@ -232,21 +233,17 @@ def create_permission_hooks(
                 }
             }
 
-        # Deny Write tool - use notes tool instead
+        # Write: allow in RW directories only
         if tool_name == "Write":
-            return deny(
-                "Write tool not available. Use notes tool instead:\n"
-                "- notes(mode='write', ...) for structured notes\n"
-                "- notes(mode='write_report', ...) for markdown reports"
-            )
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
+            if _path_is_under(file_path, rw_dirs):
+                return allow()
+            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
 
-        # Deny Bash tool - use sandbox or specialized tools
-        if tool_name == "Bash":
-            return deny(
-                "Bash not available in forecasting. Use:\n"
-                "- mcp__sandbox__execute_code for Python\n"
-                "- Glob/Grep for file search"
-            )
+        # Bash: SDK sandbox config handles this via autoAllowBashIfSandboxed
+        # No explicit denial needed here
 
         # File edit operations: only allowed in RW directories
         if tool_name == "Edit":
@@ -474,9 +471,12 @@ async def run_forecast(
                 # Built-in tools
                 "WebSearch",
                 "WebFetch",
-                # File tools for notes (Read only, Write denied via hook)
+                # File tools for notes (directory-restricted via hooks)
                 "Read",
+                "Write",
                 "Glob",
+                # Bash (sandboxed via SDK config)
+                "Bash",
                 # Metaculus tools (only if token is configured)
                 *(
                     [
@@ -668,6 +668,41 @@ async def run_forecast(
     log_metrics_summary()
     metrics = get_metrics_summary()
     output.tool_metrics = metrics
+
+    # Search for meta notes and populate output.meta
+    if question_id is not None and question_id > 0:
+        from aib.tools.notes import _load_all_notes, NoteType
+
+        all_notes = _load_all_notes()
+        meta_notes = [
+            n
+            for n in all_notes
+            if n.type == NoteType.meta and n.question_id == question_id
+        ]
+        if meta_notes:
+            # Use most recent meta note
+            meta_notes.sort(key=lambda n: n.created_at, reverse=True)
+            meta_note = meta_notes[0]
+
+            # Extract subagents from tool metrics
+            subagents_used = []
+            if metrics and "by_tool" in metrics:
+                for tool_name in metrics["by_tool"]:
+                    if tool_name == "Task":
+                        subagents_used.append("(via Task)")
+
+            output.meta = ForecastMeta(
+                meta_note_id=meta_note.id,
+                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                subagents_used=subagents_used,
+            )
+            logger.info("Found meta note %s for question %d", meta_note.id, question_id)
+        else:
+            logger.warning(
+                "No meta note found for question %d. "
+                "Agent should call notes(mode='write_meta', ...) before final output.",
+                question_id,
+            )
 
     # Auto-save forecast to history (for top-level forecasts only)
     if question_id is not None and question_id > 0:

@@ -94,6 +94,8 @@ class NotesInput(TypedDict, total=False):
     prompt_issues: list[str]
     suggestions: list[str]
     reflection: str
+    effective_tools: list[str]  # Tools that actually helped (vs just used)
+    question_title: str  # Question title for context in note
 
 
 # --- Storage Helpers ---
@@ -176,6 +178,8 @@ def _note_to_summary(note: Note) -> NoteSummary:
         "prompt_issues": list,
         "suggestions": list,
         "reflection": str,
+        "effective_tools": list,
+        "question_title": str,
     },
 )
 @tracked("notes")
@@ -430,15 +434,19 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
         return mcp_error("write_meta mode requires: tools_used")
 
     question_id = args.get("question_id")
+    question_title = args.get("question_title", "")
     tools_used = args.get("tools_used", [])
     tools_not_used = args.get("tools_not_used", [])
     tools_missing = args.get("tools_missing", [])
+    effective_tools = args.get("effective_tools", [])
     prompt_issues = args.get("prompt_issues", [])
     suggestions = args.get("suggestions", [])
     reflection = args.get("reflection", "")
 
     # Build summary
     summary_parts = [f"Used {len(tools_used)} tools"]
+    if effective_tools:
+        summary_parts.append(f"{len(effective_tools)} effective")
     if tools_missing:
         summary_parts.append(f"{len(tools_missing)} missing")
     if prompt_issues:
@@ -448,10 +456,20 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
     # Build detailed content
     content_lines = ["## Process Reflection\n"]
 
+    if question_title:
+        content_lines.append(f"**Question:** {question_title}\n")
+
     content_lines.append("### Tools Used")
     for tool_name in tools_used:
         content_lines.append(f"- {tool_name}")
     content_lines.append("")
+
+    if effective_tools:
+        content_lines.append("### Effective Tools")
+        content_lines.append("Tools that provided the most value:")
+        for tool_name in effective_tools:
+            content_lines.append(f"- {tool_name}")
+        content_lines.append("")
 
     if tools_not_used:
         content_lines.append("### Tools Not Used")
@@ -483,10 +501,14 @@ async def _write_meta(args: NotesInput) -> dict[str, Any]:
 
     content = "\n".join(content_lines)
 
-    # Create note
+    # Create note with question title in topic if available
+    topic = f"Process reflection for Q{question_id}"
+    if question_title:
+        topic = f"Process reflection: {question_title[:50]}"
+
     note = Note(
         type=NoteType.meta,
-        topic=f"Process reflection for Q{question_id}",
+        topic=topic,
         summary=summary,
         content=content,
         question_id=question_id,

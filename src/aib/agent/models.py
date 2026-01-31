@@ -507,34 +507,23 @@ class NumericForecast(BaseModel):
 
 
 class ForecastMeta(BaseModel):
-    """Process reflection metadata from the forecasting run."""
+    """Lightweight reference to process reflection.
 
-    tools_used: list[str] = Field(
-        description="Tools that were used during this forecast."
-    )
-    tools_not_used: list[str] | None = Field(
-        default=None,
-        description="Available tools that were not used (for reflection).",
-    )
-    tools_missing: list[str] | None = Field(
-        default=None,
-        description="Tools the agent wished it had access to.",
-    )
-    prompt_issues: list[str] | None = Field(
-        default=None,
-        description="Issues or ambiguities in the prompt or instructions.",
-    )
-    suggestions: list[str] | None = Field(
-        default=None,
-        description="Suggestions for improving the forecasting process.",
-    )
-    reflection: str | None = Field(
-        default=None,
-        description="Free-form reflection on the research process.",
-    )
+    Full reflection details are stored in the meta note (use notes(mode='read', id=meta_note_id)
+    to retrieve). This model provides a quick reference and summary statistics.
+    """
+
     meta_note_id: str | None = Field(
         default=None,
-        description="ID of the write_meta note if created.",
+        description="ID of the write_meta note for full reflection.",
+    )
+    tools_used_count: int = Field(
+        default=0,
+        description="Count of distinct tools used.",
+    )
+    subagents_used: list[str] = Field(
+        default_factory=list,
+        description="Subagents invoked during research.",
     )
 
 

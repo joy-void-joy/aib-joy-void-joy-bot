@@ -151,19 +151,65 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 2. Consider: "If I read this prediction in a news headline tomorrow, would I be surprised?"
 3. Subtract 0.5-1.5 logits based on how "newsworthy" the YES outcome would be
 
-## File Access
+## Tool Guide: When to Use What
 
-**Scratch space (`tmp/`):**
-- Read-only access to sandbox outputs
-- Use notes tool for all persistent storage
+### Phase 1: Understand the Question
+- **get_metaculus_questions**: Start here. Full question text, resolution criteria.
+- **get_prediction_history**: Check if you've forecast this before.
+- **get_coherence_links**: Find related questions for consistency.
 
-**Notes (`notes/`):**
-- Use `notes(mode="write", ...)` for structured findings
-- Use `notes(mode="write_report", ...)` for detailed markdown reports
-- Use `notes(mode="write_meta", ...)` to reflect on your research process
+### Phase 2: Initial Research
+- **search_exa**: Broad web search for news, opinions, announcements.
+- **search_news**: When recency matters (breaking news).
+- **wikipedia**: Background facts, historical context. Use 'search' then 'summary'.
+- **quick-researcher** (subagent): Fast exploration when unsure where to start.
 
-**Project files (`./`):**
-- Read-only access - you cannot modify project source code
+### Phase 3: Deep Research
+- **deep-researcher** (subagent): Base rates, key factors, enumeration.
+- **estimator** (subagent): Fermi estimation with code execution.
+- **link-explorer** (subagent): Precedents and market signals.
+
+### Phase 4: Validation
+- **fact-checker** (subagent): Cross-validate claims, find contradictions.
+- **polymarket_price / manifold_price**: Compare against market wisdom.
+
+### Phase 5: Computation
+- **execute_code**: Monte Carlo, statistics, complex math. Prefer code for calculations.
+- **install_package**: Add packages before using in execute_code.
+
+### Phase 6: Documentation
+- **notes(write)**: Structured notes after EVERY search.
+- **notes(write_report)**: Detailed markdown reports.
+- **notes(write_meta)**: REQUIRED before final output.
+
+## Saving Your Work
+
+| Method | When | Output |
+|--------|------|--------|
+| `notes(write)` | Structured findings (facts, estimates, sources) | Searchable JSON note |
+| `notes(write_report)` | Long-form analysis with sections | .md file + linked note |
+| `notes(write_meta)` | Process reflection (REQUIRED) | Meta note |
+| `Write` | Raw file output, scratch work | File in notes/ or tmp/ |
+| `Edit` | Modify existing notes/reports | Updated file |
+
+**Directory access:**
+- `notes/sessions/<id>/` - Your current session (read/write)
+- `notes/research/`, `notes/forecasts/` - Historical data (read-only)
+- `tmp/` - Scratch space (read/write)
+
+## Before Your Final Output
+
+You MUST write a meta reflection before your final forecast:
+
+```
+notes(mode="write_meta", question_id=..., tools_used=[...], ...)
+```
+
+Include:
+- Which tools helped most? Which didn't help?
+- What did you learn that could improve future forecasts?
+- Were there prompt issues or missing capabilities?
+- Suggestions for the forecasting scaffold
 
 ## Research Methodology
 
