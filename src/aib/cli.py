@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 
 import httpx
@@ -11,6 +13,8 @@ from aib.agent import ForecastOutput, run_forecast
 
 app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
 logger = logging.getLogger(__name__)
+
+LOGS_BASE_PATH = Path("./logs")
 
 
 def display_forecast(output: ForecastOutput) -> None:
@@ -66,6 +70,44 @@ def display_forecast(output: ForecastOutput) -> None:
     print()
 
 
+def setup_logging(question_id: int, verbose: bool) -> Path:
+    """Configure logging to console and file.
+
+    Returns the path to the log file.
+    """
+    level = logging.DEBUG if verbose else logging.INFO
+    fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    datefmt = "%H:%M:%S"
+
+    # Create log directory for this question
+    log_dir = LOGS_BASE_PATH / str(question_id)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Timestamped log file
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    log_file = log_dir / f"{timestamp}.log"
+
+    # Configure root logger with both console and file handlers
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_handler.setFormatter(logging.Formatter(fmt, datefmt))
+    root_logger.addHandler(console_handler)
+
+    # File handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)  # Always capture DEBUG to file
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
+    root_logger.addHandler(file_handler)
+
+    return log_file
+
+
 @app.command()
 def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
@@ -76,11 +118,8 @@ def test(
     ] = False,
 ) -> None:
     """Test forecasting on a single question without submitting."""
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    log_file = setup_logging(question_id, verbose)
+    logger.info("Logging to %s", log_file)
 
     try:
         output = asyncio.run(run_forecast(question_id, stream_thinking=stream))

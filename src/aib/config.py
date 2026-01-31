@@ -1,6 +1,7 @@
 """Configuration management using pydantic-settings."""
 
 import logging
+import os
 from typing import Self
 
 from pydantic import Field, model_validator
@@ -179,3 +180,16 @@ class Settings(BaseSettings):
 
 # Singleton instance
 settings = Settings()
+
+# Export API keys to os.environ for external libraries (e.g., forecasting-tools)
+# that read directly from environment variables rather than using our settings.
+_ENV_EXPORTS = [
+    ("METACULUS_TOKEN", settings.metaculus_token),
+    ("EXA_API_KEY", settings.exa_api_key),
+    ("ASKNEWS_CLIENT_ID", settings.asknews_client_id),
+    ("ASKNEWS_SECRET", settings.asknews_client_secret),
+]
+
+for env_name, value in _ENV_EXPORTS:
+    if value and env_name not in os.environ:
+        os.environ[env_name] = value
