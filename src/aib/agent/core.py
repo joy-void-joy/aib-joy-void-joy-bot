@@ -3,7 +3,6 @@
 import dataclasses
 import json
 import logging
-import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -18,17 +17,34 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
+from aib.agent.history import (
+    format_history_for_context,
+    load_past_forecasts,
+    save_forecast,
+)
 from aib.agent.models import (
     Forecast,
     ForecastOutput,
     MultipleChoiceForecast,
     NumericForecast,
 )
-from aib.agent.numeric import percentiles_to_cdf
-from aib.agent.prompts import FORECASTING_SYSTEM_PROMPT, get_type_specific_guidance
+from aib.agent.numeric import (
+    DistributionComponent,
+    MixtureDistributionConfig,
+    mixture_components_to_cdf,
+    percentiles_to_cdf,
+)
+from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.agent.subagents import SUBAGENTS
-from aib.tools import composition_server, forecasting_server, markets_server
+from aib.config import settings
+from aib.tools import (
+    composition_server,
+    forecasting_server,
+    markets_server,
+    notes_server,
+)
 from aib.tools.composition import set_run_forecast_fn
+from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
@@ -57,6 +73,9 @@ def get_output_schema_for_question(
 
 # Notes folder base path
 NOTES_BASE_PATH = Path("./notes")
+
+# Logs folder base path
+LOGS_BASE_PATH = Path("./logs")
 
 
 def setup_notes_folder(session_id: str) -> dict[str, Path]:
@@ -180,8 +199,15 @@ async def run_forecast(
     Returns:
         ForecastOutput with the forecast results.
     """
-    # Generate session ID
-    session_id = str(uuid.uuid4())[:8]
+    # Generate session ID based on question_id for persistence
+    if question_id is not None:
+        session_id = str(question_id)
+    else:
+        # Sub-forecasts use timestamp-based ID since they don't have a real question_id
+        session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Reset metrics for this forecast session
+    reset_metrics()
 
     # Either fetch question or use provided context
     if question_context is not None:
@@ -213,19 +239,40 @@ async def run_forecast(
     model_class, output_schema = get_output_schema_for_question(question_type)
     type_guidance = get_type_specific_guidance(question_type, context)
 
+    # Load past forecasts for this question (if any)
+    history_context = ""
+    if question_id is not None and question_id > 0:
+        past_forecasts = load_past_forecasts(question_id)
+        if past_forecasts:
+            history_context = format_history_for_context(past_forecasts)
+            logger.info(
+                "Loaded %d past forecasts for question %d",
+                len(past_forecasts),
+                question_id,
+            )
+
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
+    if history_context:
+        prompt += f"\n\n{history_context}"
 
     collected_text: list[str] = []
+    collected_thinking: list[str] = []
     assistant_messages: list[AssistantMessage] = []
     result: ResultMessage | None = None
 
+    # Setup thinking log file
+    thinking_log_path = (
+        LOGS_BASE_PATH / session_id / datetime.now().strftime("%Y%m%d_%H%M%S.log")
+    )
+    thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
+
     with Sandbox() as sandbox:
         options = ClaudeAgentOptions(
-            model="claude-opus-4-5-20251101",
+            model=settings.model,
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
-                "append": FORECASTING_SYSTEM_PROMPT,
+                "append": get_forecasting_system_prompt(),
             },
             # Unlimited thinking tokens for deep reasoning
             max_thinking_tokens=None,
@@ -236,10 +283,12 @@ async def run_forecast(
                 "forecasting": forecasting_server,
                 # In-process: Docker-based Python sandbox
                 "sandbox": sandbox.create_mcp_server(),
-                # In-process: composition tools (parallel research, subquestions)
+                # In-process: composition tools (subquestion decomposition)
                 "composition": composition_server,
                 # In-process: prediction market tools
                 "markets": markets_server,
+                # In-process: notes browsing tools
+                "notes": notes_server,
             },
             # Subagents for specialized research tasks
             agents=SUBAGENTS,
@@ -261,24 +310,30 @@ async def run_forecast(
                 "Write",
                 "Glob",
                 # Forecasting tools (mcp__<server>__<tool>)
-                "mcp__forecasting__get_metaculus_question",
+                "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
                 "mcp__forecasting__list_tournament_questions",
                 "mcp__forecasting__search_metaculus",
                 "mcp__forecasting__get_coherence_links",
-                "mcp__forecasting__search_exa",
-                "mcp__forecasting__search_news",
-                "mcp__forecasting__search_wikipedia",
+                "mcp__forecasting__get_prediction_history",
+                # Search tools (only if credentials configured)
+                *(["mcp__forecasting__search_exa"] if settings.exa_api_key else []),
+                *(
+                    ["mcp__forecasting__search_news"]
+                    if settings.asknews_client_id and settings.asknews_client_secret
+                    else []
+                ),
+                "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
                 # Sandbox tools (in-process Docker sandbox)
                 "mcp__sandbox__execute_code",
                 "mcp__sandbox__install_package",
-                # Composition tools (parallel execution)
-                "mcp__composition__parallel_research",
-                "mcp__composition__parallel_market_search",
+                # Composition tools
                 # spawn_subquestions only available for top-level forecasts
                 *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
                 # Prediction market tools
                 "mcp__markets__polymarket_price",
                 "mcp__markets__manifold_price",
+                # Notes browsing tools
+                "mcp__notes__browse_notes",
                 # Subagent spawning
                 "Task",
             ],
@@ -297,10 +352,26 @@ async def run_forecast(
                     for block in message.content:
                         if isinstance(block, TextBlock):
                             collected_text.append(block.text)
+                            logger.debug(
+                                "Text: %s",
+                                block.text[:200] + "..."
+                                if len(block.text) > 200
+                                else block.text,
+                            )
                         elif isinstance(block, ThinkingBlock):
                             # Log thinking blocks for visibility into agent reasoning
-                            thinking_text = block.thinking if hasattr(block, 'thinking') else str(block)
-                            logger.debug("Thinking: %s", thinking_text[:200] + "..." if len(thinking_text) > 200 else thinking_text)
+                            thinking_text = (
+                                block.thinking
+                                if hasattr(block, "thinking")
+                                else str(block)
+                            )
+                            collected_thinking.append(thinking_text)
+                            logger.debug(
+                                "Thinking: %s",
+                                thinking_text[:200] + "..."
+                                if len(thinking_text) > 200
+                                else thinking_text,
+                            )
                             if stream_thinking:
                                 print(f"\n💭 [Thinking]\n{thinking_text}\n")
                         elif isinstance(block, ToolUseBlock):
@@ -315,6 +386,12 @@ async def run_forecast(
 
     if result is None:
         raise RuntimeError("No result received from agent")
+
+    # Save thinking log
+    if collected_thinking:
+        thinking_log_content = "\n\n---\n\n".join(collected_thinking)
+        thinking_log_path.write_text(thinking_log_content, encoding="utf-8")
+        logger.info("Saved thinking log to %s", thinking_log_path)
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
@@ -338,25 +415,70 @@ async def run_forecast(
             output.logit = forecast.logit
             output.probability = forecast.probability
             output.probability_from_logit = forecast.probability_from_logit
+
+            # Check for consistency issues
+            consistency_warnings = forecast.check_consistency()
+            for warning in consistency_warnings:
+                logger.warning("Consistency check: %s", warning)
         elif isinstance(forecast, NumericForecast):
             output.median = forecast.median
             output.confidence_interval = forecast.confidence_interval
             output.percentiles = forecast.get_percentile_dict()
 
-            # Generate CDF from percentiles
+            # Generate CDF from percentiles or mixture components
             bounds = context.get("numeric_bounds", {})
-            if bounds.get("range_min") is not None and bounds.get("range_max") is not None:
+            if (
+                bounds.get("range_min") is not None
+                and bounds.get("range_max") is not None
+            ):
                 try:
-                    output.cdf = percentiles_to_cdf(
-                        output.percentiles,
-                        upper_bound=bounds["range_max"],
-                        lower_bound=bounds["range_min"],
-                        open_upper_bound=bounds.get("open_upper_bound", False),
-                        open_lower_bound=bounds.get("open_lower_bound", False),
-                        zero_point=bounds.get("zero_point"),
-                        cdf_size=bounds.get("cdf_size", 201),
-                    )
-                    logger.info("Generated %d-point CDF", len(output.cdf))
+                    if forecast.uses_mixture_mode and forecast.components:
+                        # Mixture distribution mode
+                        mixture_config = MixtureDistributionConfig(
+                            components=[
+                                DistributionComponent(
+                                    scenario=c.scenario,
+                                    mode=c.mode,
+                                    lower_bound=c.lower_bound,
+                                    upper_bound=c.upper_bound,
+                                    weight=c.weight,
+                                )
+                                for c in forecast.components
+                            ],
+                            question_lower_bound=bounds["range_min"],
+                            question_upper_bound=bounds["range_max"],
+                            open_lower_bound=bounds.get("open_lower_bound", False),
+                            open_upper_bound=bounds.get("open_upper_bound", False),
+                            zero_point=bounds.get("zero_point"),
+                        )
+                        output.cdf = mixture_components_to_cdf(
+                            mixture_config,
+                            cdf_size=bounds.get("cdf_size", 201),
+                        )
+                        logger.info(
+                            "Generated %d-point CDF from %d mixture components",
+                            len(output.cdf),
+                            len(forecast.components),
+                        )
+                    elif output.percentiles:
+                        # Traditional percentile mode
+                        output.cdf = percentiles_to_cdf(
+                            output.percentiles,
+                            upper_bound=bounds["range_max"],
+                            lower_bound=bounds["range_min"],
+                            open_upper_bound=bounds.get("open_upper_bound", False),
+                            open_lower_bound=bounds.get("open_lower_bound", False),
+                            zero_point=bounds.get("zero_point"),
+                            cdf_size=bounds.get("cdf_size", 201),
+                        )
+                        logger.info(
+                            "Generated %d-point CDF from percentiles", len(output.cdf)
+                        )
+                    else:
+                        logger.warning(
+                            "No percentiles or components for CDF generation"
+                        )
+                        output.cdf = None
                 except Exception as e:
                     logger.exception("Failed to generate CDF: %s", e)
                     output.cdf = None
@@ -372,6 +494,30 @@ async def run_forecast(
             output.confidence_interval = (0.0, 0.0)
         elif question_type == "multiple_choice":
             output.probabilities = {}
+
+    # Log tool metrics summary
+    log_metrics_summary()
+    metrics = get_metrics_summary()
+    output.tool_metrics = metrics
+
+    # Auto-save forecast to history (for top-level forecasts only)
+    if question_id is not None and question_id > 0:
+        try:
+            save_forecast(
+                question_id=question_id,
+                question_title=question_title,
+                question_type=question_type,
+                summary=output.summary,
+                factors=[f.model_dump() for f in output.factors],
+                probability=output.probability,
+                logit=output.logit,
+                probabilities=output.probabilities,
+                median=output.median,
+                confidence_interval=output.confidence_interval,
+                percentiles=output.percentiles,
+            )
+        except Exception as e:
+            logger.warning("Failed to auto-save forecast: %s", e)
 
     return output
 
