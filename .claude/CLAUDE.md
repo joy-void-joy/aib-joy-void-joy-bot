@@ -125,6 +125,28 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 - **History will be rebased** — Don't worry about perfect commit messages during development. The history will be cleaned up via interactive rebase before the PR is merged.
 - **Meaningful final commits** — After rebasing, each commit should tell a story: what changed and why. The final history should be easy to read and bisect.
 
+### Commit Message Format
+
+Use conventional commit syntax: `type(scope): description`
+
+**Types:**
+- `feat` — New feature or capability
+- `fix` — Bug fix
+- `refactor` — Code change that neither fixes a bug nor adds a feature
+- `docs` — Documentation only
+- `test` — Adding or updating tests
+- `chore` — Maintenance (dependencies, build config, etc.)
+- `meta` — Changes to `.claude/` files (CLAUDE.md, settings, scripts, commands)
+
+**Examples:**
+```
+feat(agent): add permission handler for read-only directories
+fix(tools): handle missing API key gracefully
+refactor(sandbox): extract Docker client initialization
+docs(readme): add installation instructions
+meta(claude): update commit message guidelines
+```
+
 **Note:** The `worktrees/` directory is gitignored.
 
 ## Code Style & Dependencies
