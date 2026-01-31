@@ -21,7 +21,7 @@ RESEARCH_TOOLS = [
     "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
     "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
     "mcp__forecasting__search_metaculus",
-    "mcp__notes__browse_notes",
+    "mcp__notes__notes",
     "Read",
     "Write",
     "Glob",
@@ -47,7 +47,7 @@ LINK_EXPLORER_TOOLS = [
     "mcp__forecasting__search_news",
     "mcp__markets__manifold_price",
     "mcp__markets__polymarket_price",
-    "mcp__notes__browse_notes",
+    "mcp__notes__notes",
     "Read",
     "Write",
 ]
@@ -56,7 +56,7 @@ LINK_EXPLORER_TOOLS = [
 FACT_CHECKER_TOOLS = [
     "mcp__forecasting__search_exa",
     "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-    "mcp__notes__browse_notes",
+    "mcp__notes__notes",
     "Read",
 ]
 
@@ -113,11 +113,12 @@ You can flexibly adapt your research based on what's needed:
 - Expert opinions from credible sources
 - Recent news (via search_news)
 
-## Notes Folder
-You have access to a shared notes folder. Use it to:
-- Save key findings with one-line summaries at the top of each file
-- Use descriptive filenames (e.g., spacex_history.md, covid_base_rates.md)
-- Keep notes scannable - the main forecaster will read them
+## Notes
+Use the `notes` tool to save structured findings:
+- `notes(mode="write", type="finding", topic="...", summary="...", content="...")`
+- Types: research, finding, estimate, reasoning, source
+- For detailed reports: write `.md` to `notes/sessions/<id>/` and reference via `report_path`
+- Search past notes: `notes(mode="search", query="...")`
 
 ## Output Format (JSON)
 

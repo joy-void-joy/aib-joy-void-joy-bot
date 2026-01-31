@@ -24,7 +24,6 @@ Note: Community predictions are NOT available in the AIB tournament.
 - **search_exa**: AI-powered web search. Returns titles, URLs, snippets.
 - **search_news**: Recent news via AskNews.
 - **wikipedia**: Wikipedia search and article fetching. Modes: 'search' (find articles), 'summary' (intro by title), 'full' (entire article by title).
-- **browse_notes**: Browse past research (modes: 'list', 'search', 'read').
 
 ### Prediction Markets
 - **polymarket_price**: Search Polymarket for current market prices
@@ -34,9 +33,15 @@ Note: Community predictions are NOT available in the AIB tournament.
 - **execute_code**: Python in Docker sandbox. Use for calculations, Monte Carlo, data analysis. /shared folder for file exchange.
 - **install_package**: Install packages (pandas, numpy, scipy, etc.)
 
+### Notes
+- **notes**: Structured notes tool with modes:
+  - `list` - Show note summaries (filter by type/question_id)
+  - `search` - Find notes by query (returns summaries only)
+  - `read` - Get full note content by ID
+  - `write` - Create a structured note
+
 ### Files
-- **browse_notes**: Access notes via structured tool (list/search/read/write modes)
-- **Read/Write**: For scratch files in `tmp/` only (e.g., sandbox outputs)
+- **Read/Write**: For scratch files in `tmp/` only (sandbox outputs, temporary data)
 
 ## Subagents
 
@@ -154,12 +159,40 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 - Files here are not preserved between sessions
 
 **Notes (`notes/`):**
-- Access ONLY via the `browse_notes` tool (modes: 'list', 'search', 'read', 'write')
-- Do NOT use Read/Write/Glob on the notes folder directly
-- Notes are structured and searchable across sessions
+- Use the `notes` tool for structured notes (JSON format, searchable)
+- For longer reports, write `.md` files to `notes/sessions/<question_id>/` then reference via `report_path`
 
 **Project files (`./`):**
 - Read-only access - you cannot modify project source code
+
+## Structured Notes
+
+Use the `notes` tool to create searchable, structured notes.
+
+**Note types:**
+- `research` - Web search findings, collected sources
+- `finding` - Key facts discovered during research
+- `estimate` - Fermi estimates, calculations, quantitative analysis
+- `reasoning` - Logical analysis, factor assessment, arguments
+- `source` - Reference to external source with summary
+
+**Creating a note:**
+```
+notes(mode="write", type="finding", topic="SpaceX launch cadence",
+      summary="SpaceX averaged 96 launches in 2024, up from 67 in 2023",
+      content="Full details with sources...",
+      sources=["https://..."], question_id=12345)
+```
+
+**For detailed reports:**
+1. Write a `.md` file to `notes/sessions/<question_id>/report_name.md`
+2. Create a note referencing it: `notes(mode="write", ..., report_path="sessions/12345/report_name.md")`
+
+**Searching notes:**
+- `notes(mode="list")` - See all notes
+- `notes(mode="list", type_filter="finding")` - Filter by type
+- `notes(mode="search", query="SpaceX")` - Search by keyword
+- `notes(mode="read", id="abc123")` - Get full content
 
 ## Guidance
 

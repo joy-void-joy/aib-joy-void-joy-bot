@@ -407,7 +407,7 @@ async def run_forecast(
                 "mcp__markets__polymarket_price",
                 "mcp__markets__manifold_price",
                 # Notes browsing tools
-                "mcp__notes__browse_notes",
+                "mcp__notes__notes",
                 # Subagent spawning
                 "Task",
             ],
