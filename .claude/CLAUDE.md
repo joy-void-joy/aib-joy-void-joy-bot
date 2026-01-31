@@ -119,6 +119,7 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 ### Commit Best Practices
 
+- **Commit before responding** — Always commit your work before responding to the user. This ensures progress is saved and creates natural checkpoints. Don't accumulate multiple changes across responses.
 - **Commit early, commit often** — Don't wait until a feature is "done" to commit. Frequent commits provide checkpoints and make rebasing easier.
 - **Keep commits atomic** — Each commit should do one thing. If you need to describe your commit with "and", it should probably be two commits.
 - **History will be rebased** — Don't worry about perfect commit messages during development. The history will be cleaned up via interactive rebase before the PR is merged.
@@ -172,7 +173,7 @@ The `forecasting-tools` library has some type annotation limitations to be aware
 
 ## Helper Scripts
 
-The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.**
+The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Avoid `uv run python -c "..."` unless it's a trivial one-liner you're certain won't be repeated.
 
 If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
 
