@@ -405,17 +405,32 @@ async def run_forecast(
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
 
+            current_block_type: str | None = None
+
             async for message in client.receive_messages():
                 # Real-time streaming events
                 if isinstance(message, StreamEvent):
-                    delta = message.event.get("delta", {})
-                    delta_type = delta.get("type", "")
-                    if delta_type == "thinking_delta":
-                        print(delta.get("thinking", ""), end="", flush=True)
-                    elif delta_type == "text_delta":
-                        print(delta.get("text", ""), end="", flush=True)
-                    elif message.event.get("type") == "content_block_stop":
-                        print()  # Newline after block
+                    event_type = message.event.get("type", "")
+
+                    # Track block type for emoji prefix
+                    if event_type == "content_block_start":
+                        block = message.event.get("content_block", {})
+                        current_block_type = block.get("type")
+                        if current_block_type == "thinking":
+                            print("\n🧠 ", end="", flush=True)
+                        elif current_block_type == "text":
+                            print("\n💬 ", end="", flush=True)
+
+                    elif event_type == "content_block_delta":
+                        delta = message.event.get("delta", {})
+                        delta_type = delta.get("type", "")
+                        if delta_type == "thinking_delta":
+                            print(delta.get("thinking", ""), end="", flush=True)
+                        elif delta_type == "text_delta":
+                            print(delta.get("text", ""), end="", flush=True)
+
+                    elif event_type == "content_block_stop":
+                        current_block_type = None
 
                 # Completed messages
                 elif isinstance(message, AssistantMessage):
