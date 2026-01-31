@@ -6,10 +6,11 @@ All tools return raw data; Claude does the reasoning.
 
 import logging
 from asyncio import Semaphore
-from typing import Any, Required, TypedDict
+from typing import Annotated, Any, Literal
 
 import httpx
 from claude_agent_sdk import create_sdk_mcp_server, tool
+from pydantic import BaseModel, Field, field_validator
 
 from forecasting_tools import (
     ApiFilter,
@@ -33,54 +34,69 @@ _metaculus_semaphore = Semaphore(settings.metaculus_max_concurrent)
 _search_semaphore = Semaphore(settings.search_max_concurrent)
 
 
-# --- Input Schemas ---
+# --- Input Schemas (Pydantic models with runtime validation) ---
 
 
-class SearchExaInput(TypedDict, total=False):
-    query: Required[str]
-    num_results: int
+class SearchExaInput(BaseModel):
+    query: str
+    num_results: int = settings.search_default_limit
 
 
-class SearchNewsInput(TypedDict, total=False):
-    query: Required[str]
-    num_results: int
+class SearchNewsInput(BaseModel):
+    query: str
+    num_results: int = settings.search_default_limit
 
 
-class GetMetaculusQuestionsInput(TypedDict, total=False):
-    """Unified input for fetching one or more Metaculus questions."""
+class GetMetaculusQuestionsInput(BaseModel):
+    """Input for fetching one or more Metaculus questions."""
 
-    post_ids: Required[list[int]]
+    post_id_list: Annotated[list[int], Field(min_length=1, max_length=20)]
+
+    @field_validator("post_id_list", mode="before")
+    @classmethod
+    def coerce_to_list(cls, v: Any) -> list[int]:
+        """Coerce various input formats to list[int].
+
+        Accepts:
+        - list[int]: [123, 456] → used as-is
+        - int: 123 → [123]
+        - str (single): "123" → [123]
+        - str (comma-separated): "123, 456" → [123, 456]
+        """
+        if isinstance(v, list):
+            return [int(x) for x in v]
+        if isinstance(v, int):
+            return [v]
+        if isinstance(v, str):
+            if "," in v:
+                return [int(x.strip()) for x in v.split(",")]
+            return [int(v)]
+        raise ValueError(f"Cannot coerce {type(v).__name__} to list[int]")
 
 
-class ListTournamentQuestionsInput(TypedDict, total=False):
-    tournament_id: Required[int | str]
-    num_questions: int
+class ListTournamentQuestionsInput(BaseModel):
+    tournament_id: int | str
+    num_questions: int = settings.tournament_default_limit
 
 
-class SearchMetaculusInput(TypedDict, total=False):
-    query: Required[str]
-    num_results: int
+class SearchMetaculusInput(BaseModel):
+    query: str
+    num_results: int = settings.metaculus_default_limit
 
 
-class CoherenceLinksInput(TypedDict):
+class CoherenceLinksInput(BaseModel):
     post_id: int
 
 
-class WikipediaInput(TypedDict, total=False):
-    """Unified Wikipedia tool input.
+class WikipediaInput(BaseModel):
+    """Unified Wikipedia tool input."""
 
-    Modes:
-    - "search": Search for articles matching query, returns list of titles/snippets
-    - "summary": Fetch article intro section by exact title
-    - "full": Fetch entire article by exact title
-    """
-
-    query: Required[str]  # Search query or exact article title
-    mode: str  # "search" (default), "summary", or "full"
-    num_results: int  # Only used for "search" mode
+    query: str
+    mode: Literal["search", "summary", "full"] = "search"
+    num_results: int = settings.search_default_limit
 
 
-class PredictionHistoryInput(TypedDict):
+class PredictionHistoryInput(BaseModel):
     post_id: int
 
 
@@ -135,26 +151,26 @@ async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
 @tool(
     "get_metaculus_questions",
     (
-        "Fetch details for one or more Metaculus questions. Pass a list of post IDs. "
+        "Fetch details for one or more Metaculus questions. "
+        "Pass post_id_list as a list of integer post IDs (e.g., [12345] or [12345, 67890]). "
         "Returns question details including title, description, resolution criteria, "
         "fine print, and community prediction (if available). "
         "Note: Community predictions are NOT available in the AIB tournament. "
         "Maximum 20 questions per request."
     ),
-    {"post_ids": list},
+    {"post_id_list": list},
 )
 @tracked("get_metaculus_questions")
-async def get_metaculus_questions(args: GetMetaculusQuestionsInput) -> dict[str, Any]:
+async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch one or more Metaculus questions (cached for 5 minutes)."""
     import asyncio
 
-    post_ids = args["post_ids"]
+    try:
+        validated = GetMetaculusQuestionsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
 
-    if not post_ids:
-        return mcp_error("No post IDs provided")
-
-    if len(post_ids) > 20:
-        return mcp_error("Maximum 20 questions per request")
+    post_ids = validated.post_id_list
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
         """Fetch a single question with error handling."""
@@ -185,12 +201,15 @@ async def get_metaculus_questions(args: GetMetaculusQuestionsInput) -> dict[str,
     {"tournament_id": int, "num_questions": int},
 )
 @tracked("list_tournament_questions")
-async def list_tournament_questions(
-    args: ListTournamentQuestionsInput,
-) -> dict[str, Any]:
+async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
     """List questions from a tournament."""
-    tournament_id = args["tournament_id"]
-    num_questions = args.get("num_questions", settings.tournament_default_limit)
+    try:
+        validated = ListTournamentQuestionsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    tournament_id = validated.tournament_id
+    num_questions = validated.num_questions
 
     try:
         async with _metaculus_semaphore:
@@ -224,10 +243,15 @@ async def list_tournament_questions(
     {"query": str, "num_results": int},
 )
 @tracked("search_metaculus")
-async def search_metaculus(args: SearchMetaculusInput) -> dict[str, Any]:
+async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
     """Search Metaculus questions by text."""
-    query = args["query"]
-    num_results = args.get("num_results", settings.metaculus_default_limit)
+    try:
+        validated = SearchMetaculusInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    num_results = validated.num_results
 
     @with_retry(max_attempts=3)
     async def _search() -> list[dict[str, Any]]:
@@ -270,9 +294,14 @@ async def search_metaculus(args: SearchMetaculusInput) -> dict[str, Any]:
     {"post_id": int},
 )
 @tracked("get_coherence_links")
-async def get_coherence_links(args: CoherenceLinksInput) -> dict[str, Any]:
+async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch coherence links for a question."""
-    post_id = args["post_id"]
+    try:
+        validated = CoherenceLinksInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    post_id = validated.post_id
     try:
         from forecasting_tools.helpers.metaculus_client import MetaculusClient
 
@@ -339,10 +368,15 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
     {"query": str, "num_results": int},
 )
 @tracked("search_exa")
-async def search_exa(args: SearchExaInput) -> dict[str, Any]:
+async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     """Search using Exa and return raw results (cached)."""
-    query = args["query"]
-    num_results = args.get("num_results", settings.search_default_limit)
+    try:
+        validated = SearchExaInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    num_results = validated.num_results
 
     try:
         async with _search_semaphore:
@@ -362,7 +396,7 @@ async def search_exa(args: SearchExaInput) -> dict[str, Any]:
     {"query": str},
 )
 @tracked("search_news")
-async def search_news(args: SearchNewsInput) -> dict[str, Any]:
+async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     """Search news using AskNews and return raw results.
 
     Note: The underlying AskNewsSearcher from forecasting-tools does not support
@@ -370,7 +404,12 @@ async def search_news(args: SearchNewsInput) -> dict[str, Any]:
     directly or contribute the feature upstream to forecasting-tools.
     See to_port/main_with_no_framework.py call_asknews() for SDK usage example.
     """
-    query = args["query"]
+    try:
+        validated = SearchNewsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
 
     @with_retry(max_attempts=3)
     async def _search() -> str:
@@ -402,14 +441,16 @@ WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
     {"query": str, "mode": str, "num_results": int},
 )
 @tracked("wikipedia")
-async def wikipedia(args: WikipediaInput) -> dict[str, Any]:
+async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
     """Unified Wikipedia search and article fetching."""
-    query = args["query"]
-    mode = args.get("mode", "search")
-    num_results = args.get("num_results", settings.search_default_limit)
+    try:
+        validated = WikipediaInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
 
-    if mode not in ("search", "summary", "full"):
-        return mcp_error(f"Invalid mode '{mode}'. Use 'search', 'summary', or 'full'.")
+    query = validated.query
+    mode = validated.mode
+    num_results = validated.num_results
 
     if mode == "search":
         # Search for articles
@@ -534,9 +575,14 @@ async def wikipedia(args: WikipediaInput) -> dict[str, Any]:
     {"post_id": int},
 )
 @tracked("get_prediction_history")
-async def get_prediction_history(args: PredictionHistoryInput) -> dict[str, Any]:
+async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
     """Get past forecasts for a question from local storage."""
-    post_id = args["post_id"]
+    try:
+        validated = PredictionHistoryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    post_id = validated.post_id
 
     try:
         forecasts = load_past_forecasts(post_id)
