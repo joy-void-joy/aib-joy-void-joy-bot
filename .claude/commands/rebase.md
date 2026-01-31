@@ -7,6 +7,8 @@ description: Create a clean rebase branch with atomic commits and open a PR
 
 Create a temporary rebase branch with a clean, logical commit history, then open a pull request.
 
+**Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
+
 ## Process
 
 1. **Gather context**:
