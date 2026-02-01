@@ -15,12 +15,12 @@ from pydantic import BaseModel, Field, field_validator
 from forecasting_tools import (
     ApiFilter,
     BinaryQuestion,
-    MetaculusApi,
 )
 from forecasting_tools.ai_models.exa_searcher import ExaSearcher
 from forecasting_tools.helpers.asknews_searcher import AskNewsSearcher
 
 from aib.agent.history import load_past_forecasts
+from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.cache import cached
 from aib.tools.metrics import tracked
@@ -62,12 +62,21 @@ class GetMetaculusQuestionsInput(BaseModel):
         - int: 123 → [123]
         - str (single): "123" → [123]
         - str (comma-separated): "123, 456" → [123, 456]
+        - str (Python list literal): "[123, 456]" → [123, 456]
         """
         if isinstance(v, list):
             return [int(x) for x in v]
         if isinstance(v, int):
             return [v]
         if isinstance(v, str):
+            v = v.strip()
+            # Handle Python list literal strings like "[123, 456]"
+            if v.startswith("[") and v.endswith("]"):
+                import ast
+
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, list):
+                    return [int(x) for x in parsed]
             if "," in v:
                 return [int(x.strip()) for x in v.split(",")]
             return [int(v)]
@@ -103,21 +112,8 @@ class PredictionHistoryInput(BaseModel):
 # --- Cached API helpers ---
 
 
-@cached(ttl=300)
-@with_retry(max_attempts=3)
-async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
-    """Fetch a single Metaculus question (cached).
-
-    Args:
-        post_id: The Metaculus post ID.
-
-    Returns:
-        Dict with question details including community prediction if available.
-    """
-    question = MetaculusApi.get_question_by_post_id(post_id)
-    if isinstance(question, list):
-        question = question[0]
-
+def _question_to_dict(question: Any) -> dict[str, object]:
+    """Convert a MetaculusQuestion to a serializable dict."""
     result: dict[str, object] = {
         "post_id": question.id_of_post,
         "title": question.question_text,
@@ -143,6 +139,16 @@ async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
         result["upper_bound"] = getattr(question, "upper_bound", None)
 
     return result
+
+
+@cached(ttl=300)
+async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
+    """Fetch a single Metaculus question (cached, native async)."""
+    client = get_metaculus_client()
+    question = await client.get_question_by_post_id(post_id)
+    if isinstance(question, list):
+        question = question[0]
+    return _question_to_dict(question)
 
 
 # --- Pure Data Tools (Metaculus API) ---
@@ -202,7 +208,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
 )
 @tracked("list_tournament_questions")
 async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
-    """List questions from a tournament."""
+    """List questions from a tournament (native async)."""
     try:
         validated = ListTournamentQuestionsInput.model_validate(args)
     except Exception as e:
@@ -213,7 +219,8 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
 
     try:
         async with _metaculus_semaphore:
-            questions = MetaculusApi.get_all_open_questions_from_tournament(
+            client = get_metaculus_client()
+            questions = await client.get_all_open_questions_from_tournament(
                 tournament_id
             )
             questions = questions[:num_questions]
@@ -244,7 +251,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
 )
 @tracked("search_metaculus")
 async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
-    """Search Metaculus questions by text."""
+    """Search Metaculus questions by text (native async)."""
     try:
         validated = SearchMetaculusInput.model_validate(args)
     except Exception as e:
@@ -253,35 +260,30 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     num_results = validated.num_results
 
-    @with_retry(max_attempts=3)
-    async def _search() -> list[dict[str, Any]]:
-        api_filter = ApiFilter(other_url_parameters={"search": query})
-        questions = await MetaculusApi.get_questions_matching_filter(
-            api_filter=api_filter,
-            num_questions=num_results,
-        )
-
-        results = []
-        for q in questions:
-            community_pred = (
-                q.community_prediction_at_access_time
-                if isinstance(q, BinaryQuestion)
-                else None
+    try:
+        async with _metaculus_semaphore:
+            client = get_metaculus_client()
+            api_filter = ApiFilter(other_url_parameters={"search": query})
+            questions = await client.get_questions_matching_filter(
+                api_filter=api_filter,
+                num_questions=num_results,
             )
-            results.append(
+
+            results = [
                 {
                     "post_id": q.id_of_post,
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
-                    "community_prediction": community_pred,
+                    "community_prediction": (
+                        q.community_prediction_at_access_time
+                        if isinstance(q, BinaryQuestion)
+                        else None
+                    ),
                 }
-            )
-        return results
+                for q in questions
+            ]
 
-    try:
-        async with _metaculus_semaphore:
-            results = await _search()
         return mcp_success(results)
     except Exception as e:
         logger.exception("Metaculus search failed")
@@ -295,7 +297,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
 )
 @tracked("get_coherence_links")
 async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
-    """Fetch coherence links for a question."""
+    """Fetch coherence links for a question (native async)."""
     try:
         validated = CoherenceLinksInput.model_validate(args)
     except Exception as e:
@@ -303,11 +305,9 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
 
     post_id = validated.post_id
     try:
-        from forecasting_tools.helpers.metaculus_client import MetaculusClient
-
         async with _metaculus_semaphore:
-            client = MetaculusClient()
-            links = client.get_links_for_question(post_id)
+            client = get_metaculus_client()
+            links = await client.get_links_for_question(post_id)
             results = [
                 {
                     "question1_id": link.question1_id,
