@@ -8,9 +8,12 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from aib.agent.models import ForecastOutput
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +24,8 @@ FORECASTS_BASE_PATH = Path("./notes/forecasts")
 class SavedForecast(BaseModel):
     """A saved forecast with metadata."""
 
-    question_id: int
+    question_id: int  # Actual question ID (for submission API)
+    post_id: int | None = None  # Post ID (for URLs, legacy: equals question_id if None)
     question_title: str
     question_type: str
     timestamp: str
@@ -38,6 +42,7 @@ class SavedForecast(BaseModel):
 
 def save_forecast(
     question_id: int,
+    post_id: int,
     question_title: str,
     question_type: str,
     summary: str,
@@ -53,7 +58,8 @@ def save_forecast(
     """Save a forecast to the history storage.
 
     Args:
-        question_id: Metaculus question/post ID.
+        question_id: Metaculus question ID (for submission API).
+        post_id: Metaculus post ID (for URLs, directory structure).
         question_title: Title of the question.
         question_type: Type of question (binary, numeric, multiple_choice).
         summary: Forecast summary/reasoning.
@@ -70,13 +76,14 @@ def save_forecast(
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Create question-specific directory
-    question_dir = FORECASTS_BASE_PATH / str(question_id)
+    # Create directory by post_id (what users see in URLs)
+    question_dir = FORECASTS_BASE_PATH / str(post_id)
     question_dir.mkdir(parents=True, exist_ok=True)
 
     # Build forecast data
     forecast = SavedForecast(
         question_id=question_id,
+        post_id=post_id,
         question_title=question_title,
         question_type=question_type,
         timestamp=timestamp,
@@ -98,16 +105,16 @@ def save_forecast(
     return filepath
 
 
-def load_past_forecasts(question_id: int) -> list[SavedForecast]:
+def load_past_forecasts(post_id: int) -> list[SavedForecast]:
     """Load all past forecasts for a question.
 
     Args:
-        question_id: Metaculus question/post ID.
+        post_id: Metaculus post ID (directory structure uses post ID).
 
     Returns:
         List of SavedForecast objects, sorted by timestamp (oldest first).
     """
-    question_dir = FORECASTS_BASE_PATH / str(question_id)
+    question_dir = FORECASTS_BASE_PATH / str(post_id)
 
     if not question_dir.exists():
         return []
@@ -123,30 +130,30 @@ def load_past_forecasts(question_id: int) -> list[SavedForecast]:
     return forecasts
 
 
-def get_latest_forecast(question_id: int) -> SavedForecast | None:
+def get_latest_forecast(post_id: int) -> SavedForecast | None:
     """Get the most recent forecast for a question.
 
     Args:
-        question_id: Metaculus question/post ID.
+        post_id: Metaculus post ID.
 
     Returns:
         The most recent SavedForecast, or None if no forecasts exist.
     """
-    forecasts = load_past_forecasts(question_id)
+    forecasts = load_past_forecasts(post_id)
     return forecasts[-1] if forecasts else None
 
 
-def update_resolution(question_id: int, resolution: str) -> None:
+def update_resolution(post_id: int, resolution: str) -> None:
     """Update the resolution status for all forecasts of a question.
 
     Args:
-        question_id: Metaculus question/post ID.
+        post_id: Metaculus post ID.
         resolution: Resolution status ("yes", "no", "ambiguous").
     """
-    question_dir = FORECASTS_BASE_PATH / str(question_id)
+    question_dir = FORECASTS_BASE_PATH / str(post_id)
 
     if not question_dir.exists():
-        logger.warning("No forecasts found for question %d", question_id)
+        logger.warning("No forecasts found for post %d", post_id)
         return
 
     for filepath in question_dir.glob("*.json"):
@@ -158,9 +165,45 @@ def update_resolution(question_id: int, resolution: str) -> None:
             logger.warning("Failed to update resolution in %s: %s", filepath, e)
 
     logger.info(
-        "Updated resolution to '%s' for all forecasts of question %d",
+        "Updated resolution to '%s' for all forecasts of post %d",
         resolution,
-        question_id,
+        post_id,
+    )
+
+
+def load_latest_for_submission(post_id: int) -> ForecastOutput | None:
+    """Load the latest forecast for submission (without re-running the agent).
+
+    Args:
+        post_id: Metaculus post ID.
+
+    Returns:
+        ForecastOutput ready for submission, or None if no forecast exists.
+    """
+    # Import at runtime to avoid circular dependency issues
+    from aib.agent import models
+
+    latest = get_latest_forecast(post_id)
+    if latest is None:
+        return None
+
+    # Convert SavedForecast to ForecastOutput
+    # Note: For legacy forecasts where post_id is None, use question_id as post_id
+    effective_post_id = latest.post_id if latest.post_id is not None else latest.question_id
+
+    return models.ForecastOutput(
+        question_id=latest.question_id,
+        post_id=effective_post_id,
+        question_title=latest.question_title,
+        question_type=latest.question_type,
+        summary=latest.summary,
+        factors=[models.Factor.model_validate(f) for f in latest.factors],
+        probability=latest.probability,
+        logit=latest.logit,
+        probabilities=latest.probabilities,
+        median=latest.median,
+        confidence_interval=latest.confidence_interval,
+        percentiles=latest.percentiles,
     )
 
 
