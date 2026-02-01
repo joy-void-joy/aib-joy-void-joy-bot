@@ -12,12 +12,7 @@ import httpx
 from claude_agent_sdk import create_sdk_mcp_server, tool
 from pydantic import BaseModel, Field, field_validator
 
-from forecasting_tools import (
-    ApiFilter,
-    BinaryQuestion,
-)
-from forecasting_tools.ai_models.exa_searcher import ExaSearcher
-from forecasting_tools.helpers.asknews_searcher import AskNewsSearcher
+from metaculus import ApiFilter, BinaryQuestion
 
 from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
@@ -342,24 +337,54 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
     Returns:
         List of search result dicts with title, url, snippet, etc.
     """
-    searcher = ExaSearcher(
-        include_text=True,
-        include_highlights=True,
-        num_results=num_results,
-    )
-    results = await searcher.invoke(query)
+    api_key = settings.exa_api_key
+    if not api_key:
+        raise ValueError("EXA_API_KEY not configured")
 
-    return [
-        {
-            "title": r.title,
-            "url": r.url,
-            "snippet": r.text[:500] if r.text else None,
-            "highlights": r.highlights[:3] if r.highlights else None,
-            "published_date": r.published_date,
-            "score": r.score,
-        }
-        for r in results
-    ]
+    url = "https://api.exa.ai/search"
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": api_key,
+    }
+    payload = {
+        "query": query,
+        "type": "auto",
+        "useAutoprompt": True,
+        "numResults": num_results,
+        "livecrawl": "always",
+        "contents": {
+            "text": {"includeHtmlTags": False},
+            "highlights": {
+                "query": query,
+                "numSentences": 4,
+                "highlightsPerUrl": 3,
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+    results = []
+    for r in data.get("results", []):
+        published_date = r.get("publishedDate")
+        if published_date and isinstance(published_date, str):
+            published_date = published_date.rstrip("Z")
+
+        results.append(
+            {
+                "title": r.get("title"),
+                "url": r.get("url"),
+                "snippet": (r.get("text") or "")[:500] or None,
+                "highlights": r.get("highlights", [])[:3] or None,
+                "published_date": published_date,
+                "score": r.get("score"),
+            }
+        )
+    return results
 
 
 @tool(
@@ -394,30 +419,83 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     "search_news",
     (
         "Search for recent news using AskNews API. Returns raw news results with headlines, sources, and summaries. "
-        "Note: The num_results parameter is currently ignored (upstream library limitation)."
+        f"Optional num_results (default: {settings.news_default_limit})."
     ),
-    {"query": str},
+    {"query": str, "num_results": int},
 )
 @tracked("search_news")
 async def search_news(args: dict[str, Any]) -> dict[str, Any]:
-    """Search news using AskNews and return raw results.
-
-    Note: The underlying AskNewsSearcher from forecasting-tools does not support
-    num_results parameter. To add this feature, either use the raw AskNews SDK
-    directly or contribute the feature upstream to forecasting-tools.
-    See to_port/main_with_no_framework.py call_asknews() for SDK usage example.
-    """
+    """Search news using AskNews SDK and return formatted results."""
     try:
         validated = SearchNewsInput.model_validate(args)
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
     query = validated.query
+    num_results = validated.num_results
 
     @with_retry(max_attempts=3)
     async def _search() -> str:
-        searcher = AskNewsSearcher()
-        return await searcher.get_formatted_news_async(query)
+        from asknews_sdk import AskNewsSDK
+
+        client_id = settings.asknews_client_id
+        client_secret = settings.asknews_client_secret
+        if not client_id or not client_secret:
+            raise ValueError("AskNews credentials not configured")
+
+        ask = AskNewsSDK(
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes={"news"},
+        )
+
+        # Get latest news (within past 48 hours)
+        hot_response = ask.news.search_news(
+            query=query,
+            n_articles=min(num_results, 6),
+            return_type="both",
+            strategy="latest news",
+        )
+
+        # Get historical news (up to 60 days back)
+        historical_response = ask.news.search_news(
+            query=query,
+            n_articles=num_results,
+            return_type="both",
+            strategy="news knowledge",
+        )
+
+        formatted = "Here are the relevant news articles:\n\n"
+
+        for articles, _ in [
+            (hot_response.as_dicts, "Latest"),
+            (historical_response.as_dicts, "Historical"),
+        ]:
+            if not articles:
+                continue
+            articles_list = [a.__dict__ for a in articles]
+            articles_list.sort(key=lambda x: x.get("pub_date", ""), reverse=True)
+
+            for article in articles_list:
+                pub_date = article.get("pub_date")
+                if pub_date:
+                    try:
+                        pub_date = pub_date.strftime("%B %d, %Y %I:%M %p")
+                    except (AttributeError, ValueError):
+                        pub_date = str(pub_date)
+
+                formatted += (
+                    f"**{article.get('eng_title', 'Untitled')}**\n"
+                    f"{article.get('summary', 'No summary')}\n"
+                    f"Language: {article.get('language', 'unknown')}\n"
+                    f"Published: {pub_date or 'unknown'}\n"
+                    f"Source: [{article.get('source_id', 'unknown')}]({article.get('article_url', '')})\n\n"
+                )
+
+        if "articles" not in formatted.lower() or formatted.count("**") == 0:
+            formatted += "No articles were found.\n"
+
+        return formatted
 
     try:
         async with _search_semaphore:
