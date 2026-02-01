@@ -37,6 +37,12 @@ uv sync
 # Run a test forecast (does not submit to Metaculus)
 uv run forecast test <question_id>
 
+# Forecast and submit to Metaculus
+uv run forecast submit <question_id>
+
+# Forecast, submit, and post reasoning as a private comment
+uv run forecast submit <question_id> --comment
+
 # Add a new dependency (DO NOT modify pyproject.toml directly)
 uv add <package-name>
 
@@ -224,7 +230,7 @@ No comment needed. The behavior is self-evident to anyone familiar with config f
 
 ## Helper Scripts
 
-The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` — this is denied in settings.json. Instead, create a script if the existing ones don't cover your use case.
+The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json. Always use `uv run` to ensure the correct virtualenv. If the existing scripts don't cover your use case, create a new script.
 
 If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
 
