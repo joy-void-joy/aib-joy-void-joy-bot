@@ -9,8 +9,6 @@ Also provides mixture distribution support for more flexible multi-scenario mode
 Ported from to_port/main_with_no_framework.py with improved typing and structure.
 """
 
-from __future__ import annotations
-
 import logging
 from collections import Counter
 from typing import Self

@@ -4,8 +4,6 @@ Simplified models for Metaculus questions and related data structures.
 Only includes fields actually used by the AIB forecasting bot.
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime, timezone
 from enum import Enum
@@ -107,7 +105,13 @@ class MetaculusQuestion(BaseModel):
             "date": DateQuestion,
         }
 
-        question_cls = type_map.get(question_type, MetaculusQuestion)
+        question_cls = type_map.get(question_type)
+        if question_cls is None:
+            post_id = post_json.get("id", "unknown")
+            raise ValueError(
+                f"Unknown question type '{question_type}' for post {post_id}. "
+                f"Supported types: {list(type_map.keys())}"
+            )
         return question_cls._from_api_json_impl(post_json)
 
     @classmethod
