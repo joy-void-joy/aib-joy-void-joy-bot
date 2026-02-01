@@ -190,7 +190,10 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         results = await asyncio.gather(*[fetch_one(pid) for pid in post_ids])
         # For single question, return directly; for multiple, wrap in list
         if len(results) == 1:
-            return mcp_success(results[0])
+            result = results[0]
+            if "error" in result:
+                return mcp_error(f"Failed to fetch question {result['post_id']}: {result['error']}")
+            return mcp_success(result)
         return mcp_success({"questions": list(results)})
     except Exception as e:
         logger.exception("Failed to fetch Metaculus questions")
