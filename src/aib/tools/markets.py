@@ -5,7 +5,7 @@ additional signal for forecasting. Market prices reflect aggregated
 wisdom of traders with financial incentives.
 """
 
-import json
+import ast
 import logging
 from typing import Any, TypedDict
 
@@ -73,24 +73,59 @@ def _parse_yes_price(outcome_prices: Any) -> float | None:
     Args:
         outcome_prices: The outcomePrices field from Polymarket API.
                        Can be a list of floats, strings, or string-encoded lists.
+                       The API sometimes returns the entire field as a string literal.
 
     Returns:
         The parsed YES price (first element) as a float, or None if parsing fails.
     """
     if not outcome_prices:
         return None
-    try:
-        price_value = outcome_prices[0]
-        if isinstance(price_value, (int, float)):
-            return float(price_value)
-        if isinstance(price_value, str):
-            # Handle string representation of list (API sometimes returns this)
-            if price_value.startswith("["):
-                parsed = json.loads(price_value.replace("'", '"'))
-                return float(parsed[0]) if parsed else None
-            return float(price_value)
+
+    def _coerce_to_list(value: Any) -> list[Any] | None:
+        """Coerce value to list, parsing string literals if needed."""
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = ast.literal_eval(value)
+                if isinstance(parsed, list):
+                    return parsed
+                # Single value parsed (e.g., "0.5" -> 0.5)
+                return [parsed]
+            except (ValueError, SyntaxError):
+                # Not a valid literal, treat as single string value
+                return [value]
         return None
-    except (ValueError, TypeError, json.JSONDecodeError, IndexError, KeyError):
+
+    def _extract_scalar(value: Any) -> float | int | str | None:
+        """Extract a scalar value, unwrapping nested structures."""
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = ast.literal_eval(value)
+                # Recurse if we got a container
+                if isinstance(parsed, list):
+                    return _extract_scalar(parsed[0]) if parsed else None
+                return parsed if isinstance(parsed, (int, float)) else None
+            except (ValueError, SyntaxError):
+                # Not a valid literal, return as-is for float() to try
+                return value
+        if isinstance(value, list) and value:
+            return _extract_scalar(value[0])
+        return None
+
+    try:
+        prices = _coerce_to_list(outcome_prices)
+        if not prices:
+            return None
+
+        scalar = _extract_scalar(prices[0])
+        if scalar is None:
+            return None
+
+        return float(scalar)
+    except (ValueError, TypeError, IndexError, KeyError):
         return None
 
 
