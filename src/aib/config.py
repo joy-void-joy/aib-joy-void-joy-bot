@@ -29,11 +29,9 @@ class Settings(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def warn_missing_api_keys(self) -> Self:
-        """Warn at startup if API keys are missing (but don't fail)."""
+    def warn_missing_optional_api_keys(self) -> Self:
+        """Warn at startup if optional API keys are missing."""
         missing = []
-        if not self.metaculus_token:
-            missing.append("METACULUS_TOKEN")
         if not self.exa_api_key:
             missing.append("EXA_API_KEY")
         if not self.asknews_client_id or not self.asknews_client_secret:
@@ -47,8 +45,7 @@ class Settings(BaseSettings):
 
     # === Metaculus ===
     # NOTE: Uses METACULUS_TOKEN (no AIB_ prefix) for compatibility with forecasting-tools library
-    metaculus_token: str | None = Field(
-        default=None,
+    metaculus_token: str = Field(
         validation_alias="METACULUS_TOKEN",
         description="Metaculus API token (reads from METACULUS_TOKEN env var)",
     )
@@ -178,8 +175,8 @@ class Settings(BaseSettings):
     )
 
 
-# Singleton instance
-settings = Settings()
+# Singleton instance (required fields are populated from environment by pydantic-settings)
+settings = Settings.model_validate({})
 
 # Export API keys to os.environ for external libraries (e.g., forecasting-tools)
 # that read directly from environment variables rather than using our settings.

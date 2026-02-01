@@ -78,7 +78,7 @@ uv run pytest -k "test_forecast"
 3. Check API key configuration: missing keys log warnings at startup
 
 **Common issues:**
-- `METACULUS_TOKEN` not set → Metaculus API calls fail
+- `METACULUS_TOKEN` not set → Startup fails (required)
 - `EXA_API_KEY` not set → Web search fails
 - Docker not running → Sandbox code execution fails
 
