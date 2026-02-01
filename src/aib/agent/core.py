@@ -286,7 +286,9 @@ def create_permission_hooks(
 
             if _path_is_under(file_path, all_readable):
                 return allow()
-            return deny(f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}")
+            return deny(
+                f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}"
+            )
 
         # Auto-allow everything else (WebSearch, WebFetch, MCP tools, Task)
         # These are already filtered by allowed_tools in options
@@ -459,7 +461,7 @@ async def run_forecast(
                 "preset": "claude_code",
                 "append": get_forecasting_system_prompt(),
             },
-            max_thinking_tokens=64_000-1,
+            max_thinking_tokens=64_000 - 1,
             permission_mode="bypassPermissions",
             hooks=hooks,  # type: ignore[arg-type]
             sandbox={
@@ -547,7 +549,8 @@ async def run_forecast(
                                     pass
                                 case _:
                                     logger.debug(
-                                        "Unhandled content block: %s", type(block).__name__
+                                        "Unhandled content block: %s",
+                                        type(block).__name__,
                                     )
                     case ResultMessage():
                         result = message
@@ -565,7 +568,9 @@ async def run_forecast(
                                 print_block(block)
                     case _:
                         print(f"📨 {type(message).__name__}: {message}")
-                        logger.debug("Unhandled message type: %s", type(message).__name__)
+                        logger.debug(
+                            "Unhandled message type: %s", type(message).__name__
+                        )
 
     if result is None:
         raise RuntimeError("No result received from agent")
@@ -709,7 +714,9 @@ async def run_forecast(
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
                 subagents_used=subagents_used,
             )
-            logger.info("Found meta-reflection %s for question %d", meta_file.name, question_id)
+            logger.info(
+                "Found meta-reflection %s for question %d", meta_file.name, question_id
+            )
         else:
             # Meta-reflection is required - log error but don't fail the forecast
             logger.error(

@@ -56,10 +56,14 @@ class Settings(BaseSettings):
         default=None, validation_alias="EXA_API_KEY", description="Exa search API key"
     )
     asknews_client_id: str | None = Field(
-        default=None, validation_alias="ASKNEWS_CLIENT_ID", description="AskNews client ID"
+        default=None,
+        validation_alias="ASKNEWS_CLIENT_ID",
+        description="AskNews client ID",
     )
     asknews_client_secret: str | None = Field(
-        default=None, validation_alias="ASKNEWS_SECRET", description="AskNews client secret"
+        default=None,
+        validation_alias="ASKNEWS_SECRET",
+        description="AskNews client secret",
     )
 
     # === Model ===

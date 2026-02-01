@@ -29,7 +29,9 @@ class TournamentQuestion:
     already_forecast: bool = False
 
 
-def list_open_tournament_questions(tournament_id: int | str) -> list[TournamentQuestion]:
+def list_open_tournament_questions(
+    tournament_id: int | str,
+) -> list[TournamentQuestion]:
     """List all open questions from a tournament.
 
     Args:
@@ -47,7 +49,9 @@ def list_open_tournament_questions(tournament_id: int | str) -> list[TournamentQ
         post_id = q.id_of_post
         url = q.page_url
         if post_id is None or url is None:
-            logger.warning("Skipping question with missing post_id or url: %s", q.question_text)
+            logger.warning(
+                "Skipping question with missing post_id or url: %s", q.question_text
+            )
             continue
 
         # Check if we've already forecast this question using Metaculus API

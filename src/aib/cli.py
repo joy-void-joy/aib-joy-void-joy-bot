@@ -124,7 +124,8 @@ def test(
 def submit(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
     comment: Annotated[
-        bool, typer.Option("--comment", "-c", help="Post reasoning as a private comment")
+        bool,
+        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
     ] = False,
 ) -> None:
     """Forecast a question and submit the prediction to Metaculus."""
@@ -183,7 +184,8 @@ def tournament(
         ),
     ] = True,
     comment: Annotated[
-        bool, typer.Option("--comment", "-c", help="Post reasoning as a private comment")
+        bool,
+        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
     ] = False,
     dry_run: Annotated[
         bool,
@@ -268,7 +270,9 @@ def tournament(
 
     # Summary
     print(f"\n{'=' * 60}")
-    print(f"Tournament complete: {success_count} submitted, {skip_count} skipped, {error_count} errors")
+    print(
+        f"Tournament complete: {success_count} submitted, {skip_count} skipped, {error_count} errors"
+    )
 
 
 if __name__ == "__main__":
