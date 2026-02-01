@@ -1,19 +1,44 @@
 ---
-allowed-tools: Write
-description: Guide for creating new slash commands
-argument-hint: [command-name] [description]
+allowed-tools: Write, Read, Glob
+description: Create a new slash command
+argument-hint: <command-name> <description of what the command should do>
 ---
 
-# Slash Command Creator Guide
+# Create New Slash Command
 
-## How This Command Works
-The `/add-command` command shows this guide for creating new slash commands. It includes:
-- Command structure and syntax
-- Common patterns and examples
-- Security restrictions and limitations
-- Frontmatter options
+## Your Task
 
-**Note for AI**: When creating commands, you CAN use bash tools like `Bash(mkdir:*)`, `Bash(ls:*)`, `Bash(git:*)` in the `allowed-tools` frontmatter of NEW commands - but ONLY for operations within the current project directory. This command itself doesn't need bash tools since it's just documentation.
+**IMPORTANT**: The user wants to CREATE a new slash command. They are NOT asking you to perform the action described—they want a command that will do it in the future.
+
+**Arguments provided**: $ARGUMENTS
+
+### How to Parse Arguments
+
+The first word is the **command name**. Everything after is the **description of what the command should do**.
+
+Example: `/add-command commit Please review all diffs and commit atomically`
+- Command name: `commit`
+- Description: "Please review all diffs and commit atomically"
+
+### Steps
+
+1. Parse the command name and description from the arguments
+2. Design a command that accomplishes the described behavior
+3. Write the command file to `.claude/commands/<command-name>.md` (project) or ask if they prefer `~/.claude/commands/` (personal)
+4. Include appropriate `allowed-tools` in frontmatter based on what the command needs
+5. Confirm the command was created and show how to use it
+
+### If No Arguments Provided
+
+If `$ARGUMENTS` is empty, ask the user:
+- What should the command be called?
+- What should it do?
+
+---
+
+# Reference: Command Syntax
+
+Use the reference below to write well-structured commands.
 
 ## Command Locations
 - **Personal**: `~/.claude/commands/` (available across all projects)
