@@ -5,10 +5,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from claude_agent_sdk.types import HookContext
+from claude_agent_sdk.types import HookContext
 
 import httpx
 from claude_agent_sdk import (
@@ -32,6 +31,7 @@ from aib.agent.history import (
     save_forecast,
 )
 from aib.agent.models import (
+    CreditExhaustedError,
     Forecast,
     ForecastMeta,
     ForecastOutput,
@@ -47,13 +47,10 @@ from aib.agent.numeric import (
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.agent.subagents import SUBAGENTS
 from aib.config import settings
-from aib.tools import (
-    composition_server,
-    forecasting_server,
-    markets_server,
-    notes_server,
-)
-from aib.tools.composition import set_run_forecast_fn
+from aib.tools.composition import composition_server, set_run_forecast_fn
+from aib.tools.forecasting import forecasting_server
+from aib.tools.markets import markets_server
+from aib.tools.notes import notes_server
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
@@ -75,9 +72,9 @@ def print_block(block: ContentBlock) -> None:
             if input_str:
                 print(input_str)
         case ToolResultBlock():
-            status = "❌" if block.is_error else "✅"
+            # Note: block.is_error is unreliable (SDK bug doesn't propagate MCP isError)
             content_preview = _truncate_content(block.content, max_len=500)
-            print(f"{status} Result [{block.tool_use_id}]: {content_preview}")
+            print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
@@ -216,7 +213,7 @@ def create_permission_hooks(
     async def permission_hook(
         input_data: Any,
         _tool_use_id: str | None,
-        _context: "HookContext",
+        _context: HookContext,
     ) -> dict[str, Any]:
         """Control tool access based on directory permissions."""
         if input_data.get("hook_event_name") != "PreToolUse":
@@ -398,29 +395,39 @@ async def run_forecast(
     reset_metrics()
 
     # Either fetch question or use provided context
+    # Note: question_id arg is actually the post_id from the URL
+    post_id: int = question_id or 0
+    actual_question_id: int = 0
+
     if question_context is not None:
         context = question_context
         question_title = context.get("title", "Sub-question")
         question_type = context.get("type", "binary")
-        # Use a placeholder ID for sub-forecasts
-        question_id = question_id or 0
+        # Sub-forecasts don't have real IDs
+        actual_question_id = context.get("question_id", 0)
         logger.info(
             "Starting sub-forecast session %s for: %s", session_id, question_title
         )
     elif question_id is not None:
-        logger.info(
-            "Starting forecast session %s for question %d", session_id, question_id
-        )
+        logger.info("Starting forecast session %s for post %d", session_id, question_id)
         post_data = await fetch_question(question_id)
         question = post_data.get("question", {})
         question_title = question.get("title", "Unknown")
         question_type = question.get("type", "binary")
+        # Extract the actual question ID (different from post ID)
+        actual_question_id = question.get("id", 0)
+        if actual_question_id == 0:
+            raise ValueError(
+                f"Could not extract question ID from post {question_id}. "
+                "The API response may be malformed."
+            )
+        logger.info("Post %d maps to question ID %d", question_id, actual_question_id)
         context = build_question_context(post_data)
     else:
         raise ValueError("Either question_id or question_context must be provided")
 
-    # Setup notes folder
-    notes = setup_notes_folder(session_id, question_id)
+    # Setup notes folder (using post_id for directory structure)
+    notes = setup_notes_folder(session_id, post_id)
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
@@ -429,14 +436,14 @@ async def run_forecast(
 
     # Load past forecasts for this question (if any)
     history_context = ""
-    if question_id is not None and question_id > 0:
-        past_forecasts = load_past_forecasts(question_id)
+    if post_id > 0:
+        past_forecasts = load_past_forecasts(post_id)
         if past_forecasts:
             history_context = format_history_for_context(past_forecasts)
             logger.info(
-                "Loaded %d past forecasts for question %d",
+                "Loaded %d past forecasts for post %d",
                 len(past_forecasts),
-                question_id,
+                post_id,
             )
 
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
@@ -547,6 +554,12 @@ async def run_forecast(
                             match block:
                                 case TextBlock():
                                     collected_text.append(block.text)
+                                    # Check for credit exhaustion
+                                    credit_error = CreditExhaustedError.from_message(
+                                        block.text
+                                    )
+                                    if credit_error:
+                                        raise credit_error
                                 case ThinkingBlock():
                                     collected_thinking.append(block.thinking)
                                 case ToolUseBlock():
@@ -589,7 +602,8 @@ async def run_forecast(
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
-        question_id=question_id,
+        question_id=actual_question_id,
+        post_id=post_id,
         question_title=question_title,
         question_type=question_type,
         summary="No forecast produced",
@@ -695,13 +709,13 @@ async def run_forecast(
     output.tool_metrics = metrics
 
     # Search for meta-reflection markdown files (required for top-level forecasts)
-    if question_id is not None and question_id > 0:
+    if post_id > 0:
         meta_dir = Path("./notes/meta")
         meta_files = []
 
         if meta_dir.exists():
-            # Find files matching _q<question_id>_ pattern
-            pattern = f"_q{question_id}_"
+            # Find files matching _q<post_id>_ pattern (agent writes using post_id)
+            pattern = f"_q{post_id}_"
             meta_files = [f for f in meta_dir.glob("*.md") if pattern in f.name]
             # Sort by filename (timestamp prefix) descending
             meta_files.sort(key=lambda f: f.name, reverse=True)
@@ -720,16 +734,14 @@ async def run_forecast(
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
                 subagents_used=subagents_used,
             )
-            logger.info(
-                "Found meta-reflection %s for question %d", meta_file.name, question_id
-            )
+            logger.info("Found meta-reflection %s for post %d", meta_file.name, post_id)
         else:
             # Meta-reflection is required - log error but don't fail the forecast
             logger.error(
-                "MISSING META-REFLECTION for question %d. "
+                "MISSING META-REFLECTION for post %d. "
                 "Agent failed to write a meta-reflection to notes/meta/ before final output. "
                 "This is a required step for tracking process reflection.",
-                question_id,
+                post_id,
             )
             output.meta = ForecastMeta(
                 meta_file_path=None,
@@ -738,10 +750,11 @@ async def run_forecast(
             )
 
     # Auto-save forecast to history (for top-level forecasts only)
-    if question_id is not None and question_id > 0:
+    if post_id > 0 and actual_question_id > 0:
         try:
             save_forecast(
-                question_id=question_id,
+                question_id=actual_question_id,
+                post_id=post_id,
                 question_title=question_title,
                 question_type=question_type,
                 summary=output.summary,

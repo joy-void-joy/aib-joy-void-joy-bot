@@ -11,6 +11,8 @@ import httpx
 import typer
 
 from aib.agent import ForecastOutput, run_forecast
+from aib.agent.history import load_latest_for_submission
+from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
     format_reasoning_comment,
@@ -23,6 +25,40 @@ app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
 logger = logging.getLogger(__name__)
 
 LOGS_BASE_PATH = Path("./logs")
+
+
+def wait_for_credit_reset(error: CreditExhaustedError) -> None:
+    """Wait until credit reset time, with progress updates."""
+    if error.reset_time is None:
+        # No reset time available, use a default wait of 1 hour
+        default_wait = 60 * 60
+        print("💤 Credit exhausted, waiting 1 hour (no reset time available)...")
+        time.sleep(default_wait)
+        return
+
+    now = datetime.now(error.reset_time.tzinfo)
+    wait_seconds = (error.reset_time - now).total_seconds()
+
+    if wait_seconds <= 0:
+        print("⚡ Reset time has passed, continuing...")
+        return
+
+    reset_str = error.reset_time.strftime("%H:%M %Z")
+    print(
+        f"💤 Credit exhausted. Waiting until {reset_str} ({wait_seconds / 60:.0f} minutes)..."
+    )
+
+    # Sleep in chunks to show progress
+    chunk_size = 300  # 5 minutes
+    remaining = wait_seconds
+    while remaining > 0:
+        sleep_time = min(chunk_size, remaining)
+        time.sleep(sleep_time)
+        remaining -= sleep_time
+        if remaining > 0:
+            print(f"   ⏳ {remaining / 60:.0f} minutes remaining...")
+
+    print("⚡ Credit reset time reached, resuming...")
 
 
 def display_forecast(output: ForecastOutput) -> None:
@@ -113,6 +149,12 @@ def test(
     try:
         output = asyncio.run(run_forecast(question_id))
         display_forecast(output)
+    except CreditExhaustedError as e:
+        reset_msg = ""
+        if e.reset_time:
+            reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
+        print(f"❌ Credit exhausted.{reset_msg}")
+        raise typer.Exit(1)
     except httpx.HTTPStatusError as e:
         print(f"Failed to fetch question: {e}")
         raise typer.Exit(1)
@@ -123,30 +165,58 @@ def test(
 
 @app.command()
 def submit(
-    question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
+    question_id: Annotated[int, typer.Argument(help="Metaculus post ID")],
     comment: Annotated[
         bool,
         typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
     ] = False,
+    use_cache: Annotated[
+        bool,
+        typer.Option(
+            "--use-cache/--no-cache",
+            help="Use cached forecast if available instead of re-running agent",
+        ),
+    ] = True,
 ) -> None:
     """Forecast a question and submit the prediction to Metaculus."""
-    log_file = setup_logging(question_id)
-    print(f"Logging to {log_file}")
+    output: ForecastOutput | None = None
 
-    try:
-        output = asyncio.run(run_forecast(question_id))
-        display_forecast(output)
-    except httpx.HTTPStatusError as e:
-        print(f"Failed to fetch question: {e}")
-        raise typer.Exit(1)
-    except RuntimeError as e:
-        print(f"Agent failed: {e}")
-        raise typer.Exit(1)
+    # Try to load from cache if requested
+    if use_cache:
+        output = load_latest_for_submission(question_id)
+        if output is not None:
+            print(f"📂 Loaded cached forecast from notes/forecasts/{question_id}/")
+            display_forecast(output)
+        else:
+            print("⚠️  No cached forecast found, running agent...")
+
+    # Run forecast if not loaded from cache
+    if output is None:
+        log_file = setup_logging(question_id)
+        print(f"Logging to {log_file}")
+
+        try:
+            output = asyncio.run(run_forecast(question_id))
+            display_forecast(output)
+        except CreditExhaustedError as e:
+            reset_msg = ""
+            if e.reset_time:
+                reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
+            print(f"❌ Credit exhausted.{reset_msg}")
+            raise typer.Exit(1)
+        except httpx.HTTPStatusError as e:
+            print(f"Failed to fetch question: {e}")
+            raise typer.Exit(1)
+        except RuntimeError as e:
+            print(f"Agent failed: {e}")
+            raise typer.Exit(1)
 
     print("Submitting forecast to Metaculus...")
     try:
         asyncio.run(submit_forecast(output))
-        print(f"✅ Forecast submitted for question {question_id}")
+        print(
+            f"✅ Forecast submitted (post {output.post_id} → question {output.question_id})"
+        )
     except SubmissionError as e:
         print(f"❌ Submission failed: {e}")
         raise typer.Exit(1)
@@ -155,8 +225,9 @@ def submit(
         print("Posting reasoning comment...")
         try:
             comment_text = format_reasoning_comment(output)
-            asyncio.run(post_comment(question_id, comment_text))
-            print(f"✅ Comment posted on question {question_id}")
+            # Comments use post_id, not question_id
+            asyncio.run(post_comment(output.post_id, comment_text))
+            print(f"✅ Comment posted on post {output.post_id}")
         except SubmissionError as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
 
@@ -236,17 +307,27 @@ def tournament(
         log_file = setup_logging(q.post_id)
         print(f"  📝 Logging to {log_file}")
 
-        # Run forecast
-        try:
-            output = asyncio.run(run_forecast(q.post_id))
-            display_forecast(output)
-        except httpx.HTTPStatusError as e:
-            print(f"  ❌ Failed to fetch question: {e}")
-            error_count += 1
-            continue
-        except RuntimeError as e:
-            print(f"  ❌ Agent failed: {e}")
-            error_count += 1
+        # Run forecast with credit exhaustion retry
+        output: ForecastOutput | None = None
+        while True:
+            try:
+                output = asyncio.run(run_forecast(q.post_id))
+                display_forecast(output)
+                break
+            except CreditExhaustedError as e:
+                print(f"  ⚠️  {e}")
+                wait_for_credit_reset(e)
+                print(f"  🔄 Retrying {q.post_id}...")
+            except httpx.HTTPStatusError as e:
+                print(f"  ❌ Failed to fetch question: {e}")
+                error_count += 1
+                break
+            except RuntimeError as e:
+                print(f"  ❌ Agent failed: {e}")
+                error_count += 1
+                break
+
+        if output is None:
             continue
 
         # Submit forecast
@@ -292,6 +373,13 @@ def loop(
         bool,
         typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
     ] = False,
+    use_cache: Annotated[
+        bool,
+        typer.Option(
+            "--use-cache/--no-cache",
+            help="Use cached forecast if available instead of re-running agent",
+        ),
+    ] = True,
 ) -> None:
     """Continuously forecast tournaments in a loop.
 
@@ -331,22 +419,47 @@ def loop(
 
             # Filter to only unforecast questions
             pending = [q for q in questions if not q.already_forecast]
-            print(f"  Found {len(pending)} pending questions (of {len(questions)} open)")
+            print(
+                f"  Found {len(pending)} pending questions (of {len(questions)} open)"
+            )
 
             for i, q in enumerate(pending, 1):
                 print(f"\n  [{i}/{len(pending)}] {q.post_id}: {q.title[:50]}...")
 
-                log_file = setup_logging(q.post_id)
-                print(f"    📝 Logging to {log_file}")
+                output: ForecastOutput | None = None
 
-                try:
-                    output = asyncio.run(run_forecast(q.post_id))
-                    display_forecast(output)
-                except httpx.HTTPStatusError as e:
-                    print(f"    ❌ Failed to fetch: {e}")
-                    continue
-                except RuntimeError as e:
-                    print(f"    ❌ Agent failed: {e}")
+                # Try cache first
+                if use_cache:
+                    output = load_latest_for_submission(q.post_id)
+                    if output is not None:
+                        print("    📂 Loaded from cache")
+                        display_forecast(output)
+
+                # Run agent if no cached forecast
+                if output is None:
+                    log_file = setup_logging(q.post_id)
+                    print(f"    📝 Logging to {log_file}")
+
+                    # Retry loop for credit exhaustion
+                    while True:
+                        try:
+                            output = asyncio.run(run_forecast(q.post_id))
+                            display_forecast(output)
+                            break
+                        except CreditExhaustedError as e:
+                            print(f"    ⚠️  {e}")
+                            wait_for_credit_reset(e)
+                            print(f"    🔄 Retrying {q.post_id}...")
+                        except httpx.HTTPStatusError as e:
+                            print(f"    ❌ Failed to fetch: {e}")
+                            output = None
+                            break
+                        except RuntimeError as e:
+                            print(f"    ❌ Agent failed: {e}")
+                            output = None
+                            break
+
+                if output is None:
                     continue
 
                 print("    📤 Submitting...")

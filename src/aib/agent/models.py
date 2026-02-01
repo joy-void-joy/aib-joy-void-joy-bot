@@ -1,9 +1,77 @@
 """Pydantic models for forecasting."""
 
 import math
-from datetime import date
+import re
+from datetime import date, datetime, timedelta
 
 from pydantic import BaseModel, Field, computed_field
+import zoneinfo
+
+
+class CreditExhaustedError(Exception):
+    """Raised when API credits are exhausted.
+
+    Includes reset time so callers can wait appropriately.
+    """
+
+    def __init__(self, message: str, reset_time: datetime | None = None):
+        super().__init__(message)
+        self.reset_time = reset_time
+
+    @classmethod
+    def from_message(cls, message: str) -> "CreditExhaustedError | None":
+        """Parse a credit exhaustion message and extract reset time.
+
+        Expected patterns:
+        - "out of extra usage · resets 6pm (Europe/Paris)"
+        - "out of extra usage · resets 2pm (America/New_York)"
+
+        Returns None if the message doesn't match the expected pattern.
+        """
+        # Check if this is a credit exhaustion message
+        if (
+            "out of extra usage" not in message.lower()
+            and "out of usage" not in message.lower()
+        ):
+            return None
+
+        # Try to extract reset time
+        # Pattern: "resets <time> (<timezone>)"
+        match = re.search(
+            r"resets?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*\(([^)]+)\)",
+            message,
+            re.IGNORECASE,
+        )
+
+        reset_time: datetime | None = None
+        if match:
+            hour = int(match.group(1))
+            minute = int(match.group(2)) if match.group(2) else 0
+            am_pm = match.group(3)
+            tz_name = match.group(4)
+
+            # Convert to 24-hour format
+            if am_pm:
+                if am_pm.lower() == "pm" and hour != 12:
+                    hour += 12
+                elif am_pm.lower() == "am" and hour == 12:
+                    hour = 0
+
+            try:
+                tz = zoneinfo.ZoneInfo(tz_name)
+                now = datetime.now(tz)
+                reset_time = now.replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
+
+                # If reset time is in the past, assume it's tomorrow
+                if reset_time <= now:
+                    reset_time += timedelta(days=1)
+            except (KeyError, ValueError):
+                # Invalid timezone, proceed without reset time
+                pass
+
+        return cls(message, reset_time)
 
 
 class Factor(BaseModel):
@@ -529,7 +597,8 @@ class ForecastMeta(BaseModel):
 class ForecastOutput(BaseModel):
     """Full output from a forecasting run, including metadata."""
 
-    question_id: int = Field(description="Metaculus question/post ID.")
+    question_id: int = Field(description="Metaculus question ID (for submission API).")
+    post_id: int = Field(description="Metaculus post ID (for URLs and comments).")
     question_title: str = Field(description="Title of the question.")
     question_type: str = Field(
         description="Type: binary, multiple_choice, numeric, etc."
