@@ -4,6 +4,7 @@ Notes are stored as JSON files with consistent schema for easy search and retrie
 Supports list, search, read, and write operations.
 """
 
+import asyncio
 import logging
 import re
 import uuid
@@ -12,6 +13,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, Required, TypedDict
 
+import aiofiles
 from pydantic import BaseModel, Field
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
@@ -40,13 +42,17 @@ class Note(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     type: NoteType
     topic: str = Field(description="Short topic/title for the note")
-    summary: str = Field(description="1-2 sentence summary, always shown in search results")
+    summary: str = Field(
+        description="1-2 sentence summary, always shown in search results"
+    )
     content: str = Field(description="Full details, only returned on explicit read")
     sources: list[str] = Field(default_factory=list, description="URLs or references")
     confidence: float | None = Field(
         default=None, ge=0, le=1, description="Confidence level for estimates"
     )
-    question_id: int | None = Field(default=None, description="Associated Metaculus question ID")
+    question_id: int | None = Field(
+        default=None, description="Associated Metaculus question ID"
+    )
     report_path: str | None = Field(
         default=None, description="Path to detailed .md report file if any"
     )
@@ -96,27 +102,36 @@ def _get_notes_dir() -> Path:
     return notes_dir
 
 
-def _load_all_notes() -> list[Note]:
-    """Load all notes from storage."""
+async def _load_all_notes() -> list[Note]:
+    """Load all notes from storage (async)."""
     notes_dir = _get_notes_dir()
-    notes = []
+    notes: list[Note] = []
 
-    for filepath in notes_dir.glob("*.json"):
+    # Get list of files (sync glob is fine for small directories)
+    filepaths = list(notes_dir.glob("*.json"))
+
+    async def load_one(filepath: Path) -> Note | None:
         try:
-            content = filepath.read_text(encoding="utf-8")
-            note = Note.model_validate_json(content)
-            notes.append(note)
+            async with aiofiles.open(filepath, encoding="utf-8") as f:
+                content = await f.read()
+            return Note.model_validate_json(content)
         except Exception as e:
             logger.warning("Failed to load note %s: %s", filepath, e)
+            return None
+
+    # Load all notes concurrently
+    results = await asyncio.gather(*[load_one(fp) for fp in filepaths])
+    notes = [n for n in results if n is not None]
 
     return notes
 
 
-def _save_note(note: Note) -> Path:
-    """Save a note to storage."""
+async def _save_note(note: Note) -> Path:
+    """Save a note to storage (async)."""
     notes_dir = _get_notes_dir()
     filepath = notes_dir / f"{note.id}.json"
-    filepath.write_text(note.model_dump_json(indent=2), encoding="utf-8")
+    async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+        await f.write(note.model_dump_json(indent=2))
     return filepath
 
 
@@ -195,7 +210,7 @@ async def _list_notes(
     question_id: int | None = None,
 ) -> dict[str, Any]:
     """List notes with optional filtering."""
-    notes = _load_all_notes()
+    notes = await _load_all_notes()
 
     # Apply filters
     if type_filter:
@@ -204,7 +219,9 @@ async def _list_notes(
             notes = [n for n in notes if n.type == note_type]
         except ValueError:
             valid_types = [t.value for t in NoteType]
-            return mcp_error(f"Invalid type_filter: {type_filter}. Valid: {valid_types}")
+            return mcp_error(
+                f"Invalid type_filter: {type_filter}. Valid: {valid_types}"
+            )
 
     if question_id is not None:
         notes = [n for n in notes if n.question_id == question_id]
@@ -231,7 +248,7 @@ async def _search_notes(
     type_filter: str | None = None,
 ) -> dict[str, Any]:
     """Search notes by query, returning summaries only."""
-    notes = _load_all_notes()
+    notes = await _load_all_notes()
 
     # Apply type filter first
     if type_filter:
@@ -240,7 +257,9 @@ async def _search_notes(
             notes = [n for n in notes if n.type == note_type]
         except ValueError:
             valid_types = [t.value for t in NoteType]
-            return mcp_error(f"Invalid type_filter: {type_filter}. Valid: {valid_types}")
+            return mcp_error(
+                f"Invalid type_filter: {type_filter}. Valid: {valid_types}"
+            )
 
     # Search in topic, summary, and content
     pattern = re.compile(re.escape(query), re.IGNORECASE)
@@ -278,7 +297,8 @@ async def _read_note(note_id: str) -> dict[str, Any]:
         return mcp_error(f"Note not found: {note_id}")
 
     try:
-        content = filepath.read_text(encoding="utf-8")
+        async with aiofiles.open(filepath, encoding="utf-8") as f:
+            content = await f.read()
         note = Note.model_validate_json(content)
         return mcp_success(note.model_dump(mode="json"))
     except Exception as e:
@@ -315,7 +335,7 @@ async def _write_note(args: NotesInput) -> dict[str, Any]:
     )
 
     # Save
-    filepath = _save_note(note)
+    filepath = await _save_note(note)
     logger.info("Created note %s at %s", note.id, filepath)
 
     return mcp_success(
