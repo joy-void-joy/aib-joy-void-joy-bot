@@ -1,7 +1,5 @@
 """Async Metaculus API client using httpx."""
 
-from __future__ import annotations
-
 import logging
 import os
 from typing import Any
@@ -140,6 +138,12 @@ class AsyncMetaculusClient:
                     break
 
                 for post_json in results:
+                    # Client-side status filtering (API may not filter correctly)
+                    if api_filter.allowed_statuses:
+                        post_status = post_json.get("status")
+                        if post_status not in api_filter.allowed_statuses:
+                            continue
+
                     parsed = self._parse_post_json(
                         post_json, api_filter.group_question_mode
                     )
