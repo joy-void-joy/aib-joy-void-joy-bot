@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -273,6 +274,112 @@ def tournament(
     print(
         f"Tournament complete: {success_count} submitted, {skip_count} skipped, {error_count} errors"
     )
+
+
+@app.command()
+def loop(
+    tournaments: Annotated[
+        list[str] | None,
+        typer.Argument(
+            help="Tournament IDs or aliases to loop over (default: aib minibench)"
+        ),
+    ] = None,
+    interval: Annotated[
+        int,
+        typer.Option("--interval", "-i", help="Minutes between runs"),
+    ] = 20,
+    comment: Annotated[
+        bool,
+        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
+    ] = False,
+) -> None:
+    """Continuously forecast tournaments in a loop.
+
+    Runs forever, checking each tournament for new questions every INTERVAL minutes.
+    Use Ctrl+C to stop.
+    """
+    if tournaments is None:
+        tournaments = ["aib", "minibench"]
+
+    print(f"Starting forecast loop for tournaments: {', '.join(tournaments)}")
+    print(f"Interval: {interval} minutes")
+    print("Press Ctrl+C to stop\n")
+
+    while True:
+        cycle_start = time.time()
+        print(f"\n{'=' * 60}")
+        print(f"Cycle started at {datetime.now(timezone.utc).isoformat()}")
+        print("=" * 60)
+
+        for tid in tournaments:
+            # Resolve tournament ID alias
+            resolved_id: int | str
+            if tid in TOURNAMENT_IDS:
+                resolved_id = TOURNAMENT_IDS[tid]
+            elif tid.isdigit():
+                resolved_id = int(tid)
+            else:
+                resolved_id = tid
+
+            print(f"\n📊 Tournament: {tid} ({resolved_id})")
+
+            try:
+                questions = list_open_tournament_questions(resolved_id)
+            except Exception as e:
+                print(f"  ❌ Failed to fetch questions: {e}")
+                continue
+
+            # Filter to only unforecast questions
+            pending = [q for q in questions if not q.already_forecast]
+            print(f"  Found {len(pending)} pending questions (of {len(questions)} open)")
+
+            for i, q in enumerate(pending, 1):
+                print(f"\n  [{i}/{len(pending)}] {q.post_id}: {q.title[:50]}...")
+
+                log_file = setup_logging(q.post_id)
+                print(f"    📝 Logging to {log_file}")
+
+                try:
+                    output = asyncio.run(run_forecast(q.post_id))
+                    display_forecast(output)
+                except httpx.HTTPStatusError as e:
+                    print(f"    ❌ Failed to fetch: {e}")
+                    continue
+                except RuntimeError as e:
+                    print(f"    ❌ Agent failed: {e}")
+                    continue
+
+                print("    📤 Submitting...")
+                try:
+                    asyncio.run(submit_forecast(output))
+                    print("    ✅ Submitted")
+                except SubmissionError as e:
+                    print(f"    ❌ Submission failed: {e}")
+                    continue
+
+                if comment:
+                    try:
+                        comment_text = format_reasoning_comment(output)
+                        asyncio.run(post_comment(q.post_id, comment_text))
+                        print("    💬 Comment posted")
+                    except SubmissionError as e:
+                        print(f"    ⚠️  Comment failed: {e}")
+
+        cycle_duration = time.time() - cycle_start
+        print(f"\n✅ Cycle complete in {cycle_duration:.0f}s")
+
+        sleep_seconds = interval * 60
+        next_run = datetime.now(timezone.utc).timestamp() + sleep_seconds
+        next_run_str = datetime.fromtimestamp(next_run, timezone.utc).strftime(
+            "%H:%M:%S UTC"
+        )
+        print(f"💤 Sleeping {interval} minutes (next run at {next_run_str})...")
+
+        try:
+            time.sleep(sleep_seconds)
+        except KeyboardInterrupt:
+            print("\n\n👋 Loop stopped by user")
+            raise typer.Exit(0)
 
 
 if __name__ == "__main__":
