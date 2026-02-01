@@ -169,8 +169,10 @@ async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
 @tool(
     "get_metaculus_questions",
     (
-        "Fetch details for one or more Metaculus questions. "
+        "Fetch details for one or more Metaculus questions by their POST ID. "
         "Pass post_id_list as a list of integer post IDs (e.g., [12345] or [12345, 67890]). "
+        "IMPORTANT: These are QUESTION post IDs, not tournament IDs. "
+        "To find question IDs, use list_tournament_questions first. "
         "Returns question details including title, description, resolution criteria, "
         "fine print, and community prediction (if available). "
         "Note: Community predictions are NOT available in the AIB tournament. "
@@ -218,7 +220,9 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     "list_tournament_questions",
     (
         "List open questions from a specific Metaculus tournament. "
-        "Common IDs: 32916 (AIB Spring 2026), 'minibench' (MiniBench), 32921 (Metaculus Cup). "
+        "Common TOURNAMENT IDs (not question IDs): "
+        "32916 (AIB Spring 2026), 'minibench' (MiniBench), 32921 (Metaculus Cup). "
+        "Returns question post IDs that can be used with get_metaculus_questions. "
         f"Optional num_questions (default: {settings.tournament_default_limit})."
     ),
     {"tournament_id": int, "num_questions": int},
@@ -525,8 +529,11 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"News search failed: {e}")
 
 
-# Wikipedia API base URL
+# Wikipedia API base URL and headers
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
+WIKIPEDIA_HEADERS = {
+    "User-Agent": "AIBForecastingBot/1.0 (https://github.com/joy-void-joy/aib-forecasting-bot; forecasting research)"
+}
 
 
 @tool(
@@ -557,7 +564,8 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         @with_retry(max_attempts=3)
         async def _search() -> list[dict[str, Any]]:
             async with httpx.AsyncClient(
-                timeout=settings.http_timeout_seconds
+                timeout=settings.http_timeout_seconds,
+                headers=WIKIPEDIA_HEADERS,
             ) as client:
                 search_response = await client.get(
                     WIKIPEDIA_API_URL,
@@ -605,7 +613,8 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         @with_retry(max_attempts=3)
         async def _fetch() -> dict[str, Any]:
             async with httpx.AsyncClient(
-                timeout=settings.http_timeout_seconds
+                timeout=settings.http_timeout_seconds,
+                headers=WIKIPEDIA_HEADERS,
             ) as client:
                 response = await client.get(
                     WIKIPEDIA_API_URL,
