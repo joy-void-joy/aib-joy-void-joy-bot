@@ -224,7 +224,7 @@ No comment needed. The behavior is self-evident to anyone familiar with config f
 
 ## Helper Scripts
 
-The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Avoid `uv run python -c "..."` unless it's a trivial one-liner you're certain won't be repeated.
+The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` — this is denied in settings.json. Instead, create a script if the existing ones don't cover your use case.
 
 If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
 
@@ -252,6 +252,21 @@ Examples:
 uv run python .claude/scripts/inspect_api.py forecasting_tools.SmartSearcher
 uv run python .claude/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
 uv run python .claude/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
+```
+
+### module_info.py
+
+Get paths and source code for installed Python modules. Use this instead of `uv run python -c "import x; print(x.__file__)"`.
+
+```bash
+# Get the file path of a module
+uv run python .claude/scripts/module_info.py path forecasting_tools.helpers.asknews_searcher
+
+# View module source code (first 100 lines by default)
+uv run python .claude/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher
+
+# View more lines
+uv run python .claude/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher --lines 200
 ```
 
 ### new_worktree.py
@@ -303,6 +318,12 @@ The script:
 ## Settings & Configuration
 
 All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
+
+### Merging Local Settings
+
+**Every time you ask for permissions or respond to the user**, check if `.claude/settings.local.json` exists. If it does, review it for sensible defaults that should be merged into `.claude/settings.json`. This ensures useful permission patterns discovered during development get committed to the shared config.
+
+`.claude/settings.local.json` is gitignored and contains user-specific or experimental settings. When a pattern proves useful, merge it to `.claude/settings.json` so the whole team benefits.
 
 ## Planning & Documentation
 
