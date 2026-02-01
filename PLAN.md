@@ -44,8 +44,12 @@ notes/
 ├── sessions/<session_id>/        # RW - current session working notes
 ├── research/                     # RO - all historical research
 │   └── <timestamp>/              # RW - this session's research
-└── forecasts/                    # RO - all historical forecasts
-    └── <timestamp>/              # RW - this session's forecast
+├── forecasts/                    # RO - all historical forecasts
+│   └── <question_id>/            # RW - forecasts for this question
+└── feedback_loop/                # Calibration metrics and analysis
+    ├── <timestamp>_metrics.json  # Output from feedback_collect.py
+    ├── <timestamp>_analysis.md   # Analysis notes from /feedback-loop
+    └── last_run.json             # Tracks last collection timestamp
 ```
 
 ---
@@ -154,6 +158,24 @@ uv run forecast run
 - [ ] Error handling with retries and fallback predictions
 - [ ] Rate limiting for API calls
 - [ ] Tests for critical paths
+
+### Phase 7: Feedback Loop
+> Goal: Learn from resolved forecasts to improve calibration
+
+- [x] `feedback_collect.py`: Fetch resolved questions, match to forecasts, compute Brier/log scores
+- [x] `/feedback-loop` command: Orchestrate collection, analysis, and code improvements
+- [ ] Calibration analysis: Identify systematic biases (overconfidence, domain blindspots)
+- [ ] Prompt refinement: Automatically adjust prompts based on calibration data
+- [ ] Experiment tracking: Version prompts and compare performance across runs
+
+**Data flow:**
+```
+Metaculus (resolved questions) → feedback_collect.py → notes/feedback_loop/
+                                                              ↓
+                                              /feedback-loop command
+                                                              ↓
+                                        Analyze patterns → Edit agent code
+```
 
 ---
 
