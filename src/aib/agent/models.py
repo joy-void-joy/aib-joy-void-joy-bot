@@ -17,6 +17,22 @@ class Factor(BaseModel):
             "Scale: ±0.5 mild, ±1.0 moderate, ±2.0 strong, ±3.0 very strong."
         )
     )
+    confidence: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Confidence in this evidence (0-1). "
+            "1.0 = fully confident, 0.5 = half confident. "
+            "Effective logit = logit × confidence."
+        ),
+    )
+
+    @computed_field
+    @property
+    def effective_logit(self) -> float:
+        """The logit value adjusted for confidence."""
+        return self.logit * self.confidence
 
 
 # --- Subagent Output Models ---
@@ -100,7 +116,7 @@ class Precedent(BaseModel):
     """A historical precedent for comparison."""
 
     event: str = Field(description="What happened.")
-    date: date | None = Field(default=None, description="When it happened.")
+    event_date: date | None = Field(default=None, description="When it happened.")
     outcome: str = Field(description="How it resolved.")
     similarity_score: float = Field(
         description="How similar to the current question (0-1)."
@@ -209,8 +225,12 @@ class RelevantNews(BaseModel):
     relevance: str = Field(description="Why this news is relevant.")
 
 
-class QuestionLinkerOutput(BaseModel):
-    """Output from the question-linker subagent."""
+class MarketResearcherOutput(BaseModel):
+    """Output from the market-researcher subagent.
+
+    This model captures the structured output when using the market-researcher
+    subagent to find related questions and market signals across platforms.
+    """
 
     metaculus_questions: list[LinkedQuestion] = Field(
         default_factory=list, description="Related Metaculus questions."
@@ -264,6 +284,68 @@ class Forecast(BaseModel):
         """Convert logit to probability via sigmoid (for comparison)."""
         return 1 / (1 + math.exp(-self.logit))
 
+    @computed_field
+    @property
+    def factors_sum_logit(self) -> float:
+        """Sum of effective logits from all factors."""
+        return sum(f.effective_logit for f in self.factors)
+
+    @computed_field
+    @property
+    def probability_from_factors(self) -> float:
+        """Probability computed from sum of factor effective logits."""
+        return 1 / (1 + math.exp(-self.factors_sum_logit))
+
+    def check_consistency(self, threshold: float = 0.15) -> list[str]:
+        """Check for consistency issues between factors and final probability.
+
+        Args:
+            threshold: Maximum acceptable difference between factor-implied
+                      probability and final probability.
+
+        Returns:
+            List of warning messages (empty if consistent).
+        """
+        warnings = []
+
+        if not self.factors:
+            return warnings
+
+        # Check if factors imply significantly different probability
+        factor_prob = self.probability_from_factors
+        diff = abs(factor_prob - self.probability)
+        if diff > threshold:
+            warnings.append(
+                f"Factor-implied probability ({factor_prob:.1%}) differs from "
+                f"final probability ({self.probability:.1%}) by {diff:.1%}. "
+                f"Consider adjusting factors or explaining the discrepancy."
+            )
+
+        # Check for contradictory strong factors
+        strong_positive = [f for f in self.factors if f.effective_logit >= 1.5]
+        strong_negative = [f for f in self.factors if f.effective_logit <= -1.5]
+        if strong_positive and strong_negative:
+            warnings.append(
+                f"Strong contradictory evidence: {len(strong_positive)} strong positive "
+                f"factors and {len(strong_negative)} strong negative factors. "
+                f"Consider if all factors are correctly weighted."
+            )
+
+        # Check if final probability contradicts overall factor direction
+        net_direction = self.factors_sum_logit
+        if net_direction > 0.5 and self.probability < 0.4:
+            warnings.append(
+                f"Factors sum to positive ({net_direction:+.2f}) but probability is low "
+                f"({self.probability:.1%}). Consider if factors are missing or overweighted."
+            )
+        elif net_direction < -0.5 and self.probability > 0.6:
+            warnings.append(
+                f"Factors sum to negative ({net_direction:+.2f}) but probability is high "
+                f"({self.probability:.1%}). Consider if factors are missing or underweighted."
+            )
+
+        return warnings
+
 
 class MultipleChoiceForecast(BaseModel):
     """Forecast for multiple choice questions."""
@@ -283,12 +365,38 @@ class MultipleChoiceForecast(BaseModel):
     )
 
 
+class ScenarioComponent(BaseModel):
+    """A scenario component for mixture distribution forecasts.
+
+    Describes one possible scenario with its probability distribution.
+    Multiple scenarios are weighted together to form the final forecast.
+    """
+
+    scenario: str = Field(
+        description="Scenario name: 'Base case', 'Upside', 'Downside', etc."
+    )
+    mode: float = Field(description="Most likely value if this scenario occurs.")
+    lower_bound: float = Field(
+        description="10th percentile: 90% chance outcome is above this."
+    )
+    upper_bound: float = Field(
+        description="90th percentile: 10% chance outcome is above this."
+    )
+    weight: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Probability this scenario occurs (weights sum to 1.0).",
+    )
+
+
 class NumericForecast(BaseModel):
     """Forecast for numeric questions.
 
-    Provides percentile estimates that are converted to a 201-point CDF
-    for Metaculus submission. The agent outputs sparse percentiles (10th, 20th,
-    40th, 60th, 80th, 90th) and the system interpolates to generate the full CDF.
+    Supports two modes:
+    1. Percentile mode: Provide sparse percentiles (10th, 20th, 40th, 60th, 80th, 90th)
+    2. Mixture mode: Provide scenario components with modes and weights
+
+    If components are provided, they take precedence over percentiles.
     """
 
     summary: str = Field(
@@ -298,47 +406,124 @@ class NumericForecast(BaseModel):
         default_factory=list,
         description="Key pieces of evidence that influenced the estimate.",
     )
-    percentile_10: float = Field(
-        description="10th percentile estimate: 90% chance the outcome is above this value."
+
+    # Percentile mode fields (traditional approach)
+    percentile_10: float | None = Field(
+        default=None,
+        description="10th percentile estimate: 90% chance the outcome is above this value.",
     )
-    percentile_20: float = Field(
-        description="20th percentile estimate: 80% chance the outcome is above this value."
+    percentile_20: float | None = Field(
+        default=None,
+        description="20th percentile estimate: 80% chance the outcome is above this value.",
     )
-    percentile_40: float = Field(
-        description="40th percentile estimate: 60% chance the outcome is above this value."
+    percentile_40: float | None = Field(
+        default=None,
+        description="40th percentile estimate: 60% chance the outcome is above this value.",
     )
-    percentile_60: float = Field(
-        description="60th percentile estimate: 40% chance the outcome is above this value."
+    percentile_60: float | None = Field(
+        default=None,
+        description="60th percentile estimate: 40% chance the outcome is above this value.",
     )
-    percentile_80: float = Field(
-        description="80th percentile estimate: 20% chance the outcome is above this value."
+    percentile_80: float | None = Field(
+        default=None,
+        description="80th percentile estimate: 20% chance the outcome is above this value.",
     )
-    percentile_90: float = Field(
-        description="90th percentile estimate: 10% chance the outcome is above this value."
+    percentile_90: float | None = Field(
+        default=None,
+        description="90th percentile estimate: 10% chance the outcome is above this value.",
     )
+
+    # Mixture mode fields (scenario-based approach)
+    components: list[ScenarioComponent] | None = Field(
+        default=None,
+        description=(
+            "Scenario components for mixture distribution. "
+            "Each component has a mode, bounds, and weight. "
+            "If provided, takes precedence over percentile fields."
+        ),
+    )
+
+    @property
+    def uses_mixture_mode(self) -> bool:
+        """Check if this forecast uses mixture mode."""
+        return self.components is not None and len(self.components) > 0
 
     @computed_field
     @property
-    def median(self) -> float:
+    def median(self) -> float | None:
         """Estimated median (interpolated from 40th and 60th percentiles)."""
-        return (self.percentile_40 + self.percentile_60) / 2
+        if self.uses_mixture_mode:
+            # For mixture mode, compute weighted average of component modes
+            if self.components:
+                return sum(c.mode * c.weight for c in self.components)
+            return None
+        if self.percentile_40 is not None and self.percentile_60 is not None:
+            return (self.percentile_40 + self.percentile_60) / 2
+        return None
 
     @computed_field
     @property
-    def confidence_interval(self) -> tuple[float, float]:
+    def confidence_interval(self) -> tuple[float, float] | None:
         """90% confidence interval (10th to 90th percentile)."""
-        return (self.percentile_10, self.percentile_90)
+        if self.uses_mixture_mode:
+            # For mixture mode, use min lower and max upper across components
+            if self.components:
+                return (
+                    min(c.lower_bound for c in self.components),
+                    max(c.upper_bound for c in self.components),
+                )
+            return None
+        if self.percentile_10 is not None and self.percentile_90 is not None:
+            return (self.percentile_10, self.percentile_90)
+        return None
 
-    def get_percentile_dict(self) -> dict[int, float]:
-        """Return percentiles as a dict for CDF generation."""
+    def get_percentile_dict(self) -> dict[int, float] | None:
+        """Return percentiles as a dict for CDF generation.
+
+        Returns None if using mixture mode (use components instead).
+        """
+        if self.uses_mixture_mode:
+            return None
+        if any(
+            p is None
+            for p in [
+                self.percentile_10,
+                self.percentile_20,
+                self.percentile_40,
+                self.percentile_60,
+                self.percentile_80,
+                self.percentile_90,
+            ]
+        ):
+            return None
         return {
-            10: self.percentile_10,
-            20: self.percentile_20,
-            40: self.percentile_40,
-            60: self.percentile_60,
-            80: self.percentile_80,
-            90: self.percentile_90,
+            10: self.percentile_10,  # type: ignore[dict-item]
+            20: self.percentile_20,  # type: ignore[dict-item]
+            40: self.percentile_40,  # type: ignore[dict-item]
+            60: self.percentile_60,  # type: ignore[dict-item]
+            80: self.percentile_80,  # type: ignore[dict-item]
+            90: self.percentile_90,  # type: ignore[dict-item]
         }
+
+
+class ForecastMeta(BaseModel):
+    """Lightweight reference to process reflection.
+
+    Full reflection is stored as a markdown file in notes/meta/.
+    """
+
+    meta_file_path: str | None = Field(
+        default=None,
+        description="Path to meta-reflection markdown file in notes/meta/.",
+    )
+    tools_used_count: int = Field(
+        default=0,
+        description="Count of distinct tools used.",
+    )
+    subagents_used: list[str] = Field(
+        default_factory=list,
+        description="Subagents invoked during research.",
+    )
 
 
 class ForecastOutput(BaseModel):
@@ -405,4 +590,12 @@ class ForecastOutput(BaseModel):
     cost_usd: float | None = Field(
         default=None,
         description="Cost of the agent run in USD.",
+    )
+    tool_metrics: dict[str, object] | None = Field(
+        default=None,
+        description="Tool call metrics: call counts, durations, error rates.",
+    )
+    meta: ForecastMeta | None = Field(
+        default=None,
+        description="Process reflection metadata.",
     )

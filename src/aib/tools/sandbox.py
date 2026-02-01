@@ -5,9 +5,11 @@ code execution. The sandbox provides tools for the Claude Agent SDK.
 """
 
 import logging
+import threading
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Self, TypedDict
 
 import docker
@@ -15,6 +17,10 @@ from claude_agent_sdk import SdkMcpTool, create_sdk_mcp_server, tool
 from claude_agent_sdk.types import McpSdkServerConfig
 from docker.errors import APIError, DockerException, NotFound
 from docker.models.containers import Container, ExecResult
+
+from aib.config import settings
+from aib.tools.metrics import tracked
+from aib.tools.responses import mcp_error, mcp_success
 
 logger = logging.getLogger(__name__)
 
@@ -64,23 +70,15 @@ def _decode_output(output: bytes | None) -> str:
     return output.decode("utf-8", errors="replace")
 
 
-def _success_response(
-    result: ExecuteCodeResult | InstallPackageResult,
-) -> dict[str, Any]:
-    """Create a successful MCP tool response."""
-    return {"content": [{"type": "text", "text": str(result)}]}
-
-
-def _error_response(message: str) -> dict[str, Any]:
-    """Create an error MCP tool response."""
-    return {"content": [{"type": "text", "text": message}], "is_error": True}
-
-
 # --- Sandbox class ---
 
 
 class SandboxNotInitializedError(RuntimeError):
     """Raised when sandbox operations are called on an inactive sandbox."""
+
+
+class CodeExecutionTimeoutError(RuntimeError):
+    """Raised when code execution exceeds the timeout."""
 
 
 class Sandbox:
@@ -93,6 +91,7 @@ class Sandbox:
         container_name: Name for the Docker container.
         docker_image: Docker image to use for the sandbox.
         volume_name: Name of the Docker volume for persistent workspace.
+        shared_dir: Local directory to mount for file sharing (default: ./tmp/sandbox-shared).
 
     Example:
         with Sandbox() as sandbox:
@@ -103,16 +102,19 @@ class Sandbox:
     DEFAULT_CONTAINER_NAME = "aib-sandbox"
     DEFAULT_DOCKER_IMAGE = "ghcr.io/astral-sh/uv:python3.12-bookworm-slim"
     DEFAULT_VOLUME_NAME = "aib-sandbox-workspace"
+    DEFAULT_SHARED_DIR = "./tmp/sandbox-shared"
 
     def __init__(
         self,
         container_name: str = DEFAULT_CONTAINER_NAME,
         docker_image: str = DEFAULT_DOCKER_IMAGE,
         volume_name: str = DEFAULT_VOLUME_NAME,
+        shared_dir: str = DEFAULT_SHARED_DIR,
     ) -> None:
         self._container_name = container_name
         self._docker_image = docker_image
         self._volume_name = volume_name
+        self._shared_dir = Path(shared_dir).resolve()
         self._container: Container | None = None
         self._client: docker.DockerClient | None = None
 
@@ -170,13 +172,20 @@ class Sandbox:
         self._client = docker.from_env()
         self._cleanup_stale_container()
 
+        # Ensure shared directory exists
+        self._shared_dir.mkdir(parents=True, exist_ok=True)
+
         logger.info("Creating sandbox container: %s", self._container_name)
+        logger.info("Mounting shared directory: %s -> /shared", self._shared_dir)
         self._container = self._client.containers.run(
             self._docker_image,
             name=self._container_name,
             command="sleep infinity",
             detach=True,
-            volumes={self._volume_name: {"bind": "/workspace", "mode": "rw"}},
+            volumes={
+                self._volume_name: {"bind": "/workspace", "mode": "rw"},
+                str(self._shared_dir): {"bind": "/shared", "mode": "rw"},
+            },
             working_dir="/workspace",
             mem_limit="1g",
             network_mode="bridge",
@@ -204,27 +213,62 @@ class Sandbox:
 
     # --- Code execution methods ---
 
-    def run_code(self, code: str) -> ExecuteCodeResult:
+    def run_code(
+        self, code: str, timeout_seconds: int | None = None
+    ) -> ExecuteCodeResult:
         """Execute Python code in the sandbox container.
 
         Args:
             code: Python code to execute.
+            timeout_seconds: Max execution time in seconds. If None, uses
+                settings.sandbox_timeout_seconds. Set to 0 for no timeout.
 
         Returns:
             Result containing exit code, stdout, stderr, and duration.
 
         Raises:
             SandboxNotInitializedError: If sandbox is not running.
+            CodeExecutionTimeoutError: If execution exceeds timeout.
         """
-        start = time.perf_counter()
+        if timeout_seconds is None:
+            timeout_seconds = settings.sandbox_timeout_seconds
 
-        result: ExecResult = self.container.exec_run(
-            ["python", "-c", code],
-            demux=True,
-            workdir="/workspace",
-        )
+        start = time.perf_counter()
+        result_holder: dict[str, ExecResult | None] = {"result": None}
+        error_holder: dict[str, Exception | None] = {"error": None}
+
+        def run_exec() -> None:
+            """Run the exec in a thread for timeout support."""
+            try:
+                result_holder["result"] = self.container.exec_run(
+                    ["python", "-c", code],
+                    demux=True,
+                    workdir="/workspace",
+                )
+            except Exception as e:
+                error_holder["error"] = e
+
+        # Use threading for timeout since Docker SDK doesn't support exec timeout
+        thread = threading.Thread(target=run_exec)
+        thread.start()
+        thread.join(timeout=timeout_seconds if timeout_seconds > 0 else None)
 
         duration_ms = int((time.perf_counter() - start) * 1000)
+
+        if thread.is_alive():
+            # Timeout occurred - thread is still running
+            # We can't cleanly kill the exec, but we return a timeout error
+            logger.warning("Code execution timed out after %d seconds", timeout_seconds)
+            raise CodeExecutionTimeoutError(
+                f"Code execution timed out after {timeout_seconds} seconds"
+            )
+
+        if error_holder["error"] is not None:
+            raise error_holder["error"]
+
+        result = result_holder["result"]
+        if result is None:
+            raise RuntimeError("Exec result is None despite thread completing")
 
         # When demux=True, output is a tuple of (stdout, stderr)
         stdout_bytes, stderr_bytes = result.output
@@ -271,23 +315,32 @@ class Sandbox:
             List of MCP tools for code execution and package installation.
         """
 
+        timeout_seconds = settings.sandbox_timeout_seconds
+
         @tool(
             "execute_code",
-            "Execute Python code in an isolated Docker container. Returns exit code, "
-            "stdout, stderr, and duration. The container has network access and a "
-            "persistent /workspace directory.",
+            (
+                "Execute Python code in an isolated Docker container. Returns exit code, "
+                "stdout, stderr, and duration. The container has network access, a "
+                "persistent /workspace directory, and a /shared directory for file exchange "
+                f"with the host. Timeout: {timeout_seconds}s."
+            ),
             ExecuteCodeInput,
         )
+        @tracked("execute_code")
         async def execute_code(args: ExecuteCodeInput) -> dict[str, Any]:
             try:
                 result = self.run_code(args["code"])
-                return _success_response(result)
+                return mcp_success(result)
             except SandboxNotInitializedError as e:
                 logger.error("Sandbox not initialized: %s", e)
-                return _error_response(f"Sandbox error: {e}")
+                return mcp_error(f"Sandbox error: {e}")
+            except CodeExecutionTimeoutError as e:
+                logger.warning("Code execution timed out")
+                return mcp_error(str(e))
             except (APIError, DockerException) as e:
                 logger.exception("Docker execution failed")
-                return _error_response(f"Docker error: {e}")
+                return mcp_error(f"Docker error: {e}")
 
         @tool(
             "install_package",
@@ -295,20 +348,21 @@ class Sandbox:
             "in the container across executions.",
             InstallPackageInput,
         )
+        @tracked("install_package")
         async def install_package(args: InstallPackageInput) -> dict[str, Any]:
             packages = args["packages"]
             if not packages:
-                return _error_response("No packages specified")
+                return mcp_error("No packages specified")
 
             try:
                 result = self.run_install(packages)
-                return _success_response(result)
+                return mcp_success(result)
             except SandboxNotInitializedError as e:
                 logger.error("Sandbox not initialized: %s", e)
-                return _error_response(f"Sandbox error: {e}")
+                return mcp_error(f"Sandbox error: {e}")
             except (APIError, DockerException) as e:
                 logger.exception("Docker execution failed")
-                return _error_response(f"Docker error: {e}")
+                return mcp_error(f"Docker error: {e}")
 
         return [execute_code, install_package]
 

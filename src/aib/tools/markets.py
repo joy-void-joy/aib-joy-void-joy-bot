@@ -5,7 +5,6 @@ additional signal for forecasting. Market prices reflect aggregated
 wisdom of traders with financial incentives.
 """
 
-import json
 import logging
 from typing import Any, Required, TypedDict
 
@@ -13,6 +12,8 @@ import httpx
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
 from aib.config import settings
+from aib.tools.metrics import tracked
+from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -41,19 +42,6 @@ class MarketPrice(TypedDict):
     source: str  # "polymarket" or "manifold"
 
 
-# --- Helper ---
-
-
-def _success(result: Any) -> dict[str, Any]:
-    """Return successful MCP response with JSON-encoded result."""
-    return {"content": [{"type": "text", "text": json.dumps(result, default=str)}]}
-
-
-def _error(message: str) -> dict[str, Any]:
-    """Return error MCP response."""
-    return {"content": [{"type": "text", "text": message}], "is_error": True}
-
-
 # --- Polymarket API ---
 
 POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
@@ -62,7 +50,7 @@ POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
 @with_retry(max_attempts=3)
 async def _search_polymarket(query: str) -> list[dict[str, Any]]:
     """Search Polymarket for markets matching query."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
             f"{POLYMARKET_GAMMA_API}/events",
             params={
@@ -75,6 +63,32 @@ async def _search_polymarket(query: str) -> list[dict[str, Any]]:
         return response.json()
 
 
+def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
+    """Parse a Polymarket event into a MarketPrice.
+
+    Args:
+        event: Raw event dict from Polymarket API
+
+    Returns:
+        MarketPrice if the event has markets, None otherwise
+    """
+    markets = event.get("markets", [])
+    if not markets:
+        return None
+
+    market = markets[0]
+    outcome_prices = market.get("outcomePrices", [])
+    yes_price = float(outcome_prices[0]) if outcome_prices else 0.5
+
+    return {
+        "market_title": event.get("title", "Unknown"),
+        "probability": yes_price,
+        "volume": market.get("volume"),
+        "url": f"https://polymarket.com/event/{event.get('slug', '')}",
+        "source": "polymarket",
+    }
+
+
 @tool(
     "polymarket_price",
     (
@@ -84,6 +98,7 @@ async def _search_polymarket(query: str) -> list[dict[str, Any]]:
     ),
     {"query": str, "limit": int},
 )
+@tracked("polymarket_price")
 async def polymarket_price(args: MarketQueryInput) -> dict[str, Any]:
     """Search Polymarket and return market prices."""
     query = args["query"]
@@ -93,36 +108,22 @@ async def polymarket_price(args: MarketQueryInput) -> dict[str, Any]:
         events = await _search_polymarket(query)
 
         if not events:
-            return _success({"markets": [], "query": query})
+            return mcp_success({"markets": [], "query": query})
 
         results: list[MarketPrice] = []
         for event in events[:limit]:
-            markets = event.get("markets", [])
-            if not markets:
-                continue
+            parsed = parse_polymarket_event(event)
+            if parsed is not None:
+                results.append(parsed)
 
-            market = markets[0]
-            outcome_prices = market.get("outcomePrices", [])
-            yes_price = float(outcome_prices[0]) if outcome_prices else 0.5
-
-            results.append(
-                {
-                    "market_title": event.get("title", "Unknown"),
-                    "probability": yes_price,
-                    "volume": market.get("volume"),
-                    "url": f"https://polymarket.com/event/{event.get('slug', '')}",
-                    "source": "polymarket",
-                }
-            )
-
-        return _success({"markets": results, "query": query})
+        return mcp_success({"markets": results, "query": query})
 
     except httpx.HTTPStatusError as e:
         logger.exception("Polymarket API error")
-        return _error(f"Polymarket API error: {e.response.status_code}")
+        return mcp_error(f"Polymarket API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Polymarket search failed")
-        return _error(f"Polymarket search failed: {e}")
+        return mcp_error(f"Polymarket search failed: {e}")
 
 
 # --- Manifold Markets API ---
@@ -133,7 +134,7 @@ MANIFOLD_API = "https://api.manifold.markets/v0"
 @with_retry(max_attempts=3)
 async def _search_manifold(query: str) -> list[dict[str, Any]]:
     """Search Manifold Markets for markets matching query."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
             f"{MANIFOLD_API}/search-markets",
             params={
@@ -147,6 +148,24 @@ async def _search_manifold(query: str) -> list[dict[str, Any]]:
         return response.json()
 
 
+def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
+    """Parse a Manifold market into a MarketPrice.
+
+    Args:
+        market: Raw market dict from Manifold API
+
+    Returns:
+        MarketPrice with parsed data
+    """
+    return {
+        "market_title": market.get("question", "Unknown"),
+        "probability": market.get("probability", 0.5),
+        "volume": market.get("volume"),
+        "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
+        "source": "manifold",
+    }
+
+
 @tool(
     "manifold_price",
     (
@@ -156,6 +175,7 @@ async def _search_manifold(query: str) -> list[dict[str, Any]]:
     ),
     {"query": str, "limit": int},
 )
+@tracked("manifold_price")
 async def manifold_price(args: MarketQueryInput) -> dict[str, Any]:
     """Search Manifold Markets and return market prices."""
     query = args["query"]
@@ -165,33 +185,18 @@ async def manifold_price(args: MarketQueryInput) -> dict[str, Any]:
         markets = await _search_manifold(query)
 
         if not markets:
-            return _success({"markets": [], "query": query})
+            return mcp_success({"markets": [], "query": query})
 
-        results: list[MarketPrice] = []
-        for market in markets[:limit]:
-            probability = market.get("probability", 0.5)
-            volume = market.get("volume")
+        results: list[MarketPrice] = [parse_manifold_market(m) for m in markets[:limit]]
 
-            results.append(
-                {
-                    "market_title": market.get("question", "Unknown"),
-                    "probability": probability,
-                    "volume": volume,
-                    "url": market.get(
-                        "url", f"https://manifold.markets/{market.get('slug', '')}"
-                    ),
-                    "source": "manifold",
-                }
-            )
-
-        return _success({"markets": results, "query": query})
+        return mcp_success({"markets": results, "query": query})
 
     except httpx.HTTPStatusError as e:
         logger.exception("Manifold API error")
-        return _error(f"Manifold API error: {e.response.status_code}")
+        return mcp_error(f"Manifold API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Manifold search failed")
-        return _error(f"Manifold search failed: {e}")
+        return mcp_error(f"Manifold search failed: {e}")
 
 
 # --- MCP Server ---

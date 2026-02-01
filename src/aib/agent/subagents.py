@@ -5,11 +5,11 @@ specialized research tasks. Each is a flexible agent that adapts to
 the specific research needs of the task.
 
 Subagents:
-- deep-researcher: Flexible research (merged from base-rate, key-factors, niche-list)
+- deep-researcher: Flexible research (base rates, key factors, enumeration)
 - estimator: Fermi estimation with code execution
-- precedent-finder: Finds similar historical events/questions
-- resolution-analyst: Parses resolution criteria for edge cases
-- market-researcher: Finds related questions/markets across platforms (Haiku-powered)
+- quick-researcher: Fast initial research (Haiku)
+- link-explorer: Find related questions, precedents, and market signals
+- fact-checker: Cross-validate claims, find contradictions
 """
 
 from claude_agent_sdk import AgentDefinition
@@ -18,11 +18,11 @@ from claude_agent_sdk import AgentDefinition
 RESEARCH_TOOLS = [
     "mcp__forecasting__search_exa",
     "mcp__forecasting__search_news",
-    "mcp__forecasting__search_wikipedia",
-    "mcp__forecasting__get_metaculus_question",
+    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
+    "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
     "mcp__forecasting__search_metaculus",
+    "mcp__notes__notes",
     "Read",
-    "Write",
     "Glob",
 ]
 
@@ -32,22 +32,37 @@ ESTIMATOR_TOOLS = [
     "mcp__forecasting__search_news",
     "mcp__sandbox__execute_code",
     "mcp__sandbox__install_package",
+    "mcp__notes__notes",
     "Read",
-    "Write",
 ]
 
-# Tools for market researcher (searches across platforms)
-MARKET_RESEARCHER_TOOLS = [
+# Tools for link explorer (searches across platforms)
+LINK_EXPLORER_TOOLS = [
     "mcp__forecasting__search_metaculus",
-    "mcp__forecasting__get_metaculus_question",
+    "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
     "mcp__forecasting__get_coherence_links",
+    "mcp__forecasting__get_prediction_history",
     "mcp__forecasting__search_exa",
     "mcp__forecasting__search_news",
     "mcp__markets__manifold_price",
     "mcp__markets__polymarket_price",
-    "mcp__composition__parallel_market_search",
+    "mcp__notes__notes",
     "Read",
-    "Write",
+]
+
+# Tools for fact checker
+FACT_CHECKER_TOOLS = [
+    "mcp__forecasting__search_exa",
+    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
+    "mcp__notes__notes",
+    "Read",
+]
+
+# Tools for quick researcher (minimal, fast)
+QUICK_RESEARCH_TOOLS = [
+    "mcp__forecasting__search_exa",
+    "mcp__forecasting__search_news",
+    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
 ]
 
 
@@ -96,11 +111,14 @@ You can flexibly adapt your research based on what's needed:
 - Expert opinions from credible sources
 - Recent news (via search_news)
 
-## Notes Folder
-You have access to a shared notes folder. Use it to:
-- Save key findings with one-line summaries at the top of each file
-- Use descriptive filenames (e.g., spacex_history.md, covid_base_rates.md)
-- Keep notes scannable - the main forecaster will read them
+## Notes
+Use the `notes` tool to save structured findings as you research:
+- `notes(mode="write", type="finding", topic="...", summary="...", content="...")`
+- `notes(mode="write_report", topic="...", summary="...", markdown_content="...", question_id=N)`
+- Types: research, finding, estimate, reasoning, source, meta
+- Search past notes: `notes(mode="search", query="...")`
+
+**Take notes frequently** - after each search, save key findings immediately.
 
 ## Output Format (JSON)
 
@@ -201,6 +219,10 @@ Can you estimate this multiple ways? Compare approaches.
 Give not just a point estimate but a range.
 How wide depends on uncertainty in your inputs.
 
+### 6. Save Your Work
+Use the notes tool to save your estimates:
+- `notes(mode="write", type="estimate", topic="...", summary="...", content="...")`
+
 ## Output Format (JSON)
 
 Return your estimate as JSON:
@@ -235,310 +257,227 @@ estimator = AgentDefinition(
 )
 
 
-# --- Precedent Finder ---
-# Finds similar historical events for comparison
+# --- Quick Researcher ---
+# Fast initial research for explore_factors (Haiku-powered for speed)
 
-PRECEDENT_FINDER_PROMPT = """\
-You are a superforecaster finding historical precedents.
+QUICK_RESEARCHER_PROMPT = """\
+You are a fast research assistant doing initial exploration for a forecasting question.
 
 ## Your Task
-Find similar historical events that can inform the forecast for this question.
+Quickly gather key information to help frame the forecasting question:
+- Recent news and developments
+- Basic background facts
+- Key stakeholders and their positions
+- Obvious factors that might affect the outcome
 
-## What Makes a Good Precedent
+## Approach
+1. Search for recent news on the topic
+2. Get basic facts from Wikipedia if relevant
+3. Identify 3-5 key factors (pro and con)
+4. Note any obvious uncertainties
 
-1. **Structural similarity**: Similar mechanisms, actors, or dynamics
-2. **Outcome relevance**: The precedent's outcome is informative
-3. **Temporal relevance**: Not so old that conditions have changed completely
-4. **Documented outcome**: We know what actually happened
-
-## Research Approach
-
-1. **Define the reference class**: What category does this question belong to?
-   - "AI company acquisitions"
-   - "International treaty negotiations"
-   - "Product launches by major tech companies"
-
-2. **Search for similar events**:
-   - Direct searches for the reference class
-   - Searches for specific named entities + historical context
-   - Wikipedia lists of similar events
-   - Academic papers analyzing this type of event
-
-3. **For each precedent, capture**:
-   - What happened (the event)
-   - When it happened
-   - How it resolved (the outcome)
-   - Why it's similar (similarity assessment)
-   - Source citation
-
-4. **Calculate base rate from precedents**:
-   - Of N similar events, how many resolved YES?
-   - Note any selection bias in your sample
-
-5. **Identify why precedents may not apply**:
-   - Changed conditions
-   - Unique aspects of current situation
-   - Selection bias in available precedents
-
-## Examples of Good Precedent Analysis
-
-Question: "Will OpenAI release GPT-5 in 2025?"
-Precedents:
-- GPT-4 release timeline (announced to released)
-- GPT-3 release timeline
-- Other major AI model releases (Gemini, Claude, etc.)
-- OpenAI's other product launches
-
-Question: "Will there be a ceasefire in conflict X?"
-Precedents:
-- Previous ceasefires in this conflict
-- Similar conflicts elsewhere
-- Ceasefires involving same actors
+Keep it fast - you're doing initial exploration, not deep research.
 
 ## Output Format (JSON)
 
-Return your findings as JSON:
+```json
+{
+  "key_facts": [
+    "Fact 1 with source",
+    "Fact 2 with source"
+  ],
+  "recent_news": [
+    {
+      "headline": "...",
+      "date": "YYYY-MM-DD",
+      "relevance": "Why this matters"
+    }
+  ],
+  "initial_factors": [
+    {
+      "text": "Factor description",
+      "direction": "pro | con",
+      "strength": "weak | moderate | strong"
+    }
+  ],
+  "uncertainties": ["What we don't know yet"],
+  "suggested_deep_research": ["Topics that need more investigation"]
+}
+```
+"""
+
+quick_researcher = AgentDefinition(
+    description=(
+        "Fast initial research for exploring factors. Quickly gathers recent news, "
+        "basic facts, and identifies initial pro/con factors. Use for quick orientation "
+        "before deeper research."
+    ),
+    prompt=QUICK_RESEARCHER_PROMPT,
+    tools=QUICK_RESEARCH_TOOLS,
+    model="haiku",
+)
+
+
+# --- Link Explorer ---
+# Merged from precedent-finder + market-researcher
+# Finds related questions, historical precedents, and market signals
+
+LINK_EXPLORER_PROMPT = """\
+You are a research assistant finding connections and context for a forecasting question.
+
+## Your Task
+Find three types of related information:
+1. **Historical precedents** - Similar past events and their outcomes
+2. **Related questions** - Other forecasts on similar topics (Metaculus, Manifold, Polymarket)
+3. **Market signals** - What prediction markets say about related events
+
+## Part 1: Historical Precedents
+
+Find similar past events that inform the forecast:
+- Define the reference class (what category of events?)
+- Search for 3-5 similar past events
+- Note what happened and how it resolved
+- Calculate a base rate if possible
+
+## Part 2: Related Questions
+
+Search across platforms:
+- **Metaculus**: search_metaculus, get_coherence_links
+- **Manifold**: manifold_price
+- **Polymarket**: polymarket_price
+
+Look for:
+- Same event, different timeframe
+- Same actor, different action
+- Conditional relationships
+
+## Part 3: Market Signals
+
+What do prediction markets indicate?
+- Current prices on related questions
+- Trading volume (higher = more reliable)
+- Trend direction
+
+## Output Format (JSON)
 
 ```json
 {
   "precedents": [
     {
-      "event": "GPT-4 release",
-      "date": "2023-03-14",
-      "outcome": "Released ~4 months after initial announcement",
-      "similarity_score": 0.9,
-      "source": "[OpenAI Blog](url)"
+      "event": "Description of similar event",
+      "date": "YYYY-MM-DD",
+      "outcome": "What happened",
+      "similarity": 0.8,
+      "source": "[Source](url)"
     }
   ],
-  "reference_class": "Major AI model releases by leading labs",
-  "base_rate_from_precedents": 0.75,
-  "caveats": [
-    "Market conditions have changed since earlier releases",
-    "Sample size is small (N=5)"
-  ],
-  "markdown_report": "Full analysis with precedent details"
-}
-```
-"""
-
-precedent_finder = AgentDefinition(
-    description=(
-        "Finds historical precedents similar to the forecasting question. "
-        "Identifies reference class, searches for similar past events, "
-        "and calculates base rates from outcomes."
-    ),
-    prompt=PRECEDENT_FINDER_PROMPT,
-    tools=RESEARCH_TOOLS,
-    model="sonnet",
-)
-
-
-# --- Resolution Analyst ---
-# Parses resolution criteria for edge cases and ambiguities
-
-RESOLUTION_ANALYST_PROMPT = """\
-You are an expert at analyzing forecasting question resolution criteria.
-
-## Your Task
-Parse the resolution criteria carefully to identify:
-- Exactly what must happen for each outcome
-- Edge cases that could lead to unexpected resolutions
-- Ambiguities in the criteria language
-- Questions to clarify with the question author
-
-## Why This Matters
-Many forecast errors come from misunderstanding resolution criteria, not from
-predicting the underlying events incorrectly. A question about "X launches product"
-might resolve differently depending on:
-- What counts as a "launch" (beta? limited? full?)
-- What counts as the "product" (renamed? merged?)
-- Timing edge cases (timezone? announced vs available?)
-
-## Approach
-
-### 1. Plain English Summary
-Restate the resolution criteria in simple terms.
-What exactly must be true for YES? For NO?
-
-### 2. Identify the Resolution Source
-Where will the definitive answer come from?
-- Official announcement
-- Government data
-- News reports
-- Specific website
-
-### 3. Find Edge Cases
-Think adversarially about scenarios that could resolve unexpectedly:
-- Partial fulfillment of criteria
-- Timing edge cases (just before/after deadline)
-- Definitional edge cases (what counts as X?)
-- Technicalities that differ from spirit
-
-For each edge case:
-- Describe the scenario
-- How would it likely resolve?
-- How likely is this edge case?
-
-### 4. Find Ambiguities
-Identify unclear language:
-- Vague terms without precise definitions
-- Phrases that could be interpreted multiple ways
-- Missing details that could matter
-
-For each ambiguity:
-- Quote the ambiguous phrase
-- Give two possible interpretations
-- Which seems more likely given context?
-
-### 5. Clarifying Questions
-What would you ask the question author to clarify?
-These should be questions where the answer would meaningfully
-affect how you forecast.
-
-## Output Format (JSON)
-
-Return your analysis as JSON:
-
-```json
-{
-  "resolution_criteria_parsed": "Plain English: X must happen before Y date according to Z source",
-  "edge_cases": [
+  "reference_class": "Category these precedents belong to",
+  "base_rate": 0.6,
+  "base_rate_caveats": ["Why this might not apply"],
+  "related_questions": [
     {
-      "scenario": "Product launches in beta only",
-      "resolution": "Likely resolves NO based on fine print",
-      "likelihood": "Medium - company has done this before"
-    }
-  ],
-  "ambiguities": [
-    {
-      "phrase": "officially announced",
-      "interpretation_a": "Press release from company",
-      "interpretation_b": "Any public statement including tweets",
-      "recommendation": "Likely interpretation A based on similar questions"
-    }
-  ],
-  "clarifying_questions": [
-    "Does a limited regional launch count?",
-    "What timezone is used for the deadline?"
-  ],
-  "likely_resolution_source": "Company press release or official blog",
-  "markdown_report": "Full analysis with recommendations"
-}
-```
-"""
-
-resolution_analyst = AgentDefinition(
-    description=(
-        "Analyzes resolution criteria to find edge cases and ambiguities. "
-        "Identifies how the question will be resolved and potential "
-        "unexpected scenarios."
-    ),
-    prompt=RESOLUTION_ANALYST_PROMPT,
-    tools=RESEARCH_TOOLS,
-    model="sonnet",
-)
-
-
-# --- Market Researcher ---
-# Finds related questions and market signals across platforms (Haiku-powered for speed)
-
-MARKET_RESEARCHER_PROMPT = """\
-You are a fast research assistant finding related forecasting questions and market signals.
-
-## Your Task
-Given a forecasting question, find related questions across multiple platforms:
-- Metaculus (search_metaculus, get_coherence_links)
-- Manifold Markets (manifold_price)
-- Polymarket (polymarket_price)
-- Web search (search_exa) for relevant context
-- Recent news (search_news) that may affect the question
-
-Use parallel_market_search to efficiently batch multiple market queries at once.
-
-## Why This Matters
-Related questions provide:
-1. **Consistency checks** - Your forecast should be coherent with related questions
-2. **Market signals** - Prediction market prices reflect aggregated wisdom
-3. **Context** - Similar questions may have useful discussion or data
-
-## Approach
-
-1. **Extract key concepts** from the question title and description
-2. **Use parallel_market_search** to batch multiple market queries efficiently
-3. **Check coherence links** on Metaculus for directly related questions
-4. **Search web/news** for context that affects multiple related questions
-5. **Rank by relevance** to the original question
-
-## What to Look For
-
-**Directly Related:**
-- Same event but different timeframe
-- Same actor/entity but different action
-- Conditional relationships (if X then Y)
-
-**Indirectly Related:**
-- Same category/domain
-- Competing or mutually exclusive outcomes
-- Upstream/downstream dependencies
-
-## Output Format (JSON)
-
-```json
-{
-  "metaculus_questions": [
-    {
-      "post_id": 12345,
-      "title": "Will X happen by Y?",
-      "community_prediction": 0.65,
-      "relevance": "Same event, different timeframe",
-      "url": "https://metaculus.com/questions/12345"
-    }
-  ],
-  "manifold_markets": [
-    {
-      "title": "Will X happen?",
-      "probability": 0.70,
+      "platform": "metaculus | manifold | polymarket",
+      "title": "Question title",
+      "probability": 0.65,
       "volume": 1234,
-      "relevance": "Directly related",
-      "url": "https://manifold.markets/..."
-    }
-  ],
-  "polymarket_markets": [
-    {
-      "title": "X to happen in 2025",
-      "probability": 0.55,
-      "volume": 50000,
-      "relevance": "Similar but broader scope",
-      "url": "https://polymarket.com/..."
+      "relevance": "Why related",
+      "url": "..."
     }
   ],
   "coherence_links": [
-    {
-      "post_id": 12346,
-      "direction": "implies",
-      "strength": 0.8
-    }
+    {"post_id": 12345, "direction": "implies", "strength": 0.8}
   ],
-  "relevant_news": [
-    {
-      "headline": "...",
-      "source": "...",
-      "relevance": "May affect both this and related questions"
-    }
-  ],
-  "markdown_summary": "Brief summary of related questions and market signals"
+  "market_summary": "What markets are saying overall",
+  "markdown_report": "Full report with all findings"
 }
 ```
 """
 
-market_researcher = AgentDefinition(
+link_explorer = AgentDefinition(
     description=(
-        "Fast agent that finds related forecasting questions across Metaculus, "
-        "Manifold, Polymarket, web, and news. Use for consistency checks and market signals. "
-        "Supports batched parallel market searches for efficiency."
+        "Finds historical precedents, related forecasting questions, and market signals. "
+        "Searches Metaculus, Manifold, Polymarket for related questions and calculates "
+        "base rates from similar past events."
     ),
-    prompt=MARKET_RESEARCHER_PROMPT,
-    tools=MARKET_RESEARCHER_TOOLS,
+    prompt=LINK_EXPLORER_PROMPT,
+    tools=LINK_EXPLORER_TOOLS,
+    model="haiku",
+)
+
+
+# --- Fact Checker ---
+# Cross-validates claims from research
+
+FACT_CHECKER_PROMPT = """\
+You are a fact-checker verifying claims made during forecasting research.
+
+## Your Task
+Given a set of claims or research findings, verify their accuracy:
+- Cross-check facts against multiple sources
+- Find contradictory information if it exists
+- Verify dates, numbers, and quotes
+- Assess source reliability
+
+## Approach
+
+### 1. For Each Claim
+- Search for corroborating evidence
+- Search for contradicting evidence
+- Check the original source if possible
+- Note the claim's reliability
+
+### 2. Flag Issues
+- Outdated information (check dates)
+- Single-source claims (no corroboration)
+- Contradicted claims
+- Misquoted or out-of-context statements
+
+### 3. Source Assessment
+- Primary sources > secondary sources
+- Official statements > news reports > social media
+- Recent information > old information
+- Note any bias in sources
+
+## Output Format (JSON)
+
+```json
+{
+  "verified_claims": [
+    {
+      "claim": "Original claim text",
+      "status": "verified | questionable | contradicted | outdated",
+      "evidence": "What supports or contradicts this",
+      "sources": ["Source 1", "Source 2"],
+      "confidence": 0.9
+    }
+  ],
+  "contradictions_found": [
+    {
+      "claim_a": "One claim",
+      "claim_b": "Contradicting claim",
+      "resolution": "Which seems more reliable and why"
+    }
+  ],
+  "outdated_information": [
+    {
+      "claim": "The outdated claim",
+      "date": "When it was true",
+      "current_status": "What's true now"
+    }
+  ],
+  "overall_assessment": "Summary of research quality",
+  "recommended_caution": ["Areas where extra skepticism is warranted"]
+}
+```
+"""
+
+fact_checker = AgentDefinition(
+    description=(
+        "Cross-validates claims from research. Finds contradictions, verifies facts "
+        "against multiple sources, and flags outdated or unreliable information."
+    ),
+    prompt=FACT_CHECKER_PROMPT,
+    tools=FACT_CHECKER_TOOLS,
     model="haiku",
 )
 
@@ -548,7 +487,7 @@ market_researcher = AgentDefinition(
 SUBAGENTS = {
     "deep-researcher": deep_researcher,
     "estimator": estimator,
-    "precedent-finder": precedent_finder,
-    "resolution-analyst": resolution_analyst,
-    "market-researcher": market_researcher,
+    "quick-researcher": quick_researcher,
+    "link-explorer": link_explorer,
+    "fact-checker": fact_checker,
 }

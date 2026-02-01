@@ -4,14 +4,22 @@ This module handles conversion of percentile estimates (e.g., 10th, 50th, 90th)
 into the 201-point CDF format required by the Metaculus API for numeric and
 discrete questions.
 
+Also provides mixture distribution support for more flexible multi-scenario modeling.
+
 Ported from to_port/main_with_no_framework.py with improved typing and structure.
 """
 
+from __future__ import annotations
+
+import logging
 from collections import Counter
 from typing import Self
 
 import numpy as np
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from scipy import stats
+
+logger = logging.getLogger(__name__)
 
 
 class NumericDefaults:
@@ -158,10 +166,10 @@ class NumericDistribution(BaseModel):
             spacing = abs(percentiles[i + 1].percentile - percentiles[i].percentile)
             if spacing < 5e-05:
                 raise ValueError(
-                    f"Percentiles at indices {i} and {i+1} are too close. "
+                    f"Percentiles at indices {i} and {i + 1} are too close. "
                     f"CDF must increase by at least 5e-05 at every step. "
-                    f"Got {percentiles[i].percentile} and {percentiles[i+1].percentile} "
-                    f"at values {percentiles[i].value} and {percentiles[i+1].value}."
+                    f"Got {percentiles[i].percentile} and {percentiles[i + 1].percentile} "
+                    f"at values {percentiles[i].value} and {percentiles[i + 1].value}."
                 )
 
     def _check_log_scaled_fields(self) -> None:
@@ -611,3 +619,262 @@ def percentiles_to_cdf(
     )
 
     return dist.get_cdf_as_floats()
+
+
+# --- Mixture Distribution Support ---
+
+
+class DistributionComponent(BaseModel):
+    """A single component in a mixture distribution.
+
+    Each component represents a scenario with its own probability distribution.
+    Components are combined with weights to form the final mixture.
+
+    Attributes:
+        scenario: Human-readable scenario name (e.g., "Base case", "Upside").
+        mode: Most likely value (peak of distribution).
+        lower_bound: 10th percentile estimate.
+        upper_bound: 90th percentile estimate.
+        weight: Weight in the mixture (all weights must sum to 1.0).
+    """
+
+    scenario: str = Field(
+        description="Scenario name: 'Base case', 'Upside', 'Downside', etc."
+    )
+    mode: float = Field(description="Most likely value (peak of distribution).")
+    lower_bound: float = Field(
+        description="10th percentile: 90% chance outcome is above this."
+    )
+    upper_bound: float = Field(
+        description="90th percentile: 10% chance outcome is above this."
+    )
+    weight: float = Field(ge=0.0, le=1.0, description="Weight in mixture (sum to 1.0).")
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> Self:
+        """Ensure bounds are ordered correctly."""
+        if self.lower_bound >= self.upper_bound:
+            raise ValueError(
+                f"lower_bound ({self.lower_bound}) must be less than upper_bound ({self.upper_bound})"
+            )
+        if not self.lower_bound <= self.mode <= self.upper_bound:
+            raise ValueError(
+                f"mode ({self.mode}) must be between lower_bound ({self.lower_bound}) "
+                f"and upper_bound ({self.upper_bound})"
+            )
+        return self
+
+
+class MixtureDistributionConfig(BaseModel):
+    """Configuration for a mixture distribution forecast.
+
+    Attributes:
+        components: List of distribution components (scenarios).
+        question_lower_bound: Question's minimum value.
+        question_upper_bound: Question's maximum value.
+        open_lower_bound: Whether values can go below the question's lower bound.
+        open_upper_bound: Whether values can exceed the question's upper bound.
+        zero_point: For log-scaled questions, the log anchor point.
+        use_lognormal: If True, use log-normal distributions. If False, use normal.
+    """
+
+    components: list[DistributionComponent]
+    question_lower_bound: float
+    question_upper_bound: float
+    open_lower_bound: bool = False
+    open_upper_bound: bool = False
+    zero_point: float | None = None
+    use_lognormal: bool = False
+
+    @field_validator("components")
+    @classmethod
+    def validate_weights_sum(
+        cls, v: list[DistributionComponent]
+    ) -> list[DistributionComponent]:
+        """Ensure component weights sum to 1.0."""
+        if not v:
+            raise ValueError("At least one component is required")
+        total_weight = sum(c.weight for c in v)
+        if abs(total_weight - 1.0) > 0.01:
+            raise ValueError(f"Component weights must sum to 1.0, got {total_weight}")
+        return v
+
+
+def _fit_distribution_from_percentiles(
+    mode: float,
+    p10: float,
+    p90: float,
+    *,
+    use_lognormal: bool = False,
+) -> stats.rv_continuous | stats.rv_frozen:
+    """Fit a scipy distribution from mode and percentile estimates.
+
+    Uses a skew-normal distribution when mode is not centered,
+    or a normal distribution when mode is approximately centered.
+    For positive-only quantities, can use log-normal.
+
+    Args:
+        mode: Most likely value.
+        p10: 10th percentile (90% above this).
+        p90: 90th percentile (10% above this).
+        use_lognormal: If True, fit a log-normal distribution.
+
+    Returns:
+        A frozen scipy distribution.
+    """
+    if use_lognormal and p10 > 0:
+        # Log-normal: work in log space
+        log_p10 = np.log(p10)
+        log_p90 = np.log(p90)
+
+        # For log-normal: p10 = exp(mu + sigma * z_0.1), p90 = exp(mu + sigma * z_0.9)
+        z_90 = stats.norm.ppf(0.9)  # ~1.28
+        sigma = (log_p90 - log_p10) / (2 * z_90)
+        mu = (log_p10 + log_p90) / 2
+
+        return stats.lognorm(s=sigma, scale=np.exp(mu))
+
+    # Normal or skew-normal
+    # For symmetric case, mu = mode, sigma = (p90 - p10) / (2 * z_90)
+    z_90 = stats.norm.ppf(0.9)  # ~1.28
+    sigma = (p90 - p10) / (2 * z_90)
+
+    # Check if mode is centered (within 10% of median)
+    midpoint = (p10 + p90) / 2
+    skewness_ratio = (mode - midpoint) / (p90 - p10) if (p90 - p10) > 0 else 0
+
+    if abs(skewness_ratio) < 0.1:
+        # Approximately symmetric, use normal
+        return stats.norm(loc=mode, scale=sigma)
+
+    # Use skew-normal for asymmetric distributions
+    # This is an approximation - proper fitting would require optimization
+    # Skewness parameter alpha controls the skew direction
+    alpha = -skewness_ratio * 5  # Scale skewness
+    alpha = max(-10, min(10, alpha))  # Clamp to reasonable range
+
+    # Adjust location and scale to match percentiles approximately
+    return stats.skewnorm(a=alpha, loc=mode, scale=sigma)
+
+
+def mixture_components_to_cdf(
+    config: MixtureDistributionConfig,
+    cdf_size: int = 201,
+) -> list[float]:
+    """Convert mixture distribution components to Metaculus CDF format.
+
+    Creates a weighted mixture of distributions from the component specifications,
+    evaluates the mixture CDF at evenly-spaced points, and applies Metaculus
+    standardization rules.
+
+    Args:
+        config: Mixture distribution configuration.
+        cdf_size: Number of CDF points (201 for numeric, fewer for discrete).
+
+    Returns:
+        List of floats representing the CDF (same format as percentiles_to_cdf).
+
+    Example:
+        >>> config = MixtureDistributionConfig(
+        ...     components=[
+        ...         DistributionComponent(
+        ...             scenario="Base case",
+        ...             mode=150,
+        ...             lower_bound=100,
+        ...             upper_bound=200,
+        ...             weight=0.6,
+        ...         ),
+        ...         DistributionComponent(
+        ...             scenario="Upside",
+        ...             mode=250,
+        ...             lower_bound=200,
+        ...             upper_bound=350,
+        ...             weight=0.4,
+        ...         ),
+        ...     ],
+        ...     question_lower_bound=0,
+        ...     question_upper_bound=500,
+        ...     open_upper_bound=True,
+        ... )
+        >>> cdf = mixture_components_to_cdf(config)
+    """
+    # Fit distributions for each component
+    distributions = []
+    weights = []
+    for comp in config.components:
+        dist = _fit_distribution_from_percentiles(
+            mode=comp.mode,
+            p10=comp.lower_bound,
+            p90=comp.upper_bound,
+            use_lognormal=config.use_lognormal,
+        )
+        distributions.append(dist)
+        weights.append(comp.weight)
+
+    # Evaluate CDF at evenly-spaced points across the question range
+    lower = config.question_lower_bound
+    upper = config.question_upper_bound
+
+    if config.zero_point is not None:
+        # Log-scaled question: use log-spaced evaluation points
+        deriv_ratio = (upper - config.zero_point) / (lower - config.zero_point)
+        locations = np.linspace(0, 1, cdf_size)
+        x_values = lower + (upper - lower) * (deriv_ratio**locations - 1) / (
+            deriv_ratio - 1
+        )
+    else:
+        # Linear question: use linearly-spaced points
+        x_values = np.linspace(lower, upper, cdf_size)
+
+    # Compute mixture CDF at each point
+    mixture_cdf = np.zeros(cdf_size)
+    for dist, weight in zip(distributions, weights, strict=True):
+        mixture_cdf += weight * dist.cdf(x_values)
+
+    # Convert to percentiles for standardization via NumericDistribution
+    # Sample enough percentiles to capture the distribution shape
+    sampled_percentiles = []
+    for i, (x, cdf_val) in enumerate(zip(x_values, mixture_cdf, strict=True)):
+        if i % 20 == 0 or i == cdf_size - 1:  # Sample every 20th point plus endpoints
+            sampled_percentiles.append(
+                Percentile(percentile=float(cdf_val), value=float(x))
+            )
+
+    # Ensure percentiles are valid (monotonically increasing)
+    cleaned_percentiles = []
+    prev_pct = -1e-10
+    for p in sampled_percentiles:
+        if p.percentile > prev_pct:
+            cleaned_percentiles.append(p)
+            prev_pct = p.percentile
+
+    if len(cleaned_percentiles) < 2:
+        logger.warning("Mixture CDF degenerate, falling back to uniform")
+        cleaned_percentiles = [
+            Percentile(percentile=0.0, value=lower),
+            Percentile(percentile=1.0, value=upper),
+        ]
+
+    # Use NumericDistribution for standardization
+    try:
+        dist = NumericDistribution(
+            declared_percentiles=cleaned_percentiles,
+            open_upper_bound=config.open_upper_bound,
+            open_lower_bound=config.open_lower_bound,
+            upper_bound=upper,
+            lower_bound=lower,
+            zero_point=config.zero_point,
+            cdf_size=cdf_size,
+            standardize_cdf=True,
+            strict_validation=False,  # More lenient for mixture CDFs
+        )
+        return dist.get_cdf_as_floats()
+    except ValueError as e:
+        logger.warning("NumericDistribution failed for mixture CDF: %s", e)
+        # Fallback: return the raw mixture CDF clamped to [0, 1]
+        clamped = np.clip(mixture_cdf, 0.0, 1.0)
+        # Apply basic monotonicity fix
+        for i in range(1, len(clamped)):
+            if clamped[i] < clamped[i - 1]:
+                clamped[i] = clamped[i - 1] + 1e-6
+        return clamped.tolist()

@@ -119,10 +119,33 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 ### Commit Best Practices
 
+- **Commit before responding** — Always commit your work before responding to the user. This ensures progress is saved and creates natural checkpoints. Don't accumulate multiple changes across responses.
 - **Commit early, commit often** — Don't wait until a feature is "done" to commit. Frequent commits provide checkpoints and make rebasing easier.
 - **Keep commits atomic** — Each commit should do one thing. If you need to describe your commit with "and", it should probably be two commits.
 - **History will be rebased** — Don't worry about perfect commit messages during development. The history will be cleaned up via interactive rebase before the PR is merged.
 - **Meaningful final commits** — After rebasing, each commit should tell a story: what changed and why. The final history should be easy to read and bisect.
+
+### Commit Message Format
+
+Use conventional commit syntax: `type(scope): description`
+
+**Types:**
+- `feat` — New feature or capability
+- `fix` — Bug fix
+- `refactor` — Code change that neither fixes a bug nor adds a feature
+- `docs` — Documentation only
+- `test` — Adding or updating tests
+- `chore` — Maintenance (dependencies, build config, etc.)
+- `meta` — Changes to `.claude/` files (CLAUDE.md, settings, scripts, commands)
+
+**Examples:**
+```
+feat(agent): add permission handler for read-only directories
+fix(tools): handle missing API key gracefully
+refactor(sandbox): extract Docker client initialization
+docs(readme): add installation instructions
+meta(claude): update commit message guidelines
+```
 
 **Note:** The `worktrees/` directory is gitignored.
 
@@ -151,6 +174,35 @@ The `forecasting-tools` library has some type annotation limitations to be aware
 - Use `TypedDict` and Pydantic models for structured data
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 
+### Code as Documentation
+
+The codebase should read as a **monolithic source of truth**—understandable without any knowledge of its history.
+
+**The test:** Before adding a comment, ask: "Would this comment exist if the code had always been written this way?" If the answer is no—if you're only adding it because you modified the line—don't add it.
+
+**Do not:**
+- Add comments to explain modifications you made
+- Reference what code used to do (e.g., "Previously this returned None")
+- Add inline comments when changing a line (this is almost always explaining the change, not the code)
+- Use phrases like "now", "new", "updated", "fixed", or "changed" in comments
+
+**Do:**
+- Write comments that would make sense to someone who never saw previous versions
+- Use commit messages for change history, not code comments
+- Only add comments that document genuinely non-obvious behavior
+
+**Example — Bad:**
+```python
+env_file=(".env", ".env.local"),  # .env.local overrides .env
+```
+This comment was added because the line was changed. If the code had always supported multiple env files, no one would bother commenting that the second one overrides the first—that's standard behavior.
+
+**Example — Good:**
+```python
+env_file=(".env", ".env.local"),
+```
+No comment needed. The behavior is self-evident to anyone familiar with config file precedence.
+
 ### Error Handling Philosophy
 
 **MCP tools should:**
@@ -172,7 +224,7 @@ The `forecasting-tools` library has some type annotation limitations to be aware
 
 ## Helper Scripts
 
-The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.**
+The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Avoid `uv run python -c "..."` unless it's a trivial one-liner you're certain won't be repeated.
 
 If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
 
@@ -201,6 +253,52 @@ uv run python .claude/scripts/inspect_api.py forecasting_tools.SmartSearcher
 uv run python .claude/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
 uv run python .claude/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
 ```
+
+### new_worktree.py
+
+Create a new git worktree with Claude session migration. Use this instead of manually running `git worktree add` when you want to preserve Claude Code context in the new worktree.
+
+```bash
+# Create new worktree branching from current branch
+uv run python .claude/scripts/new_worktree.py <worktree-name>
+
+# Migrate a specific session instead of most recent
+uv run python .claude/scripts/new_worktree.py <worktree-name> --session-id <uuid>
+
+# Skip uv sync (if you'll do it manually)
+uv run python .claude/scripts/new_worktree.py <worktree-name> --no-sync
+```
+
+The script:
+1. Creates a new worktree in the `tree/` directory with a new branch
+2. Runs `uv sync --all-groups --all-extras`
+3. Migrates the most recent Claude session to the new worktree
+
+After running, `cd` to the new worktree and run `claude --resume` to continue the session.
+
+### feedback_collect.py
+
+Collect calibration data from resolved forecasts. Used by the `/feedback-loop` command to gather metrics before analysis.
+
+```bash
+# Collect from default tournament (AIB Spring 2026)
+uv run python .claude/scripts/feedback_collect.py
+
+# Collect from specific tournament
+uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
+
+# Collect all resolved questions (ignore last run timestamp)
+uv run python .claude/scripts/feedback_collect.py --all-time
+
+# Collect only questions resolved after a date
+uv run python .claude/scripts/feedback_collect.py --since 2026-01-01
+```
+
+The script:
+1. Fetches resolved questions from Metaculus
+2. Matches them to forecasts in `notes/forecasts/`
+3. Computes Brier scores, log scores, and calibration buckets
+4. Saves metrics to `notes/feedback_loop/<timestamp>_metrics.json`
 
 ## Settings & Configuration
 

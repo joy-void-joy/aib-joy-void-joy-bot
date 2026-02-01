@@ -3,37 +3,99 @@
 import dataclasses
 import json
 import logging
-import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from claude_agent_sdk.types import HookContext
 
 import httpx
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
+    ContentBlock,
+    HookMatcher,
     ResultMessage,
+    SystemMessage,
     TextBlock,
     ThinkingBlock,
+    ToolResultBlock,
     ToolUseBlock,
+    UserMessage,
 )
 
+from aib.agent.history import (
+    format_history_for_context,
+    load_past_forecasts,
+    save_forecast,
+)
 from aib.agent.models import (
     Forecast,
+    ForecastMeta,
     ForecastOutput,
     MultipleChoiceForecast,
     NumericForecast,
 )
-from aib.agent.numeric import percentiles_to_cdf
-from aib.agent.prompts import FORECASTING_SYSTEM_PROMPT, get_type_specific_guidance
+from aib.agent.numeric import (
+    DistributionComponent,
+    MixtureDistributionConfig,
+    mixture_components_to_cdf,
+    percentiles_to_cdf,
+)
+from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.agent.subagents import SUBAGENTS
-from aib.tools import composition_server, forecasting_server, markets_server
+from aib.config import settings
+from aib.tools import (
+    composition_server,
+    forecasting_server,
+    markets_server,
+    notes_server,
+)
 from aib.tools.composition import set_run_forecast_fn
+from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
+
+
+def print_block(block: ContentBlock) -> None:
+    """Print a content block with appropriate emoji prefix."""
+    match block:
+        case ThinkingBlock():
+            print(f"💭 {block.thinking}")
+        case TextBlock():
+            print(f"💬 {block.text}")
+        case ToolUseBlock():
+            input_str = json.dumps(block.input, indent=2) if block.input else ""
+            print(f"🔧 {block.name} [{block.id}]")
+            if input_str:
+                print(input_str)
+        case ToolResultBlock():
+            status = "❌" if block.is_error else "✅"
+            content_preview = _truncate_content(block.content, max_len=500)
+            print(f"{status} Result [{block.tool_use_id}]: {content_preview}")
+        case _:
+            print(f"❓ {type(block).__name__}: {block}")
+
+
+def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
+    """Truncate content for display, handling various content types."""
+    if content is None:
+        return "(empty)"
+    if isinstance(content, list):
+        # MCP-style content blocks
+        texts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                texts.append(item.get("text", ""))
+        content = "\n".join(texts)
+    if len(content) > max_len:
+        return content[:max_len] + "..."
+    return content
 
 
 def get_output_schema_for_question(
@@ -58,41 +120,180 @@ def get_output_schema_for_question(
 # Notes folder base path
 NOTES_BASE_PATH = Path("./notes")
 
+# Logs folder base path
+LOGS_BASE_PATH = Path("./logs")
 
-def setup_notes_folder(session_id: str) -> dict[str, Path]:
+
+@dataclasses.dataclass
+class NotesConfig:
+    """Notes folder configuration with explicit RW/RO separation."""
+
+    session: Path
+    research: Path
+    forecasts: Path
+    rw: list[Path]
+    ro: list[Path]
+
+    @property
+    def all_dirs(self) -> list[Path]:
+        return self.rw + self.ro
+
+
+def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     """Create session-specific notes folder structure.
 
-    Structure:
-    - notes/sessions/<session_id>/       (RW for this session)
-    - notes/research/                    (RO - all research)
-    - notes/research/<timestamp>/        (RW - this session's research)
-    - notes/forecasts/                   (RO - all forecasts)
-    - notes/forecasts/<timestamp>/       (RW - this session's forecast)
+    Structure (RW = this session can write, RO = read historical only):
+    - notes/sessions/<session_id>/              (RW)
+    - notes/research/<question_id>/<timestamp>/ (RW)
+    - notes/forecasts/<question_id>/<timestamp>/(RW)
+    - notes/meta/                               (RW)
+    - notes/research/                           (RO)
+    - notes/forecasts/                          (RO)
+    - notes/structured/                         (RO - notes tool writes here)
 
-    Folders are created empty - the agent decides what files to create.
-    Each note file should start with a one-line summary for quick scanning.
+    Args:
+        session_id: Unique session identifier.
+        question_id: Metaculus question/post ID (0 for sub-forecasts).
 
     Returns:
-        Dict with paths for add_dirs config.
+        NotesConfig with RW and RO directories separated.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     session_path = NOTES_BASE_PATH / "sessions" / session_id
     research_base = NOTES_BASE_PATH / "research"
-    research_path = research_base / timestamp
+    research_path = research_base / str(question_id) / timestamp
     forecasts_base = NOTES_BASE_PATH / "forecasts"
-    forecasts_path = forecasts_base / timestamp
+    forecasts_path = forecasts_base / str(question_id) / timestamp
+    meta_path = NOTES_BASE_PATH / "meta"
+    structured_path = NOTES_BASE_PATH / "structured"
 
     session_path.mkdir(parents=True, exist_ok=True)
     research_path.mkdir(parents=True, exist_ok=True)
     forecasts_path.mkdir(parents=True, exist_ok=True)
+    meta_path.mkdir(parents=True, exist_ok=True)
+
+    return NotesConfig(
+        session=session_path,
+        research=research_path,
+        forecasts=forecasts_path,
+        rw=[session_path, research_path, forecasts_path, meta_path],
+        ro=[research_base, forecasts_base, structured_path],
+    )
+
+
+def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
+    """Check if a file path is under one of the allowed directories."""
+    try:
+        path = Path(file_path).resolve()
+    except (OSError, ValueError):
+        return False
+
+    for allowed in allowed_dirs:
+        try:
+            path.relative_to(allowed.resolve())
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def create_permission_hooks(
+    rw_dirs: list[Path],
+    ro_dirs: list[Path],
+) -> dict[str, Any]:
+    """Create permission hooks with directory-based access control.
+
+    Args:
+        rw_dirs: Directories where Write/Edit/Read are allowed
+        ro_dirs: Additional directories where only Read is allowed
+
+    Returns:
+        Hooks configuration dict for ClaudeAgentOptions.
+    """
+    all_readable = rw_dirs + ro_dirs
+
+    async def permission_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: "HookContext",
+    ) -> dict[str, Any]:
+        """Control tool access based on directory permissions."""
+        if input_data.get("hook_event_name") != "PreToolUse":
+            return {}
+
+        tool_name = input_data.get("tool_name", "")
+        tool_input = input_data.get("tool_input", {})
+        hook_event = input_data["hook_event_name"]
+
+        def deny(reason: str) -> dict[str, Any]:
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": reason,
+                }
+            }
+
+        def allow() -> dict[str, Any]:
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "permissionDecision": "allow",
+                }
+            }
+
+        # Write: allow in RW directories only
+        if tool_name == "Write":
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
+            if _path_is_under(file_path, rw_dirs):
+                return allow()
+            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
+
+        # Bash: SDK sandbox config handles this via autoAllowBashIfSandboxed
+        # No explicit denial needed here
+
+        # File edit operations: only allowed in RW directories
+        if tool_name == "Edit":
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
+
+            if _path_is_under(file_path, rw_dirs):
+                return allow()
+            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
+
+        # Read: requires file_path, must be in readable directories
+        if tool_name == "Read":
+            file_path = tool_input.get("file_path", "")
+            if not file_path:
+                return {}  # Let SDK handle missing required param
+
+            if _path_is_under(file_path, all_readable):
+                return allow()
+            return deny(f"Read denied. Allowed: {[str(d) for d in all_readable]}")
+
+        # Glob/Grep: require explicit path in readable directories (no cwd default)
+        if tool_name in ("Glob", "Grep"):
+            file_path = tool_input.get("path", "")
+            if not file_path:
+                return deny(
+                    f"Path required for {tool_name}. "
+                    f"Specify path in: {[str(d) for d in all_readable]}"
+                )
+
+            if _path_is_under(file_path, all_readable):
+                return allow()
+            return deny(f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}")
+
+        # Auto-allow everything else (WebSearch, WebFetch, MCP tools, Task)
+        # These are already filtered by allowed_tools in options
+        return allow()
 
     return {
-        "session": session_path,
-        "research_base": research_base,
-        "research": research_path,
-        "forecasts_base": forecasts_base,
-        "forecasts": forecasts_path,
+        "PreToolUse": [HookMatcher(hooks=[permission_hook])],  # type: ignore[list-item]
     }
 
 
@@ -167,7 +368,6 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
-    stream_thinking: bool = False,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -175,13 +375,19 @@ async def run_forecast(
         question_id: Metaculus post ID (for top-level forecasts)
         question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
-        stream_thinking: Whether to print thinking blocks to stdout as they arrive
 
     Returns:
         ForecastOutput with the forecast results.
     """
-    # Generate session ID
-    session_id = str(uuid.uuid4())[:8]
+    # Generate session ID based on question_id for persistence
+    if question_id is not None:
+        session_id = str(question_id)
+    else:
+        # Sub-forecasts use timestamp-based ID since they don't have a real question_id
+        session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Reset metrics for this forecast session
+    reset_metrics()
 
     # Either fetch question or use provided context
     if question_context is not None:
@@ -206,79 +412,112 @@ async def run_forecast(
         raise ValueError("Either question_id or question_context must be provided")
 
     # Setup notes folder
-    notes = setup_notes_folder(session_id)
-    logger.info("Notes folder: %s", notes["session"])
+    notes = setup_notes_folder(session_id, question_id)
+    logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
     model_class, output_schema = get_output_schema_for_question(question_type)
     type_guidance = get_type_specific_guidance(question_type, context)
 
+    # Load past forecasts for this question (if any)
+    history_context = ""
+    if question_id is not None and question_id > 0:
+        past_forecasts = load_past_forecasts(question_id)
+        if past_forecasts:
+            history_context = format_history_for_context(past_forecasts)
+            logger.info(
+                "Loaded %d past forecasts for question %d",
+                len(past_forecasts),
+                question_id,
+            )
+
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
+    if history_context:
+        prompt += f"\n\n{history_context}"
 
     collected_text: list[str] = []
+    collected_thinking: list[str] = []
     assistant_messages: list[AssistantMessage] = []
     result: ResultMessage | None = None
 
+    # Setup thinking log file
+    thinking_log_path = (
+        LOGS_BASE_PATH / session_id / datetime.now().strftime("%Y%m%d_%H%M%S.log")
+    )
+    thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
+
     with Sandbox() as sandbox:
+        # tmp/ for scratch work + session-specific notes directories
+        rw_dirs = [Path("tmp")] + notes.rw
+        ro_dirs = notes.ro
+        hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+
         options = ClaudeAgentOptions(
-            model="claude-opus-4-5-20251101",
+            model=settings.model,
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
-                "append": FORECASTING_SYSTEM_PROMPT,
+                "append": get_forecasting_system_prompt(),
             },
-            # Unlimited thinking tokens for deep reasoning
-            max_thinking_tokens=None,
+            max_thinking_tokens=64_000-1,
             permission_mode="bypassPermissions",
-            # MCP servers for research and code execution
-            mcp_servers={
-                # In-process: forecasting tools (pure capabilities)
-                "forecasting": forecasting_server,
-                # In-process: Docker-based Python sandbox
-                "sandbox": sandbox.create_mcp_server(),
-                # In-process: composition tools (parallel research, subquestions)
-                "composition": composition_server,
-                # In-process: prediction market tools
-                "markets": markets_server,
+            hooks=hooks,  # type: ignore[arg-type]
+            sandbox={
+                "enabled": True,
+                "autoAllowBashIfSandboxed": True,
+                "allowUnsandboxedCommands": False,
             },
-            # Subagents for specialized research tasks
+            mcp_servers={
+                "forecasting": forecasting_server,
+                "sandbox": sandbox.create_mcp_server(),
+                "composition": composition_server,
+                "markets": markets_server,
+                "notes": notes_server,
+            },
             agents=SUBAGENTS,
-            # Notes folder access
-            add_dirs=[
-                str(notes["session"]),  # RW - current session
-                str(notes["research_base"]),  # RO - all research
-                str(notes["research"]),  # RW - this session's research
-                str(notes["forecasts_base"]),  # RO - all forecasts
-                str(notes["forecasts"]),  # RW - this session's forecast
-            ],
+            add_dirs=[str(d) for d in notes.all_dirs],
             # Built-in tools + MCP tools (conditionally include spawn_subquestions)
             allowed_tools=[
-                # Built-in web tools
+                # Built-in tools
                 "WebSearch",
                 "WebFetch",
-                # File tools for notes
+                # File tools for notes (directory-restricted via hooks)
                 "Read",
                 "Write",
                 "Glob",
-                # Forecasting tools (mcp__<server>__<tool>)
-                "mcp__forecasting__get_metaculus_question",
-                "mcp__forecasting__list_tournament_questions",
-                "mcp__forecasting__search_metaculus",
-                "mcp__forecasting__get_coherence_links",
-                "mcp__forecasting__search_exa",
-                "mcp__forecasting__search_news",
-                "mcp__forecasting__search_wikipedia",
+                # Bash (sandboxed via SDK config)
+                "Bash",
+                # Metaculus tools (only if token is configured)
+                *(
+                    [
+                        "mcp__forecasting__get_metaculus_questions",
+                        "mcp__forecasting__list_tournament_questions",
+                        "mcp__forecasting__search_metaculus",
+                        "mcp__forecasting__get_coherence_links",
+                        "mcp__forecasting__get_prediction_history",
+                    ]
+                    if settings.metaculus_token
+                    else []
+                ),
+                # Search tools (only if credentials configured)
+                *(["mcp__forecasting__search_exa"] if settings.exa_api_key else []),
+                *(
+                    ["mcp__forecasting__search_news"]
+                    if settings.asknews_client_id and settings.asknews_client_secret
+                    else []
+                ),
+                "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
                 # Sandbox tools (in-process Docker sandbox)
                 "mcp__sandbox__execute_code",
                 "mcp__sandbox__install_package",
-                # Composition tools (parallel execution)
-                "mcp__composition__parallel_research",
-                "mcp__composition__parallel_market_search",
+                # Composition tools
                 # spawn_subquestions only available for top-level forecasts
                 *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
                 # Prediction market tools
                 "mcp__markets__polymarket_price",
                 "mcp__markets__manifold_price",
+                # Notes browsing tools
+                "mcp__notes__notes",
                 # Subagent spawning
                 "Task",
             ],
@@ -291,30 +530,51 @@ async def run_forecast(
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
 
-            async for message in client.receive_messages():
-                if isinstance(message, AssistantMessage):
-                    assistant_messages.append(message)
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            collected_text.append(block.text)
-                        elif isinstance(block, ThinkingBlock):
-                            # Log thinking blocks for visibility into agent reasoning
-                            thinking_text = block.thinking if hasattr(block, 'thinking') else str(block)
-                            logger.debug("Thinking: %s", thinking_text[:200] + "..." if len(thinking_text) > 200 else thinking_text)
-                            if stream_thinking:
-                                print(f"\n💭 [Thinking]\n{thinking_text}\n")
-                        elif isinstance(block, ToolUseBlock):
-                            logger.debug("Tool: %s", dataclasses.asdict(block))
-                            if stream_thinking:
-                                print(f"🔧 Tool: {block.name}")
-
-                elif isinstance(message, ResultMessage):
-                    result = message
-                    if message.is_error:
-                        raise RuntimeError(f"Agent error: {message.result}")
+            async for message in client.receive_response():
+                match message:
+                    case AssistantMessage():
+                        assistant_messages.append(message)
+                        for block in message.content:
+                            print_block(block)
+                            match block:
+                                case TextBlock():
+                                    collected_text.append(block.text)
+                                case ThinkingBlock():
+                                    collected_thinking.append(block.thinking)
+                                case ToolUseBlock():
+                                    pass
+                                case ToolResultBlock():
+                                    pass
+                                case _:
+                                    logger.debug(
+                                        "Unhandled content block: %s", type(block).__name__
+                                    )
+                    case ResultMessage():
+                        result = message
+                        if message.is_error:
+                            raise RuntimeError(f"Agent error: {message.result}")
+                    case SystemMessage():
+                        logger.info(
+                            "System message [%s]: %s",
+                            message.subtype,
+                            json.dumps(message.data, indent=2),
+                        )
+                    case UserMessage():
+                        if isinstance(message.content, list):
+                            for block in message.content:
+                                print_block(block)
+                    case _:
+                        print(f"📨 {type(message).__name__}: {message}")
+                        logger.debug("Unhandled message type: %s", type(message).__name__)
 
     if result is None:
         raise RuntimeError("No result received from agent")
+
+    # Save thinking log
+    if collected_thinking:
+        thinking_log_content = "\n\n---\n\n".join(collected_thinking)
+        thinking_log_path.write_text(thinking_log_content, encoding="utf-8")
+        logger.info("Saved thinking log to %s", thinking_log_path)
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
@@ -338,25 +598,70 @@ async def run_forecast(
             output.logit = forecast.logit
             output.probability = forecast.probability
             output.probability_from_logit = forecast.probability_from_logit
+
+            # Check for consistency issues
+            consistency_warnings = forecast.check_consistency()
+            for warning in consistency_warnings:
+                logger.warning("Consistency check: %s", warning)
         elif isinstance(forecast, NumericForecast):
             output.median = forecast.median
             output.confidence_interval = forecast.confidence_interval
             output.percentiles = forecast.get_percentile_dict()
 
-            # Generate CDF from percentiles
+            # Generate CDF from percentiles or mixture components
             bounds = context.get("numeric_bounds", {})
-            if bounds.get("range_min") is not None and bounds.get("range_max") is not None:
+            if (
+                bounds.get("range_min") is not None
+                and bounds.get("range_max") is not None
+            ):
                 try:
-                    output.cdf = percentiles_to_cdf(
-                        output.percentiles,
-                        upper_bound=bounds["range_max"],
-                        lower_bound=bounds["range_min"],
-                        open_upper_bound=bounds.get("open_upper_bound", False),
-                        open_lower_bound=bounds.get("open_lower_bound", False),
-                        zero_point=bounds.get("zero_point"),
-                        cdf_size=bounds.get("cdf_size", 201),
-                    )
-                    logger.info("Generated %d-point CDF", len(output.cdf))
+                    if forecast.uses_mixture_mode and forecast.components:
+                        # Mixture distribution mode
+                        mixture_config = MixtureDistributionConfig(
+                            components=[
+                                DistributionComponent(
+                                    scenario=c.scenario,
+                                    mode=c.mode,
+                                    lower_bound=c.lower_bound,
+                                    upper_bound=c.upper_bound,
+                                    weight=c.weight,
+                                )
+                                for c in forecast.components
+                            ],
+                            question_lower_bound=bounds["range_min"],
+                            question_upper_bound=bounds["range_max"],
+                            open_lower_bound=bounds.get("open_lower_bound", False),
+                            open_upper_bound=bounds.get("open_upper_bound", False),
+                            zero_point=bounds.get("zero_point"),
+                        )
+                        output.cdf = mixture_components_to_cdf(
+                            mixture_config,
+                            cdf_size=bounds.get("cdf_size", 201),
+                        )
+                        logger.info(
+                            "Generated %d-point CDF from %d mixture components",
+                            len(output.cdf),
+                            len(forecast.components),
+                        )
+                    elif output.percentiles:
+                        # Traditional percentile mode
+                        output.cdf = percentiles_to_cdf(
+                            output.percentiles,
+                            upper_bound=bounds["range_max"],
+                            lower_bound=bounds["range_min"],
+                            open_upper_bound=bounds.get("open_upper_bound", False),
+                            open_lower_bound=bounds.get("open_lower_bound", False),
+                            zero_point=bounds.get("zero_point"),
+                            cdf_size=bounds.get("cdf_size", 201),
+                        )
+                        logger.info(
+                            "Generated %d-point CDF from percentiles", len(output.cdf)
+                        )
+                    else:
+                        logger.warning(
+                            "No percentiles or components for CDF generation"
+                        )
+                        output.cdf = None
                 except Exception as e:
                     logger.exception("Failed to generate CDF: %s", e)
                     output.cdf = None
@@ -372,6 +677,71 @@ async def run_forecast(
             output.confidence_interval = (0.0, 0.0)
         elif question_type == "multiple_choice":
             output.probabilities = {}
+
+    # Log tool metrics summary
+    log_metrics_summary()
+    metrics = get_metrics_summary()
+    output.tool_metrics = metrics
+
+    # Search for meta-reflection markdown files (required for top-level forecasts)
+    if question_id is not None and question_id > 0:
+        meta_dir = Path("./notes/meta")
+        meta_files = []
+
+        if meta_dir.exists():
+            # Find files matching _q<question_id>_ pattern
+            pattern = f"_q{question_id}_"
+            meta_files = [f for f in meta_dir.glob("*.md") if pattern in f.name]
+            # Sort by filename (timestamp prefix) descending
+            meta_files.sort(key=lambda f: f.name, reverse=True)
+
+        # Extract subagents from tool metrics
+        subagents_used = []
+        if metrics and "by_tool" in metrics:
+            for tool_name in metrics["by_tool"]:
+                if tool_name == "Task":
+                    subagents_used.append("(via Task)")
+
+        if meta_files:
+            meta_file = meta_files[0]
+            output.meta = ForecastMeta(
+                meta_file_path=str(meta_file),
+                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                subagents_used=subagents_used,
+            )
+            logger.info("Found meta-reflection %s for question %d", meta_file.name, question_id)
+        else:
+            # Meta-reflection is required - log error but don't fail the forecast
+            logger.error(
+                "MISSING META-REFLECTION for question %d. "
+                "Agent failed to write a meta-reflection to notes/meta/ before final output. "
+                "This is a required step for tracking process reflection.",
+                question_id,
+            )
+            output.meta = ForecastMeta(
+                meta_file_path=None,
+                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                subagents_used=subagents_used,
+            )
+
+    # Auto-save forecast to history (for top-level forecasts only)
+    if question_id is not None and question_id > 0:
+        try:
+            save_forecast(
+                question_id=question_id,
+                question_title=question_title,
+                question_type=question_type,
+                summary=output.summary,
+                factors=[f.model_dump() for f in output.factors],
+                probability=output.probability,
+                logit=output.logit,
+                probabilities=output.probabilities,
+                median=output.median,
+                confidence_interval=output.confidence_interval,
+                percentiles=output.percentiles,
+            )
+        except Exception as e:
+            logger.warning("Failed to auto-save forecast: %s", e)
 
     return output
 
