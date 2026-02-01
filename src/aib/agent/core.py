@@ -659,10 +659,12 @@ async def run_forecast(
                             open_upper_bound=bounds.get("open_upper_bound", False),
                             zero_point=bounds.get("zero_point"),
                         )
+                        expected_cdf_size = bounds.get("cdf_size", 201)
                         output.cdf = mixture_components_to_cdf(
                             mixture_config,
-                            cdf_size=bounds.get("cdf_size", 201),
+                            cdf_size=expected_cdf_size,
                         )
+                        output.cdf_size = expected_cdf_size
                         logger.info(
                             "Generated %d-point CDF from %d mixture components",
                             len(output.cdf),
@@ -670,6 +672,7 @@ async def run_forecast(
                         )
                     elif output.percentiles:
                         # Traditional percentile mode
+                        expected_cdf_size = bounds.get("cdf_size", 201)
                         output.cdf = percentiles_to_cdf(
                             output.percentiles,
                             upper_bound=bounds["range_max"],
@@ -677,8 +680,9 @@ async def run_forecast(
                             open_upper_bound=bounds.get("open_upper_bound", False),
                             open_lower_bound=bounds.get("open_lower_bound", False),
                             zero_point=bounds.get("zero_point"),
-                            cdf_size=bounds.get("cdf_size", 201),
+                            cdf_size=expected_cdf_size,
                         )
+                        output.cdf_size = expected_cdf_size
                         logger.info(
                             "Generated %d-point CDF from percentiles", len(output.cdf)
                         )

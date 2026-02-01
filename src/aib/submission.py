@@ -108,9 +108,11 @@ def create_forecast_payload(output: ForecastOutput) -> dict:
                 f"{question_type.capitalize()} forecast missing CDF. "
                 "Ensure numeric bounds are available and percentiles/components are valid."
             )
-        if len(output.cdf) != 201:
+        # Validate CDF size: 201 for numeric, variable for discrete
+        expected_size = output.cdf_size or 201
+        if len(output.cdf) != expected_size:
             raise SubmissionError(
-                f"CDF must have exactly 201 points, got {len(output.cdf)}"
+                f"CDF must have exactly {expected_size} points, got {len(output.cdf)}"
             )
         return {
             "probability_yes": None,

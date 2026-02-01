@@ -640,7 +640,11 @@ class ForecastOutput(BaseModel):
     )
     cdf: list[float] | None = Field(
         default=None,
-        description="For numeric: 201-point CDF for Metaculus submission.",
+        description="For numeric/discrete: CDF for Metaculus submission.",
+    )
+    cdf_size: int | None = Field(
+        default=None,
+        description="Expected CDF size (201 for numeric, variable for discrete).",
     )
 
     # Metadata
