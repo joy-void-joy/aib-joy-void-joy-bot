@@ -337,6 +337,12 @@ def build_question_context(post_data: dict) -> dict:
             "open_lower_bound": question.get("open_lower_bound", False),
             "open_upper_bound": question.get("open_upper_bound", False),
             "zero_point": scaling.get("zero_point"),  # For log-scaled questions
+            # Nominal bounds: more intuitive display values for discrete questions
+            # (e.g., "0 to 10" instead of internal scaling values)
+            "nominal_lower_bound": scaling.get("nominal_lower_bound"),
+            "nominal_upper_bound": scaling.get("nominal_upper_bound"),
+            # Unit of measure for clearer prompts
+            "unit": question.get("unit") or "",
         }
         # For discrete questions, CDF size is inbound_outcome_count + 1
         if question_type == "discrete":

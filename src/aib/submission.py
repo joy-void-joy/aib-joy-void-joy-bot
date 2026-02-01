@@ -4,9 +4,9 @@ import logging
 from dataclasses import dataclass
 
 import httpx
-from forecasting_tools import MetaculusClient
 
 from aib.agent.models import ForecastOutput
+from aib.clients.metaculus import get_client
 from aib.config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class TournamentQuestion:
     already_forecast: bool = False
 
 
-def list_open_tournament_questions(
+async def list_open_tournament_questions(
     tournament_id: int | str,
 ) -> list[TournamentQuestion]:
     """List all open questions from a tournament.
@@ -41,8 +41,8 @@ def list_open_tournament_questions(
         List of TournamentQuestion objects for open questions.
         Each question includes `already_forecast` flag from Metaculus API.
     """
-    client = MetaculusClient()
-    questions = client.get_all_open_questions_from_tournament(tournament_id)
+    client = get_client()
+    questions = await client.get_all_open_questions_from_tournament(tournament_id)
 
     results = []
     for q in questions:

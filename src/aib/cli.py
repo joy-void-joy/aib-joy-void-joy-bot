@@ -205,7 +205,7 @@ def tournament(
 
     print(f"Fetching open questions from tournament: {resolved_id}")
     try:
-        questions = list_open_tournament_questions(resolved_id)
+        questions = asyncio.run(list_open_tournament_questions(resolved_id))
     except Exception as e:
         print(f"Failed to fetch tournament questions: {e}")
         raise typer.Exit(1)
@@ -324,7 +324,7 @@ def loop(
             print(f"\n📊 Tournament: {tid} ({resolved_id})")
 
             try:
-                questions = list_open_tournament_questions(resolved_id)
+                questions = asyncio.run(list_open_tournament_questions(resolved_id))
             except Exception as e:
                 print(f"  ❌ Failed to fetch questions: {e}")
                 continue

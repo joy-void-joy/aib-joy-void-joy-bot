@@ -18,15 +18,12 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 
 ## Reference Files
 
-### Current Implementation (in worktrees/mcp-servers)
 - **src/aib/cli.py**: CLI entry point (`uv run forecast test <question_id>`)
 - **src/aib/agent/core.py**: Main forecasting agent orchestration using Claude Agent SDK
 - **src/aib/agent/subagents.py**: Subagent definitions (deep-researcher, estimator, etc.)
+- **src/aib/agent/numeric.py**: CDF generation for numeric/discrete questions
+- **src/aib/submission.py**: Metaculus API submission functions
 - **src/aib/tools/**: MCP tool implementations (forecasting, sandbox, composition, markets)
-
-### Legacy Reference (in to_port/)
-- **to_port/main.py**: Original main entry point (pre-refactor)
-- **to_port/main_with_no_framework.py**: Reference implementation showing Metaculus API patterns and the forecasting loop. Intentionally rough—use to understand the API, not to copy directly.
 
 ## Commands
 

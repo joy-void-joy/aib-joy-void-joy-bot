@@ -522,22 +522,49 @@ Options: {options}
 
 
 def _format_bounds_info(bounds: dict) -> str:
-    """Format bounds info for numeric questions."""
+    """Format bounds info for numeric/discrete questions.
+
+    Uses nominal bounds when available (more intuitive for discrete questions),
+    falls back to range_min/range_max. Includes units when provided.
+
+    The messaging distinguishes between:
+    - Open bounds: "The question creator thinks the outcome is likely not higher/lower than X"
+    - Closed bounds: "The outcome cannot be higher/lower than X"
+    """
     lines = []
-    if bounds.get("range_min") is not None:
-        qualifier = (
-            "likely not lower than"
-            if bounds.get("open_lower_bound")
-            else "cannot be lower than"
+    unit = bounds.get("unit", "")
+    unit_suffix = f" {unit}" if unit else ""
+
+    # Use nominal bounds if available (more intuitive for discrete questions),
+    # otherwise fall back to range_min/range_max
+    lower_bound = bounds.get("nominal_lower_bound") or bounds.get("range_min")
+    upper_bound = bounds.get("nominal_upper_bound") or bounds.get("range_max")
+
+    if lower_bound is not None:
+        if bounds.get("open_lower_bound"):
+            lines.append(
+                f"The question creator thinks the outcome is likely not lower than "
+                f"{lower_bound}{unit_suffix}."
+            )
+        else:
+            lines.append(f"The outcome cannot be lower than {lower_bound}{unit_suffix}.")
+
+    if upper_bound is not None:
+        if bounds.get("open_upper_bound"):
+            lines.append(
+                f"The question creator thinks the outcome is likely not higher than "
+                f"{upper_bound}{unit_suffix}."
+            )
+        else:
+            lines.append(
+                f"The outcome cannot be higher than {upper_bound}{unit_suffix}."
+            )
+
+    if bounds.get("zero_point") is not None:
+        lines.append(
+            f"Note: This question uses a logarithmic scale (zero point: {bounds['zero_point']})."
         )
-        lines.append(f"Lower bound: {qualifier} {bounds['range_min']}")
-    if bounds.get("range_max") is not None:
-        qualifier = (
-            "likely not higher than"
-            if bounds.get("open_upper_bound")
-            else "cannot be higher than"
-        )
-        lines.append(f"Upper bound: {qualifier} {bounds['range_max']}")
+
     return "\n".join(lines) if lines else "No bounds specified"
 
 
