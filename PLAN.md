@@ -60,8 +60,22 @@ notes/
 # Test a single question without submitting
 uv run forecast test <question_id>
 
-# (Future) Run full forecasting loop
-uv run forecast run
+# Forecast and submit to Metaculus
+uv run forecast submit <question_id>
+
+# Forecast, submit, and post reasoning as a private comment
+uv run forecast submit <question_id> --comment
+
+# Forecast all open questions in a tournament
+uv run forecast tournament aib                    # AIB Spring 2026
+uv run forecast tournament minibench              # MiniBench
+uv run forecast tournament cup                    # Metaculus Cup
+uv run forecast tournament 32916                  # By numeric ID
+
+# Options for tournament command
+uv run forecast tournament aib --dry-run          # List without forecasting
+uv run forecast tournament aib --no-skip-existing # Re-forecast all
+uv run forecast tournament aib --comment          # Post reasoning comments
 ```
 
 ---
@@ -145,10 +159,11 @@ uv run forecast run
 - [x] `agent/models.py`: Output models for all subagents
 - [x] Notes folder with timestamped sessions, research, and forecasts
 
-### Phase 5: CLI & Logging
-> Goal: Working test command with full logging
+### Phase 5: CLI & Submission
+> Goal: Working commands with full logging and Metaculus submission
 
-- [x] `cli.py`: Typer CLI with `test` command
+- [x] `cli.py`: Typer CLI with `test` and `submit` commands
+- [x] `submission.py`: Metaculus API submission (forecasts + comments)
 - [ ] Logging all agent interactions to `logs/<timestamp>_<question_id>.json`
 - [x] Console output: probability + reasoning summary
 
