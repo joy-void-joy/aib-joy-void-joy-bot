@@ -286,6 +286,22 @@ Use timestamp format `YYYYMMDD_HHMMSS` and a short slug from the question title.
 - What would make you update significantly?
 - Any comparable past forecasts to track?
 
+**7. System Design Reflection**
+
+Use this forecast as a lens to reflect on the system itself:
+
+- **Tool Gaps**: During this run, was there a moment where you thought "I wish I had a tool that..."? Not just missing data, but a missing *capability* — something that would change how you approach forecasts generally.
+
+- **Subagent Friction**: Did the handoffs between you and subagents feel natural? Were there points where you were doing work that felt like it belonged elsewhere, or waiting for a subagent to do something you could have done faster yourself?
+
+- **Prompt Assumptions**: Did the system prompt's guidance match how this forecast actually unfolded? Were there instructions that didn't apply, or situations the prompt didn't anticipate? How would you restructure the guidance based on what happened?
+
+- **Ontology Fit**: Looking at how you actually used the tools and subagents — does the current decomposition make sense? What would you merge, split, or reconceive?
+
+- **From Scratch**: If you were designing this forecasting system from the ground up — knowing what you now know from this run and any previous experience — what would you build? What's the right set of tools, subagents, and workflow? Don't be constrained by what exists; describe what *should* exist.
+
+Ground the first four points in specific moments from this run. The last point is your synthesis — use everything you've observed to imagine a better system.
+
 Write this as a genuine reflection, not a checklist. Be specific and honest about what worked and what didn't. This helps improve the system over time.
 
 ## Research Methodology
