@@ -10,6 +10,12 @@ import httpx
 import typer
 
 from aib.agent import ForecastOutput, run_forecast
+from aib.submission import (
+    SubmissionError,
+    format_reasoning_comment,
+    post_comment,
+    submit_forecast,
+)
 
 app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
 logger = logging.getLogger(__name__)
@@ -111,6 +117,45 @@ def test(
     except RuntimeError as e:
         print(f"Agent failed: {e}")
         raise typer.Exit(1)
+
+
+@app.command()
+def submit(
+    question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
+    comment: Annotated[
+        bool, typer.Option("--comment", "-c", help="Post reasoning as a private comment")
+    ] = False,
+) -> None:
+    """Forecast a question and submit the prediction to Metaculus."""
+    log_file = setup_logging(question_id)
+    print(f"Logging to {log_file}")
+
+    try:
+        output = asyncio.run(run_forecast(question_id))
+        display_forecast(output)
+    except httpx.HTTPStatusError as e:
+        print(f"Failed to fetch question: {e}")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        print(f"Agent failed: {e}")
+        raise typer.Exit(1)
+
+    print("Submitting forecast to Metaculus...")
+    try:
+        asyncio.run(submit_forecast(output))
+        print(f"✅ Forecast submitted for question {question_id}")
+    except SubmissionError as e:
+        print(f"❌ Submission failed: {e}")
+        raise typer.Exit(1)
+
+    if comment:
+        print("Posting reasoning comment...")
+        try:
+            comment_text = format_reasoning_comment(output)
+            asyncio.run(post_comment(question_id, comment_text))
+            print(f"✅ Comment posted on question {question_id}")
+        except SubmissionError as e:
+            print(f"⚠️  Comment failed (forecast was submitted): {e}")
 
 
 if __name__ == "__main__":

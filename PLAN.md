@@ -60,8 +60,11 @@ notes/
 # Test a single question without submitting
 uv run forecast test <question_id>
 
-# (Future) Run full forecasting loop
-uv run forecast run
+# Forecast and submit to Metaculus
+uv run forecast submit <question_id>
+
+# Forecast, submit, and post reasoning as a private comment
+uv run forecast submit <question_id> --comment
 ```
 
 ---
@@ -145,10 +148,11 @@ uv run forecast run
 - [x] `agent/models.py`: Output models for all subagents
 - [x] Notes folder with timestamped sessions, research, and forecasts
 
-### Phase 5: CLI & Logging
-> Goal: Working test command with full logging
+### Phase 5: CLI & Submission
+> Goal: Working commands with full logging and Metaculus submission
 
-- [x] `cli.py`: Typer CLI with `test` command
+- [x] `cli.py`: Typer CLI with `test` and `submit` commands
+- [x] `submission.py`: Metaculus API submission (forecasts + comments)
 - [ ] Logging all agent interactions to `logs/<timestamp>_<question_id>.json`
 - [x] Console output: probability + reasoning summary
 
