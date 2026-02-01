@@ -1,8 +1,10 @@
 """Metaculus forecast submission."""
 
 import logging
+from dataclasses import dataclass
 
 import httpx
+from forecasting_tools import MetaculusClient
 
 from aib.agent.models import ForecastOutput
 from aib.config import settings
@@ -14,6 +16,53 @@ METACULUS_API_BASE = "https://www.metaculus.com/api"
 
 class SubmissionError(Exception):
     """Error during forecast submission."""
+
+
+@dataclass
+class TournamentQuestion:
+    """Lightweight question info from tournament listing."""
+
+    post_id: int
+    title: str
+    question_type: str
+    url: str
+    already_forecast: bool = False
+
+
+def list_open_tournament_questions(tournament_id: int | str) -> list[TournamentQuestion]:
+    """List all open questions from a tournament.
+
+    Args:
+        tournament_id: Tournament ID (int) or slug (str).
+
+    Returns:
+        List of TournamentQuestion objects for open questions.
+        Each question includes `already_forecast` flag from Metaculus API.
+    """
+    client = MetaculusClient()
+    questions = client.get_all_open_questions_from_tournament(tournament_id)
+
+    results = []
+    for q in questions:
+        post_id = q.id_of_post
+        url = q.page_url
+        if post_id is None or url is None:
+            logger.warning("Skipping question with missing post_id or url: %s", q.question_text)
+            continue
+
+        # Check if we've already forecast this question using Metaculus API
+        already_forecast = q.timestamp_of_my_last_forecast is not None
+
+        results.append(
+            TournamentQuestion(
+                post_id=post_id,
+                title=q.question_text,
+                question_type=q.get_question_type(),
+                url=url,
+                already_forecast=already_forecast,
+            )
+        )
+    return results
 
 
 def create_forecast_payload(output: ForecastOutput) -> dict:

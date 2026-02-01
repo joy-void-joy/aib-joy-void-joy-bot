@@ -13,6 +13,7 @@ from aib.agent import ForecastOutput, run_forecast
 from aib.submission import (
     SubmissionError,
     format_reasoning_comment,
+    list_open_tournament_questions,
     post_comment,
     submit_forecast,
 )
@@ -156,6 +157,118 @@ def submit(
             print(f"✅ Comment posted on question {question_id}")
         except SubmissionError as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
+
+
+# Known tournament IDs
+TOURNAMENT_IDS = {
+    "aib": "spring-aib-2026",
+    "minibench": "minibench",
+    "cup": 32921,
+}
+
+
+@app.command()
+def tournament(
+    tournament_id: Annotated[
+        str,
+        typer.Argument(
+            help="Tournament ID or alias (aib, minibench, cup) or numeric ID"
+        ),
+    ] = "aib",
+    skip_existing: Annotated[
+        bool,
+        typer.Option(
+            "--skip-existing/--no-skip-existing",
+            help="Skip questions that already have a local forecast",
+        ),
+    ] = True,
+    comment: Annotated[
+        bool, typer.Option("--comment", "-c", help="Post reasoning as a private comment")
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="List questions without forecasting"),
+    ] = False,
+) -> None:
+    """Forecast all open questions in a tournament and submit to Metaculus."""
+    # Resolve tournament ID alias
+    resolved_id: int | str
+    if tournament_id in TOURNAMENT_IDS:
+        resolved_id = TOURNAMENT_IDS[tournament_id]
+    elif tournament_id.isdigit():
+        resolved_id = int(tournament_id)
+    else:
+        resolved_id = tournament_id
+
+    print(f"Fetching open questions from tournament: {resolved_id}")
+    try:
+        questions = list_open_tournament_questions(resolved_id)
+    except Exception as e:
+        print(f"Failed to fetch tournament questions: {e}")
+        raise typer.Exit(1)
+
+    print(f"Found {len(questions)} open questions")
+
+    if dry_run:
+        for q in questions:
+            status = "📝 Already forecast" if q.already_forecast else "⏳ Pending"
+            print(f"  [{status}] {q.post_id}: {q.title[:60]}...")
+        return
+
+    # Track results
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+
+    for i, q in enumerate(questions, 1):
+        print(f"\n[{i}/{len(questions)}] Question {q.post_id}: {q.title[:50]}...")
+
+        # Check for existing forecast (uses Metaculus API data)
+        if skip_existing and q.already_forecast:
+            print("  ⏭️  Skipping (already forecast on Metaculus)")
+            skip_count += 1
+            continue
+
+        # Setup logging for this question
+        log_file = setup_logging(q.post_id)
+        print(f"  📝 Logging to {log_file}")
+
+        # Run forecast
+        try:
+            output = asyncio.run(run_forecast(q.post_id))
+            display_forecast(output)
+        except httpx.HTTPStatusError as e:
+            print(f"  ❌ Failed to fetch question: {e}")
+            error_count += 1
+            continue
+        except RuntimeError as e:
+            print(f"  ❌ Agent failed: {e}")
+            error_count += 1
+            continue
+
+        # Submit forecast
+        print("  📤 Submitting forecast...")
+        try:
+            asyncio.run(submit_forecast(output))
+            print("  ✅ Forecast submitted")
+            success_count += 1
+        except SubmissionError as e:
+            print(f"  ❌ Submission failed: {e}")
+            error_count += 1
+            continue
+
+        # Post comment if requested
+        if comment:
+            try:
+                comment_text = format_reasoning_comment(output)
+                asyncio.run(post_comment(q.post_id, comment_text))
+                print("  💬 Comment posted")
+            except SubmissionError as e:
+                print(f"  ⚠️  Comment failed: {e}")
+
+    # Summary
+    print(f"\n{'=' * 60}")
+    print(f"Tournament complete: {success_count} submitted, {skip_count} skipped, {error_count} errors")
 
 
 if __name__ == "__main__":
