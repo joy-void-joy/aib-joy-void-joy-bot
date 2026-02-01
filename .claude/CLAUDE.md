@@ -43,6 +43,11 @@ uv run forecast submit <question_id>
 # Forecast, submit, and post reasoning as a private comment
 uv run forecast submit <question_id> --comment
 
+# Forecast all open questions in a tournament (skips already forecast)
+uv run forecast tournament aib       # AIB Spring 2026
+uv run forecast tournament minibench # MiniBench
+uv run forecast tournament cup       # Metaculus Cup
+
 # Add a new dependency (DO NOT modify pyproject.toml directly)
 uv add <package-name>
 

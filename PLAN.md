@@ -65,6 +65,17 @@ uv run forecast submit <question_id>
 
 # Forecast, submit, and post reasoning as a private comment
 uv run forecast submit <question_id> --comment
+
+# Forecast all open questions in a tournament
+uv run forecast tournament aib                    # AIB Spring 2026
+uv run forecast tournament minibench              # MiniBench
+uv run forecast tournament cup                    # Metaculus Cup
+uv run forecast tournament 32916                  # By numeric ID
+
+# Options for tournament command
+uv run forecast tournament aib --dry-run          # List without forecasting
+uv run forecast tournament aib --no-skip-existing # Re-forecast all
+uv run forecast tournament aib --comment          # Post reasoning comments
 ```
 
 ---
