@@ -224,5 +224,8 @@ def get_client() -> AsyncMetaculusClient:
     """Get the async Metaculus client singleton."""
     global _client
     if _client is None:
-        _client = AsyncMetaculusClient(timeout=settings.http_timeout_seconds)
+        _client = AsyncMetaculusClient(
+            timeout=settings.http_timeout_seconds,
+            token=settings.metaculus_token,
+        )
     return _client
