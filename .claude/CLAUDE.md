@@ -323,6 +323,21 @@ The script:
 3. Computes Brier scores, log scores, and calibration buckets
 4. Saves metrics to `notes/feedback_loop/<timestamp>_metrics.json`
 
+### debug.py
+
+Debug tools for Metaculus API parsing and MCP error propagation.
+
+```bash
+# Test Metaculus API parsing
+uv run python .claude/scripts/debug.py metaculus --tournament spring-aib-2026
+
+# Test only raw API parsing (no client)
+uv run python .claude/scripts/debug.py metaculus --raw-only
+
+# Test MCP error flag propagation (SDK workaround verification)
+uv run python .claude/scripts/debug.py mcp-error
+```
+
 ## Settings & Configuration
 
 All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
