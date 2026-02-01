@@ -528,11 +528,11 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
 
                 pages = data.get("query", {}).get("pages", {})
                 if not pages:
-                    return {"error": f"Article not found: {query}"}
+                    raise ValueError(f"Article not found: {query}")
 
                 page_id = next(iter(pages))
                 if page_id == "-1":
-                    return {"error": f"Article not found: {query}"}
+                    raise ValueError(f"Article not found: {query}")
 
                 page = pages[page_id]
                 extract = page.get("extract", "")
