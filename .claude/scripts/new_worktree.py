@@ -118,9 +118,12 @@ def create(
         typer.echo(f"Error: {new_worktree_path} already exists", err=True)
         raise typer.Exit(1)
 
+    git = sh.Command("git")
+    uv = sh.Command("uv")
+
     # Get current branch name
     try:
-        current_branch = sh.git("branch", "--show-current", _tty_out=False).strip()
+        current_branch = str(git("branch", "--show-current", _tty_out=False)).strip()
     except sh.ErrorReturnCode:
         typer.echo("Error: Could not determine current branch", err=True)
         raise typer.Exit(1)
@@ -134,7 +137,7 @@ def create(
 
     # Create the worktree with a new branch
     try:
-        sh.git(
+        git(
             "worktree", "add",
             str(new_worktree_path),
             "-b", branch_name,
@@ -145,11 +148,17 @@ def create(
         typer.echo(f"Error creating worktree: {e.stderr.decode()}", err=True)
         raise typer.Exit(1)
 
+    # Copy .env.local if it exists
+    env_local = cwd / ".env.local"
+    if env_local.exists():
+        shutil.copy2(env_local, new_worktree_path / ".env.local")
+        typer.echo("✓ Copied .env.local")
+
     # Run uv sync in the new worktree
     if not no_sync:
         typer.echo("Running uv sync...")
         try:
-            sh.uv(
+            uv(
                 "sync", "--all-groups", "--all-extras",
                 _cwd=str(new_worktree_path),
                 _tty_out=False
@@ -230,8 +239,17 @@ def create(
             typer.echo("No session to migrate (none found in source)")
 
     typer.echo()
-    typer.echo("Done! To switch to the new worktree:")
-    typer.echo(f"  cd {new_worktree_path}")
+    cd_command = f"cd {new_worktree_path}"
+
+    # Try to copy to clipboard
+    try:
+        xclip = sh.Command("xclip")
+        xclip("-selection", "clipboard", _in=cd_command)
+        typer.echo(f"Done! Copied to clipboard: {cd_command}")
+    except (sh.CommandNotFound, sh.ErrorReturnCode):
+        typer.echo("Done! To switch to the new worktree:")
+        typer.echo(f"  {cd_command}")
+
     typer.echo()
     typer.echo("Then start Claude Code to continue with the migrated session:")
     typer.echo("  claude --resume")
