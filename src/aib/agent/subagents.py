@@ -14,56 +14,74 @@ Subagents:
 
 from claude_agent_sdk import AgentDefinition
 
-# Tools available to research subagents
-RESEARCH_TOOLS = [
-    "mcp__forecasting__search_exa",
-    "mcp__forecasting__search_news",
-    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-    "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
-    "mcp__forecasting__search_metaculus",
-    "mcp__notes__notes",
-    "Read",
-    "Glob",
-]
+from aib.config import settings
 
-# Tools for estimator (includes code execution)
-ESTIMATOR_TOOLS = [
-    "mcp__forecasting__search_exa",
-    "mcp__forecasting__search_news",
-    "mcp__sandbox__execute_code",
-    "mcp__sandbox__install_package",
-    "mcp__notes__notes",
-    "Read",
-]
 
-# Tools for link explorer (searches across platforms)
-LINK_EXPLORER_TOOLS = [
-    "mcp__forecasting__search_metaculus",
-    "mcp__forecasting__get_metaculus_questions",  # Unified: single or batch
-    "mcp__forecasting__get_coherence_links",
-    "mcp__forecasting__get_prediction_history",
-    "mcp__forecasting__search_exa",
-    "mcp__forecasting__search_news",
-    "mcp__markets__manifold_price",
-    "mcp__markets__polymarket_price",
-    "mcp__notes__notes",
-    "Read",
-]
+def _search_tools() -> list[str]:
+    """Return search tools based on configured API keys."""
+    tools: list[str] = []
+    if settings.exa_api_key:
+        tools.append("mcp__forecasting__search_exa")
+    if settings.asknews_client_id and settings.asknews_client_secret:
+        tools.append("mcp__forecasting__search_news")
+    return tools
 
-# Tools for fact checker
-FACT_CHECKER_TOOLS = [
-    "mcp__forecasting__search_exa",
-    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-    "mcp__notes__notes",
-    "Read",
-]
 
-# Tools for quick researcher (minimal, fast)
-QUICK_RESEARCH_TOOLS = [
-    "mcp__forecasting__search_exa",
-    "mcp__forecasting__search_news",
-    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-]
+def _research_tools() -> list[str]:
+    """Tools available to research subagents."""
+    return [
+        *_search_tools(),
+        "mcp__forecasting__wikipedia",
+        "mcp__forecasting__get_metaculus_questions",
+        "mcp__forecasting__search_metaculus",
+        "mcp__notes__notes",
+        "Read",
+        "Glob",
+    ]
+
+
+def _estimator_tools() -> list[str]:
+    """Tools for estimator (includes code execution)."""
+    return [
+        *_search_tools(),
+        "mcp__sandbox__execute_code",
+        "mcp__sandbox__install_package",
+        "mcp__notes__notes",
+        "Read",
+    ]
+
+
+def _link_explorer_tools() -> list[str]:
+    """Tools for link explorer (searches across platforms)."""
+    return [
+        "mcp__forecasting__search_metaculus",
+        "mcp__forecasting__get_metaculus_questions",
+        "mcp__forecasting__get_coherence_links",
+        "mcp__forecasting__get_prediction_history",
+        *_search_tools(),
+        "mcp__markets__manifold_price",
+        "mcp__markets__polymarket_price",
+        "mcp__notes__notes",
+        "Read",
+    ]
+
+
+def _fact_checker_tools() -> list[str]:
+    """Tools for fact checker."""
+    return [
+        *(["mcp__forecasting__search_exa"] if settings.exa_api_key else []),
+        "mcp__forecasting__wikipedia",
+        "mcp__notes__notes",
+        "Read",
+    ]
+
+
+def _quick_research_tools() -> list[str]:
+    """Tools for quick researcher (minimal, fast)."""
+    return [
+        *_search_tools(),
+        "mcp__forecasting__wikipedia",
+    ]
 
 
 # --- Deep Researcher ---
@@ -171,7 +189,7 @@ deep_researcher = AgentDefinition(
         "adapts research approach to the question."
     ),
     prompt=DEEP_RESEARCHER_PROMPT,
-    tools=RESEARCH_TOOLS,
+    tools=_research_tools(),
     model="sonnet",
 )
 
@@ -252,7 +270,7 @@ estimator = AgentDefinition(
         "calculations. Returns point estimate with confidence range."
     ),
     prompt=ESTIMATOR_PROMPT,
-    tools=ESTIMATOR_TOOLS,
+    tools=_estimator_tools(),
     model="sonnet",
 )
 
@@ -313,7 +331,7 @@ quick_researcher = AgentDefinition(
         "before deeper research."
     ),
     prompt=QUICK_RESEARCHER_PROMPT,
-    tools=QUICK_RESEARCH_TOOLS,
+    tools=_quick_research_tools(),
     model="haiku",
 )
 
@@ -400,7 +418,7 @@ link_explorer = AgentDefinition(
         "base rates from similar past events."
     ),
     prompt=LINK_EXPLORER_PROMPT,
-    tools=LINK_EXPLORER_TOOLS,
+    tools=_link_explorer_tools(),
     model="haiku",
 )
 
@@ -477,7 +495,7 @@ fact_checker = AgentDefinition(
         "against multiple sources, and flags outdated or unreliable information."
     ),
     prompt=FACT_CHECKER_PROMPT,
-    tools=FACT_CHECKER_TOOLS,
+    tools=_fact_checker_tools(),
     model="haiku",
 )
 
