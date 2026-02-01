@@ -9,7 +9,9 @@ from asyncio import Semaphore
 from typing import Annotated, Any, Literal
 
 import httpx
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import tool
+
+from aib.tools.mcp_server import create_mcp_server
 from pydantic import BaseModel, Field, field_validator
 
 from metaculus import ApiFilter, BinaryQuestion
@@ -24,7 +26,22 @@ from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
-# Rate limiting semaphores
+# --- Rate Limiting ---
+#
+# These semaphores are intentionally global (module-level) to enforce rate limits
+# across ALL concurrent forecast sessions, including subforecasts spawned by
+# spawn_subquestions. This prevents exceeding API rate limits when running
+# multiple forecasts in parallel.
+#
+# Behavior:
+# - Main forecast and all subforecasts share the same semaphore slots
+# - If max_concurrent=5 and main forecast uses 2 slots, subforecasts get 3
+# - Subforecasts may queue waiting for slots
+#
+# Configure via environment:
+# - AIB_METACULUS_MAX_CONCURRENT (default: 5)
+# - AIB_SEARCH_MAX_CONCURRENT (default: 3)
+
 _metaculus_semaphore = Semaphore(settings.metaculus_max_concurrent)
 _search_semaphore = Semaphore(settings.search_max_concurrent)
 
@@ -187,7 +204,9 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         if len(results) == 1:
             result = results[0]
             if "error" in result:
-                return mcp_error(f"Failed to fetch question {result['post_id']}: {result['error']}")
+                return mcp_error(
+                    f"Failed to fetch question {result['post_id']}: {result['error']}"
+                )
             return mcp_success(result)
         return mcp_success({"questions": list(results)})
     except Exception as e:
@@ -732,7 +751,7 @@ if settings.asknews_client_id and settings.asknews_client_secret:
 else:
     logger.info("search_news tool disabled: ASKNEWS_CLIENT_ID/SECRET not configured")
 
-forecasting_server = create_sdk_mcp_server(
+forecasting_server = create_mcp_server(
     name="forecasting",
     version="4.0.0",
     tools=_forecasting_tools,

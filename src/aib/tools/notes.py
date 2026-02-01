@@ -11,12 +11,14 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, Required, TypedDict
+from typing import Any, Literal
 
 import aiofiles
 from pydantic import BaseModel, Field
 
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import tool
+
+from aib.tools.mcp_server import create_mcp_server
 
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -73,23 +75,25 @@ class NoteSummary(BaseModel):
 # --- Input Types ---
 
 
-class NotesInput(TypedDict, total=False):
-    mode: Required[Literal["list", "search", "read", "write"]]
+class NotesInput(BaseModel):
+    """Input for notes tool."""
+
+    mode: Literal["list", "search", "read", "write"]
     # For list
-    type_filter: str  # Filter by NoteType
-    question_id: int  # Filter by question
+    type_filter: str | None = None
+    question_id: int | None = None
     # For search
-    query: str
+    query: str | None = None
     # For read
-    id: str
+    id: str | None = None
     # For write
-    type: str
-    topic: str
-    summary: str
-    content: str
-    sources: list[str]
-    confidence: float
-    report_path: str
+    type: str | None = None
+    topic: str | None = None
+    summary: str | None = None
+    content: str | None = None
+    sources: list[str] = Field(default_factory=list)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    report_path: str | None = None
 
 
 # --- Storage Helpers ---
@@ -175,30 +179,35 @@ def _note_to_summary(note: Note) -> NoteSummary:
     },
 )
 @tracked("notes")
-async def notes_tool(args: NotesInput) -> dict[str, Any]:
+async def notes_tool(args: dict[str, Any]) -> dict[str, Any]:
     """Manage structured notes for forecasting research."""
-    mode = args["mode"]
+    try:
+        validated = NotesInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    mode = validated.mode
 
     if mode == "list":
         return await _list_notes(
-            type_filter=args.get("type_filter"),
-            question_id=args.get("question_id"),
+            type_filter=validated.type_filter,
+            question_id=validated.question_id,
         )
     elif mode == "search":
-        query = args.get("query")
+        query = validated.query
         if not query:
             return mcp_error("Search mode requires 'query' parameter")
         return await _search_notes(
             query=query,
-            type_filter=args.get("type_filter"),
+            type_filter=validated.type_filter,
         )
     elif mode == "read":
-        note_id = args.get("id")
+        note_id = validated.id
         if not note_id:
             return mcp_error("Read mode requires 'id' parameter")
         return await _read_note(note_id)
     elif mode == "write":
-        return await _write_note(args)
+        return await _write_note(validated)
     else:
         return mcp_error(
             f"Unknown mode: {mode}. Use 'list', 'search', 'read', or 'write'."
@@ -306,16 +315,21 @@ async def _read_note(note_id: str) -> dict[str, Any]:
         return mcp_error(f"Failed to read note: {e}")
 
 
-async def _write_note(args: NotesInput) -> dict[str, Any]:
+async def _write_note(validated: NotesInput) -> dict[str, Any]:
     """Create a new structured note."""
     # Validate required fields
-    required = ["type", "topic", "summary", "content"]
-    missing = [f for f in required if not args.get(f)]
+    required_fields = {
+        "type": validated.type,
+        "topic": validated.topic,
+        "summary": validated.summary,
+        "content": validated.content,
+    }
+    missing = [f for f, v in required_fields.items() if not v]
     if missing:
         return mcp_error(f"Write mode requires: {', '.join(missing)}")
 
     # Validate note type
-    note_type_str = args.get("type", "")
+    note_type_str = validated.type or ""
     try:
         note_type = NoteType(note_type_str)
     except ValueError:
@@ -325,13 +339,13 @@ async def _write_note(args: NotesInput) -> dict[str, Any]:
     # Create note
     note = Note(
         type=note_type,
-        topic=args.get("topic", ""),
-        summary=args.get("summary", ""),
-        content=args.get("content", ""),
-        sources=args.get("sources", []),
-        confidence=args.get("confidence"),
-        question_id=args.get("question_id"),
-        report_path=args.get("report_path"),
+        topic=validated.topic or "",
+        summary=validated.summary or "",
+        content=validated.content or "",
+        sources=validated.sources,
+        confidence=validated.confidence,
+        question_id=validated.question_id,
+        report_path=validated.report_path,
     )
 
     # Save
@@ -350,7 +364,7 @@ async def _write_note(args: NotesInput) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-notes_server = create_sdk_mcp_server(
+notes_server = create_mcp_server(
     name="notes",
     version="2.0.0",
     tools=[

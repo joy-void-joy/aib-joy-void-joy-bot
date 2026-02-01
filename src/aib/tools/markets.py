@@ -5,11 +5,15 @@ additional signal for forecasting. Market prices reflect aggregated
 wisdom of traders with financial incentives.
 """
 
+import json
 import logging
-from typing import Any, Required, TypedDict
+from typing import Any, TypedDict
 
 import httpx
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import tool
+from pydantic import BaseModel, Field
+
+from aib.tools.mcp_server import create_mcp_server
 
 from aib.config import settings
 from aib.tools.metrics import tracked
@@ -22,11 +26,11 @@ logger = logging.getLogger(__name__)
 # --- Input Schemas ---
 
 
-class MarketQueryInput(TypedDict, total=False):
+class MarketQueryInput(BaseModel):
     """Input for market price tools."""
 
-    query: Required[str]
-    limit: int
+    query: str = Field(min_length=1)
+    limit: int = Field(default=settings.market_default_limit, ge=1, le=50)
 
 
 # --- Output Schemas ---
@@ -63,6 +67,33 @@ async def _search_polymarket(query: str) -> list[dict[str, Any]]:
         return response.json()
 
 
+def _parse_yes_price(outcome_prices: Any) -> float | None:
+    """Parse YES price from various Polymarket API response formats.
+
+    Args:
+        outcome_prices: The outcomePrices field from Polymarket API.
+                       Can be a list of floats, strings, or string-encoded lists.
+
+    Returns:
+        The parsed YES price (first element) as a float, or None if parsing fails.
+    """
+    if not outcome_prices:
+        return None
+    try:
+        price_value = outcome_prices[0]
+        if isinstance(price_value, (int, float)):
+            return float(price_value)
+        if isinstance(price_value, str):
+            # Handle string representation of list (API sometimes returns this)
+            if price_value.startswith("["):
+                parsed = json.loads(price_value.replace("'", '"'))
+                return float(parsed[0]) if parsed else None
+            return float(price_value)
+        return None
+    except (ValueError, TypeError, json.JSONDecodeError, IndexError, KeyError):
+        return None
+
+
 def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
     """Parse a Polymarket event into a MarketPrice.
 
@@ -70,7 +101,8 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
         event: Raw event dict from Polymarket API
 
     Returns:
-        MarketPrice if the event has markets, None otherwise
+        MarketPrice if the event has valid market data, None otherwise.
+        Returns None instead of falling back to 0.5 when price parsing fails.
     """
     markets = event.get("markets", [])
     if not markets:
@@ -78,7 +110,15 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
 
     market = markets[0]
     outcome_prices = market.get("outcomePrices", [])
-    yes_price = float(outcome_prices[0]) if outcome_prices else 0.5
+
+    yes_price = _parse_yes_price(outcome_prices)
+    if yes_price is None:
+        logger.warning(
+            "Could not parse outcomePrices for event %s: %s",
+            event.get("slug", "unknown"),
+            outcome_prices,
+        )
+        return None
 
     return {
         "market_title": event.get("title", "Unknown"),
@@ -99,10 +139,15 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
     {"query": str, "limit": int},
 )
 @tracked("polymarket_price")
-async def polymarket_price(args: MarketQueryInput) -> dict[str, Any]:
+async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
     """Search Polymarket and return market prices."""
-    query = args["query"]
-    limit = args.get("limit", settings.market_default_limit)
+    try:
+        validated = MarketQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    limit = validated.limit
 
     try:
         events = await _search_polymarket(query)
@@ -176,10 +221,15 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
     {"query": str, "limit": int},
 )
 @tracked("manifold_price")
-async def manifold_price(args: MarketQueryInput) -> dict[str, Any]:
+async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
     """Search Manifold Markets and return market prices."""
-    query = args["query"]
-    limit = args.get("limit", settings.market_default_limit)
+    try:
+        validated = MarketQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    limit = validated.limit
 
     try:
         markets = await _search_manifold(query)
@@ -201,7 +251,7 @@ async def manifold_price(args: MarketQueryInput) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-markets_server = create_sdk_mcp_server(
+markets_server = create_mcp_server(
     name="markets",
     version="1.0.0",
     tools=[

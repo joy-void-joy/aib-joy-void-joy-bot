@@ -5,7 +5,6 @@ code execution. The sandbox provides tools for the Claude Agent SDK.
 """
 
 import logging
-import threading
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -13,7 +12,10 @@ from pathlib import Path
 from typing import Any, Self, TypedDict
 
 import docker
-from claude_agent_sdk import SdkMcpTool, create_sdk_mcp_server, tool
+from claude_agent_sdk import SdkMcpTool, tool
+from pydantic import BaseModel, Field
+
+from aib.tools.mcp_server import create_mcp_server
 from claude_agent_sdk.types import McpSdkServerConfig
 from docker.errors import APIError, DockerException, NotFound
 from docker.models.containers import Container, ExecResult
@@ -25,19 +27,19 @@ from aib.tools.responses import mcp_error, mcp_success
 logger = logging.getLogger(__name__)
 
 
-# --- TypedDict definitions for tool inputs ---
+# --- Pydantic input schemas ---
 
 
-class ExecuteCodeInput(TypedDict):
+class ExecuteCodeInput(BaseModel):
     """Input schema for the execute_code tool."""
 
-    code: str
+    code: str = Field(min_length=1)
 
 
-class InstallPackageInput(TypedDict):
+class InstallPackageInput(BaseModel):
     """Input schema for the install_package tool."""
 
-    packages: list[str]
+    packages: list[str] = Field(min_length=1)
 
 
 # --- TypedDict definitions for result types ---
@@ -234,41 +236,29 @@ class Sandbox:
             timeout_seconds = settings.sandbox_timeout_seconds
 
         start = time.perf_counter()
-        result_holder: dict[str, ExecResult | None] = {"result": None}
-        error_holder: dict[str, Exception | None] = {"error": None}
 
-        def run_exec() -> None:
-            """Run the exec in a thread for timeout support."""
-            try:
-                result_holder["result"] = self.container.exec_run(
-                    ["python", "-c", code],
-                    demux=True,
-                    workdir="/workspace",
-                )
-            except Exception as e:
-                error_holder["error"] = e
+        # Use `timeout` command inside container for reliable timeout handling.
+        # The `timeout` utility (from coreutils) returns exit code 124 on timeout
+        # and actually kills the process, unlike threading-based timeouts which
+        # leave zombie processes running.
+        if timeout_seconds > 0:
+            cmd = ["timeout", str(timeout_seconds), "python", "-c", code]
+        else:
+            cmd = ["python", "-c", code]
 
-        # Use threading for timeout since Docker SDK doesn't support exec timeout
-        thread = threading.Thread(target=run_exec)
-        thread.start()
-        thread.join(timeout=timeout_seconds if timeout_seconds > 0 else None)
+        result: ExecResult = self.container.exec_run(
+            cmd,
+            demux=True,
+            workdir="/workspace",
+        )
 
         duration_ms = int((time.perf_counter() - start) * 1000)
 
-        if thread.is_alive():
-            # Timeout occurred - thread is still running
-            # We can't cleanly kill the exec, but we return a timeout error
-            logger.warning("Code execution timed out after %d seconds", timeout_seconds)
+        # Check for timeout (exit code 124 from `timeout` command)
+        if result.exit_code == 124:
             raise CodeExecutionTimeoutError(
                 f"Code execution timed out after {timeout_seconds} seconds"
             )
-
-        if error_holder["error"] is not None:
-            raise error_holder["error"]
-
-        result = result_holder["result"]
-        if result is None:
-            raise RuntimeError("Exec result is None despite thread completing")
 
         # When demux=True, output is a tuple of (stdout, stderr)
         stdout_bytes, stderr_bytes = result.output
@@ -325,12 +315,17 @@ class Sandbox:
                 "persistent /workspace directory, and a /shared directory for file exchange "
                 f"with the host. Timeout: {timeout_seconds}s."
             ),
-            ExecuteCodeInput,
+            {"code": str},
         )
         @tracked("execute_code")
-        async def execute_code(args: ExecuteCodeInput) -> dict[str, Any]:
+        async def execute_code(args: dict[str, Any]) -> dict[str, Any]:
             try:
-                result = self.run_code(args["code"])
+                validated = ExecuteCodeInput.model_validate(args)
+            except Exception as e:
+                return mcp_error(f"Invalid input: {e}")
+
+            try:
+                result = self.run_code(validated.code)
                 return mcp_success(result)
             except SandboxNotInitializedError as e:
                 logger.error("Sandbox not initialized: %s", e)
@@ -346,16 +341,17 @@ class Sandbox:
             "install_package",
             "Install one or more Python packages from PyPI using uv. Packages persist "
             "in the container across executions.",
-            InstallPackageInput,
+            {"packages": list},
         )
         @tracked("install_package")
-        async def install_package(args: InstallPackageInput) -> dict[str, Any]:
-            packages = args["packages"]
-            if not packages:
-                return mcp_error("No packages specified")
+        async def install_package(args: dict[str, Any]) -> dict[str, Any]:
+            try:
+                validated = InstallPackageInput.model_validate(args)
+            except Exception as e:
+                return mcp_error(f"Invalid input: {e}")
 
             try:
-                result = self.run_install(packages)
+                result = self.run_install(validated.packages)
                 return mcp_success(result)
             except SandboxNotInitializedError as e:
                 logger.error("Sandbox not initialized: %s", e)
@@ -380,7 +376,7 @@ class Sandbox:
         Returns:
             Configured MCP server with execute_code and install_package tools.
         """
-        return create_sdk_mcp_server(
+        return create_mcp_server(
             name=name,
             version=version,
             tools=self.create_tools(),

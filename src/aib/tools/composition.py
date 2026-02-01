@@ -6,9 +6,12 @@ These tools enable the main forecasting agent to:
 
 import asyncio
 import logging
-from typing import Any, Required, TypedDict
+from typing import Any
 
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import tool
+from pydantic import BaseModel, Field
+
+from aib.tools.mcp_server import create_mcp_server
 
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -35,36 +38,27 @@ def set_run_forecast_fn(fn: Any) -> None:
 # --- Input Schemas ---
 
 
-class SubQuestion(TypedDict, total=False):
-    """A sub-question for parallel forecasting.
+class SubQuestionInput(BaseModel):
+    """A sub-question for parallel forecasting."""
 
-    Attributes:
-        question: The sub-question text.
-        context: How this relates to the parent question.
-        weight: Optional weight for agent's own synthesis (default: 1.0).
-        type: Question type: "binary" (default), "numeric", or "multiple_choice".
-        options: For multiple_choice questions, list of option labels.
-        numeric_bounds: For numeric questions, dict with range_min, range_max, etc.
-    """
-
-    question: Required[str]
-    context: str
-    weight: float  # Optional, default 1.0; for agent's synthesis reference
-    type: str  # "binary", "numeric", or "multiple_choice" (default: binary)
-    options: list[str]  # For multiple_choice
-    numeric_bounds: dict[str, Any]  # For numeric questions
+    question: str
+    context: str = ""
+    weight: float = 1.0
+    type: str = "binary"
+    options: list[str] = Field(default_factory=list)
+    numeric_bounds: dict[str, Any] = Field(default_factory=dict)
 
 
-class SpawnSubquestionsInput(TypedDict):
+class SpawnSubquestionsInput(BaseModel):
     """Input for spawn_subquestions tool."""
 
-    subquestions: list[SubQuestion]
+    subquestions: list[SubQuestionInput] = Field(min_length=1)
 
 
 # --- Output Schemas ---
 
 
-class SubForecastResult(TypedDict):
+class SubForecastResult(BaseModel):
     """Result from a single sub-forecast."""
 
     question: str
@@ -85,10 +79,10 @@ class SubForecastResult(TypedDict):
         "capabilities. Returns all individual sub-forecasts for you to synthesize. "
         "No automatic aggregation — you decide how to combine results."
     ),
-    SpawnSubquestionsInput,
+    {"subquestions": list},
 )
 @tracked("spawn_subquestions")
-async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
+async def spawn_subquestions(args: dict[str, Any]) -> dict[str, Any]:
     """Spawn parallel sub-forecasters for decomposed questions.
 
     Recursively calls run_forecast() for each sub-question with allow_spawn=False
@@ -98,29 +92,31 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
     if _run_forecast_fn is None:
         return mcp_error("run_forecast not configured - call set_run_forecast_fn first")
 
-    subquestions = args["subquestions"]
+    try:
+        validated = SpawnSubquestionsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
 
-    if not subquestions:
-        return mcp_error("No subquestions provided")
+    subquestions = validated.subquestions
 
-    async def run_subforecast(sq: SubQuestion) -> dict[str, Any]:
+    async def run_subforecast(sq: SubQuestionInput) -> dict[str, Any]:
         """Execute a single sub-forecast."""
-        question_type = sq.get("type", "binary")
+        question_type = sq.type
 
         # Build context for the sub-question
         context: dict[str, Any] = {
-            "title": sq["question"],
+            "title": sq.question,
             "type": question_type,
-            "description": sq.get("context", ""),
+            "description": sq.context,
             "resolution_criteria": "",
             "fine_print": "",
         }
 
         # Add type-specific context
-        if question_type == "multiple_choice" and "options" in sq:
-            context["options"] = sq["options"]
-        elif question_type in ("numeric", "discrete") and "numeric_bounds" in sq:
-            context["numeric_bounds"] = sq["numeric_bounds"]
+        if question_type == "multiple_choice" and sq.options:
+            context["options"] = sq.options
+        elif question_type in ("numeric", "discrete") and sq.numeric_bounds:
+            context["numeric_bounds"] = sq.numeric_bounds
 
         try:
             result = await _run_forecast_fn(
@@ -130,10 +126,10 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
 
             # Build response based on question type
             response: dict[str, Any] = {
-                "question": sq["question"],
+                "question": sq.question,
                 "type": question_type,
                 "summary": result.summary,
-                "weight": sq.get("weight", 1.0),  # Default weight 1.0
+                "weight": sq.weight,
                 "error": None,
             }
 
@@ -149,12 +145,12 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
             return response
 
         except Exception as e:
-            logger.exception("Sub-forecast failed: %s", sq["question"])
+            logger.exception("Sub-forecast failed: %s", sq.question)
             return {
-                "question": sq["question"],
+                "question": sq.question,
                 "type": question_type,
                 "summary": None,
-                "weight": sq.get("weight", 1.0),
+                "weight": sq.weight,
                 "error": str(e),
             }
 
@@ -181,7 +177,7 @@ async def spawn_subquestions(args: SpawnSubquestionsInput) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-composition_server = create_sdk_mcp_server(
+composition_server = create_mcp_server(
     name="composition",
     version="2.0.0",
     tools=[
