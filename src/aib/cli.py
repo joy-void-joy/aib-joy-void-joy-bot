@@ -11,7 +11,7 @@ import httpx
 import typer
 
 from aib.agent import ForecastOutput, run_forecast
-from aib.agent.history import load_latest_for_submission
+from aib.agent.history import is_submitted, load_latest_for_submission, mark_submitted
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
@@ -182,8 +182,9 @@ def submit(
     output: ForecastOutput | None = None
 
     # Try to load from cache if requested
+    # Use allow_resubmit=True since user explicitly requested submission
     if use_cache:
-        output = load_latest_for_submission(question_id)
+        output = load_latest_for_submission(question_id, allow_resubmit=True)
         if output is not None:
             print(f"📂 Loaded cached forecast from notes/forecasts/{question_id}/")
             display_forecast(output)
@@ -214,6 +215,7 @@ def submit(
     print("Submitting forecast to Metaculus...")
     try:
         asyncio.run(submit_forecast(output))
+        mark_submitted(output.post_id)
         print(
             f"✅ Forecast submitted (post {output.post_id} → question {output.question_id})"
         )
@@ -334,6 +336,7 @@ def tournament(
         print("  📤 Submitting forecast...")
         try:
             asyncio.run(submit_forecast(output))
+            mark_submitted(output.post_id)
             print("  ✅ Forecast submitted")
             success_count += 1
         except SubmissionError as e:
@@ -426,6 +429,11 @@ def loop(
             for i, q in enumerate(pending, 1):
                 print(f"\n  [{i}/{len(pending)}] {q.post_id}: {q.title[:50]}...")
 
+                # Check if already submitted locally (API doesn't track this in listings)
+                if use_cache and is_submitted(q.post_id):
+                    print("    ⏭️  Already submitted (from local cache)")
+                    continue
+
                 output: ForecastOutput | None = None
 
                 # Try cache first
@@ -465,6 +473,7 @@ def loop(
                 print("    📤 Submitting...")
                 try:
                     asyncio.run(submit_forecast(output))
+                    mark_submitted(output.post_id)
                     print("    ✅ Submitted")
                 except SubmissionError as e:
                     print(f"    ❌ Submission failed: {e}")

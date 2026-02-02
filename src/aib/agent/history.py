@@ -38,6 +38,7 @@ class SavedForecast(BaseModel):
     summary: str
     factors: list[dict[str, Any]]
     resolution: str | None = None  # "yes", "no", "ambiguous", or None if unresolved
+    submitted_at: str | None = None  # ISO timestamp when submitted to Metaculus
 
 
 def save_forecast(
@@ -143,6 +144,55 @@ def get_latest_forecast(post_id: int) -> SavedForecast | None:
     return forecasts[-1] if forecasts else None
 
 
+def mark_submitted(post_id: int, timestamp: str | None = None) -> bool:
+    """Mark the latest forecast for a question as submitted.
+
+    Args:
+        post_id: Metaculus post ID.
+        timestamp: ISO timestamp of submission. If None, uses current time.
+
+    Returns:
+        True if a forecast was marked, False if no forecast exists.
+    """
+    question_dir = FORECASTS_BASE_PATH / str(post_id)
+
+    if not question_dir.exists():
+        logger.warning("No forecasts found for post %d", post_id)
+        return False
+
+    # Find the latest forecast file
+    forecast_files = sorted(question_dir.glob("*.json"))
+    if not forecast_files:
+        return False
+
+    latest_file = forecast_files[-1]
+
+    try:
+        data = json.loads(latest_file.read_text(encoding="utf-8"))
+        if timestamp is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data["submitted_at"] = timestamp
+        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.info("Marked forecast for post %d as submitted at %s", post_id, timestamp)
+        return True
+    except Exception as e:
+        logger.warning("Failed to mark submission for post %d: %s", post_id, e)
+        return False
+
+
+def is_submitted(post_id: int) -> bool:
+    """Check if the latest forecast for a question has been submitted.
+
+    Args:
+        post_id: Metaculus post ID.
+
+    Returns:
+        True if the latest forecast has a submitted_at timestamp.
+    """
+    latest = get_latest_forecast(post_id)
+    return latest is not None and latest.submitted_at is not None
+
+
 def update_resolution(post_id: int, resolution: str) -> None:
     """Update the resolution status for all forecasts of a question.
 
@@ -212,7 +262,9 @@ async def _fetch_numeric_bounds(post_id: int) -> dict | None:
         return None
 
 
-def load_latest_for_submission(post_id: int) -> "ForecastOutput | None":
+def load_latest_for_submission(
+    post_id: int, *, allow_resubmit: bool = False
+) -> "ForecastOutput | None":
     """Load the latest forecast for submission (without re-running the agent).
 
     For numeric/discrete questions, this regenerates the CDF from percentiles
@@ -220,9 +272,12 @@ def load_latest_for_submission(post_id: int) -> "ForecastOutput | None":
 
     Args:
         post_id: Metaculus post ID.
+        allow_resubmit: If False (default), returns None for already-submitted
+            forecasts. Set to True to load even if already submitted.
 
     Returns:
-        ForecastOutput ready for submission, or None if no forecast exists.
+        ForecastOutput ready for submission, or None if no forecast exists
+        or if already submitted (when allow_resubmit=False).
     """
     import asyncio
 
@@ -232,6 +287,15 @@ def load_latest_for_submission(post_id: int) -> "ForecastOutput | None":
 
     latest = get_latest_forecast(post_id)
     if latest is None:
+        return None
+
+    # Skip already-submitted forecasts unless explicitly allowed
+    if not allow_resubmit and latest.submitted_at is not None:
+        logger.info(
+            "Skipping already-submitted forecast for post %d (submitted at %s)",
+            post_id,
+            latest.submitted_at,
+        )
         return None
 
     # Convert SavedForecast to ForecastOutput
