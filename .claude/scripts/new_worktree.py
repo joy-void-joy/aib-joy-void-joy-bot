@@ -26,8 +26,12 @@ app = typer.Typer(help="Create a new worktree with Claude session migration")
 
 
 def path_to_project_dir(path: Path) -> str:
-    """Convert a filesystem path to Claude's project directory name format."""
-    return str(path.resolve()).replace("/", "-").lstrip("-")
+    """Convert a filesystem path to Claude's project directory name format.
+
+    Claude Code converts paths by replacing both / and . with -, and keeps
+    the leading dash.
+    """
+    return str(path.resolve()).replace("/", "-").replace(".", "-")
 
 
 def get_claude_projects_dir() -> Path:
@@ -74,9 +78,7 @@ def get_most_recent_session(project_dir: Path) -> dict | None:
         if entries:
             # Sort by modified time, most recent first
             sorted_entries = sorted(
-                entries,
-                key=lambda e: e.get("modified", ""),
-                reverse=True
+                entries, key=lambda e: e.get("modified", ""), reverse=True
             )
             return sorted_entries[0]
 
@@ -95,18 +97,26 @@ def get_most_recent_session(project_dir: Path) -> dict | None:
     }
 
 
+GITIGNORED_DATA_DIRS = ["notes", "logs"]
+
+
 @app.command()
 def create(
     name: str = typer.Argument(..., help="Name for the new worktree/branch"),
     session_id: str | None = typer.Option(
-        None, "--session-id", "-s",
-        help="Specific session ID to migrate (default: most recent)"
+        None,
+        "--session-id",
+        "-s",
+        help="Specific session ID to migrate (default: most recent)",
     ),
-    no_sync: bool = typer.Option(
-        False, "--no-sync", help="Skip running uv sync"
-    ),
+    no_sync: bool = typer.Option(False, "--no-sync", help="Skip running uv sync"),
     no_session: bool = typer.Option(
         False, "--no-session", help="Skip session migration"
+    ),
+    copy_data: bool = typer.Option(
+        True,
+        "--copy-data/--no-copy-data",
+        help="Copy gitignored data directories (notes/, logs/) to new worktree",
     ),
 ) -> None:
     """Create a new worktree and migrate Claude session."""
@@ -138,10 +148,7 @@ def create(
     # Create the worktree with a new branch
     try:
         git(
-            "worktree", "add",
-            str(new_worktree_path),
-            "-b", branch_name,
-            _tty_out=False
+            "worktree", "add", str(new_worktree_path), "-b", branch_name, _tty_out=False
         )
         typer.echo("✓ Worktree created")
     except sh.ErrorReturnCode as e:
@@ -154,14 +161,25 @@ def create(
         shutil.copy2(env_local, new_worktree_path / ".env.local")
         typer.echo("✓ Copied .env.local")
 
+    # Copy gitignored data directories (notes/, logs/)
+    if copy_data:
+        for dir_name in GITIGNORED_DATA_DIRS:
+            source_dir = cwd / dir_name
+            target_dir = new_worktree_path / dir_name
+            if source_dir.exists() and source_dir.is_dir():
+                shutil.copytree(source_dir, target_dir)
+                typer.echo(f"✓ Copied {dir_name}/")
+
     # Run uv sync in the new worktree
     if not no_sync:
         typer.echo("Running uv sync...")
         try:
             uv(
-                "sync", "--all-groups", "--all-extras",
+                "sync",
+                "--all-groups",
+                "--all-extras",
                 _cwd=str(new_worktree_path),
-                _tty_out=False
+                _tty_out=False,
             )
             typer.echo("✓ Dependencies synced")
         except sh.ErrorReturnCode as e:
