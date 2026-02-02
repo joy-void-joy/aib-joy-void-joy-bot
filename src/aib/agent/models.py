@@ -4,7 +4,9 @@ import math
 import re
 from datetime import date, datetime, timedelta
 
-from pydantic import BaseModel, Field, computed_field
+from typing import Self
+
+from pydantic import BaseModel, Field, computed_field, model_validator
 import zoneinfo
 
 
@@ -510,6 +512,49 @@ class NumericForecast(BaseModel):
             "If provided, takes precedence over percentile fields."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_has_distribution(self) -> Self:
+        """Ensure either all percentiles OR components are provided."""
+        has_components = self.components is not None and len(self.components) > 0
+        has_all_percentiles = all(
+            p is not None
+            for p in [
+                self.percentile_10,
+                self.percentile_20,
+                self.percentile_40,
+                self.percentile_60,
+                self.percentile_80,
+                self.percentile_90,
+            ]
+        )
+
+        if not has_components and not has_all_percentiles:
+            raise ValueError(
+                "NumericForecast requires either all 6 percentiles "
+                "(percentile_10, percentile_20, percentile_40, percentile_60, "
+                "percentile_80, percentile_90) OR components for mixture mode. "
+                "Percentiles must be strictly increasing values."
+            )
+
+        # Validate percentiles are strictly increasing if all provided
+        if has_all_percentiles:
+            percentiles = [
+                self.percentile_10,
+                self.percentile_20,
+                self.percentile_40,
+                self.percentile_60,
+                self.percentile_80,
+                self.percentile_90,
+            ]
+            for i in range(len(percentiles) - 1):
+                if percentiles[i] >= percentiles[i + 1]:  # type: ignore[operator]
+                    raise ValueError(
+                        f"Percentiles must be strictly increasing. "
+                        f"Got {percentiles[i]} >= {percentiles[i + 1]} at indices {i} and {i + 1}."
+                    )
+
+        return self
 
     @property
     def uses_mixture_mode(self) -> bool:
