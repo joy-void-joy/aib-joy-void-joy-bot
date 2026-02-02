@@ -95,6 +95,48 @@ def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
     return content
 
 
+class ReasoningLogger:
+    """Accumulates agent reasoning for feedback loop analysis.
+
+    Writes to notes/logs/ which is committed to git but NOT accessible
+    to the agent during runtime.
+    """
+
+    def __init__(self, log_path: Path, question_title: str) -> None:
+        self.log_path = log_path
+        self.lines: list[str] = []
+        self.lines.append(f"# Reasoning Log: {question_title}\n")
+        self.lines.append(f"*Generated: {datetime.now().isoformat()}*\n\n")
+
+    def format_block(self, block: ContentBlock) -> str:
+        """Format a content block as markdown."""
+        match block:
+            case ThinkingBlock():
+                return f"## 💭 Thinking\n\n{block.thinking}\n"
+            case TextBlock():
+                return f"## 💬 Response\n\n{block.text}\n"
+            case ToolUseBlock():
+                input_str = json.dumps(block.input, indent=2) if block.input else ""
+                result = f"## 🔧 Tool: {block.name}\n\n"
+                if input_str:
+                    result += f"```json\n{input_str}\n```\n"
+                return result
+            case ToolResultBlock():
+                content_str = _truncate_content(block.content, max_len=2000)
+                return f"### 📋 Result\n\n```\n{content_str}\n```\n"
+            case _:
+                return f"## ❓ {type(block).__name__}\n\n{block}\n"
+
+    def log_block(self, block: ContentBlock) -> None:
+        """Add a formatted block to the log."""
+        self.lines.append(self.format_block(block))
+
+    def save(self) -> None:
+        """Write accumulated log to file."""
+        self.log_path.write_text("\n".join(self.lines), encoding="utf-8")
+        logger.info("Saved reasoning log to %s", self.log_path)
+
+
 def get_output_schema_for_question(
     question_type: str,
 ) -> tuple[type[Forecast | NumericForecast | MultipleChoiceForecast], dict]:
@@ -128,6 +170,7 @@ class NotesConfig:
     session: Path
     research: Path
     forecasts: Path
+    reasoning_log: Path  # For feedback loop (agent cannot access)
     rw: list[Path]
     ro: list[Path]
 
@@ -147,6 +190,7 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     - notes/research/                           (RO)
     - notes/forecasts/                          (RO)
     - notes/structured/                         (RO - notes tool writes here)
+    - notes/logs/                               (NO ACCESS - for feedback loop only)
 
     Args:
         session_id: Unique session identifier.
@@ -164,16 +208,22 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     forecasts_path = forecasts_base / str(question_id) / timestamp
     meta_path = NOTES_BASE_PATH / "meta"
     structured_path = NOTES_BASE_PATH / "structured"
+    logs_path = NOTES_BASE_PATH / "logs"
 
     session_path.mkdir(parents=True, exist_ok=True)
     research_path.mkdir(parents=True, exist_ok=True)
     forecasts_path.mkdir(parents=True, exist_ok=True)
     meta_path.mkdir(parents=True, exist_ok=True)
+    logs_path.mkdir(parents=True, exist_ok=True)
+
+    # Reasoning log file for this session (agent cannot access notes/logs/)
+    reasoning_log = logs_path / f"{question_id}_{timestamp}.md"
 
     return NotesConfig(
         session=session_path,
         research=research_path,
         forecasts=forecasts_path,
+        reasoning_log=reasoning_log,
         rw=[session_path, research_path, forecasts_path, meta_path],
         ro=[research_base, forecasts_base, structured_path],
     )
@@ -455,11 +505,14 @@ async def run_forecast(
     assistant_messages: list[AssistantMessage] = []
     result: ResultMessage | None = None
 
-    # Setup thinking log file
+    # Setup thinking log file (verbose, gitignored)
     thinking_log_path = (
         LOGS_BASE_PATH / session_id / datetime.now().strftime("%Y%m%d_%H%M%S.log")
     )
     thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Setup reasoning logger (committed, for feedback loop)
+    reasoning_logger = ReasoningLogger(notes.reasoning_log, question_title)
 
     with Sandbox() as sandbox:
         # tmp/ for scratch work + session-specific notes directories
@@ -551,6 +604,7 @@ async def run_forecast(
                         assistant_messages.append(message)
                         for block in message.content:
                             print_block(block)
+                            reasoning_logger.log_block(block)
                             match block:
                                 case TextBlock():
                                     collected_text.append(block.text)
@@ -585,6 +639,7 @@ async def run_forecast(
                         if isinstance(message.content, list):
                             for block in message.content:
                                 print_block(block)
+                                reasoning_logger.log_block(block)
                     case _:
                         print(f"📨 {type(message).__name__}: {message}")
                         logger.debug(
@@ -594,11 +649,14 @@ async def run_forecast(
     if result is None:
         raise RuntimeError("No result received from agent")
 
-    # Save thinking log
+    # Save thinking log (verbose, gitignored)
     if collected_thinking:
         thinking_log_content = "\n\n---\n\n".join(collected_thinking)
         thinking_log_path.write_text(thinking_log_content, encoding="utf-8")
         logger.info("Saved thinking log to %s", thinking_log_path)
+
+    # Save reasoning log (committed, for feedback loop)
+    reasoning_logger.save()
 
     # Extract structured forecast based on question type
     output = ForecastOutput(

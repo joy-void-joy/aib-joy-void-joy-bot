@@ -97,7 +97,7 @@ def get_most_recent_session(project_dir: Path) -> dict | None:
     }
 
 
-GITIGNORED_DATA_DIRS = ["notes", "logs"]
+GITIGNORED_DATA_DIRS = ["logs"]
 
 
 @app.command()

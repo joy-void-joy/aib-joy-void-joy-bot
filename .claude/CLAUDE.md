@@ -291,13 +291,13 @@ uv run python .claude/scripts/new_worktree.py <worktree-name> --session-id <uuid
 # Skip uv sync (if you'll do it manually)
 uv run python .claude/scripts/new_worktree.py <worktree-name> --no-sync
 
-# Skip copying notes/ and logs/ directories
+# Skip copying logs/ directory
 uv run python .claude/scripts/new_worktree.py <worktree-name> --no-copy-data
 ```
 
 The script:
 1. Creates a new worktree in the `tree/` directory with a new branch
-2. Copies `.env.local`, `notes/`, and `logs/` directories
+2. Copies `.env.local` and `logs/` directory (notes/ is tracked in git)
 3. Runs `uv sync --all-groups --all-extras`
 4. Migrates the most recent Claude session to the new worktree
 
