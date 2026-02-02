@@ -171,8 +171,52 @@ def update_resolution(post_id: int, resolution: str) -> None:
     )
 
 
-def load_latest_for_submission(post_id: int) -> ForecastOutput | None:
+async def _fetch_numeric_bounds(post_id: int) -> dict | None:
+    """Fetch numeric bounds from Metaculus API for CDF generation.
+
+    Args:
+        post_id: Metaculus post ID.
+
+    Returns:
+        Dict with range_min, range_max, open_lower_bound, open_upper_bound,
+        zero_point, and cdf_size. None if fetch fails or question is not numeric.
+    """
+    from metaculus import NumericQuestion
+
+    from aib.clients.metaculus import get_client
+
+    try:
+        client = get_client()
+        question = await client.get_question_by_post_id(post_id)
+
+        # Handle case where multiple questions are returned (shouldn't happen)
+        if isinstance(question, list):
+            question = question[0]
+
+        if not isinstance(question, NumericQuestion):
+            logger.warning(
+                "Question %d is not numeric (got %s)", post_id, type(question).__name__
+            )
+            return None
+
+        return {
+            "range_min": question.lower_bound,
+            "range_max": question.upper_bound,
+            "open_lower_bound": question.open_lower_bound,
+            "open_upper_bound": question.open_upper_bound,
+            "zero_point": question.zero_point,
+            "cdf_size": question.cdf_size,
+        }
+    except Exception as e:
+        logger.warning("Failed to fetch numeric bounds for post %d: %s", post_id, e)
+        return None
+
+
+def load_latest_for_submission(post_id: int) -> "ForecastOutput | None":
     """Load the latest forecast for submission (without re-running the agent).
+
+    For numeric/discrete questions, this regenerates the CDF from percentiles
+    by fetching the question bounds from Metaculus.
 
     Args:
         post_id: Metaculus post ID.
@@ -180,8 +224,11 @@ def load_latest_for_submission(post_id: int) -> ForecastOutput | None:
     Returns:
         ForecastOutput ready for submission, or None if no forecast exists.
     """
+    import asyncio
+
     # Import at runtime to avoid circular dependency issues
     from aib.agent import models
+    from aib.agent.numeric import percentiles_to_cdf
 
     latest = get_latest_forecast(post_id)
     if latest is None:
@@ -189,9 +236,11 @@ def load_latest_for_submission(post_id: int) -> ForecastOutput | None:
 
     # Convert SavedForecast to ForecastOutput
     # Note: For legacy forecasts where post_id is None, use question_id as post_id
-    effective_post_id = latest.post_id if latest.post_id is not None else latest.question_id
+    effective_post_id = (
+        latest.post_id if latest.post_id is not None else latest.question_id
+    )
 
-    return models.ForecastOutput(
+    output = models.ForecastOutput(
         question_id=latest.question_id,
         post_id=effective_post_id,
         question_title=latest.question_title,
@@ -205,6 +254,38 @@ def load_latest_for_submission(post_id: int) -> ForecastOutput | None:
         confidence_interval=latest.confidence_interval,
         percentiles=latest.percentiles,
     )
+
+    # For numeric/discrete questions with percentiles, regenerate CDF
+    if latest.question_type in ("numeric", "discrete") and latest.percentiles:
+        bounds = asyncio.run(_fetch_numeric_bounds(effective_post_id))
+        if bounds and bounds.get("range_min") is not None and bounds.get("range_max") is not None:
+            try:
+                cdf_size = bounds.get("cdf_size", 201)
+                output.cdf = percentiles_to_cdf(
+                    latest.percentiles,
+                    upper_bound=bounds["range_max"],
+                    lower_bound=bounds["range_min"],
+                    open_upper_bound=bounds.get("open_upper_bound", False),
+                    open_lower_bound=bounds.get("open_lower_bound", False),
+                    zero_point=bounds.get("zero_point"),
+                    cdf_size=cdf_size,
+                )
+                output.cdf_size = cdf_size
+                logger.info(
+                    "Regenerated %d-point CDF for cached forecast of post %d",
+                    len(output.cdf),
+                    post_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to regenerate CDF for post %d: %s", post_id, e
+                )
+        else:
+            logger.warning(
+                "Could not fetch bounds for CDF regeneration (post %d)", post_id
+            )
+
+    return output
 
 
 def format_history_for_context(forecasts: list[SavedForecast]) -> str:
