@@ -213,11 +213,21 @@ async def post_comment(
     logger.info("Posted comment on post %d", post_id)
 
 
-def format_reasoning_comment(output: ForecastOutput) -> str:
+def format_reasoning_comment(
+    output: ForecastOutput, *, max_length: int = 15000
+) -> str:
     """Format a ForecastOutput into a markdown comment for Metaculus.
+
+    Tournament rules require bots to leave comments showing reasoning.
+    This function produces a structured comment with:
+    - Summary and forecast values
+    - Key factors with directional weights
+    - Full reasoning trace (if available)
+    - Sources consulted
 
     Args:
         output: The forecast output to format.
+        max_length: Maximum comment length. Reasoning is truncated if needed.
 
     Returns:
         Markdown-formatted comment string.
@@ -242,9 +252,55 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
         lines.append("\n## Key Factors\n")
         for factor in output.factors:
             sign = "+" if factor.logit >= 0 else ""
-            lines.append(f"- [{sign}{factor.logit:.1f}] {factor.description}")
+            conf_note = f" (conf: {factor.confidence:.0%})" if factor.confidence < 1 else ""
+            lines.append(f"- [{sign}{factor.logit:.1f}] {factor.description}{conf_note}")
 
+    # Include reasoning trace if available
+    if output.reasoning:
+        lines.append("\n## Reasoning Trace\n")
+        # Reserve space for other sections
+        current_length = len("\n".join(lines))
+        sources_estimate = 500 if output.sources_consulted else 50
+        available = max_length - current_length - sources_estimate
+
+        if len(output.reasoning) <= available:
+            lines.append(output.reasoning)
+        else:
+            truncated = output.reasoning[: available - 50]
+            # Try to cut at a paragraph or sentence boundary
+            for sep in ["\n\n", "\n", ". "]:
+                idx = truncated.rfind(sep)
+                if idx > available * 0.7:
+                    truncated = truncated[: idx + len(sep)]
+                    break
+            lines.append(truncated.strip())
+            lines.append("\n*[Reasoning truncated for length]*")
+
+    # Include actual sources (top 10)
     if output.sources_consulted:
-        lines.append(f"\n---\n*Sources consulted: {len(output.sources_consulted)}*")
+        lines.append("\n## Sources Consulted\n")
+        sources_to_show = output.sources_consulted[:10]
+        for source in sources_to_show:
+            # Format as bullet, handling URLs and queries
+            if source.startswith("http"):
+                lines.append(f"- {source}")
+            else:
+                lines.append(f"- {source}")
+        if len(output.sources_consulted) > 10:
+            lines.append(
+                f"\n*...and {len(output.sources_consulted) - 10} more sources*"
+            )
+    else:
+        lines.append("\n---\n*No sources recorded*")
+
+    # Meta info
+    if output.meta:
+        meta_parts = []
+        if output.meta.subagents_used:
+            meta_parts.append(f"Subagents: {', '.join(output.meta.subagents_used)}")
+        if output.meta.tools_used_count:
+            meta_parts.append(f"Tool calls: {output.meta.tools_used_count}")
+        if meta_parts:
+            lines.append(f"\n---\n*{' | '.join(meta_parts)}*")
 
     return "\n".join(lines)
