@@ -39,6 +39,7 @@ class SavedForecast(BaseModel):
     factors: list[dict[str, Any]]
     resolution: str | None = None  # "yes", "no", "ambiguous", or None if unresolved
     submitted_at: str | None = None  # ISO timestamp when submitted to Metaculus
+    comment_posted_at: str | None = None  # ISO timestamp when comment was posted
 
 
 def save_forecast(
@@ -191,6 +192,54 @@ def is_submitted(post_id: int) -> bool:
     """
     latest = get_latest_forecast(post_id)
     return latest is not None and latest.submitted_at is not None
+
+
+def has_comment(post_id: int) -> bool:
+    """Check if the latest forecast for a question has a comment posted.
+
+    Args:
+        post_id: Metaculus post ID.
+
+    Returns:
+        True if the latest forecast has a comment_posted_at timestamp.
+    """
+    latest = get_latest_forecast(post_id)
+    return latest is not None and latest.comment_posted_at is not None
+
+
+def mark_comment_posted(post_id: int, timestamp: str | None = None) -> bool:
+    """Mark the latest forecast for a question as having a comment posted.
+
+    Args:
+        post_id: Metaculus post ID.
+        timestamp: ISO timestamp of comment posting. If None, uses current time.
+
+    Returns:
+        True if a forecast was marked, False if no forecast exists.
+    """
+    question_dir = FORECASTS_BASE_PATH / str(post_id)
+
+    if not question_dir.exists():
+        logger.warning("No forecasts found for post %d", post_id)
+        return False
+
+    forecast_files = sorted(question_dir.glob("*.json"))
+    if not forecast_files:
+        return False
+
+    latest_file = forecast_files[-1]
+
+    try:
+        data = json.loads(latest_file.read_text(encoding="utf-8"))
+        if timestamp is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data["comment_posted_at"] = timestamp
+        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.info("Marked comment posted for post %d at %s", post_id, timestamp)
+        return True
+    except Exception as e:
+        logger.warning("Failed to mark comment for post %d: %s", post_id, e)
+        return False
 
 
 def update_resolution(post_id: int, resolution: str) -> None:

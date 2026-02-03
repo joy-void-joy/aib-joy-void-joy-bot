@@ -168,8 +168,12 @@ def submit(
     question_id: Annotated[int, typer.Argument(help="Metaculus post ID")],
     comment: Annotated[
         bool,
-        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
-    ] = False,
+        typer.Option(
+            "--comment/--no-comment",
+            "-c",
+            help="Post reasoning as a private comment (required by tournament rules)",
+        ),
+    ] = True,
     use_cache: Annotated[
         bool,
         typer.Option(
@@ -259,8 +263,12 @@ def tournament(
     ] = True,
     comment: Annotated[
         bool,
-        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
-    ] = False,
+        typer.Option(
+            "--comment/--no-comment",
+            "-c",
+            help="Post reasoning as a private comment (required by tournament rules)",
+        ),
+    ] = True,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", "-n", help="List questions without forecasting"),
@@ -374,8 +382,12 @@ def loop(
     ] = 20,
     comment: Annotated[
         bool,
-        typer.Option("--comment", "-c", help="Post reasoning as a private comment"),
-    ] = False,
+        typer.Option(
+            "--comment/--no-comment",
+            "-c",
+            help="Post reasoning as a private comment (required by tournament rules)",
+        ),
+    ] = True,
     use_cache: Annotated[
         bool,
         typer.Option(
@@ -502,6 +514,129 @@ def loop(
         except KeyboardInterrupt:
             print("\n\n👋 Loop stopped by user")
             raise typer.Exit(0)
+
+
+@app.command()
+def backfill_comments(
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="List forecasts without posting comments"),
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", "-f", help="Post comments even if already marked as posted"),
+    ] = False,
+) -> None:
+    """Post private comments on all saved forecasts.
+
+    Skips forecasts that already have comment_posted_at set (unless --force).
+    Safe to run multiple times.
+    """
+    asyncio.run(_backfill_comments_async(dry_run, force))
+
+
+async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
+    """Async implementation of backfill_comments."""
+    import httpx
+
+    from aib.agent.history import (
+        FORECASTS_BASE_PATH,
+        get_latest_forecast,
+        has_comment,
+        mark_comment_posted,
+    )
+    from aib.agent.models import Factor, ForecastOutput
+    from aib.config import settings
+
+    if not FORECASTS_BASE_PATH.exists():
+        print("No forecasts directory found")
+        raise typer.Exit(1)
+
+    # Find all forecast directories
+    forecast_dirs = sorted(
+        [d for d in FORECASTS_BASE_PATH.iterdir() if d.is_dir() and d.name.isdigit()],
+        key=lambda d: int(d.name),
+    )
+
+    print(f"Found {len(forecast_dirs)} forecast directories")
+
+    success_count = 0
+    skip_count = 0
+    error_count = 0
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for d in forecast_dirs:
+            post_id = int(d.name)
+
+            # Check if already has comment (unless force)
+            if not force and has_comment(post_id):
+                print(f"  ⏭️  {post_id}: Already has comment")
+                skip_count += 1
+                continue
+
+            saved = get_latest_forecast(post_id)
+
+            if saved is None:
+                print(f"  ⚠️  {post_id}: No forecast files found")
+                skip_count += 1
+                continue
+
+            print(f"  📝 {post_id}: {saved.question_title[:50]}...")
+
+            if dry_run:
+                success_count += 1
+                continue
+
+            # Convert SavedForecast to ForecastOutput for format_reasoning_comment
+            output = ForecastOutput(
+                question_id=saved.question_id,
+                post_id=saved.post_id or saved.question_id,
+                question_title=saved.question_title,
+                question_type=saved.question_type,
+                summary=saved.summary,
+                factors=[Factor.model_validate(f) for f in saved.factors],
+                probability=saved.probability,
+                logit=saved.logit,
+                probabilities=saved.probabilities,
+                median=saved.median,
+                confidence_interval=saved.confidence_interval,
+                percentiles=saved.percentiles,
+            )
+
+            comment_text = format_reasoning_comment(output)
+
+            try:
+                response = await client.post(
+                    "https://www.metaculus.com/api/comments/create/",
+                    json={
+                        "text": comment_text,
+                        "parent": None,
+                        "included_forecast": True,
+                        "is_private": True,
+                        "on_post": post_id,
+                    },
+                    headers={"Authorization": f"Token {settings.metaculus_token}"},
+                )
+
+                if response.is_success:
+                    mark_comment_posted(post_id)
+                    print("    ✅ Comment posted")
+                    success_count += 1
+                else:
+                    print(f"    ❌ Failed: {response.status_code}")
+                    error_count += 1
+                    if response.status_code in (429, 403):
+                        print("    ⏳ Rate limited, waiting 30s...")
+                        await asyncio.sleep(30)
+
+            except httpx.HTTPError as e:
+                print(f"    ❌ HTTP error: {e}")
+                error_count += 1
+
+            # Small delay between requests
+            await asyncio.sleep(1)
+
+    print(f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors")
 
 
 if __name__ == "__main__":
