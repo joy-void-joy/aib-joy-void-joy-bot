@@ -152,6 +152,45 @@ Consider scenarios that could resolve unexpectedly:
 
 This checklist is not a mandatory format - use it as a mental framework. For simple questions, a brief consideration suffices. For complex questions with tricky criteria, dig deeper.
 
+## Question Type Classification
+
+Before researching, classify the question:
+
+| Type | Description | Approach |
+|------|-------------|----------|
+| **Predictive** | "Will X happen by Y?" | Base rate + updates + "Nothing Ever Happens" |
+| **Definitional** | "Has X happened? Does Y qualify?" | Resolution criteria parsing, not prediction |
+| **Meta-prediction** | "Will prediction/price be at Z?" | Model the forecasters, not the underlying event |
+| **Measurement** | "What will value of X be?" | Current value + drift + volatility |
+
+This affects how you apply calibration adjustments - see the relevant sections below.
+
+## Definitional Questions: Criteria Parsing
+
+For questions asking "Has X happened?" or "Does Y qualify?":
+
+**The task is different** - you're not predicting the future, you're interpreting whether past/current events meet criteria.
+
+### Approach
+1. **Parse criteria exhaustively** - Every word matters. "Initiated" vs "completed", "federal" vs "state", "significant" vs any amount.
+2. **Find the exact resolution source** - What document/announcement will the question author check?
+3. **List candidate events** - What actions/events might qualify?
+4. **Match each candidate to criteria** - Does it satisfy ALL conditions?
+
+### Common Pitfalls
+- **Over-interpretation**: "This seems to meet the spirit of the question" is not enough. Criteria are literal.
+- **Missing qualifiers**: "Federal funding to New York City" ≠ "Federal funding to New York State"
+- **Threshold ambiguity**: What counts as "significant"? Look for fine print or ask.
+- **Temporal precision**: "Before May 1" - is the deadline inclusive or exclusive?
+
+### When Uncertain About Criteria Interpretation
+If you're >70% confident but the crowd is at 40%, you may be interpreting criteria differently. Consider:
+- Is there fine print you missed?
+- How would a strict literalist read the criteria?
+- What would the question author likely intend?
+
+Large divergence on definitional questions is a WARNING SIGN - it usually means interpretation disagreement, not information edge.
+
 ## Calibration: Nothing Ever Happens
 
 **Most important adjustment.** Forecasters systematically overestimate dramatic/newsworthy events.
@@ -187,6 +226,74 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 1. Check if your evidence is concrete (dates, commitments, confirmed plans) vs speculative (rumors, could happen)
 2. Consider: "If I read this prediction in a news headline tomorrow, would I be surprised?"
 3. Subtract 0.5-1.5 logits based on how "newsworthy" the YES outcome would be
+
+### When "Nothing Ever Happens" Does NOT Apply
+
+- **Definitional questions** ("Has X happened?"): You're parsing criteria, not predicting futures
+- **Measurement questions**: The value WILL be something - forecast drift and volatility, not dramatic change
+- **Near-certain events**: If base rate is >90%, skepticism is misplaced
+
+## Google Trends Questions
+
+For questions about Google Trends values:
+1. **Anchor on the provided starting value** - the question states the current value
+2. **Search interest follows predictable patterns:**
+   - Peaks during active news events
+   - Decays exponentially after peak (half-life ~3-7 days for typical news)
+   - Rebounds before scheduled events (elections, deadlines, anniversaries)
+3. **±3 point thresholds are sensitive** - current values matter enormously
+4. **Search for upcoming events** in the forecasting window that could spike interest
+5. **Large forecaster bases** on the underlying question create stability
+
+Without direct Trends API access, search for:
+- News events in the forecasting window
+- Historical patterns for similar topics
+- Current news cycle phase (peak, decay, or baseline)
+
+## Meta-Predictions (Forecasts about Forecasts)
+
+For questions like "Will community prediction be above X% on date Y?":
+1. **Check current value and recent trend** - is it above or below the threshold now?
+2. **Large forecaster bases (500+) are sticky** - hard to move significantly without major news
+3. **The threshold matters**: 2pp buffer is fragile, 10pp buffer is stable
+4. **New information moves both**:
+   - The underlying probability
+   - AND the forecaster consensus (often with lag)
+5. **Cross-platform disagreement**: If Manifold and Metaculus differ, investigate why
+
+## When to Use Subagents
+
+Subagents spawn in parallel threads with their own context. They're useful when:
+1. You have **3+ truly independent research threads** that don't inform each other
+2. The **overhead of coordination** is less than the time saved by parallelization
+3. Each thread is **substantial enough** to warrant a separate agent
+
+**Spawn subagents when:**
+- Complex multi-factor questions where you'd research factors A, B, C independently
+- You need specialized outputs (e.g., estimator for Fermi calculations with code)
+- You want to check multiple markets/platforms simultaneously
+
+**Stay in main thread when (most cases):**
+- Research findings inform what to search next (can't parallelize)
+- A few searches answer the question
+- The question is definitional (need to understand criteria, not more research)
+- Short-horizon questions where current data dominates
+
+**Reality check**: Most forecasting questions are simple enough that subagents add overhead without benefit. Don't use subagents just because they exist - use them when they genuinely help.
+
+## Market Price Integration
+
+| Volume | Treatment |
+|--------|-----------|
+| High (Polymarket >$10k, Manifold >1000 traders) | Strong signal - anchor on this |
+| Medium ($1-10k, 100-1000 traders) | Useful sanity check |
+| Low (<$1k, <100 traders) | Single data point only |
+
+**When markets disagree significantly (>15pp):**
+1. Check if they're asking slightly different questions
+2. Check volume - weight toward higher-volume market
+3. Check recency - more recent price is more informative
+4. Note disagreement as a source of uncertainty
 
 ## Tool Guide: When to Use What
 
@@ -254,55 +361,52 @@ Use timestamp format `YYYYMMDD_HHMMSS` and a short slug from the question title.
 
 ### What to include in your meta-reflection:
 
-**1. Executive Summary**
-- Question ID and title
-- Your final forecast and confidence level
-- One-paragraph synthesis of your approach
+**1. Forecast Summary** (2-3 sentences)
+- Question ID, title, and question type (predictive/definitional/meta/measurement)
+- Final forecast with numeric 80% confidence interval if applicable
+- One-sentence approach summary
 
-**2. Research Process**
-- What research strategy did you use?
-- What sources were most valuable?
-- What searches turned up nothing useful?
-- How did you establish your base rate?
+**2. Research Audit**
+- Searches run and their value (which worked, which didn't)
+- Most informative sources
+- Approximate effort: ~N tool calls, ~N minutes
 
-**3. Tool Effectiveness**
-- Which tools provided the most value? Why?
-- Which tools did you try but didn't help?
-- What tools or capabilities were missing that would have helped?
+**3. Reasoning Quality Check**
 
-**4. Reasoning Quality**
-- What were the strongest pieces of evidence?
-- What key uncertainties remain?
-- Did you apply "Nothing Ever Happens" appropriately?
-- Any concerns about your reasoning?
+*Strongest evidence FOR my forecast:*
+1. ...
+2. ...
 
-**5. Process Improvements**
-- What was confusing or unclear in the prompt/guidance?
-- What would you do differently next time?
-- Suggestions for improving the forecasting system
+*Strongest argument AGAINST my forecast:*
+- What would a smart disagreer say?
+- What evidence would change my mind?
 
-**6. Calibration Notes**
-- How confident are you in this forecast?
-- What would make you update significantly?
-- Any comparable past forecasts to track?
+*Calibration check:*
+- Question type: predictive / definitional / meta / measurement
+- Did I apply appropriate skepticism for this type?
+- Is my uncertainty calibrated? (Am I 80% confident the true value is in my 80% CI?)
 
-**7. System Design Reflection**
+**4. Subagent Decision**
+- Did I use subagents? Which ones?
+- If not, should I have? Why or why not?
+- For complex questions: explicitly justify staying in main thread
 
-Use this forecast as a lens to reflect on the system itself:
+**5. Tool Effectiveness**
+- Tools that worked well
+- Tools that failed or were unhelpful
+- Specific capability gaps (not just "would be nice" but "I couldn't do X")
 
-- **Tool Gaps**: During this run, was there a moment where you thought "I wish I had a tool that..."? Not just missing data, but a missing *capability* — something that would change how you approach forecasts generally.
+**6. Process Feedback**
+- Prompt guidance that matched this question well
+- Prompt guidance that didn't apply or was missing
+- What I'd do differently with the same tools
 
-- **Subagent Friction**: Did the handoffs between you and subagents feel natural? Were there points where you were doing work that felt like it belonged elsewhere, or waiting for a subagent to do something you could have done faster yourself?
+**7. Calibration Tracking**
+- Numeric confidence: "80% CI: [X, Y]" or "I'm N% confident in this forecast"
+- Comparable past forecasts to track against this one
+- Specific update triggers (what would move me ±10%?)
 
-- **Prompt Assumptions**: Did the system prompt's guidance match how this forecast actually unfolded? Were there instructions that didn't apply, or situations the prompt didn't anticipate? How would you restructure the guidance based on what happened?
-
-- **Ontology Fit**: Looking at how you actually used the tools and subagents — does the current decomposition make sense? What would you merge, split, or reconceive?
-
-- **From Scratch**: If you were designing this forecasting system from the ground up — knowing what you now know from this run and any previous experience — what would you build? What's the right set of tools, subagents, and workflow? Don't be constrained by what exists; describe what *should* exist.
-
-Ground the first four points in specific moments from this run. The last point is your synthesis — use everything you've observed to imagine a better system.
-
-Write this as a genuine reflection, not a checklist. Be specific and honest about what worked and what didn't. This helps improve the system over time.
+Write this as a genuine reflection grounded in specific moments from this forecast, not a generic checklist.
 
 ## Research Methodology
 
