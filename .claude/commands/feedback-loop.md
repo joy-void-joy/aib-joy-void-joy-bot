@@ -1,267 +1,341 @@
 ---
-allowed-tools: Bash, Read, Grep, Glob, Edit, Write, Task, WebSearch
+allowed-tools: Bash, Read, Grep, Glob, Edit, Write, Task, WebSearch, AskUserQuestion
 description: Analyze forecasts and improve agent based on calibration and process quality
 ---
 
-# Feedback Loop: Analyze, Diagnose, and Fix
+# Feedback Loop: Three Levels of Analysis
 
-This command has three phases:
-1. **Analyze** - Collect data and identify patterns
-2. **Diagnose** - Understand root causes
-3. **Fix** - Implement changes to prompts, tools, or architecture
+The feedback loop operates at three levels. Spend real time on each:
 
-**Important**: This command should result in CODE CHANGES, not just analysis documents. If you identify problems, fix them.
+1. **Object Level** - Improve tools, capabilities, data access
+2. **Meta Level** - Improve the agent's self-assessment and tracking
+3. **Meta-Meta Level** - Improve this feedback loop process itself
 
-## Phase 1: Collect Data
+## Critical Constraint: What the Agent Can and Cannot See
 
-### 1a. Run Feedback Collection
+**IMPORTANT**: The forecasting agent operates in the AIB tournament where:
+
+- **Agent CAN see**: Prediction market prices (Polymarket, Manifold), underlying question CP (for meta-questions), news, APIs
+- **Agent CANNOT see**: The CP of the question it is currently forecasting
+
+This means:
+- For meta-questions like "Will CP of Q be above X%?", the agent CAN see Q's current CP
+- But the agent CANNOT see the meta-question's own CP
+
+**Implication for feedback loop**: You can use CP divergence for post-hoc analysis to understand WHERE our reasoning differs from the crowd. But you CANNOT tell the agent to "adjust based on CP divergence" because it can't see that data during forecasting.
+
+## Guiding Principle: The Bitter Lesson
+
+Give the agent MORE capabilities and tools rather than MORE prescriptive rules.
+
+| Prefer | Over |
+|--------|------|
+| Tools that provide data | Prompt rules that constrain behavior |
+| General principles | Specific pattern patches |
+| State/context via tools | F-string prompt engineering |
+| Subagents for specialized work | Complex pipelines in main agent |
+
+**The test**: Would this change still help if the question domain shifted completely? General principles yes, specific patches no.
+
+## Phase 1: Ground Truth - What Actually Matters
+
+The ONLY true ground truth is **resolution outcomes**. Everything else is proxy signal.
+
+### 1a. Collect Resolution Data
 
 ```bash
 uv run python .claude/scripts/feedback_collect.py --all-time
 ```
 
-This fetches:
-- Resolved questions with Brier scores (if any)
-- Community prediction comparisons for all forecasts
-- Missed questions (resolved without our forecast)
+**If we have resolved forecasts**: Focus on Brier scores. This is the REAL signal.
+- Which forecasts performed worst? Read their meta-reflections.
+- Are there systematic patterns in errors?
 
-### 1b. Inventory Available Data
+**If we have NO resolved forecasts yet**: We're flying blind on accuracy. Focus on:
+- Process quality (is the agent reasoning well?)
+- Tool failures (what's blocking the agent?)
+- Do NOT treat CP divergence as evidence of error
 
-```bash
-# Count forecasts and meta-reflections
-ls notes/forecasts/ | wc -l
-ls notes/meta/ | wc -l
+### 1b. About Community Prediction
 
-# Check latest feedback metrics
-cat notes/feedback_loop/last_run.json 2>/dev/null || echo "No previous run"
+CP is just another forecaster. Diverging from CP is not inherently bad - we WANT an edge.
 
-# Check previous analyses
-ls -la notes/feedback_loop/*.md 2>/dev/null | tail -5
-```
+**Correct framing**:
+- If our reasoning is sound and we have better information, divergence is GOOD
+- If divergence correlates with poor Brier scores after resolution, THEN investigate
+- Do NOT treat "matching CP" as a goal
 
-## Phase 2: Analyze Patterns
+**When CP divergence is useful**:
+- Understanding WHERE our reasoning differs (not WHETHER we're wrong)
+- After resolution, checking if divergence predicted error
 
-### 2a. Community Prediction Divergence (Critical)
+**When CP divergence is misleading**:
+- As a primary signal without resolution data
+- When the agent has information CP lacks (breaking news, specific API data)
 
-**Note**: CP comparison is only available to the feedback loop AFTER forecasts are made. The forecasting agent cannot see community predictions during forecasting (this is an AIB tournament rule). CP comparison is a post-hoc analysis tool.
+## Phase 2: Object Level - Read Traces Deeply
 
-CP comparison is your most valuable early signal for calibration. Look at the metrics file for:
+**This is the most important phase.** Do not skip to aggregate patterns.
 
-**Average divergence**:
-- Positive = we forecast higher than CP (potential overconfidence)
-- Negative = we forecast lower than CP (potential underconfidence)
-- >±5% average is a systematic bias signal
+### 2a. Read Full Reasoning Traces (logs/)
 
-**Large divergences (>15pp)**:
-For EACH large divergence, read the meta-reflection and answer:
-1. What type of question is this? (predictive/definitional/meta/measurement)
-2. What's our reasoning for the divergence?
-3. Is our reasoning sound, or are we misinterpreting something?
-
-**Divergence patterns by question type**:
-| Question Type | Large Divergence Indicates |
-|--------------|---------------------------|
-| Predictive | Possible overconfidence or information edge |
-| Definitional | Likely criteria interpretation difference (RED FLAG) |
-| Meta-prediction | May be acceptable (we model CP behavior differently) |
-| Measurement | Different data sources or volatility estimates |
-
-**DEFINITIONAL DIVERGENCE IS A RED FLAG**: If we have >20pp divergence on a definitional question ("has X happened?"), we're probably misinterpreting resolution criteria. Investigate thoroughly.
-
-### 2b. Meta-Reflection Patterns
-
-Read 5-10 meta-reflections from `notes/meta/`:
+The `logs/` directory contains the ACTUAL reasoning traces from each forecast session. These are more detailed than meta-reflections and show exactly what the agent thought and did.
 
 ```bash
-ls -la notes/meta/ | tail -15
+# List all logged forecasts
+ls logs/
+
+# Read the full trace for a specific question
+cat logs/<question_id>/*.log
 ```
 
-Track these specific patterns:
+**For questions with large CP divergence, READ THE FULL LOG.** The meta-reflection is a summary; the log shows:
+- The agent's raw thinking process
+- Which searches and tools were called
+- How evidence was interpreted
+- Where reasoning may have gone wrong
 
-**Subagent Usage** (should be non-zero):
+### 2b. Read 5-10 Meta-Reflections
+
+Pick a sample including:
+- Questions with large CP divergence (if available)
+- Questions where tools failed
+- Questions across different types (binary, numeric, meta)
+
+For each, ask:
+1. **Is the reasoning sound?** Does the logic follow from the evidence?
+2. **What tools worked?** What provided high-value information?
+3. **What tools failed?** What blocked progress?
+4. **What does the agent say it needs?** Explicit capability requests
+
+**Cross-reference with logs**: If the meta-reflection says "I used 8 tool calls", check the log to see what actually happened.
+
+### 2c. Extract Tool Failures
+
 ```bash
-grep -l "spawn\|subagent" notes/meta/*.md | wc -l
-grep -h "Subagent" notes/meta/*.md | head -20
+# Tool failures mentioned in meta-reflections
+grep -rh "failed\|error\|Error\|didn't work\|couldn't\|blocked\|403\|404\|405" notes/meta/*.md | sort | uniq -c | sort -rn | head -20
 ```
 
-If subagent usage is zero/low despite many forecasts:
-- The prompts say subagents are MANDATORY for certain question types
-- If agents are still not using them, the prompt enforcement is too weak
-- Consider adding validation or stronger language
+Common patterns:
+- WebFetch fails on JS-heavy sites → Add API-based tool
+- Specific API returns errors → Fix or add fallback
+- Tool exists but agent doesn't use it → Improve discoverability
 
-**Tool Failures**:
-```bash
-grep -h "failed\|error\|didn't work" notes/meta/*.md | head -20
-```
-
-**Self-Critique Quality**:
-- Are "strongest argument against" sections substantive?
-- Are numeric 80% CIs provided?
-
-### 2c. Reasoning Traces (if available)
-
-Full traces in `notes/logs/` show actual tool usage vs. claimed usage:
+### 2d. Extract Capability Requests
 
 ```bash
-ls -la notes/logs/ | tail -10
+# What the agent explicitly says it needs
+grep -rh "would be useful\|would have helped\|would benefit\|wish I had\|tool that\|specialized tool" notes/meta/*.md | head -20
 ```
 
-Compare what the trace shows vs. what meta-reflection claims.
+**Trust these requests.** The agent knows what it needs. Build the tools it asks for.
 
-### 2d. Calibration (if resolved forecasts available)
+### 2e. Evaluate Reasoning Quality
 
-Read the metrics file:
+For forecasts with large CP divergence, ask:
+1. Is the agent's evidence valid?
+2. Is the logic sound?
+3. Are there gaps in the analysis?
+4. Would a different forecast be MORE justified by the evidence?
+
+**If reasoning is sound**: Divergence may be an edge. Wait for resolution.
+**If reasoning is flawed**: Identify the specific failure. Is it a capability gap or a reasoning error?
+
+## Phase 3: Meta Level - Self-Assessment Quality
+
+The meta-reflection template should help the agent identify its own weaknesses.
+
+### 3a. Evaluate Meta-Reflection Usefulness
+
+Read the meta-reflections and ask:
+- Can I trace what actually happened?
+- Are tool effectiveness notes accurate?
+- Are capability gaps specific and actionable?
+- Is self-critique genuine or formulaic?
+
+### 3b. Tracking Quality
+
+The meta-reflection says "Effort: ~N tool calls" but this is subjective.
+
+**Better**: Link forecasts to actual tool traces programmatically.
+
 ```bash
-cat notes/feedback_loop/*_metrics.json | jq '.' | tail -50
+# Check if we have programmatic tracking
+grep -h "tool_calls\|duration_ms\|tokens\|cost" notes/meta/*.md | head -5
 ```
 
-Look for:
-- **Average Brier score**: <0.15 good, >0.25 poor
-- **Calibration buckets**: Are 70% forecasts resolving at ~70%?
-- **Worst performers**: Which forecasts scored worst? Read their meta-reflections.
+If tracking is subjective, consider:
+- Adding actual tool call counts to forecast output
+- Linking meta-reflection files to session logs
+- Including timestamps and costs programmatically
 
-## Phase 3: Diagnose Root Causes
+### 3c. Template Improvements
 
-For each pattern identified, determine the root cause:
+If meta-reflections are formulaic or unhelpful:
+- Simplify the template (fewer categories, more specifics)
+- Request concrete examples instead of general assessments
+- Remove sections that always produce boilerplate
 
-| Symptom | Possible Causes |
-|---------|-----------------|
-| High CP divergence (positive) | Overconfidence, "Nothing Ever Happens" not applied, definitional misinterpretation |
-| High CP divergence (negative) | Underconfidence, excessive "Nothing Ever Happens" |
-| Zero subagent usage | Prompt too advisory, perceived overhead, time pressure |
-| Tool failures | API issues, missing keys, JavaScript rendering |
-| Formulaic meta-reflections | Template too long, not enforced, low value perceived |
+## Phase 4: Implement Changes (Bitter Lesson Order)
 
-**Ask**: "If I changed X, would the agent behave differently?"
+### Priority 1: Fix Failing Tools
 
-## Phase 4: Implement Fixes
+If a tool fails repeatedly, fix it or add an alternative.
 
-**This is the most important phase.** Don't just document problems - fix them.
-
-### Priority Order
-
-1. **Prompt changes** (`src/aib/agent/prompts.py`) - Highest leverage, immediate effect
-2. **Subagent changes** (`src/aib/agent/subagents.py`) - Medium leverage
-3. **Tool changes** (`src/aib/tools/`) - High effort but sometimes necessary
-4. **Meta-reflection template** - Affects future feedback loops
-
-### Making Prompt Changes
-
-Common prompt fixes:
-
-| Problem | Fix Location | Change |
-|---------|-------------|--------|
-| Calibration bias | "Nothing Ever Happens" section | Adjust logit recommendations |
-| Missing question type guidance | Add new section | Google Trends, meta-predictions, etc. |
-| Subagent underuse | "When to Use Subagents" | Make MANDATORY for certain types |
-| CP divergence ignored | Add "Large Divergence Warning" | Require investigation when >20pp |
-| Definitional misinterpretation | Add dedicated section | Criteria parsing guidance |
-
-After making changes:
 ```bash
-# Verify syntax
-uv run pyright src/aib/agent/prompts.py
-
-# Review the change
-git diff src/aib/agent/prompts.py
+# Example: Wikipedia 403 errors
+# → Check if redirects param is set
+# → Add error handling and fallback
 ```
 
-### Making Tool Changes
+### Priority 2: Build Requested Tools
 
-If a tool consistently fails:
-1. Check if it's an API key issue (`.env.local`)
-2. Check if it's a library issue (update via `uv add`)
-3. If structural, modify `src/aib/tools/`
+What did the agent explicitly request?
 
-### Commit Strategy
+| Agent Request | Action |
+|--------------|--------|
+| "CP history over time" | Build tool to fetch historical CP |
+| "Prediction market aggregator" | Improve polymarket/manifold search |
+| "Historical base rate database" | Build reference data tool |
+| "WebFetch fails on X" | Add X-specific API tool |
 
-Make atomic commits:
-```bash
-git add <specific-files>
-git commit -m "meta(feedback): <what changed and why>"
-```
+### Priority 3: Improve Subagents
 
-**One logical change per commit** so we can track what helped.
+If subagents aren't used:
+- Are they providing unique value?
+- Are they too expensive (time/compute)?
+- Should they be lighter/faster?
 
-## Phase 5: Document
+### Priority 4: Simplify Prompts (Not Add Rules)
 
-Write analysis to `notes/feedback_loop/<timestamp>_analysis.md`:
+Prompt changes should:
+- ADD general principles that help across domains
+- REMOVE prescriptive rules that add complexity
+- PREFER "use tool X for Y" over "when pattern P, do Q"
+
+**Do NOT add**:
+- Specific rules for specific question types
+- Numeric adjustments ("subtract 0.5 logits when...")
+- Patches for observed patterns
+
+## Phase 5: Meta-Meta Level - Improve This Process
+
+After running the feedback loop, reflect:
+
+### What data did you lack?
+
+- Could you trace from forecast → reasoning → tools → outcome?
+- Was programmatic tracking sufficient?
+- What logs would have helped?
+
+### What would make this easier next time?
+
+Scripts to build:
+- `trace_forecast.py` - Link forecast to full tool call trace
+- `compare_to_resolution.py` - Show reasoning vs actual outcome
+- `tool_failure_report.py` - Aggregate failures by tool and target
+
+### Update this document
+
+If you learned something about the feedback loop process:
+- Add it to this document
+- Add scripts that automate repetitive analysis
+- Remove guidance that wasn't useful
+
+## Anti-Patterns to Avoid
+
+### DON'T: Patch prompts for observed patterns
+❌ "When forecasting meta-predictions, subtract 0.5 logits"
+❌ "For definitional questions, cap confidence at 70%"
+✅ Build tool that provides historical calibration data
+✅ Add general principle about interpretation uncertainty
+
+### DON'T: Over-rely on CP divergence
+❌ "Large CP divergence means we're wrong"
+❌ "Tell agent to trust CP when divergence > 20pp"
+✅ Wait for resolution data to know if divergence correlates with error
+✅ Use CP divergence to understand WHERE reasoning differs, not WHETHER it's wrong
+
+### DON'T: Add rules the agent can't act on
+❌ "Adjust based on the meta-question's CP" (agent can't see this)
+✅ Provide tools that give the agent actionable information
+
+### DON'T: Skip reading traces
+❌ Jump to aggregate statistics (average divergence)
+✅ Read 5-10 meta-reflections deeply first
+✅ Understand what actually happened in individual forecasts
+
+## Documentation Template
+
+Write to `notes/feedback_loop/<timestamp>_analysis.md`:
 
 ```markdown
 # Feedback Loop Analysis: YYYY-MM-DD
 
-## Data Summary
-- Forecasts analyzed: N
-- Resolved forecasts: N
-- Brier score: X.XX (if available)
-- CP comparisons: N
-- Average CP divergence: +/-X.X%
+## Ground Truth Status
+- Resolved forecasts with our predictions: N
+- Average Brier score: X.XX (or "none yet - process analysis only")
 
-## CP Divergence Analysis
-[For each large divergence, explain what it means]
+## Object-Level Findings
 
-## Patterns Identified
-1. [Pattern] → [Root cause] → [Fix made]
+### Tool Failures
+| Tool | Failure | Count | Fix |
+|------|---------|-------|-----|
+| WebFetch | 403 on site X | N | Add X API tool |
+
+### Agent Capability Requests
+- "Would benefit from X" → [action taken]
+- "Tool Y failed" → [action taken]
+
+### Reasoning Quality Assessment
+- [For 3-5 forecasts, brief assessment of reasoning soundness]
+
+## Meta-Level Findings
+
+### Meta-Reflection Quality
+- Are they useful for debugging? [yes/no + why]
+- Is tracking programmatic? [yes/no + what's missing]
+
+### Template Improvements Made
+- [List any changes to meta-reflection prompt]
+
+## Meta-Meta Findings
+
+### What data did I lack?
+- [Specific gaps]
+
+### What scripts would help next time?
+- [Specific scripts to build]
+
+### How should this process change?
+- [Updates to feedback-loop.md]
 
 ## Changes Made
-1. [File]: [Change] - [Rationale]
-
-## Validation Plan
-- [How will we know if fixes worked?]
-
-## Next Steps
-- [What to monitor]
+| Level | Change | Rationale |
+|-------|--------|-----------|
+| Object | Added X tool | Agent requested it in N meta-reflections |
+| Meta | Improved tracking | Subjective → programmatic |
+| Process | Added script Y | Automate repetitive analysis |
 ```
 
-Commit with: `meta(feedback): <brief summary of improvements>`
-
-## Quick Reference: Diagnosis Guide
-
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| +ve CP divergence on definitional Qs | Criteria misinterpretation | Add definitional question guidance |
-| +ve CP divergence on predictive Qs | Overconfidence | Strengthen "Nothing Ever Happens" |
-| Zero subagent usage | Guidance too advisory | Make spawning MANDATORY for certain types |
-| "Tool X failed" repeated | API/config issue | Fix tool or add fallback |
-| Formulaic meta-reflections | Template fatigue | Simplify, focus on specifics |
-| Missing 80% CIs | Not enforced | Add validation or stronger prompt language |
-
-## Example Workflow
+## Scripts Available
 
 ```bash
-# 1. Collect data
+# Collect feedback data
 uv run python .claude/scripts/feedback_collect.py --all-time
 
-# 2. Read metrics
-cat notes/feedback_loop/*_metrics.json | tail -1
+# Collect from specific tournament
+uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
 
-# 3. Note large divergences, read their meta-reflections
-# (Divergence >15pp needs investigation)
-
-# 4. Identify pattern (e.g., "definitional questions have high divergence")
-
-# 5. Make fix (e.g., add definitional question guidance to prompts.py)
-# Edit src/aib/agent/prompts.py
-
-# 6. Verify
-uv run pyright src/aib/agent/prompts.py
-
-# 7. Commit
-git add src/aib/agent/prompts.py
-git commit -m "meta(feedback): add definitional question criteria parsing guidance"
-
-# 8. Document
-# Write notes/feedback_loop/<timestamp>_analysis.md
-
-# 9. Commit analysis
-git add notes/feedback_loop/
-git commit -m "meta(feedback): document analysis and changes"
+# (Add more scripts as you build them)
 ```
 
-## Guidelines
+## Key Questions to Answer Each Session
 
-- **CP divergence is your best early signal** - Use it before resolutions
-- **Definitional divergence is a red flag** - Usually means criteria misinterpretation
-- **Fix problems, don't just document them** - This command should result in code changes
-- **One fix per commit** - Track what helped
-- **Subagents should be used** - Zero usage means the guidance isn't working
+1. **Do we have resolution data?** If no, focus on process not accuracy.
+2. **What's our Brier score?** This is the REAL metric (when available).
+3. **What tools fail repeatedly?** Fix or replace them.
+4. **What does the agent say it needs?** Trust and provide.
+5. **Is the agent's reasoning sound?** Read traces deeply to find out.
+6. **What would make this process better?** Update this document.
