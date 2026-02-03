@@ -179,22 +179,22 @@ class NotesConfig:
         return self.rw + self.ro
 
 
-def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
+def setup_notes_folder(session_id: str, post_id: int) -> NotesConfig:
     """Create session-specific notes folder structure.
 
     Structure (RW = this session can write, RO = read historical only):
-    - notes/sessions/<session_id>/              (RW)
-    - notes/research/<question_id>/<timestamp>/ (RW)
-    - notes/forecasts/<question_id>/<timestamp>/(RW)
-    - notes/meta/                               (RW)
-    - notes/research/                           (RO)
-    - notes/forecasts/                          (RO)
-    - notes/structured/                         (RO - notes tool writes here)
-    - notes/logs/                               (NO ACCESS - for feedback loop only)
+    - notes/sessions/<session_id>/            (RW)
+    - notes/research/<post_id>/<timestamp>/   (RW)
+    - notes/forecasts/<post_id>/<timestamp>/  (RW)
+    - notes/meta/                             (RW)
+    - notes/research/                         (RO)
+    - notes/forecasts/                        (RO)
+    - notes/structured/                       (RO - notes tool writes here)
+    - notes/logs/                             (NO ACCESS - for feedback loop only)
 
     Args:
         session_id: Unique session identifier.
-        question_id: Metaculus question/post ID (0 for sub-forecasts).
+        post_id: Metaculus post ID (the URL identifier, e.g., 41976). Use 0 for sub-forecasts.
 
     Returns:
         NotesConfig with RW and RO directories separated.
@@ -203,9 +203,9 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
 
     session_path = NOTES_BASE_PATH / "sessions" / session_id
     research_base = NOTES_BASE_PATH / "research"
-    research_path = research_base / str(question_id) / timestamp
+    research_path = research_base / str(post_id) / timestamp
     forecasts_base = NOTES_BASE_PATH / "forecasts"
-    forecasts_path = forecasts_base / str(question_id) / timestamp
+    forecasts_path = forecasts_base / str(post_id) / timestamp
     meta_path = NOTES_BASE_PATH / "meta"
     structured_path = NOTES_BASE_PATH / "structured"
     logs_path = NOTES_BASE_PATH / "logs"
@@ -217,7 +217,7 @@ def setup_notes_folder(session_id: str, question_id: int) -> NotesConfig:
     logs_path.mkdir(parents=True, exist_ok=True)
 
     # Reasoning log file for this session (agent cannot access notes/logs/)
-    reasoning_log = logs_path / f"{question_id}_{timestamp}.md"
+    reasoning_log = logs_path / f"{post_id}_{timestamp}.md"
 
     return NotesConfig(
         session=session_path,

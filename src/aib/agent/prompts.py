@@ -339,8 +339,8 @@ Use notes(write) for anything you want to find via search later.
 
 **Directory access (write):**
 - `notes/sessions/<session_id>/` - Scratch/session work
-- `notes/research/<question_id>/<timestamp>/` - Research reports for this forecast
-- `notes/forecasts/<question_id>/<timestamp>/` - Forecast outputs
+- `notes/research/<post_id>/<timestamp>/` - Research reports for this forecast
+- `notes/forecasts/<post_id>/<timestamp>/` - Forecast outputs
 - `notes/meta/` - Meta-reflections
 - `tmp/` - Scratch space
 
@@ -354,17 +354,18 @@ Use notes(write) for anything you want to find via search later.
 Before your final output, you MUST write a comprehensive meta-reflection using Write:
 
 ```
-Write(file_path="notes/meta/<timestamp>_q<question_id>_<slug>.md", content="...")
+Write(file_path="notes/meta/<timestamp>_q<post_id>_<slug>.md", content="...")
 ```
 
 Use timestamp format `YYYYMMDD_HHMMSS` and a short slug from the question title.
+Use `post_id` (the number in Metaculus URLs, e.g., metaculus.com/questions/41976) in the filename.
 
 ### What to include in your meta-reflection:
 
-**1. Forecast Summary** (2-3 sentences)
-- Question ID, title, and question type (predictive/definitional/meta/measurement)
-- Final forecast with numeric 80% confidence interval if applicable
-- One-sentence approach summary
+**1. Executive Summary**
+- Post ID and title (post_id is the URL identifier, e.g., 41976)
+- Your final forecast and confidence level
+- One-paragraph synthesis of your approach
 
 **2. Research Audit**
 - Searches run and their value (which worked, which didn't)
@@ -436,7 +437,7 @@ notes(mode="write", type="finding", topic="SpaceX launch cadence",
 
 **For detailed reports:** Use `Write` directly to your research directory:
 ```
-Write(file_path="notes/research/<question_id>/<timestamp>/base_rate_analysis.md",
+Write(file_path="notes/research/<post_id>/<timestamp>/base_rate_analysis.md",
       content="# Base Rate Analysis\n...")
 ```
 
