@@ -48,15 +48,25 @@ from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_g
 from aib.agent.subagents import SUBAGENTS
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
+from aib.tools.financial import financial_server
 from aib.tools.forecasting import forecasting_server
 from aib.tools.markets import markets_server
 from aib.tools.notes import notes_server
+from aib.tools.trends import trends_server
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
+
+
+def _optional_tools(condition: bool | str | None, tools: list[str]) -> list[str]:
+    """Return tools list if condition is truthy, else empty list.
+
+    Used to conditionally include MCP tools based on API key availability.
+    """
+    return tools if condition else []
 
 
 def print_block(block: ContentBlock) -> None:
@@ -135,6 +145,108 @@ class ReasoningLogger:
         """Write accumulated log to file."""
         self.log_path.write_text("\n".join(self.lines), encoding="utf-8")
         logger.info("Saved reasoning log to %s", self.log_path)
+
+
+def append_metrics_to_meta_reflection(
+    meta_file: Path,
+    *,
+    metrics: dict[str, Any] | None,
+    duration_seconds: float | None,
+    cost_usd: float | None,
+    token_usage: dict[str, Any] | None,
+    log_path: Path | None,
+    post_id: int,
+    question_id: int,
+    sources: list[str] | None = None,
+) -> None:
+    """Append programmatic metrics to a meta-reflection file.
+
+    This injects actual tool metrics, timing, and cost data into the
+    agent-written meta-reflection, creating a complete document with
+    both qualitative assessment and quantitative data.
+    """
+    lines = [
+        "",
+        "---",
+        "",
+        "## Programmatic Metrics",
+        "",
+        "*Auto-generated - do not edit manually*",
+        "",
+    ]
+
+    # Basic info
+    lines.append(f"- **Post ID**: {post_id}")
+    lines.append(f"- **Question ID**: {question_id}")
+
+    # Timing and cost
+    if duration_seconds is not None:
+        minutes = duration_seconds / 60
+        lines.append(f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)")
+    if cost_usd is not None:
+        lines.append(f"- **Cost**: ${cost_usd:.4f}")
+
+    # Token usage
+    if token_usage:
+        input_tokens = token_usage.get("input_tokens", 0)
+        output_tokens = token_usage.get("output_tokens", 0)
+        cache_read = token_usage.get("cache_read_input_tokens", 0)
+        cache_create = token_usage.get("cache_creation_input_tokens", 0)
+        total = input_tokens + output_tokens
+        lines.append(f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)")
+        if cache_read or cache_create:
+            lines.append(f"  - Cache: {cache_read:,} read, {cache_create:,} created")
+
+    # Log path
+    if log_path and log_path.exists():
+        lines.append(f"- **Log File**: `{log_path}`")
+
+    # Tool metrics summary
+    if metrics:
+        total_calls = metrics.get("total_tool_calls", 0)
+        total_errors = metrics.get("total_errors", 0)
+        error_rate = metrics.get("overall_error_rate", "0%")
+
+        lines.append("")
+        lines.append("### Tool Calls")
+        lines.append("")
+        lines.append(f"- **Total**: {total_calls} calls")
+        lines.append(f"- **Errors**: {total_errors} ({error_rate})")
+
+        # Per-tool breakdown
+        by_tool = metrics.get("by_tool", {})
+        if by_tool:
+            lines.append("")
+            lines.append("| Tool | Calls | Errors | Avg Time |")
+            lines.append("|------|-------|--------|----------|")
+            for tool_name, tool_data in sorted(by_tool.items()):
+                calls = tool_data.get("call_count", 0)
+                errors = tool_data.get("error_count", 0)
+                avg_ms = tool_data.get("avg_duration_ms", 0)
+                error_indicator = f" ⚠️" if errors > 0 else ""
+                lines.append(
+                    f"| {tool_name} | {calls} | {errors}{error_indicator} | {avg_ms:.0f}ms |"
+                )
+
+    # Sources consulted
+    if sources:
+        lines.append("")
+        lines.append("### Sources Consulted")
+        lines.append("")
+        for source in sources[:20]:  # Limit to 20 to avoid bloat
+            # Truncate long URLs/queries for readability
+            display = source if len(source) <= 80 else source[:77] + "..."
+            lines.append(f"- {display}")
+        if len(sources) > 20:
+            lines.append(f"- ... and {len(sources) - 20} more")
+
+    # Append to file
+    try:
+        with open(meta_file, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        logger.info("Appended metrics to meta-reflection %s", meta_file)
+    except Exception as e:
+        logger.warning("Failed to append metrics to %s: %s", meta_file, e)
 
 
 def get_output_schema_for_question(
@@ -537,10 +649,12 @@ async def run_forecast(
             },
             mcp_servers={
                 "forecasting": forecasting_server,
+                "financial": financial_server,
                 "sandbox": sandbox.create_mcp_server(),
                 "composition": composition_server,
                 "markets": markets_server,
                 "notes": notes_server,
+                "trends": trends_server,
             },
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
@@ -563,18 +677,26 @@ async def run_forecast(
                         "mcp__forecasting__search_metaculus",
                         "mcp__forecasting__get_coherence_links",
                         "mcp__forecasting__get_prediction_history",
+                        "mcp__forecasting__get_cp_history",
                     ]
                     if settings.metaculus_token
                     else []
                 ),
-                # Search tools (only if credentials configured)
-                *(["mcp__forecasting__search_exa"] if settings.exa_api_key else []),
-                *(
-                    ["mcp__forecasting__search_news"]
-                    if settings.asknews_client_id and settings.asknews_client_secret
-                    else []
+                # Search tools (conditional on API credentials)
+                *_optional_tools(
+                    settings.exa_api_key,
+                    ["mcp__forecasting__search_exa"],
+                ),
+                *_optional_tools(
+                    settings.asknews_client_id and settings.asknews_client_secret,
+                    ["mcp__forecasting__search_news"],
                 ),
                 "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
+                # Financial data tools (conditional on API credentials)
+                *_optional_tools(
+                    settings.fred_api_key,
+                    ["mcp__financial__fred_series", "mcp__financial__fred_search"],
+                ),
                 # Sandbox tools (in-process Docker sandbox)
                 "mcp__sandbox__execute_code",
                 "mcp__sandbox__install_package",
@@ -584,6 +706,13 @@ async def run_forecast(
                 # Prediction market tools
                 "mcp__markets__polymarket_price",
                 "mcp__markets__manifold_price",
+                # Stock market tools (no API key required)
+                "mcp__markets__stock_price",
+                "mcp__markets__stock_history",
+                # Google Trends tools (no API key required)
+                "mcp__trends__google_trends",
+                "mcp__trends__google_trends_compare",
+                "mcp__trends__google_trends_related",
                 # Notes browsing tools
                 "mcp__notes__notes",
                 # Subagent spawning
@@ -670,6 +799,7 @@ async def run_forecast(
         sources_consulted=extract_sources(assistant_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
+        token_usage=result.usage,
     )
 
     if result.structured_output:
@@ -797,6 +927,19 @@ async def run_forecast(
                 subagents_used=subagents_used,
             )
             logger.info("Found meta-reflection %s for post %d", meta_file.name, post_id)
+
+            # Inject programmatic metrics into the meta-reflection
+            append_metrics_to_meta_reflection(
+                meta_file,
+                metrics=metrics,
+                duration_seconds=output.duration_seconds,
+                cost_usd=output.cost_usd,
+                token_usage=output.token_usage,
+                log_path=thinking_log_path if thinking_log_path.exists() else None,
+                post_id=post_id,
+                question_id=actual_question_id,
+                sources=output.sources_consulted,
+            )
         else:
             # Meta-reflection is required - log error but don't fail the forecast
             logger.error(
@@ -827,6 +970,9 @@ async def run_forecast(
                 median=output.median,
                 confidence_interval=output.confidence_interval,
                 percentiles=output.percentiles,
+                tool_metrics=metrics,
+                token_usage=output.token_usage,
+                log_path=str(thinking_log_path) if thinking_log_path.exists() else None,
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
