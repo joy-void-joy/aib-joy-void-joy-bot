@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from aib.agent.hooks import HooksConfig
 from aib.agent.retrodict import (
     RetrodictConfig,
     _rewrite_to_wayback,
@@ -85,7 +86,7 @@ class TestRetrodictHooks:
         )
 
     @pytest.fixture
-    def hooks(self, config: RetrodictConfig) -> dict[str, Any]:
+    def hooks(self, config: RetrodictConfig) -> HooksConfig:
         """Create hooks from config."""
         return create_retrodict_hooks(config)
 

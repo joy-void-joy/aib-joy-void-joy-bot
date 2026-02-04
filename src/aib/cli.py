@@ -222,7 +222,21 @@ def retrodict(
         """Fetch resolution, final CP, and published_at for a question."""
         client = AsyncMetaculusClient()
         try:
-            q = await client.get_question_by_post_id(post_id)
+            result = await client.get_question_by_post_id(post_id)
+            # Handle single question or group (list). For groups, we use the
+            # first question - if the user wants a specific sub-question, they
+            # should provide that sub-question's post_id directly.
+            if isinstance(result, list):
+                if len(result) > 1:
+                    logger.warning(
+                        "Post %d contains %d questions. Using first: %s",
+                        post_id,
+                        len(result),
+                        result[0].question_text[:50],
+                    )
+                q = result[0]
+            else:
+                q = result
             resolution = q.resolution_string
             cp = None
             if isinstance(q, BinaryQuestion):
