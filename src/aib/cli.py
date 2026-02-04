@@ -164,6 +164,133 @@ def test(
 
 
 @app.command()
+def retrodict(
+    question_ids: Annotated[
+        list[int], typer.Argument(help="Metaculus post IDs of resolved questions")
+    ],
+) -> None:
+    """Run forecasts on resolved questions for calibration.
+
+    Forecasts resolved questions to build calibration data. Does not submit.
+    Shows the actual resolution and computes Brier score for binary questions.
+
+    Examples:
+        uv run forecast retrodict 41835 41521
+        uv run forecast retrodict 41835 41521 41517
+    """
+    import sys
+
+    sys.path.insert(0, "src")
+    from metaculus import AsyncMetaculusClient, BinaryQuestion
+
+    async def get_resolution(post_id: int) -> tuple[str | None, float | None]:
+        """Fetch resolution and final CP for a question."""
+        client = AsyncMetaculusClient()
+        try:
+            q = await client.get_question_by_post_id(post_id)
+            resolution = q.resolution_string
+            cp = None
+            if isinstance(q, BinaryQuestion):
+                cp = q.community_prediction_at_access_time
+            return resolution, cp
+        except Exception as e:
+            logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
+            return None, None
+
+    results: list[dict] = []
+
+    for i, qid in enumerate(question_ids, 1):
+        print(f"\n{'=' * 60}")
+        print(f"[{i}/{len(question_ids)}] Retrodicting question {qid}")
+        print("=" * 60)
+
+        # Fetch resolution first
+        resolution, final_cp = asyncio.run(get_resolution(qid))
+        if resolution:
+            print(f"Resolution: {resolution}")
+            if final_cp is not None:
+                print(f"Final CP: {final_cp:.1%}")
+        else:
+            print("⚠️  Could not fetch resolution (question may not be resolved)")
+
+        # Setup logging
+        log_file = setup_logging(qid)
+        print(f"Logging to {log_file}")
+
+        # Run forecast
+        try:
+            output = asyncio.run(run_forecast(qid))
+            display_forecast(output)
+
+            # Compute Brier score for binary questions
+            brier = None
+            if output.probability is not None and resolution in ("yes", "no"):
+                outcome = 1.0 if resolution == "yes" else 0.0
+                brier = (output.probability - outcome) ** 2
+                print(f"\n📊 Calibration:")
+                print(f"   Our forecast: {output.probability:.1%}")
+                print(f"   Resolution: {resolution}")
+                print(f"   Brier score: {brier:.4f}")
+                if final_cp is not None:
+                    cp_brier = (final_cp - outcome) ** 2
+                    print(f"   CP Brier: {cp_brier:.4f}")
+                    diff = brier - cp_brier
+                    better_worse = "better" if diff < 0 else "worse"
+                    print(f"   We were {abs(diff):.4f} {better_worse} than CP")
+
+            results.append({
+                "post_id": qid,
+                "resolution": resolution,
+                "our_forecast": output.probability,
+                "final_cp": final_cp,
+                "brier": brier,
+                "question_type": output.question_type,
+            })
+
+        except CreditExhaustedError as e:
+            reset_msg = ""
+            if e.reset_time:
+                reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
+            print(f"❌ Credit exhausted.{reset_msg}")
+            results.append({"post_id": qid, "error": "credit_exhausted"})
+        except httpx.HTTPStatusError as e:
+            print(f"❌ Failed to fetch question: {e}")
+            results.append({"post_id": qid, "error": str(e)})
+        except RuntimeError as e:
+            print(f"❌ Agent failed: {e}")
+            results.append({"post_id": qid, "error": str(e)})
+
+    # Summary
+    print(f"\n{'=' * 60}")
+    print("RETRODICT SUMMARY")
+    print("=" * 60)
+
+    binary_results = [r for r in results if r.get("brier") is not None]
+    if binary_results:
+        avg_brier = sum(r["brier"] for r in binary_results) / len(binary_results)
+        print(f"\nBinary questions: {len(binary_results)}")
+        print(f"Average Brier score: {avg_brier:.4f}")
+
+        # Compare to CP
+        cp_briers = [
+            (r.get("final_cp", 0.5) - (1.0 if r["resolution"] == "yes" else 0.0)) ** 2
+            for r in binary_results
+            if r.get("final_cp") is not None
+        ]
+        if cp_briers:
+            avg_cp_brier = sum(cp_briers) / len(cp_briers)
+            print(f"Average CP Brier: {avg_cp_brier:.4f}")
+            diff = avg_brier - avg_cp_brier
+            print(f"Difference: {diff:+.4f} ({'worse' if diff > 0 else 'better'} than CP)")
+
+    errors = [r for r in results if "error" in r]
+    if errors:
+        print(f"\nErrors: {len(errors)}")
+        for r in errors:
+            print(f"  {r['post_id']}: {r['error']}")
+
+
+@app.command()
 def submit(
     question_id: Annotated[int, typer.Argument(help="Metaculus post ID")],
     comment: Annotated[
