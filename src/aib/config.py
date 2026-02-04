@@ -65,6 +65,11 @@ class Settings(BaseSettings):
         validation_alias="ASKNEWS_SECRET",
         description="AskNews client secret",
     )
+    fred_api_key: str | None = Field(
+        default=None,
+        validation_alias="FRED_API_KEY",
+        description="FRED (Federal Reserve Economic Data) API key",
+    )
 
     # === Model ===
     model: str = Field(

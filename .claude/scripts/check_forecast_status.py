@@ -73,7 +73,6 @@ def backfill(
     Checks each local forecast against the Metaculus API and marks
     forecasts as submitted if the API confirms they were submitted.
     """
-    from pathlib import Path
 
     from aib.agent.history import FORECASTS_BASE_PATH, mark_submitted
 

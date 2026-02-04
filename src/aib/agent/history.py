@@ -40,6 +40,10 @@ class SavedForecast(BaseModel):
     resolution: str | None = None  # "yes", "no", "ambiguous", or None if unresolved
     submitted_at: str | None = None  # ISO timestamp when submitted to Metaculus
     comment_posted_at: str | None = None  # ISO timestamp when comment was posted
+    # Programmatic tracking fields
+    tool_metrics: dict[str, Any] | None = None  # Tool call counts, durations, errors
+    token_usage: dict[str, Any] | None = None  # Token usage: input, output, cache
+    log_path: str | None = None  # Path to reasoning log file
 
 
 def save_forecast(
@@ -56,6 +60,9 @@ def save_forecast(
     median: float | None = None,
     confidence_interval: tuple[float, float] | None = None,
     percentiles: dict[int, float] | None = None,
+    tool_metrics: dict[str, Any] | None = None,
+    token_usage: dict[str, Any] | None = None,
+    log_path: str | None = None,
 ) -> Path:
     """Save a forecast to the history storage.
 
@@ -72,6 +79,9 @@ def save_forecast(
         median: For numeric, the median estimate.
         confidence_interval: For numeric, the (low, high) 90% CI.
         percentiles: For numeric, percentile estimates.
+        tool_metrics: Programmatic tracking of tool calls, durations, errors.
+        token_usage: Token usage stats (input, output, cache tokens).
+        log_path: Path to the reasoning log file in logs/.
 
     Returns:
         Path to the saved forecast file.
@@ -97,6 +107,9 @@ def save_forecast(
         percentiles=percentiles,
         summary=summary,
         factors=[f if isinstance(f, dict) else f.model_dump() for f in factors],
+        tool_metrics=tool_metrics,
+        token_usage=token_usage,
+        log_path=log_path,
     )
 
     # Save to file

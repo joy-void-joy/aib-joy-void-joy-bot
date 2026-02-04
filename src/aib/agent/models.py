@@ -709,6 +709,10 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Cost of the agent run in USD.",
     )
+    token_usage: dict[str, int] | None = Field(
+        default=None,
+        description="Token usage: input_tokens, output_tokens, cache_read_tokens, etc.",
+    )
     tool_metrics: dict[str, object] | None = Field(
         default=None,
         description="Tool call metrics: call counts, durations, error rates.",

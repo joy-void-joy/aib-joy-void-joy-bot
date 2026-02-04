@@ -181,6 +181,7 @@ The `forecasting-tools` library has some type annotation limitations to be aware
 - **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
 - Use `TypedDict` and Pydantic models for structured data
 - Never manually parse Claude/agent output — use structured outputs via pydantic
+- **Never use `# type: ignore`** — Ask the user how to properly fix type errors instead of suppressing them
 
 ### Code as Documentation
 
@@ -327,6 +328,30 @@ The script:
 3. Computes Brier scores, log scores, and calibration buckets
 4. Saves metrics to `notes/feedback_loop/<timestamp>_metrics.json`
 
+### trace_forecast.py
+
+Link forecasts to their logs and metrics. Useful for debugging and feedback loop analysis.
+
+```bash
+# Show details for a specific forecast
+uv run python .claude/scripts/trace_forecast.py show 41906
+
+# Show with full tool-by-tool metrics
+uv run python .claude/scripts/trace_forecast.py show 41906 --verbose
+
+# List recent forecasts with metrics summary
+uv run python .claude/scripts/trace_forecast.py list
+
+# Show forecasts with tool errors
+uv run python .claude/scripts/trace_forecast.py errors
+```
+
+The script displays:
+- Forecast details (probability, logit, timestamp)
+- Tool metrics (call counts, error rates, durations)
+- Log file paths and sizes
+- Error breakdowns by tool
+
 ### debug.py
 
 Debug tools for Metaculus API parsing and MCP error propagation.
@@ -341,6 +366,78 @@ uv run python .claude/scripts/debug.py metaculus --raw-only
 # Test MCP error flag propagation (SDK workaround verification)
 uv run python .claude/scripts/debug.py mcp-error
 ```
+
+### aggregate_metrics.py
+
+Aggregate metrics across all forecasts for analysis.
+
+```bash
+# Show summary (counts, costs, tokens)
+uv run python .claude/scripts/aggregate_metrics.py summary
+
+# Show tool usage aggregates
+uv run python .claude/scripts/aggregate_metrics.py tools
+
+# Show metrics by question type
+uv run python .claude/scripts/aggregate_metrics.py by-type
+
+# Show forecasts with high error rates
+uv run python .claude/scripts/aggregate_metrics.py errors
+```
+
+### resolution_update.py
+
+Fetch resolutions from Metaculus and update saved forecasts.
+
+```bash
+# Check for and apply resolution updates
+uv run python .claude/scripts/resolution_update.py check
+
+# Dry run (don't modify files)
+uv run python .claude/scripts/resolution_update.py check --dry-run
+
+# Show resolution status of all forecasts
+uv run python .claude/scripts/resolution_update.py status
+
+# Manually set resolution for a forecast
+uv run python .claude/scripts/resolution_update.py set 12345 yes
+```
+
+### calibration_report.py
+
+Generate calibration reports from resolved forecasts.
+
+```bash
+# Show calibration summary (Brier scores, buckets)
+uv run python .claude/scripts/calibration_report.py summary
+
+# Show detailed forecast-by-forecast results
+uv run python .claude/scripts/calibration_report.py detail
+
+# Export calibration data to JSON
+uv run python .claude/scripts/calibration_report.py export
+uv run python .claude/scripts/calibration_report.py export -o custom_path.json
+```
+
+### forecast_queue.py
+
+Manage forecasting queue and priorities. Shows questions that need forecasting, sorted by urgency.
+
+```bash
+# Show forecasting status for a tournament
+uv run python .claude/scripts/forecast_queue.py status aib
+
+# Show questions closing soon that haven't been forecast
+uv run python .claude/scripts/forecast_queue.py upcoming aib --days 7
+
+# Include already-forecasted questions in the list
+uv run python .claude/scripts/forecast_queue.py upcoming aib --all
+
+# Show recently resolved questions that we missed
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+```
+
+Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup)
 
 ## Settings & Configuration
 

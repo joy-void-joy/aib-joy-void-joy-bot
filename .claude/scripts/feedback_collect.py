@@ -522,7 +522,7 @@ async def _main_async(
 
     # Report community prediction comparison (early signal)
     if cp_comparisons:
-        print(f"\n" + "-" * 60)
+        print("\n" + "-" * 60)
         print("COMMUNITY PREDICTION COMPARISON (Early Signal)")
         print("-" * 60)
         print(f"Forecasts with CP available: {len(cp_comparisons)}")

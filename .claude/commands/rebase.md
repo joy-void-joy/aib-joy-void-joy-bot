@@ -11,31 +11,51 @@ Create a temporary rebase branch with a clean, logical commit history, then open
 
 ## Process
 
-1. **Gather context**:
+1. **Sync main with remote**:
+   ```bash
+   # If local main is behind origin:
+   git fetch origin main
+   git checkout main && git merge --ff-only origin/main
+
+   # If local main is ahead of origin (has unpushed commits):
+   git push origin main
+   ```
+   PRs compare against origin/main, so local and remote must be in sync. If they diverge, the PR will show incorrect commit counts.
+
+2. **Gather context**:
    - Identify the current branch and its base (typically `main`)
    - Review the full diff from base to HEAD: `git diff main...HEAD`
    - List existing commits: `git log --oneline main..HEAD`
 
-2. **Understand all changes**:
+3. **Understand all changes**:
    - Read the changed files to understand the complete set of modifications
    - Think about what logical units of work exist (features, refactors, fixes, tests, docs)
    - **Ignore the existing commit history** — focus on what makes sense as a clean sequence
 
-3. **Create rebase branch**:
+4. **Create rebase branch**:
    ```bash
    git checkout -b <branch>-rebase main
    ```
 
-4. **Build clean commits**:
+5. **Build clean commits**:
    - For each logical unit of work, cherry-pick or manually stage the relevant changes
    - Create atomic commits with clear messages
    - Order commits logically (dependencies first, then features, then polish)
    - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 
-5. **Push and create PR**:
+6. **Push and create PR**:
    ```bash
    git push -u origin <branch>-rebase
    gh pr create --title "..." --body "..."
+   ```
+
+7. **Refresh PR base and verify**:
+   ```bash
+   # Always refresh after pushing (GitHub caches the base reference)
+   gh pr edit <num> --base main
+
+   # Verify commit count matches expectation
+   gh pr view <num> --json commits --jq '.commits | length'
    ```
 
 ## Guidelines

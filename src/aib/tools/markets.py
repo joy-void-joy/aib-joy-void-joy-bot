@@ -284,6 +284,141 @@ async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Manifold search failed: {e}")
 
 
+# --- Yahoo Finance API ---
+
+
+class StockQueryInput(BaseModel):
+    """Input for stock price tool."""
+
+    symbol: str = Field(min_length=1, max_length=10)
+    period: str = Field(default="1mo")  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+
+
+class StockPrice(TypedDict):
+    """Price information for a stock."""
+
+    symbol: str
+    name: str
+    current_price: float | None
+    previous_close: float | None
+    change_percent: float | None
+    currency: str
+    market_cap: float | None
+    fifty_two_week_high: float | None
+    fifty_two_week_low: float | None
+
+
+@tool(
+    "stock_price",
+    (
+        "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
+        "Returns current price, previous close, 52-week range, and market cap. "
+        "Use for stock price comparison questions."
+    ),
+    {"symbol": str, "period": str},
+)
+@tracked("stock_price")
+async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
+    """Get stock price from Yahoo Finance."""
+    try:
+        validated = StockQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    symbol = validated.symbol.upper()
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+
+        if not info or info.get("regularMarketPrice") is None:
+            return mcp_error(f"No data found for symbol: {symbol}")
+
+        result: StockPrice = {
+            "symbol": symbol,
+            "name": info.get("shortName", info.get("longName", symbol)),
+            "current_price": info.get("regularMarketPrice"),
+            "previous_close": info.get("previousClose"),
+            "change_percent": info.get("regularMarketChangePercent"),
+            "currency": info.get("currency", "USD"),
+            "market_cap": info.get("marketCap"),
+            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+        }
+
+        return mcp_success(result)
+
+    except Exception as e:
+        logger.exception("Yahoo Finance lookup failed")
+        return mcp_error(f"Yahoo Finance lookup failed for {symbol}: {e}")
+
+
+@tool(
+    "stock_history",
+    (
+        "Get historical stock prices for a ticker symbol. "
+        "Returns OHLCV data for the specified period. "
+        "Periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max. "
+        "Use for analyzing price trends and volatility."
+    ),
+    {"symbol": str, "period": str},
+)
+@tracked("stock_history")
+async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
+    """Get historical stock prices from Yahoo Finance."""
+    try:
+        validated = StockQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    symbol = validated.symbol.upper()
+    period = validated.period
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period=period)
+
+        if hist.empty:
+            return mcp_error(f"No historical data found for symbol: {symbol}")
+
+        # Convert to list of dicts for JSON serialization
+        # Reset index to make date a column, then convert to records
+        hist_reset = hist.reset_index()
+        hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
+
+        records: list[dict[str, object]] = hist_reset[["Date", "Open", "High", "Low", "Close", "Volume"]].to_dict("records")  # pyright: ignore[reportCallIssue]
+
+        # Rename keys to lowercase and limit to last 30
+        formatted: list[dict[str, object]] = [
+            {
+                "date": r["Date"],
+                "open": r["Open"],
+                "high": r["High"],
+                "low": r["Low"],
+                "close": r["Close"],
+                "volume": r["Volume"],
+            }
+            for r in records[-30:]  # Limit to last 30 days
+        ]
+
+        return mcp_success({
+            "symbol": symbol,
+            "period": period,
+            "data_points": len(records),
+            "first_date": formatted[0]["date"] if formatted else None,
+            "last_date": formatted[-1]["date"] if formatted else None,
+            "history": formatted,
+        })
+
+    except Exception as e:
+        logger.exception("Yahoo Finance history lookup failed")
+        return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
+
+
 # --- MCP Server ---
 
 markets_server = create_mcp_server(
@@ -292,5 +427,7 @@ markets_server = create_mcp_server(
     tools=[
         polymarket_price,
         manifold_price,
+        stock_price,
+        stock_history,
     ],
 )

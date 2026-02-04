@@ -109,6 +109,13 @@ class CoherenceLinksInput(BaseModel):
     post_id: int
 
 
+class CPHistoryInput(BaseModel):
+    """Input for fetching community prediction history."""
+
+    question_id: int = Field(description="Metaculus question ID (not post ID)")
+    days: int = Field(default=30, description="Number of days of history to fetch")
+
+
 class WikipediaInput(BaseModel):
     """Unified Wikipedia tool input."""
 
@@ -343,6 +350,76 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         logger.exception("Failed to fetch coherence links")
         return mcp_error(f"Failed to fetch links: {e}")
+
+
+@tool(
+    "get_cp_history",
+    (
+        "Fetch historical community prediction (CP) data for a question. "
+        "Useful for meta-prediction questions about CP movements. "
+        "Returns timestamped CP values over the requested period. "
+        "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
+    ),
+    {"question_id": int, "days": int},
+)
+@tracked("get_cp_history")
+async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
+    """Fetch community prediction history for a question."""
+    try:
+        validated = CPHistoryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    question_id = validated.question_id
+    days = min(validated.days, 365)
+
+    try:
+        async with _metaculus_semaphore:
+            async with httpx.AsyncClient(
+                timeout=settings.http_timeout_seconds,
+                headers={"Authorization": f"Token {settings.metaculus_token}"},
+            ) as client:
+                response = await client.get(
+                    f"https://www.metaculus.com/api/questions/{question_id}/aggregate-history/",
+                    params={"days": days},
+                )
+                response.raise_for_status()
+                data = response.json()
+
+        history = data.get("history", [])
+        results = []
+        for entry in history:
+            timestamp = entry.get("start_time") or entry.get("end_time")
+            centers = entry.get("centers", [])
+            if centers and len(centers) > 0:
+                cp = centers[0]
+                if cp is not None:
+                    results.append(
+                        {
+                            "timestamp": timestamp,
+                            "community_prediction": round(cp, 4),
+                        }
+                    )
+
+        return mcp_success(
+            {
+                "question_id": question_id,
+                "days_requested": days,
+                "data_points": len(results),
+                "history": results,
+            }
+        )
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return mcp_error(
+                f"Question {question_id} not found or has no CP history. "
+                "Note: This tool needs the question_id (internal ID), not the post_id (URL ID)."
+            )
+        logger.exception("Failed to fetch CP history")
+        return mcp_error(f"Failed to fetch CP history: {e}")
+    except Exception as e:
+        logger.exception("Failed to fetch CP history")
+        return mcp_error(f"Failed to fetch CP history: {e}")
 
 
 # --- Pure Search Tools (Raw Results, No LLM Summarization) ---
@@ -625,6 +702,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                         "exintro": mode == "summary",
                         "explaintext": True,
                         "inprop": "url",
+                        "redirects": 1,  # Follow Wikipedia redirects
                         "format": "json",
                         "utf8": 1,
                     },
@@ -736,29 +814,31 @@ async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- Create MCP Server ---
 
-# Build tool list conditionally based on available credentials
+# Build tool list conditionally based on available credentials.
+# Tools are gated at BOTH layers:
+# 1. MCP server registration (here) - so agent doesn't discover unavailable tools
+# 2. allowed_tools in core.py - defense in depth
 _forecasting_tools = [
-    # Metaculus data tools
-    get_metaculus_questions,  # Unified: handles single or batch
+    # Metaculus data tools (always available - uses METACULUS_TOKEN which is required)
+    get_metaculus_questions,
     list_tournament_questions,
     search_metaculus,
     get_coherence_links,
+    get_cp_history,
     get_prediction_history,
-    # Search tools (raw results, cached)
-    wikipedia,  # Unified: search, summary, or full article
+    # Wikipedia (no API key required)
+    wikipedia,
 ]
 
-# Only include search_exa if Exa API key is configured
 if settings.exa_api_key:
     _forecasting_tools.append(search_exa)
 else:
     logger.info("search_exa tool disabled: EXA_API_KEY not configured")
 
-# Only include search_news if AskNews credentials are configured
 if settings.asknews_client_id and settings.asknews_client_secret:
     _forecasting_tools.append(search_news)
 else:
-    logger.info("search_news tool disabled: ASKNEWS_CLIENT_ID/SECRET not configured")
+    logger.info("search_news tool disabled: ASKNEWS credentials not configured")
 
 forecasting_server = create_mcp_server(
     name="forecasting",
