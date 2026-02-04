@@ -99,7 +99,9 @@ uv run pytest -k "test_forecast"
 
 This project uses **git worktrees** (not regular branches) to develop multiple features in parallel.
 
-**IMPORTANT:** Never commit directly to `main`. Always work in a worktree.
+**IMPORTANT:** Never commit *code* directly to `main`. Always work in a worktree for code changes.
+
+**Exception:** Data commits (`data(forecasts):`) can go directly to main—forecast outputs don't need review.
 
 ### Worktrees vs Branches
 
@@ -142,10 +144,11 @@ Use conventional commit syntax: `type(scope): description`
 - `feat` — New feature or capability
 - `fix` — Bug fix
 - `refactor` — Code change that neither fixes a bug nor adds a feature
-- `docs` — Documentation only
+- `docs` — Documentation only (README, standalone docs)
 - `test` — Adding or updating tests
 - `chore` — Maintenance (dependencies, build config, etc.)
 - `meta` — Changes to `.claude/` files (CLAUDE.md, settings, scripts, commands)
+- `data` — Generated data and outputs (forecasts, metrics, logs)
 
 **Examples:**
 ```
@@ -154,7 +157,21 @@ fix(tools): handle missing API key gracefully
 refactor(sandbox): extract Docker client initialization
 docs(readme): add installation instructions
 meta(claude): update commit message guidelines
+data(forecasts): add Feb 4 2026 forecast batch
 ```
+
+### Forecast Commits
+
+Forecast outputs use `data(forecasts):` and can be committed directly to main (no worktree needed).
+
+**What goes in a forecast commit:**
+- Forecast markdown files (`notes/forecasts/<question_id>/`)
+- Meta-reflections about the forecast (include in the forecast file itself, not separate docs)
+- Resolution updates when questions resolve
+
+**What does NOT go in a forecast commit:**
+- Code changes (use worktree + PR)
+- Standalone reflection documents (if analyzing multiple forecasts, use `docs(meta):` but this is for cross-cutting analysis, not per-forecast reflections)
 
 **Note:** The `worktrees/` directory is gitignored.
 
