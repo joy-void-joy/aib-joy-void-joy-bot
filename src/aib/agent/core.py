@@ -457,11 +457,14 @@ def create_permission_hooks(
     }
 
 
-def create_webfetch_quality_hooks() -> HooksConfig:
+def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfig:
     """Create PostToolUse hook for WebFetch quality detection.
 
     Detects when WebFetch returns JS-rendered garbage and injects
     a system message with alternative tools to try.
+
+    Args:
+        retrodict_mode: If True, exclude Playwright from suggestions.
     """
 
     async def webfetch_quality_hook(
@@ -504,7 +507,9 @@ def create_webfetch_quality_hooks() -> HooksConfig:
 
         # Classify the content
         try:
-            classification = await classify_webfetch_content(content, url)
+            classification = await classify_webfetch_content(
+                content, url, retrodict_mode=retrodict_mode
+            )
 
             if classification.is_js_rendered and classification.confidence >= 0.6:
                 message = generate_fallback_message(url, classification)
@@ -716,7 +721,9 @@ async def run_forecast(
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
 
         # Always add WebFetch quality detection
-        webfetch_hooks = create_webfetch_quality_hooks()
+        webfetch_hooks = create_webfetch_quality_hooks(
+            retrodict_mode=bool(retrodict_config)
+        )
         hooks = merge_hooks(permission_hooks, webfetch_hooks)
 
         # Compose with retrodict hooks if in retrodict mode

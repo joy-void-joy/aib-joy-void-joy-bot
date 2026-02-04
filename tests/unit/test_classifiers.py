@@ -155,6 +155,20 @@ class TestSuggestAlternatives:
         assert any("search_exa" in alt for alt in alternatives)
         assert any("Playwright" in alt for alt in alternatives)
 
+    def test_retrodict_mode_excludes_playwright_social_media(self) -> None:
+        """Retrodict mode should not suggest Playwright for social media URLs."""
+        url = "https://twitter.com/user"
+        alternatives = _suggest_alternatives_for_url(url, retrodict_mode=True)
+        assert any("JavaScript rendering" in alt for alt in alternatives)
+        assert not any("Playwright" in alt for alt in alternatives)
+
+    def test_retrodict_mode_excludes_playwright_generic(self) -> None:
+        """Retrodict mode should not suggest Playwright for generic URLs."""
+        url = "https://random-site.com/page"
+        alternatives = _suggest_alternatives_for_url(url, retrodict_mode=True)
+        assert any("search_exa" in alt for alt in alternatives)
+        assert not any("Playwright" in alt for alt in alternatives)
+
 
 class TestGenerateFallbackMessage:
     """Tests for fallback message generation."""

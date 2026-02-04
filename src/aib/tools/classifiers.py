@@ -65,7 +65,9 @@ LOADING_PATTERNS = [
 ]
 
 
-def classify_heuristic(content: str, url: str = "") -> WebFetchQuality:
+def classify_heuristic(
+    content: str, url: str = "", *, retrodict_mode: bool = False
+) -> WebFetchQuality:
     """Fast heuristic classification of WebFetch content quality.
 
     Checks for common indicators of JS-rendered pages without making API calls.
@@ -74,6 +76,7 @@ def classify_heuristic(content: str, url: str = "") -> WebFetchQuality:
     Args:
         content: The fetched page content (should be HTML/text, not raw bytes)
         url: The URL that was fetched (for domain-specific hints)
+        retrodict_mode: If True, exclude Playwright from suggestions
 
     Returns:
         WebFetchQuality with classification and suggested alternatives.
@@ -123,7 +126,7 @@ def classify_heuristic(content: str, url: str = "") -> WebFetchQuality:
 
     # Generate alternatives based on URL
     if url:
-        alternatives = _suggest_alternatives_for_url(url)
+        alternatives = _suggest_alternatives_for_url(url, retrodict_mode=retrodict_mode)
 
     # Calculate confidence based on indicators
     if not indicators:
@@ -172,11 +175,12 @@ def classify_heuristic(content: str, url: str = "") -> WebFetchQuality:
     )
 
 
-def _suggest_alternatives_for_url(url: str) -> list[str]:
+def _suggest_alternatives_for_url(url: str, *, retrodict_mode: bool = False) -> list[str]:
     """Suggest alternative tools/approaches based on the URL.
 
     Args:
         url: The URL that was fetched
+        retrodict_mode: If True, exclude Playwright suggestions (not available in retrodict)
 
     Returns:
         List of suggestions for the agent to try
@@ -209,9 +213,10 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
         alternatives.append(
             "Consider using mcp__forecasting__search_news for social media coverage"
         )
-        alternatives.append(
-            "Use Playwright browser tools for JS-heavy sites (mcp__playwright__browser_navigate)"
-        )
+        if not retrodict_mode:
+            alternatives.append(
+                "Use Playwright browser tools for JS-heavy sites (mcp__playwright__browser_navigate)"
+            )
 
     # Prediction markets
     if "polymarket" in url_lower:
@@ -225,9 +230,10 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
         alternatives.append(
             "Use sandbox execute_code with requests/beautifulsoup for complex scraping"
         )
-        alternatives.append(
-            "Use Playwright browser tools as last resort (mcp__playwright__browser_navigate, browser_snapshot)"
-        )
+        if not retrodict_mode:
+            alternatives.append(
+                "Use Playwright browser tools as last resort (mcp__playwright__browser_navigate, browser_snapshot)"
+            )
 
     return alternatives
 
@@ -355,6 +361,8 @@ async def classify_webfetch_content(
     content: str,
     url: str = "",
     confidence_threshold: float = 0.6,
+    *,
+    retrodict_mode: bool = False,
 ) -> WebFetchQuality:
     """Classify WebFetch content quality with automatic escalation to Haiku.
 
@@ -365,12 +373,13 @@ async def classify_webfetch_content(
         url: The URL that was fetched (for domain-specific hints)
         confidence_threshold: Minimum confidence for heuristic result before
             escalating to Haiku (default: 0.6)
+        retrodict_mode: If True, exclude Playwright from suggestions
 
     Returns:
         WebFetchQuality with final classification
     """
     # Try heuristics first
-    heuristic_result = classify_heuristic(content, url)
+    heuristic_result = classify_heuristic(content, url, retrodict_mode=retrodict_mode)
 
     # If confident enough, return heuristic result
     if heuristic_result.confidence >= confidence_threshold:
