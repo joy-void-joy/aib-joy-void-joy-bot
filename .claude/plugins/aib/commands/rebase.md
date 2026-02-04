@@ -1,0 +1,80 @@
+---
+allowed-tools: Bash(git:*), Bash(gh:*), Read, Grep, Glob
+description: Create a clean rebase branch with atomic commits and open a PR
+---
+
+# Rebase and PR
+
+Create a temporary rebase branch with a clean, logical commit history, then open a pull request.
+
+**Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
+
+## Process
+
+1. **Sync main with remote**:
+   ```bash
+   # If local main is behind origin:
+   git fetch origin main
+   git checkout main && git merge --ff-only origin/main
+
+   # If local main is ahead of origin (has unpushed commits):
+   git push origin main
+   ```
+   PRs compare against origin/main, so local and remote must be in sync. If they diverge, the PR will show incorrect commit counts.
+
+2. **Gather context**:
+   - Identify the current branch and its base (typically `main`)
+   - Review the full diff from base to HEAD: `git diff main...HEAD`
+   - List existing commits: `git log --oneline main..HEAD`
+
+3. **Understand all changes**:
+   - Read the changed files to understand the complete set of modifications
+   - Think about what logical units of work exist (features, refactors, fixes, tests, docs)
+   - **Ignore the existing commit history** — focus on what makes sense as a clean sequence
+
+4. **Create rebase branch**:
+   ```bash
+   git checkout -b <branch>-rebase main
+   ```
+
+5. **Build clean commits**:
+   - For each logical unit of work, cherry-pick or manually stage the relevant changes
+   - Create atomic commits with clear messages
+   - Order commits logically (dependencies first, then features, then polish)
+   - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
+
+6. **Push and create PR**:
+   ```bash
+   git push -u origin <branch>-rebase
+   gh pr create --title "..." --body "..."
+   ```
+
+7. **Refresh PR base and verify**:
+   ```bash
+   # Always refresh after pushing (GitHub caches the base reference)
+   gh pr edit <num> --base main
+
+   # Verify commit count matches expectation
+   gh pr view <num> --json commits --jq '.commits | length'
+   ```
+
+## Guidelines
+
+- **Fresh perspective** — Don't feel bound by how commits were originally organized
+- **Logical ordering** — Put foundational changes before features that depend on them
+- **Atomic commits** — Each commit should compile/run independently if possible
+- **Meaningful messages** — Commit messages should explain *what* and *why*
+
+## PR Format
+
+```markdown
+## Summary
+- [1-3 bullet points describing the changes]
+
+## Test plan
+- [How to verify the changes work]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
