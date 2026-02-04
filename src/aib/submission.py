@@ -213,9 +213,7 @@ async def post_comment(
     logger.info("Posted comment on post %d", post_id)
 
 
-def format_reasoning_comment(
-    output: ForecastOutput, *, max_length: int = 15000
-) -> str:
+def format_reasoning_comment(output: ForecastOutput, *, max_length: int = 15000) -> str:
     """Format a ForecastOutput into a markdown comment for Metaculus.
 
     Tournament rules require bots to leave comments showing reasoning.
@@ -252,8 +250,12 @@ def format_reasoning_comment(
         lines.append("\n## Key Factors\n")
         for factor in output.factors:
             sign = "+" if factor.logit >= 0 else ""
-            conf_note = f" (conf: {factor.confidence:.0%})" if factor.confidence < 1 else ""
-            lines.append(f"- [{sign}{factor.logit:.1f}] {factor.description}{conf_note}")
+            conf_note = (
+                f" (conf: {factor.confidence:.0%})" if factor.confidence < 1 else ""
+            )
+            lines.append(
+                f"- [{sign}{factor.logit:.1f}] {factor.description}{conf_note}"
+            )
 
     # Include reasoning trace if available
     if output.reasoning:

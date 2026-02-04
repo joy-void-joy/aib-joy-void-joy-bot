@@ -10,8 +10,20 @@ propagation:
 This module provides a fixed version that works around both issues.
 
 Use `create_mcp_server` instead of `create_sdk_mcp_server` from claude_agent_sdk.
+
+SDK Compatibility
+-----------------
+Tested against: claude-agent-sdk>=0.1.26
+Last verified: 2026-02-04
+
+Maintenance Notes:
+- Check if these bugs are fixed in future SDK versions
+- If fixed, remove this module and use `create_sdk_mcp_server` directly
+- Update pyproject.toml to require the fixed version minimum
+- Monitor SDK changelog for MCP-related changes
 """
 
+import logging
 from typing import Any, cast
 
 from claude_agent_sdk import SdkMcpTool
@@ -19,6 +31,8 @@ from claude_agent_sdk.types import McpSdkServerConfig
 from mcp.server import Server
 from mcp.types import CallToolResult, ContentBlock, ImageContent, TextContent, Tool
 from pydantic import TypeAdapter
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_json_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]:
@@ -56,8 +70,13 @@ def _generate_json_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]
     try:
         adapter = TypeAdapter(input_schema)
         return adapter.json_schema()
-    except Exception:
-        # Fallback for types that can't be adapted
+    except TypeError as e:
+        # TypeAdapter doesn't support this type (e.g., some complex generics)
+        logger.warning(
+            "TypeAdapter doesn't support %s: %s. Using empty schema.",
+            input_schema,
+            e,
+        )
         return {"type": "object", "properties": {}}
 
 

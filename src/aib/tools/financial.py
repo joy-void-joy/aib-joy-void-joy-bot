@@ -115,10 +115,14 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
         # Convert to list of dicts
         obs_list: list[FredObservation] = []
         for date, value in observations.items():
-            obs_list.append({
-                "date": str(date)[:10],
-                "value": float(value) if not (value != value) else None,  # Handle NaN
-            })
+            obs_list.append(
+                {
+                    "date": str(date)[:10],
+                    "value": float(value)
+                    if not (value != value)
+                    else None,  # Handle NaN
+                }
+            )
 
         # Get latest non-null value
         latest_value = None
@@ -138,15 +142,17 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
             "last_updated": str(info.get("last_updated", ""))[:10],
         }
 
-        return mcp_success({
-            "series": series_info,
-            "latest_value": latest_value,
-            "latest_date": latest_date,
-            "observation_start": start_date,
-            "observation_end": end_date,
-            "data_points": len(obs_list),
-            "observations": obs_list[-30:],  # Limit to last 30
-        })
+        return mcp_success(
+            {
+                "series": series_info,
+                "latest_value": latest_value,
+                "latest_date": latest_date,
+                "observation_start": start_date,
+                "observation_end": end_date,
+                "data_points": len(obs_list),
+                "observations": obs_list[-30:],  # Limit to last 30
+            }
+        )
 
     except Exception as e:
         logger.exception("FRED series lookup failed")
@@ -184,28 +190,34 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
         results = fred.search(validated.query)
 
         if results is None or len(results) == 0:
-            return mcp_success({
-                "query": validated.query,
-                "results": [],
-                "total_found": 0,
-            })
+            return mcp_success(
+                {
+                    "query": validated.query,
+                    "results": [],
+                    "total_found": 0,
+                }
+            )
 
         # Convert to list of dicts (results is a DataFrame)
         series_list = []
         for idx, row in results.head(validated.limit).iterrows():
-            series_list.append({
-                "id": str(idx),
-                "title": str(row.get("title", "")),
-                "frequency": str(row.get("frequency", "")),
-                "units": str(row.get("units", "")),
-                "popularity": int(row.get("popularity") or 0),
-            })
+            series_list.append(
+                {
+                    "id": str(idx),
+                    "title": str(row.get("title", "")),
+                    "frequency": str(row.get("frequency", "")),
+                    "units": str(row.get("units", "")),
+                    "popularity": int(row.get("popularity") or 0),
+                }
+            )
 
-        return mcp_success({
-            "query": validated.query,
-            "results": series_list,
-            "total_found": len(results),
-        })
+        return mcp_success(
+            {
+                "query": validated.query,
+                "results": series_list,
+                "total_found": len(results),
+            }
+        )
 
     except Exception as e:
         logger.exception("FRED search failed")
