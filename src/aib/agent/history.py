@@ -46,6 +46,14 @@ class SavedForecast(BaseModel):
     tool_metrics: dict[str, Any] | None = None  # Tool call counts, durations, errors
     token_usage: TokenUsage | None = None  # Token usage: input, output, cache
     log_path: str | None = None  # Path to reasoning log file
+    # Cadence tracking fields (when question published vs when we forecast)
+    question_published_at: str | None = (
+        None  # ISO timestamp when question was published
+    )
+    question_close_time: str | None = None  # ISO timestamp when question closes
+    question_scheduled_resolve_time: str | None = (
+        None  # ISO timestamp when resolution expected
+    )
 
 
 def save_forecast(
@@ -65,6 +73,9 @@ def save_forecast(
     tool_metrics: dict[str, Any] | None = None,
     token_usage: TokenUsage | None = None,
     log_path: str | None = None,
+    question_published_at: str | None = None,
+    question_close_time: str | None = None,
+    question_scheduled_resolve_time: str | None = None,
 ) -> Path:
     """Save a forecast to the history storage.
 
@@ -84,6 +95,9 @@ def save_forecast(
         tool_metrics: Programmatic tracking of tool calls, durations, errors.
         token_usage: Token usage stats (input, output, cache tokens).
         log_path: Path to the reasoning log file in logs/.
+        question_published_at: ISO timestamp when question was published on Metaculus.
+        question_close_time: ISO timestamp when question closes for forecasting.
+        question_scheduled_resolve_time: ISO timestamp when question is expected to resolve.
 
     Returns:
         Path to the saved forecast file.
@@ -112,6 +126,9 @@ def save_forecast(
         tool_metrics=tool_metrics,
         token_usage=token_usage,
         log_path=log_path,
+        question_published_at=question_published_at,
+        question_close_time=question_close_time,
+        question_scheduled_resolve_time=question_scheduled_resolve_time,
     )
 
     # Save to file
@@ -189,7 +206,9 @@ def mark_submitted(post_id: int, timestamp: str | None = None) -> bool:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         data["submitted_at"] = timestamp
         latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        logger.info("Marked forecast for post %d as submitted at %s", post_id, timestamp)
+        logger.info(
+            "Marked forecast for post %d as submitted at %s", post_id, timestamp
+        )
         return True
     except Exception as e:
         logger.warning("Failed to mark submission for post %d: %s", post_id, e)
@@ -386,7 +405,11 @@ def load_latest_for_submission(
     # For numeric/discrete questions with percentiles, regenerate CDF
     if latest.question_type in ("numeric", "discrete") and latest.percentiles:
         bounds = asyncio.run(_fetch_numeric_bounds(effective_post_id))
-        if bounds and bounds.get("range_min") is not None and bounds.get("range_max") is not None:
+        if (
+            bounds
+            and bounds.get("range_min") is not None
+            and bounds.get("range_max") is not None
+        ):
             try:
                 cdf_size = bounds.get("cdf_size", 201)
                 output.cdf = percentiles_to_cdf(
@@ -405,9 +428,7 @@ def load_latest_for_submission(
                     post_id,
                 )
             except Exception as e:
-                logger.warning(
-                    "Failed to regenerate CDF for post %d: %s", post_id, e
-                )
+                logger.warning("Failed to regenerate CDF for post %d: %s", post_id, e)
         else:
             logger.warning(
                 "Could not fetch bounds for CDF regeneration (post %d)", post_id

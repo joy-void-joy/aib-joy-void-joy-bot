@@ -106,7 +106,9 @@ class SearchMetaculusInput(BaseModel):
 
 
 class CoherenceLinksInput(BaseModel):
-    post_id: int
+    """Input for fetching coherence links."""
+
+    question_id: int = Field(description="Metaculus question ID (not post ID)")
 
 
 class CPHistoryInput(BaseModel):
@@ -114,6 +116,10 @@ class CPHistoryInput(BaseModel):
 
     question_id: int = Field(description="Metaculus question ID (not post ID)")
     days: int = Field(default=30, description="Number of days of history to fetch")
+    before: str | None = Field(
+        default=None,
+        description="Optional cutoff date (YYYY-MM-DD). Data after this date is excluded.",
+    )
 
 
 class WikipediaInput(BaseModel):
@@ -132,9 +138,15 @@ class PredictionHistoryInput(BaseModel):
 
 
 def _question_to_dict(question: Any) -> dict[str, object]:
-    """Convert a MetaculusQuestion to a serializable dict."""
+    """Convert a MetaculusQuestion to a serializable dict.
+
+    Note: Returns both post_id and question_id. These are different:
+    - post_id: Used for URLs and local storage (e.g., metaculus.com/questions/{post_id})
+    - question_id: Used for certain API endpoints (get_coherence_links, get_cp_history)
+    """
     result: dict[str, object] = {
         "post_id": question.id_of_post,
+        "question_id": question.id_of_question,  # Needed for get_coherence_links, get_cp_history
         "title": question.question_text,
         "type": question.get_question_type(),
         "url": question.page_url,
@@ -256,6 +268,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
             results = [
                 {
                     "post_id": q.id_of_post,
+                    "question_id": q.id_of_question,
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
@@ -300,6 +313,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
             results = [
                 {
                     "post_id": q.id_of_post,
+                    "question_id": q.id_of_question,
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
@@ -320,8 +334,12 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
 
 @tool(
     "get_coherence_links",
-    "Get questions related to this one via coherence links. Used for consistency checking between related forecasts.",
-    {"post_id": int},
+    (
+        "Get questions related to this one via coherence links. "
+        "Used for consistency checking between related forecasts. "
+        "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
+    ),
+    {"question_id": int},
 )
 @tracked("get_coherence_links")
 async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
@@ -331,11 +349,11 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    post_id = validated.post_id
+    question_id = validated.question_id
     try:
         async with _metaculus_semaphore:
             client = get_metaculus_client()
-            links = await client.get_links_for_question(post_id)
+            links = await client.get_links_for_question(question_id)
             results = [
                 {
                     "question1_id": link.question1_id,
@@ -372,6 +390,21 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
     question_id = validated.question_id
     days = min(validated.days, 365)
+    before_cutoff = validated.before
+
+    # Parse cutoff date if provided (for retrodict mode filtering)
+    cutoff_dt = None
+    if before_cutoff:
+        try:
+            from datetime import datetime, timezone
+
+            cutoff_dt = datetime.strptime(before_cutoff, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            return mcp_error(
+                f"Invalid 'before' date format: {before_cutoff}. Use YYYY-MM-DD."
+            )
 
     try:
         async with _metaculus_semaphore:
@@ -388,18 +421,35 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
         history = data.get("history", [])
         results = []
+        filtered_count = 0
         for entry in history:
             timestamp = entry.get("start_time") or entry.get("end_time")
             centers = entry.get("centers", [])
             if centers and len(centers) > 0:
                 cp = centers[0]
                 if cp is not None:
+                    # Filter by cutoff date if specified
+                    if cutoff_dt and timestamp:
+                        from datetime import datetime
+
+                        ts_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        if ts_dt > cutoff_dt:
+                            filtered_count += 1
+                            continue
+
                     results.append(
                         {
                             "timestamp": timestamp,
                             "community_prediction": round(cp, 4),
                         }
                     )
+
+        if filtered_count > 0:
+            logger.info(
+                "[Retrodict] CP history: filtered %d points after %s",
+                filtered_count,
+                before_cutoff,
+            )
 
         return mcp_success(
             {
