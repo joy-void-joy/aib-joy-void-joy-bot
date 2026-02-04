@@ -31,8 +31,35 @@ from aib.agent.history import load_past_forecasts, FORECASTS_BASE_PATH
 app = typer.Typer(help="Collect feedback data from resolved forecasts")
 logger = logging.getLogger(__name__)
 
-FEEDBACK_PATH = Path("./notes/feedback_loop")
-LAST_RUN_FILE = FEEDBACK_PATH / "last_run.json"
+FEEDBACK_BASE_PATH = Path("./notes/feedback_loop")
+
+
+def get_current_branch() -> str:
+    """Get the current git branch name."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip() or "main"
+    except subprocess.CalledProcessError:
+        return "main"
+
+
+def get_feedback_path() -> Path:
+    """Get the feedback path for the current branch."""
+    branch = get_current_branch()
+    return FEEDBACK_BASE_PATH / branch
+
+
+def get_last_run_file() -> Path:
+    """Get the last run file for the current branch."""
+    return get_feedback_path() / "last_run.json"
+
 
 # Tournament IDs
 TOURNAMENTS = {
@@ -355,15 +382,18 @@ def match_forecasts_to_resolutions(
 
 def load_last_run() -> dict[str, Any]:
     """Load last run metadata."""
-    if LAST_RUN_FILE.exists():
-        return json.loads(LAST_RUN_FILE.read_text())
+    last_run_file = get_last_run_file()
+    if last_run_file.exists():
+        return json.loads(last_run_file.read_text())
     return {}
 
 
 def save_last_run(data: dict[str, Any]) -> None:
     """Save last run metadata."""
-    FEEDBACK_PATH.mkdir(parents=True, exist_ok=True)
-    LAST_RUN_FILE.write_text(json.dumps(data, indent=2, default=str))
+    feedback_path = get_feedback_path()
+    feedback_path.mkdir(parents=True, exist_ok=True)
+    last_run_file = get_last_run_file()
+    last_run_file.write_text(json.dumps(data, indent=2, default=str))
 
 
 @app.command()
@@ -495,9 +525,10 @@ async def _main_async(
     )
 
     # Save metrics
-    FEEDBACK_PATH.mkdir(parents=True, exist_ok=True)
+    feedback_path = get_feedback_path()
+    feedback_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = FEEDBACK_PATH / f"{timestamp}_metrics.json"
+    output_file = feedback_path / f"{timestamp}_metrics.json"
     output_file.write_text(metrics.model_dump_json(indent=2))
     logger.info("Saved metrics to %s", output_file)
 

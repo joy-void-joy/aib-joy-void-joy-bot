@@ -5,11 +5,30 @@ description: Analyze forecasts and improve agent based on calibration and proces
 
 # Feedback Loop: Three Levels of Analysis
 
-The feedback loop operates at three levels. Spend real time on each:
+The feedback loop operates at three levels. Be clear about which level you're working at:
 
-1. **Object Level** - Improve tools, capabilities, data access
-2. **Meta Level** - Improve the agent's self-assessment and tracking
-3. **Meta-Meta Level** - Improve this feedback loop process itself
+1. **Object Level** - The forecasting agent itself: tools, capabilities, data access, runtime behavior
+2. **Meta Level** - The agent's self-assessment: meta-prompts, reflection templates, metrics emission, what the agent tracks about itself
+3. **Meta-Meta Level** - This feedback loop process: the scripts, the analysis methods, this document itself
+
+**Clarification**:
+- Object level = "How can the agent forecast better?" (tools, APIs, reasoning)
+- Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/meta/)
+- Meta-meta level = "How can this feedback loop command work better?" (feedback_collect.py, this document, analysis workflows)
+
+**Examples**:
+- Object: Add a new stock_price tool, fix a failing API
+- Meta: Update the meta-reflection prompt template, add new tracking fields to forecast JSON
+- Meta-meta: Create a script to automate analysis, clarify confusing parts of this document
+
+**IMPORTANT: Every feedback loop session should span all three levels thoroughly.**
+
+Don't stop after finding object-level improvements. Ask yourself:
+- Did I check if the agent's self-tracking is sufficient? (meta)
+- Did I update this document with what I learned? (meta-meta)
+- Are there scripts that would make next session easier? (meta-meta)
+
+A good feedback loop session produces changes at multiple levels. If you only made object-level changes, you probably skipped the reflection phases.
 
 ## Critical Constraint: What the Agent Can and Cannot See
 
@@ -37,6 +56,18 @@ Give the agent MORE capabilities and tools rather than MORE prescriptive rules.
 
 **The test**: Would this change still help if the question domain shifted completely? General principles yes, specific patches no.
 
+**Clarification**: The bitter lesson does NOT mean never modifying prompts. It's fine to add:
+- General guidance for categories of questions (e.g., "for meta-predictions, consider the underlying question's CP trajectory")
+- Principles that help reasoning (e.g., "numeric questions require 201-point CDFs")
+- Structural guidance (e.g., "check prediction markets for event questions")
+
+What to AVOID:
+- Specific numeric patches ("subtract 0.5 logits for definitional questions")
+- Rules that hard-code observations from specific questions
+- Prescriptive formulas that will become outdated
+
+Keep the system prompt fresh - periodically review and remove guidance that no longer applies. Old prompt rules can sediment into an outdated system.
+
 ## Phase 1: Ground Truth - What Actually Matters
 
 The ONLY true ground truth is **resolution outcomes**. Everything else is proxy signal.
@@ -55,6 +86,70 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 - Process quality (is the agent reasoning well?)
 - Tool failures (what's blocking the agent?)
 - Do NOT treat CP divergence as evidence of error
+
+### 1b. Retrodict Missed Questions
+
+If questions resolved before we forecast them, **retrodict** them to build calibration data. Blind mode restricts all tools to data that was available before the question resolved, ensuring the agent cannot "cheat" by looking up the answer.
+
+```bash
+# Check which questions we missed
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Retrodict with blind mode (default - recommended)
+uv run forecast retrodict 41835 41521 41517
+
+# Retrodict with a specific cutoff date
+uv run forecast retrodict 41835 --forecast-date 2026-01-15
+
+# Non-blind mode (for testing/debugging only)
+uv run forecast retrodict 41835 --no-blind
+```
+
+**How blind mode works:**
+- **WebSearch**: Appends `before:YYYY-MM-DD` to all queries
+- **WebFetch**: Rewrites URLs to Wayback Machine (`web.archive.org/web/{timestamp}id_/{url}`)
+- **Sandbox**: Network restricted to PyPI only - agent can install packages but cannot make arbitrary HTTP requests
+- **Financial tools**: Caps `end_date` parameters to the forecast date
+- **Live-only tools**: Blocked with hints to use historical alternatives (e.g., `stock_price` → `stock_history`)
+- **CP history**: Filters response to exclude data after the cutoff
+
+The agent forecasts as if it were making the prediction at the original question date, using only information that was available at that time.
+
+**What retrodict outputs:**
+- Saves forecasts to `notes/forecasts/` with `is_retrodict: true` flag
+- Shows actual resolution and final CP for comparison
+- Computes Brier scores for binary questions
+- Tracks `forecast_date` used for time restriction
+
+#### Future-Leak Detection
+
+After running retrodict, review traces for signs that the agent accessed post-resolution information:
+
+**Red flags in agent reasoning:**
+- References events after the `forecast_date`
+- Phrases like "the outcome was", "it resolved to", "we now know"
+- Reasoning that mentions post-resolution news
+- Suspiciously high confidence (95%+) on genuinely uncertain questions
+
+**How to check:**
+```bash
+# Scan for future-leak phrases
+grep -rh "resolved\|outcome\|result\|happened\|we know\|actually" notes/meta/*_q<question_id>_*.md
+
+# Check the full reasoning trace
+cat logs/<question_id>/*.log
+```
+
+**If you find future leak:**
+1. The forecast is invalid for calibration
+2. Identify which tool allowed the leak
+3. Report the gap - retrodict hooks need fixing
+4. Exclude from Brier score calculations
+
+**Expected behavior in proper retrodict:**
+- Agent uses historical data and base rates
+- Uncertainty reflects what was knowable at `forecast_date`
+- No mentions of resolution or what "actually happened"
 
 ### 1b. About Community Prediction
 
@@ -142,40 +237,39 @@ For forecasts with large CP divergence, ask:
 **If reasoning is sound**: Divergence may be an edge. Wait for resolution.
 **If reasoning is flawed**: Identify the specific failure. Is it a capability gap or a reasoning error?
 
-## Phase 3: Meta Level - Self-Assessment Quality
+## Phase 3: Meta Level - Analysis Process Quality
 
-The meta-reflection template should help the agent identify its own weaknesses.
+Evaluate whether this feedback loop is finding the right things to improve.
 
-### 3a. Evaluate Meta-Reflection Usefulness
+### 3a. Did the Analysis Surface Actionable Insights?
 
-Read the meta-reflections and ask:
-- Can I trace what actually happened?
-- Are tool effectiveness notes accurate?
-- Are capability gaps specific and actionable?
-- Is self-critique genuine or formulaic?
+Ask yourself:
+- Did I find specific tools to fix or build?
+- Did I identify concrete capability gaps?
+- Did the analysis lead to clear next steps?
 
-### 3b. Tracking Quality
+If the analysis felt circular or unproductive, the meta-process needs improvement.
 
-The meta-reflection says "Effort: ~N tool calls" but this is subjective.
+### 3b. Evaluate Tracking Data Quality
 
-**Better**: Link forecasts to actual tool traces programmatically.
+Check if the data we collect is sufficient for analysis:
+- Are forecasts linked to their reasoning traces?
+- Can we correlate tool usage with forecast quality?
+- Do we have resolution data to evaluate accuracy?
 
 ```bash
-# Check if we have programmatic tracking
-grep -h "tool_calls\|duration_ms\|tokens\|cost" notes/meta/*.md | head -5
+# Check what tracking data we have
+uv run python .claude/scripts/trace_forecast.py list
 ```
 
-If tracking is subjective, consider:
-- Adding actual tool call counts to forecast output
-- Linking meta-reflection files to session logs
-- Including timestamps and costs programmatically
+### 3c. Identify Missing Data
 
-### 3c. Template Improvements
+Common gaps:
+- **No resolution data** → Can't evaluate accuracy, only process
+- **No tool-to-forecast linkage** → Can't identify which tools help
+- **No question type tagging** → Can't identify patterns by category
 
-If meta-reflections are formulaic or unhelpful:
-- Simplify the template (fewer categories, more specifics)
-- Request concrete examples instead of general assessments
-- Remove sections that always produce boilerplate
+If you find gaps, add tracking in Phase 4.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
@@ -191,14 +285,26 @@ If a tool fails repeatedly, fix it or add an alternative.
 
 ### Priority 2: Build Requested Tools
 
-What did the agent explicitly request?
+What did the agent explicitly request? **Don't just build—discuss with the user first.**
 
-| Agent Request | Action |
-|--------------|--------|
-| "CP history over time" | Build tool to fetch historical CP |
-| "Prediction market aggregator" | Improve polymarket/manifold search |
-| "Historical base rate database" | Build reference data tool |
-| "WebFetch fails on X" | Add X-specific API tool |
+For each capability gap found in meta-reflections:
+
+1. **Quantify**: How many questions mentioned this need? (grep the meta-reflections)
+2. **Research**: What APIs or approaches exist? What would implementation look like?
+3. **Ask the user**: Use `AskUserQuestion` to present:
+   - The capability gap and how many questions it affected
+   - Concrete implementation options (APIs, costs, complexity)
+   - Your recommendation and why
+
+**Example discussion format:**
+> "The agent requested X in 7 meta-reflections. Options:
+> - Option A: Use [API] (~$X/mo, handles Y)
+> - Option B: Build custom tool with [approach]
+> - Option C: Skip—agent worked around it with [alternative]
+>
+> I recommend [X] because [reason]. What do you think?"
+
+This ensures tool decisions are collaborative and the user understands the tradeoffs.
 
 ### Priority 3: Improve Subagents
 
@@ -219,29 +325,48 @@ Prompt changes should:
 - Numeric adjustments ("subtract 0.5 logits when...")
 - Patches for observed patterns
 
-## Phase 5: Meta-Meta Level - Improve This Process
+## Phase 5: Meta-Meta Level - Improve This Document
 
-After running the feedback loop, reflect:
+This phase is about improving the feedback loop infrastructure itself.
 
-### What data did you lack?
+### 5a. Was This Document Helpful?
 
-- Could you trace from forecast → reasoning → tools → outcome?
-- Was programmatic tracking sufficient?
-- What logs would have helped?
+Ask:
+- Did the phases guide you to useful insights?
+- Was any guidance outdated or confusing?
+- Did you have to improvise steps not documented here?
 
-### What would make this easier next time?
+If yes to any, update this document NOW before you forget.
 
-Scripts to build:
-- `trace_forecast.py` - Link forecast to full tool call trace
-- `compare_to_resolution.py` - Show reasoning vs actual outcome
-- `tool_failure_report.py` - Aggregate failures by tool and target
+### 5b. Build Missing Scripts
 
-### Update this document
+If you found yourself doing repetitive analysis, automate it:
 
-If you learned something about the feedback loop process:
-- Add it to this document
-- Add scripts that automate repetitive analysis
-- Remove guidance that wasn't useful
+```bash
+# Scripts that already exist:
+uv run python .claude/scripts/feedback_collect.py --help
+uv run python .claude/scripts/trace_forecast.py --help
+uv run python .claude/scripts/calibration_report.py --help
+```
+
+If you need a script that doesn't exist, create it in `.claude/scripts/` and document it in CLAUDE.md.
+
+### 5c. Improve Data Collection
+
+If the feedback loop lacked data, fix the source:
+- Add fields to forecast JSON schema
+- Update the agent to emit more tracking data
+- Add scripts to collect missing metrics
+
+### 5d. Update This Document
+
+Every session should leave this document better:
+- Remove outdated guidance
+- Add new scripts to the "Scripts Available" section
+- Clarify confusing terminology
+- Add examples from actual analysis
+
+**Note**: This feedback loop data is now saved to `notes/feedback_loop/<branch_name>/` to keep different worktrees organized.
 
 ## Anti-Patterns to Avoid
 
@@ -268,7 +393,9 @@ If you learned something about the feedback loop process:
 
 ## Documentation Template
 
-Write to `notes/feedback_loop/<timestamp>_analysis.md`:
+Write to `notes/feedback_loop/<branch_name>/<timestamp>_analysis.md`:
+
+The feedback_collect.py script automatically organizes data by branch. When writing analysis, use the same structure:
 
 ```markdown
 # Feedback Loop Analysis: YYYY-MM-DD
@@ -291,32 +418,30 @@ Write to `notes/feedback_loop/<timestamp>_analysis.md`:
 ### Reasoning Quality Assessment
 - [For 3-5 forecasts, brief assessment of reasoning soundness]
 
-## Meta-Level Findings
+## Meta-Level Findings (Analysis Process)
 
-### Meta-Reflection Quality
-- Are they useful for debugging? [yes/no + why]
-- Is tracking programmatic? [yes/no + what's missing]
+### Was This Analysis Productive?
+- Did it surface actionable insights? [yes/no]
+- What data was missing?
+- What would have made analysis easier?
 
-### Template Improvements Made
-- [List any changes to meta-reflection prompt]
+## Meta-Meta Findings (Feedback Loop Infrastructure)
 
-## Meta-Meta Findings
+### Updates to This Document
+- [Changes made to feedback-loop.md]
 
-### What data did I lack?
-- [Specific gaps]
+### Scripts Created/Updated
+- [New scripts added to .claude/scripts/]
 
-### What scripts would help next time?
-- [Specific scripts to build]
-
-### How should this process change?
-- [Updates to feedback-loop.md]
+### Data Collection Improvements
+- [Changes to forecast tracking, metrics, etc.]
 
 ## Changes Made
 | Level | Change | Rationale |
 |-------|--------|-----------|
 | Object | Added X tool | Agent requested it in N meta-reflections |
-| Meta | Improved tracking | Subjective → programmatic |
-| Process | Added script Y | Automate repetitive analysis |
+| Meta | Improved analysis queries | Was missing Y data |
+| Meta-Meta | Updated feedback-loop.md | Clarified Z section |
 ```
 
 ## Scripts Available
@@ -328,8 +453,41 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 # Collect from specific tournament
 uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
 
+# Check missed questions
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Check resolutions for specific questions
+uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+
+# Retrodict resolved questions (blind mode - restricts to historical data)
+uv run forecast retrodict 41835 41521 41517
+
+# Retrodict with specific cutoff date
+uv run forecast retrodict 41835 --forecast-date 2026-01-15
+
+# Retrodict without time restriction (for debugging)
+uv run forecast retrodict 41835 --no-blind
+
+# Trace a forecast to its logs and metrics
+uv run python .claude/scripts/trace_forecast.py show 41906
+
+# Aggregate metrics across all forecasts
+uv run python .claude/scripts/aggregate_metrics.py summary
+
+# Calibration report (needs resolved forecasts)
+uv run python .claude/scripts/calibration_report.py summary
+
 # (Add more scripts as you build them)
 ```
+
+## Periodic Maintenance
+
+Every few feedback loop sessions, take time to:
+
+1. **Reread this entire document** - Is it still accurate? Remove outdated guidance.
+2. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
+3. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
+4. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
 
 ## Key Questions to Answer Each Session
 
