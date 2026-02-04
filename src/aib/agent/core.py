@@ -30,7 +30,7 @@ from aib.agent.history import (
     load_past_forecasts,
     save_forecast,
 )
-from aib.agent.retrodict import LIVE_ONLY_TOOLS, RetrodictConfig, create_retrodict_hooks
+from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
 from aib.tools.classifiers import (
     classify_webfetch_content,
     generate_fallback_message,
@@ -56,7 +56,7 @@ from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
 from aib.tools.financial import financial_server
 from aib.tools.forecasting import forecasting_server
-from aib.tools.markets import markets_server
+from aib.tools.markets import create_markets_server
 from aib.tools.notes import notes_server
 from aib.tools.trends import trends_server
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
@@ -769,7 +769,7 @@ async def run_forecast(
                 "financial": financial_server,
                 "sandbox": sandbox.create_mcp_server(),
                 "composition": composition_server,
-                "markets": markets_server,
+                "markets": create_markets_server(exclude_live=bool(retrodict_config)),
                 "notes": notes_server,
                 "trends": trends_server,
                 # Playwright MCP for JS-heavy sites (last resort)
@@ -781,78 +781,75 @@ async def run_forecast(
             },
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
-            # Built-in tools + MCP tools (conditionally include spawn_subquestions)
-            # In retrodict mode, live-only tools are excluded entirely
+            # Built-in tools + MCP tools
+            # Note: Live-only market tools are excluded at MCP server level
+            # in retrodict mode via create_markets_server(exclude_live=True)
             allowed_tools=[
-                tool
-                for tool in [
-                    # Built-in tools
-                    "WebSearch",
-                    "WebFetch",
-                    # File tools for notes (directory-restricted via hooks)
-                    "Read",
-                    "Write",
-                    "Glob",
-                    # Bash (sandboxed via SDK config)
-                    "Bash",
-                    # Metaculus tools (only if token is configured)
-                    *(
-                        [
-                            "mcp__forecasting__get_metaculus_questions",
-                            "mcp__forecasting__list_tournament_questions",
-                            "mcp__forecasting__search_metaculus",
-                            "mcp__forecasting__get_coherence_links",
-                            "mcp__forecasting__get_prediction_history",
-                            "mcp__forecasting__get_cp_history",
-                        ]
-                        if settings.metaculus_token
-                        else []
-                    ),
-                    # Search tools (conditional on API credentials)
-                    *_optional_tools(
-                        settings.exa_api_key,
-                        ["mcp__forecasting__search_exa"],
-                    ),
-                    *_optional_tools(
-                        settings.asknews_client_id and settings.asknews_client_secret,
-                        ["mcp__forecasting__search_news"],
-                    ),
-                    "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-                    # Financial data tools (conditional on API credentials)
-                    *_optional_tools(
-                        settings.fred_api_key,
-                        ["mcp__financial__fred_series", "mcp__financial__fred_search"],
-                    ),
-                    # Sandbox tools (in-process Docker sandbox)
-                    "mcp__sandbox__execute_code",
-                    "mcp__sandbox__install_package",
-                    # Composition tools
-                    # spawn_subquestions only available for top-level forecasts
-                    *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
-                    # Prediction market tools (live prices excluded in retrodict mode)
-                    "mcp__markets__polymarket_price",
-                    "mcp__markets__manifold_price",
-                    # Historical market tools
-                    "mcp__markets__polymarket_history",
-                    "mcp__markets__manifold_history",
-                    # Stock market tools (no API key required)
-                    "mcp__markets__stock_price",
-                    "mcp__markets__stock_history",
-                    # Google Trends tools (no API key required)
-                    "mcp__trends__google_trends",
-                    "mcp__trends__google_trends_compare",
-                    "mcp__trends__google_trends_related",
-                    # Notes browsing tools
-                    "mcp__notes__notes",
-                    # Playwright tools (last resort for JS-heavy sites)
-                    "mcp__playwright__browser_navigate",
-                    "mcp__playwright__browser_snapshot",
-                    "mcp__playwright__browser_click",
-                    "mcp__playwright__browser_type",
-                    # Subagent spawning
-                    "Task",
-                ]
-                if not retrodict_config or tool not in LIVE_ONLY_TOOLS
+                # Built-in tools
+                "WebSearch",
+                "WebFetch",
+                # File tools for notes (directory-restricted via hooks)
+                "Read",
+                "Write",
+                "Glob",
+                # Bash (sandboxed via SDK config)
+                "Bash",
+                # Metaculus tools (only if token is configured)
+                *(
+                    [
+                        "mcp__forecasting__get_metaculus_questions",
+                        "mcp__forecasting__list_tournament_questions",
+                        "mcp__forecasting__search_metaculus",
+                        "mcp__forecasting__get_coherence_links",
+                        "mcp__forecasting__get_prediction_history",
+                        "mcp__forecasting__get_cp_history",
+                    ]
+                    if settings.metaculus_token
+                    else []
+                ),
+                # Search tools (conditional on API credentials)
+                *_optional_tools(
+                    settings.exa_api_key,
+                    ["mcp__forecasting__search_exa"],
+                ),
+                *_optional_tools(
+                    settings.asknews_client_id and settings.asknews_client_secret,
+                    ["mcp__forecasting__search_news"],
+                ),
+                "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
+                # Financial data tools (conditional on API credentials)
+                *_optional_tools(
+                    settings.fred_api_key,
+                    ["mcp__financial__fred_series", "mcp__financial__fred_search"],
+                ),
+                # Sandbox tools (in-process Docker sandbox)
+                "mcp__sandbox__execute_code",
+                "mcp__sandbox__install_package",
+                # Composition tools
+                # spawn_subquestions only available for top-level forecasts
+                *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
+                # Prediction market tools (live prices excluded at MCP level in retrodict)
+                "mcp__markets__polymarket_price",
+                "mcp__markets__manifold_price",
+                # Historical market tools
+                "mcp__markets__polymarket_history",
+                "mcp__markets__manifold_history",
+                # Stock market tools (no API key required)
+                "mcp__markets__stock_price",
+                "mcp__markets__stock_history",
+                # Google Trends tools (no API key required)
+                "mcp__trends__google_trends",
+                "mcp__trends__google_trends_compare",
+                "mcp__trends__google_trends_related",
+                # Notes browsing tools
+                "mcp__notes__notes",
+                # Playwright tools (last resort for JS-heavy sites)
+                "mcp__playwright__browser_navigate",
+                "mcp__playwright__browser_snapshot",
+                "mcp__playwright__browser_click",
+                "mcp__playwright__browser_type",
+                # Subagent spawning
+                "Task",
             ],
             output_format={
                 "type": "json_schema",

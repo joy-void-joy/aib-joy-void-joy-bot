@@ -634,15 +634,41 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-markets_server = create_mcp_server(
-    name="markets",
-    version="1.0.0",
-    tools=[
-        polymarket_price,
-        manifold_price,
-        polymarket_history,
-        manifold_history,
-        stock_price,
-        stock_history,
-    ],
-)
+# Live-only tools that return current prices (excluded in retrodict mode)
+LIVE_ONLY_MARKET_TOOLS = frozenset({"polymarket_price", "manifold_price", "stock_price"})
+
+# All available market tools
+_ALL_MARKET_TOOLS = [
+    polymarket_price,
+    manifold_price,
+    polymarket_history,
+    manifold_history,
+    stock_price,
+    stock_history,
+]
+
+
+def create_markets_server(*, exclude_live: bool = False) -> Any:
+    """Create the markets MCP server.
+
+    Args:
+        exclude_live: If True, exclude live-only tools (for retrodict mode).
+            This prevents the agent from even seeing these tools.
+
+    Returns:
+        McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
+    """
+    if exclude_live:
+        tools = [t for t in _ALL_MARKET_TOOLS if t.name not in LIVE_ONLY_MARKET_TOOLS]
+    else:
+        tools = _ALL_MARKET_TOOLS
+
+    return create_mcp_server(
+        name="markets",
+        version="1.0.0",
+        tools=tools,
+    )
+
+
+# Default server for backwards compatibility (includes all tools)
+markets_server = create_markets_server(exclude_live=False)

@@ -62,16 +62,8 @@ class RetrodictConfig:
         return int(self.forecast_date.timestamp() * 1000)
 
 
-# Tools that return live data and cannot be reliably restricted
-LIVE_ONLY_TOOLS = frozenset(
-    {
-        "mcp__markets__stock_price",
-        "mcp__markets__polymarket_price",
-        "mcp__markets__manifold_price",
-    }
-)
-
 # Tools that need date parameter modification
+# Note: Live-only market tools are excluded at MCP server level (see markets.py)
 DATE_CAPPABLE_TOOLS = frozenset(
     {
         "mcp__markets__stock_history",
@@ -229,10 +221,7 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
                         url,
                         config.wayback_ts,
                     )
-                    return deny(
-                        f"No Wayback snapshot available for this URL before {config.date_str}.",
-                        "Try a different source, use search tools, or check archive.org manually.",
-                    )
+                    return deny(f"HTTP 404: URL not found or unavailable.")
 
                 # Validate snapshot is not after the cutoff (Wayback returns "closest"
                 # which could be after the requested date)
@@ -243,10 +232,7 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
                         actual_ts,
                         config.wayback_ts,
                     )
-                    return deny(
-                        f"Closest Wayback snapshot ({actual_ts[:8]}) is after cutoff date ({config.date_str}).",
-                        "Try a different source or use search tools.",
-                    )
+                    return deny(f"HTTP 404: URL not found or unavailable.")
 
                 wayback_url = _rewrite_to_wayback(url, actual_ts)
                 logger.info(

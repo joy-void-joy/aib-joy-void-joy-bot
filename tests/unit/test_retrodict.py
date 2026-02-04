@@ -161,7 +161,7 @@ class TestRetrodictHooks:
     async def test_webfetch_denies_when_no_snapshot(
         self, hooks: dict[str, Any], config: RetrodictConfig
     ) -> None:
-        """WebFetch should deny URLs without Wayback snapshots."""
+        """WebFetch should deny URLs without archived snapshots (appears as 404)."""
         pre_hook = hooks["PreToolUse"][0].hooks[0]
 
         input_data = {
@@ -179,7 +179,8 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
-        assert "No Wayback snapshot" in output["permissionDecisionReason"]
+        # Returns generic 404 to not reveal archive mechanism
+        assert "404" in output["permissionDecisionReason"]
 
     @pytest.mark.asyncio
     async def test_webfetch_uses_actual_snapshot_timestamp(
@@ -332,7 +333,7 @@ class TestRetrodictHooks:
     async def test_webfetch_denies_snapshot_after_cutoff(
         self, hooks: dict[str, Any], config: RetrodictConfig
     ) -> None:
-        """WebFetch should deny if closest Wayback snapshot is after cutoff."""
+        """WebFetch should deny if closest snapshot is after cutoff (appears as 404)."""
         pre_hook = hooks["PreToolUse"][0].hooks[0]
 
         input_data = {
@@ -352,7 +353,8 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
-        assert "after cutoff" in output["permissionDecisionReason"]
+        # Returns generic 404 to not reveal archive mechanism
+        assert "404" in output["permissionDecisionReason"]
 
 
 class TestPyPIOnlyNetwork:
