@@ -7,7 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from claude_agent_sdk.types import HookContext
+from claude_agent_sdk.types import (
+    HookContext,
+    HookEvent,
+    HookJSONOutput,
+    HookMatcher,
+)
 
 import httpx
 from claude_agent_sdk import (
@@ -15,7 +20,6 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ClaudeSDKClient,
     ContentBlock,
-    HookMatcher,
     ResultMessage,
     SystemMessage,
     TextBlock,
@@ -361,7 +365,7 @@ def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
 def create_permission_hooks(
     rw_dirs: list[Path],
     ro_dirs: list[Path],
-) -> dict[str, Any]:
+) -> dict[HookEvent, list[HookMatcher]]:
     """Create permission hooks with directory-based access control.
 
     Args:
@@ -377,37 +381,43 @@ def create_permission_hooks(
         input_data: Any,
         _tool_use_id: str | None,
         _context: HookContext,
-    ) -> dict[str, Any]:
+    ) -> HookJSONOutput:
         """Control tool access based on directory permissions."""
         if input_data.get("hook_event_name") != "PreToolUse":
-            return {}
+            return cast(HookJSONOutput, {})
 
         tool_name = input_data.get("tool_name", "")
         tool_input = input_data.get("tool_input", {})
         hook_event = input_data["hook_event_name"]
 
-        def deny(reason: str) -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
+        def deny(reason: str) -> HookJSONOutput:
+            return cast(
+                HookJSONOutput,
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": hook_event,
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": reason,
+                    }
+                },
+            )
 
-        def allow() -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                }
-            }
+        def allow() -> HookJSONOutput:
+            return cast(
+                HookJSONOutput,
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": hook_event,
+                        "permissionDecision": "allow",
+                    }
+                },
+            )
 
         # Write: allow in RW directories only
         if tool_name == "Write":
             file_path = tool_input.get("file_path", "")
             if not file_path:
-                return {}  # Let SDK handle missing required param
+                return cast(HookJSONOutput, {})  # Let SDK handle missing required param
             if _path_is_under(file_path, rw_dirs):
                 return allow()
             return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
@@ -419,7 +429,7 @@ def create_permission_hooks(
         if tool_name == "Edit":
             file_path = tool_input.get("file_path", "")
             if not file_path:
-                return {}  # Let SDK handle missing required param
+                return cast(HookJSONOutput, {})  # Let SDK handle missing required param
 
             if _path_is_under(file_path, rw_dirs):
                 return allow()
@@ -429,7 +439,7 @@ def create_permission_hooks(
         if tool_name == "Read":
             file_path = tool_input.get("file_path", "")
             if not file_path:
-                return {}  # Let SDK handle missing required param
+                return cast(HookJSONOutput, {})  # Let SDK handle missing required param
 
             if _path_is_under(file_path, all_readable):
                 return allow()
@@ -454,9 +464,7 @@ def create_permission_hooks(
         # These are already filtered by allowed_tools in options
         return allow()
 
-    return {
-        "PreToolUse": [HookMatcher(hooks=[permission_hook])],  # type: ignore[list-item]
-    }
+    return {"PreToolUse": [HookMatcher(hooks=[permission_hook])]}
 
 
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
@@ -642,7 +650,7 @@ async def run_forecast(
             },
             max_thinking_tokens=64_000 - 1,
             permission_mode="bypassPermissions",
-            hooks=hooks,  # type: ignore[arg-type]
+            hooks=hooks,
             sandbox={
                 "enabled": True,
                 "autoAllowBashIfSandboxed": True,
@@ -880,7 +888,7 @@ async def run_forecast(
                             "No percentiles or components for CDF generation"
                         )
                         output.cdf = None
-                except Exception as e:
+                except ValueError as e:
                     logger.exception("Failed to generate CDF: %s", e)
                     output.cdf = None
         elif isinstance(forecast, MultipleChoiceForecast):
@@ -975,7 +983,7 @@ async def run_forecast(
                 token_usage=output.token_usage,
                 log_path=str(thinking_log_path) if thinking_log_path.exists() else None,
             )
-        except Exception as e:
+        except OSError as e:
             logger.warning("Failed to auto-save forecast: %s", e)
 
     return output

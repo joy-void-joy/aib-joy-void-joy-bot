@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -115,10 +116,9 @@ def _calculate_trend_direction(values: list[int]) -> str:
 @tracked("google_trends")
 async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
     """Get Google Trends interest over time for a keyword."""
-    try:
-        validated = TrendsQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(TrendsQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     keyword = validated.keyword
     timeframe = validated.timeframe
@@ -199,10 +199,9 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("google_trends_compare")
 async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
     """Compare Google Trends interest for multiple keywords."""
-    try:
-        validated = TrendsCompareInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(TrendsCompareInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     keywords = validated.keywords
     timeframe = validated.timeframe
@@ -283,10 +282,9 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("google_trends_related")
 async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
     """Get related queries for a keyword from Google Trends."""
-    try:
-        validated = TrendsQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(TrendsQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     keyword = validated.keyword
     timeframe = validated.timeframe

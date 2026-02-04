@@ -23,6 +23,7 @@ from aib.tools.cache import cached
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -192,10 +193,9 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch one or more Metaculus questions (cached for 5 minutes)."""
     import asyncio
 
-    try:
-        validated = GetMetaculusQuestionsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(GetMetaculusQuestionsInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     post_ids = validated.post_id_list
 
@@ -237,10 +237,9 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("list_tournament_questions")
 async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
     """List questions from a tournament (native async)."""
-    try:
-        validated = ListTournamentQuestionsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(ListTournamentQuestionsInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     tournament_id = validated.tournament_id
     num_questions = validated.num_questions
@@ -280,10 +279,9 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("search_metaculus")
 async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
     """Search Metaculus questions by text (native async)."""
-    try:
-        validated = SearchMetaculusInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(SearchMetaculusInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     num_results = validated.num_results
@@ -326,10 +324,9 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("get_coherence_links")
 async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch coherence links for a question (native async)."""
-    try:
-        validated = CoherenceLinksInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(CoherenceLinksInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     post_id = validated.post_id
     try:
@@ -365,10 +362,9 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("get_cp_history")
 async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch community prediction history for a question."""
-    try:
-        validated = CPHistoryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(CPHistoryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     question_id = validated.question_id
     days = min(validated.days, 365)
@@ -498,10 +494,9 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
 @tracked("search_exa")
 async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     """Search using Exa and return raw results (cached)."""
-    try:
-        validated = SearchExaInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(SearchExaInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     num_results = validated.num_results
@@ -526,10 +521,9 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("search_news")
 async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     """Search news using AskNews SDK and return formatted results."""
-    try:
-        validated = SearchNewsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(SearchNewsInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     num_results = validated.num_results
@@ -627,10 +621,9 @@ WIKIPEDIA_HEADERS = {
 @tracked("wikipedia")
 async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
     """Unified Wikipedia search and article fetching."""
-    try:
-        validated = WikipediaInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(WikipediaInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     mode = validated.mode
@@ -764,10 +757,9 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("get_prediction_history")
 async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
     """Get past forecasts for a question from local storage."""
-    try:
-        validated = PredictionHistoryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(PredictionHistoryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     post_id = validated.post_id
 

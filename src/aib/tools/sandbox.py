@@ -23,6 +23,7 @@ from docker.models.containers import Container, ExecResult
 from aib.config import settings
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -319,10 +320,9 @@ class Sandbox:
         )
         @tracked("execute_code")
         async def execute_code(args: dict[str, Any]) -> dict[str, Any]:
-            try:
-                validated = ExecuteCodeInput.model_validate(args)
-            except Exception as e:
-                return mcp_error(f"Invalid input: {e}")
+            validated = validate_input(ExecuteCodeInput, args)
+            if isinstance(validated, dict):
+                return validated
 
             try:
                 result = self.run_code(validated.code)
@@ -345,10 +345,9 @@ class Sandbox:
         )
         @tracked("install_package")
         async def install_package(args: dict[str, Any]) -> dict[str, Any]:
-            try:
-                validated = InstallPackageInput.model_validate(args)
-            except Exception as e:
-                return mcp_error(f"Invalid input: {e}")
+            validated = validate_input(InstallPackageInput, args)
+            if isinstance(validated, dict):
+                return validated
 
             try:
                 result = self.run_install(validated.packages)

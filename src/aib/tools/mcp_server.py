@@ -12,6 +12,7 @@ This module provides a fixed version that works around both issues.
 Use `create_mcp_server` instead of `create_sdk_mcp_server` from claude_agent_sdk.
 """
 
+from collections.abc import Callable
 from typing import Any, cast
 
 from claude_agent_sdk import SdkMcpTool
@@ -96,7 +97,11 @@ def create_mcp_server(
     if tools:
         tool_map = {tool_def.name: tool_def for tool_def in tools}
 
-        @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
+        # MCP Server library lacks type stubs, so we cast the decorators
+        list_tools_decorator = cast(Callable[..., Any], server.list_tools)()
+        call_tool_decorator = cast(Callable[..., Any], server.call_tool)()
+
+        @list_tools_decorator
         async def list_tools() -> list[Tool]:
             """Return the list of available tools."""
             tool_list = []
@@ -111,7 +116,7 @@ def create_mcp_server(
                 )
             return tool_list
 
-        @server.call_tool()  # type: ignore[untyped-decorator]
+        @call_tool_decorator
         async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             """Execute a tool by name with given arguments.
 

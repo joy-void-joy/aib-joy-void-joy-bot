@@ -7,7 +7,7 @@ wisdom of traders with financial incentives.
 
 import ast
 import logging
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 import httpx
 from claude_agent_sdk import tool
@@ -19,6 +19,7 @@ from aib.config import settings
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -176,10 +177,9 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
 @tracked("polymarket_price")
 async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
     """Search Polymarket and return market prices."""
-    try:
-        validated = MarketQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(MarketQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     limit = validated.limit
@@ -258,10 +258,9 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
 @tracked("manifold_price")
 async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
     """Search Manifold Markets and return market prices."""
-    try:
-        validated = MarketQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(MarketQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     query = validated.query
     limit = validated.limit
@@ -320,10 +319,9 @@ class StockPrice(TypedDict):
 @tracked("stock_price")
 async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
     """Get stock price from Yahoo Finance."""
-    try:
-        validated = StockQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(StockQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     symbol = validated.symbol.upper()
 
@@ -368,10 +366,9 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("stock_history")
 async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
     """Get historical stock prices from Yahoo Finance."""
-    try:
-        validated = StockQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(StockQueryInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     symbol = validated.symbol.upper()
     period = validated.period
@@ -390,7 +387,8 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
         hist_reset = hist.reset_index()
         hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
 
-        records: list[dict[str, object]] = hist_reset[["Date", "Open", "High", "Low", "Close", "Volume"]].to_dict("records")  # pyright: ignore[reportCallIssue]
+        selected_columns = cast(Any, hist_reset[["Date", "Open", "High", "Low", "Close", "Volume"]])
+        records: list[dict[str, object]] = selected_columns.to_dict(orient="records")
 
         # Rename keys to lowercase and limit to last 30
         formatted: list[dict[str, object]] = [

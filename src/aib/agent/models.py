@@ -567,16 +567,17 @@ class NumericForecast(BaseModel):
 
         # Validate percentiles are strictly increasing if all provided
         if has_all_percentiles:
-            percentiles = [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
+            p10 = self.percentile_10
+            p20 = self.percentile_20
+            p40 = self.percentile_40
+            p60 = self.percentile_60
+            p80 = self.percentile_80
+            p90 = self.percentile_90
+            assert p10 is not None and p20 is not None and p40 is not None
+            assert p60 is not None and p80 is not None and p90 is not None
+            percentiles = [p10, p20, p40, p60, p80, p90]
             for i in range(len(percentiles) - 1):
-                if percentiles[i] >= percentiles[i + 1]:  # type: ignore[operator]
+                if percentiles[i] >= percentiles[i + 1]:
                     raise ValueError(
                         f"Percentiles must be strictly increasing. "
                         f"Got {percentiles[i]} >= {percentiles[i + 1]} at indices {i} and {i + 1}."
@@ -625,26 +626,18 @@ class NumericForecast(BaseModel):
         """
         if self.uses_mixture_mode:
             return None
-        if any(
-            p is None
-            for p in [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
-        ):
+
+        p10 = self.percentile_10
+        p20 = self.percentile_20
+        p40 = self.percentile_40
+        p60 = self.percentile_60
+        p80 = self.percentile_80
+        p90 = self.percentile_90
+
+        if p10 is None or p20 is None or p40 is None or p60 is None or p80 is None or p90 is None:
             return None
-        return {
-            10: self.percentile_10,  # type: ignore[dict-item]
-            20: self.percentile_20,  # type: ignore[dict-item]
-            40: self.percentile_40,  # type: ignore[dict-item]
-            60: self.percentile_60,  # type: ignore[dict-item]
-            80: self.percentile_80,  # type: ignore[dict-item]
-            90: self.percentile_90,  # type: ignore[dict-item]
-        }
+
+        return {10: p10, 20: p20, 40: p40, 60: p60, 80: p80, 90: p90}
 
 
 class ForecastMeta(BaseModel):

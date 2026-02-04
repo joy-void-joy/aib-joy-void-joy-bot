@@ -15,6 +15,7 @@ from aib.config import settings
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +79,9 @@ class FredSeriesInfo(TypedDict):
 @tracked("fred_series")
 async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
     """Get FRED series data."""
-    try:
-        validated = FredSeriesInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(FredSeriesInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     api_key = settings.fred_api_key
     if not api_key:
@@ -164,10 +164,9 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
 @tracked("fred_search")
 async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
     """Search for FRED series."""
-    try:
-        validated = FredSearchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(FredSearchInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     api_key = settings.fred_api_key
     if not api_key:

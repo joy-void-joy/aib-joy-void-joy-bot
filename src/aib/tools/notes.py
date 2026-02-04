@@ -22,6 +22,7 @@ from aib.tools.mcp_server import create_mcp_server
 
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.validation import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -181,10 +182,9 @@ def _note_to_summary(note: Note) -> NoteSummary:
 @tracked("notes")
 async def notes_tool(args: dict[str, Any]) -> dict[str, Any]:
     """Manage structured notes for forecasting research."""
-    try:
-        validated = NotesInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+    validated = validate_input(NotesInput, args)
+    if isinstance(validated, dict):
+        return validated
 
     mode = validated.mode
 
