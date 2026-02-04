@@ -56,6 +56,49 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 - Tool failures (what's blocking the agent?)
 - Do NOT treat CP divergence as evidence of error
 
+### 1b. Retrodict Missed Questions
+
+If questions resolved before we forecast them, **retrodict** them to build calibration data:
+
+```bash
+# Check which questions we missed
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Check their resolutions
+uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+
+# Run retroactive forecasts (saves to notes/forecasts/, computes Brier scores)
+uv run forecast retrodict 41835 41521 41517
+```
+
+The `retrodict` command:
+- Runs the forecast agent on resolved questions
+- Saves forecasts to `notes/forecasts/` just like normal
+- Shows the actual resolution and final CP
+- Computes Brier scores for binary questions
+- Compares our performance to the final CP
+
+**⚠️ CRITICAL LIMITATION**: Retrodicting already-resolved questions has LIMITED calibration value because:
+- The agent can simply google "did X happen" and find the answer
+- This tests research skills, not forecasting skills
+- A 97% forecast on a past event that already happened proves nothing
+
+**When retrodiction IS useful**:
+- Questions where resolution isn't easily googleable (numeric values, obscure events)
+- Questions that resolved very recently (news hasn't propagated)
+- Testing tool usage and reasoning process (not accuracy)
+
+**When retrodiction is NOT useful**:
+- Binary questions about major events that already happened
+- Anything the agent can find by searching "[question topic] result"
+
+**Better alternatives for calibration**:
+1. **Forecast open questions** - The loop should catch these before they close
+2. **Use questions from other tournaments** - Still open, can actually submit
+3. **Focus on numeric questions** - Harder to google exact values
+
+Run this on any missed questions, but weight the calibration value appropriately.
+
 ### 1b. About Community Prediction
 
 CP is just another forecaster. Diverging from CP is not inherently bad - we WANT an edge.
@@ -328,8 +371,35 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 # Collect from specific tournament
 uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
 
+# Check missed questions
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Check resolutions for specific questions
+uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+
+# Retrodict resolved questions (builds calibration data)
+uv run forecast retrodict 41835 41521 41517
+
+# Trace a forecast to its logs and metrics
+uv run python .claude/scripts/trace_forecast.py show 41906
+
+# Aggregate metrics across all forecasts
+uv run python .claude/scripts/aggregate_metrics.py summary
+
+# Calibration report (needs resolved forecasts)
+uv run python .claude/scripts/calibration_report.py summary
+
 # (Add more scripts as you build them)
 ```
+
+## Periodic Maintenance
+
+Every few feedback loop sessions, take time to:
+
+1. **Reread this entire document** - Is it still accurate? Remove outdated guidance.
+2. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
+3. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
+4. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
 
 ## Key Questions to Answer Each Session
 
