@@ -30,6 +30,13 @@ from aib.agent.history import (
     load_past_forecasts,
     save_forecast,
 )
+from aib.agent.hooks import HooksConfig, merge_hooks
+from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
+from aib.agent.tool_policy import ToolPolicy
+from aib.tools.classifiers import (
+    classify_webfetch_content,
+    generate_fallback_message,
+)
 from aib.agent.models import (
     CreditExhaustedError,
     Forecast,
@@ -49,25 +56,12 @@ from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_g
 from aib.agent.subagents import SUBAGENTS
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
-from aib.tools.financial import financial_server
-from aib.tools.forecasting import forecasting_server
-from aib.tools.markets import markets_server
-from aib.tools.notes import notes_server
-from aib.tools.trends import trends_server
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
-
-
-def _optional_tools(condition: bool | str | None, tools: list[str]) -> list[str]:
-    """Return tools list if condition is truthy, else empty list.
-
-    Used to conditionally include MCP tools based on API key availability.
-    """
-    return tools if condition else []
 
 
 def print_block(block: ContentBlock) -> None:
@@ -183,7 +177,9 @@ def append_metrics_to_meta_reflection(
     # Timing and cost
     if duration_seconds is not None:
         minutes = duration_seconds / 60
-        lines.append(f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)")
+        lines.append(
+            f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)"
+        )
     if cost_usd is not None:
         lines.append(f"- **Cost**: ${cost_usd:.4f}")
 
@@ -194,7 +190,9 @@ def append_metrics_to_meta_reflection(
         cache_read = token_usage.get("cache_read_input_tokens", 0)
         cache_create = token_usage.get("cache_creation_input_tokens", 0)
         total = input_tokens + output_tokens
-        lines.append(f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)")
+        lines.append(
+            f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)"
+        )
         if cache_read or cache_create:
             lines.append(f"  - Cache: {cache_read:,} read, {cache_create:,} created")
 
@@ -361,7 +359,7 @@ def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
 def create_permission_hooks(
     rw_dirs: list[Path],
     ro_dirs: list[Path],
-) -> dict[str, Any]:
+) -> HooksConfig:
     """Create permission hooks with directory-based access control.
 
     Args:
@@ -459,6 +457,78 @@ def create_permission_hooks(
     }
 
 
+def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfig:
+    """Create PostToolUse hook for WebFetch quality detection.
+
+    Detects when WebFetch returns JS-rendered garbage and injects
+    a system message with alternative tools to try.
+
+    Args:
+        retrodict_mode: If True, exclude Playwright from suggestions.
+    """
+
+    async def webfetch_quality_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> dict[str, Any]:
+        """Check WebFetch responses for JS-rendering issues."""
+        if input_data.get("hook_event_name") != "PostToolUse":
+            return {}
+
+        tool_name = input_data.get("tool_name", "")
+        if tool_name != "WebFetch":
+            return {}
+
+        # Extract content from tool response
+        tool_response = input_data.get("tool_response", {})
+        content = ""
+
+        # Handle different response formats
+        if isinstance(tool_response, str):
+            content = tool_response
+        elif isinstance(tool_response, dict):
+            # MCP-style response
+            result = tool_response.get("result", tool_response)
+            if isinstance(result, str):
+                content = result
+            elif isinstance(result, dict):
+                content = result.get("content", result.get("text", ""))
+
+        if not content:
+            # No content to classify
+            return {}
+        # Note: Short content is itself a signal of JS rendering - the classifier
+        # handles this case, so we don't filter by length here
+
+        # Get the URL from tool input
+        tool_input = input_data.get("tool_input", {})
+        url = tool_input.get("url", "")
+
+        # Classify the content
+        try:
+            classification = await classify_webfetch_content(
+                content, url, retrodict_mode=retrodict_mode
+            )
+
+            if classification.is_js_rendered and classification.confidence >= 0.6:
+                message = generate_fallback_message(url, classification)
+                logger.info(
+                    "WebFetch quality issue detected for %s (confidence=%.0f%%)",
+                    url[:50],
+                    classification.confidence * 100,
+                )
+                return {"systemMessage": message}
+        except Exception as e:
+            logger.warning("WebFetch quality check failed: %s", e)
+
+        return {}
+
+    return {
+        "PostToolUse": [HookMatcher(hooks=[webfetch_quality_hook])],  # type: ignore[list-item]
+    }
+
+
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
     """Fetch question details from Metaculus API."""
     headers = {"Authorization": f"Token {token}"} if token else {}
@@ -484,6 +554,9 @@ def build_question_context(post_data: dict) -> dict:
         "resolution_criteria": question.get("resolution_criteria", ""),
         "fine_print": question.get("fine_print", ""),
         "scheduled_close_time": question.get("scheduled_close_time"),
+        # Cadence tracking fields
+        "published_at": post_data.get("published_at"),
+        "scheduled_resolve_time": question.get("scheduled_resolve_time"),
     }
 
     if question_type == "multiple_choice":
@@ -536,6 +609,7 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
+    retrodict_config: RetrodictConfig | None = None,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -543,6 +617,9 @@ async def run_forecast(
         question_id: Metaculus post ID (for top-level forecasts)
         question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
+        retrodict_config: If provided, enables blind retrodict mode with time-restricted
+            data access. All tools will be filtered to only return data available
+            before the forecast_date.
 
     Returns:
         ForecastOutput with the forecast results.
@@ -627,18 +704,46 @@ async def run_forecast(
     # Setup reasoning logger (committed, for feedback loop)
     reasoning_logger = ReasoningLogger(notes.reasoning_log, question_title)
 
-    with Sandbox() as sandbox:
+    # Determine sandbox network mode for retrodict
+    sandbox_network_mode = "pypi_only" if retrodict_config else "bridge"
+    if retrodict_config:
+        logger.info(
+            "Retrodict mode: restricting data to before %s",
+            retrodict_config.date_str,
+        )
+
+    with Sandbox(network_mode=sandbox_network_mode) as sandbox:
         # tmp/ for scratch work + session-specific notes directories
         rw_dirs = [Path("tmp")] + notes.rw
         ro_dirs = notes.ro
-        hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+
+        # Create base permission hooks
+        permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+
+        # Always add WebFetch quality detection
+        webfetch_hooks = create_webfetch_quality_hooks(
+            retrodict_mode=bool(retrodict_config)
+        )
+        hooks = merge_hooks(permission_hooks, webfetch_hooks)
+
+        # Compose with retrodict hooks if in retrodict mode
+        if retrodict_config:
+            retrodict_hooks = create_retrodict_hooks(retrodict_config)
+            hooks = merge_hooks(hooks, retrodict_hooks)
+
+        # Centralized tool policy determines MCP servers and allowed tools
+        policy = ToolPolicy.from_settings(settings, retrodict_config)
 
         options = ClaudeAgentOptions(
             model=settings.model,
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
-                "append": get_forecasting_system_prompt(),
+                "append": get_forecasting_system_prompt(
+                    forecast_date=retrodict_config.forecast_date
+                    if retrodict_config
+                    else None
+                ),
             },
             max_thinking_tokens=64_000 - 1,
             permission_mode="bypassPermissions",
@@ -648,77 +753,10 @@ async def run_forecast(
                 "autoAllowBashIfSandboxed": True,
                 "allowUnsandboxedCommands": False,
             },
-            mcp_servers={
-                "forecasting": forecasting_server,
-                "financial": financial_server,
-                "sandbox": sandbox.create_mcp_server(),
-                "composition": composition_server,
-                "markets": markets_server,
-                "notes": notes_server,
-                "trends": trends_server,
-            },
+            mcp_servers=policy.get_mcp_servers(sandbox, composition_server),
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
-            # Built-in tools + MCP tools (conditionally include spawn_subquestions)
-            allowed_tools=[
-                # Built-in tools
-                "WebSearch",
-                "WebFetch",
-                # File tools for notes (directory-restricted via hooks)
-                "Read",
-                "Write",
-                "Glob",
-                # Bash (sandboxed via SDK config)
-                "Bash",
-                # Metaculus tools (only if token is configured)
-                *(
-                    [
-                        "mcp__forecasting__get_metaculus_questions",
-                        "mcp__forecasting__list_tournament_questions",
-                        "mcp__forecasting__search_metaculus",
-                        "mcp__forecasting__get_coherence_links",
-                        "mcp__forecasting__get_prediction_history",
-                        "mcp__forecasting__get_cp_history",
-                    ]
-                    if settings.metaculus_token
-                    else []
-                ),
-                # Search tools (conditional on API credentials)
-                *_optional_tools(
-                    settings.exa_api_key,
-                    ["mcp__forecasting__search_exa"],
-                ),
-                *_optional_tools(
-                    settings.asknews_client_id and settings.asknews_client_secret,
-                    ["mcp__forecasting__search_news"],
-                ),
-                "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-                # Financial data tools (conditional on API credentials)
-                *_optional_tools(
-                    settings.fred_api_key,
-                    ["mcp__financial__fred_series", "mcp__financial__fred_search"],
-                ),
-                # Sandbox tools (in-process Docker sandbox)
-                "mcp__sandbox__execute_code",
-                "mcp__sandbox__install_package",
-                # Composition tools
-                # spawn_subquestions only available for top-level forecasts
-                *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
-                # Prediction market tools
-                "mcp__markets__polymarket_price",
-                "mcp__markets__manifold_price",
-                # Stock market tools (no API key required)
-                "mcp__markets__stock_price",
-                "mcp__markets__stock_history",
-                # Google Trends tools (no API key required)
-                "mcp__trends__google_trends",
-                "mcp__trends__google_trends_compare",
-                "mcp__trends__google_trends_related",
-                # Notes browsing tools
-                "mcp__notes__notes",
-                # Subagent spawning
-                "Task",
-            ],
+            allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
             output_format={
                 "type": "json_schema",
                 "schema": output_schema,
@@ -801,6 +839,7 @@ async def run_forecast(
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,
+        retrodict_date=retrodict_config.forecast_date if retrodict_config else None,
     )
 
     if result.structured_output:
@@ -974,6 +1013,9 @@ async def run_forecast(
                 tool_metrics=metrics,
                 token_usage=output.token_usage,
                 log_path=str(thinking_log_path) if thinking_log_path.exists() else None,
+                question_published_at=context.get("published_at"),
+                question_close_time=context.get("scheduled_close_time"),
+                question_scheduled_resolve_time=context.get("scheduled_resolve_time"),
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
