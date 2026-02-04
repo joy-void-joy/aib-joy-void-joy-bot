@@ -14,7 +14,12 @@ app = typer.Typer(help="Inspect Python modules")
 
 @app.command()
 def path(
-    module: Annotated[str, typer.Argument(help="Module name (e.g., 'forecasting_tools.helpers.asknews_searcher')")],
+    module: Annotated[
+        str,
+        typer.Argument(
+            help="Module name (e.g., 'forecasting_tools.helpers.asknews_searcher')"
+        ),
+    ],
 ) -> None:
     """Print the file path of a Python module."""
     import importlib
@@ -23,14 +28,18 @@ def path(
     if hasattr(mod, "__file__") and mod.__file__:
         print(mod.__file__)
     else:
-        print(f"Module {module} has no __file__ attribute (built-in or namespace package)")
+        print(
+            f"Module {module} has no __file__ attribute (built-in or namespace package)"
+        )
         sys.exit(1)
 
 
 @app.command()
 def source(
     module: Annotated[str, typer.Argument(help="Module name")],
-    lines: Annotated[int, typer.Option("--lines", "-n", help="Number of lines to show (0 = all)")] = 100,
+    lines: Annotated[
+        int, typer.Option("--lines", "-n", help="Number of lines to show (0 = all)")
+    ] = 100,
 ) -> None:
     """Print the source code of a Python module."""
     import importlib
