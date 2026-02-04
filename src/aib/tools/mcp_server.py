@@ -23,9 +23,12 @@ Maintenance Notes:
 - Monitor SDK changelog for MCP-related changes
 """
 
+import logging
 from typing import Any, cast
 
 from claude_agent_sdk import SdkMcpTool
+
+logger = logging.getLogger(__name__)
 from claude_agent_sdk.types import McpSdkServerConfig
 from mcp.server import Server
 from mcp.types import CallToolResult, ContentBlock, ImageContent, TextContent, Tool
@@ -67,8 +70,13 @@ def _generate_json_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]
     try:
         adapter = TypeAdapter(input_schema)
         return adapter.json_schema()
-    except Exception:
-        # Fallback for types that can't be adapted
+    except TypeError as e:
+        # TypeAdapter doesn't support this type (e.g., some complex generics)
+        logger.warning(
+            "TypeAdapter doesn't support %s: %s. Using empty schema.",
+            input_schema,
+            e,
+        )
         return {"type": "object", "properties": {}}
 
 

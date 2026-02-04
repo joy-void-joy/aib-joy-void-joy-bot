@@ -13,15 +13,18 @@ The hooks work by:
 """
 
 import logging
+import re
 import socket
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
 from claude_agent_sdk import HookMatcher
 from claude_agent_sdk.types import HookContext
 
+from aib.agent.hooks import HooksConfig
+from aib.tools.cache import cached
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -95,6 +98,102 @@ def _rewrite_to_wayback(url: str, timestamp: str) -> str:
     return f"https://web.archive.org/web/{timestamp}id_/{url}"
 
 
+def _parse_trends_duration(timeframe: str) -> int:
+    """Parse Google Trends timeframe to get duration in days.
+
+    Supported formats:
+    - 'now 1-H' -> 1 hour (rounds to 1 day)
+    - 'now 4-H' -> 4 hours (rounds to 1 day)
+    - 'now 1-d' -> 1 day
+    - 'now 7-d' -> 7 days
+    - 'today 1-m' -> 30 days (1 month)
+    - 'today 3-m' -> 90 days (3 months)
+    - 'today 12-m' -> 365 days (12 months)
+    - 'today 5-y' -> 1825 days (5 years)
+    - 'all' -> 10 years (approximate)
+    - '2020-01-01 2020-12-31' -> exact date range
+
+    Args:
+        timeframe: Google Trends timeframe string.
+
+    Returns:
+        Duration in days.
+    """
+    timeframe = timeframe.lower().strip()
+
+    # Handle 'all' - use 10 years as approximation
+    if timeframe == "all":
+        return 3650
+
+    # Handle date range format: 'YYYY-MM-DD YYYY-MM-DD'
+    date_range_match = re.match(
+        r"(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})", timeframe
+    )
+    if date_range_match:
+        start_date = datetime.strptime(date_range_match.group(1), "%Y-%m-%d")
+        end_date = datetime.strptime(date_range_match.group(2), "%Y-%m-%d")
+        return (end_date - start_date).days
+
+    # Handle relative formats: 'now X-Y' or 'today X-Y'
+    relative_match = re.match(r"(now|today)\s+(\d+)-([hdmy])", timeframe)
+    if relative_match:
+        value = int(relative_match.group(2))
+        unit = relative_match.group(3)
+
+        if unit == "h":
+            return max(1, value // 24)  # Hours -> days, minimum 1
+        elif unit == "d":
+            return value
+        elif unit == "m":
+            return value * 30  # Months -> days
+        elif unit == "y":
+            return value * 365  # Years -> days
+
+    # Default to 1 year if unrecognized
+    return 365
+
+
+def _cap_trends_timeframe(timeframe: str, cutoff_date: datetime) -> str:
+    """Convert trends timeframe to date range ending at cutoff.
+
+    Preserves the requested duration while ensuring end date doesn't exceed
+    the retrodict cutoff.
+
+    Args:
+        timeframe: Original Google Trends timeframe.
+        cutoff_date: Maximum end date (retrodict cutoff).
+
+    Returns:
+        Date range string in 'YYYY-MM-DD YYYY-MM-DD' format.
+    """
+    duration_days = _parse_trends_duration(timeframe)
+    start_date = cutoff_date - timedelta(days=duration_days)
+    return f"{start_date.strftime('%Y-%m-%d')} {cutoff_date.strftime('%Y-%m-%d')}"
+
+
+def _normalize_wayback_ts(timestamp: str) -> int:
+    """Normalize Wayback timestamp to YYYYMMDD integer for safe comparison.
+
+    The Wayback API returns timestamps with variable precision (YYYYMMDD to
+    YYYYMMDDHHMMSS). This function extracts just the date portion as an integer
+    for reliable comparison.
+
+    Args:
+        timestamp: Wayback timestamp string (8-14 digits).
+
+    Returns:
+        Integer in YYYYMMDD format for comparison.
+
+    Example:
+        >>> _normalize_wayback_ts("20260115")
+        20260115
+        >>> _normalize_wayback_ts("20260115120000")
+        20260115
+    """
+    return int(timestamp[:8])
+
+
+@cached(ttl=3600)  # 1 hour - Wayback snapshots don't change frequently
 @with_retry(max_attempts=2)
 async def _check_wayback_availability(
     url: str, timestamp: str
@@ -129,14 +228,14 @@ async def _check_wayback_availability(
     return None
 
 
-def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
+def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
     """Create hooks that restrict tool access to data before forecast_date.
 
     Args:
         config: Retrodict configuration with forecast date and mode settings.
 
     Returns:
-        Hooks dict for ClaudeAgentOptions with PreToolUse and PostToolUse hooks.
+        HooksConfig for ClaudeAgentOptions with PreToolUse hook.
     """
 
     async def pre_tool_use_hook(
@@ -226,7 +325,9 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
                 # Validate snapshot is not after the cutoff (Wayback returns "closest"
                 # which could be after the requested date)
                 actual_ts = availability.get("timestamp", config.wayback_ts)
-                if actual_ts > config.wayback_ts:
+                # Use integer comparison to handle variable timestamp precision
+                # (YYYYMMDD vs YYYYMMDDHHMMSS)
+                if _normalize_wayback_ts(actual_ts) > _normalize_wayback_ts(config.wayback_ts):
                     logger.warning(
                         "[Retrodict] Wayback closest snapshot (%s) is after cutoff (%s)",
                         actual_ts,
@@ -259,19 +360,15 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
             logger.info("[Retrodict] fred_series capped to %s", config.date_str)
             return modify_input(new_input)
 
-        # Google Trends: Cap timeframe
+        # Google Trends: Cap timeframe while preserving requested duration
         if tool_name in (
             "mcp__trends__google_trends",
             "mcp__trends__google_trends_compare",
         ):
-            # Trends uses timeframe like "today 3-m" or "2020-01-01 2020-12-31"
-            # We'll override with a specific end date
             current_timeframe = tool_input.get("timeframe", "today 12-m")
-            # Convert to date range ending at forecast_date
-            start_date = config.forecast_date.replace(
-                year=config.forecast_date.year - 1
+            new_timeframe = _cap_trends_timeframe(
+                current_timeframe, config.forecast_date
             )
-            new_timeframe = f"{start_date.strftime('%Y-%m-%d')} {config.date_str}"
             new_input = {**tool_input, "timeframe": new_timeframe}
             logger.info(
                 "[Retrodict] trends timeframe capped: %s -> %s",

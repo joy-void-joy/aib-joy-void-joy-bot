@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from claude_agent_sdk.types import HookContext, McpStdioServerConfig
+from claude_agent_sdk.types import HookContext
 
 import httpx
 from claude_agent_sdk import (
@@ -30,7 +30,9 @@ from aib.agent.history import (
     load_past_forecasts,
     save_forecast,
 )
+from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
+from aib.agent.tool_policy import ToolPolicy
 from aib.tools.classifiers import (
     classify_webfetch_content,
     generate_fallback_message,
@@ -54,25 +56,12 @@ from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_g
 from aib.agent.subagents import SUBAGENTS
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
-from aib.tools.financial import financial_server
-from aib.tools.forecasting import forecasting_server
-from aib.tools.markets import create_markets_server
-from aib.tools.notes import notes_server
-from aib.tools.trends import trends_server
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
-
-
-def _optional_tools(condition: bool | str | None, tools: list[str]) -> list[str]:
-    """Return tools list if condition is truthy, else empty list.
-
-    Used to conditionally include MCP tools based on API key availability.
-    """
-    return tools if condition else []
 
 
 def print_block(block: ContentBlock) -> None:
@@ -367,26 +356,10 @@ def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
     return False
 
 
-def _merge_hooks(base: dict[str, Any], additional: dict[str, Any]) -> dict[str, Any]:
-    """Merge two hook configurations.
-
-    For each hook event type, combines the hooks from both configs.
-    Base hooks run first, then additional hooks.
-    """
-    merged = dict(base)
-    for event, matchers in additional.items():
-        if event in merged:
-            # Combine matchers for the same event
-            merged[event] = merged[event] + matchers
-        else:
-            merged[event] = matchers
-    return merged
-
-
 def create_permission_hooks(
     rw_dirs: list[Path],
     ro_dirs: list[Path],
-) -> dict[str, Any]:
+) -> HooksConfig:
     """Create permission hooks with directory-based access control.
 
     Args:
@@ -484,7 +457,7 @@ def create_permission_hooks(
     }
 
 
-def create_webfetch_quality_hooks() -> dict[str, Any]:
+def create_webfetch_quality_hooks() -> HooksConfig:
     """Create PostToolUse hook for WebFetch quality detection.
 
     Detects when WebFetch returns JS-rendered garbage and injects
@@ -519,9 +492,11 @@ def create_webfetch_quality_hooks() -> dict[str, Any]:
             elif isinstance(result, dict):
                 content = result.get("content", result.get("text", ""))
 
-        if not content or len(content) < 50:
-            # Too short to classify meaningfully
+        if not content:
+            # No content to classify
             return {}
+        # Note: Short content is itself a signal of JS rendering - the classifier
+        # handles this case, so we don't filter by length here
 
         # Get the URL from tool input
         tool_input = input_data.get("tool_input", {})
@@ -742,12 +717,15 @@ async def run_forecast(
 
         # Always add WebFetch quality detection
         webfetch_hooks = create_webfetch_quality_hooks()
-        hooks = _merge_hooks(permission_hooks, webfetch_hooks)
+        hooks = merge_hooks(permission_hooks, webfetch_hooks)
 
         # Compose with retrodict hooks if in retrodict mode
         if retrodict_config:
             retrodict_hooks = create_retrodict_hooks(retrodict_config)
-            hooks = _merge_hooks(hooks, retrodict_hooks)
+            hooks = merge_hooks(hooks, retrodict_hooks)
+
+        # Centralized tool policy determines MCP servers and allowed tools
+        policy = ToolPolicy.from_settings(settings, retrodict_config)
 
         options = ClaudeAgentOptions(
             model=settings.model,
@@ -764,93 +742,10 @@ async def run_forecast(
                 "autoAllowBashIfSandboxed": True,
                 "allowUnsandboxedCommands": False,
             },
-            mcp_servers={
-                "forecasting": forecasting_server,
-                "financial": financial_server,
-                "sandbox": sandbox.create_mcp_server(),
-                "composition": composition_server,
-                "markets": create_markets_server(exclude_live=bool(retrodict_config)),
-                "notes": notes_server,
-                "trends": trends_server,
-                # Playwright MCP for JS-heavy sites (last resort)
-                "playwright": McpStdioServerConfig(
-                    type="stdio",
-                    command="bun",
-                    args=["x", "@anthropic-ai/mcp-server-playwright"],
-                ),
-            },
+            mcp_servers=policy.get_mcp_servers(sandbox, composition_server),
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
-            # Built-in tools + MCP tools
-            # Note: Live-only market tools are excluded at MCP server level
-            # in retrodict mode via create_markets_server(exclude_live=True)
-            allowed_tools=[
-                # Built-in tools
-                "WebSearch",
-                "WebFetch",
-                # File tools for notes (directory-restricted via hooks)
-                "Read",
-                "Write",
-                "Glob",
-                # Bash (sandboxed via SDK config)
-                "Bash",
-                # Metaculus tools (only if token is configured)
-                *(
-                    [
-                        "mcp__forecasting__get_metaculus_questions",
-                        "mcp__forecasting__list_tournament_questions",
-                        "mcp__forecasting__search_metaculus",
-                        "mcp__forecasting__get_coherence_links",
-                        "mcp__forecasting__get_prediction_history",
-                        "mcp__forecasting__get_cp_history",
-                    ]
-                    if settings.metaculus_token
-                    else []
-                ),
-                # Search tools (conditional on API credentials)
-                *_optional_tools(
-                    settings.exa_api_key,
-                    ["mcp__forecasting__search_exa"],
-                ),
-                *_optional_tools(
-                    settings.asknews_client_id and settings.asknews_client_secret,
-                    ["mcp__forecasting__search_news"],
-                ),
-                "mcp__forecasting__wikipedia",  # Unified: search, summary, or full
-                # Financial data tools (conditional on API credentials)
-                *_optional_tools(
-                    settings.fred_api_key,
-                    ["mcp__financial__fred_series", "mcp__financial__fred_search"],
-                ),
-                # Sandbox tools (in-process Docker sandbox)
-                "mcp__sandbox__execute_code",
-                "mcp__sandbox__install_package",
-                # Composition tools
-                # spawn_subquestions only available for top-level forecasts
-                *(["mcp__composition__spawn_subquestions"] if allow_spawn else []),
-                # Prediction market tools (live prices excluded at MCP level in retrodict)
-                "mcp__markets__polymarket_price",
-                "mcp__markets__manifold_price",
-                # Historical market tools
-                "mcp__markets__polymarket_history",
-                "mcp__markets__manifold_history",
-                # Stock market tools (no API key required)
-                "mcp__markets__stock_price",
-                "mcp__markets__stock_history",
-                # Google Trends tools (no API key required)
-                "mcp__trends__google_trends",
-                "mcp__trends__google_trends_compare",
-                "mcp__trends__google_trends_related",
-                # Notes browsing tools
-                "mcp__notes__notes",
-                # Playwright tools (last resort for JS-heavy sites)
-                "mcp__playwright__browser_navigate",
-                "mcp__playwright__browser_snapshot",
-                "mcp__playwright__browser_click",
-                "mcp__playwright__browser_type",
-                # Subagent spawning
-                "Task",
-            ],
+            allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
             output_format={
                 "type": "json_schema",
                 "schema": output_schema,
@@ -933,6 +828,7 @@ async def run_forecast(
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,
+        retrodict_date=retrodict_config.forecast_date if retrodict_config else None,
     )
 
     if result.structured_output:
