@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from claude_agent_sdk.types import HookContext
+from claude_agent_sdk.types import HookContext, McpStdioServerConfig
 
 import httpx
 from claude_agent_sdk import (
@@ -772,6 +772,12 @@ async def run_forecast(
                 "markets": markets_server,
                 "notes": notes_server,
                 "trends": trends_server,
+                # Playwright MCP for JS-heavy sites (last resort)
+                "playwright": McpStdioServerConfig(
+                    type="stdio",
+                    command="npx",
+                    args=["-y", "@anthropic-ai/mcp-server-playwright"],
+                ),
             },
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
@@ -835,6 +841,11 @@ async def run_forecast(
                 "mcp__trends__google_trends_related",
                 # Notes browsing tools
                 "mcp__notes__notes",
+                # Playwright tools (last resort for JS-heavy sites)
+                "mcp__playwright__browser_navigate",
+                "mcp__playwright__browser_snapshot",
+                "mcp__playwright__browser_click",
+                "mcp__playwright__browser_type",
                 # Subagent spawning
                 "Task",
             ],
