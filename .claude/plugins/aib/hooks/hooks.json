@@ -1,5 +1,5 @@
 {
-  "description": "AIB workflow hooks: pre-push quality checks, test file protection, and PLAN.md validation",
+  "description": "AIB workflow hooks: pre-push quality checks and test file protection",
   "hooks": {
     "PreToolUse": [
       {
@@ -24,17 +24,6 @@
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/protect-tests.sh",
             "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Check if PLAN.md exists and accurately reflects the current implementation. Respond with ONLY this JSON, no other text:\n\n{\"ok\": true}\n\nOR if PLAN.md needs updates:\n\n{\"ok\": false, \"reason\": \"what needs to be updated\"}",
-            "timeout": 60
           }
         ]
       }
