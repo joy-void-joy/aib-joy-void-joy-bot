@@ -56,6 +56,48 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 - Tool failures (what's blocking the agent?)
 - Do NOT treat CP divergence as evidence of error
 
+### 1b. Retrodict Missed Questions
+
+If questions resolved before we forecast them, **retrodict** them to build calibration data:
+
+```bash
+# Check which questions we missed
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Check their resolutions
+uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+
+# Run retroactive forecasts (saves to notes/forecasts/, computes Brier scores)
+uv run forecast retrodict 41835 41521 41517
+```
+
+The `retrodict` command:
+- Runs the forecast agent on resolved questions
+- Saves forecasts to `notes/forecasts/` just like normal
+- Shows the actual resolution and final CP
+- Computes Brier scores for binary questions
+- Compares our performance to the final CP
+
+**This is valuable calibration data** even though we can't submit. It tells us:
+- What would we have forecast?
+- Were we better or worse than CP?
+- What reasoning did we use?
+
+Run this on any missed questions to build up calibration data faster.
+
+**If no missed AIB questions**: Search Metaculus for other resolved questions to retrodict:
+
+```bash
+# Search for recently resolved questions on any topic
+# Then retrodict interesting ones for calibration practice
+uv run forecast retrodict <question_id> <question_id> ...
+```
+
+This is useful for:
+- Building calibration data when AIB is slow
+- Testing the agent on different question types
+- Practicing on domains where we're weak
+
 ### 1b. About Community Prediction
 
 CP is just another forecaster. Diverging from CP is not inherently bad - we WANT an edge.
@@ -328,7 +370,23 @@ uv run python .claude/scripts/feedback_collect.py --all-time
 # Collect from specific tournament
 uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
 
-# (Add more scripts as you build them)
+# Check missed questions
+uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+
+# Check resolutions for specific questions
+uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+
+# Retrodict resolved questions (builds calibration data)
+uv run forecast retrodict 41835 41521 41517
+
+# Trace a forecast to its logs and metrics
+uv run python .claude/scripts/trace_forecast.py show 41906
+
+# Aggregate metrics across all forecasts
+uv run python .claude/scripts/aggregate_metrics.py summary
+
+# Calibration report (needs resolved forecasts)
+uv run python .claude/scripts/calibration_report.py summary
 ```
 
 ## Key Questions to Answer Each Session
