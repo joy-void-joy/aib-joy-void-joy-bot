@@ -241,14 +241,7 @@ def retrodict(
             cp = None
             if isinstance(q, BinaryQuestion):
                 cp = q.community_prediction_at_access_time
-            # Get published_at from the question data
-            published_at = getattr(q, "published_at", None)
-            if published_at and isinstance(published_at, str):
-                # Parse ISO format
-                published_at = datetime.fromisoformat(
-                    published_at.replace("Z", "+00:00")
-                )
-            return resolution, cp, published_at
+            return resolution, cp, q.published_time
         except Exception as e:
             logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
             return None, None, None

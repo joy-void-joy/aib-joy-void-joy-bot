@@ -29,6 +29,7 @@ from aib.agent.history import (
     format_history_for_context,
     load_past_forecasts,
     save_forecast,
+    save_retrodict,
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
@@ -290,22 +291,28 @@ class NotesConfig:
         return self.rw + self.ro
 
 
-def setup_notes_folder(session_id: str, post_id: int) -> NotesConfig:
+def setup_notes_folder(
+    session_id: str, post_id: int, *, retrodict: bool = False
+) -> NotesConfig:
     """Create session-specific notes folder structure.
 
     Structure (RW = this session can write, RO = read historical only):
     - notes/sessions/<session_id>/            (RW)
-    - notes/research/<post_id>/<timestamp>/   (RW)
-    - notes/forecasts/<post_id>/<timestamp>/  (RW)
+    - notes/research/<post_id>/<timestamp>/   (RW, blocked in retrodict)
+    - notes/forecasts/<post_id>/<timestamp>/  (RW, blocked in retrodict)
     - notes/meta/                             (RW)
-    - notes/research/                         (RO)
-    - notes/forecasts/                        (RO)
-    - notes/structured/                       (RO - notes tool writes here)
+    - notes/research/                         (RO, blocked in retrodict)
+    - notes/forecasts/                        (RO, blocked in retrodict)
+    - notes/structured/                       (RO, blocked in retrodict)
     - notes/logs/                             (NO ACCESS - for feedback loop only)
+
+    In retrodict mode, read access to forecasts/, research/, and structured/
+    is blocked to prevent "future leak" from past forecasts or research notes.
 
     Args:
         session_id: Unique session identifier.
         post_id: Metaculus post ID (the URL identifier, e.g., 41976). Use 0 for sub-forecasts.
+        retrodict: If True, block read access to historical data directories.
 
     Returns:
         NotesConfig with RW and RO directories separated.
@@ -322,13 +329,27 @@ def setup_notes_folder(session_id: str, post_id: int) -> NotesConfig:
     logs_path = NOTES_BASE_PATH / "logs"
 
     session_path.mkdir(parents=True, exist_ok=True)
-    research_path.mkdir(parents=True, exist_ok=True)
-    forecasts_path.mkdir(parents=True, exist_ok=True)
     meta_path.mkdir(parents=True, exist_ok=True)
     logs_path.mkdir(parents=True, exist_ok=True)
 
     # Reasoning log file for this session (agent cannot access notes/logs/)
     reasoning_log = logs_path / f"{post_id}_{timestamp}.md"
+
+    if retrodict:
+        # In retrodict mode: only session and meta are writable, no RO access
+        # Don't create research/forecasts paths - agent shouldn't write there
+        return NotesConfig(
+            session=session_path,
+            research=session_path,  # Redirect to session (no separate research)
+            forecasts=session_path,  # Redirect to session (no separate forecasts)
+            reasoning_log=reasoning_log,
+            rw=[session_path, meta_path],
+            ro=[],  # No read-only access to historical data
+        )
+
+    # Normal mode: full access
+    research_path.mkdir(parents=True, exist_ok=True)
+    forecasts_path.mkdir(parents=True, exist_ok=True)
 
     return NotesConfig(
         session=session_path,
@@ -667,7 +688,8 @@ async def run_forecast(
         raise ValueError("Either question_id or question_context must be provided")
 
     # Setup notes folder (using post_id for directory structure)
-    notes = setup_notes_folder(session_id, post_id)
+    # In retrodict mode, block read access to historical data
+    notes = setup_notes_folder(session_id, post_id, retrodict=bool(retrodict_config))
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
@@ -675,8 +697,9 @@ async def run_forecast(
     type_guidance = get_type_specific_guidance(question_type, context)
 
     # Load past forecasts for this question (if any)
+    # Skip in retrodict mode to prevent future leak from resolution data
     history_context = ""
-    if post_id > 0:
+    if post_id > 0 and not retrodict_config:
         past_forecasts = load_past_forecasts(post_id)
         if past_forecasts:
             history_context = format_history_for_context(past_forecasts)
@@ -997,26 +1020,34 @@ async def run_forecast(
     # Auto-save forecast to history (for top-level forecasts only)
     if post_id > 0 and actual_question_id > 0:
         try:
-            save_forecast(
-                question_id=actual_question_id,
-                post_id=post_id,
-                question_title=question_title,
-                question_type=question_type,
-                summary=output.summary,
-                factors=[f.model_dump() for f in output.factors],
-                probability=output.probability,
-                logit=output.logit,
-                probabilities=output.probabilities,
-                median=output.median,
-                confidence_interval=output.confidence_interval,
-                percentiles=output.percentiles,
-                tool_metrics=metrics,
-                token_usage=output.token_usage,
-                log_path=str(thinking_log_path) if thinking_log_path.exists() else None,
-                question_published_at=context.get("published_at"),
-                question_close_time=context.get("scheduled_close_time"),
-                question_scheduled_resolve_time=context.get("scheduled_resolve_time"),
-            )
+            save_kwargs = {
+                "question_id": actual_question_id,
+                "post_id": post_id,
+                "question_title": question_title,
+                "question_type": question_type,
+                "summary": output.summary,
+                "factors": [f.model_dump() for f in output.factors],
+                "probability": output.probability,
+                "logit": output.logit,
+                "probabilities": output.probabilities,
+                "median": output.median,
+                "confidence_interval": output.confidence_interval,
+                "percentiles": output.percentiles,
+                "tool_metrics": metrics,
+                "token_usage": output.token_usage,
+                "log_path": str(thinking_log_path) if thinking_log_path.exists() else None,
+                "question_published_at": context.get("published_at"),
+                "question_close_time": context.get("scheduled_close_time"),
+                "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
+            }
+
+            if retrodict_config:
+                save_retrodict(
+                    **save_kwargs,
+                    retrodict_date=retrodict_config.date_str,
+                )
+            else:
+                save_forecast(**save_kwargs)
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
 

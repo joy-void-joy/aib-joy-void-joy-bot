@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Base path for forecast storage
 FORECASTS_BASE_PATH = Path("./notes/forecasts")
+RETRODICT_BASE_PATH = Path("./notes/retrodict")
 
 
 class SavedForecast(BaseModel):
@@ -54,6 +55,8 @@ class SavedForecast(BaseModel):
     question_scheduled_resolve_time: str | None = (
         None  # ISO timestamp when resolution expected
     )
+    # Retrodict tracking
+    retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
 
 
 def save_forecast(
@@ -136,6 +139,102 @@ def save_forecast(
     filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")
 
     logger.info("Saved forecast for question %d to %s", question_id, filepath)
+    return filepath
+
+
+def save_retrodict(
+    question_id: int,
+    post_id: int,
+    question_title: str,
+    question_type: str,
+    summary: str,
+    factors: list[dict[str, Any]],
+    retrodict_date: str,
+    *,
+    probability: float | None = None,
+    logit: float | None = None,
+    probabilities: dict[str, float] | None = None,
+    median: float | None = None,
+    confidence_interval: tuple[float, float] | None = None,
+    percentiles: dict[int, float] | None = None,
+    tool_metrics: dict[str, Any] | None = None,
+    token_usage: TokenUsage | None = None,
+    log_path: str | None = None,
+    question_published_at: str | None = None,
+    question_close_time: str | None = None,
+    question_scheduled_resolve_time: str | None = None,
+) -> Path:
+    """Save a retrodicted forecast to the retrodict storage.
+
+    Retrodicted forecasts are stored separately from live forecasts to:
+    1. Prevent mixing calibration data with real forecasts
+    2. Make the cutoff date explicit in the filename
+    3. Allow different access controls during retrodict mode
+
+    Args:
+        question_id: Metaculus question ID (for submission API).
+        post_id: Metaculus post ID (for URLs, directory structure).
+        question_title: Title of the question.
+        question_type: Type of question (binary, numeric, multiple_choice).
+        summary: Forecast summary/reasoning.
+        factors: List of evidence factors.
+        retrodict_date: YYYY-MM-DD cutoff date for data access.
+        probability: For binary questions, the final probability.
+        logit: For binary questions, the logit value.
+        probabilities: For multiple choice, mapping of option to probability.
+        median: For numeric, the median estimate.
+        confidence_interval: For numeric, the (low, high) 90% CI.
+        percentiles: For numeric, percentile estimates.
+        tool_metrics: Programmatic tracking of tool calls, durations, errors.
+        token_usage: Token usage stats (input, output, cache tokens).
+        log_path: Path to the reasoning log file in logs/.
+        question_published_at: ISO timestamp when question was published.
+        question_close_time: ISO timestamp when question closes.
+        question_scheduled_resolve_time: ISO timestamp when resolution expected.
+
+    Returns:
+        Path to the saved retrodict file.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Create directory by post_id
+    question_dir = RETRODICT_BASE_PATH / str(post_id)
+    question_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build forecast data with retrodict_date
+    forecast = SavedForecast(
+        question_id=question_id,
+        post_id=post_id,
+        question_title=question_title,
+        question_type=question_type,
+        timestamp=timestamp,
+        probability=probability,
+        logit=logit,
+        probabilities=probabilities,
+        median=median,
+        confidence_interval=confidence_interval,
+        percentiles=percentiles,
+        summary=summary,
+        factors=[f if isinstance(f, dict) else f.model_dump() for f in factors],
+        tool_metrics=tool_metrics,
+        token_usage=token_usage,
+        log_path=log_path,
+        question_published_at=question_published_at,
+        question_close_time=question_close_time,
+        question_scheduled_resolve_time=question_scheduled_resolve_time,
+        retrodict_date=retrodict_date,
+    )
+
+    # Include retrodict_date in filename for easy identification
+    filepath = question_dir / f"{retrodict_date}_{timestamp}.json"
+    filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")
+
+    logger.info(
+        "Saved retrodict forecast for question %d (cutoff %s) to %s",
+        question_id,
+        retrodict_date,
+        filepath,
+    )
     return filepath
 
 

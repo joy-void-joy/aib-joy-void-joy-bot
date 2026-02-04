@@ -116,10 +116,16 @@ uv run forecast retrodict 41835 --no-blind
 The agent forecasts as if it were making the prediction at the original question date, using only information that was available at that time.
 
 **What retrodict outputs:**
-- Saves forecasts to `notes/forecasts/` with `is_retrodict: true` flag
+- Saves forecasts to `notes/retrodict/<post_id>/<forecast_date>_<timestamp>.json`
+- The `retrodict_date` field in the JSON records the cutoff date used
+- Filename includes the cutoff date for easy identification
 - Shows actual resolution and final CP for comparison
 - Computes Brier scores for binary questions
-- Tracks `forecast_date` used for time restriction
+
+**Retrodict vs Live forecasts:**
+- Live forecasts go to `notes/forecasts/`
+- Retrodicted forecasts go to `notes/retrodict/` (separate folder)
+- This prevents mixing calibration data with real predictions
 
 #### Future-Leak Detection
 
