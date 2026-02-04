@@ -145,7 +145,9 @@ def list_forecasts(
         typer.echo("No forecasts found")
         return
 
-    typer.echo(f"\n{'Post ID':<8} {'Timestamp':<16} {'Calls':<6} {'M':<2} {'L':<2} Title")
+    typer.echo(
+        f"\n{'Post ID':<8} {'Timestamp':<16} {'Calls':<6} {'M':<2} {'L':<2} Title"
+    )
     typer.echo("-" * 80)
     for f in forecasts:
         metrics_indicator = "✓" if f["has_metrics"] else "-"

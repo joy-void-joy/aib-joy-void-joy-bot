@@ -127,7 +127,9 @@ def backfill(
             except Exception as e:
                 print(f"  Error checking {post_id}: {e}")
 
-        print(f"\nSummary: {updated} updated, {already_marked} already marked, {not_submitted} not submitted")
+        print(
+            f"\nSummary: {updated} updated, {already_marked} already marked, {not_submitted} not submitted"
+        )
 
     asyncio.run(_backfill())
 
@@ -150,9 +152,13 @@ def check(
         try:
             q = await client.get_question_by_post_id(post_id)
             print(f"   Title: {q.question_text[:60]}...")
-            print(f"   timestamp_of_my_last_forecast: {q.timestamp_of_my_last_forecast}")
+            print(
+                f"   timestamp_of_my_last_forecast: {q.timestamp_of_my_last_forecast}"
+            )
             print(f"   already_forecast: {q.timestamp_of_my_last_forecast is not None}")
-            print(f"   scheduled_close_time: {getattr(q, 'scheduled_close_time', 'N/A')}")
+            print(
+                f"   scheduled_close_time: {getattr(q, 'scheduled_close_time', 'N/A')}"
+            )
             print(f"   actual_close_time: {getattr(q, 'actual_close_time', 'N/A')}")
         except Exception as e:
             print(f"   Error: {e}")
@@ -164,7 +170,9 @@ def check(
 
         for q in questions:
             print(f"\n   Question {q.id_of_post}: {q.question_text[:40]}...")
-            print(f"   timestamp_of_my_last_forecast: {q.timestamp_of_my_last_forecast}")
+            print(
+                f"   timestamp_of_my_last_forecast: {q.timestamp_of_my_last_forecast}"
+            )
 
             # Check if my_forecasts is in the raw API JSON
             my_forecasts = q.api_json.get("question", {}).get("my_forecasts")

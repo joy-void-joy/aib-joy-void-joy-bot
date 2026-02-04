@@ -251,9 +251,9 @@ No comment needed. The behavior is self-evident to anyone familiar with config f
 
 ## Helper Scripts
 
-The `.claude/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json. Always use `uv run` to ensure the correct virtualenv. If the existing scripts don't cover your use case, create a new script.
+The `.claude/plugins/aib/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json. Always use `uv run` to ensure the correct virtualenv. If the existing scripts don't cover your use case, create a new script.
 
-If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/scripts/` instead. Then update this section of CLAUDE.md to document it.
+If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/plugins/aib/scripts/` instead. Then update this section of CLAUDE.md to document it.
 
 **Write scripts in Python using [typer](https://typer.tiangolo.com/)** for consistent CLI interfaces with automatic help text and argument parsing. Use **[sh](https://sh.readthedocs.io/)** for shell commands instead of `subprocess`.
 
@@ -265,20 +265,20 @@ Explore package APIs—never use `python -c "import ..."` or ad-hoc REPL command
 
 ```bash
 # Show summary of a class (methods, properties, constants)
-uv run python .claude/scripts/inspect_api.py <module.Class>
+uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class>
 
 # Show signature of a specific method
-uv run python .claude/scripts/inspect_api.py <module.Class.method>
+uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class.method>
 
 # Show full help() output
-uv run python .claude/scripts/inspect_api.py <module.Class> --help-full
+uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class> --help-full
 ```
 
 Examples:
 ```bash
-uv run python .claude/scripts/inspect_api.py forecasting_tools.SmartSearcher
-uv run python .claude/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
-uv run python .claude/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
+uv run python .claude/plugins/aib/scripts/inspect_api.py forecasting_tools.SmartSearcher
+uv run python .claude/plugins/aib/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
+uv run python .claude/plugins/aib/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
 ```
 
 ### module_info.py
@@ -287,13 +287,13 @@ Get paths and source code for installed Python modules. Use this instead of `uv 
 
 ```bash
 # Get the file path of a module
-uv run python .claude/scripts/module_info.py path forecasting_tools.helpers.asknews_searcher
+uv run python .claude/plugins/aib/scripts/module_info.py path forecasting_tools.helpers.asknews_searcher
 
 # View module source code (first 100 lines by default)
-uv run python .claude/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher
+uv run python .claude/plugins/aib/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher
 
 # View more lines
-uv run python .claude/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher --lines 200
+uv run python .claude/plugins/aib/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher --lines 200
 ```
 
 ### new_worktree.py
@@ -302,16 +302,16 @@ Create a new git worktree with Claude session migration. Use this instead of man
 
 ```bash
 # Create new worktree branching from current branch
-uv run python .claude/scripts/new_worktree.py <worktree-name>
+uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name>
 
 # Migrate a specific session instead of most recent
-uv run python .claude/scripts/new_worktree.py <worktree-name> --session-id <uuid>
+uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --session-id <uuid>
 
 # Skip uv sync (if you'll do it manually)
-uv run python .claude/scripts/new_worktree.py <worktree-name> --no-sync
+uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --no-sync
 
 # Skip copying logs/ directory
-uv run python .claude/scripts/new_worktree.py <worktree-name> --no-copy-data
+uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --no-copy-data
 ```
 
 The script:
@@ -328,16 +328,16 @@ Collect calibration data from resolved forecasts. Used by the `/feedback-loop` c
 
 ```bash
 # Collect from default tournament (AIB Spring 2026)
-uv run python .claude/scripts/feedback_collect.py
+uv run python .claude/plugins/aib/scripts/feedback_collect.py
 
 # Collect from specific tournament
-uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
 
 # Collect all resolved questions (ignore last run timestamp)
-uv run python .claude/scripts/feedback_collect.py --all-time
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
 
 # Collect only questions resolved after a date
-uv run python .claude/scripts/feedback_collect.py --since 2026-01-01
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --since 2026-01-01
 ```
 
 The script:
@@ -352,16 +352,16 @@ Link forecasts to their logs and metrics. Useful for debugging and feedback loop
 
 ```bash
 # Show details for a specific forecast
-uv run python .claude/scripts/trace_forecast.py show 41906
+uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
 
 # Show with full tool-by-tool metrics
-uv run python .claude/scripts/trace_forecast.py show 41906 --verbose
+uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906 --verbose
 
 # List recent forecasts with metrics summary
-uv run python .claude/scripts/trace_forecast.py list
+uv run python .claude/plugins/aib/scripts/trace_forecast.py list
 
 # Show forecasts with tool errors
-uv run python .claude/scripts/trace_forecast.py errors
+uv run python .claude/plugins/aib/scripts/trace_forecast.py errors
 ```
 
 The script displays:
@@ -376,13 +376,13 @@ Debug tools for Metaculus API parsing and MCP error propagation.
 
 ```bash
 # Test Metaculus API parsing
-uv run python .claude/scripts/debug.py metaculus --tournament spring-aib-2026
+uv run python .claude/plugins/aib/scripts/debug.py metaculus --tournament spring-aib-2026
 
 # Test only raw API parsing (no client)
-uv run python .claude/scripts/debug.py metaculus --raw-only
+uv run python .claude/plugins/aib/scripts/debug.py metaculus --raw-only
 
 # Test MCP error flag propagation (SDK workaround verification)
-uv run python .claude/scripts/debug.py mcp-error
+uv run python .claude/plugins/aib/scripts/debug.py mcp-error
 ```
 
 ### aggregate_metrics.py
@@ -391,16 +391,16 @@ Aggregate metrics across all forecasts for analysis.
 
 ```bash
 # Show summary (counts, costs, tokens)
-uv run python .claude/scripts/aggregate_metrics.py summary
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
 
 # Show tool usage aggregates
-uv run python .claude/scripts/aggregate_metrics.py tools
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py tools
 
 # Show metrics by question type
-uv run python .claude/scripts/aggregate_metrics.py by-type
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py by-type
 
 # Show forecasts with high error rates
-uv run python .claude/scripts/aggregate_metrics.py errors
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py errors
 ```
 
 ### resolution_update.py
@@ -409,16 +409,16 @@ Fetch resolutions from Metaculus and update saved forecasts.
 
 ```bash
 # Check for and apply resolution updates
-uv run python .claude/scripts/resolution_update.py check
+uv run python .claude/plugins/aib/scripts/resolution_update.py check
 
 # Dry run (don't modify files)
-uv run python .claude/scripts/resolution_update.py check --dry-run
+uv run python .claude/plugins/aib/scripts/resolution_update.py check --dry-run
 
 # Show resolution status of all forecasts
-uv run python .claude/scripts/resolution_update.py status
+uv run python .claude/plugins/aib/scripts/resolution_update.py status
 
 # Manually set resolution for a forecast
-uv run python .claude/scripts/resolution_update.py set 12345 yes
+uv run python .claude/plugins/aib/scripts/resolution_update.py set 12345 yes
 ```
 
 ### calibration_report.py
@@ -427,14 +427,14 @@ Generate calibration reports from resolved forecasts.
 
 ```bash
 # Show calibration summary (Brier scores, buckets)
-uv run python .claude/scripts/calibration_report.py summary
+uv run python .claude/plugins/aib/scripts/calibration_report.py summary
 
 # Show detailed forecast-by-forecast results
-uv run python .claude/scripts/calibration_report.py detail
+uv run python .claude/plugins/aib/scripts/calibration_report.py detail
 
 # Export calibration data to JSON
-uv run python .claude/scripts/calibration_report.py export
-uv run python .claude/scripts/calibration_report.py export -o custom_path.json
+uv run python .claude/plugins/aib/scripts/calibration_report.py export
+uv run python .claude/plugins/aib/scripts/calibration_report.py export -o custom_path.json
 ```
 
 ### forecast_queue.py
@@ -443,16 +443,16 @@ Manage forecasting queue and priorities. Shows questions that need forecasting, 
 
 ```bash
 # Show forecasting status for a tournament
-uv run python .claude/scripts/forecast_queue.py status aib
+uv run python .claude/plugins/aib/scripts/forecast_queue.py status aib
 
 # Show questions closing soon that haven't been forecast
-uv run python .claude/scripts/forecast_queue.py upcoming aib --days 7
+uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming aib --days 7
 
 # Include already-forecasted questions in the list
-uv run python .claude/scripts/forecast_queue.py upcoming aib --all
+uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming aib --all
 
 # Show recently resolved questions that we missed
-uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
 ```
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup)
@@ -488,6 +488,50 @@ All Claude Code settings modifications should be **project-level** (in `.claude/
 Even if the question is open-ended and just needs a text response, use `AskUserQuestion` with options that include a blank/custom input option. This allows the user to parse responses as structured notifications rather than scanning through conversation summaries.
 
 **Do not** embed questions in regular text responses—always route them through the tool.
+
+### Proposing Changes
+
+When brainstorming or suggesting improvements, always use `AskUserQuestion` to propose changes before implementing them:
+
+- **Propose, don't assume**: Use AskUserQuestion before making changes
+- **Show context**: Show the relevant current state before proposing changes
+- **Group related changes**: Batch related improvements into single proposals
+- **Explain rationale**: Every suggestion should include why it would help
+- **Offer alternatives**: When there are multiple valid approaches, present options
+
+### Command Evolution
+
+**After every command invocation**, reflect on how it was actually used vs. how it was documented:
+
+1. **Compare intent vs usage**: Did the command serve its documented purpose, or was it adapted?
+2. **Notice patterns**: When the user provides documentation, corrects your approach, or redirects focus, that's a signal the command should evolve.
+3. **Proactively propose updates**: Use AskUserQuestion to suggest command improvements based on observed usage.
+
+**Evolution signals to watch for:**
+- User provides external docs → Add doc-fetching or reference to command
+- User corrects your approach → Update command to prevent future errors
+- User asks for something the command should cover → Expand command scope
+- User ignores sections → Consider simplifying
+
+**When to propose updates:**
+- At the end of a command invocation that diverged from documentation
+- When you notice the same correction being made repeatedly
+- When external documentation reveals better approaches
+
+### Consulting External Documentation
+
+When questions involve Claude Code, Agent SDK, or Claude API:
+
+1. **Use the claude-code-guide subagent**:
+   ```
+   Task(subagent_type="claude-code-guide", prompt="<specific question>")
+   ```
+
+2. **Fetch docs directly** for specific pages:
+   - `WebFetch(url="https://docs.claude.com/en/agent-sdk/<topic>")`
+   - `WebFetch(url="https://docs.claude.com/en/claude-code/<topic>")`
+
+When the user provides documentation links, incorporate that knowledge into CLAUDE.md or relevant commands.
 
 ## When in Doubt
 
