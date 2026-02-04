@@ -16,6 +16,10 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 - **No community predictions available** — The AIB tournament does not expose community predictions, so we cannot use them for sanity-checking
 - **CDF required for numeric questions** — Numeric and discrete questions require a 201-point CDF (cumulative distribution function), not just point estimates
 
+---
+
+# Getting Started
+
 ## Reference Files
 
 - **src/aib/cli.py**: CLI entry point (`uv run forecast test <question_id>`)
@@ -75,31 +79,39 @@ uv run pytest -k "test_forecast"
 ```
 
 **Test organization:**
+
 - `tests/unit/` - Unit tests (mock external APIs)
 - `tests/integration/` - Integration tests (require API keys, use `@pytest.mark.integration`)
 
 ## Debugging
 
 **When a forecast fails:**
+
 1. Check the notes folder (`notes/sessions/<session_id>/`) for intermediate reasoning
 2. Run with `--verbose` flag for detailed tool call logging
 3. Check API key configuration: missing keys log warnings at startup
 
 **Common issues:**
+
 - `METACULUS_TOKEN` not set → Startup fails (required)
 - `EXA_API_KEY` not set → Web search fails
 - `FRED_API_KEY` not set → FRED economic data tools fail
 - Docker not running → Sandbox code execution fails
 
 **Inspecting tool outputs:**
+
 - Tool results are JSON-encoded; parse with `json.loads()` if debugging
 - Check `src/aib/tools/*.py` for expected input/output schemas
+
+---
+
+# Development Workflow
 
 ## Git Workflow
 
 This project uses **git worktrees** (not regular branches) to develop multiple features in parallel.
 
-**IMPORTANT:** Never commit *code* directly to `main`. Always work in a worktree for code changes.
+**IMPORTANT:** Never commit _code_ directly to `main`. Always work in a worktree for code changes.
 
 **Exception:** Data commits (`data(forecasts):`) can go directly to main—forecast outputs don't need review.
 
@@ -108,32 +120,32 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 - **`git checkout -b`**: Creates a branch but stays in the same directory. Switching branches changes all files in place.
 - **`git worktree add`**: Creates a new directory with its own working copy. Multiple branches can be worked on simultaneously in separate directories.
 
-### If already in a worktree:
+### If already in a worktree
 
 **You are typically already in a worktree subbranch.** Check with `git worktree list` to confirm. If you're in a feature worktree, just work directly—no need to create another worktree or branch out.
 
-### When implementing a feature:
+### When implementing a feature
 
 1. **Create a worktree** (if the user hasn't already created one):
    ```bash
    git worktree add ./worktrees/feat-name -b feat/feature-name
    cd ./worktrees/feat-name
    ```
-2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together. This creates a clear history that will be rebased before merging.
+2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
-4. **Rebase before merging** — Once the feature is complete, rebase to create semantically meaningful commits. Squash fixups, reorder for clarity, and write descriptive commit messages.
+4. **Rebase before merging** — Once complete, rebase to create semantically meaningful commits. Squash fixups, reorder for clarity.
 5. Create a PR for review
 6. **Clean up worktree** after merge:
    ```bash
    git worktree remove ./worktrees/feat-name
    ```
 
-### Commit Best Practices
+### Commit Guidelines
 
-- **Commit before responding** — Always commit your work before responding to the user. This ensures progress is saved and creates natural checkpoints. Don't accumulate multiple changes across responses.
-- **Commit early, commit often** — Don't wait until a feature is "done" to commit. Frequent commits provide checkpoints and make rebasing easier.
-- **Keep commits atomic** — Each commit should do one thing. If you need to describe your commit with "and", it should probably be two commits.
-- **History will be rebased** — Don't worry about perfect commit messages during development. The history will be cleaned up via interactive rebase before the PR is merged.
+- **Commit before responding** — Always commit your work before responding to the user. Don't accumulate multiple changes across responses.
+- **Commit early, commit often** — Frequent commits provide checkpoints and make rebasing easier.
+- **Keep commits atomic** — Each commit should do one thing. If you need "and" in your message, it should be two commits.
+- **History will be rebased** — Don't worry about perfect messages during development. The history will be cleaned up before merge.
 - **Meaningful final commits** — After rebasing, each commit should tell a story: what changed and why. The final history should be easy to read and bisect.
 
 ### Commit Message Format
@@ -141,6 +153,7 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 Use conventional commit syntax: `type(scope): description`
 
 **Types:**
+
 - `feat` — New feature or capability
 - `fix` — Bug fix
 - `refactor` — Code change that neither fixes a bug nor adds a feature
@@ -151,11 +164,11 @@ Use conventional commit syntax: `type(scope): description`
 - `data` — Generated data and outputs (forecasts, metrics, logs)
 
 **Examples:**
+
 ```
 feat(agent): add permission handler for read-only directories
 fix(tools): handle missing API key gracefully
 refactor(sandbox): extract Docker client initialization
-docs(readme): add installation instructions
 meta(claude): update commit message guidelines
 data(forecasts): add Feb 4 2026 forecast batch
 ```
@@ -165,79 +178,92 @@ data(forecasts): add Feb 4 2026 forecast batch
 Forecast outputs use `data(forecasts):` and can be committed directly to main (no worktree needed).
 
 **What goes in a forecast commit:**
+
 - Forecast markdown files (`notes/forecasts/<question_id>/`)
-- Meta-reflections about the forecast (include in the forecast file itself, not separate docs)
+- Meta-reflections about the forecast (include in the forecast file itself)
 - Resolution updates when questions resolve
 
 **What does NOT go in a forecast commit:**
+
 - Code changes (use worktree + PR)
-- Standalone reflection documents (if analyzing multiple forecasts, use `docs(meta):` but this is for cross-cutting analysis, not per-forecast reflections)
+- Standalone reflection documents (use `docs(meta):` for cross-cutting analysis)
 
 **Note:** The `worktrees/` directory is gitignored.
 
 ## Code Style & Dependencies
 
 ### Primary Libraries
-- **claude-agent-sdk**: Primary framework for building agents
+
+- **claude-agent-sdk**: Primary framework for building agents (use `query()` for one-shot LLM calls with structured output)
 - **pydantic**: For data validation and settings
-- **pydantic-ai**: Use when calling Claude outside of Agent SDK (never manually parse LLM output)
 - **pydantic-settings**: For configuration (not dotenv)
 
 ### forecasting-tools Library Notes
 
-The `forecasting-tools` library has some type annotation limitations to be aware of:
+The `forecasting-tools` library has some type annotation limitations:
 
-1. **Question type polymorphism**: `MetaculusApi.get_question_by_post_id()` and `get_questions_matching_filter()` return `MetaculusQuestion`, but the actual runtime objects are subclasses (`BinaryQuestion`, `NumericQuestion`, `MultipleChoiceQuestion`, etc.). Use `isinstance()` checks when accessing subclass-specific attributes.
+1. **Question type polymorphism**: `MetaculusApi.get_question_by_post_id()` returns `MetaculusQuestion`, but actual objects are subclasses (`BinaryQuestion`, `NumericQuestion`, etc.). Use `isinstance()` checks.
 
-2. **`community_prediction_at_access_time`**: This attribute only exists on `BinaryQuestion`, not on the base `MetaculusQuestion`. Always check `isinstance(q, BinaryQuestion)` before accessing it.
+2. **`community_prediction_at_access_time`**: Only exists on `BinaryQuestion`. Always check `isinstance(q, BinaryQuestion)` first.
 
-3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links (not `get_coherence_links_for_question`). Check method names with the `inspect_api.py` script.
+3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links. Check method names with `inspect_api.py`.
 
 ### Type Safety Requirements
+
 - **No bare `except Exception`** — always catch specific exceptions
 - **Every function must specify input and output types**
 - **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
 - Use `TypedDict` and Pydantic models for structured data
 - Never manually parse Claude/agent output — use structured outputs via pydantic
-- **Never use `# type: ignore`** — Ask the user how to properly fix type errors instead of suppressing them
+- **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
 ### Code as Documentation
 
 The codebase should read as a **monolithic source of truth**—understandable without any knowledge of its history.
 
-**The test:** Before adding a comment, ask: "Would this comment exist if the code had always been written this way?" If the answer is no—if you're only adding it because you modified the line—don't add it.
+**The test:** Before adding a comment, ask: "Would this comment exist if the code had always been written this way?" If no—don't add it.
 
 **Do not:**
+
 - Add comments to explain modifications you made
 - Reference what code used to do (e.g., "Previously this returned None")
 - Add inline comments when changing a line (this is almost always explaining the change, not the code)
 - Use phrases like "now", "new", "updated", "fixed", or "changed" in comments
 
 **Do:**
+
 - Write comments that would make sense to someone who never saw previous versions
 - Use commit messages for change history, not code comments
 - Only add comments that document genuinely non-obvious behavior
 
 **Example — Bad:**
+
 ```python
 env_file=(".env", ".env.local"),  # .env.local overrides .env
 ```
-This comment was added because the line was changed. If the code had always supported multiple env files, no one would bother commenting that the second one overrides the first—that's standard behavior.
+
+Why this is bad: The comment only exists because the line was *changed*. If the code had always supported multiple env files, no developer would comment that later files override earlier ones—that's how all config file systems work. The comment explains the modification, not the code.
 
 **Example — Good:**
+
 ```python
 env_file=(".env", ".env.local"),
 ```
-No comment needed. The behavior is self-evident to anyone familiar with config file precedence.
+
+Why this is good: The behavior is self-evident to anyone familiar with configuration precedence. No comment needed. The git history explains *when* and *why* multiple env files were added.
+
+**The underlying principle:** Comments that explain *what you changed* create noise for future readers who don't care about the change—they just need to understand the current code. Those explanations belong in commit messages, where they're preserved but don't clutter the codebase.
 
 ### Error Handling Philosophy
 
 **MCP tools should:**
-- Return `{"content": [...], "is_error": True}` for recoverable errors (let agent retry/adapt)
+
+- Return `{"content": [...], "is_error": True}` for recoverable errors
 - Log exceptions with `logger.exception()` for debugging
 - Include actionable error messages (what failed, why, what to try)
 
 **Agent code should:**
+
 - Raise exceptions for unrecoverable errors (missing config, invalid state)
 - Use the `with_retry` decorator for transient failures (HTTP timeouts, rate limits)
 - Validate inputs early with Pydantic models
@@ -245,162 +271,85 @@ No comment needed. The behavior is self-evident to anyone familiar with config f
 **Never silently swallow errors** — either handle them meaningfully or let them propagate.
 
 ### Tools
-- **uv**: Package manager. Use `uv add <package>` to install packages (never edit pyproject.toml directly)
+
+- **uv**: Package manager. Use `uv add <package>` (never edit pyproject.toml directly)
 - **ruff**: Formatting and linting
 - **pyright**: Type checking
 
+---
+
+# Tooling
+
 ## Helper Scripts
 
-The `.claude/plugins/aib/scripts/` directory contains reusable scripts for common tasks. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json. Always use `uv run` to ensure the correct virtualenv. If the existing scripts don't cover your use case, create a new script.
+The `.claude/plugins/aib/scripts/` directory contains reusable scripts. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json.
 
-If you find yourself running the same kind of command repeatedly—whether it's a Python snippet, a bash pipeline, an API call, a data transformation, or any other programmatic operation—**stop and create a script** in `.claude/plugins/aib/scripts/` instead. Then update this section of CLAUDE.md to document it.
+If you find yourself running the same command repeatedly, **create a script** in `.claude/plugins/aib/scripts/` and document it here.
 
-**Write scripts in Python using [typer](https://typer.tiangolo.com/)** for consistent CLI interfaces with automatic help text and argument parsing. Use **[sh](https://sh.readthedocs.io/)** for shell commands instead of `subprocess`.
-
-This applies to any repetitive programmatic call, not just Python functions.
+**Write scripts in Python using [typer](https://typer.tiangolo.com/)** for CLI interfaces. Use **[sh](https://sh.readthedocs.io/)** for shell commands instead of `subprocess`.
 
 ### inspect_api.py
 
 Explore package APIs—never use `python -c "import ..."` or ad-hoc REPL commands.
 
 ```bash
-# Show summary of a class (methods, properties, constants)
 uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class>
-
-# Show signature of a specific method
 uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class.method>
-
-# Show full help() output
 uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class> --help-full
-```
-
-Examples:
-```bash
-uv run python .claude/plugins/aib/scripts/inspect_api.py forecasting_tools.SmartSearcher
-uv run python .claude/plugins/aib/scripts/inspect_api.py forecasting_tools.MetaculusApi.get_question_by_post_id
-uv run python .claude/plugins/aib/scripts/inspect_api.py mcp.server.fastmcp.FastMCP --help-full
 ```
 
 ### module_info.py
 
-Get paths and source code for installed Python modules. Use this instead of `uv run python -c "import x; print(x.__file__)"`.
+Get paths and source code for installed Python modules.
 
 ```bash
-# Get the file path of a module
-uv run python .claude/plugins/aib/scripts/module_info.py path forecasting_tools.helpers.asknews_searcher
-
-# View module source code (first 100 lines by default)
-uv run python .claude/plugins/aib/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher
-
-# View more lines
-uv run python .claude/plugins/aib/scripts/module_info.py source forecasting_tools.helpers.asknews_searcher --lines 200
+uv run python .claude/plugins/aib/scripts/module_info.py path <module>
+uv run python .claude/plugins/aib/scripts/module_info.py source <module> [--lines N]
 ```
 
 ### new_worktree.py
 
-Create a new git worktree with Claude session migration. Use this instead of manually running `git worktree add` when you want to preserve Claude Code context in the new worktree.
+Create a new git worktree with Claude session migration.
 
 ```bash
-# Create new worktree branching from current branch
-uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name>
-
-# Migrate a specific session instead of most recent
-uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --session-id <uuid>
-
-# Skip uv sync (if you'll do it manually)
-uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --no-sync
-
-# Skip copying logs/ directory
-uv run python .claude/plugins/aib/scripts/new_worktree.py <worktree-name> --no-copy-data
+uv run python .claude/plugins/aib/scripts/new_worktree.py <name> [--session-id UUID] [--no-sync] [--no-copy-data]
 ```
 
-The script:
-1. Creates a new worktree in the `tree/` directory with a new branch
-2. Copies `.env.local` and `logs/` directory (notes/ is tracked in git)
-3. Runs `uv sync --all-groups --all-extras`
-4. Migrates the most recent Claude session to the new worktree
-
-After running, `cd` to the new worktree and run `claude --resume` to continue the session.
+Creates worktree in `tree/`, copies `.env.local` and `logs/`, runs `uv sync`, migrates Claude session. After running, `cd` to the worktree and run `claude --resume`.
 
 ### feedback_collect.py
 
-Collect calibration data from resolved forecasts. Used by the `/feedback-loop` command to gather metrics before analysis.
+Collect calibration data from resolved forecasts.
 
 ```bash
-# Collect from default tournament (AIB Spring 2026)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py
-
-# Collect from specific tournament
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
-
-# Collect all resolved questions (ignore last run timestamp)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
-
-# Collect only questions resolved after a date
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --since 2026-01-01
+uv run python .claude/plugins/aib/scripts/feedback_collect.py [--tournament X] [--all-time] [--since DATE]
 ```
-
-The script:
-1. Fetches resolved questions from Metaculus
-2. Matches them to forecasts in `notes/forecasts/`
-3. Computes Brier scores, log scores, and calibration buckets
-4. Saves metrics to `notes/feedback_loop/<timestamp>_metrics.json`
 
 ### trace_forecast.py
 
-Link forecasts to their logs and metrics. Useful for debugging and feedback loop analysis.
+Link forecasts to their logs and metrics.
 
 ```bash
-# Show details for a specific forecast
-uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
-
-# Show with full tool-by-tool metrics
-uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906 --verbose
-
-# List recent forecasts with metrics summary
+uv run python .claude/plugins/aib/scripts/trace_forecast.py show <id> [--verbose]
 uv run python .claude/plugins/aib/scripts/trace_forecast.py list
-
-# Show forecasts with tool errors
 uv run python .claude/plugins/aib/scripts/trace_forecast.py errors
 ```
-
-The script displays:
-- Forecast details (probability, logit, timestamp)
-- Tool metrics (call counts, error rates, durations)
-- Log file paths and sizes
-- Error breakdowns by tool
 
 ### debug.py
 
 Debug tools for Metaculus API parsing and MCP error propagation.
 
 ```bash
-# Test Metaculus API parsing
-uv run python .claude/plugins/aib/scripts/debug.py metaculus --tournament spring-aib-2026
-
-# Test only raw API parsing (no client)
-uv run python .claude/plugins/aib/scripts/debug.py metaculus --raw-only
-
-# Test MCP error flag propagation (SDK workaround verification)
+uv run python .claude/plugins/aib/scripts/debug.py metaculus [--tournament X] [--raw-only]
 uv run python .claude/plugins/aib/scripts/debug.py mcp-error
 ```
 
 ### aggregate_metrics.py
 
-Aggregate metrics across all forecasts for analysis.
+Aggregate metrics across all forecasts.
 
 ```bash
-# Show summary (counts, costs, tokens)
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
-
-# Show tool usage aggregates
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py tools
-
-# Show metrics by question type
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py by-type
-
-# Show forecasts with high error rates
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py errors
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary|tools|by-type|errors
 ```
 
 ### resolution_update.py
@@ -408,17 +357,9 @@ uv run python .claude/plugins/aib/scripts/aggregate_metrics.py errors
 Fetch resolutions from Metaculus and update saved forecasts.
 
 ```bash
-# Check for and apply resolution updates
-uv run python .claude/plugins/aib/scripts/resolution_update.py check
-
-# Dry run (don't modify files)
-uv run python .claude/plugins/aib/scripts/resolution_update.py check --dry-run
-
-# Show resolution status of all forecasts
+uv run python .claude/plugins/aib/scripts/resolution_update.py check [--dry-run]
 uv run python .claude/plugins/aib/scripts/resolution_update.py status
-
-# Manually set resolution for a forecast
-uv run python .claude/plugins/aib/scripts/resolution_update.py set 12345 yes
+uv run python .claude/plugins/aib/scripts/resolution_update.py set <id> <yes|no>
 ```
 
 ### calibration_report.py
@@ -426,99 +367,148 @@ uv run python .claude/plugins/aib/scripts/resolution_update.py set 12345 yes
 Generate calibration reports from resolved forecasts.
 
 ```bash
-# Show calibration summary (Brier scores, buckets)
-uv run python .claude/plugins/aib/scripts/calibration_report.py summary
-
-# Show detailed forecast-by-forecast results
-uv run python .claude/plugins/aib/scripts/calibration_report.py detail
-
-# Export calibration data to JSON
-uv run python .claude/plugins/aib/scripts/calibration_report.py export
-uv run python .claude/plugins/aib/scripts/calibration_report.py export -o custom_path.json
+uv run python .claude/plugins/aib/scripts/calibration_report.py summary|detail
+uv run python .claude/plugins/aib/scripts/calibration_report.py export [-o FILE]
 ```
 
 ### forecast_queue.py
 
-Manage forecasting queue and priorities. Shows questions that need forecasting, sorted by urgency.
+Manage forecasting queue and priorities.
 
 ```bash
-# Show forecasting status for a tournament
-uv run python .claude/plugins/aib/scripts/forecast_queue.py status aib
-
-# Show questions closing soon that haven't been forecast
-uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming aib --days 7
-
-# Include already-forecasted questions in the list
-uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming aib --all
-
-# Show recently resolved questions that we missed
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
+uv run python .claude/plugins/aib/scripts/forecast_queue.py status <tournament>
+uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming <tournament> [--days N] [--all]
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed <tournament> [--days N]
 ```
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup)
 
 ## Settings & Configuration
 
-All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level, so they're shared with the team.
+All Claude Code settings modifications should be **project-level** (in `.claude/settings.json`), not user-level.
 
 ### Merging Local Settings
 
-**Every time you ask for permissions or respond to the user**, check if `.claude/settings.local.json` exists. If it does, review it for sensible defaults that should be merged into `.claude/settings.json`. This ensures useful permission patterns discovered during development get committed to the shared config.
+**Every time you respond to the user**, check if `.claude/settings.local.json` exists. If it does, review it for sensible defaults to merge into `.claude/settings.json`. This ensures useful permission patterns get committed to the shared config.
 
-`.claude/settings.local.json` is gitignored and contains user-specific or experimental settings. When a pattern proves useful, merge it to `.claude/settings.json` so the whole team benefits.
+---
 
-## Planning & Documentation
-
-**PLAN.md** is the source of truth for what has been built and what remains. Keep it synchronized with reality:
-- **Reflect actual state**: PLAN.md must accurately describe what exists in the codebase, not aspirational designs
-- Mark completed items when finishing work (`[x]`)
-- Update architecture decisions as they evolve
-- Add new tasks discovered during implementation
-- Keep status indicators current (`[ ]` pending, `[x]` done, `[~]` in progress)
-- **No speculative code**: Don't include code snippets for unimplemented features—describe what to build, not how
+# Process & Communication
 
 ## Asking Questions
 
 **Always use the `AskUserQuestion` tool** instead of asking questions in plain text. This applies to:
+
 - Clarifying requirements or ambiguous instructions
 - Offering choices between implementation approaches
 - Confirming before destructive or irreversible actions
+- Proposing changes or improvements
 - Any situation where you need user input before proceeding
 
-Even if the question is open-ended and just needs a text response, use `AskUserQuestion` with options that include a blank/custom input option. This allows the user to parse responses as structured notifications rather than scanning through conversation summaries.
+Even for open-ended questions, use `AskUserQuestion` with options that include a custom input option. This allows structured notification parsing.
 
-**Do not** embed questions in regular text responses—always route them through the tool.
-
-### Proposing Changes
-
-When brainstorming or suggesting improvements, always use `AskUserQuestion` to propose changes before implementing them:
+**When proposing changes:**
 
 - **Propose, don't assume**: Use AskUserQuestion before making changes
-- **Show context**: Show the relevant current state before proposing changes
-- **Group related changes**: Batch related improvements into single proposals
+- **Show context**: Show relevant current state before proposing
 - **Explain rationale**: Every suggestion should include why it would help
-- **Offer alternatives**: When there are multiple valid approaches, present options
+- **Offer alternatives**: Present options when multiple valid approaches exist
 
-### Command Evolution
+**When in doubt, ask.** Err on the side of asking questions rather than making assumptions.
 
-**After every command invocation**, reflect on how it was actually used vs. how it was documented:
+## Planning & Documentation
+
+**PLAN.md** is the source of truth for what has been built and what remains. Keep it synchronized with reality:
+
+- **Reflect actual state**: PLAN.md must describe what exists, not aspirational designs
+- Mark completed items when finishing work (`[x]`)
+- Update architecture decisions as they evolve
+- Add new tasks discovered during implementation
+- Keep status indicators current (`[ ]` pending, `[x]` done, `[~]` in progress)
+- **No speculative code**: Describe what to build, not how
+
+## Code Change Reports
+
+After completing code modifications, provide an **extensive report** including:
+
+1. **Summary** — One paragraph explaining the overall change and its purpose
+
+2. **Files Modified** — List each file with path, nature of change, and brief description
+
+3. **Detailed Changes** — For each significant change:
+   - **Context**: Show surrounding code (10-20 lines)
+   - **Before/After**: If modifying existing code, show both versions
+   - **Rationale**: Why this approach was chosen
+
+4. **Architectural Considerations** — Did you consider unifying with existing patterns? Are there similar functions that could be consolidated?
+
+5. **Testing** — What tests were added/modified?
+
+**Code block format:**
+
+```python
+# src/aib/tools/example.py (lines 45-67)
+
+def existing_function():
+    """Show enough context to understand the change."""
+    # ... existing code ...
+    new_behavior = do_something_different()
+    # ... more existing code ...
+    return result
+```
+
+**Example report:**
+
+```markdown
+## Summary
+
+Refactored URL handling to use standard library instead of manual string manipulation.
+
+## Files Modified
+
+- `src/aib/agent/retrodict.py` — Simplified Wayback URL construction
+- `tests/unit/test_retrodict.py` — Updated test expectations
+
+## Detailed Changes
+
+### 1. Wayback URL Construction (retrodict.py:83-97)
+
+**Before:**
+[code block showing old implementation]
+
+**After:**
+[code block showing new implementation]
+
+**Rationale:** The Wayback Machine accepts raw URLs directly—no encoding needed.
+The previous `quote()` call was breaking query parameters.
+
+## Architectural Considerations
+
+- Checked `src/aib/tools/` for similar URL handling patterns—none found
+- This is the only place we construct Wayback URLs
+
+## Testing
+
+- Updated `test_url_with_query_params` to verify query strings are preserved
+- All 6 Wayback-related tests pass
+```
+
+## Slash Commands & Skills
+
+**After every command invocation**, reflect on how it was actually used vs. documented:
 
 1. **Compare intent vs usage**: Did the command serve its documented purpose, or was it adapted?
-2. **Notice patterns**: When the user provides documentation, corrects your approach, or redirects focus, that's a signal the command should evolve.
-3. **Proactively propose updates**: Use AskUserQuestion to suggest command improvements based on observed usage.
+2. **Notice patterns**: When the user corrects your approach or redirects focus, that's a signal the command should evolve.
+3. **Proactively propose updates**: Use AskUserQuestion to suggest command improvements.
 
-**Evolution signals to watch for:**
+**Evolution signals:**
+
 - User provides external docs → Add doc-fetching or reference to command
 - User corrects your approach → Update command to prevent future errors
-- User asks for something the command should cover → Expand command scope
+- User asks for something the command should cover → Expand scope
 - User ignores sections → Consider simplifying
 
-**When to propose updates:**
-- At the end of a command invocation that diverged from documentation
-- When you notice the same correction being made repeatedly
-- When external documentation reveals better approaches
-
-### Consulting External Documentation
+## External Resources
 
 When questions involve Claude Code, Agent SDK, or Claude API:
 
@@ -532,7 +522,3 @@ When questions involve Claude Code, Agent SDK, or Claude API:
    - `WebFetch(url="https://docs.claude.com/en/claude-code/<topic>")`
 
 When the user provides documentation links, incorporate that knowledge into CLAUDE.md or relevant commands.
-
-## When in Doubt
-
-Err on the side of asking questions (using `AskUserQuestion`) rather than making assumptions.
