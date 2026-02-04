@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from claude_agent_sdk.types import HookContext
 
@@ -37,6 +37,7 @@ from aib.agent.models import (
     ForecastOutput,
     MultipleChoiceForecast,
     NumericForecast,
+    TokenUsage,
 )
 from aib.agent.numeric import (
     DistributionComponent,
@@ -153,7 +154,7 @@ def append_metrics_to_meta_reflection(
     metrics: dict[str, Any] | None,
     duration_seconds: float | None,
     cost_usd: float | None,
-    token_usage: dict[str, Any] | None,
+    token_usage: TokenUsage | None,
     log_path: Path | None,
     post_id: int,
     question_id: int,
@@ -223,7 +224,7 @@ def append_metrics_to_meta_reflection(
                 calls = tool_data.get("call_count", 0)
                 errors = tool_data.get("error_count", 0)
                 avg_ms = tool_data.get("avg_duration_ms", 0)
-                error_indicator = f" ⚠️" if errors > 0 else ""
+                error_indicator = " ⚠️" if errors > 0 else ""
                 lines.append(
                     f"| {tool_name} | {calls} | {errors}{error_indicator} | {avg_ms:.0f}ms |"
                 )
@@ -799,7 +800,7 @@ async def run_forecast(
         sources_consulted=extract_sources(assistant_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
-        token_usage=result.usage,
+        token_usage=cast(TokenUsage, result.usage) if result.usage else None,
     )
 
     if result.structured_output:

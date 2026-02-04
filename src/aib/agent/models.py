@@ -3,11 +3,39 @@
 import math
 import re
 from datetime import date, datetime, timedelta
-
-from typing import Self
+from typing import Self, TypedDict
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 import zoneinfo
+
+
+class ServerToolUse(TypedDict, total=False):
+    """Server-side tool usage counts."""
+
+    web_search_requests: int
+    web_fetch_requests: int
+
+
+class CacheCreation(TypedDict, total=False):
+    """Cache creation token breakdown."""
+
+    ephemeral_1h_input_tokens: int
+    ephemeral_5m_input_tokens: int
+
+
+class TokenUsage(TypedDict, total=False):
+    """Token usage from the Anthropic API.
+
+    Uses total=False since fields vary by API version and request type.
+    """
+
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    server_tool_use: ServerToolUse
+    service_tier: str
+    cache_creation: CacheCreation
 
 
 class CreditExhaustedError(Exception):
@@ -709,7 +737,7 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Cost of the agent run in USD.",
     )
-    token_usage: dict[str, int] | None = Field(
+    token_usage: TokenUsage | None = Field(
         default=None,
         description="Token usage: input_tokens, output_tokens, cache_read_tokens, etc.",
     )

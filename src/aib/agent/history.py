@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from aib.agent.models import TokenUsage
+
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
 
@@ -42,7 +44,7 @@ class SavedForecast(BaseModel):
     comment_posted_at: str | None = None  # ISO timestamp when comment was posted
     # Programmatic tracking fields
     tool_metrics: dict[str, Any] | None = None  # Tool call counts, durations, errors
-    token_usage: dict[str, Any] | None = None  # Token usage: input, output, cache
+    token_usage: TokenUsage | None = None  # Token usage: input, output, cache
     log_path: str | None = None  # Path to reasoning log file
 
 
@@ -61,7 +63,7 @@ def save_forecast(
     confidence_interval: tuple[float, float] | None = None,
     percentiles: dict[int, float] | None = None,
     tool_metrics: dict[str, Any] | None = None,
-    token_usage: dict[str, Any] | None = None,
+    token_usage: TokenUsage | None = None,
     log_path: str | None = None,
 ) -> Path:
     """Save a forecast to the history storage.
