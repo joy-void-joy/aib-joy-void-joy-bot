@@ -7,9 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from aib.agent.retrodict import (
-    LIVE_ONLY_TOOLS,
     RetrodictConfig,
-    _check_wayback_availability,
     _rewrite_to_wayback,
     create_retrodict_hooks,
     generate_pypi_only_iptables_rules,
@@ -230,24 +228,9 @@ class TestRetrodictHooks:
         # Should not have modifiedInput since URL is already Wayback
         assert "modifiedInput" not in output
 
-    @pytest.mark.asyncio
-    async def test_live_tools_blocked(self, hooks: dict[str, Any]) -> None:
-        """Live-only tools should be denied with hints."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        for tool_name in LIVE_ONLY_TOOLS:
-            input_data = {
-                "hook_event_name": "PreToolUse",
-                "tool_name": tool_name,
-                "tool_input": {"query": "test"},
-            }
-
-            result = await pre_hook(input_data, None, None)
-
-            output = result["hookSpecificOutput"]
-            assert output["permissionDecision"] == "deny", f"{tool_name} should be blocked"
-            assert "Retrodict mode" in output["permissionDecisionReason"]
-            assert "Hint:" in output["permissionDecisionReason"]
+    # Note: Live-only tools (LIVE_ONLY_TOOLS) are excluded via allowed_tools
+    # in core.py, not via hooks. No test needed here since the tools simply
+    # never reach the hooks.
 
     @pytest.mark.asyncio
     async def test_stock_history_capped(

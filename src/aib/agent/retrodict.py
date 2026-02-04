@@ -161,9 +161,9 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
         hook_event = input_data["hook_event_name"]
 
         def deny(reason: str, hint: str = "") -> dict[str, Any]:
-            msg = f"[Retrodict mode] {reason}"
+            msg = reason
             if hint:
-                msg += f" Hint: {hint}"
+                msg += f" {hint}"
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
@@ -190,17 +190,8 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
                 }
             }
 
-        # Block live-only tools
-        if tool_name in LIVE_ONLY_TOOLS:
-            hints = {
-                "mcp__markets__stock_price": "Use mcp__markets__stock_history with end_date instead.",
-                "mcp__markets__polymarket_price": "Use mcp__markets__polymarket_history instead.",
-                "mcp__markets__manifold_price": "Use mcp__markets__manifold_history instead.",
-            }
-            return deny(
-                f"Tool '{tool_name}' returns live data only.",
-                hints.get(tool_name, ""),
-            )
+        # Note: Live-only tools (stock_price, polymarket_price, manifold_price)
+        # are excluded from allowed_tools in retrodict mode (see core.py)
 
         # WebSearch: Append before: operator
         if tool_name == "WebSearch":
