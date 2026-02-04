@@ -6,10 +6,10 @@ enabling calibration testing on resolved questions without "future leak"
 
 The hooks work by:
 - Appending `before:YYYY-MM-DD` to WebSearch queries
-- Rewriting WebFetch URLs to Wayback Machine snapshots
+- Rewriting WebFetch URLs to Wayback Machine snapshots (with availability check)
 - Capping date parameters on financial tools (FRED, stock_history, trends)
+- Injecting `before` parameter to filter CP history data
 - Blocking live-only tools (stock_price, manifold_price, polymarket_price)
-- Filtering PostToolUse responses to remove data after the cutoff
 """
 
 import logging
@@ -18,8 +18,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+import httpx
 from claude_agent_sdk import HookMatcher
 from claude_agent_sdk.types import HookContext
+
+from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +101,40 @@ def _rewrite_to_wayback(url: str, timestamp: str) -> str:
         'https://web.archive.org/web/20260115id_/https://example.com/page?q=1'
     """
     return f"https://web.archive.org/web/{timestamp}id_/{url}"
+
+
+@with_retry(max_attempts=2)
+async def _check_wayback_availability(
+    url: str, timestamp: str
+) -> dict[str, Any] | None:
+    """Check if a URL has a Wayback Machine snapshot near the given timestamp.
+
+    Uses the Wayback Availability API to check for archived snapshots before
+    attempting to rewrite URLs. This prevents errors when URLs aren't archived.
+
+    Args:
+        url: The original URL to check.
+        timestamp: Wayback timestamp format (YYYYMMDD or YYYYMMDDHHMMSS).
+
+    Returns:
+        Dict with snapshot info if available (contains 'url', 'timestamp', 'status'),
+        or None if no snapshot exists near the requested time.
+
+    API docs: https://archive.org/help/wayback_api.php
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(
+            "https://archive.org/wayback/available",
+            params={"url": url, "timestamp": timestamp},
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    snapshots = data.get("archived_snapshots", {})
+    closest = snapshots.get("closest")
+    if closest and closest.get("available"):
+        return closest
+    return None
 
 
 def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
@@ -179,15 +216,53 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
                 return modify_input(new_input)
             return allow()
 
-        # WebFetch: Rewrite to Wayback Machine
+        # WebFetch: Check Wayback availability and rewrite URL
         if tool_name == "WebFetch":
             url = tool_input.get("url", "")
             if url and "web.archive.org" not in url:
-                wayback_url = _rewrite_to_wayback(url, config.wayback_ts)
+                # Check if snapshot exists before rewriting
+                try:
+                    availability = await _check_wayback_availability(
+                        url, config.wayback_ts
+                    )
+                except httpx.HTTPError as e:
+                    logger.warning(
+                        "[Retrodict] Wayback availability check failed: %s", e
+                    )
+                    # Proceed anyway with requested timestamp
+                    availability = {"timestamp": config.wayback_ts}
+
+                if availability is None:
+                    logger.warning(
+                        "[Retrodict] No Wayback snapshot for %s at %s",
+                        url,
+                        config.wayback_ts,
+                    )
+                    return deny(
+                        f"No Wayback snapshot available for this URL before {config.date_str}.",
+                        "Try a different source, use search tools, or check archive.org manually.",
+                    )
+
+                # Validate snapshot is not after the cutoff (Wayback returns "closest"
+                # which could be after the requested date)
+                actual_ts = availability.get("timestamp", config.wayback_ts)
+                if actual_ts > config.wayback_ts:
+                    logger.warning(
+                        "[Retrodict] Wayback closest snapshot (%s) is after cutoff (%s)",
+                        actual_ts,
+                        config.wayback_ts,
+                    )
+                    return deny(
+                        f"Closest Wayback snapshot ({actual_ts[:8]}) is after cutoff date ({config.date_str}).",
+                        "Try a different source or use search tools.",
+                    )
+
+                wayback_url = _rewrite_to_wayback(url, actual_ts)
                 logger.info(
-                    "[Retrodict] WebFetch URL rewritten to Wayback: %s -> %s",
+                    "[Retrodict] WebFetch URL rewritten to Wayback: %s -> %s (snapshot: %s)",
                     url,
                     wayback_url,
+                    actual_ts,
                 )
                 new_input = {**tool_input, "url": wayback_url}
                 return modify_input(new_input)
@@ -228,37 +303,17 @@ def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
             )
             return modify_input(new_input)
 
+        # get_cp_history: Inject 'before' parameter to filter out future data
+        if tool_name == "mcp__forecasting__get_cp_history":
+            new_input = {**tool_input, "before": config.date_str}
+            logger.info("[Retrodict] get_cp_history capped to %s", config.date_str)
+            return modify_input(new_input)
+
         # Allow all other tools
         return allow()
 
-    async def post_tool_use_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        """Filter tool outputs to remove data after the cutoff."""
-        if input_data.get("hook_event_name") != "PostToolUse":
-            return {}
-
-        tool_name = input_data.get("tool_name", "")
-        # tool_response = input_data.get("tool_response")
-
-        # get_cp_history: Filter points after cutoff
-        if tool_name == "mcp__forecasting__get_cp_history":
-            # The response contains history points with timestamps
-            # We would filter them here, but for now just log
-            logger.info(
-                "[Retrodict] get_cp_history response should be filtered to %s",
-                config.date_str,
-            )
-            # TODO: Implement actual filtering of response data
-            pass
-
-        return {}
-
     return {
         "PreToolUse": [HookMatcher(hooks=[pre_tool_use_hook])],  # type: ignore[list-item]
-        "PostToolUse": [HookMatcher(hooks=[post_tool_use_hook])],  # type: ignore[list-item]
     }
 
 

@@ -116,6 +116,10 @@ class CPHistoryInput(BaseModel):
 
     question_id: int = Field(description="Metaculus question ID (not post ID)")
     days: int = Field(default=30, description="Number of days of history to fetch")
+    before: str | None = Field(
+        default=None,
+        description="Optional cutoff date (YYYY-MM-DD). Data after this date is excluded.",
+    )
 
 
 class WikipediaInput(BaseModel):
@@ -386,6 +390,19 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
     question_id = validated.question_id
     days = min(validated.days, 365)
+    before_cutoff = validated.before
+
+    # Parse cutoff date if provided (for retrodict mode filtering)
+    cutoff_dt = None
+    if before_cutoff:
+        try:
+            from datetime import datetime, timezone
+
+            cutoff_dt = datetime.strptime(before_cutoff, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            return mcp_error(f"Invalid 'before' date format: {before_cutoff}. Use YYYY-MM-DD.")
 
     try:
         async with _metaculus_semaphore:
@@ -402,18 +419,35 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
         history = data.get("history", [])
         results = []
+        filtered_count = 0
         for entry in history:
             timestamp = entry.get("start_time") or entry.get("end_time")
             centers = entry.get("centers", [])
             if centers and len(centers) > 0:
                 cp = centers[0]
                 if cp is not None:
+                    # Filter by cutoff date if specified
+                    if cutoff_dt and timestamp:
+                        from datetime import datetime
+
+                        ts_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        if ts_dt > cutoff_dt:
+                            filtered_count += 1
+                            continue
+
                     results.append(
                         {
                             "timestamp": timestamp,
                             "community_prediction": round(cp, 4),
                         }
                     )
+
+        if filtered_count > 0:
+            logger.info(
+                "[Retrodict] CP history: filtered %d points after %s",
+                filtered_count,
+                before_cutoff,
+            )
 
         return mcp_success(
             {
