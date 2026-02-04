@@ -46,6 +46,10 @@ class SavedForecast(BaseModel):
     tool_metrics: dict[str, Any] | None = None  # Tool call counts, durations, errors
     token_usage: TokenUsage | None = None  # Token usage: input, output, cache
     log_path: str | None = None  # Path to reasoning log file
+    # Cadence tracking fields (when question published vs when we forecast)
+    question_published_at: str | None = None  # ISO timestamp when question was published
+    question_close_time: str | None = None  # ISO timestamp when question closes
+    question_scheduled_resolve_time: str | None = None  # ISO timestamp when resolution expected
 
 
 def save_forecast(
@@ -65,6 +69,9 @@ def save_forecast(
     tool_metrics: dict[str, Any] | None = None,
     token_usage: TokenUsage | None = None,
     log_path: str | None = None,
+    question_published_at: str | None = None,
+    question_close_time: str | None = None,
+    question_scheduled_resolve_time: str | None = None,
 ) -> Path:
     """Save a forecast to the history storage.
 
@@ -84,6 +91,9 @@ def save_forecast(
         tool_metrics: Programmatic tracking of tool calls, durations, errors.
         token_usage: Token usage stats (input, output, cache tokens).
         log_path: Path to the reasoning log file in logs/.
+        question_published_at: ISO timestamp when question was published on Metaculus.
+        question_close_time: ISO timestamp when question closes for forecasting.
+        question_scheduled_resolve_time: ISO timestamp when question is expected to resolve.
 
     Returns:
         Path to the saved forecast file.
@@ -112,6 +122,9 @@ def save_forecast(
         tool_metrics=tool_metrics,
         token_usage=token_usage,
         log_path=log_path,
+        question_published_at=question_published_at,
+        question_close_time=question_close_time,
+        question_scheduled_resolve_time=question_scheduled_resolve_time,
     )
 
     # Save to file
