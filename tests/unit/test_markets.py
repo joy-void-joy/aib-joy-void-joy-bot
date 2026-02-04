@@ -159,7 +159,9 @@ class TestManifoldHistoryInternal:
         for bet in bets:
             bet_time = bet.get("createdTime", 0)
             if bet_time <= target_ts_ms:
-                if relevant_bet is None or bet_time > relevant_bet.get("createdTime", 0):
+                if relevant_bet is None or bet_time > relevant_bet.get(
+                    "createdTime", 0
+                ):
                     relevant_bet = bet
 
         assert relevant_bet is not None
@@ -176,7 +178,9 @@ class TestManifoldHistoryInternal:
         for bet in bets:
             bet_time = bet.get("createdTime", 0)
             if bet_time <= target_ts_ms:
-                if relevant_bet is None or bet_time > relevant_bet.get("createdTime", 0):
+                if relevant_bet is None or bet_time > relevant_bet.get(
+                    "createdTime", 0
+                ):
                     relevant_bet = bet
 
         assert relevant_bet is None

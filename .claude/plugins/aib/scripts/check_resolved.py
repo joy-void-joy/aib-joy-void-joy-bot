@@ -31,7 +31,10 @@ def check(question_ids: list[int] = typer.Argument(..., help="Question IDs to ch
                 print(f"Title: {q.question_text[:100]}...")
                 print(f"Type: {q.get_question_type()}")
                 print(f"Resolution: {q.resolution_string}")
-                if isinstance(q, BinaryQuestion) and q.community_prediction_at_access_time is not None:
+                if (
+                    isinstance(q, BinaryQuestion)
+                    and q.community_prediction_at_access_time is not None
+                ):
                     print(f"Final CP: {q.community_prediction_at_access_time:.1%}")
             except Exception as e:
                 print(f"\n=== Question {qid} ===")

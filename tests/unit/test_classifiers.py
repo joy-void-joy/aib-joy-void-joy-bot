@@ -259,6 +259,7 @@ class TestClassifyHaiku:
         with patch("aib.tools.classifiers.query", mock_query):
             # Clear the cache to ensure fresh call
             from aib.tools.cache import api_cache
+
             await api_cache.clear()
 
             result = await classify_haiku("Loading... unique content 1")
@@ -285,6 +286,7 @@ class TestClassifyHaiku:
 
         with patch("aib.tools.classifiers.query", mock_query):
             from aib.tools.cache import api_cache
+
             await api_cache.clear()
 
             result = await classify_haiku("test content for empty result unique 2")
@@ -311,6 +313,7 @@ class TestClassifyHaiku:
 
         with patch("aib.tools.classifiers.query", mock_query):
             from aib.tools.cache import api_cache
+
             await api_cache.clear()
 
             result = await classify_haiku("test content for parse error unique 3")

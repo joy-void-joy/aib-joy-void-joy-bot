@@ -47,9 +47,13 @@ class SavedForecast(BaseModel):
     token_usage: TokenUsage | None = None  # Token usage: input, output, cache
     log_path: str | None = None  # Path to reasoning log file
     # Cadence tracking fields (when question published vs when we forecast)
-    question_published_at: str | None = None  # ISO timestamp when question was published
+    question_published_at: str | None = (
+        None  # ISO timestamp when question was published
+    )
     question_close_time: str | None = None  # ISO timestamp when question closes
-    question_scheduled_resolve_time: str | None = None  # ISO timestamp when resolution expected
+    question_scheduled_resolve_time: str | None = (
+        None  # ISO timestamp when resolution expected
+    )
 
 
 def save_forecast(
@@ -202,7 +206,9 @@ def mark_submitted(post_id: int, timestamp: str | None = None) -> bool:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         data["submitted_at"] = timestamp
         latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        logger.info("Marked forecast for post %d as submitted at %s", post_id, timestamp)
+        logger.info(
+            "Marked forecast for post %d as submitted at %s", post_id, timestamp
+        )
         return True
     except Exception as e:
         logger.warning("Failed to mark submission for post %d: %s", post_id, e)
@@ -399,7 +405,11 @@ def load_latest_for_submission(
     # For numeric/discrete questions with percentiles, regenerate CDF
     if latest.question_type in ("numeric", "discrete") and latest.percentiles:
         bounds = asyncio.run(_fetch_numeric_bounds(effective_post_id))
-        if bounds and bounds.get("range_min") is not None and bounds.get("range_max") is not None:
+        if (
+            bounds
+            and bounds.get("range_min") is not None
+            and bounds.get("range_max") is not None
+        ):
             try:
                 cdf_size = bounds.get("cdf_size", 201)
                 output.cdf = percentiles_to_cdf(
@@ -418,9 +428,7 @@ def load_latest_for_submission(
                     post_id,
                 )
             except Exception as e:
-                logger.warning(
-                    "Failed to regenerate CDF for post %d: %s", post_id, e
-                )
+                logger.warning("Failed to regenerate CDF for post %d: %s", post_id, e)
         else:
             logger.warning(
                 "Could not fetch bounds for CDF regeneration (post %d)", post_id

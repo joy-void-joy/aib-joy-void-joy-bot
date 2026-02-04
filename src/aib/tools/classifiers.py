@@ -175,7 +175,9 @@ def classify_heuristic(
     )
 
 
-def _suggest_alternatives_for_url(url: str, *, retrodict_mode: bool = False) -> list[str]:
+def _suggest_alternatives_for_url(
+    url: str, *, retrodict_mode: bool = False
+) -> list[str]:
     """Suggest alternative tools/approaches based on the URL.
 
     Args:
@@ -340,7 +342,7 @@ async def classify_haiku(content: str) -> WebFetchQuality:
         return WebFetchQuality(
             is_js_rendered=True,
             confidence=0.5,
-            reason=f"Haiku classification failed: JSON parse error",
+            reason="Haiku classification failed: JSON parse error",
             suggested_alternatives=[
                 "Try mcp__forecasting__search_exa for a more robust search"
             ],

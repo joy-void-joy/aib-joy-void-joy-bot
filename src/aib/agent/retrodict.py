@@ -126,9 +126,7 @@ def _parse_trends_duration(timeframe: str) -> int:
         return 3650
 
     # Handle date range format: 'YYYY-MM-DD YYYY-MM-DD'
-    date_range_match = re.match(
-        r"(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})", timeframe
-    )
+    date_range_match = re.match(r"(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})", timeframe)
     if date_range_match:
         start_date = datetime.strptime(date_range_match.group(1), "%Y-%m-%d")
         end_date = datetime.strptime(date_range_match.group(2), "%Y-%m-%d")
@@ -320,20 +318,22 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
                         url,
                         config.wayback_ts,
                     )
-                    return deny(f"HTTP 404: URL not found or unavailable.")
+                    return deny("HTTP 404: URL not found or unavailable.")
 
                 # Validate snapshot is not after the cutoff (Wayback returns "closest"
                 # which could be after the requested date)
                 actual_ts = availability.get("timestamp", config.wayback_ts)
                 # Use integer comparison to handle variable timestamp precision
                 # (YYYYMMDD vs YYYYMMDDHHMMSS)
-                if _normalize_wayback_ts(actual_ts) > _normalize_wayback_ts(config.wayback_ts):
+                if _normalize_wayback_ts(actual_ts) > _normalize_wayback_ts(
+                    config.wayback_ts
+                ):
                     logger.warning(
                         "[Retrodict] Wayback closest snapshot (%s) is after cutoff (%s)",
                         actual_ts,
                         config.wayback_ts,
                     )
-                    return deny(f"HTTP 404: URL not found or unavailable.")
+                    return deny("HTTP 404: URL not found or unavailable.")
 
                 wayback_url = _rewrite_to_wayback(url, actual_ts)
                 logger.info(

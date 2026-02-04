@@ -27,12 +27,12 @@ import logging
 from typing import Any, cast
 
 from claude_agent_sdk import SdkMcpTool
-
-logger = logging.getLogger(__name__)
 from claude_agent_sdk.types import McpSdkServerConfig
 from mcp.server import Server
 from mcp.types import CallToolResult, ContentBlock, ImageContent, TextContent, Tool
 from pydantic import TypeAdapter
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_json_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]:

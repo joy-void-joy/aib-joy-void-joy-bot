@@ -79,7 +79,9 @@ class MetaculusQuestion(BaseModel):
 
     question_text: str
     id_of_post: int | None = None  # URL/storage ID - see module docstring
-    id_of_question: int | None = None  # API ID for coherence/CP/submit - see module docstring
+    id_of_question: int | None = (
+        None  # API ID for coherence/CP/submit - see module docstring
+    )
     page_url: str | None = None
     status: QuestionState | None = None
     num_forecasters: int | None = None

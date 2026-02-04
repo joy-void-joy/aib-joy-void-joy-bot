@@ -60,6 +60,7 @@ def get_last_run_file() -> Path:
     """Get the last run file for the current branch."""
     return get_feedback_path() / "last_run.json"
 
+
 # Tournament IDs
 TOURNAMENTS = {
     "spring-aib-2026": 32916,

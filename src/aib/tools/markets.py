@@ -635,7 +635,9 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
 # --- MCP Server ---
 
 # Live-only tools that return current prices (excluded in retrodict mode)
-LIVE_ONLY_MARKET_TOOLS = frozenset({"polymarket_price", "manifold_price", "stock_price"})
+LIVE_ONLY_MARKET_TOOLS = frozenset(
+    {"polymarket_price", "manifold_price", "stock_price"}
+)
 
 # All available market tools
 _ALL_MARKET_TOOLS = [

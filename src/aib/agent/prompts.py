@@ -713,7 +713,9 @@ def _format_bounds_info(bounds: dict) -> str:
                 f"{lower_bound}{unit_suffix}."
             )
         else:
-            lines.append(f"The outcome cannot be lower than {lower_bound}{unit_suffix}.")
+            lines.append(
+                f"The outcome cannot be lower than {lower_bound}{unit_suffix}."
+            )
 
     if upper_bound is not None:
         if bounds.get("open_upper_bound"):

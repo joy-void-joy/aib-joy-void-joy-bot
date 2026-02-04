@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -50,7 +50,9 @@ class TestWaybackRewrite:
         url = "https://example.com/page"
         timestamp = "20260115"
         result = _rewrite_to_wayback(url, timestamp)
-        assert result == "https://web.archive.org/web/20260115id_/https://example.com/page"
+        assert (
+            result == "https://web.archive.org/web/20260115id_/https://example.com/page"
+        )
 
     def test_url_with_query_params(self) -> None:
         """Should preserve query parameters."""
@@ -129,7 +131,10 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         # Should allow without modification since before: already present
-        assert "modifiedInput" not in output or output["modifiedInput"]["query"].count("before:") == 1
+        assert (
+            "modifiedInput" not in output
+            or output["modifiedInput"]["query"].count("before:") == 1
+        )
 
     @pytest.mark.asyncio
     async def test_webfetch_rewrites_to_wayback(
@@ -211,16 +216,16 @@ class TestRetrodictHooks:
         assert actual_snapshot_ts in output["modifiedInput"]["url"]
 
     @pytest.mark.asyncio
-    async def test_webfetch_skips_wayback_urls(
-        self, hooks: dict[str, Any]
-    ) -> None:
+    async def test_webfetch_skips_wayback_urls(self, hooks: dict[str, Any]) -> None:
         """Should not rewrite URLs that are already Wayback URLs."""
         pre_hook = hooks["PreToolUse"][0].hooks[0]
 
         input_data = {
             "hook_event_name": "PreToolUse",
             "tool_name": "WebFetch",
-            "tool_input": {"url": "https://web.archive.org/web/20260115/https://example.com"},
+            "tool_input": {
+                "url": "https://web.archive.org/web/20260115/https://example.com"
+            },
         }
 
         result = await pre_hook(input_data, None, None)

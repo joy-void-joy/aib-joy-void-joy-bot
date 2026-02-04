@@ -25,96 +25,124 @@ if TYPE_CHECKING:
 # --- Tool Sets ---
 
 # Built-in SDK tools (always available)
-BUILTIN_TOOLS: frozenset[str] = frozenset({
-    "WebSearch",
-    "WebFetch",
-    "Read",
-    "Write",
-    "Glob",
-    "Bash",
-    "Task",
-})
+BUILTIN_TOOLS: frozenset[str] = frozenset(
+    {
+        "WebSearch",
+        "WebFetch",
+        "Read",
+        "Write",
+        "Glob",
+        "Bash",
+        "Task",
+    }
+)
 
 # Metaculus tools (require METACULUS_TOKEN)
-METACULUS_TOOLS: frozenset[str] = frozenset({
-    "mcp__forecasting__get_metaculus_questions",
-    "mcp__forecasting__list_tournament_questions",
-    "mcp__forecasting__search_metaculus",
-    "mcp__forecasting__get_coherence_links",
-    "mcp__forecasting__get_prediction_history",
-    "mcp__forecasting__get_cp_history",
-})
+METACULUS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__forecasting__get_metaculus_questions",
+        "mcp__forecasting__list_tournament_questions",
+        "mcp__forecasting__search_metaculus",
+        "mcp__forecasting__get_coherence_links",
+        "mcp__forecasting__get_prediction_history",
+        "mcp__forecasting__get_cp_history",
+    }
+)
 
 # Wikipedia tool (no API key required)
-WIKIPEDIA_TOOLS: frozenset[str] = frozenset({
-    "mcp__forecasting__wikipedia",
-})
+WIKIPEDIA_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__forecasting__wikipedia",
+    }
+)
 
 # Exa search tools (require EXA_API_KEY)
-EXA_TOOLS: frozenset[str] = frozenset({
-    "mcp__forecasting__search_exa",
-})
+EXA_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__forecasting__search_exa",
+    }
+)
 
 # AskNews tools (require ASKNEWS_CLIENT_ID and ASKNEWS_SECRET)
-ASKNEWS_TOOLS: frozenset[str] = frozenset({
-    "mcp__forecasting__search_news",
-})
+ASKNEWS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__forecasting__search_news",
+    }
+)
 
 # FRED tools (require FRED_API_KEY)
-FRED_TOOLS: frozenset[str] = frozenset({
-    "mcp__financial__fred_series",
-    "mcp__financial__fred_search",
-})
+FRED_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__financial__fred_series",
+        "mcp__financial__fred_search",
+    }
+)
 
 # Sandbox tools (always available when sandbox is running)
-SANDBOX_TOOLS: frozenset[str] = frozenset({
-    "mcp__sandbox__execute_code",
-    "mcp__sandbox__install_package",
-})
+SANDBOX_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__sandbox__execute_code",
+        "mcp__sandbox__install_package",
+    }
+)
 
 # Composition tools
-COMPOSITION_TOOLS: frozenset[str] = frozenset({
-    "mcp__composition__spawn_subquestions",
-})
+COMPOSITION_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__composition__spawn_subquestions",
+    }
+)
 
 # Market tools - live prices
-LIVE_MARKET_TOOLS: frozenset[str] = frozenset({
-    "mcp__markets__polymarket_price",
-    "mcp__markets__manifold_price",
-    "mcp__markets__stock_price",
-})
+LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__markets__polymarket_price",
+        "mcp__markets__manifold_price",
+        "mcp__markets__stock_price",
+    }
+)
 
 # Market tools - historical data
-HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset({
-    "mcp__markets__polymarket_history",
-    "mcp__markets__manifold_history",
-    "mcp__markets__stock_history",
-})
+HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__markets__polymarket_history",
+        "mcp__markets__manifold_history",
+        "mcp__markets__stock_history",
+    }
+)
 
 # Google Trends tools (no API key required)
-TRENDS_TOOLS: frozenset[str] = frozenset({
-    "mcp__trends__google_trends",
-    "mcp__trends__google_trends_compare",
-    "mcp__trends__google_trends_related",
-})
+TRENDS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__trends__google_trends",
+        "mcp__trends__google_trends_compare",
+        "mcp__trends__google_trends_related",
+    }
+)
 
 # Notes tools
-NOTES_TOOLS: frozenset[str] = frozenset({
-    "mcp__notes__notes",
-})
+NOTES_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__notes__notes",
+    }
+)
 
 # Playwright browser tools (excluded in retrodict mode)
-PLAYWRIGHT_TOOLS: frozenset[str] = frozenset({
-    "mcp__playwright__browser_navigate",
-    "mcp__playwright__browser_snapshot",
-    "mcp__playwright__browser_click",
-    "mcp__playwright__browser_type",
-})
+PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__playwright__browser_navigate",
+        "mcp__playwright__browser_snapshot",
+        "mcp__playwright__browser_click",
+        "mcp__playwright__browser_type",
+    }
+)
 
 # MCP servers to exclude in retrodict mode
-RETRODICT_EXCLUDED_SERVERS: frozenset[str] = frozenset({
-    "playwright",
-})
+RETRODICT_EXCLUDED_SERVERS: frozenset[str] = frozenset(
+    {
+        "playwright",
+    }
+)
 
 
 @dataclass

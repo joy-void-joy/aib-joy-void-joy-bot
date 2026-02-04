@@ -402,7 +402,9 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
                 tzinfo=timezone.utc
             )
         except ValueError:
-            return mcp_error(f"Invalid 'before' date format: {before_cutoff}. Use YYYY-MM-DD.")
+            return mcp_error(
+                f"Invalid 'before' date format: {before_cutoff}. Use YYYY-MM-DD."
+            )
 
     try:
         async with _metaculus_semaphore:

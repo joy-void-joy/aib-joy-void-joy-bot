@@ -740,7 +740,9 @@ async def run_forecast(
                 "type": "preset",
                 "preset": "claude_code",
                 "append": get_forecasting_system_prompt(
-                    forecast_date=retrodict_config.forecast_date if retrodict_config else None
+                    forecast_date=retrodict_config.forecast_date
+                    if retrodict_config
+                    else None
                 ),
             },
             max_thinking_tokens=64_000 - 1,
