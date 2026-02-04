@@ -30,6 +30,7 @@ from aib.agent.history import (
     load_past_forecasts,
     save_forecast,
 )
+from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
 from aib.agent.models import (
     CreditExhaustedError,
     Forecast,
@@ -183,7 +184,9 @@ def append_metrics_to_meta_reflection(
     # Timing and cost
     if duration_seconds is not None:
         minutes = duration_seconds / 60
-        lines.append(f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)")
+        lines.append(
+            f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)"
+        )
     if cost_usd is not None:
         lines.append(f"- **Cost**: ${cost_usd:.4f}")
 
@@ -194,7 +197,9 @@ def append_metrics_to_meta_reflection(
         cache_read = token_usage.get("cache_read_input_tokens", 0)
         cache_create = token_usage.get("cache_creation_input_tokens", 0)
         total = input_tokens + output_tokens
-        lines.append(f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)")
+        lines.append(
+            f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)"
+        )
         if cache_read or cache_create:
             lines.append(f"  - Cache: {cache_read:,} read, {cache_create:,} created")
 
@@ -358,6 +363,22 @@ def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
     return False
 
 
+def _merge_hooks(base: dict[str, Any], additional: dict[str, Any]) -> dict[str, Any]:
+    """Merge two hook configurations.
+
+    For each hook event type, combines the hooks from both configs.
+    Base hooks run first, then additional hooks.
+    """
+    merged = dict(base)
+    for event, matchers in additional.items():
+        if event in merged:
+            # Combine matchers for the same event
+            merged[event] = merged[event] + matchers
+        else:
+            merged[event] = matchers
+    return merged
+
+
 def create_permission_hooks(
     rw_dirs: list[Path],
     ro_dirs: list[Path],
@@ -484,6 +505,9 @@ def build_question_context(post_data: dict) -> dict:
         "resolution_criteria": question.get("resolution_criteria", ""),
         "fine_print": question.get("fine_print", ""),
         "scheduled_close_time": question.get("scheduled_close_time"),
+        # Cadence tracking fields
+        "published_at": post_data.get("published_at"),
+        "scheduled_resolve_time": question.get("scheduled_resolve_time"),
     }
 
     if question_type == "multiple_choice":
@@ -536,6 +560,7 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
+    retrodict_config: RetrodictConfig | None = None,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -543,6 +568,9 @@ async def run_forecast(
         question_id: Metaculus post ID (for top-level forecasts)
         question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
+        retrodict_config: If provided, enables blind retrodict mode with time-restricted
+            data access. All tools will be filtered to only return data available
+            before the forecast_date.
 
     Returns:
         ForecastOutput with the forecast results.
@@ -627,11 +655,29 @@ async def run_forecast(
     # Setup reasoning logger (committed, for feedback loop)
     reasoning_logger = ReasoningLogger(notes.reasoning_log, question_title)
 
-    with Sandbox() as sandbox:
+    # Determine sandbox network mode for retrodict
+    sandbox_network_mode = "pypi_only" if retrodict_config else "bridge"
+    if retrodict_config:
+        logger.info(
+            "Retrodict mode: restricting data to before %s",
+            retrodict_config.date_str,
+        )
+
+    with Sandbox(network_mode=sandbox_network_mode) as sandbox:
         # tmp/ for scratch work + session-specific notes directories
         rw_dirs = [Path("tmp")] + notes.rw
         ro_dirs = notes.ro
-        hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+
+        # Create base permission hooks
+        permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+
+        # Compose with retrodict hooks if in retrodict mode
+        if retrodict_config:
+            retrodict_hooks = create_retrodict_hooks(retrodict_config)
+            # Merge hooks: both PreToolUse hooks run, add PostToolUse
+            hooks = _merge_hooks(permission_hooks, retrodict_hooks)
+        else:
+            hooks = permission_hooks
 
         options = ClaudeAgentOptions(
             model=settings.model,
@@ -707,6 +753,9 @@ async def run_forecast(
                 # Prediction market tools
                 "mcp__markets__polymarket_price",
                 "mcp__markets__manifold_price",
+                # Historical market tools (for retrodict mode)
+                "mcp__markets__polymarket_history",
+                "mcp__markets__manifold_history",
                 # Stock market tools (no API key required)
                 "mcp__markets__stock_price",
                 "mcp__markets__stock_history",
@@ -974,6 +1023,9 @@ async def run_forecast(
                 tool_metrics=metrics,
                 token_usage=output.token_usage,
                 log_path=str(thinking_log_path) if thinking_log_path.exists() else None,
+                question_published_at=context.get("published_at"),
+                question_close_time=context.get("scheduled_close_time"),
+                question_scheduled_resolve_time=context.get("scheduled_resolve_time"),
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)

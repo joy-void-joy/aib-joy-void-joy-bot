@@ -2,6 +2,11 @@
 
 Use `Sandbox` as a context manager to create an isolated container for
 code execution. The sandbox provides tools for the Claude Agent SDK.
+
+Network modes for retrodict (blind forecasting):
+- "bridge": Full network access (default)
+- "pypi_only": Only pypi.org allowed via iptables rules
+- "none": No network access at all
 """
 
 import logging
@@ -9,7 +14,7 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Self, TypedDict
+from typing import Any, Literal, Self, TypedDict
 
 import docker
 from claude_agent_sdk import SdkMcpTool, tool
@@ -25,6 +30,20 @@ from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 
 logger = logging.getLogger(__name__)
+
+# Type alias for network mode
+NetworkMode = Literal["bridge", "pypi_only", "none"]
+
+# Common packages to pre-install for faster agent execution
+COMMON_PACKAGES = [
+    "yfinance",
+    "requests",
+    "pandas",
+    "numpy",
+    "fredapi",
+    "beautifulsoup4",
+    "lxml",
+]
 
 
 # --- Pydantic input schemas ---
@@ -94,11 +113,18 @@ class Sandbox:
         docker_image: Docker image to use for the sandbox.
         volume_name: Name of the Docker volume for persistent workspace.
         shared_dir: Local directory to mount for file sharing (default: ./tmp/sandbox-shared).
+        network_mode: Network access level ("bridge", "pypi_only", "none").
+        pre_install_packages: Whether to pre-install common packages on start.
 
     Example:
         with Sandbox() as sandbox:
             result = sandbox.run_code("print('hello')")
             server = sandbox.create_mcp_server()
+
+        # Retrodict mode with pypi-only network
+        with Sandbox(network_mode="pypi_only") as sandbox:
+            result = sandbox.run_code("import yfinance")  # Works (pre-installed)
+            # But: requests.get("https://news.com") would fail
     """
 
     DEFAULT_CONTAINER_NAME = "aib-sandbox"
@@ -112,11 +138,15 @@ class Sandbox:
         docker_image: str = DEFAULT_DOCKER_IMAGE,
         volume_name: str = DEFAULT_VOLUME_NAME,
         shared_dir: str = DEFAULT_SHARED_DIR,
+        network_mode: NetworkMode = "bridge",
+        pre_install_packages: bool = True,
     ) -> None:
         self._container_name = container_name
         self._docker_image = docker_image
         self._volume_name = volume_name
         self._shared_dir = Path(shared_dir).resolve()
+        self._network_mode = network_mode
+        self._pre_install_packages = pre_install_packages
         self._container: Container | None = None
         self._client: docker.DockerClient | None = None
 
@@ -162,11 +192,72 @@ class Sandbox:
         finally:
             self._container = None
 
+    def _exec(self, cmd: str | list[str]) -> ExecResult:
+        """Execute a command in the container.
+
+        Args:
+            cmd: Command string or list of arguments.
+
+        Returns:
+            ExecResult from Docker.
+        """
+        if isinstance(cmd, str):
+            cmd = ["sh", "-c", cmd]
+        return self.container.exec_run(cmd, demux=False)
+
+    def _setup_pypi_only_network(self) -> None:
+        """Configure iptables to only allow PyPI traffic.
+
+        This enables `pip install` while blocking arbitrary HTTP requests,
+        preventing "future leak" in retrodict mode where the agent might
+        try to fetch live data from inside the sandbox.
+        """
+        from aib.agent.retrodict import (
+            generate_pypi_only_iptables_rules,
+            get_pypi_allowed_ips,
+        )
+
+        allowed_ips = get_pypi_allowed_ips()
+        if not allowed_ips:
+            logger.warning("No PyPI IPs resolved, network may not work correctly")
+            return
+
+        rules = generate_pypi_only_iptables_rules(allowed_ips)
+        logger.info("Setting up pypi-only network with %d iptables rules", len(rules))
+
+        for rule in rules:
+            result = self._exec(rule)
+            if result.exit_code != 0:
+                logger.warning(
+                    "iptables rule failed (exit %d): %s",
+                    result.exit_code,
+                    _decode_output(result.output),
+                )
+
+    def _pre_install_common_packages(self) -> None:
+        """Pre-install common packages for faster agent execution."""
+        logger.info("Pre-installing common packages: %s", COMMON_PACKAGES)
+        cmd = ["uv", "pip", "install", "--system", *COMMON_PACKAGES]
+        result = self.container.exec_run(cmd, demux=False)
+        if result.exit_code != 0:
+            logger.warning(
+                "Package pre-install failed (exit %d): %s",
+                result.exit_code,
+                _decode_output(result.output)[:500],
+            )
+        else:
+            logger.info("Pre-installed common packages successfully")
+
     def start(self) -> None:
         """Start the sandbox container.
 
         Creates a new Docker container for code execution. Removes any
         stale container with the same name first.
+
+        The container's network mode is controlled by self._network_mode:
+        - "bridge": Full network access (default)
+        - "pypi_only": iptables rules allow only PyPI traffic
+        - "none": No network access
 
         Raises:
             DockerException: If container creation fails.
@@ -177,7 +268,16 @@ class Sandbox:
         # Ensure shared directory exists
         self._shared_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info("Creating sandbox container: %s", self._container_name)
+        # For pypi_only mode, we need CAP_NET_ADMIN to configure iptables
+        cap_add = ["NET_ADMIN"] if self._network_mode == "pypi_only" else []
+        # For "none" mode, use Docker's network isolation
+        docker_network_mode = "none" if self._network_mode == "none" else "bridge"
+
+        logger.info(
+            "Creating sandbox container: %s (network=%s)",
+            self._container_name,
+            self._network_mode,
+        )
         logger.info("Mounting shared directory: %s -> /shared", self._shared_dir)
         self._container = self._client.containers.run(
             self._docker_image,
@@ -190,8 +290,17 @@ class Sandbox:
             },
             working_dir="/workspace",
             mem_limit="1g",
-            network_mode="bridge",
+            network_mode=docker_network_mode,
+            cap_add=cap_add or None,
         )
+
+        # Pre-install common packages (if enabled and network available)
+        if self._pre_install_packages and self._network_mode != "none":
+            self._pre_install_common_packages()
+
+        # Set up iptables for pypi-only mode (must be after pre-install)
+        if self._network_mode == "pypi_only":
+            self._setup_pypi_only_network()
 
     def stop(self) -> None:
         """Stop and remove the sandbox container."""
@@ -391,6 +500,8 @@ def sandbox_context(
     container_name: str = Sandbox.DEFAULT_CONTAINER_NAME,
     docker_image: str = Sandbox.DEFAULT_DOCKER_IMAGE,
     volume_name: str = Sandbox.DEFAULT_VOLUME_NAME,
+    network_mode: NetworkMode = "bridge",
+    pre_install_packages: bool = True,
 ) -> Generator[Sandbox, None, None]:
     """Context manager that creates a sandbox and destroys it on exit.
 
@@ -401,6 +512,8 @@ def sandbox_context(
         container_name: Name for the Docker container.
         docker_image: Docker image to use for the sandbox.
         volume_name: Name of the Docker volume for persistent workspace.
+        network_mode: Network access level ("bridge", "pypi_only", "none").
+        pre_install_packages: Whether to pre-install common packages.
 
     Yields:
         The running Sandbox instance.
@@ -408,11 +521,17 @@ def sandbox_context(
     Example:
         with sandbox_context() as sandbox:
             result = sandbox.run_code("print('hello')")
+
+        # Retrodict mode
+        with sandbox_context(network_mode="pypi_only") as sandbox:
+            result = sandbox.run_code("import yfinance")
     """
     sandbox = Sandbox(
         container_name=container_name,
         docker_image=docker_image,
         volume_name=volume_name,
+        network_mode=network_mode,
+        pre_install_packages=pre_install_packages,
     )
     with sandbox:
         yield sandbox

@@ -12,6 +12,7 @@ import typer
 
 from aib.agent import ForecastOutput, run_forecast
 from aib.agent.history import is_submitted, load_latest_for_submission, mark_submitted
+from aib.agent.retrodict import RetrodictConfig
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
@@ -168,23 +169,57 @@ def retrodict(
     question_ids: Annotated[
         list[int], typer.Argument(help="Metaculus post IDs of resolved questions")
     ],
+    forecast_date: Annotated[
+        str | None,
+        typer.Option(
+            "--forecast-date",
+            "-d",
+            help="Restrict data access to this date (YYYY-MM-DD). Enables blind mode.",
+        ),
+    ] = None,
+    blind: Annotated[
+        bool,
+        typer.Option(
+            "--blind/--no-blind",
+            help="Enable blind mode (restrict to question published_at if no --forecast-date)",
+        ),
+    ] = True,
 ) -> None:
     """Run forecasts on resolved questions for calibration.
 
     Forecasts resolved questions to build calibration data. Does not submit.
     Shows the actual resolution and computes Brier score for binary questions.
 
+    By default, runs in "blind mode" which restricts all tools to data
+    available before the question's published_at date. This prevents
+    "future leak" where the agent finds out the answer by searching.
+
+    Use --forecast-date to specify a custom cutoff date, or --no-blind
+    to disable time restrictions entirely (useful for testing).
+
     Examples:
         uv run forecast retrodict 41835 41521
-        uv run forecast retrodict 41835 41521 41517
+        uv run forecast retrodict 41835 --forecast-date 2026-01-15
+        uv run forecast retrodict 41835 --no-blind  # No time restriction
     """
     import sys
 
     sys.path.insert(0, "src")
     from metaculus import AsyncMetaculusClient, BinaryQuestion
 
-    async def get_resolution(post_id: int) -> tuple[str | None, float | None]:
-        """Fetch resolution and final CP for a question."""
+    # Parse forecast_date if provided
+    parsed_forecast_date: datetime | None = None
+    if forecast_date:
+        try:
+            parsed_forecast_date = datetime.strptime(forecast_date, "%Y-%m-%d")
+        except ValueError:
+            print(f"❌ Invalid date format: {forecast_date}. Use YYYY-MM-DD.")
+            raise typer.Exit(1)
+
+    async def get_resolution_and_published(
+        post_id: int,
+    ) -> tuple[str | None, float | None, datetime | None]:
+        """Fetch resolution, final CP, and published_at for a question."""
         client = AsyncMetaculusClient()
         try:
             q = await client.get_question_by_post_id(post_id)
@@ -192,10 +227,17 @@ def retrodict(
             cp = None
             if isinstance(q, BinaryQuestion):
                 cp = q.community_prediction_at_access_time
-            return resolution, cp
+            # Get published_at from the question data
+            published_at = getattr(q, "published_at", None)
+            if published_at and isinstance(published_at, str):
+                # Parse ISO format
+                published_at = datetime.fromisoformat(
+                    published_at.replace("Z", "+00:00")
+                )
+            return resolution, cp, published_at
         except Exception as e:
             logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
-            return None, None
+            return None, None, None
 
     results: list[dict] = []
 
@@ -204,8 +246,10 @@ def retrodict(
         print(f"[{i}/{len(question_ids)}] Retrodicting question {qid}")
         print("=" * 60)
 
-        # Fetch resolution first
-        resolution, final_cp = asyncio.run(get_resolution(qid))
+        # Fetch resolution and published_at
+        resolution, final_cp, published_at = asyncio.run(
+            get_resolution_and_published(qid)
+        )
         if resolution:
             print(f"Resolution: {resolution}")
             if final_cp is not None:
@@ -213,13 +257,27 @@ def retrodict(
         else:
             print("⚠️  Could not fetch resolution (question may not be resolved)")
 
+        # Determine the retrodict config
+        retrodict_config: RetrodictConfig | None = None
+        if blind:
+            if parsed_forecast_date:
+                retrodict_config = RetrodictConfig(forecast_date=parsed_forecast_date)
+                print(
+                    f"🔒 Blind mode: data restricted to before {parsed_forecast_date.date()}"
+                )
+            elif published_at:
+                retrodict_config = RetrodictConfig(forecast_date=published_at)
+                print(f"🔒 Blind mode: data restricted to before {published_at.date()}")
+            else:
+                print("⚠️  No published_at found, running without blind mode")
+
         # Setup logging
         log_file = setup_logging(qid)
         print(f"Logging to {log_file}")
 
         # Run forecast
         try:
-            output = asyncio.run(run_forecast(qid))
+            output = asyncio.run(run_forecast(qid, retrodict_config=retrodict_config))
             display_forecast(output)
 
             # Compute Brier score for binary questions
@@ -227,7 +285,7 @@ def retrodict(
             if output.probability is not None and resolution in ("yes", "no"):
                 outcome = 1.0 if resolution == "yes" else 0.0
                 brier = (output.probability - outcome) ** 2
-                print(f"\n📊 Calibration:")
+                print("\n📊 Calibration:")
                 print(f"   Our forecast: {output.probability:.1%}")
                 print(f"   Resolution: {resolution}")
                 print(f"   Brier score: {brier:.4f}")
@@ -238,14 +296,16 @@ def retrodict(
                     better_worse = "better" if diff < 0 else "worse"
                     print(f"   We were {abs(diff):.4f} {better_worse} than CP")
 
-            results.append({
-                "post_id": qid,
-                "resolution": resolution,
-                "our_forecast": output.probability,
-                "final_cp": final_cp,
-                "brier": brier,
-                "question_type": output.question_type,
-            })
+            results.append(
+                {
+                    "post_id": qid,
+                    "resolution": resolution,
+                    "our_forecast": output.probability,
+                    "final_cp": final_cp,
+                    "brier": brier,
+                    "question_type": output.question_type,
+                }
+            )
 
         except CreditExhaustedError as e:
             reset_msg = ""
@@ -281,7 +341,9 @@ def retrodict(
             avg_cp_brier = sum(cp_briers) / len(cp_briers)
             print(f"Average CP Brier: {avg_cp_brier:.4f}")
             diff = avg_brier - avg_cp_brier
-            print(f"Difference: {diff:+.4f} ({'worse' if diff > 0 else 'better'} than CP)")
+            print(
+                f"Difference: {diff:+.4f} ({'worse' if diff > 0 else 'better'} than CP)"
+            )
 
     errors = [r for r in results if "error" in r]
     if errors:
@@ -651,7 +713,9 @@ def backfill_comments(
     ] = False,
     force: Annotated[
         bool,
-        typer.Option("--force", "-f", help="Post comments even if already marked as posted"),
+        typer.Option(
+            "--force", "-f", help="Post comments even if already marked as posted"
+        ),
     ] = False,
 ) -> None:
     """Post private comments on all saved forecasts.
@@ -763,7 +827,9 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
             # Small delay between requests
             await asyncio.sleep(1)
 
-    print(f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors")
+    print(
+        f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors"
+    )
 
 
 if __name__ == "__main__":
