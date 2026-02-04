@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(gh:*), Read, Grep, Glob
+allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
 description: Create a clean rebase branch with atomic commits and open a PR
 ---
 
@@ -8,6 +8,38 @@ description: Create a clean rebase branch with atomic commits and open a PR
 Create a temporary rebase branch with a clean, logical commit history, then open a pull request.
 
 **Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
+
+## Pre-rebase Validation
+
+Before starting the rebase, ensure the branch is clean and passing all checks.
+
+1. **Merge main into feature branch**:
+   ```bash
+   # Fetch and merge main to get latest changes
+   git fetch origin main
+   git merge origin/main
+   ```
+   Resolve any merge conflicts before proceeding. This ensures the rebase branch will be up-to-date.
+
+2. **Run all checks**:
+   ```bash
+   uv run pyright
+   uv run ruff check .
+   uv run ruff format --check .
+   uv run pytest
+   ```
+   Fix any issues found. The rebase branch should only contain passing code.
+
+3. **Commit remaining changes**:
+   ```bash
+   git status
+   # Stage and commit any uncommitted work
+   git add <files>
+   git commit -m "fix: address pyright/ruff/test issues"
+   ```
+   All changes must be committed before rebasing. Don't leave uncommitted work.
+
+---
 
 ## Process
 
