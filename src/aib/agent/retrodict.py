@@ -92,7 +92,8 @@ def _rewrite_to_wayback(url: str, timestamp: str) -> str:
     """
     # Wayback URL format: web.archive.org/web/{timestamp}id_/{url}
     # The "id_" modifier returns the original content without Wayback toolbar
-    encoded_url = quote(url, safe=":/")
+    # Preserve URL structure including query parameters (safe chars: :/?&=)
+    encoded_url = quote(url, safe=":/?&=")
     return f"https://web.archive.org/web/{timestamp}id_/{encoded_url}"
 
 

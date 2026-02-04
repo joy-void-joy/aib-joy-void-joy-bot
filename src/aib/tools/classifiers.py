@@ -4,9 +4,11 @@ Detects when WebFetch returns JS-rendered garbage and suggests alternatives.
 Uses a two-tier approach: fast heuristics first, Haiku classifier for uncertain cases.
 """
 
+import json
 import logging
 import re
 
+from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -183,7 +185,7 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
     # Stock/financial data
     if any(
         d in url_lower
-        for d in ["yahoo.com/finance", "tradingview", "marketwatch", "bloomberg"]
+        for d in ["finance.yahoo.com", "tradingview", "marketwatch", "bloomberg"]
     ):
         alternatives.append(
             "Use mcp__markets__stock_price or stock_history for stock data"
@@ -228,11 +230,42 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
     return alternatives
 
 
+# JSON schema for structured output from Haiku
+_CLASSIFICATION_SCHEMA = {
+    "type": "json_schema",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "is_js_rendered": {
+                "type": "boolean",
+                "description": "True if content is JS-rendered garbage",
+            },
+            "confidence": {
+                "type": "number",
+                "description": "Confidence 0-1",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Brief explanation",
+            },
+            "suggested_alternatives": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Alternative tools to try",
+            },
+        },
+        "required": ["is_js_rendered", "confidence", "reason"],
+    },
+}
+
+
 async def classify_haiku(content: str) -> WebFetchQuality:
     """Use Haiku model to classify uncertain WebFetch content.
 
     Only called when heuristic classification has low confidence.
     Very cheap (~$0.0001 per call) but adds latency.
+
+    Uses the Claude Agent SDK query function with Haiku model and no tools.
 
     Args:
         content: The fetched page content (truncated to 3000 chars)
@@ -240,28 +273,70 @@ async def classify_haiku(content: str) -> WebFetchQuality:
     Returns:
         WebFetchQuality with Haiku's classification
     """
-    from pydantic_ai import Agent
-
     # Truncate content for efficiency
     truncated = content[:3000] if len(content) > 3000 else content
 
-    agent = Agent[None, WebFetchQuality](
-        "anthropic:claude-haiku-4-5-20251001",
-        output_type=WebFetchQuality,
+    prompt = (
+        "Classify whether this web content is JavaScript-rendered garbage "
+        "(empty page, loading spinner, framework bootstrap code) vs actual content.\n\n"
+        "Set is_js_rendered=True if the content is useless for information extraction.\n\n"
+        f"Content:\n{truncated}"
+    )
+
+    options = ClaudeAgentOptions(
+        model="haiku",
+        max_turns=1,
+        allowed_tools=[],  # No tools - just classification
         system_prompt=(
-            "Classify whether web page content appears to be JavaScript-rendered garbage "
-            "(empty page, loading spinner, framework bootstrap code) vs actual content. "
-            "Set is_js_rendered=True if the content is useless for information extraction. "
-            "Provide suggested_alternatives if you detect specific site types."
+            "You are a classifier. Analyze web content and determine if it's "
+            "JavaScript-rendered garbage (empty/loading/bootstrap) vs actual content. "
+            "Respond with JSON only."
         ),
+        output_format=_CLASSIFICATION_SCHEMA,
     )
 
     try:
-        result = await agent.run(f"Classify this web content:\n\n{truncated}")
-        return result.output
+        data = None
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, ResultMessage):
+                # With output_format, structured_output contains parsed JSON
+                if message.structured_output:
+                    data = message.structured_output
+                elif message.result:
+                    # Fallback to parsing result string
+                    data = json.loads(message.result)
+                break
+
+        if not data:
+            logger.warning("Haiku classification returned empty result")
+            return WebFetchQuality(
+                is_js_rendered=True,
+                confidence=0.5,
+                reason="Haiku classification returned empty result",
+                suggested_alternatives=[
+                    "Try mcp__forecasting__search_exa for a more robust search"
+                ],
+            )
+
+        return WebFetchQuality(
+            is_js_rendered=data.get("is_js_rendered", True),
+            confidence=data.get("confidence", 0.5),
+            reason=data.get("reason", "Haiku classification"),
+            suggested_alternatives=data.get("suggested_alternatives", []),
+        )
+
+    except json.JSONDecodeError as e:
+        logger.warning("Haiku classification JSON parse error: %s", e)
+        return WebFetchQuality(
+            is_js_rendered=True,
+            confidence=0.5,
+            reason=f"Haiku classification failed: JSON parse error",
+            suggested_alternatives=[
+                "Try mcp__forecasting__search_exa for a more robust search"
+            ],
+        )
     except Exception as e:
         logger.warning("Haiku classification failed: %s", e)
-        # Fall back to uncertain result
         return WebFetchQuality(
             is_js_rendered=True,
             confidence=0.5,

@@ -775,8 +775,8 @@ async def run_forecast(
                 # Playwright MCP for JS-heavy sites (last resort)
                 "playwright": McpStdioServerConfig(
                     type="stdio",
-                    command="npx",
-                    args=["-y", "@anthropic-ai/mcp-server-playwright"],
+                    command="bun",
+                    args=["x", "@anthropic-ai/mcp-server-playwright"],
                 ),
             },
             agents=SUBAGENTS,
