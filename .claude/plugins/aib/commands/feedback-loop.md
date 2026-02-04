@@ -78,25 +78,26 @@ The `retrodict` command:
 - Computes Brier scores for binary questions
 - Compares our performance to the final CP
 
-**This is valuable calibration data** even though we can't submit. It tells us:
-- What would we have forecast?
-- Were we better or worse than CP?
-- What reasoning did we use?
+**⚠️ CRITICAL LIMITATION**: Retrodicting already-resolved questions has LIMITED calibration value because:
+- The agent can simply google "did X happen" and find the answer
+- This tests research skills, not forecasting skills
+- A 97% forecast on a past event that already happened proves nothing
 
-Run this on any missed questions to build up calibration data faster.
+**When retrodiction IS useful**:
+- Questions where resolution isn't easily googleable (numeric values, obscure events)
+- Questions that resolved very recently (news hasn't propagated)
+- Testing tool usage and reasoning process (not accuracy)
 
-**If no missed AIB questions**: Search Metaculus for other resolved questions to retrodict:
+**When retrodiction is NOT useful**:
+- Binary questions about major events that already happened
+- Anything the agent can find by searching "[question topic] result"
 
-```bash
-# Search for recently resolved questions on any topic
-# Then retrodict interesting ones for calibration practice
-uv run forecast retrodict <question_id> <question_id> ...
-```
+**Better alternatives for calibration**:
+1. **Forecast open questions** - The loop should catch these before they close
+2. **Use questions from other tournaments** - Still open, can actually submit
+3. **Focus on numeric questions** - Harder to google exact values
 
-This is useful for:
-- Building calibration data when AIB is slow
-- Testing the agent on different question types
-- Practicing on domains where we're weak
+Run this on any missed questions, but weight the calibration value appropriately.
 
 ### 1b. About Community Prediction
 
@@ -387,7 +388,18 @@ uv run python .claude/scripts/aggregate_metrics.py summary
 
 # Calibration report (needs resolved forecasts)
 uv run python .claude/scripts/calibration_report.py summary
+
+# (Add more scripts as you build them)
 ```
+
+## Periodic Maintenance
+
+Every few feedback loop sessions, take time to:
+
+1. **Reread this entire document** - Is it still accurate? Remove outdated guidance.
+2. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
+3. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
+4. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
 
 ## Key Questions to Answer Each Session
 
