@@ -36,6 +36,8 @@ class Settings(BaseSettings):
             missing.append("EXA_API_KEY")
         if not self.asknews_client_id or not self.asknews_client_secret:
             missing.append("ASKNEWS_CLIENT_ID/ASKNEWS_SECRET")
+        if not self.fred_api_key:
+            missing.append("FRED_API_KEY")
 
         if missing:
             logger.warning(
@@ -194,6 +196,7 @@ _ENV_EXPORTS = [
     ("EXA_API_KEY", settings.exa_api_key),
     ("ASKNEWS_CLIENT_ID", settings.asknews_client_id),
     ("ASKNEWS_SECRET", settings.asknews_client_secret),
+    ("FRED_API_KEY", settings.fred_api_key),
 ]
 
 for env_name, value in _ENV_EXPORTS:

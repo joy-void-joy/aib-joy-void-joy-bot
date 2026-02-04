@@ -88,6 +88,7 @@ uv run pytest -k "test_forecast"
 **Common issues:**
 - `METACULUS_TOKEN` not set → Startup fails (required)
 - `EXA_API_KEY` not set → Web search fails
+- `FRED_API_KEY` not set → FRED economic data tools fail
 - Docker not running → Sandbox code execution fails
 
 **Inspecting tool outputs:**
