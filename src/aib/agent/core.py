@@ -31,6 +31,10 @@ from aib.agent.history import (
     save_forecast,
 )
 from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
+from aib.tools.classifiers import (
+    classify_webfetch_content,
+    generate_fallback_message,
+)
 from aib.agent.models import (
     CreditExhaustedError,
     Forecast,
@@ -480,6 +484,71 @@ def create_permission_hooks(
     }
 
 
+def create_webfetch_quality_hooks() -> dict[str, Any]:
+    """Create PostToolUse hook for WebFetch quality detection.
+
+    Detects when WebFetch returns JS-rendered garbage and injects
+    a system message with alternative tools to try.
+    """
+
+    async def webfetch_quality_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> dict[str, Any]:
+        """Check WebFetch responses for JS-rendering issues."""
+        if input_data.get("hook_event_name") != "PostToolUse":
+            return {}
+
+        tool_name = input_data.get("tool_name", "")
+        if tool_name != "WebFetch":
+            return {}
+
+        # Extract content from tool response
+        tool_response = input_data.get("tool_response", {})
+        content = ""
+
+        # Handle different response formats
+        if isinstance(tool_response, str):
+            content = tool_response
+        elif isinstance(tool_response, dict):
+            # MCP-style response
+            result = tool_response.get("result", tool_response)
+            if isinstance(result, str):
+                content = result
+            elif isinstance(result, dict):
+                content = result.get("content", result.get("text", ""))
+
+        if not content or len(content) < 50:
+            # Too short to classify meaningfully
+            return {}
+
+        # Get the URL from tool input
+        tool_input = input_data.get("tool_input", {})
+        url = tool_input.get("url", "")
+
+        # Classify the content
+        try:
+            classification = await classify_webfetch_content(content, url)
+
+            if classification.is_js_rendered and classification.confidence >= 0.6:
+                message = generate_fallback_message(url, classification)
+                logger.info(
+                    "WebFetch quality issue detected for %s (confidence=%.0f%%)",
+                    url[:50],
+                    classification.confidence * 100,
+                )
+                return {"systemMessage": message}
+        except Exception as e:
+            logger.warning("WebFetch quality check failed: %s", e)
+
+        return {}
+
+    return {
+        "PostToolUse": [HookMatcher(hooks=[webfetch_quality_hook])],  # type: ignore[list-item]
+    }
+
+
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
     """Fetch question details from Metaculus API."""
     headers = {"Authorization": f"Token {token}"} if token else {}
@@ -671,13 +740,14 @@ async def run_forecast(
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
 
+        # Always add WebFetch quality detection
+        webfetch_hooks = create_webfetch_quality_hooks()
+        hooks = _merge_hooks(permission_hooks, webfetch_hooks)
+
         # Compose with retrodict hooks if in retrodict mode
         if retrodict_config:
             retrodict_hooks = create_retrodict_hooks(retrodict_config)
-            # Merge hooks: both PreToolUse hooks run, add PostToolUse
-            hooks = _merge_hooks(permission_hooks, retrodict_hooks)
-        else:
-            hooks = permission_hooks
+            hooks = _merge_hooks(hooks, retrodict_hooks)
 
         options = ClaudeAgentOptions(
             model=settings.model,
