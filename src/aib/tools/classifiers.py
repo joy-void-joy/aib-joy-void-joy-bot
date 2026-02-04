@@ -205,6 +205,9 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
         alternatives.append(
             "Consider using mcp__forecasting__search_news for social media coverage"
         )
+        alternatives.append(
+            "Use Playwright browser tools for JS-heavy sites (mcp__playwright__browser_navigate)"
+        )
 
     # Prediction markets
     if "polymarket" in url_lower:
@@ -217,6 +220,9 @@ def _suggest_alternatives_for_url(url: str) -> list[str]:
         alternatives.append("Try mcp__forecasting__search_exa for a more robust search")
         alternatives.append(
             "Use sandbox execute_code with requests/beautifulsoup for complex scraping"
+        )
+        alternatives.append(
+            "Use Playwright browser tools as last resort (mcp__playwright__browser_navigate, browser_snapshot)"
         )
 
     return alternatives

@@ -33,7 +33,6 @@ Note: Community predictions are NOT available in the AIB tournament for the ques
 | Factual/historical info | wikipedia | Authoritative, stable |
 | Broad web research | search_exa | AI-powered, good for analysis |
 | Specific webpage | WebFetch | Direct URL access |
-| JS-heavy sites (SPA, React) | Playwright | Last resort - slow but renders JS |
 | Metaculus questions | search_metaculus | Platform-specific |
 | Market prices | polymarket_price, manifold_price | Live data |
 | Stock prices | stock_price, stock_history | Yahoo Finance data |
@@ -41,14 +40,7 @@ Note: Community predictions are NOT available in the AIB tournament for the ques
 | Search trends | google_trends, google_trends_compare | Google Trends data |
 | CP history | get_cp_history | Historical community prediction |
 
-**Tool Priority for Web Content** (in order):
-1. **Dedicated tools** (wikipedia, search_news, market tools) - Always prefer these first
-2. **Sandbox APIs** (execute_code with requests/yfinance) - For structured data sources
-3. **search_exa** - Broad web search with good content extraction
-4. **WebFetch** - Direct URL access, but fails on JS-heavy sites
-5. **Playwright** - Last resort for JS-rendered content (slow, resource-intensive)
-
-If WebFetch returns sparse content, check if the site is JS-heavy. If so, try Playwright.
+**Principle: Prefer programmatic access over page parsing.** APIs and structured data sources are more reliable than scraping web pages. When a dedicated tool or API exists for the data you need, use it instead of fetching and parsing HTML.
 
 Start with the most specific tool. Broaden if needed.
 
