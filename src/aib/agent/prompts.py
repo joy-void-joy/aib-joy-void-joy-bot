@@ -580,18 +580,26 @@ def generate_tool_docs(mcp_servers: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def get_forecasting_system_prompt(mcp_servers: dict[str, Any] | None = None) -> str:
-    """Generate the forecasting system prompt with current date.
+def get_forecasting_system_prompt(
+    mcp_servers: dict[str, Any] | None = None,
+    *,
+    forecast_date: datetime | None = None,
+) -> str:
+    """Generate the forecasting system prompt.
 
     Args:
         mcp_servers: Optional dict of MCP servers to generate tool docs from.
             If None, uses the static tool documentation in the template.
+        forecast_date: Date to use as "today" in the prompt. If None, uses
+            the actual current date. Use this for retrodict mode to set the
+            agent's temporal context.
 
     Returns:
-        The system prompt with today's date filled in.
+        The system prompt with the date filled in.
     """
+    effective_date = forecast_date or datetime.now()
     prompt = _FORECASTING_SYSTEM_PROMPT_TEMPLATE.format(
-        date=datetime.now().strftime("%Y-%m-%d")
+        date=effective_date.strftime("%Y-%m-%d")
     )
 
     # If MCP servers provided, append auto-generated tool docs

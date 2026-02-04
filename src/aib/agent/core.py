@@ -739,7 +739,9 @@ async def run_forecast(
             system_prompt={
                 "type": "preset",
                 "preset": "claude_code",
-                "append": get_forecasting_system_prompt(),
+                "append": get_forecasting_system_prompt(
+                    forecast_date=retrodict_config.forecast_date if retrodict_config else None
+                ),
             },
             max_thinking_tokens=64_000 - 1,
             permission_mode="bypassPermissions",
