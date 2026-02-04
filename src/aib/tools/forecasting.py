@@ -106,7 +106,9 @@ class SearchMetaculusInput(BaseModel):
 
 
 class CoherenceLinksInput(BaseModel):
-    post_id: int
+    """Input for fetching coherence links."""
+
+    question_id: int = Field(description="Metaculus question ID (not post ID)")
 
 
 class CPHistoryInput(BaseModel):
@@ -132,9 +134,15 @@ class PredictionHistoryInput(BaseModel):
 
 
 def _question_to_dict(question: Any) -> dict[str, object]:
-    """Convert a MetaculusQuestion to a serializable dict."""
+    """Convert a MetaculusQuestion to a serializable dict.
+
+    Note: Returns both post_id and question_id. These are different:
+    - post_id: Used for URLs and local storage (e.g., metaculus.com/questions/{post_id})
+    - question_id: Used for certain API endpoints (get_coherence_links, get_cp_history)
+    """
     result: dict[str, object] = {
         "post_id": question.id_of_post,
+        "question_id": question.id_of_question,  # Needed for get_coherence_links, get_cp_history
         "title": question.question_text,
         "type": question.get_question_type(),
         "url": question.page_url,
@@ -256,6 +264,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
             results = [
                 {
                     "post_id": q.id_of_post,
+                    "question_id": q.id_of_question,
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
@@ -300,6 +309,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
             results = [
                 {
                     "post_id": q.id_of_post,
+                    "question_id": q.id_of_question,
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
@@ -320,8 +330,12 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
 
 @tool(
     "get_coherence_links",
-    "Get questions related to this one via coherence links. Used for consistency checking between related forecasts.",
-    {"post_id": int},
+    (
+        "Get questions related to this one via coherence links. "
+        "Used for consistency checking between related forecasts. "
+        "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
+    ),
+    {"question_id": int},
 )
 @tracked("get_coherence_links")
 async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
@@ -331,11 +345,11 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    post_id = validated.post_id
+    question_id = validated.question_id
     try:
         async with _metaculus_semaphore:
             client = get_metaculus_client()
-            links = await client.get_links_for_question(post_id)
+            links = await client.get_links_for_question(question_id)
             results = [
                 {
                     "question1_id": link.question1_id,
