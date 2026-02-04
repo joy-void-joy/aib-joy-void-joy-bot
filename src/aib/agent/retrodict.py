@@ -17,7 +17,6 @@ import socket
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-from urllib.parse import quote
 
 from claude_agent_sdk import HookMatcher
 from claude_agent_sdk.types import HookContext
@@ -83,18 +82,22 @@ DATE_CAPPABLE_TOOLS = frozenset(
 def _rewrite_to_wayback(url: str, timestamp: str) -> str:
     """Rewrite a URL to use Wayback Machine snapshot.
 
+    The Wayback Machine URL format appends the original URL directly after the
+    timestamp - no encoding needed. The 'id_' modifier returns raw content
+    without the Wayback toolbar injection.
+
     Args:
-        url: Original URL to fetch
+        url: Original URL to fetch (e.g., "https://example.com/search?q=test")
         timestamp: Wayback timestamp format (YYYYMMDD or YYYYMMDDHHMMSS)
 
     Returns:
         Wayback Machine URL for the closest snapshot before the timestamp.
+
+    Example:
+        >>> _rewrite_to_wayback("https://example.com/page?q=1", "20260115")
+        'https://web.archive.org/web/20260115id_/https://example.com/page?q=1'
     """
-    # Wayback URL format: web.archive.org/web/{timestamp}id_/{url}
-    # The "id_" modifier returns the original content without Wayback toolbar
-    # Preserve URL structure including query parameters (safe chars: :/?&=)
-    encoded_url = quote(url, safe=":/?&=")
-    return f"https://web.archive.org/web/{timestamp}id_/{encoded_url}"
+    return f"https://web.archive.org/web/{timestamp}id_/{url}"
 
 
 def create_retrodict_hooks(config: RetrodictConfig) -> dict[str, Any]:
