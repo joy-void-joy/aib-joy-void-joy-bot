@@ -10,6 +10,17 @@ propagation:
 This module provides a fixed version that works around both issues.
 
 Use `create_mcp_server` instead of `create_sdk_mcp_server` from claude_agent_sdk.
+
+SDK Compatibility
+-----------------
+Tested against: claude-agent-sdk>=0.1.26
+Last verified: 2026-02-04
+
+Maintenance Notes:
+- Check if these bugs are fixed in future SDK versions
+- If fixed, remove this module and use `create_sdk_mcp_server` directly
+- Update pyproject.toml to require the fixed version minimum
+- Monitor SDK changelog for MCP-related changes
 """
 
 from typing import Any, cast

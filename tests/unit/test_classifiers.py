@@ -217,3 +217,177 @@ class TestGenerateFallbackMessage:
         )
         message = generate_fallback_message("https://example.com", classification)
         assert "different approach" in message
+
+
+class TestClassifyHaiku:
+    """Tests for Haiku model classifier (async)."""
+
+    @pytest.mark.asyncio
+    async def test_classify_haiku_returns_quality(self) -> None:
+        """classify_haiku should return WebFetchQuality."""
+        from unittest.mock import patch, MagicMock
+
+        from claude_agent_sdk import ResultMessage
+        from aib.tools.classifiers import classify_haiku
+
+        # Create a proper mock for ResultMessage
+        mock_result = MagicMock(spec=ResultMessage)
+        mock_result.structured_output = {
+            "is_js_rendered": True,
+            "confidence": 0.85,
+            "reason": "Loading content detected",
+        }
+
+        # Create async generator that yields our mock
+        async def mock_query(*args, **kwargs):
+            yield mock_result
+
+        with patch("aib.tools.classifiers.query", mock_query):
+            # Clear the cache to ensure fresh call
+            from aib.tools.cache import api_cache
+            await api_cache.clear()
+
+            result = await classify_haiku("Loading... unique content 1")
+
+            assert result.is_js_rendered is True
+            assert result.confidence == 0.85
+            assert "Loading" in result.reason
+
+    @pytest.mark.asyncio
+    async def test_classify_haiku_handles_empty_result(self) -> None:
+        """classify_haiku should handle empty Haiku response."""
+        from unittest.mock import patch, MagicMock
+
+        from claude_agent_sdk import ResultMessage
+        from aib.tools.classifiers import classify_haiku
+
+        # Mock ResultMessage with no structured output
+        mock_result = MagicMock(spec=ResultMessage)
+        mock_result.structured_output = None
+        mock_result.result = None
+
+        async def mock_query(*args, **kwargs):
+            yield mock_result
+
+        with patch("aib.tools.classifiers.query", mock_query):
+            from aib.tools.cache import api_cache
+            await api_cache.clear()
+
+            result = await classify_haiku("test content for empty result unique 2")
+
+            # Should return default classification when no data
+            assert result.is_js_rendered is True
+            assert result.confidence == 0.5
+
+    @pytest.mark.asyncio
+    async def test_classify_haiku_handles_json_parse_error(self) -> None:
+        """classify_haiku should handle JSON parsing errors."""
+        from unittest.mock import patch, MagicMock
+
+        from claude_agent_sdk import ResultMessage
+        from aib.tools.classifiers import classify_haiku
+
+        # Mock ResultMessage with invalid JSON in result
+        mock_result = MagicMock(spec=ResultMessage)
+        mock_result.structured_output = None
+        mock_result.result = "not valid json {"
+
+        async def mock_query(*args, **kwargs):
+            yield mock_result
+
+        with patch("aib.tools.classifiers.query", mock_query):
+            from aib.tools.cache import api_cache
+            await api_cache.clear()
+
+            result = await classify_haiku("test content for parse error unique 3")
+
+            # Should return fallback classification
+            assert result.is_js_rendered is True
+            assert result.confidence == 0.5
+
+
+class TestClassifyWebfetchContent:
+    """Tests for the full classification pipeline (async)."""
+
+    @pytest.mark.asyncio
+    async def test_uses_heuristics_when_confident(
+        self, sample_html_content: str
+    ) -> None:
+        """Should not call Haiku if heuristics are confident."""
+        from unittest.mock import patch
+
+        from aib.tools.classifiers import classify_webfetch_content
+
+        with patch("aib.tools.classifiers.classify_haiku") as mock_haiku:
+            result = await classify_webfetch_content(sample_html_content)
+
+            # Real HTML should be classified with high confidence by heuristics
+            assert result.is_js_rendered is False
+            assert result.confidence >= 0.6
+            # Haiku should NOT be called when heuristics are confident
+            mock_haiku.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_escalates_to_haiku_when_uncertain(self) -> None:
+        """Should call Haiku when heuristics have low confidence."""
+        from unittest.mock import patch, AsyncMock
+
+        from aib.tools.classifiers import classify_webfetch_content
+
+        # Content that triggers medium confidence in heuristics
+        uncertain_content = "Some text content" + ("<div>" * 15)
+
+        mock_haiku_result = WebFetchQuality(
+            is_js_rendered=False,
+            confidence=0.9,
+            reason="Haiku says it's fine",
+            suggested_alternatives=[],
+        )
+
+        with patch(
+            "aib.tools.classifiers.classify_haiku",
+            new_callable=AsyncMock,
+            return_value=mock_haiku_result,
+        ) as mock_haiku:
+            result = await classify_webfetch_content(
+                uncertain_content,
+                confidence_threshold=0.99,  # Force escalation to Haiku
+            )
+
+            mock_haiku.assert_called_once()
+            assert result.confidence == 0.9
+            assert result.reason == "Haiku says it's fine"
+
+    @pytest.mark.asyncio
+    async def test_merges_alternatives_from_both_classifiers(self) -> None:
+        """Should merge alternatives from heuristics and Haiku."""
+        from unittest.mock import patch, AsyncMock
+
+        from aib.tools.classifiers import classify_webfetch_content
+
+        # Content that will get alternatives from heuristics (based on URL)
+        uncertain_content = "Loading..." + ("<div>" * 10)
+        url = "https://twitter.com/user/status"  # Will trigger social media suggestions
+
+        mock_haiku_result = WebFetchQuality(
+            is_js_rendered=True,
+            confidence=0.8,
+            reason="Haiku classification",
+            suggested_alternatives=["Use API instead"],
+        )
+
+        with patch(
+            "aib.tools.classifiers.classify_haiku",
+            new_callable=AsyncMock,
+            return_value=mock_haiku_result,
+        ):
+            result = await classify_webfetch_content(
+                uncertain_content,
+                url=url,
+                confidence_threshold=0.99,  # Force escalation
+            )
+
+            # Should have alternatives from both sources (deduplicated)
+            assert len(result.suggested_alternatives) >= 1
+            # Haiku alternative should be included
+            assert "Use API instead" in result.suggested_alternatives

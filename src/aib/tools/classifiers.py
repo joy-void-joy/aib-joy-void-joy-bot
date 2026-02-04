@@ -11,6 +11,8 @@ import re
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 from pydantic import BaseModel, Field
 
+from aib.tools.cache import cached
+
 logger = logging.getLogger(__name__)
 
 
@@ -259,11 +261,13 @@ _CLASSIFICATION_SCHEMA = {
 }
 
 
+@cached(ttl=900)  # 15 min - prevents duplicate calls within a forecast session
 async def classify_haiku(content: str) -> WebFetchQuality:
     """Use Haiku model to classify uncertain WebFetch content.
 
     Only called when heuristic classification has low confidence.
-    Very cheap (~$0.0001 per call) but adds latency.
+    Very cheap (~$0.0001 per call) but adds latency. Cached to prevent
+    duplicate API calls when the same content is fetched multiple times.
 
     Uses the Claude Agent SDK query function with Haiku model and no tools.
 

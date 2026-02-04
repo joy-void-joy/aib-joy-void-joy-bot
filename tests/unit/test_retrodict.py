@@ -2,13 +2,14 @@
 
 from datetime import datetime
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from aib.agent.retrodict import (
     LIVE_ONLY_TOOLS,
     RetrodictConfig,
+    _check_wayback_availability,
     _rewrite_to_wayback,
     create_retrodict_hooks,
     generate_pypi_only_iptables_rules,
@@ -60,10 +61,18 @@ class TestWaybackRewrite:
         assert "q=test" in result
         assert "page=1" in result
 
-    def test_already_wayback_url(self) -> None:
-        """Hook should not double-rewrite Wayback URLs."""
-        # This is tested in the hook, not in _rewrite_to_wayback
-        pass
+    def test_wayback_url_structure(self) -> None:
+        """Verify the Wayback URL structure is correct."""
+        url = "https://example.com/page?q=test&lang=en"
+        timestamp = "20260115"
+        result = _rewrite_to_wayback(url, timestamp)
+
+        # Should have the id_ modifier for raw content
+        assert "id_/" in result
+        # Should preserve the full original URL including query params
+        assert result.endswith(url)
+        # Should use the correct base format
+        assert result.startswith("https://web.archive.org/web/")
 
 
 class TestRetrodictHooks:
@@ -136,13 +145,70 @@ class TestRetrodictHooks:
             "tool_input": {"url": "https://example.com/page"},
         }
 
-        result = await pre_hook(input_data, None, None)
+        # Mock the availability check to return a valid snapshot
+        mock_availability = {"timestamp": config.wayback_ts, "available": True}
+        with patch(
+            "aib.agent.retrodict._check_wayback_availability",
+            return_value=mock_availability,
+        ):
+            result = await pre_hook(input_data, None, None)
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert "modifiedInput" in output
         assert "web.archive.org" in output["modifiedInput"]["url"]
         assert config.wayback_ts in output["modifiedInput"]["url"]
+
+    @pytest.mark.asyncio
+    async def test_webfetch_denies_when_no_snapshot(
+        self, hooks: dict[str, Any], config: RetrodictConfig
+    ) -> None:
+        """WebFetch should deny URLs without Wayback snapshots."""
+        pre_hook = hooks["PreToolUse"][0].hooks[0]
+
+        input_data = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "WebFetch",
+            "tool_input": {"url": "https://nonexistent-site.example/page"},
+        }
+
+        # Mock the availability check to return None (no snapshot)
+        with patch(
+            "aib.agent.retrodict._check_wayback_availability",
+            return_value=None,
+        ):
+            result = await pre_hook(input_data, None, None)
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "deny"
+        assert "No Wayback snapshot" in output["permissionDecisionReason"]
+
+    @pytest.mark.asyncio
+    async def test_webfetch_uses_actual_snapshot_timestamp(
+        self, hooks: dict[str, Any], config: RetrodictConfig
+    ) -> None:
+        """WebFetch should use the actual snapshot timestamp from API."""
+        pre_hook = hooks["PreToolUse"][0].hooks[0]
+
+        input_data = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "WebFetch",
+            "tool_input": {"url": "https://example.com/page"},
+        }
+
+        # Mock with a different timestamp than requested
+        actual_snapshot_ts = "20260110120000"  # Closest available
+        mock_availability = {"timestamp": actual_snapshot_ts, "available": True}
+        with patch(
+            "aib.agent.retrodict._check_wayback_availability",
+            return_value=mock_availability,
+        ):
+            result = await pre_hook(input_data, None, None)
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        # Should use the actual snapshot timestamp, not the requested one
+        assert actual_snapshot_ts in output["modifiedInput"]["url"]
 
     @pytest.mark.asyncio
     async def test_webfetch_skips_wayback_urls(
@@ -162,6 +228,7 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         # Should not have modifiedInput since URL is already Wayback
+        assert "modifiedInput" not in output
 
     @pytest.mark.asyncio
     async def test_live_tools_blocked(self, hooks: dict[str, Any]) -> None:
@@ -255,6 +322,54 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert "modifiedInput" not in output
+
+    @pytest.mark.asyncio
+    async def test_cp_history_injects_before_parameter(
+        self, hooks: dict[str, Any], config: RetrodictConfig
+    ) -> None:
+        """get_cp_history PreToolUse should inject 'before' parameter."""
+        pre_hook = hooks["PreToolUse"][0].hooks[0]
+
+        input_data = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "mcp__forecasting__get_cp_history",
+            "tool_input": {"question_id": 123, "days": 30},
+        }
+
+        result = await pre_hook(input_data, None, None)
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert "modifiedInput" in output
+        assert output["modifiedInput"]["before"] == config.date_str
+        assert output["modifiedInput"]["question_id"] == 123
+        assert output["modifiedInput"]["days"] == 30
+
+    @pytest.mark.asyncio
+    async def test_webfetch_denies_snapshot_after_cutoff(
+        self, hooks: dict[str, Any], config: RetrodictConfig
+    ) -> None:
+        """WebFetch should deny if closest Wayback snapshot is after cutoff."""
+        pre_hook = hooks["PreToolUse"][0].hooks[0]
+
+        input_data = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "WebFetch",
+            "tool_input": {"url": "https://example.com/page"},
+        }
+
+        # Mock with a snapshot timestamp AFTER the cutoff
+        future_snapshot_ts = "20260120120000"  # 5 days after 20260115
+        mock_availability = {"timestamp": future_snapshot_ts, "available": True}
+        with patch(
+            "aib.agent.retrodict._check_wayback_availability",
+            return_value=mock_availability,
+        ):
+            result = await pre_hook(input_data, None, None)
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "deny"
+        assert "after cutoff" in output["permissionDecisionReason"]
 
 
 class TestPyPIOnlyNetwork:
