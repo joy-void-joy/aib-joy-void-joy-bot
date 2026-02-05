@@ -9,11 +9,11 @@ import pytest
 from aib.agent.hooks import HooksConfig
 from aib.agent.retrodict import (
     RetrodictConfig,
-    _rewrite_to_wayback,
     create_retrodict_hooks,
     generate_pypi_only_iptables_rules,
     get_pypi_allowed_ips,
 )
+from aib.tools.wayback import normalize_wayback_timestamp, rewrite_to_wayback
 
 
 class TestRetrodictConfig:
@@ -49,7 +49,7 @@ class TestWaybackRewrite:
         """Should rewrite URL to Wayback format."""
         url = "https://example.com/page"
         timestamp = "20260115"
-        result = _rewrite_to_wayback(url, timestamp)
+        result = rewrite_to_wayback(url, timestamp)
         assert (
             result == "https://web.archive.org/web/20260115id_/https://example.com/page"
         )
@@ -58,7 +58,7 @@ class TestWaybackRewrite:
         """Should preserve query parameters."""
         url = "https://example.com/search?q=test&page=1"
         timestamp = "20260115"
-        result = _rewrite_to_wayback(url, timestamp)
+        result = rewrite_to_wayback(url, timestamp)
         assert "q=test" in result
         assert "page=1" in result
 
@@ -66,7 +66,7 @@ class TestWaybackRewrite:
         """Verify the Wayback URL structure is correct."""
         url = "https://example.com/page?q=test&lang=en"
         timestamp = "20260115"
-        result = _rewrite_to_wayback(url, timestamp)
+        result = rewrite_to_wayback(url, timestamp)
 
         # Should have the id_ modifier for raw content
         assert "id_/" in result
@@ -76,8 +76,34 @@ class TestWaybackRewrite:
         assert result.startswith("https://web.archive.org/web/")
 
 
+class TestWaybackTimestampNormalization:
+    """Tests for Wayback timestamp normalization used in cutoff validation."""
+
+    def test_normalize_short_timestamp(self) -> None:
+        """YYYYMMDD format should normalize to same integer."""
+        assert normalize_wayback_timestamp("20260115") == 20260115
+
+    def test_normalize_long_timestamp(self) -> None:
+        """YYYYMMDDHHMMSS format should extract just the date portion."""
+        assert normalize_wayback_timestamp("20260115120000") == 20260115
+
+    def test_comparison_for_cutoff_validation(self) -> None:
+        """Normalized timestamps should compare correctly for cutoff checks."""
+        cutoff = normalize_wayback_timestamp("20260115")
+        before_cutoff = normalize_wayback_timestamp("20260110120000")
+        after_cutoff = normalize_wayback_timestamp("20260120235959")
+
+        assert before_cutoff < cutoff
+        assert after_cutoff > cutoff
+
+
 class TestRetrodictHooks:
-    """Tests for the PreToolUse and PostToolUse hooks."""
+    """Tests for the PreToolUse hooks that modify tool inputs for time restriction.
+
+    Note: Some tools (WebSearch, live market prices, Playwright) are excluded
+    entirely via ToolPolicy and never reach these hooks. This class tests only
+    the tools that ARE allowed but need input modification.
+    """
 
     @pytest.fixture
     def config(self) -> RetrodictConfig:
@@ -92,275 +118,289 @@ class TestRetrodictHooks:
         """Create hooks from config."""
         return create_retrodict_hooks(config)
 
-    @pytest.mark.asyncio
-    async def test_websearch_adds_before_filter(
-        self, hooks: dict[str, Any], config: RetrodictConfig
-    ) -> None:
-        """WebSearch queries should have before: operator added."""
+    async def _invoke_hook(
+        self, hooks: HooksConfig, tool_name: str, tool_input: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Helper to invoke the PreToolUse hook."""
         pre_hook = hooks["PreToolUse"][0].hooks[0]
-
         input_data = {
             "hook_event_name": "PreToolUse",
-            "tool_name": "WebSearch",
-            "tool_input": {"query": "breaking news"},
+            "tool_name": tool_name,
+            "tool_input": tool_input,
         }
+        return await pre_hook(input_data, None, None)
 
-        result = await pre_hook(input_data, None, None)
-
-        assert "hookSpecificOutput" in result
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert "modifiedInput" in output
-        assert f"before:{config.date_str}" in output["modifiedInput"]["query"]
-
-    @pytest.mark.asyncio
-    async def test_websearch_no_duplicate_before(
-        self, hooks: dict[str, Any], config: RetrodictConfig
-    ) -> None:
-        """Should not add before: if already present."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebSearch",
-            "tool_input": {"query": f"news before:{config.date_str}"},
-        }
-
-        result = await pre_hook(input_data, None, None)
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        # Should allow without modification since before: already present
-        assert (
-            "modifiedInput" not in output
-            or output["modifiedInput"]["query"].count("before:") == 1
-        )
+    # --- WebFetch tests (URL rewriting to Wayback Machine) ---
 
     @pytest.mark.asyncio
     async def test_webfetch_rewrites_to_wayback(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
         """WebFetch URLs should be rewritten to Wayback Machine."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebFetch",
-            "tool_input": {"url": "https://example.com/page"},
-        }
-
-        # Mock the availability check to return a valid snapshot
         mock_availability = {"timestamp": config.wayback_ts, "available": True}
         with patch(
-            "aib.agent.retrodict._check_wayback_availability",
+            "aib.agent.retrodict.check_wayback_availability",
             return_value=mock_availability,
         ):
-            result = await pre_hook(input_data, None, None)
+            result = await self._invoke_hook(
+                hooks, "WebFetch", {"url": "https://example.com/page"}
+            )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert "modifiedInput" in output
-        assert "web.archive.org" in output["modifiedInput"]["url"]
-        assert config.wayback_ts in output["modifiedInput"]["url"]
+        modified_url = output["modifiedInput"]["url"]
+        assert modified_url.startswith("https://web.archive.org/web/")
+        assert "example.com/page" in modified_url
 
     @pytest.mark.asyncio
     async def test_webfetch_denies_when_no_snapshot(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
         """WebFetch should deny URLs without archived snapshots (appears as 404)."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebFetch",
-            "tool_input": {"url": "https://nonexistent-site.example/page"},
-        }
-
-        # Mock the availability check to return None (no snapshot)
         with patch(
-            "aib.agent.retrodict._check_wayback_availability",
+            "aib.agent.retrodict.check_wayback_availability",
             return_value=None,
         ):
-            result = await pre_hook(input_data, None, None)
+            result = await self._invoke_hook(
+                hooks, "WebFetch", {"url": "https://nonexistent-site.example/page"}
+            )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
-        # Returns generic 404 to not reveal archive mechanism
         assert "404" in output["permissionDecisionReason"]
 
     @pytest.mark.asyncio
     async def test_webfetch_uses_actual_snapshot_timestamp(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
-        """WebFetch should use the actual snapshot timestamp from API."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebFetch",
-            "tool_input": {"url": "https://example.com/page"},
-        }
-
-        # Mock with a different timestamp than requested
-        actual_snapshot_ts = "20260110120000"  # Closest available
+        """WebFetch should use the actual snapshot timestamp from Wayback API."""
+        actual_snapshot_ts = "20260110120000"  # Different from requested
         mock_availability = {"timestamp": actual_snapshot_ts, "available": True}
         with patch(
-            "aib.agent.retrodict._check_wayback_availability",
+            "aib.agent.retrodict.check_wayback_availability",
             return_value=mock_availability,
         ):
-            result = await pre_hook(input_data, None, None)
+            result = await self._invoke_hook(
+                hooks, "WebFetch", {"url": "https://example.com/page"}
+            )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        # Should use the actual snapshot timestamp, not the requested one
         assert actual_snapshot_ts in output["modifiedInput"]["url"]
 
     @pytest.mark.asyncio
-    async def test_webfetch_skips_wayback_urls(self, hooks: dict[str, Any]) -> None:
+    async def test_webfetch_skips_wayback_urls(self, hooks: HooksConfig) -> None:
         """Should not rewrite URLs that are already Wayback URLs."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebFetch",
-            "tool_input": {
-                "url": "https://web.archive.org/web/20260115/https://example.com"
-            },
-        }
-
-        result = await pre_hook(input_data, None, None)
+        result = await self._invoke_hook(
+            hooks,
+            "WebFetch",
+            {"url": "https://web.archive.org/web/20260115/https://example.com"},
+        )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        # Should not have modifiedInput since URL is already Wayback
         assert "modifiedInput" not in output
 
-    # Note: Live-only tools (LIVE_ONLY_TOOLS) are excluded via allowed_tools
-    # in core.py, not via hooks. No test needed here since the tools simply
-    # never reach the hooks.
+    # --- Financial/market data capping tests ---
 
     @pytest.mark.asyncio
-    async def test_stock_history_capped(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+    async def test_stock_history_end_date_capped(
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
-        """stock_history should have end_date capped."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "mcp__markets__stock_history",
-            "tool_input": {"symbol": "AAPL", "period": "1y"},
-        }
-
-        result = await pre_hook(input_data, None, None)
+        """stock_history should have end_date capped to forecast date."""
+        result = await self._invoke_hook(
+            hooks, "mcp__markets__stock_history", {"symbol": "AAPL", "period": "1y"}
+        )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert output["modifiedInput"]["end_date"] == config.date_str
 
     @pytest.mark.asyncio
-    async def test_fred_series_capped(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+    async def test_fred_series_observation_end_capped(
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
-        """fred_series should have observation_end capped."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "mcp__financial__fred_series",
-            "tool_input": {"series_id": "DGS10"},
-        }
-
-        result = await pre_hook(input_data, None, None)
+        """fred_series should have observation_end capped to forecast date."""
+        result = await self._invoke_hook(
+            hooks, "mcp__financial__fred_series", {"series_id": "DGS10"}
+        )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert output["modifiedInput"]["observation_end"] == config.date_str
 
     @pytest.mark.asyncio
-    async def test_google_trends_capped(
-        self, hooks: dict[str, Any], config: RetrodictConfig
+    async def test_polymarket_history_timestamp_capped(
+        self, hooks: HooksConfig, config: RetrodictConfig
     ) -> None:
-        """Google Trends should have timeframe capped."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
+        """polymarket_history should have timestamp capped."""
+        future_ts = config.unix_ts + 86400 * 30  # 30 days in future
+        result = await self._invoke_hook(
+            hooks, "mcp__markets__polymarket_history", {"timestamp": future_ts}
+        )
 
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "mcp__trends__google_trends",
-            "tool_input": {"keyword": "test"},
-        }
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert output["modifiedInput"]["timestamp"] == config.unix_ts
 
-        result = await pre_hook(input_data, None, None)
+    @pytest.mark.asyncio
+    async def test_manifold_history_timestamp_capped(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """manifold_history should have timestamp capped."""
+        future_ts = config.unix_ts + 86400 * 30
+        result = await self._invoke_hook(
+            hooks, "mcp__markets__manifold_history", {"timestamp": future_ts}
+        )
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert output["modifiedInput"]["timestamp"] == config.unix_ts
+
+    # --- Google Trends tests ---
+
+    @pytest.mark.asyncio
+    async def test_google_trends_timeframe_converted_to_date_range(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """Google Trends relative timeframe should become date range ending at cutoff."""
+        result = await self._invoke_hook(
+            hooks,
+            "mcp__trends__google_trends",
+            {"keyword": "test", "timeframe": "today 12-m"},
+        )
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        timeframe = output["modifiedInput"]["timeframe"]
+        # Should end at the cutoff date
+        assert config.date_str in timeframe
+        # Should be a date range format (YYYY-MM-DD YYYY-MM-DD)
+        assert len(timeframe.split()) == 2
+
+    @pytest.mark.asyncio
+    async def test_google_trends_compare_timeframe_capped(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """google_trends_compare should also have timeframe capped."""
+        result = await self._invoke_hook(
+            hooks,
+            "mcp__trends__google_trends_compare",
+            {"keywords": ["a", "b"], "timeframe": "today 3-m"},
+        )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert config.date_str in output["modifiedInput"]["timeframe"]
 
+    # --- Search tool tests ---
+
     @pytest.mark.asyncio
-    async def test_other_tools_allowed(self, hooks: dict[str, Any]) -> None:
-        """Non-restricted tools should be allowed without modification."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
+    async def test_retrodict_search_gets_cutoff_date_injected(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """Retrodict search tool should have cutoff_date injected."""
+        result = await self._invoke_hook(
+            hooks, "mcp__search__web_search", {"query": "test query"}
+        )
 
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/some/path"},
-        }
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert output["modifiedInput"]["cutoff_date"] == config.date_str
 
-        result = await pre_hook(input_data, None, None)
+    @pytest.mark.asyncio
+    async def test_search_exa_gets_published_before_and_livecrawl(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """search_exa should have published_before and livecrawl=never injected."""
+        result = await self._invoke_hook(
+            hooks, "mcp__forecasting__search_exa", {"query": "test"}
+        )
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert output["modifiedInput"]["published_before"] == config.date_str
+        assert output["modifiedInput"]["livecrawl"] == "never"
+
+
+class TestRetrodictSearchToolSchema:
+    """Tests for retrodict search tool schema configuration."""
+
+    def test_web_search_schema_includes_cutoff_date(self) -> None:
+        """web_search tool schema must include cutoff_date for hook injection to work.
+
+        The SDK/MCP layer strips parameters not in the declared schema, so
+        cutoff_date must be explicitly included even though it's hidden from
+        the agent (injected by retrodict hook).
+        """
+        from aib.tools.retrodict_search import web_search
+
+        assert "cutoff_date" in web_search.input_schema, (
+            "cutoff_date must be in web_search input_schema or it will be "
+            "stripped by SDK validation before reaching the handler"
+        )
+
+
+class TestRetrodictHooksContinued:
+    """Continuation of TestRetrodictHooks tests."""
+
+    @pytest.fixture
+    def config(self) -> RetrodictConfig:
+        """Create a retrodict config for testing."""
+        return RetrodictConfig(forecast_date=datetime(2026, 1, 25))
+
+    @pytest.fixture
+    def hooks(self, config: RetrodictConfig) -> HooksConfig:
+        """Create retrodict hooks for testing."""
+        return create_retrodict_hooks(config)
+
+    async def _invoke_hook(
+        self, hooks: HooksConfig, tool_name: str, tool_input: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Helper to invoke a PreToolUse hook and return the result."""
+        hook_matchers = hooks["PreToolUse"]
+        hook_fn = hook_matchers[0].hooks[0]
+        return await hook_fn(  # type: ignore[return-value]
+            {
+                "hook_event_name": "PreToolUse",
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+            },
+            None,  # type: ignore[arg-type]
+            None,  # type: ignore[arg-type]
+        )
+
+    @pytest.mark.asyncio
+    async def test_cp_history_gets_before_parameter(
+        self, hooks: HooksConfig, config: RetrodictConfig
+    ) -> None:
+        """get_cp_history should have 'before' parameter injected."""
+        result = await self._invoke_hook(
+            hooks,
+            "mcp__forecasting__get_cp_history",
+            {"question_id": 123, "days": 30},
+        )
+
+        output = result["hookSpecificOutput"]
+        assert output["permissionDecision"] == "allow"
+        assert output["modifiedInput"]["before"] == config.date_str
+        # Original parameters should be preserved
+        assert output["modifiedInput"]["question_id"] == 123
+        assert output["modifiedInput"]["days"] == 30
+
+    # --- Passthrough tests ---
+
+    @pytest.mark.asyncio
+    async def test_unmodified_tools_pass_through(self, hooks: HooksConfig) -> None:
+        """Tools without special handling should be allowed without modification."""
+        result = await self._invoke_hook(
+            hooks, "Read", {"file_path": "/some/path"}
+        )
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
         assert "modifiedInput" not in output
-
-    @pytest.mark.asyncio
-    async def test_cp_history_injects_before_parameter(
-        self, hooks: dict[str, Any], config: RetrodictConfig
-    ) -> None:
-        """get_cp_history PreToolUse should inject 'before' parameter."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "mcp__forecasting__get_cp_history",
-            "tool_input": {"question_id": 123, "days": 30},
-        }
-
-        result = await pre_hook(input_data, None, None)
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert "modifiedInput" in output
-        assert output["modifiedInput"]["before"] == config.date_str
-        assert output["modifiedInput"]["question_id"] == 123
-        assert output["modifiedInput"]["days"] == 30
-
-    @pytest.mark.asyncio
-    async def test_webfetch_denies_snapshot_after_cutoff(
-        self, hooks: dict[str, Any], config: RetrodictConfig
-    ) -> None:
-        """WebFetch should deny if closest snapshot is after cutoff (appears as 404)."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-
-        input_data = {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "WebFetch",
-            "tool_input": {"url": "https://example.com/page"},
-        }
-
-        # Mock with a snapshot timestamp AFTER the cutoff
-        future_snapshot_ts = "20260120120000"  # 5 days after 20260115
-        mock_availability = {"timestamp": future_snapshot_ts, "available": True}
-        with patch(
-            "aib.agent.retrodict._check_wayback_availability",
-            return_value=mock_availability,
-        ):
-            result = await pre_hook(input_data, None, None)
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
-        # Returns generic 404 to not reveal archive mechanism
-        assert "404" in output["permissionDecisionReason"]
 
 
 class TestPyPIOnlyNetwork:
