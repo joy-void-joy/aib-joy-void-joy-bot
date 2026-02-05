@@ -69,13 +69,14 @@ class WebSearchResponse(BaseModel):
 
 
 async def _perform_web_search(
-    search_query: str, num_results: int
+    search_query: str, num_results: int, cutoff_date: str | None = None
 ) -> list[SearchResultItem]:
     """Use Claude Agent SDK to perform a web search with structured output.
 
     Args:
         search_query: Search query.
         num_results: Number of results to request.
+        cutoff_date: Optional date (YYYY-MM-DD) to filter out future content.
 
     Returns:
         List of search result items.
@@ -89,13 +90,24 @@ async def _perform_web_search(
         },
     )
 
-    async for message in query(
-        prompt=(
-            f"Search the web for: {search_query}\n\n"
-            f"Return up to {num_results} relevant results with title, URL, and snippet."
-        ),
-        options=options,
-    ):
+    # Build prompt with optional temporal filtering
+    base_prompt = (
+        f"Search the web for: {search_query}\n\n"
+        f"Return up to {num_results} relevant results with title, URL, and snippet."
+    )
+
+    if cutoff_date:
+        temporal_filter = (
+            f"\n\nIMPORTANT: You are searching as if today is {cutoff_date}. "
+            f"Exclude any results that mention events, dates, or information after {cutoff_date}. "
+            f"If a snippet contains dates after {cutoff_date}, either redact those portions "
+            f"or exclude the result entirely. Do not include any future-dated content."
+        )
+        prompt = base_prompt + temporal_filter
+    else:
+        prompt = base_prompt
+
+    async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage) and message.structured_output:
             response = WebSearchResponse.model_validate(message.structured_output)
             return response.results
@@ -169,7 +181,9 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
     try:
         # Perform web search via Agent SDK (returns structured results)
         logger.info("[WebSearch] Searching for: %s", search_query)
-        search_results = await _perform_web_search(search_query, num_results * 2)
+        search_results = await _perform_web_search(
+            search_query, num_results * 2, cutoff_date
+        )
         logger.info("[WebSearch] Got %d results from search", len(search_results))
 
         if not search_results:
