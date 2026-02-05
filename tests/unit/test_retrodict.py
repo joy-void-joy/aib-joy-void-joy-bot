@@ -324,20 +324,42 @@ class TestRetrodictHooks:
         assert output["modifiedInput"]["livecrawl"] == "never"
 
 
-class TestRetrodictSearchToolSchema:
-    """Tests for retrodict search tool schema configuration."""
+class TestRetrodictToolSchemas:
+    """Tests for retrodict tool schema configuration.
+
+    The SDK/MCP layer strips parameters not in the declared schema, so
+    hook-injected parameters must be explicitly included in the schema
+    even though they're hidden from the agent.
+    """
 
     def test_web_search_schema_includes_cutoff_date(self) -> None:
-        """web_search tool schema must include cutoff_date for hook injection to work.
-
-        The SDK/MCP layer strips parameters not in the declared schema, so
-        cutoff_date must be explicitly included even though it's hidden from
-        the agent (injected by retrodict hook).
-        """
+        """web_search tool schema must include cutoff_date for hook injection to work."""
         from aib.tools.retrodict_search import web_search
 
         assert "cutoff_date" in web_search.input_schema, (
             "cutoff_date must be in web_search input_schema or it will be "
+            "stripped by SDK validation before reaching the handler"
+        )
+
+    def test_search_exa_schema_includes_retrodict_params(self) -> None:
+        """search_exa tool schema must include published_before and livecrawl."""
+        from aib.tools.forecasting import search_exa
+
+        assert "published_before" in search_exa.input_schema, (
+            "published_before must be in search_exa input_schema or it will be "
+            "stripped by SDK validation before reaching the handler"
+        )
+        assert "livecrawl" in search_exa.input_schema, (
+            "livecrawl must be in search_exa input_schema or it will be "
+            "stripped by SDK validation before reaching the handler"
+        )
+
+    def test_get_cp_history_schema_includes_before(self) -> None:
+        """get_cp_history tool schema must include before parameter."""
+        from aib.tools.forecasting import get_cp_history
+
+        assert "before" in get_cp_history.input_schema, (
+            "before must be in get_cp_history input_schema or it will be "
             "stripped by SDK validation before reaching the handler"
         )
 

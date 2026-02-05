@@ -52,6 +52,14 @@ _search_semaphore = Semaphore(settings.search_max_concurrent)
 class SearchExaInput(BaseModel):
     query: str
     num_results: int = settings.search_default_limit
+    published_before: str | None = Field(
+        default=None,
+        description="ISO date (YYYY-MM-DD) to filter results published before this date.",
+    )
+    livecrawl: str = Field(
+        default="always",
+        description="Livecrawl mode: 'always', 'fallback', or 'never'.",
+    )
 
 
 class SearchNewsInput(BaseModel):
@@ -378,7 +386,8 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
         "Returns timestamped CP values over the requested period. "
         "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
     ),
-    {"question_id": int, "days": int},
+    # `before` is injected by retrodict hook but must be in schema to avoid being stripped
+    {"question_id": int, "days": int, "before": str},
 )
 @tracked("get_cp_history")
 async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -477,12 +486,19 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
 @cached(ttl=300)
 @with_retry(max_attempts=3)
-async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
+async def _exa_search(
+    query: str,
+    num_results: int,
+    published_before: str | None = None,
+    livecrawl: str = "always",
+) -> list[dict[str, Any]]:
     """Execute an Exa search (cached for 5 minutes).
 
     Args:
         query: Search query string.
         num_results: Number of results to return.
+        published_before: Optional ISO date (YYYY-MM-DD) to filter results.
+        livecrawl: Livecrawl mode ('always', 'fallback', 'never').
 
     Returns:
         List of search result dicts with title, url, snippet, etc.
@@ -497,12 +513,12 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
         "content-type": "application/json",
         "x-api-key": api_key,
     }
-    payload = {
+    payload: dict[str, Any] = {
         "query": query,
         "type": "auto",
         "useAutoprompt": True,
         "numResults": num_results,
-        "livecrawl": "always",
+        "livecrawl": livecrawl,
         "contents": {
             "text": {"includeHtmlTags": False},
             "highlights": {
@@ -512,6 +528,9 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
             },
         },
     }
+
+    if published_before:
+        payload["publishedBefore"] = f"{published_before}T23:59:59.999Z"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, json=payload, headers=headers)
@@ -543,7 +562,8 @@ async def _exa_search(query: str, num_results: int) -> list[dict[str, Any]]:
         "Search the web using Exa AI-powered search. Returns raw results with titles, URLs, and snippets. "
         f"Results are cached for 5 minutes. Optional num_results (default: {settings.search_default_limit})."
     ),
-    {"query": str, "num_results": int},
+    # `published_before` and `livecrawl` are injected by retrodict hook but must be in schema
+    {"query": str, "num_results": int, "published_before": str, "livecrawl": str},
 )
 @tracked("search_exa")
 async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
@@ -555,10 +575,14 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
 
     query = validated.query
     num_results = validated.num_results
+    published_before = validated.published_before
+    livecrawl = validated.livecrawl
 
     try:
         async with _search_semaphore:
-            formatted = await _exa_search(query, num_results)
+            formatted = await _exa_search(
+                query, num_results, published_before, livecrawl
+            )
         return mcp_success(formatted)
     except Exception as e:
         logger.exception("Exa search failed")
