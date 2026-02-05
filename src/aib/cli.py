@@ -11,7 +11,13 @@ import httpx
 import typer
 
 from aib.agent import ForecastOutput, run_forecast
-from aib.agent.history import is_submitted, load_latest_for_submission, mark_submitted
+from aib.agent.history import (
+    RetrodictComparison,
+    is_submitted,
+    load_latest_for_submission,
+    mark_submitted,
+    update_retrodict_comparison,
+)
 from aib.agent.retrodict import RetrodictConfig
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
@@ -287,30 +293,126 @@ def retrodict(
             output = asyncio.run(run_forecast(qid, retrodict_config=retrodict_config))
             display_forecast(output)
 
-            # Compute Brier score for binary questions
+            # Compute and display comparison between prediction and actual
+            comparison: RetrodictComparison | None = None
             brier = None
+
+            print("\n" + "=" * 60)
+            print("📊 RETRODICT COMPARISON")
+            print("=" * 60)
+
             if output.probability is not None and resolution in ("yes", "no"):
+                # Binary question comparison
                 outcome = 1.0 if resolution == "yes" else 0.0
                 brier = (output.probability - outcome) ** 2
-                print("\n📊 Calibration:")
-                print(f"   Our forecast: {output.probability:.1%}")
-                print(f"   Resolution: {resolution}")
-                print(f"   Brier score: {brier:.4f}")
+                diff_pct = (output.probability - outcome) * 100
+
+                print(f"\n   Actual Result:    {resolution.upper()}")
+                print(f"   Our Prediction:   {output.probability:.1%}")
+                print(f"   Difference:       {diff_pct:+.1f} percentage points")
+                print(f"   Brier Score:      {brier:.4f}")
+
+                comparison = RetrodictComparison(
+                    actual_value=resolution,
+                    predicted_value=output.probability,
+                    difference_pct=diff_pct,
+                    score=brier,
+                    score_name="brier",
+                )
+
                 if final_cp is not None:
                     cp_brier = (final_cp - outcome) ** 2
-                    print(f"   CP Brier: {cp_brier:.4f}")
-                    diff = brier - cp_brier
-                    better_worse = "better" if diff < 0 else "worse"
-                    print(f"   We were {abs(diff):.4f} {better_worse} than CP")
+                    score_diff = brier - cp_brier
+                    better_worse = "better" if score_diff < 0 else "worse"
+                    print(f"\n   Final CP:         {final_cp:.1%}")
+                    print(f"   CP Brier:         {cp_brier:.4f}")
+                    print(f"   vs CP:            {abs(score_diff):.4f} {better_worse}")
+
+            elif output.median is not None and resolution:
+                # Numeric question comparison
+                print(f"\n   Actual Result:    {resolution}")
+                print(f"   Our Prediction:   {output.median}")
+
+                within_ci = None
+                difference = None
+
+                if output.confidence_interval:
+                    lo, hi = output.confidence_interval
+                    print(f"   90% CI:           [{lo}, {hi}]")
+                    try:
+                        actual_val = float(resolution.replace(",", ""))
+                        difference = actual_val - output.median
+                        print(f"   Difference:       {difference:+.2f}")
+
+                        if lo <= actual_val <= hi:
+                            within_ci = True
+                            print("   Within 90% CI:    ✅ Yes")
+                        else:
+                            within_ci = False
+                            if actual_val < lo:
+                                print(f"   Within 90% CI:    ❌ No (below by {lo - actual_val:.2f})")
+                            else:
+                                print(f"   Within 90% CI:    ❌ No (above by {actual_val - hi:.2f})")
+
+                        comparison = RetrodictComparison(
+                            actual_value=actual_val,
+                            predicted_value=output.median,
+                            difference=difference,
+                            within_ci=within_ci,
+                        )
+                    except (ValueError, TypeError):
+                        print("   (Could not parse resolution as numeric)")
+                        comparison = RetrodictComparison(
+                            actual_value=resolution,
+                            predicted_value=output.median,
+                        )
+
+            elif output.probabilities and resolution:
+                # Multiple choice comparison
+                import math
+
+                print(f"\n   Actual Result:    {resolution}")
+                print("   Our Predictions:")
+                for option, prob in sorted(
+                    output.probabilities.items(), key=lambda x: -x[1]
+                ):
+                    marker = " ✓" if option.lower() == resolution.lower() else ""
+                    print(f"     {option}: {prob:.1%}{marker}")
+
+                correct_prob = output.probabilities.get(resolution, 0)
+                print(f"\n   Prob on correct:  {correct_prob:.1%}")
+
+                log_score = None
+                if correct_prob > 0:
+                    log_score = math.log(correct_prob)
+                    print(f"   Log Score:        {log_score:.4f}")
+
+                comparison = RetrodictComparison(
+                    actual_value=resolution,
+                    predicted_value=correct_prob,
+                    score=log_score,
+                    score_name="log_score",
+                )
+
+            else:
+                print(f"\n   Actual Result:    {resolution or 'Unknown'}")
+                print(f"   Our Prediction:   {output.probability or output.median or 'N/A'}")
+
+            print("\n" + "=" * 60)
+
+            # Save comparison to retrodict file
+            if comparison is not None:
+                update_retrodict_comparison(qid, comparison, resolution)
 
             results.append(
                 {
                     "post_id": qid,
                     "resolution": resolution,
-                    "our_forecast": output.probability,
+                    "our_forecast": output.probability or output.median,
                     "final_cp": final_cp,
                     "brier": brier,
                     "question_type": output.question_type,
+                    "comparison": comparison.model_dump() if comparison else None,
                 }
             )
 

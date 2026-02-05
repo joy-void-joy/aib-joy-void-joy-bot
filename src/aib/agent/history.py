@@ -24,6 +24,18 @@ FORECASTS_BASE_PATH = Path("./notes/forecasts")
 RETRODICT_BASE_PATH = Path("./notes/retrodict")
 
 
+class RetrodictComparison(BaseModel):
+    """Comparison between retrodict prediction and actual resolution."""
+
+    actual_value: float | str | None = None  # Resolved value (numeric) or outcome (binary)
+    predicted_value: float | str | None = None  # Our prediction (median, probability, etc.)
+    difference: float | None = None  # Numeric difference (for numeric questions)
+    difference_pct: float | None = None  # Percentage points diff (for binary)
+    within_ci: bool | None = None  # Whether actual fell within 90% CI (numeric)
+    score: float | None = None  # Brier score (binary) or log score (categorical)
+    score_name: str | None = None  # "brier", "log_score", etc.
+
+
 class SavedForecast(BaseModel):
     """A saved forecast with metadata."""
 
@@ -57,6 +69,8 @@ class SavedForecast(BaseModel):
     )
     # Retrodict tracking
     retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
+    # Retrodict comparison (actual vs predicted)
+    comparison: RetrodictComparison | None = None
 
 
 def save_forecast(
@@ -236,6 +250,50 @@ def save_retrodict(
         filepath,
     )
     return filepath
+
+
+def update_retrodict_comparison(
+    post_id: int,
+    comparison: RetrodictComparison,
+    resolution: str | None = None,
+) -> bool:
+    """Update the latest retrodict forecast with comparison data.
+
+    Args:
+        post_id: Metaculus post ID.
+        comparison: Comparison metrics between prediction and actual.
+        resolution: Resolution string (e.g., "yes", "no", or numeric value as string).
+
+    Returns:
+        True if successfully updated, False otherwise.
+    """
+    question_dir = RETRODICT_BASE_PATH / str(post_id)
+
+    if not question_dir.exists():
+        logger.warning("No retrodict forecasts found for post %d", post_id)
+        return False
+
+    forecast_files = sorted(question_dir.glob("*.json"))
+    if not forecast_files:
+        return False
+
+    latest_file = forecast_files[-1]
+
+    try:
+        data = json.loads(latest_file.read_text(encoding="utf-8"))
+        data["comparison"] = comparison.model_dump()
+        if resolution is not None:
+            data["resolution"] = resolution
+        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.info(
+            "Updated retrodict comparison for post %d: %s",
+            post_id,
+            comparison.model_dump(),
+        )
+        return True
+    except Exception as e:
+        logger.warning("Failed to update retrodict comparison for post %d: %s", post_id, e)
+        return False
 
 
 def load_past_forecasts(post_id: int) -> list[SavedForecast]:
