@@ -13,7 +13,7 @@ The feedback loop operates at three levels. Be clear about which level you're wo
 
 **Clarification**:
 - Object level = "How can the agent forecast better?" (tools, APIs, reasoning)
-- Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/meta/)
+- Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/sessions/)
 - Meta-meta level = "How can this feedback loop command work better?" (feedback_collect.py, this document, analysis workflows)
 
 **Examples**:
@@ -140,7 +140,7 @@ After running retrodict, review traces for signs that the agent accessed post-re
 **How to check:**
 ```bash
 # Scan for future-leak phrases
-grep -rh "resolved\|outcome\|result\|happened\|we know\|actually" notes/meta/*_q<question_id>_*.md
+grep -rh "resolved\|outcome\|result\|happened\|we know\|actually" notes/sessions/*/meta.md
 
 # Check the full reasoning trace
 cat logs/<question_id>/*.log
@@ -215,7 +215,7 @@ For each, ask:
 
 ```bash
 # Tool failures mentioned in meta-reflections
-grep -rh "failed\|error\|Error\|didn't work\|couldn't\|blocked\|403\|404\|405" notes/meta/*.md | sort | uniq -c | sort -rn | head -20
+grep -rh "failed\|error\|Error\|didn't work\|couldn't\|blocked\|403\|404\|405" notes/sessions/*/meta.md | sort | uniq -c | sort -rn | head -20
 ```
 
 Common patterns:
@@ -227,7 +227,7 @@ Common patterns:
 
 ```bash
 # What the agent explicitly says it needs
-grep -rh "would be useful\|would have helped\|would benefit\|wish I had\|tool that\|specialized tool" notes/meta/*.md | head -20
+grep -rh "would be useful\|would have helped\|would benefit\|wish I had\|tool that\|specialized tool" notes/sessions/*/meta.md | head -20
 ```
 
 **Trust these requests.** The agent knows what it needs. Build the tools it asks for.
