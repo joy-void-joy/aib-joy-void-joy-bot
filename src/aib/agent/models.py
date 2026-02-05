@@ -650,12 +650,12 @@ class NumericForecast(BaseModel):
 class ForecastMeta(BaseModel):
     """Lightweight reference to process reflection.
 
-    Full reflection is stored as a markdown file in notes/meta/.
+    Full reflection is stored as a markdown file in the session directory.
     """
 
     meta_file_path: str | None = Field(
         default=None,
-        description="Path to meta-reflection markdown file in notes/meta/.",
+        description="Path to meta-reflection markdown file in session directory.",
     )
     tools_used_count: int = Field(
         default=0,

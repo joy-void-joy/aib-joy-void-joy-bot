@@ -291,16 +291,31 @@ class NotesConfig:
         return self.rw + self.ro
 
 
+def _parse_session_id(session_id: str) -> tuple[str, str]:
+    """Parse session_id into (post_id, timestamp) components.
+
+    Session ID format: <post_id>_<timestamp> (e.g., "41906_20260202_002119")
+    or "sub_<timestamp>" for sub-forecasts.
+    """
+    if session_id.startswith("sub_"):
+        return ("0", session_id[4:])  # sub_20260202_002119 -> ("0", "20260202_002119")
+
+    # Split on first underscore only to handle timestamps with underscores
+    parts = session_id.split("_", 1)
+    if len(parts) == 2:
+        return (parts[0], parts[1])
+    return (session_id, datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+
 def setup_notes_folder(
     session_id: str, post_id: int, *, retrodict: bool = False
 ) -> NotesConfig:
     """Create session-specific notes folder structure.
 
     Structure (RW = this session can write, RO = read historical only):
-    - notes/sessions/<session_id>/            (RW)
+    - notes/sessions/<post_id>/<timestamp>/   (RW) - session work + meta
     - notes/research/<post_id>/<timestamp>/   (RW, blocked in retrodict)
     - notes/forecasts/<post_id>/<timestamp>/  (RW, blocked in retrodict)
-    - notes/meta/                             (RW)
     - notes/research/                         (RO, blocked in retrodict)
     - notes/forecasts/                        (RO, blocked in retrodict)
     - notes/structured/                       (RO, blocked in retrodict)
@@ -310,40 +325,39 @@ def setup_notes_folder(
     is blocked to prevent "future leak" from past forecasts or research notes.
 
     Args:
-        session_id: Unique session identifier.
+        session_id: Unique session identifier (format: <post_id>_<timestamp>).
         post_id: Metaculus post ID (the URL identifier, e.g., 41976). Use 0 for sub-forecasts.
         retrodict: If True, block read access to historical data directories.
 
     Returns:
         NotesConfig with RW and RO directories separated.
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Parse session_id to get consistent path components
+    _, timestamp = _parse_session_id(session_id)
 
-    session_path = NOTES_BASE_PATH / "sessions" / session_id
+    # Unified path structure: notes/<type>/<post_id>/<timestamp>/
+    session_path = NOTES_BASE_PATH / "sessions" / str(post_id) / timestamp
     research_base = NOTES_BASE_PATH / "research"
     research_path = research_base / str(post_id) / timestamp
     forecasts_base = NOTES_BASE_PATH / "forecasts"
     forecasts_path = forecasts_base / str(post_id) / timestamp
-    meta_path = NOTES_BASE_PATH / "meta"
     structured_path = NOTES_BASE_PATH / "structured"
     logs_path = NOTES_BASE_PATH / "logs"
 
     session_path.mkdir(parents=True, exist_ok=True)
-    meta_path.mkdir(parents=True, exist_ok=True)
     logs_path.mkdir(parents=True, exist_ok=True)
 
     # Reasoning log file for this session (agent cannot access notes/logs/)
     reasoning_log = logs_path / f"{post_id}_{timestamp}.md"
 
     if retrodict:
-        # In retrodict mode: only session and meta are writable, no RO access
-        # Don't create research/forecasts paths - agent shouldn't write there
+        # In retrodict mode: only session is writable, no RO access to historical data
         return NotesConfig(
             session=session_path,
             research=session_path,  # Redirect to session (no separate research)
             forecasts=session_path,  # Redirect to session (no separate forecasts)
             reasoning_log=reasoning_log,
-            rw=[session_path, meta_path],
+            rw=[session_path],
             ro=[],  # No read-only access to historical data
         )
 
@@ -356,7 +370,7 @@ def setup_notes_folder(
         research=research_path,
         forecasts=forecasts_path,
         reasoning_log=reasoning_log,
-        rw=[session_path, research_path, forecasts_path, meta_path],
+        rw=[session_path, research_path, forecasts_path],
         ro=[research_base, forecasts_base, structured_path],
     )
 
@@ -645,12 +659,14 @@ async def run_forecast(
     Returns:
         ForecastOutput with the forecast results.
     """
-    # Generate session ID based on question_id for persistence
+    # Generate session ID for notes and logging
+    # Format: <post_id>_<timestamp> for traceability
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if question_id is not None:
-        session_id = str(question_id)
+        session_id = f"{question_id}_{timestamp}"
     else:
         # Sub-forecasts use timestamp-based ID since they don't have a real question_id
-        session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_id = f"sub_{timestamp}"
 
     # Reset metrics for this forecast session
     reset_metrics()
@@ -776,7 +792,9 @@ async def run_forecast(
                 "autoAllowBashIfSandboxed": True,
                 "allowUnsandboxedCommands": False,
             },
-            mcp_servers=policy.get_mcp_servers(sandbox, composition_server),
+            mcp_servers=policy.get_mcp_servers(
+                sandbox, composition_server, session_id=session_id
+            ),
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
             allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
@@ -963,17 +981,10 @@ async def run_forecast(
     metrics = get_metrics_summary()
     output.tool_metrics = metrics
 
-    # Search for meta-reflection markdown files (required for top-level forecasts)
+    # Check for meta-reflection (required for top-level forecasts)
+    # Meta is written via notes(write_meta) to notes/sessions/<post_id>/<timestamp>/meta.md
     if post_id > 0:
-        meta_dir = Path("./notes/meta")
-        meta_files = []
-
-        if meta_dir.exists():
-            # Find files matching _q<post_id>_ pattern (agent writes using post_id)
-            pattern = f"_q{post_id}_"
-            meta_files = [f for f in meta_dir.glob("*.md") if pattern in f.name]
-            # Sort by filename (timestamp prefix) descending
-            meta_files.sort(key=lambda f: f.name, reverse=True)
+        meta_file = notes.session / "meta.md"
 
         # Extract subagents from tool metrics
         subagents_used = []
@@ -982,14 +993,13 @@ async def run_forecast(
                 if tool_name == "Task":
                     subagents_used.append("(via Task)")
 
-        if meta_files:
-            meta_file = meta_files[0]
+        if meta_file.exists():
             output.meta = ForecastMeta(
                 meta_file_path=str(meta_file),
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
                 subagents_used=subagents_used,
             )
-            logger.info("Found meta-reflection %s for post %d", meta_file.name, post_id)
+            logger.info("Found meta-reflection at %s", meta_file)
 
             # Inject programmatic metrics into the meta-reflection
             append_metrics_to_meta_reflection(
@@ -1007,9 +1017,10 @@ async def run_forecast(
             # Meta-reflection is required - log error but don't fail the forecast
             logger.error(
                 "MISSING META-REFLECTION for post %d. "
-                "Agent failed to write a meta-reflection to notes/meta/ before final output. "
-                "This is a required step for tracking process reflection.",
+                "Agent failed to call notes(write_meta) before final output. "
+                "Expected at: %s",
                 post_id,
+                meta_file,
             )
             output.meta = ForecastMeta(
                 meta_file_path=None,

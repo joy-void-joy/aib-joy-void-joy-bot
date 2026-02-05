@@ -13,9 +13,10 @@ from claude_agent_sdk.types import McpServerConfig, McpStdioServerConfig
 
 from aib.agent.retrodict import RetrodictConfig
 from aib.tools.financial import financial_server
-from aib.tools.forecasting import forecasting_server
+from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
-from aib.tools.notes import notes_server
+from aib.tools.notes import create_notes_server
+from aib.tools.retrodict_search import create_retrodict_search_server
 from aib.tools.trends import trends_server
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ BUILTIN_TOOLS: frozenset[str] = frozenset(
         "Read",
         "Write",
         "Glob",
+        "Grep",
         "Bash",
         "Task",
     }
@@ -137,6 +139,13 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Search tools for retrodict mode (Wayback-validated)
+RETRODICT_VALIDATED_SEARCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__search__web_search",
+    }
+)
+
 # MCP servers to exclude in retrodict mode
 RETRODICT_EXCLUDED_SERVERS: frozenset[str] = frozenset(
     {
@@ -156,7 +165,7 @@ class ToolPolicy:
 
     Example:
         policy = ToolPolicy.from_settings(settings, retrodict_config)
-        mcp_servers = policy.get_mcp_servers(sandbox)
+        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_id="41906_20260202")
         allowed_tools = policy.get_allowed_tools(allow_spawn=True)
     """
 
@@ -191,6 +200,9 @@ class ToolPolicy:
         if self.retrodict_config:
             excluded.update(LIVE_MARKET_TOOLS)
             excluded.update(PLAYWRIGHT_TOOLS)
+            excluded.update(WIKIPEDIA_TOOLS)  # Articles contain post-cutoff info
+            excluded.update(ASKNEWS_TOOLS)  # No date filtering support
+            excluded.add("WebSearch")  # Unreliable before: operator
 
         self._excluded_tools = frozenset(excluded)
 
@@ -227,25 +239,33 @@ class ToolPolicy:
         self,
         sandbox: Sandbox,
         composition_server: Any,
+        *,
+        session_id: str | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
         Args:
             sandbox: The sandbox instance for code execution.
             composition_server: The composition MCP server for spawn_subquestions.
+            session_id: Session ID for the notes tool. Format: "<post_id>_<timestamp>".
+                Enables write_meta mode. If None, write_meta is disabled.
 
         Returns:
             Dict mapping server name to server config.
         """
         servers: dict[str, McpServerConfig] = {
-            "forecasting": forecasting_server,
+            "forecasting": create_forecasting_server(exclude_wikipedia=self.is_retrodict),
             "financial": financial_server,
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(exclude_live=self.is_retrodict),
-            "notes": notes_server,
+            "notes": create_notes_server(session_id),
             "trends": trends_server,
         }
+
+        # Add search server in retrodict mode (Wayback-validated web search)
+        if self.is_retrodict:
+            servers["search"] = create_retrodict_search_server()
 
         # Only add Playwright in non-retrodict mode
         if not self.is_retrodict:
@@ -304,6 +324,10 @@ class ToolPolicy:
 
         # Playwright tools (excluded in retrodict via _excluded_tools)
         tools.update(PLAYWRIGHT_TOOLS)
+
+        # Retrodict validated search tools (only in retrodict mode)
+        if self.is_retrodict:
+            tools.update(RETRODICT_VALIDATED_SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools

@@ -1,7 +1,10 @@
 """Structured notes tool for forecasting research and reasoning.
 
 Notes are stored as JSON files with consistent schema for easy search and retrieval.
-Supports list, search, read, and write operations.
+Supports list, search, read, write, and write_meta operations.
+
+The write_meta mode writes meta-reflections to the session directory. This is
+write-only by design - the agent cannot read meta-reflections from other sessions.
 """
 
 import asyncio
@@ -26,6 +29,7 @@ from aib.tools.responses import mcp_error, mcp_success
 logger = logging.getLogger(__name__)
 
 NOTES_BASE_PATH = Path("./notes")
+SESSIONS_PATH = NOTES_BASE_PATH / "sessions"
 
 
 class NoteType(str, Enum):
@@ -78,7 +82,7 @@ class NoteSummary(BaseModel):
 class NotesInput(BaseModel):
     """Input for notes tool."""
 
-    mode: Literal["list", "search", "read", "write"]
+    mode: Literal["list", "search", "read", "write", "write_meta", "write_report"]
     # For list
     type_filter: str | None = None
     question_id: int | None = None
@@ -86,7 +90,7 @@ class NotesInput(BaseModel):
     query: str | None = None
     # For read
     id: str | None = None
-    # For write
+    # For write (structured JSON notes)
     type: str | None = None
     topic: str | None = None
     summary: str | None = None
@@ -94,6 +98,11 @@ class NotesInput(BaseModel):
     sources: list[str] = Field(default_factory=list)
     confidence: float | None = Field(default=None, ge=0, le=1)
     report_path: str | None = None
+    # For write_meta (meta-reflections - session-scoped)
+    # session_id is injected by server, not provided by agent
+    # For write_report (long markdown reports - question-scoped)
+    post_id: int | None = None
+    title: str | None = None  # Used for report filename slug
 
 
 # --- Storage Helpers ---
@@ -154,64 +163,133 @@ def _note_to_summary(note: Note) -> NoteSummary:
 # --- Tool Implementation ---
 
 
-@tool(
-    "notes",
-    (
-        "Manage structured notes for forecasting research. "
-        "Modes: 'list' shows note summaries (filterable by type/question), "
-        "'search' finds notes by query (returns summaries only), "
-        "'read' gets full note content by ID, "
-        "'write' creates a new structured note."
-    ),
-    {
-        "mode": str,
-        "type_filter": str,
-        "question_id": int,
-        "query": str,
-        "id": str,
-        "type": str,
-        "topic": str,
-        "summary": str,
-        "content": str,
-        "sources": list,
-        "confidence": float,
-        "report_path": str,
-    },
-)
-@tracked("notes")
-async def notes_tool(args: dict[str, Any]) -> dict[str, Any]:
-    """Manage structured notes for forecasting research."""
-    try:
-        validated = NotesInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
+_NOTES_TOOL_DESCRIPTION = """\
+Manage notes for forecasting research. Choose the right mode for your content:
 
-    mode = validated.mode
+## Modes
 
-    if mode == "list":
-        return await _list_notes(
-            type_filter=validated.type_filter,
-            question_id=validated.question_id,
-        )
-    elif mode == "search":
-        query = validated.query
-        if not query:
-            return mcp_error("Search mode requires 'query' parameter")
-        return await _search_notes(
-            query=query,
-            type_filter=validated.type_filter,
-        )
-    elif mode == "read":
-        note_id = validated.id
-        if not note_id:
-            return mcp_error("Read mode requires 'id' parameter")
-        return await _read_note(note_id)
-    elif mode == "write":
-        return await _write_note(validated)
-    else:
-        return mcp_error(
-            f"Unknown mode: {mode}. Use 'list', 'search', 'read', or 'write'."
-        )
+### write (structured JSON notes - SEARCHABLE)
+Use for: Facts, estimates, findings you want to find later via search.
+Required: type, topic, summary, content
+Optional: sources, confidence, question_id
+
+Types: research, finding, estimate, reasoning, source
+
+Example:
+  notes(mode="write", type="finding", topic="Tesla Q1 base rate",
+        summary="Historical Q1 deliveries average 15% below annual run rate",
+        content="Full analysis...", question_id=41906)
+
+### write_meta (meta-reflection - REQUIRED)
+Use for: Your REQUIRED meta-reflection before final output.
+Required: content (your full meta-reflection markdown)
+
+This is write-only - you cannot read meta from other sessions.
+Write your reflection on: research process, tool effectiveness, reasoning quality,
+calibration notes, and what you'd do differently.
+
+Example:
+  notes(mode="write_meta", content="# Meta-Reflection\\n\\n## Executive Summary...")
+
+### write_report (long markdown - readable by future sessions)
+Use for: In-depth research reports (>500 words) worth preserving.
+Required: post_id, content
+Optional: title (for filename)
+
+Example:
+  notes(mode="write_report", post_id=41906, title="NYC funding analysis",
+        content="# Deep Analysis of NYC Federal Funding...")
+
+### list (browse notes)
+Optional: type_filter, question_id
+
+### search (find notes by query)
+Required: query
+Optional: type_filter
+
+### read (get full note content)
+Required: id (note ID from list/search)
+
+## When to Use What
+
+| Content Type | Mode | Searchable? | Readable? |
+|-------------|------|-------------|-----------|
+| Short facts/estimates | write | Yes | Yes |
+| Meta-reflection | write_meta | No | No (write-only) |
+| Long research report | write_report | No | Yes |
+"""
+
+
+def _create_notes_tool(session_id: str | None = None):
+    """Create the notes tool with optional session context.
+
+    Args:
+        session_id: The session ID for write_meta mode. If None, write_meta is disabled.
+    """
+
+    @tool(
+        "notes",
+        _NOTES_TOOL_DESCRIPTION,
+        {
+            "mode": str,
+            "type_filter": str,
+            "question_id": int,
+            "query": str,
+            "id": str,
+            "type": str,
+            "topic": str,
+            "summary": str,
+            "content": str,
+            "sources": list,
+            "confidence": float,
+            "report_path": str,
+            "post_id": int,
+            "title": str,
+        },
+    )
+    @tracked("notes")
+    async def notes_tool(args: dict[str, Any]) -> dict[str, Any]:
+        """Manage notes for forecasting research."""
+        try:
+            validated = NotesInput.model_validate(args)
+        except Exception as e:
+            return mcp_error(f"Invalid input: {e}")
+
+        mode = validated.mode
+
+        if mode == "list":
+            return await _list_notes(
+                type_filter=validated.type_filter,
+                question_id=validated.question_id,
+            )
+        elif mode == "search":
+            query = validated.query
+            if not query:
+                return mcp_error("Search mode requires 'query' parameter")
+            return await _search_notes(
+                query=query,
+                type_filter=validated.type_filter,
+            )
+        elif mode == "read":
+            note_id = validated.id
+            if not note_id:
+                return mcp_error("Read mode requires 'id' parameter")
+            return await _read_note(note_id)
+        elif mode == "write":
+            return await _write_note(validated)
+        elif mode == "write_meta":
+            if not session_id:
+                return mcp_error("write_meta is not available in this context")
+            return await _write_meta(session_id, validated.content or "")
+        elif mode == "write_report":
+            return await _write_report(validated)
+        else:
+            return mcp_error(
+                f"Unknown mode: {mode}. Use 'list', 'search', 'read', 'write', "
+                "'write_meta', or 'write_report'."
+            )
+
+    return notes_tool
 
 
 async def _list_notes(
@@ -362,12 +440,123 @@ async def _write_note(validated: NotesInput) -> dict[str, Any]:
     )
 
 
-# --- MCP Server ---
+def _slugify(text: str, max_length: int = 50) -> str:
+    """Convert text to a filesystem-safe slug."""
+    # Lowercase and replace spaces/special chars with underscores
+    slug = re.sub(r"[^\w\s-]", "", text.lower())
+    slug = re.sub(r"[-\s]+", "_", slug).strip("_")
+    return slug[:max_length]
 
-notes_server = create_mcp_server(
-    name="notes",
-    version="2.0.0",
-    tools=[
-        notes_tool,
-    ],
-)
+
+def _parse_session_id(session_id: str) -> tuple[str, str]:
+    """Parse session_id into (post_id, timestamp) components.
+
+    Session ID format: <post_id>_<timestamp> (e.g., "41906_20260202_002119")
+    or "sub_<timestamp>" for sub-forecasts.
+    """
+    if session_id.startswith("sub_"):
+        return ("0", session_id[4:])
+
+    parts = session_id.split("_", 1)
+    if len(parts) == 2:
+        return (parts[0], parts[1])
+    return (session_id, "unknown")
+
+
+async def _write_meta(session_id: str, content: str) -> dict[str, Any]:
+    """Write meta-reflection to the session directory.
+
+    Meta-reflections are write-only by design. The agent cannot read meta from
+    other sessions, which prevents anchoring/biasing from past reflections.
+    """
+    if not content or not content.strip():
+        return mcp_error("write_meta requires 'content' parameter with your reflection")
+
+    # Parse session_id to get path: notes/sessions/<post_id>/<timestamp>/
+    post_id, timestamp = _parse_session_id(session_id)
+    session_dir = SESSIONS_PATH / post_id / timestamp
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    filepath = session_dir / "meta.md"
+
+    try:
+        async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+            await f.write(content)
+
+        logger.info("Wrote meta-reflection to %s", filepath)
+
+        return mcp_success(
+            {
+                "path": str(filepath),
+                "session_id": session_id,
+                "message": "Meta-reflection saved successfully",
+            }
+        )
+    except Exception as e:
+        logger.exception("Failed to write meta-reflection")
+        return mcp_error(f"Failed to write meta-reflection: {e}")
+
+
+async def _write_report(validated: NotesInput) -> dict[str, Any]:
+    """Write a long markdown report for a question.
+
+    Reports are stored in notes/research/<post_id>/ and ARE readable by future
+    sessions. Use this for in-depth research that should be discoverable.
+    """
+    if not validated.post_id:
+        return mcp_error("write_report requires 'post_id' parameter")
+    if not validated.content or not validated.content.strip():
+        return mcp_error("write_report requires 'content' parameter")
+
+    # Generate filename
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    title_slug = _slugify(validated.title or "report")
+    filename = f"{timestamp}_{title_slug}.md"
+
+    # Create directory
+    report_dir = NOTES_BASE_PATH / "research" / str(validated.post_id)
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    filepath = report_dir / filename
+
+    try:
+        async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+            await f.write(validated.content)
+
+        logger.info("Wrote report to %s", filepath)
+
+        return mcp_success(
+            {
+                "path": str(filepath),
+                "post_id": validated.post_id,
+                "filename": filename,
+                "message": "Report saved successfully",
+            }
+        )
+    except Exception as e:
+        logger.exception("Failed to write report")
+        return mcp_error(f"Failed to write report: {e}")
+
+
+# --- MCP Server Factory ---
+
+
+def create_notes_server(session_id: str | None = None):
+    """Create the notes MCP server with session context.
+
+    Args:
+        session_id: Session ID for write_meta mode. Format: "<post_id>_<timestamp>".
+            If None, write_meta mode is disabled.
+
+    Returns:
+        MCP server configured with the notes tool.
+    """
+    return create_mcp_server(
+        name="notes",
+        version="3.0.0",
+        tools=[_create_notes_tool(session_id)],
+    )
+
+
+# Default server without session (for backwards compatibility)
+notes_server = create_notes_server()

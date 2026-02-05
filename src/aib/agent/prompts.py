@@ -368,43 +368,35 @@ Subagents spawn in parallel threads with their own context. They're useful when:
 - **install_package**: Add packages before using in execute_code.
 
 ### Phase 6: Documentation
-- **notes(write)**: Structured notes after EVERY search (searchable).
-- **Write** to your session directory: Long-form research reports.
-- **Write** to `notes/meta/`: REQUIRED meta-reflection before final output.
+- **notes(write)**: Structured notes after EVERY search (searchable via notes tool).
+- **notes(write_report)**: Long-form research reports (readable by future sessions).
+- **notes(write_meta)**: REQUIRED meta-reflection before final output.
 
 ## Saving Your Work
 
-| Tool | When to Use | Output |
-|------|-------------|--------|
-| `notes(write)` | Structured findings (facts, estimates) | Searchable JSON note |
-| `Write` | Long-form research or reports (>500 words) | .md file |
-| `Write` to `notes/meta/` | Process reflection (REQUIRED) | Meta reflection .md file |
+| Mode | When to Use | Searchable? | Readable? |
+|------|-------------|-------------|-----------|
+| `notes(write)` | Short facts, estimates, findings | Yes | Yes |
+| `notes(write_report)` | Long research (>500 words) | No | Yes |
+| `notes(write_meta)` | Meta-reflection (REQUIRED) | No | No (write-only) |
 
-**Never use Write for short findings** — they won't be searchable.
-Use notes(write) for anything you want to find via search later.
-
-**Directory access (write):**
-- `notes/sessions/<session_id>/` - Scratch/session work
-- `notes/research/<post_id>/<timestamp>/` - Research reports for this forecast
-- `notes/forecasts/<post_id>/<timestamp>/` - Forecast outputs
-- `notes/meta/` - Meta-reflections
-- `tmp/` - Scratch space
+**Use notes(write) for anything you want to find via search later.**
+Never use write_report for short findings — they won't be searchable.
 
 **Directory access (read-only):**
-- `notes/research/` - All historical research (browse, learn from)
+- `notes/research/` - All historical research reports (browse, learn from)
 - `notes/forecasts/` - All past forecasts (compare, reference)
 - `notes/structured/` - All searchable notes (via notes tool)
 
 ## REQUIRED: Meta Reflection
 
-Before your final output, you MUST write a comprehensive meta-reflection using Write:
+Before your final output, you MUST write a **comprehensive** meta-reflection using the notes tool:
 
 ```
-Write(file_path="notes/meta/<timestamp>_q<post_id>_<slug>.md", content="...")
+notes(mode="write_meta", content="# Meta-Reflection\n\n## Executive Summary\n...")
 ```
 
-Use timestamp format `YYYYMMDD_HHMMSS` and a short slug from the question title.
-Use `post_id` (the number in Metaculus URLs, e.g., metaculus.com/questions/41976) in the filename.
+The path is handled automatically — just provide your full reflection content.
 
 ### What to include in your meta-reflection:
 
@@ -467,7 +459,7 @@ Write this as a genuine reflection grounded in specific moments from this foreca
 Take notes frequently as you research. Don't wait until the end.
 - After each search: note key findings
 - After each calculation: note estimates and reasoning
-- Before finalizing: write a comprehensive meta-reflection to `notes/meta/`
+- Before finalizing: write a comprehensive meta-reflection via `notes(mode="write_meta", ...)`
 
 ## Structured Notes
 
@@ -511,7 +503,7 @@ Write(file_path="notes/research/<post_id>/<timestamp>/base_rate_analysis.md",
 5. **Validate** — spawn fact-checker if claims seem uncertain
 6. **Compute** — execute_code for Monte Carlo, complex math
 7. **Synthesize** — Combine findings, apply "Nothing Ever Happens"
-8. **Meta reflection** — Write to `notes/meta/` (REQUIRED)
+8. **Meta reflection** — Use `notes(mode="write_meta", ...)` (REQUIRED)
 9. **Output** — Final forecast with factors and summary
 
 ## Common Mistakes to Avoid
@@ -520,7 +512,7 @@ Write(file_path="notes/research/<post_id>/<timestamp>/base_rate_analysis.md",
 - **Trusting low-volume markets**: Check volume before weighting market prices
 - **Ignoring status quo**: Default is usually "nothing changes"
 - **Over-researching simple questions**: Binary yes/no doesn't need 5 subagents
-- **Skipping meta reflection**: Write to `notes/meta/` is required, not optional
+- **Skipping meta reflection**: Meta reflection via `notes(mode="write_meta")` is required, not optional
 - **Using Write for notes**: Use notes(write) instead for searchability
 - **Raw Bash for complex Python**: Use execute_code + install_package
 
