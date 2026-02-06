@@ -71,6 +71,8 @@ class GetMetaculusQuestionsInput(BaseModel):
     """Input for fetching one or more Metaculus questions."""
 
     post_id_list: Annotated[list[int], Field(min_length=1, max_length=20)]
+    # Hidden from agent - injected by retrodict hook to hide current CP
+    cutoff_date: str | None = None
 
     @field_validator("post_id_list", mode="before")
     @classmethod
@@ -136,6 +138,8 @@ class WikipediaInput(BaseModel):
     query: str
     mode: Literal["search", "summary", "full"] = "search"
     num_results: int = settings.search_default_limit
+    # Hidden from agent - injected by retrodict hook for historical lookups
+    cutoff_date: str | None = None
 
 
 class PredictionHistoryInput(BaseModel):
@@ -145,12 +149,16 @@ class PredictionHistoryInput(BaseModel):
 # --- Cached API helpers ---
 
 
-def _question_to_dict(question: Any) -> dict[str, object]:
+def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, object]:
     """Convert a MetaculusQuestion to a serializable dict.
 
     Note: Returns both post_id and question_id. These are different:
     - post_id: Used for URLs and local storage (e.g., metaculus.com/questions/{post_id})
     - question_id: Used for certain API endpoints (get_coherence_links, get_cp_history)
+
+    Args:
+        question: MetaculusQuestion object.
+        hide_cp: If True, exclude community_prediction (for retrodict mode).
     """
     result: dict[str, object] = {
         "post_id": question.id_of_post,
@@ -164,8 +172,10 @@ def _question_to_dict(question: Any) -> dict[str, object]:
         "num_forecasters": question.num_forecasters,
     }
 
-    # Include community prediction for binary questions
-    if isinstance(question, BinaryQuestion):
+    # Include community prediction for binary questions (unless hidden for retrodict)
+    if hide_cp:
+        result["community_prediction"] = None
+    elif isinstance(question, BinaryQuestion):
         result["community_prediction"] = question.community_prediction_at_access_time
     else:
         result["community_prediction"] = None
@@ -218,12 +228,18 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     post_ids = validated.post_id_list
+    hide_cp = validated.cutoff_date is not None  # Hide CP in retrodict mode
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
         """Fetch a single question with error handling."""
         try:
             async with _metaculus_semaphore:
-                return await _fetch_metaculus_question(post_id)
+                result = await _fetch_metaculus_question(post_id)
+                # Hide community prediction in retrodict mode
+                if hide_cp and "community_prediction" in result:
+                    result = dict(result)  # Don't modify cached result
+                    result["community_prediction"] = None
+                return result
         except Exception as e:
             return {"post_id": post_id, "error": str(e)}
 
@@ -680,11 +696,13 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"News search failed: {e}")
 
 
-# Wikipedia API base URL and headers
-WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
-WIKIPEDIA_HEADERS = {
-    "User-Agent": "AIBForecastingBot/1.0 (https://github.com/joy-void-joy/aib-forecasting-bot; forecasting research)"
-}
+# Wikipedia API (historical support via aib.tools.wikipedia)
+from aib.tools.wikipedia import (
+    WIKIPEDIA_API_URL,
+    WIKIPEDIA_HEADERS,
+    extract_intro as _extract_intro,
+    fetch_wikipedia_historical as _fetch_wikipedia_historical_content,
+)
 
 
 @tool(
@@ -696,7 +714,8 @@ WIKIPEDIA_HEADERS = {
         "'full' fetches entire article by exact title. "
         f"For search mode, optional num_results (default: {settings.search_default_limit})."
     ),
-    {"query": str, "mode": str, "num_results": int},
+    # cutoff_date is injected by retrodict hook, must be in schema for validation
+    {"query": str, "mode": str, "num_results": int, "cutoff_date": str},
 )
 @tracked("wikipedia")
 async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
@@ -709,6 +728,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     mode = validated.mode
     num_results = validated.num_results
+    cutoff_date = validated.cutoff_date
 
     if mode == "search":
         # Search for articles
@@ -754,6 +774,33 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         try:
             async with _search_semaphore:
                 results = await _search()
+
+            # In retrodict mode, replace snippets with historical content
+            if cutoff_date and results:
+                historical_results = []
+                for result in results:
+                    try:
+                        historical = await _fetch_wikipedia_historical_content(
+                            result["title"], cutoff_date
+                        )
+                        # Extract a snippet from the historical content
+                        snippet = _extract_intro(historical["extract"])[:500]
+                        if len(snippet) == 500:
+                            snippet = snippet.rsplit(" ", 1)[0] + "..."
+                        historical_results.append(
+                            {
+                                "title": historical["title"],
+                                "snippet": snippet,
+                                "url": historical["url"],
+                                "revision_timestamp": historical["revision_timestamp"],
+                            }
+                        )
+                    except ValueError as e:
+                        # Article didn't exist at cutoff_date, skip it
+                        logger.debug("Skipping %s: %s", result["title"], e)
+                        continue
+                results = historical_results
+
             return mcp_success({"query": query, "mode": mode, "results": results})
         except Exception as e:
             logger.exception("Wikipedia search failed")
@@ -761,6 +808,31 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
 
     else:
         # Fetch article content (summary or full)
+        # In retrodict mode, use historical fetch
+        if cutoff_date:
+            try:
+                async with _search_semaphore:
+                    historical = await _fetch_wikipedia_historical_content(
+                        query, cutoff_date
+                    )
+                extract = historical["extract"]
+                if mode == "summary":
+                    extract = _extract_intro(extract)
+                return mcp_success(
+                    {
+                        "title": historical["title"],
+                        "url": historical["url"],
+                        "extract": extract,
+                        "mode": mode,
+                        "revision_id": historical["revision_id"],
+                        "revision_timestamp": historical["revision_timestamp"],
+                        "cutoff_date": cutoff_date,
+                    }
+                )
+            except Exception as e:
+                logger.exception("Wikipedia historical fetch failed")
+                return mcp_error(f"Wikipedia historical fetch failed: {e}")
+
         @with_retry(max_attempts=3)
         async def _fetch() -> dict[str, Any]:
             async with httpx.AsyncClient(
@@ -799,22 +871,11 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                     f"https://en.wikipedia.org/wiki/{query.replace(' ', '_')}",
                 )
 
-                # Truncate very long articles (>50k chars)
-                max_chars = 50000
-                truncated = len(extract) > max_chars
-                if truncated:
-                    extract = (
-                        extract[:max_chars]
-                        + "\n\n[Article truncated - full text exceeds 50,000 characters]"
-                    )
-
                 return {
                     "title": page.get("title", query),
                     "url": url,
                     "extract": extract,
                     "mode": mode,
-                    "truncated": truncated,
-                    "original_length": len(page.get("extract", "")),
                 }
 
         try:
@@ -892,7 +953,7 @@ async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
 # Tools are gated at BOTH layers:
 # 1. MCP server registration (here) - so agent doesn't discover unavailable tools
 # 2. allowed_tools in core.py - defense in depth
-_forecasting_tools = [
+_BASE_FORECASTING_TOOLS = [
     # Metaculus data tools (always available - uses METACULUS_TOKEN which is required)
     get_metaculus_questions,
     list_tournament_questions,
@@ -900,22 +961,46 @@ _forecasting_tools = [
     get_coherence_links,
     get_cp_history,
     get_prediction_history,
-    # Wikipedia (no API key required)
-    wikipedia,
 ]
 
+_OPTIONAL_FORECASTING_TOOLS: list[Any] = []
+
+# Wikipedia (no API key required)
+_OPTIONAL_FORECASTING_TOOLS.append(wikipedia)
+
 if settings.exa_api_key:
-    _forecasting_tools.append(search_exa)
+    _OPTIONAL_FORECASTING_TOOLS.append(search_exa)
 else:
     logger.info("search_exa tool disabled: EXA_API_KEY not configured")
 
 if settings.asknews_client_id and settings.asknews_client_secret:
-    _forecasting_tools.append(search_news)
+    _OPTIONAL_FORECASTING_TOOLS.append(search_news)
 else:
     logger.info("search_news tool disabled: ASKNEWS credentials not configured")
 
-forecasting_server = create_mcp_server(
-    name="forecasting",
-    version="4.0.0",
-    tools=_forecasting_tools,
-)
+
+def create_forecasting_server(*, exclude_wikipedia: bool = False) -> Any:
+    """Create the forecasting MCP server.
+
+    Args:
+        exclude_wikipedia: If True, exclude wikipedia tool (for retrodict mode).
+            Wikipedia articles contain post-cutoff information.
+
+    Returns:
+        McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
+    """
+    tools = list(_BASE_FORECASTING_TOOLS)
+    for tool in _OPTIONAL_FORECASTING_TOOLS:
+        if exclude_wikipedia and tool.name == "wikipedia":
+            continue
+        tools.append(tool)
+
+    return create_mcp_server(
+        name="forecasting",
+        version="4.0.0",
+        tools=tools,
+    )
+
+
+# Default server for backwards compatibility
+forecasting_server = create_forecasting_server()
