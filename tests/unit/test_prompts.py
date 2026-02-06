@@ -8,21 +8,16 @@ from aib.agent.prompts import get_forecasting_system_prompt
 class TestForecastingSystemPrompt:
     """Tests for get_forecasting_system_prompt()."""
 
-    def test_default_uses_current_date(self) -> None:
-        """Without forecast_date, prompt uses today's date."""
+    def test_no_date_in_prompt(self) -> None:
+        """Prompt does not inject a date (model knows it from system context)."""
         prompt = get_forecasting_system_prompt()
-        today = datetime.now().strftime("%Y-%m-%d")
-        assert f"Today's date is {today}" in prompt
+        assert "Today's date is" not in prompt
 
-    def test_forecast_date_override(self) -> None:
-        """forecast_date parameter overrides the date in the prompt."""
+    def test_forecast_date_accepted_but_unused(self) -> None:
+        """forecast_date parameter is accepted for caller compatibility."""
         retrodict_date = datetime(2025, 6, 15)
         prompt = get_forecasting_system_prompt(forecast_date=retrodict_date)
-        assert "Today's date is 2025-06-15" in prompt
-        # Should NOT contain today's actual date
-        today = datetime.now().strftime("%Y-%m-%d")
-        if today != "2025-06-15":
-            assert f"Today's date is {today}" not in prompt
+        assert "Today's date is" not in prompt
 
     def test_prompt_contains_expected_sections(self) -> None:
         """Prompt includes key forecasting guidance sections."""
