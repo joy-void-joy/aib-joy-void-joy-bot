@@ -773,6 +773,26 @@ async def run_forecast(
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings, retrodict_config)
 
+        # Debug: verify tool exclusions in retrodict mode
+        if retrodict_config:
+            allowed = policy.get_allowed_tools(allow_spawn=allow_spawn)
+            logger.info(
+                "[Retrodict] is_retrodict=%s, excluded_tools contains wikipedia=%s, manifold=%s",
+                policy.is_retrodict,
+                "mcp__forecasting__wikipedia" in policy._excluded_tools,
+                "mcp__markets__manifold_price" in policy._excluded_tools,
+            )
+            logger.info(
+                "[Retrodict] allowed_tools contains wikipedia=%s, manifold=%s",
+                "mcp__forecasting__wikipedia" in allowed,
+                "mcp__markets__manifold_price" in allowed,
+            )
+
+        # Create MCP servers first so we can extract tool descriptions
+        mcp_servers = policy.get_mcp_servers(
+            sandbox, composition_server, session_id=session_id
+        )
+
         options = ClaudeAgentOptions(
             model=settings.model,
             system_prompt={
@@ -781,7 +801,10 @@ async def run_forecast(
                 "append": get_forecasting_system_prompt(
                     forecast_date=retrodict_config.forecast_date
                     if retrodict_config
-                    else None
+                    else None,
+                    tool_docs=policy.get_tool_docs(
+                        mcp_servers, allow_spawn=allow_spawn
+                    ),
                 ),
             },
             max_thinking_tokens=64_000 - 1,
@@ -792,9 +815,7 @@ async def run_forecast(
                 "autoAllowBashIfSandboxed": True,
                 "allowUnsandboxedCommands": False,
             },
-            mcp_servers=policy.get_mcp_servers(
-                sandbox, composition_server, session_id=session_id
-            ),
+            mcp_servers=mcp_servers,
             agents=SUBAGENTS,
             add_dirs=[str(d) for d in notes.all_dirs],
             allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),

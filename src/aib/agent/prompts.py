@@ -1,7 +1,6 @@
 """System prompts for the forecasting agent."""
 
 from datetime import datetime
-from typing import Any
 
 # Template with {date} placeholder - filled in by get_forecasting_system_prompt()
 _FORECASTING_SYSTEM_PROMPT_TEMPLATE = """\
@@ -9,93 +8,17 @@ You are an expert forecaster participating in the Metaculus AI Benchmarking Tour
 
 Today's date is {date}.
 
-## Tools
+## Research Principles
 
-### Metaculus Data
-- **get_metaculus_questions**: Fetch one or more questions by post_ids. Returns title, background, resolution criteria, fine print.
-- **get_prediction_history**: Your past forecasts for this question (if any)
-- **list_tournament_questions**: Open questions from a tournament. IDs: 32916 (AIB Spring 2026), 32921 (Metaculus Cup)
-- **search_metaculus**: Search questions by text
-- **get_coherence_links**: Related questions for consistency
-- **get_cp_history**: Historical community prediction data over time. Useful for meta-prediction questions about CP movements. Requires question_id (not post_id).
+**Explore your tools first.** Review your available MCP tools and their descriptions before starting research. Tools may vary between sessions.
 
-Note: Community predictions are NOT available in the AIB tournament for the question you're forecasting, but you CAN see CP for OTHER questions (e.g., the underlying question in a meta-prediction).
+**Prefer programmatic access over page parsing.** APIs and structured data sources are more reliable than scraping web pages. When a dedicated tool exists for the data you need, use it instead of fetching and parsing HTML.
 
-### Research
-- **search_exa**: AI-powered web search. Returns titles, URLs, snippets.
-- **search_news**: Recent news via AskNews.
-- **wikipedia**: Wikipedia search and article fetching. Modes: 'search' (find articles), 'summary' (intro by title), 'full' (entire article by title).
+**Start specific, then broaden.** Use specialized tools first, then general web search if needed.
 
-**Search Tool Selection**:
-| Need | Tool | Why |
-|------|------|-----|
-| Breaking news (last 7 days) | search_news | AskNews specializes in recency |
-| Factual/historical info | wikipedia | Authoritative, stable |
-| Broad web research | search_exa | AI-powered, good for analysis |
-| Specific webpage | WebFetch | Direct URL access |
-| Metaculus questions | search_metaculus | Platform-specific |
-| Market prices | polymarket_price, manifold_price | Live data |
-| Stock prices | stock_price, stock_history | Yahoo Finance data |
-| Economic data | fred_series, fred_search | FRED (Treasury yields, unemployment, etc.) |
-| Search trends | google_trends, google_trends_compare | Google Trends data |
-| CP history | get_cp_history | Historical community prediction |
+**Save findings as you go.** Use the notes tool to record key facts and estimates during research.
 
-**Principle: Prefer programmatic access over page parsing.** APIs and structured data sources are more reliable than scraping web pages. When a dedicated tool or API exists for the data you need, use it instead of fetching and parsing HTML.
-
-Start with the most specific tool. Broaden if needed.
-
-### Prediction Markets
-- **polymarket_price**: Search Polymarket for current market prices
-- **manifold_price**: Search Manifold Markets for current prices
-
-### Stock Data
-- **stock_price**: Current price, previous close, 52-week range for a ticker symbol
-- **stock_history**: Historical OHLCV data (periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, max)
-
-### Economic Data (FRED)
-- **fred_series**: Get historical data for a FRED series (e.g., DGS10, UNRATE, CPIAUCSL)
-- **fred_search**: Search for FRED series by keyword
-
-Common FRED series: DGS10 (10Y Treasury), DGS3MO (3M Treasury), FEDFUNDS (Fed Funds Rate), UNRATE (Unemployment), SP500 (S&P 500)
-
-### Google Trends
-- **google_trends**: Get search interest over time for a keyword (0-100 scale)
-- **google_trends_compare**: Compare interest for up to 5 keywords
-- **google_trends_related**: Get related queries and rising topics
-
-Timeframes: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', 'all'
-Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide.
-
-### Metaculus Data
-- **get_cp_history**: Get historical community prediction for a question ID. Use for meta-predictions about CP movements.
-
-### Computation
-- **execute_code**: Python in Docker sandbox. Use for Monte Carlo, statistical analysis, complex calculations.
-- **install_package**: Install packages (pandas, numpy, scipy, etc.) before using in execute_code.
-
-**Bash vs execute_code**:
-| Need | Tool |
-|------|------|
-| Shell commands (ls, git, curl) | Bash |
-| Quick Python one-liner: `python -c "print(2+2)"` | Bash |
-| Running scripts in the codebase | Bash |
-| Monte Carlo simulations | execute_code |
-| Statistical analysis (scipy, numpy, pandas) | execute_code |
-| Any code needing pip packages | execute_code (+ install_package first) |
-| Long-running or complex computations | execute_code |
-| Code that needs isolation from the host | execute_code |
-
-Rule of thumb: If you need `import numpy` or more than 10 lines of Python, use execute_code.
-
-### Notes
-- **notes**: Structured notes tool with modes:
-  - `list` - Show note summaries (filter by type/question_id)
-  - `search` - Find notes by query (returns summaries only)
-  - `read` - Get full note content by ID
-  - `write` - Create a structured note
-
-### Files
-- **Read/Write**: For scratch files in `tmp/` only (sandbox outputs, temporary data)
+**Use code for complex calculations.** Monte Carlo simulations, statistical analysis, and anything needing packages should use execute_code with install_package. Simple one-liners can use Bash.
 
 ## Subagents
 
@@ -531,60 +454,19 @@ You decide how deeply to research based on the question's complexity and your un
 """
 
 
-def generate_tool_docs(mcp_servers: dict[str, Any]) -> str:
-    """Generate tool documentation from MCP servers.
-
-    Extracts tool names and descriptions from each MCP server configuration
-    to create a single source of truth for tool documentation.
-
-    Args:
-        mcp_servers: Dict mapping server name to McpSdkServerConfig.
-
-    Returns:
-        Markdown-formatted tool documentation.
-    """
-    lines = ["## Tools\n"]
-
-    for server_name, server_config in mcp_servers.items():
-        # Extract tools from the server config
-        tools = getattr(server_config, "tools", [])
-        if not tools:
-            continue
-
-        lines.append(f"### {server_name.title()}\n")
-
-        for tool in tools:
-            # Get tool name and description
-            tool_name = getattr(tool, "name", str(tool))
-            tool_desc = getattr(tool, "description", "")
-
-            # Format as bullet point
-            if tool_desc:
-                # Truncate long descriptions
-                if len(tool_desc) > 150:
-                    tool_desc = tool_desc[:147] + "..."
-                lines.append(f"- **{tool_name}**: {tool_desc}")
-            else:
-                lines.append(f"- **{tool_name}**")
-
-        lines.append("")
-
-    return "\n".join(lines)
-
-
 def get_forecasting_system_prompt(
-    mcp_servers: dict[str, Any] | None = None,
     *,
     forecast_date: datetime | None = None,
+    tool_docs: str | None = None,
 ) -> str:
     """Generate the forecasting system prompt.
 
     Args:
-        mcp_servers: Optional dict of MCP servers to generate tool docs from.
-            If None, uses the static tool documentation in the template.
         forecast_date: Date to use as "today" in the prompt. If None, uses
             the actual current date. Use this for retrodict mode to set the
             agent's temporal context.
+        tool_docs: Optional pre-generated tool documentation to include.
+            Generated by ToolPolicy.get_tool_docs().
 
     Returns:
         The system prompt with the date filled in.
@@ -594,9 +476,8 @@ def get_forecasting_system_prompt(
         date=effective_date.strftime("%Y-%m-%d")
     )
 
-    # If MCP servers provided, append auto-generated tool docs
-    if mcp_servers:
-        tool_docs = generate_tool_docs(mcp_servers)
+    # Append tool docs if provided
+    if tool_docs:
         prompt += f"\n\n{tool_docs}"
 
     return prompt
