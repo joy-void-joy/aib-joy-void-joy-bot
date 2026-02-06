@@ -291,7 +291,9 @@ class StockQueryInput(BaseModel):
     """Input for stock price tool."""
 
     symbol: str = Field(min_length=1, max_length=10)
-    period: str = Field(default="1mo")  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    period: str = Field(
+        default="1mo"
+    )  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
 
 
 class StockPrice(TypedDict):
@@ -390,7 +392,9 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
         hist_reset = hist.reset_index()
         hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
 
-        records: list[dict[str, object]] = hist_reset[["Date", "Open", "High", "Low", "Close", "Volume"]].to_dict("records")  # pyright: ignore[reportCallIssue]
+        records: list[dict[str, object]] = hist_reset[
+            ["Date", "Open", "High", "Low", "Close", "Volume"]
+        ].to_dict("records")  # pyright: ignore[reportCallIssue]
 
         # Rename keys to lowercase and limit to last 30
         formatted: list[dict[str, object]] = [
@@ -405,14 +409,16 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
             for r in records[-30:]  # Limit to last 30 days
         ]
 
-        return mcp_success({
-            "symbol": symbol,
-            "period": period,
-            "data_points": len(records),
-            "first_date": formatted[0]["date"] if formatted else None,
-            "last_date": formatted[-1]["date"] if formatted else None,
-            "history": formatted,
-        })
+        return mcp_success(
+            {
+                "symbol": symbol,
+                "period": period,
+                "data_points": len(records),
+                "first_date": formatted[0]["date"] if formatted else None,
+                "last_date": formatted[-1]["date"] if formatted else None,
+                "history": formatted,
+            }
+        )
 
     except Exception as e:
         logger.exception("Yahoo Finance history lookup failed")

@@ -52,10 +52,10 @@ def summary() -> None:
     resolved = sum(1 for f in forecasts if f.get("resolution"))
 
     typer.echo(f"\n=== Forecast Summary ({total} total) ===\n")
-    typer.echo(f"With metrics: {with_metrics} ({100*with_metrics/total:.0f}%)")
-    typer.echo(f"With tokens:  {with_tokens} ({100*with_tokens/total:.0f}%)")
-    typer.echo(f"Submitted:    {submitted} ({100*submitted/total:.0f}%)")
-    typer.echo(f"Resolved:     {resolved} ({100*resolved/total:.0f}%)")
+    typer.echo(f"With metrics: {with_metrics} ({100 * with_metrics / total:.0f}%)")
+    typer.echo(f"With tokens:  {with_tokens} ({100 * with_tokens / total:.0f}%)")
+    typer.echo(f"Submitted:    {submitted} ({100 * submitted / total:.0f}%)")
+    typer.echo(f"Resolved:     {resolved} ({100 * resolved / total:.0f}%)")
 
     # Aggregate costs
     total_cost = sum(

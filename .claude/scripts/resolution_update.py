@@ -193,7 +193,9 @@ def status() -> None:
 @app.command("set")
 def set_resolution(
     post_id: int = typer.Argument(..., help="Post ID"),
-    resolution: str = typer.Argument(..., help="Resolution value (yes/no/ambiguous/value)"),
+    resolution: str = typer.Argument(
+        ..., help="Resolution value (yes/no/ambiguous/value)"
+    ),
 ) -> None:
     """Manually set resolution for a forecast."""
     post_dir = FORECASTS_PATH / str(post_id)

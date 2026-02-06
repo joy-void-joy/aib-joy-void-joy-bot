@@ -524,7 +524,9 @@ def backfill_comments(
     ] = False,
     force: Annotated[
         bool,
-        typer.Option("--force", "-f", help="Post comments even if already marked as posted"),
+        typer.Option(
+            "--force", "-f", help="Post comments even if already marked as posted"
+        ),
     ] = False,
 ) -> None:
     """Post private comments on all saved forecasts.
@@ -636,7 +638,9 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
             # Small delay between requests
             await asyncio.sleep(1)
 
-    print(f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors")
+    print(
+        f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors"
+    )
 
 
 if __name__ == "__main__":

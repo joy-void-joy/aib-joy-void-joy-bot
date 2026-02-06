@@ -124,12 +124,22 @@ def summary() -> None:
         buckets[bucket]["total_prob"] += f["probability"]
 
     typer.echo("\n--- Calibration by Bucket ---\n")
-    typer.echo(f"{'Bucket':<12} {'Count':>6} {'Actual%':>10} {'Predicted%':>12} {'Gap':>8}")
+    typer.echo(
+        f"{'Bucket':<12} {'Count':>6} {'Actual%':>10} {'Predicted%':>12} {'Gap':>8}"
+    )
     typer.echo("-" * 50)
 
     bucket_order = [
-        "0-10%", "10-20%", "20-30%", "30-40%", "40-50%",
-        "50-60%", "60-70%", "70-80%", "80-90%", "90-100%"
+        "0-10%",
+        "10-20%",
+        "20-30%",
+        "30-40%",
+        "40-50%",
+        "50-60%",
+        "60-70%",
+        "70-80%",
+        "80-90%",
+        "90-100%",
     ]
 
     for bucket in bucket_order:

@@ -147,7 +147,9 @@ def compute_calibration_buckets(
     for bucket_name, entries in buckets.items():
         if entries:
             avg_forecast = sum(p for p, _ in entries) / len(entries)
-            resolution_rate = sum(1 for _, resolved in entries if resolved) / len(entries)
+            resolution_rate = sum(1 for _, resolved in entries if resolved) / len(
+                entries
+            )
             output[bucket_name] = {
                 "count": len(entries),
                 "avg_forecast": round(avg_forecast, 3),
@@ -218,7 +220,9 @@ async def fetch_resolved_questions(
                 api_filter,
                 num_questions=500,
             )
-            logger.info("Found %d resolved questions in %s", len(questions), tournament_id)
+            logger.info(
+                "Found %d resolved questions in %s", len(questions), tournament_id
+            )
             all_questions.extend(questions)
         except Exception as e:
             logger.warning("Failed to fetch from tournament %s: %s", tournament_id, e)
@@ -238,7 +242,8 @@ async def fetch_cp_for_forecasts(client: AsyncMetaculusClient) -> list[CPCompari
         return comparisons
 
     post_ids = [
-        int(d.name) for d in FORECASTS_BASE_PATH.iterdir()
+        int(d.name)
+        for d in FORECASTS_BASE_PATH.iterdir()
         if d.is_dir() and d.name.isdigit()
     ]
 
@@ -257,7 +262,10 @@ async def fetch_cp_for_forecasts(client: AsyncMetaculusClient) -> list[CPCompari
         latest_forecast = forecasts[-1]
 
         # Only compare binary forecasts with probability
-        if latest_forecast.question_type != "binary" or latest_forecast.probability is None:
+        if (
+            latest_forecast.question_type != "binary"
+            or latest_forecast.probability is None
+        ):
             continue
 
         # Fetch current question state
@@ -277,16 +285,20 @@ async def fetch_cp_for_forecasts(client: AsyncMetaculusClient) -> list[CPCompari
             # Calculate divergence
             divergence = latest_forecast.probability - cp
 
-            comparisons.append(CPComparison(
-                question_id=post_id,
-                question_title=latest_forecast.question_title[:80],
-                question_type=latest_forecast.question_type,
-                forecast_timestamp=latest_forecast.timestamp,
-                our_probability=latest_forecast.probability,
-                community_prediction=cp,
-                divergence=divergence,
-                question_status=question.status.value if question.status else "unknown",
-            ))
+            comparisons.append(
+                CPComparison(
+                    question_id=post_id,
+                    question_title=latest_forecast.question_title[:80],
+                    question_type=latest_forecast.question_type,
+                    forecast_timestamp=latest_forecast.timestamp,
+                    our_probability=latest_forecast.probability,
+                    community_prediction=cp,
+                    divergence=divergence,
+                    question_status=question.status.value
+                    if question.status
+                    else "unknown",
+                )
+            )
         except Exception as e:
             logger.debug("Failed to fetch CP for post %d: %s", post_id, e)
 
@@ -329,8 +341,12 @@ def match_forecasts_to_resolutions(
 
             if forecast.question_type == "binary" and forecast.probability is not None:
                 if isinstance(resolution, bool):
-                    result.brier_score = compute_brier_score(forecast.probability, resolution)
-                    result.log_score = compute_log_score(forecast.probability, resolution)
+                    result.brier_score = compute_brier_score(
+                        forecast.probability, resolution
+                    )
+                    result.log_score = compute_log_score(
+                        forecast.probability, resolution
+                    )
 
             results.append(result)
 
@@ -355,14 +371,16 @@ def main(
     tournament: Annotated[
         list[str] | None,
         typer.Option(
-            "--tournament", "-t",
+            "--tournament",
+            "-t",
             help="Tournament ID or slug (can specify multiple). Default: spring-aib-2026",
         ),
     ] = None,
     since: Annotated[
         str | None,
         typer.Option(
-            "--since", "-s",
+            "--since",
+            "-s",
             help="Only fetch questions resolved after this date (YYYY-MM-DD). Default: last run.",
         ),
     ] = None,
@@ -442,7 +460,9 @@ async def _main_async(
     avg_brier = None
     avg_log = None
     if binary_results:
-        brier_scores = [r.brier_score for r in binary_results if r.brier_score is not None]
+        brier_scores = [
+            r.brier_score for r in binary_results if r.brier_score is not None
+        ]
         log_scores = [r.log_score for r in binary_results if r.log_score is not None]
         if brier_scores:
             avg_brier = sum(brier_scores) / len(brier_scores)
@@ -482,11 +502,13 @@ async def _main_async(
     logger.info("Saved metrics to %s", output_file)
 
     # Update last run
-    save_last_run({
-        "last_collection": datetime.now().isoformat(),
-        "last_metrics_file": str(output_file),
-        "tournaments": tournament_names,
-    })
+    save_last_run(
+        {
+            "last_collection": datetime.now().isoformat(),
+            "last_metrics_file": str(output_file),
+            "tournaments": tournament_names,
+        }
+    )
 
     # Print summary
     print("\n" + "=" * 60)
@@ -505,19 +527,28 @@ async def _main_async(
     if calibration:
         print("\nCalibration (forecasted → actual resolution rate):")
         for bucket, data in calibration.items():
-            print(f"  {bucket}: {data['avg_forecast']:.0%} → {data['resolution_rate']:.0%} (n={data['count']})")
+            print(
+                f"  {bucket}: {data['avg_forecast']:.0%} → {data['resolution_rate']:.0%} (n={data['count']})"
+            )
 
     # Report missed questions (resolved but no forecast)
     forecasted_ids = {r.question_id for r in results}
     missed_questions = [
-        q for q in questions
+        q
+        for q in questions
         if q.id_of_post is not None and q.id_of_post not in forecasted_ids
     ]
     if missed_questions:
-        print(f"\nMissed Questions ({len(missed_questions)} resolved without forecast):")
+        print(
+            f"\nMissed Questions ({len(missed_questions)} resolved without forecast):"
+        )
         for q in missed_questions:
             res_str = q.resolution_string or "?"
-            title = q.question_text[:60] + "..." if len(q.question_text) > 60 else q.question_text
+            title = (
+                q.question_text[:60] + "..."
+                if len(q.question_text) > 60
+                else q.question_text
+            )
             print(f"  - [{q.id_of_post}] {title} → {res_str}")
 
     # Report community prediction comparison (early signal)
@@ -528,7 +559,9 @@ async def _main_async(
         print(f"Forecasts with CP available: {len(cp_comparisons)}")
         if avg_cp_divergence is not None:
             direction = "higher" if avg_cp_divergence > 0 else "lower"
-            print(f"Average divergence: {avg_cp_divergence:+.1%} (we are {direction} than CP)")
+            print(
+                f"Average divergence: {avg_cp_divergence:+.1%} (we are {direction} than CP)"
+            )
 
         # Show large divergences (>15pp)
         large_divergences = [c for c in cp_comparisons if abs(c.divergence) > 0.15]
@@ -537,15 +570,23 @@ async def _main_async(
             # Sort by absolute divergence
             large_divergences.sort(key=lambda c: abs(c.divergence), reverse=True)
             for c in large_divergences[:10]:  # Top 10
-                title = c.question_title[:50] + "..." if len(c.question_title) > 50 else c.question_title
-                print(f"  [{c.question_id}] {c.our_probability:.0%} vs CP {c.community_prediction:.0%} ({c.divergence:+.0%})")
+                title = (
+                    c.question_title[:50] + "..."
+                    if len(c.question_title) > 50
+                    else c.question_title
+                )
+                print(
+                    f"  [{c.question_id}] {c.our_probability:.0%} vs CP {c.community_prediction:.0%} ({c.divergence:+.0%})"
+                )
                 print(f"      {title}")
 
         # Show systematic bias
         higher_count = sum(1 for c in cp_comparisons if c.divergence > 0.02)
         lower_count = sum(1 for c in cp_comparisons if c.divergence < -0.02)
         if higher_count + lower_count > 0:
-            print(f"\nBias check: {higher_count} forecasts higher than CP, {lower_count} lower")
+            print(
+                f"\nBias check: {higher_count} forecasts higher than CP, {lower_count} lower"
+            )
 
     print(f"\nMetrics saved to: {output_file}")
 

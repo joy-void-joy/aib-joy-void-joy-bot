@@ -183,7 +183,9 @@ def append_metrics_to_meta_reflection(
     # Timing and cost
     if duration_seconds is not None:
         minutes = duration_seconds / 60
-        lines.append(f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)")
+        lines.append(
+            f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)"
+        )
     if cost_usd is not None:
         lines.append(f"- **Cost**: ${cost_usd:.4f}")
 
@@ -194,7 +196,9 @@ def append_metrics_to_meta_reflection(
         cache_read = token_usage.get("cache_read_input_tokens", 0)
         cache_create = token_usage.get("cache_creation_input_tokens", 0)
         total = input_tokens + output_tokens
-        lines.append(f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)")
+        lines.append(
+            f"- **Tokens**: {total:,} total ({input_tokens:,} in, {output_tokens:,} out)"
+        )
         if cache_read or cache_create:
             lines.append(f"  - Cache: {cache_read:,} read, {cache_create:,} created")
 
