@@ -32,7 +32,7 @@ from aib.agent.history import (
     save_retrodict,
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
-from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks
+from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks, get_modified_input
 from aib.agent.tool_policy import ToolPolicy
 from aib.tools.classifiers import (
     classify_webfetch_content,
@@ -65,6 +65,10 @@ logger = logging.getLogger(__name__)
 METACULUS_API_BASE = "https://www.metaculus.com/api"
 
 
+# Buffer original tool inputs so we can display post-hook params on ToolResultBlock
+_pending_tool_inputs: dict[str, dict] = {}
+
+
 def print_block(block: ContentBlock) -> None:
     """Print a content block with appropriate emoji prefix."""
     match block:
@@ -73,14 +77,18 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            input_str = json.dumps(block.input, indent=2) if block.input else ""
+            _pending_tool_inputs[block.id] = block.input or {}
             print(f"🔧 {block.name} [{block.id}]")
-            if input_str:
-                print(input_str)
         case ToolResultBlock():
+            # Display actual tool input (post-hook modifications if any)
+            tool_use_id = block.tool_use_id
+            original_input = _pending_tool_inputs.pop(tool_use_id, None)
+            actual_input = get_modified_input(tool_use_id) or original_input
+            if actual_input:
+                print(json.dumps(actual_input, indent=2))
             # Note: block.is_error is unreliable (SDK bug doesn't propagate MCP isError)
             content_preview = _truncate_content(block.content, max_len=500)
-            print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
+            print(f"📋 Result [{tool_use_id}]: {content_preview}")
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
@@ -111,6 +119,7 @@ class ReasoningLogger:
     def __init__(self, log_path: Path, question_title: str) -> None:
         self.log_path = log_path
         self.lines: list[str] = []
+        self._pending_inputs: dict[str, tuple[str, dict]] = {}
         self.lines.append(f"# Reasoning Log: {question_title}\n")
         self.lines.append(f"*Generated: {datetime.now().isoformat()}*\n\n")
 
@@ -122,14 +131,21 @@ class ReasoningLogger:
             case TextBlock():
                 return f"## 💬 Response\n\n{block.text}\n"
             case ToolUseBlock():
-                input_str = json.dumps(block.input, indent=2) if block.input else ""
-                result = f"## 🔧 Tool: {block.name}\n\n"
-                if input_str:
-                    result += f"```json\n{input_str}\n```\n"
-                return result
+                self._pending_inputs[block.id] = (block.name, block.input or {})
+                return f"## 🔧 Tool: {block.name}\n\n"
             case ToolResultBlock():
+                parts: list[str] = []
+                tool_use_id = block.tool_use_id
+                original = self._pending_inputs.pop(tool_use_id, None)
+                actual_input = get_modified_input(tool_use_id)
+                if actual_input is None and original is not None:
+                    actual_input = original[1]
+                if actual_input:
+                    input_str = json.dumps(actual_input, indent=2)
+                    parts.append(f"```json\n{input_str}\n```\n")
                 content_str = _truncate_content(block.content, max_len=2000)
-                return f"### 📋 Result\n\n```\n{content_str}\n```\n"
+                parts.append(f"### 📋 Result\n\n```\n{content_str}\n```\n")
+                return "\n".join(parts)
             case _:
                 return f"## ❓ {type(block).__name__}\n\n{block}\n"
 
