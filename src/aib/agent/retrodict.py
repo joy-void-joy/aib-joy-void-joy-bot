@@ -30,6 +30,14 @@ from aib.tools.wayback import (
 
 logger = logging.getLogger(__name__)
 
+# Track hook modifications so display code can show actual tool params
+_modified_inputs: dict[str, dict[str, Any]] = {}
+
+
+def get_modified_input(tool_use_id: str) -> dict[str, Any] | None:
+    """Look up the post-hook input for a tool call, if modified by retrodict."""
+    return _modified_inputs.get(tool_use_id)
+
 
 @dataclass
 class RetrodictConfig:
@@ -161,7 +169,7 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
 
     async def pre_tool_use_hook(
         input_data: Any,
-        _tool_use_id: str | None,
+        tool_use_id: str | None,
         _context: HookContext,
     ) -> dict[str, Any]:
         """Filter and modify tool inputs for time restriction."""
@@ -185,7 +193,9 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
             }
 
         def modify_input(new_input: dict[str, Any]) -> dict[str, Any]:
-            """Return modified tool input."""
+            """Return modified tool input and record for display."""
+            if tool_use_id:
+                _modified_inputs[tool_use_id] = new_input
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
