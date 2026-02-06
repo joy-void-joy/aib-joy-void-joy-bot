@@ -7,8 +7,6 @@ from typing import Any
 _FORECASTING_SYSTEM_PROMPT_TEMPLATE = """\
 You are an expert forecaster participating in the Metaculus AI Benchmarking Tournament.
 
-Today's date is {date}.
-
 ## Tools
 
 ### Metaculus Data
