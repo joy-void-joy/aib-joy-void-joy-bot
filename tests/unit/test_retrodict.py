@@ -423,6 +423,100 @@ class TestRetrodictHooksContinued:
         assert "updatedInput" not in output
 
 
+class TestExaDateFilter:
+    """Tests for client-side publishedDate filtering in exa_search."""
+
+    def test_drops_results_after_cutoff(self) -> None:
+        from aib.tools.exa import ExaResult, _filter_by_published_date
+
+        results: list[ExaResult] = [
+            {
+                "title": "Before cutoff",
+                "url": "https://example.com/before",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2026-01-20T10:00:00",
+                "score": 1.0,
+            },
+            {
+                "title": "After cutoff",
+                "url": "https://example.com/after",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2026-02-04T08:00:00",
+                "score": 0.9,
+            },
+        ]
+        filtered = _filter_by_published_date(results, "2026-01-25")
+        assert len(filtered) == 1
+        assert filtered[0]["url"] == "https://example.com/before"
+
+    def test_drops_results_without_published_date(self) -> None:
+        from aib.tools.exa import ExaResult, _filter_by_published_date
+
+        results: list[ExaResult] = [
+            {
+                "title": "Has date",
+                "url": "https://example.com/dated",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2026-01-10",
+                "score": 1.0,
+            },
+            {
+                "title": "No date",
+                "url": "https://example.com/undated",
+                "snippet": None,
+                "highlights": None,
+                "published_date": None,
+                "score": 0.8,
+            },
+        ]
+        filtered = _filter_by_published_date(results, "2026-01-25")
+        assert len(filtered) == 1
+        assert filtered[0]["url"] == "https://example.com/dated"
+
+    def test_keeps_all_valid_results(self) -> None:
+        from aib.tools.exa import ExaResult, _filter_by_published_date
+
+        results: list[ExaResult] = [
+            {
+                "title": "Old article",
+                "url": "https://example.com/old",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2025-06-15",
+                "score": 1.0,
+            },
+            {
+                "title": "Recent article",
+                "url": "https://example.com/recent",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2026-01-24",
+                "score": 0.9,
+            },
+        ]
+        filtered = _filter_by_published_date(results, "2026-01-25")
+        assert len(filtered) == 2
+
+    def test_boundary_date_is_included(self) -> None:
+        from aib.tools.exa import ExaResult, _filter_by_published_date
+
+        results: list[ExaResult] = [
+            {
+                "title": "Exact cutoff",
+                "url": "https://example.com/boundary",
+                "snippet": None,
+                "highlights": None,
+                "published_date": "2026-01-25T23:59:59",
+                "score": 1.0,
+            },
+        ]
+        filtered = _filter_by_published_date(results, "2026-01-25")
+        assert len(filtered) == 1
+
+
 class TestPyPIOnlyNetwork:
     """Tests for PyPI-only network iptables generation."""
 

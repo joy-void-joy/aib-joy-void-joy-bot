@@ -95,8 +95,8 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         for r in exa_results:
             results.append(
                 SearchResult(
-                    title=r.get("title") or r.get("url", ""),
-                    url=r.get("url", ""),
+                    title=r.get("title") or r.get("url") or "",
+                    url=r.get("url") or "",
                     snippet=r.get("snippet"),
                 )
             )
