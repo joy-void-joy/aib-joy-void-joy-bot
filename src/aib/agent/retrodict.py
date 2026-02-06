@@ -19,13 +19,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-import httpx
 from claude_agent_sdk import HookMatcher
 from claude_agent_sdk.types import HookContext
 
 from aib.agent.hooks import HooksConfig
-from aib.tools.cache import cached
-from aib.tools.retry import with_retry
+from aib.tools.wayback import (
+    check_wayback_availability,
+    rewrite_to_wayback,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,27 +76,6 @@ DATE_CAPPABLE_TOOLS = frozenset(
         "mcp__trends__google_trends_compare",
     }
 )
-
-
-def _rewrite_to_wayback(url: str, timestamp: str) -> str:
-    """Rewrite a URL to use Wayback Machine snapshot.
-
-    The Wayback Machine URL format appends the original URL directly after the
-    timestamp - no encoding needed. The 'id_' modifier returns raw content
-    without the Wayback toolbar injection.
-
-    Args:
-        url: Original URL to fetch (e.g., "https://example.com/search?q=test")
-        timestamp: Wayback timestamp format (YYYYMMDD or YYYYMMDDHHMMSS)
-
-    Returns:
-        Wayback Machine URL for the closest snapshot before the timestamp.
-
-    Example:
-        >>> _rewrite_to_wayback("https://example.com/page?q=1", "20260115")
-        'https://web.archive.org/web/20260115id_/https://example.com/page?q=1'
-    """
-    return f"https://web.archive.org/web/{timestamp}id_/{url}"
 
 
 def _parse_trends_duration(timeframe: str) -> int:
@@ -169,63 +149,6 @@ def _cap_trends_timeframe(timeframe: str, cutoff_date: datetime) -> str:
     return f"{start_date.strftime('%Y-%m-%d')} {cutoff_date.strftime('%Y-%m-%d')}"
 
 
-def _normalize_wayback_ts(timestamp: str) -> int:
-    """Normalize Wayback timestamp to YYYYMMDD integer for safe comparison.
-
-    The Wayback API returns timestamps with variable precision (YYYYMMDD to
-    YYYYMMDDHHMMSS). This function extracts just the date portion as an integer
-    for reliable comparison.
-
-    Args:
-        timestamp: Wayback timestamp string (8-14 digits).
-
-    Returns:
-        Integer in YYYYMMDD format for comparison.
-
-    Example:
-        >>> _normalize_wayback_ts("20260115")
-        20260115
-        >>> _normalize_wayback_ts("20260115120000")
-        20260115
-    """
-    return int(timestamp[:8])
-
-
-@cached(ttl=3600)  # 1 hour - Wayback snapshots don't change frequently
-@with_retry(max_attempts=2)
-async def _check_wayback_availability(
-    url: str, timestamp: str
-) -> dict[str, Any] | None:
-    """Check if a URL has a Wayback Machine snapshot near the given timestamp.
-
-    Uses the Wayback Availability API to check for archived snapshots before
-    attempting to rewrite URLs. This prevents errors when URLs aren't archived.
-
-    Args:
-        url: The original URL to check.
-        timestamp: Wayback timestamp format (YYYYMMDD or YYYYMMDDHHMMSS).
-
-    Returns:
-        Dict with snapshot info if available (contains 'url', 'timestamp', 'status'),
-        or None if no snapshot exists near the requested time.
-
-    API docs: https://archive.org/help/wayback_api.php
-    """
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(
-            "https://archive.org/wayback/available",
-            params={"url": url, "timestamp": timestamp},
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    snapshots = data.get("archived_snapshots", {})
-    closest = snapshots.get("closest")
-    if closest and closest.get("available"):
-        return closest
-    return None
-
-
 def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
     """Create hooks that restrict tool access to data before forecast_date.
 
@@ -279,63 +202,40 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
                 }
             }
 
-        # Note: Live-only tools (stock_price, polymarket_price, manifold_price)
-        # are excluded from allowed_tools in retrodict mode (see core.py)
+        # Note: Tools excluded via policy in retrodict mode:
+        # - WebSearch (unreliable before: operator)
+        # - search_news (no date filtering)
+        # - Live market tools (stock_price, polymarket_price, manifold_price)
+        # - Playwright tools
 
-        # WebSearch: Append before: operator
-        if tool_name == "WebSearch":
-            query = tool_input.get("query", "")
-            if query and f"before:{config.date_str}" not in query:
-                modified_query = f"{query} before:{config.date_str}"
-                logger.info(
-                    "[Retrodict] WebSearch query modified: %r -> %r",
-                    query,
-                    modified_query,
-                )
-                new_input = {**tool_input, "query": modified_query}
-                return modify_input(new_input)
-            return allow()
+        # web_search (search server): Inject cutoff_date for Wayback validation
+        if tool_name == "mcp__search__web_search":
+            new_input = {**tool_input, "cutoff_date": config.date_str}
+            logger.info(
+                "[Retrodict] web_search cutoff_date injected: %s",
+                config.date_str,
+            )
+            return modify_input(new_input)
 
         # WebFetch: Check Wayback availability and rewrite URL
         if tool_name == "WebFetch":
             url = tool_input.get("url", "")
             if url and "web.archive.org" not in url:
-                # Check if snapshot exists before rewriting
-                try:
-                    availability = await _check_wayback_availability(
-                        url, config.wayback_ts
-                    )
-                except httpx.HTTPError as e:
-                    logger.warning(
-                        "[Retrodict] Wayback availability check failed: %s", e
-                    )
-                    # Proceed anyway with requested timestamp
-                    availability = {"timestamp": config.wayback_ts}
+                # Check if snapshot exists before rewriting (rate-limited, validates cutoff)
+                availability = await check_wayback_availability(
+                    url, config.wayback_ts, validate_before_cutoff=True
+                )
 
                 if availability is None:
                     logger.warning(
-                        "[Retrodict] No Wayback snapshot for %s at %s",
+                        "[Retrodict] No valid Wayback snapshot for %s at %s",
                         url,
                         config.wayback_ts,
                     )
                     return deny("HTTP 404: URL not found or unavailable.")
 
-                # Validate snapshot is not after the cutoff (Wayback returns "closest"
-                # which could be after the requested date)
                 actual_ts = availability.get("timestamp", config.wayback_ts)
-                # Use integer comparison to handle variable timestamp precision
-                # (YYYYMMDD vs YYYYMMDDHHMMSS)
-                if _normalize_wayback_ts(actual_ts) > _normalize_wayback_ts(
-                    config.wayback_ts
-                ):
-                    logger.warning(
-                        "[Retrodict] Wayback closest snapshot (%s) is after cutoff (%s)",
-                        actual_ts,
-                        config.wayback_ts,
-                    )
-                    return deny("HTTP 404: URL not found or unavailable.")
-
-                wayback_url = _rewrite_to_wayback(url, actual_ts)
+                wayback_url = rewrite_to_wayback(url, actual_ts)
                 logger.info(
                     "[Retrodict] WebFetch URL rewritten to Wayback: %s -> %s (snapshot: %s)",
                     url,
@@ -381,6 +281,80 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
         if tool_name == "mcp__forecasting__get_cp_history":
             new_input = {**tool_input, "before": config.date_str}
             logger.info("[Retrodict] get_cp_history capped to %s", config.date_str)
+            return modify_input(new_input)
+
+        # search_exa: Add publishedBefore and disable livecrawl
+        if tool_name == "mcp__forecasting__search_exa":
+            new_input = {
+                **tool_input,
+                "published_before": config.date_str,
+                "livecrawl": "never",
+            }
+            logger.info(
+                "[Retrodict] search_exa capped to %s with livecrawl=never",
+                config.date_str,
+            )
+            return modify_input(new_input)
+
+        # wikipedia: Inject cutoff_date for historical revision lookup
+        if tool_name == "mcp__forecasting__wikipedia":
+            new_input = {**tool_input, "cutoff_date": config.date_str}
+            logger.info("[Retrodict] wikipedia cutoff_date injected: %s", config.date_str)
+            return modify_input(new_input)
+
+        # get_metaculus_questions: Inject cutoff_date to hide current CP
+        if tool_name == "mcp__forecasting__get_metaculus_questions":
+            new_input = {**tool_input, "cutoff_date": config.date_str}
+            logger.info(
+                "[Retrodict] get_metaculus_questions cutoff_date injected: %s",
+                config.date_str,
+            )
+            return modify_input(new_input)
+
+        # search_arxiv: Inject cutoff_date to filter papers by publication date
+        if tool_name == "mcp__arxiv__search_arxiv":
+            new_input = {**tool_input, "cutoff_date": config.date_str}
+            logger.info("[Retrodict] search_arxiv cutoff_date injected: %s", config.date_str)
+            return modify_input(new_input)
+
+        # google_trends_related: Cap timeframe (same as google_trends)
+        if tool_name == "mcp__trends__google_trends_related":
+            current_timeframe = tool_input.get("timeframe", "today 12-m")
+            new_timeframe = _cap_trends_timeframe(
+                current_timeframe, config.forecast_date
+            )
+            new_input = {**tool_input, "timeframe": new_timeframe}
+            logger.info(
+                "[Retrodict] google_trends_related timeframe capped: %s -> %s",
+                current_timeframe,
+                new_timeframe,
+            )
+            return modify_input(new_input)
+
+        # polymarket_history: Cap timestamp to retrodict cutoff
+        if tool_name == "mcp__markets__polymarket_history":
+            timestamp = tool_input.get("timestamp", 0)
+            capped_ts = min(timestamp, config.unix_ts)
+            if timestamp != capped_ts:
+                logger.info(
+                    "[Retrodict] polymarket_history timestamp capped: %d -> %d",
+                    timestamp,
+                    capped_ts,
+                )
+            new_input = {**tool_input, "timestamp": capped_ts}
+            return modify_input(new_input)
+
+        # manifold_history: Cap timestamp to retrodict cutoff
+        if tool_name == "mcp__markets__manifold_history":
+            timestamp = tool_input.get("timestamp", 0)
+            capped_ts = min(timestamp, config.unix_ts)
+            if timestamp != capped_ts:
+                logger.info(
+                    "[Retrodict] manifold_history timestamp capped: %d -> %d",
+                    timestamp,
+                    capped_ts,
+                )
+            new_input = {**tool_input, "timestamp": capped_ts}
             return modify_input(new_input)
 
         # Allow all other tools

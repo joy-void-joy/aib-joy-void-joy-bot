@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 from claude_agent_sdk.types import McpServerConfig, McpStdioServerConfig
 
 from aib.agent.retrodict import RetrodictConfig
+from aib.tools.arxiv_search import arxiv_server
 from aib.tools.financial import financial_server
 from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
@@ -146,6 +147,13 @@ RETRODICT_VALIDATED_SEARCH_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# arXiv tools (no API key required, supports date filtering)
+ARXIV_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__arxiv__search_arxiv",
+    }
+)
+
 # MCP servers to exclude in retrodict mode
 RETRODICT_EXCLUDED_SERVERS: frozenset[str] = frozenset(
     {
@@ -200,7 +208,7 @@ class ToolPolicy:
         if self.retrodict_config:
             excluded.update(LIVE_MARKET_TOOLS)
             excluded.update(PLAYWRIGHT_TOOLS)
-            excluded.update(WIKIPEDIA_TOOLS)  # Articles contain post-cutoff info
+            # Wikipedia now supports historical lookups via cutoff_date injection
             excluded.update(ASKNEWS_TOOLS)  # No date filtering support
             excluded.add("WebSearch")  # Unreliable before: operator
 
@@ -261,6 +269,7 @@ class ToolPolicy:
             "markets": create_markets_server(exclude_live=self.is_retrodict),
             "notes": create_notes_server(session_id),
             "trends": trends_server,
+            "arxiv": arxiv_server,
         }
 
         # Add search server in retrodict mode (Wayback-validated web search)
@@ -322,6 +331,9 @@ class ToolPolicy:
         # Notes tools
         tools.update(NOTES_TOOLS)
 
+        # arXiv tools (supports date filtering)
+        tools.update(ARXIV_TOOLS)
+
         # Playwright tools (excluded in retrodict via _excluded_tools)
         tools.update(PLAYWRIGHT_TOOLS)
 
@@ -348,3 +360,75 @@ class ToolPolicy:
             True if the tool is available, False otherwise.
         """
         return tool_name not in self._excluded_tools
+
+    def get_tool_docs(
+        self,
+        mcp_servers: dict[str, McpServerConfig],
+        *,
+        allow_spawn: bool = True,
+    ) -> str:
+        """Generate tool documentation for allowed tools.
+
+        Extracts tool descriptions from MCP server instances.
+
+        Args:
+            mcp_servers: Dict of MCP servers from get_mcp_servers().
+            allow_spawn: Whether to include spawn_subquestions.
+
+        Returns:
+            Markdown-formatted tool documentation.
+        """
+        allowed = set(self.get_allowed_tools(allow_spawn=allow_spawn))
+        descriptions: dict[str, str] = {}
+
+        # Extract descriptions from SDK servers (which have _tools attribute)
+        for server_name, server_config in mcp_servers.items():
+            # Check if this is an SDK server with an instance
+            server_type = (
+                server_config.get("type")
+                if isinstance(server_config, dict)
+                else getattr(server_config, "type", None)
+            )
+            if server_type != "sdk":
+                continue
+
+            instance = (
+                server_config.get("instance")
+                if isinstance(server_config, dict)
+                else getattr(server_config, "instance", None)
+            )
+            if instance is None:
+                continue
+
+            # Access stored tools from the server instance
+            tools = getattr(instance, "_tools", [])
+            for tool in tools:
+                full_name = f"mcp__{server_name}__{tool.name}"
+                if full_name in allowed:
+                    descriptions[full_name] = tool.description
+
+        return self._format_tool_docs(descriptions)
+
+    def _format_tool_docs(self, descriptions: dict[str, str]) -> str:
+        """Format tool descriptions as markdown documentation."""
+        # Group by server
+        by_server: dict[str, list[tuple[str, str]]] = {}
+        for full_name, desc in descriptions.items():
+            parts = full_name.split("__")
+            if len(parts) >= 3:
+                server = parts[1]
+                tool_name = parts[2]
+            else:
+                server = "other"
+                tool_name = full_name
+            by_server.setdefault(server, []).append((tool_name, desc))
+
+        # Format as markdown
+        lines = ["## Available Tools\n"]
+        for server, tools in sorted(by_server.items()):
+            lines.append(f"### {server.title()}\n")
+            for tool_name, desc in sorted(tools):
+                lines.append(f"- **{tool_name}**: {desc}")
+            lines.append("")
+
+        return "\n".join(lines)

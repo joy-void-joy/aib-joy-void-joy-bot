@@ -111,6 +111,7 @@ def create_mcp_server(
         McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
     """
     server = Server(name, version=version)
+    server._tools = tools or []  # type: ignore[attr-defined]
 
     if tools:
         tool_map = {tool_def.name: tool_def for tool_def in tools}
