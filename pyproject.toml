@@ -24,7 +24,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pyright>=1.1.408", "ruff>=0.14.14"]
+dev = [
+    "pyright>=1.1.408",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.14",
+]
 
 [project.scripts]
 forecast = "aib.cli:app"
@@ -35,3 +40,11 @@ where = ["src"]
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.pyright]
+extraPaths = [".claude/plugins/aib/hooks/scripts"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
