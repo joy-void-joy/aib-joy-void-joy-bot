@@ -190,7 +190,7 @@ def create_retrodict_hooks(config: RetrodictConfig) -> HooksConfig:
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
                     "permissionDecision": "allow",
-                    "modifiedInput": new_input,
+                    "updatedInput": new_input,
                 }
             }
 
