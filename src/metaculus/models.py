@@ -2,6 +2,30 @@
 
 Simplified models for Metaculus questions and related data structures.
 Only includes fields actually used by the AIB forecasting bot.
+
+IMPORTANT: post_id vs question_id
+================================
+Metaculus has two different ID systems:
+
+- **post_id** (id_of_post): The ID in the URL (metaculus.com/questions/{post_id}).
+  A post is a container that can hold one or more questions. Used for:
+  - Fetching questions: GET /api/posts/{post_id}/
+  - Building URLs: metaculus.com/questions/{post_id}
+  - Local forecast storage: notes/forecasts/{post_id}/
+
+- **question_id** (id_of_question): The internal ID of the actual question.
+  Used for:
+  - Coherence links: GET /api/coherence/question/{question_id}/links/
+  - CP history: GET /api/questions/{question_id}/aggregate-history/
+  - Submitting forecasts: POST /api/questions/{question_id}/predict/
+
+For most questions, post_id == question_id, but for group questions
+(one post containing multiple sub-questions), they differ.
+
+When in doubt, check which API endpoint you're calling and use the
+appropriate ID. The client methods are named to clarify:
+- get_question_by_post_id(post_id) - takes post_id
+- get_links_for_question(question_id) - takes question_id
 """
 
 import logging
@@ -47,11 +71,17 @@ class MetaculusQuestion(BaseModel):
     """Base class for Metaculus questions.
 
     Contains fields common to all question types.
+
+    Attributes:
+        id_of_post: The post ID (used for URLs, local storage). See module docstring.
+        id_of_question: The question ID (used for coherence links, CP history, submissions).
     """
 
     question_text: str
-    id_of_post: int | None = None
-    id_of_question: int | None = None
+    id_of_post: int | None = None  # URL/storage ID - see module docstring
+    id_of_question: int | None = (
+        None  # API ID for coherence/CP/submit - see module docstring
+    )
     page_url: str | None = None
     status: QuestionState | None = None
     num_forecasters: int | None = None

@@ -11,7 +11,13 @@ import httpx
 import typer
 
 from aib.agent import ForecastOutput, run_forecast
-from aib.agent.history import is_submitted, load_latest_for_submission, mark_submitted
+from aib.agent.history import (
+    commit_forecast,
+    is_submitted,
+    load_latest_for_submission,
+    mark_submitted,
+)
+from aib.agent.retrodict import RetrodictConfig
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
@@ -164,6 +170,208 @@ def test(
 
 
 @app.command()
+def retrodict(
+    question_ids: Annotated[
+        list[int], typer.Argument(help="Metaculus post IDs of resolved questions")
+    ],
+    forecast_date: Annotated[
+        str | None,
+        typer.Option(
+            "--forecast-date",
+            "-d",
+            help="Restrict data access to this date (YYYY-MM-DD). Enables blind mode.",
+        ),
+    ] = None,
+    blind: Annotated[
+        bool,
+        typer.Option(
+            "--blind/--no-blind",
+            help="Enable blind mode (restrict to question published_at if no --forecast-date)",
+        ),
+    ] = True,
+) -> None:
+    """Run forecasts on resolved questions for calibration.
+
+    Forecasts resolved questions to build calibration data. Does not submit.
+    Shows the actual resolution and computes Brier score for binary questions.
+
+    By default, runs in "blind mode" which restricts all tools to data
+    available before the question's published_at date. This prevents
+    "future leak" where the agent finds out the answer by searching.
+
+    Use --forecast-date to specify a custom cutoff date, or --no-blind
+    to disable time restrictions entirely (useful for testing).
+
+    Examples:
+        uv run forecast retrodict 41835 41521
+        uv run forecast retrodict 41835 --forecast-date 2026-01-15
+        uv run forecast retrodict 41835 --no-blind  # No time restriction
+    """
+    import sys
+
+    sys.path.insert(0, "src")
+    from metaculus import AsyncMetaculusClient, BinaryQuestion
+
+    # Parse forecast_date if provided
+    parsed_forecast_date: datetime | None = None
+    if forecast_date:
+        try:
+            parsed_forecast_date = datetime.strptime(forecast_date, "%Y-%m-%d")
+        except ValueError:
+            print(f"❌ Invalid date format: {forecast_date}. Use YYYY-MM-DD.")
+            raise typer.Exit(1)
+
+    async def get_resolution_and_published(
+        post_id: int,
+    ) -> tuple[str | None, float | None, datetime | None]:
+        """Fetch resolution, final CP, and published_at for a question."""
+        client = AsyncMetaculusClient()
+        try:
+            result = await client.get_question_by_post_id(post_id)
+            # Handle single question or group (list). For groups, we use the
+            # first question - if the user wants a specific sub-question, they
+            # should provide that sub-question's post_id directly.
+            if isinstance(result, list):
+                if len(result) > 1:
+                    logger.warning(
+                        "Post %d contains %d questions. Using first: %s",
+                        post_id,
+                        len(result),
+                        result[0].question_text[:50],
+                    )
+                q = result[0]
+            else:
+                q = result
+            resolution = q.resolution_string
+            cp = None
+            if isinstance(q, BinaryQuestion):
+                cp = q.community_prediction_at_access_time
+            # Get published_at from the question data
+            published_at = getattr(q, "published_at", None)
+            if published_at and isinstance(published_at, str):
+                # Parse ISO format
+                published_at = datetime.fromisoformat(
+                    published_at.replace("Z", "+00:00")
+                )
+            return resolution, cp, published_at
+        except Exception as e:
+            logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
+            return None, None, None
+
+    results: list[dict] = []
+
+    for i, qid in enumerate(question_ids, 1):
+        print(f"\n{'=' * 60}")
+        print(f"[{i}/{len(question_ids)}] Retrodicting question {qid}")
+        print("=" * 60)
+
+        # Fetch resolution and published_at
+        resolution, final_cp, published_at = asyncio.run(
+            get_resolution_and_published(qid)
+        )
+        if resolution:
+            print(f"Resolution: {resolution}")
+            if final_cp is not None:
+                print(f"Final CP: {final_cp:.1%}")
+        else:
+            print("⚠️  Could not fetch resolution (question may not be resolved)")
+
+        # Determine the retrodict config
+        retrodict_config: RetrodictConfig | None = None
+        if blind:
+            if parsed_forecast_date:
+                retrodict_config = RetrodictConfig(forecast_date=parsed_forecast_date)
+                print(
+                    f"🔒 Blind mode: data restricted to before {parsed_forecast_date.date()}"
+                )
+            elif published_at:
+                retrodict_config = RetrodictConfig(forecast_date=published_at)
+                print(f"🔒 Blind mode: data restricted to before {published_at.date()}")
+            else:
+                print("⚠️  No published_at found, running without blind mode")
+
+        # Setup logging
+        log_file = setup_logging(qid)
+        print(f"Logging to {log_file}")
+
+        # Run forecast
+        try:
+            output = asyncio.run(run_forecast(qid, retrodict_config=retrodict_config))
+            display_forecast(output)
+
+            # Compute Brier score for binary questions
+            brier = None
+            if output.probability is not None and resolution in ("yes", "no"):
+                outcome = 1.0 if resolution == "yes" else 0.0
+                brier = (output.probability - outcome) ** 2
+                print("\n📊 Calibration:")
+                print(f"   Our forecast: {output.probability:.1%}")
+                print(f"   Resolution: {resolution}")
+                print(f"   Brier score: {brier:.4f}")
+                if final_cp is not None:
+                    cp_brier = (final_cp - outcome) ** 2
+                    print(f"   CP Brier: {cp_brier:.4f}")
+                    diff = brier - cp_brier
+                    better_worse = "better" if diff < 0 else "worse"
+                    print(f"   We were {abs(diff):.4f} {better_worse} than CP")
+
+            results.append(
+                {
+                    "post_id": qid,
+                    "resolution": resolution,
+                    "our_forecast": output.probability,
+                    "final_cp": final_cp,
+                    "brier": brier,
+                    "question_type": output.question_type,
+                }
+            )
+
+        except CreditExhaustedError as e:
+            reset_msg = ""
+            if e.reset_time:
+                reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
+            print(f"❌ Credit exhausted.{reset_msg}")
+            results.append({"post_id": qid, "error": "credit_exhausted"})
+        except httpx.HTTPStatusError as e:
+            print(f"❌ Failed to fetch question: {e}")
+            results.append({"post_id": qid, "error": str(e)})
+        except RuntimeError as e:
+            print(f"❌ Agent failed: {e}")
+            results.append({"post_id": qid, "error": str(e)})
+
+    # Summary
+    print(f"\n{'=' * 60}")
+    print("RETRODICT SUMMARY")
+    print("=" * 60)
+
+    binary_results = [r for r in results if r.get("brier") is not None]
+    if binary_results:
+        avg_brier = sum(r["brier"] for r in binary_results) / len(binary_results)
+        print(f"\nBinary questions: {len(binary_results)}")
+        print(f"Average Brier score: {avg_brier:.4f}")
+
+        # Compare to CP
+        cp_briers = [
+            (r.get("final_cp", 0.5) - (1.0 if r["resolution"] == "yes" else 0.0)) ** 2
+            for r in binary_results
+            if r.get("final_cp") is not None
+        ]
+        if cp_briers:
+            avg_cp_brier = sum(cp_briers) / len(cp_briers)
+            print(f"Average CP Brier: {avg_cp_brier:.4f}")
+            diff = avg_brier - avg_cp_brier
+            print(
+                f"Difference: {diff:+.4f} ({'worse' if diff > 0 else 'better'} than CP)"
+            )
+
+    errors = [r for r in results if "error" in r]
+    if errors:
+        print(f"\nErrors: {len(errors)}")
+        for r in errors:
+            print(f"  {r['post_id']}: {r['error']}")
+
+
+@app.command()
 def submit(
     question_id: Annotated[int, typer.Argument(help="Metaculus post ID")],
     comment: Annotated[
@@ -226,6 +434,9 @@ def submit(
     except SubmissionError as e:
         print(f"❌ Submission failed: {e}")
         raise typer.Exit(1)
+
+    if commit_forecast(output.post_id, output.question_title):
+        print("  📦 Committed to git")
 
     if comment:
         print("Posting reasoning comment...")
@@ -351,6 +562,9 @@ def tournament(
             print(f"  ❌ Submission failed: {e}")
             error_count += 1
             continue
+
+        if commit_forecast(output.post_id, output.question_title):
+            print("  📦 Committed to git")
 
         # Post comment if requested
         if comment:
@@ -490,6 +704,9 @@ def loop(
                 except SubmissionError as e:
                     print(f"    ❌ Submission failed: {e}")
                     continue
+
+                if commit_forecast(output.post_id, output.question_title):
+                    print("    📦 Committed to git")
 
                 if comment:
                     try:

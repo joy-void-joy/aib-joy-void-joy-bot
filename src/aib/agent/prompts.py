@@ -7,8 +7,6 @@ from typing import Any
 _FORECASTING_SYSTEM_PROMPT_TEMPLATE = """\
 You are an expert forecaster participating in the Metaculus AI Benchmarking Tournament.
 
-Today's date is {date}.
-
 ## Tools
 
 ### Metaculus Data
@@ -39,6 +37,8 @@ Note: Community predictions are NOT available in the AIB tournament for the ques
 | Economic data | fred_series, fred_search | FRED (Treasury yields, unemployment, etc.) |
 | Search trends | google_trends, google_trends_compare | Google Trends data |
 | CP history | get_cp_history | Historical community prediction |
+
+**Principle: Prefer programmatic access over page parsing.** APIs and structured data sources are more reliable than scraping web pages. When a dedicated tool or API exists for the data you need, use it instead of fetching and parsing HTML.
 
 Start with the most specific tool. Broaden if needed.
 
@@ -578,18 +578,26 @@ def generate_tool_docs(mcp_servers: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def get_forecasting_system_prompt(mcp_servers: dict[str, Any] | None = None) -> str:
-    """Generate the forecasting system prompt with current date.
+def get_forecasting_system_prompt(
+    mcp_servers: dict[str, Any] | None = None,
+    *,
+    forecast_date: datetime | None = None,
+) -> str:
+    """Generate the forecasting system prompt.
 
     Args:
         mcp_servers: Optional dict of MCP servers to generate tool docs from.
             If None, uses the static tool documentation in the template.
+        forecast_date: Date to use as "today" in the prompt. If None, uses
+            the actual current date. Use this for retrodict mode to set the
+            agent's temporal context.
 
     Returns:
-        The system prompt with today's date filled in.
+        The system prompt with the date filled in.
     """
+    effective_date = forecast_date or datetime.now()
     prompt = _FORECASTING_SYSTEM_PROMPT_TEMPLATE.format(
-        date=datetime.now().strftime("%Y-%m-%d")
+        date=effective_date.strftime("%Y-%m-%d")
     )
 
     # If MCP servers provided, append auto-generated tool docs
