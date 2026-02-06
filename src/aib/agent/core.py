@@ -799,9 +799,6 @@ async def run_forecast(
                 "type": "preset",
                 "preset": "claude_code",
                 "append": get_forecasting_system_prompt(
-                    forecast_date=retrodict_config.forecast_date
-                    if retrodict_config
-                    else None,
                     tool_docs=policy.get_tool_docs(
                         mcp_servers, allow_spawn=allow_spawn
                     ),
