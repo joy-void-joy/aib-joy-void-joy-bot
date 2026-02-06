@@ -13,7 +13,10 @@ Create a temporary rebase branch with a clean, logical commit history, then open
 
 Before starting the rebase, ensure the branch is clean and passing all checks.
 
-1. **Merge main into feature branch**:
+1. **Merge local settings into shared config**:
+   Check if `.claude/settings.local.json` exists. If it does, review it and merge all sensible settings into `.claude/settings.json` — including permissions (allow/deny/ask rules), auto-accept patterns, and any other configuration that would benefit all contributors. Skip anything user-specific (e.g., personal paths, tokens). Commit the settings update as a separate commit.
+
+2. **Merge main into feature branch**:
    ```bash
    # Fetch and merge main to get latest changes
    git fetch origin main
@@ -21,7 +24,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    ```
    Resolve any merge conflicts before proceeding. This ensures the rebase branch will be up-to-date.
 
-2. **Run all checks**:
+3. **Run all checks**:
    ```bash
    uv run pyright
    uv run ruff check .
@@ -30,7 +33,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    ```
    Fix any issues found. The rebase branch should only contain passing code.
 
-3. **Commit remaining changes**:
+4. **Commit remaining changes**:
    ```bash
    git status
    # Stage and commit any uncommitted work

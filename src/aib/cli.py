@@ -13,6 +13,7 @@ import typer
 from aib.agent import ForecastOutput, run_forecast
 from aib.agent.history import (
     RetrodictComparison,
+    commit_forecast,
     is_submitted,
     load_latest_for_submission,
     mark_submitted,
@@ -525,6 +526,9 @@ def submit(
         print(f"❌ Submission failed: {e}")
         raise typer.Exit(1)
 
+    if commit_forecast(output.post_id, output.question_title):
+        print("  📦 Committed to git")
+
     if comment:
         print("Posting reasoning comment...")
         try:
@@ -649,6 +653,9 @@ def tournament(
             print(f"  ❌ Submission failed: {e}")
             error_count += 1
             continue
+
+        if commit_forecast(output.post_id, output.question_title):
+            print("  📦 Committed to git")
 
         # Post comment if requested
         if comment:
@@ -788,6 +795,9 @@ def loop(
                 except SubmissionError as e:
                     print(f"    ❌ Submission failed: {e}")
                     continue
+
+                if commit_forecast(output.post_id, output.question_title):
+                    print("    📦 Committed to git")
 
                 if comment:
                     try:
