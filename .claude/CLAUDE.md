@@ -191,11 +191,11 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 
 ## Editing Style
 
-**Prefer small, atomic edits.** A PreToolUse hook auto-allows edits that match safe patterns (≤3 lines, pure deletions, import changes, adding comments/docstrings, whitespace-only). Larger edits require manual approval.
+**Prefer small, atomic edits.** A PreToolUse hook counts "real" changed lines (ignoring imports, comments, whitespace, blank lines, docstrings) and auto-allows edits with ≤3 real changes. Pure deletions, TypedDict/BaseModel definitions, and single-line `replace_all` renames are always auto-allowed.
 
-- **Split large changes into multiple small edits** — each Edit call should change ≤3 lines when possible
-- **Separate concerns** — move imports in one edit, change logic in another
-- **Delete separately** — remove old code in one edit, add new code in another
+- **Split large changes into multiple small edits** — keep real (non-trivial) line changes to ≤3 per Edit call
+- **Separate concerns** — move imports in one edit, change logic in another (import changes are trivial and don't count)
+- **Use `rename-symbol`** for identifier renames instead of `Edit` with `replace_all`
 
 This makes reviews faster and keeps the workflow smooth.
 
@@ -293,6 +293,41 @@ Why this is good: The behavior is self-evident to anyone familiar with configura
 - **uv**: Package manager. Use `uv add <package>` (never edit pyproject.toml directly)
 - **ruff**: Formatting and linting
 - **pyright**: Type checking
+
+### Pyright LSP
+
+The `pyright-lsp` plugin is enabled and provides code intelligence tools. **Use these actively** — they are faster and more accurate than grep-based searches for code understanding and refactoring.
+
+**Navigation (use before editing unfamiliar code):**
+
+- **go-to-definition** — Jump to where a symbol is defined. Use this instead of grepping for `def foo` or `class Foo`.
+- **find-references** — Find all usages of a symbol. Use this instead of grepping for a symbol name.
+- **hover-documentation** — Get type info and docs for a symbol at a position.
+- **list-symbols** — List all symbols in a file. Use this instead of grepping for `def ` or `class `.
+- **find-implementations** — Find implementations of an interface or abstract method.
+- **trace-call-hierarchy** — Understand call chains. Use this instead of manually tracing function calls.
+
+**Refactoring:**
+
+- **rename-symbol** — Rename a symbol across the workspace. **Always prefer this over `Edit` with `replace_all`** for identifier renames — it understands scope and won't rename unrelated identifiers that happen to share the same name.
+- **rename-symbol-strict** — Same as above but with explicit position for disambiguation when multiple candidates exist at the same location.
+
+**Diagnostics:**
+
+- After every file edit, pyright automatically analyzes changes and reports type errors. Pay attention to these — they catch issues immediately.
+
+**When to use LSP vs grep/Edit:**
+
+| Task | Use LSP | Use grep/Edit |
+|---|---|---|
+| Find where a function is defined | `go-to-definition` | |
+| Find all callers of a function | `find-references` | |
+| Rename a variable/function/class | `rename-symbol` | |
+| Search for a string literal | | `Grep` |
+| Search across non-Python files | | `Grep` |
+| Change logic within a function | | `Edit` |
+| Add new code | | `Edit` / `Write` |
+
 
 ---
 

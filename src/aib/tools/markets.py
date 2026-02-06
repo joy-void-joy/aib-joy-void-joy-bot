@@ -479,7 +479,7 @@ class StockQueryInput(BaseModel):
     period: str = Field(
         default="1mo"
     )  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-    end_date: str | None = Field(default=None)  # YYYY-MM-DD format, for retrodict mode
+    end_date: str | None = Field(default=None)
 
 
 class StockHistoryEntry(TypedDict):
