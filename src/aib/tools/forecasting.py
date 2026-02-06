@@ -547,6 +547,12 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     published_before = validated.published_before
     livecrawl = validated.livecrawl
 
+    logger.info(
+        "search_exa actual params: published_before=%s, livecrawl=%s",
+        published_before,
+        livecrawl,
+    )
+
     try:
         async with _search_semaphore:
             formatted = await exa_search(
