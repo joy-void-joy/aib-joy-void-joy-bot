@@ -75,7 +75,7 @@ The ONLY true ground truth is **resolution outcomes**. Everything else is proxy 
 ### 1a. Collect Resolution Data
 
 ```bash
-uv run python .claude/scripts/feedback_collect.py --all-time
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
 ```
 
 **If we have resolved forecasts**: Focus on Brier scores. This is the REAL signal.
@@ -93,7 +93,7 @@ If questions resolved before we forecast them, **retrodict** them to build calib
 
 ```bash
 # Check which questions we missed
-uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
 
 # Retrodict with blind mode (default - recommended)
 uv run forecast retrodict 41835 41521 41517
@@ -259,7 +259,7 @@ Check if the data we collect is sufficient for analysis:
 
 ```bash
 # Check what tracking data we have
-uv run python .claude/scripts/trace_forecast.py list
+uv run python .claude/plugins/aib/scripts/trace_forecast.py list
 ```
 
 ### 3c. Identify Missing Data
@@ -344,12 +344,12 @@ If you found yourself doing repetitive analysis, automate it:
 
 ```bash
 # Scripts that already exist:
-uv run python .claude/scripts/feedback_collect.py --help
-uv run python .claude/scripts/trace_forecast.py --help
-uv run python .claude/scripts/calibration_report.py --help
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --help
+uv run python .claude/plugins/aib/scripts/trace_forecast.py --help
+uv run python .claude/plugins/aib/scripts/calibration_report.py --help
 ```
 
-If you need a script that doesn't exist, create it in `.claude/scripts/` and document it in CLAUDE.md.
+If you need a script that doesn't exist, create it in `.claude/plugins/aib/scripts/` and document it in CLAUDE.md.
 
 ### 5c. Improve Data Collection
 
@@ -431,7 +431,7 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 - [Changes made to feedback-loop.md]
 
 ### Scripts Created/Updated
-- [New scripts added to .claude/scripts/]
+- [New scripts added to .claude/plugins/aib/scripts/]
 
 ### Data Collection Improvements
 - [Changes to forecast tracking, metrics, etc.]
@@ -448,16 +448,16 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 
 ```bash
 # Collect feedback data
-uv run python .claude/scripts/feedback_collect.py --all-time
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
 
 # Collect from specific tournament
-uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
 
 # Check missed questions
-uv run python .claude/scripts/forecast_queue.py missed aib --days 14
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
 
 # Check resolutions for specific questions
-uv run python .claude/scripts/check_resolved.py 41835 41521 41517
+uv run python .claude/plugins/aib/scripts/check_resolved.py 41835 41521 41517
 
 # Retrodict resolved questions (blind mode - restricts to historical data)
 uv run forecast retrodict 41835 41521 41517
@@ -469,13 +469,13 @@ uv run forecast retrodict 41835 --forecast-date 2026-01-15
 uv run forecast retrodict 41835 --no-blind
 
 # Trace a forecast to its logs and metrics
-uv run python .claude/scripts/trace_forecast.py show 41906
+uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
 
 # Aggregate metrics across all forecasts
-uv run python .claude/scripts/aggregate_metrics.py summary
+uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
 
 # Calibration report (needs resolved forecasts)
-uv run python .claude/scripts/calibration_report.py summary
+uv run python .claude/plugins/aib/scripts/calibration_report.py summary
 
 # (Add more scripts as you build them)
 ```
