@@ -8,17 +8,33 @@ Uses the arxiv Python library: https://pypi.org/project/arxiv/
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, TypedDict
 
 import arxiv
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
+
+from claude_agent_sdk.types import McpSdkServerConfig
 
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 
 logger = logging.getLogger(__name__)
+
+
+class ArxivPaper(TypedDict):
+    """Parsed arXiv paper data."""
+
+    id: str
+    title: str
+    summary: str | None
+    authors: list[str]
+    published: str
+    updated: str | None
+    categories: list[str]
+    primary_category: str
+    pdf_url: str | None
 
 
 class SearchArxivInput(BaseModel):
@@ -107,7 +123,7 @@ async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Search failed: {e}")
 
 
-def create_arxiv_server():
+def create_arxiv_server() -> McpSdkServerConfig:
     """Create MCP server with arXiv tool."""
     return create_mcp_server("arxiv", tools=[search_arxiv])
 

@@ -7,9 +7,13 @@ and other context. This replaces scattered conditional logic throughout core.py.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
-from claude_agent_sdk.types import McpServerConfig, McpStdioServerConfig
+from claude_agent_sdk.types import (
+    McpSdkServerConfig,
+    McpServerConfig,
+    McpStdioServerConfig,
+)
 
 from aib.agent.retrodict import RetrodictConfig
 from aib.tools.arxiv_search import arxiv_server
@@ -246,7 +250,7 @@ class ToolPolicy:
     def get_mcp_servers(
         self,
         sandbox: Sandbox,
-        composition_server: Any,
+        composition_server: McpSdkServerConfig,
         *,
         session_id: str | None = None,
     ) -> dict[str, McpServerConfig]:
@@ -262,7 +266,9 @@ class ToolPolicy:
             Dict mapping server name to server config.
         """
         servers: dict[str, McpServerConfig] = {
-            "forecasting": create_forecasting_server(exclude_wikipedia=self.is_retrodict),
+            "forecasting": create_forecasting_server(
+                exclude_wikipedia=self.is_retrodict
+            ),
             "financial": financial_server,
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,

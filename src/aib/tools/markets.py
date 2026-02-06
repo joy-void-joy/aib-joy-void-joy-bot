@@ -13,6 +13,8 @@ import httpx
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+from claude_agent_sdk.types import McpSdkServerConfig
+
 from aib.tools.mcp_server import create_mcp_server
 
 from aib.config import settings
@@ -480,6 +482,17 @@ class StockQueryInput(BaseModel):
     end_date: str | None = Field(default=None)  # YYYY-MM-DD format, for retrodict mode
 
 
+class StockHistoryEntry(TypedDict):
+    """Single OHLCV data point for stock history."""
+
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
 class StockPrice(TypedDict):
     """Price information for a stock."""
 
@@ -650,7 +663,7 @@ _ALL_MARKET_TOOLS = [
 ]
 
 
-def create_markets_server(*, exclude_live: bool = False) -> Any:
+def create_markets_server(*, exclude_live: bool = False) -> McpSdkServerConfig:
     """Create the markets MCP server.
 
     Args:

@@ -6,7 +6,10 @@ These tools enable the main forecasting agent to:
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
+
+from aib.agent.models import ForecastOutput
 
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
@@ -22,10 +25,12 @@ logger = logging.getLogger(__name__)
 # --- Run Forecast Reference (set by core.py) ---
 
 # Reference to run_forecast function - set by core.py to avoid circular import
-_run_forecast_fn: Any = None
+_RunForecastFn = Callable[..., Awaitable["ForecastOutput"]]
+
+_run_forecast_fn: _RunForecastFn | None = None
 
 
-def set_run_forecast_fn(fn: Any) -> None:
+def set_run_forecast_fn(fn: _RunForecastFn) -> None:
     """Set the run_forecast function reference.
 
     Called by core.py after run_forecast is defined to enable
@@ -91,6 +96,7 @@ async def spawn_subquestions(args: dict[str, Any]) -> dict[str, Any]:
     """
     if _run_forecast_fn is None:
         return mcp_error("run_forecast not configured - call set_run_forecast_fn first")
+    run_forecast = _run_forecast_fn
 
     try:
         validated = SpawnSubquestionsInput.model_validate(args)
@@ -119,7 +125,7 @@ async def spawn_subquestions(args: dict[str, Any]) -> dict[str, Any]:
             context["numeric_bounds"] = sq.numeric_bounds
 
         try:
-            result = await _run_forecast_fn(
+            result = await run_forecast(
                 question_context=context,
                 allow_spawn=False,  # Prevent infinite recursion
             )

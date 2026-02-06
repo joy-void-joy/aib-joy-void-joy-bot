@@ -6,10 +6,13 @@ All tools return raw data; Claude does the reasoning.
 
 import logging
 from asyncio import Semaphore
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
 from claude_agent_sdk import tool
+
+from claude_agent_sdk import SdkMcpTool
+from claude_agent_sdk.types import McpSdkServerConfig
 
 from aib.tools.mcp_server import create_mcp_server
 from pydantic import BaseModel, Field, field_validator
@@ -145,6 +148,27 @@ class WikipediaInput(BaseModel):
 
 class PredictionHistoryInput(BaseModel):
     post_id: int
+
+
+# --- Output Schemas ---
+
+
+class QuestionDict(TypedDict, total=False):
+    """Metaculus question data returned by _question_to_dict."""
+
+    post_id: int
+    question_id: int
+    title: str
+    type: str
+    url: str
+    background_info: str | None
+    resolution_criteria: str | None
+    fine_print: str | None
+    num_forecasters: int
+    community_prediction: float | None
+    options: list[str] | None
+    lower_bound: float | None
+    upper_bound: float | None
 
 
 # --- Cached API helpers ---
@@ -892,7 +916,7 @@ _BASE_FORECASTING_TOOLS = [
     get_prediction_history,
 ]
 
-_OPTIONAL_FORECASTING_TOOLS: list[Any] = []
+_OPTIONAL_FORECASTING_TOOLS: list[SdkMcpTool[Any]] = []
 
 # Wikipedia (no API key required)
 _OPTIONAL_FORECASTING_TOOLS.append(wikipedia)
@@ -908,7 +932,7 @@ else:
     logger.info("search_news tool disabled: ASKNEWS credentials not configured")
 
 
-def create_forecasting_server(*, exclude_wikipedia: bool = False) -> Any:
+def create_forecasting_server(*, exclude_wikipedia: bool = False) -> McpSdkServerConfig:
     """Create the forecasting MCP server.
 
     Args:
@@ -919,10 +943,10 @@ def create_forecasting_server(*, exclude_wikipedia: bool = False) -> Any:
         McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
     """
     tools = list(_BASE_FORECASTING_TOOLS)
-    for tool in _OPTIONAL_FORECASTING_TOOLS:
-        if exclude_wikipedia and tool.name == "wikipedia":
+    for t in _OPTIONAL_FORECASTING_TOOLS:
+        if exclude_wikipedia and t.name == "wikipedia":
             continue
-        tools.append(tool)
+        tools.append(t)
 
     return create_mcp_server(
         name="forecasting",

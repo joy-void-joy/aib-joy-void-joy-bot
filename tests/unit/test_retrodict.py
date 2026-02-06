@@ -148,10 +148,10 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert "modifiedInput" in output
-        modified_url = output["modifiedInput"]["url"]
-        assert modified_url.startswith("https://web.archive.org/web/")
-        assert "example.com/page" in modified_url
+        assert "updatedInput" in output
+        updated_url = output["updatedInput"]["url"]
+        assert updated_url.startswith("https://web.archive.org/web/")
+        assert "example.com/page" in updated_url
 
     @pytest.mark.asyncio
     async def test_webfetch_denies_when_no_snapshot(
@@ -187,7 +187,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert actual_snapshot_ts in output["modifiedInput"]["url"]
+        assert actual_snapshot_ts in output["updatedInput"]["url"]
 
     @pytest.mark.asyncio
     async def test_webfetch_skips_wayback_urls(self, hooks: HooksConfig) -> None:
@@ -200,7 +200,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert "modifiedInput" not in output
+        assert "updatedInput" not in output
 
     # --- Financial/market data capping tests ---
 
@@ -215,7 +215,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["end_date"] == config.date_str
+        assert output["updatedInput"]["end_date"] == config.date_str
 
     @pytest.mark.asyncio
     async def test_fred_series_observation_end_capped(
@@ -228,7 +228,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["observation_end"] == config.date_str
+        assert output["updatedInput"]["observation_end"] == config.date_str
 
     @pytest.mark.asyncio
     async def test_polymarket_history_timestamp_capped(
@@ -242,7 +242,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["timestamp"] == config.unix_ts
+        assert output["updatedInput"]["timestamp"] == config.unix_ts
 
     @pytest.mark.asyncio
     async def test_manifold_history_timestamp_capped(
@@ -256,7 +256,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["timestamp"] == config.unix_ts
+        assert output["updatedInput"]["timestamp"] == config.unix_ts
 
     # --- Google Trends tests ---
 
@@ -273,7 +273,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        timeframe = output["modifiedInput"]["timeframe"]
+        timeframe = output["updatedInput"]["timeframe"]
         # Should end at the cutoff date
         assert config.date_str in timeframe
         # Should be a date range format (YYYY-MM-DD YYYY-MM-DD)
@@ -292,7 +292,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert config.date_str in output["modifiedInput"]["timeframe"]
+        assert config.date_str in output["updatedInput"]["timeframe"]
 
     # --- Search tool tests ---
 
@@ -307,7 +307,7 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["cutoff_date"] == config.date_str
+        assert output["updatedInput"]["cutoff_date"] == config.date_str
 
     @pytest.mark.asyncio
     async def test_search_exa_gets_published_before_and_livecrawl(
@@ -320,8 +320,8 @@ class TestRetrodictHooks:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["published_before"] == config.date_str
-        assert output["modifiedInput"]["livecrawl"] == "never"
+        assert output["updatedInput"]["published_before"] == config.date_str
+        assert output["updatedInput"]["livecrawl"] == "never"
 
 
 class TestRetrodictToolSchemas:
@@ -406,23 +406,21 @@ class TestRetrodictHooksContinued:
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert output["modifiedInput"]["before"] == config.date_str
+        assert output["updatedInput"]["before"] == config.date_str
         # Original parameters should be preserved
-        assert output["modifiedInput"]["question_id"] == 123
-        assert output["modifiedInput"]["days"] == 30
+        assert output["updatedInput"]["question_id"] == 123
+        assert output["updatedInput"]["days"] == 30
 
     # --- Passthrough tests ---
 
     @pytest.mark.asyncio
     async def test_unmodified_tools_pass_through(self, hooks: HooksConfig) -> None:
         """Tools without special handling should be allowed without modification."""
-        result = await self._invoke_hook(
-            hooks, "Read", {"file_path": "/some/path"}
-        )
+        result = await self._invoke_hook(hooks, "Read", {"file_path": "/some/path"})
 
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "allow"
-        assert "modifiedInput" not in output
+        assert "updatedInput" not in output
 
 
 class TestPyPIOnlyNetwork:
