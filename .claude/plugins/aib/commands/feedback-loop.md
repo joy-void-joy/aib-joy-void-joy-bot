@@ -457,7 +457,7 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament sprin
 uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
 
 # Check resolutions for specific questions
-uv run python .claude/plugins/aib/scripts/check_resolved.py 41835 41521 41517
+uv run python .claude/plugins/aib/scripts/resolution_update.py check
 
 # Retrodict resolved questions (blind mode - restricts to historical data)
 uv run forecast retrodict 41835 41521 41517

@@ -17,8 +17,7 @@ $ARGUMENTS
 Based on the user's input above, explore the relevant parts of `.claude/` and brainstorm solutions. The `.claude/` directory contains:
 
 - `CLAUDE.md` - Project instructions and documentation
-- `commands/` - Slash commands (being migrated to plugin)
-- `scripts/` - Helper scripts (being migrated to plugin)
+- `commands/` - Slash commands
 - `settings.json` - Permissions and plugin configuration
 - `plugins/aib/` - Main project plugin with all commands, scripts, and workflows
 
