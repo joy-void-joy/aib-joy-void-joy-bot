@@ -27,7 +27,21 @@ class TestForecastingSystemPrompt:
     def test_prompt_contains_expected_sections(self) -> None:
         """Prompt includes key forecasting guidance sections."""
         prompt = get_forecasting_system_prompt()
-        assert "## Tools" in prompt
+        # Core methodology sections
+        assert "## Research Principles" in prompt
         assert "## Output Format" in prompt
         assert "Nothing Ever Happens" in prompt
         assert "Resolution Criteria" in prompt
+
+    def test_tool_docs_included_when_provided(self) -> None:
+        """Tool docs are appended to prompt when provided."""
+        tool_docs = "## Available Tools\n\n- **test_tool**: A test tool"
+        prompt = get_forecasting_system_prompt(tool_docs=tool_docs)
+        assert "## Available Tools" in prompt
+        assert "test_tool" in prompt
+
+    def test_tool_docs_not_included_by_default(self) -> None:
+        """Without tool_docs, prompt has no tool section."""
+        prompt = get_forecasting_system_prompt()
+        # Base prompt doesn't have tool listing (tools are dynamically generated)
+        assert "## Available Tools" not in prompt
