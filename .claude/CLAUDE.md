@@ -189,6 +189,16 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 
 **Note:** The `worktrees/` directory is gitignored.
 
+## Editing Style
+
+**Prefer small, atomic edits.** A PreToolUse hook auto-allows edits that match safe patterns (≤3 lines, pure deletions, import changes, adding comments/docstrings, whitespace-only). Larger edits require manual approval.
+
+- **Split large changes into multiple small edits** — each Edit call should change ≤3 lines when possible
+- **Separate concerns** — move imports in one edit, change logic in another
+- **Delete separately** — remove old code in one edit, add new code in another
+
+This makes reviews faster and keeps the workflow smooth.
+
 ## Code Style & Dependencies
 
 ### Primary Libraries
