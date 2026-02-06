@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Base path for forecast storage
 FORECASTS_BASE_PATH = Path("./notes/forecasts")
 RETRODICT_BASE_PATH = Path("./notes/retrodict")
-META_BASE_PATH = Path("./notes/meta")
+SESSIONS_PATH = Path("./notes/sessions")
 LOGS_BASE_PATH = Path("./notes/logs")
 
 
@@ -55,9 +55,9 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
     if forecast_dir.exists():
         paths_to_stage.append(str(forecast_dir))
 
-    if META_BASE_PATH.exists():
-        for meta_file in META_BASE_PATH.glob(f"*_q{post_id}_*"):
-            paths_to_stage.append(str(meta_file))
+    sessions_dir = SESSIONS_PATH / str(post_id)
+    if sessions_dir.exists():
+        paths_to_stage.append(str(sessions_dir))
 
     if LOGS_BASE_PATH.exists():
         for log_file in LOGS_BASE_PATH.glob(f"{post_id}_*"):
