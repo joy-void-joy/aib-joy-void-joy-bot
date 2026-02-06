@@ -14,7 +14,7 @@ _scripts_dir = str(
 )
 sys.path.insert(0, _scripts_dir)
 
-from auto_allow_edits import (
+from auto_allow_edits import (  # noqa: E402
     _allow_decision,
     count_real_changes,
     decide,
@@ -169,11 +169,15 @@ class TestCountRealChanges:
 
 class TestDecide:
     def test_protected_file_defers(self) -> None:
-        result = decide({"file_path": ".claude/settings.json", "old_string": "x", "new_string": "y"})
+        result = decide(
+            {"file_path": ".claude/settings.json", "old_string": "x", "new_string": "y"}
+        )
         assert result is None
 
     def test_pure_deletion_allows(self) -> None:
-        result = decide({"file_path": "foo.py", "old_string": "x = 1", "new_string": ""})
+        result = decide(
+            {"file_path": "foo.py", "old_string": "x = 1", "new_string": ""}
+        )
         assert result == ALLOW
 
     def test_typed_dict_allows(self) -> None:
@@ -182,29 +186,35 @@ class TestDecide:
         assert result == ALLOW
 
     def test_replace_all_single_line_allows(self) -> None:
-        result = decide({
-            "file_path": "foo.py",
-            "old_string": "old_name",
-            "new_string": "new_name",
-            "replace_all": True,
-        })
+        result = decide(
+            {
+                "file_path": "foo.py",
+                "old_string": "old_name",
+                "new_string": "new_name",
+                "replace_all": True,
+            }
+        )
         assert result == ALLOW
 
     def test_replace_all_multi_line_defers(self) -> None:
-        result = decide({
-            "file_path": "foo.py",
-            "old_string": "line1\nline2",
-            "new_string": "new1\nnew2",
-            "replace_all": True,
-        })
+        result = decide(
+            {
+                "file_path": "foo.py",
+                "old_string": "line1\nline2",
+                "new_string": "new1\nnew2",
+                "replace_all": True,
+            }
+        )
         assert result is None
 
     def test_small_edit_allows(self) -> None:
-        result = decide({
-            "file_path": "foo.py",
-            "old_string": "x = 1",
-            "new_string": "x = 2",
-        })
+        result = decide(
+            {
+                "file_path": "foo.py",
+                "old_string": "x = 1",
+                "new_string": "x = 2",
+            }
+        )
         assert result == ALLOW
 
     def test_large_edit_defers(self) -> None:

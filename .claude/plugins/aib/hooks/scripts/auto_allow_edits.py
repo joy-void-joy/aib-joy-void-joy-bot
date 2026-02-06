@@ -63,14 +63,14 @@ def is_type_definition_line(line: str) -> bool:
 def is_type_definition_block(text: str) -> bool:
     if not text or not text.strip():
         return False
-    lines = [l for l in text.splitlines() if l.strip()]
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     has_class = any(
-        re.match(r"\s*class\s+\w+\s*\(.*(?:TypedDict|BaseModel).*\)\s*:", l)
-        for l in lines
+        re.match(r"\s*class\s+\w+\s*\(.*(?:TypedDict|BaseModel).*\)\s*:", ln)
+        for ln in lines
     )
     if not has_class:
         return False
-    return all(is_type_definition_line(l) for l in lines)
+    return all(is_type_definition_line(ln) for ln in lines)
 
 
 def strip_docstrings(lines: list[str]) -> list[str]:
@@ -103,8 +103,8 @@ def count_real_changes(old_string: str, new_string: str) -> int:
 
     matcher = difflib.SequenceMatcher(
         None,
-        [l.strip() for l in old_lines],
-        [l.strip() for l in new_lines],
+        [ln.strip() for ln in old_lines],
+        [ln.strip() for ln in new_lines],
     )
 
     real = 0
@@ -114,9 +114,7 @@ def count_real_changes(old_string: str, new_string: str) -> int:
         removed_real = sum(
             1 for i in range(i1, i2) if not is_trivial_line(old_lines[i])
         )
-        added_real = sum(
-            1 for j in range(j1, j2) if not is_trivial_line(new_lines[j])
-        )
+        added_real = sum(1 for j in range(j1, j2) if not is_trivial_line(new_lines[j]))
         real += max(removed_real, added_real)
 
     return real
