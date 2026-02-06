@@ -217,6 +217,14 @@ The `forecasting-tools` library has some type annotation limitations:
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
+### Use Standard Libraries
+
+When integrating with external services (APIs, data sources, etc.):
+
+- **Use existing Python libraries first** — Check PyPI for official or well-maintained client libraries before writing raw HTTP requests
+- **Examples**: Use `arxiv` for arXiv search, `yfinance` for stock data, `fredapi` for FRED economic data
+- **Don't rebuild the wheel** — If a library exists with good documentation and maintenance, use it
+
 ### Code as Documentation
 
 The codebase should read as a **monolithic source of truth**—understandable without any knowledge of its history.
