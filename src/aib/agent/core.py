@@ -836,6 +836,7 @@ async def run_forecast(
                 "type": "json_schema",
                 "schema": output_schema,
             },
+            extra_args={"no-session-persistence": None},
         )
 
         async with ClaudeSDKClient(options=options) as client:
