@@ -12,6 +12,7 @@ import httpx
 from aib.config import settings
 from aib.tools.cache import cached
 from aib.tools.retry import with_retry
+from aib.tools.wayback import wayback_validate_results
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,8 @@ async def exa_search(
 
     if published_before:
         results = _filter_by_published_date(results, published_before)
+        wayback_ts = published_before.replace("-", "")
+        results = await wayback_validate_results(results, wayback_ts)
 
     return results
 

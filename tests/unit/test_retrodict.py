@@ -2,18 +2,23 @@
 
 from datetime import datetime
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from aib.agent.hooks import HooksConfig
+from aib.tools.exa import ExaResult
 from aib.agent.retrodict import (
     RetrodictConfig,
     create_retrodict_hooks,
     generate_pypi_only_iptables_rules,
     get_pypi_allowed_ips,
 )
-from aib.tools.wayback import normalize_wayback_timestamp, rewrite_to_wayback
+from aib.tools.wayback import (
+    normalize_wayback_timestamp,
+    rewrite_to_wayback,
+    wayback_validate_results,
+)
 
 
 class TestRetrodictConfig:
@@ -556,3 +561,99 @@ class TestPyPIOnlyNetwork:
         ip_rules = [r for r in rules if "1.2.3.4" in r]
         for rule in ip_rules:
             assert "--dport 443" in rule
+
+
+def _make_exa_result(
+    url: str,
+    snippet: str | None = "original snippet",
+    published_date: str | None = "2026-01-10",
+) -> ExaResult:
+    return {
+        "title": f"Result for {url}",
+        "url": url,
+        "snippet": snippet,
+        "highlights": None,
+        "published_date": published_date,
+        "score": 1.0,
+    }
+
+
+class TestWaybackValidateResults:
+    """Tests for wayback_validate_results() which replaces Exa snippets
+    with Wayback-extracted content and drops results without valid snapshots."""
+
+    @pytest.mark.asyncio
+    async def test_drops_results_without_snapshot(self) -> None:
+        """Results should be dropped when no pre-cutoff Wayback snapshot exists."""
+        results = [
+            _make_exa_result("https://example.com/a"),
+            _make_exa_result("https://example.com/b"),
+        ]
+        with patch(
+            "aib.tools.wayback.fetch_wayback_content",
+            new_callable=AsyncMock,
+            side_effect=[None, None],
+        ):
+            validated = await wayback_validate_results(results, "20260115")
+
+        assert len(validated) == 0
+
+    @pytest.mark.asyncio
+    async def test_replaces_snippet_with_wayback_content(self) -> None:
+        """Snippet should be replaced with first 500 chars of Wayback content."""
+        results = [_make_exa_result("https://example.com/a")]
+        wayback_text = "Wayback content " * 50  # >500 chars
+
+        with patch(
+            "aib.tools.wayback.fetch_wayback_content",
+            new_callable=AsyncMock,
+            return_value=wayback_text,
+        ):
+            validated = await wayback_validate_results(results, "20260115")
+
+        assert len(validated) == 1
+        assert validated[0]["snippet"] == wayback_text[:500]
+        assert validated[0]["snippet"] != "original snippet"
+
+    @pytest.mark.asyncio
+    async def test_keeps_results_with_snapshot_drops_without(self) -> None:
+        """Should keep results with snapshots and drop those without."""
+        results = [
+            _make_exa_result("https://example.com/good"),
+            _make_exa_result("https://example.com/bad"),
+            _make_exa_result("https://example.com/also-good"),
+        ]
+        with patch(
+            "aib.tools.wayback.fetch_wayback_content",
+            new_callable=AsyncMock,
+            side_effect=["Good content", None, "Also good"],
+        ):
+            validated = await wayback_validate_results(results, "20260115")
+
+        assert len(validated) == 2
+        assert validated[0]["url"] == "https://example.com/good"
+        assert validated[0]["snippet"] == "Good content"
+        assert validated[1]["url"] == "https://example.com/also-good"
+        assert validated[1]["snippet"] == "Also good"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_fetching(self) -> None:
+        """All URLs should be fetched concurrently via asyncio.gather."""
+        results = [
+            _make_exa_result(f"https://example.com/{i}")
+            for i in range(5)
+        ]
+        call_order: list[str] = []
+
+        async def mock_fetch(url: str, _ts: str) -> str:
+            call_order.append(url)
+            return f"Content for {url}"
+
+        with patch(
+            "aib.tools.wayback.fetch_wayback_content",
+            side_effect=mock_fetch,
+        ):
+            validated = await wayback_validate_results(results, "20260115")
+
+        assert len(validated) == 5
+        assert len(call_order) == 5

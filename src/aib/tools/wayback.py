@@ -8,11 +8,17 @@ respecting Internet Archive's usage guidelines:
 - Cache results (availability rarely changes)
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from aib.tools.exa import ExaResult
 
 import httpx
+import trafilatura
 from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
@@ -169,3 +175,94 @@ def rewrite_to_wayback(url: str, timestamp: str) -> str:
         'https://web.archive.org/web/20260115id_/https://example.com/page?q=1'
     """
     return f"https://web.archive.org/web/{timestamp}id_/{url}"
+
+
+@cached(ttl=3600)
+async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
+    """Fetch a Wayback Machine snapshot and extract text content.
+
+    Validates that a pre-cutoff snapshot exists, fetches the archived HTML,
+    and extracts readable text using trafilatura.
+
+    Args:
+        url: Original URL to fetch from Wayback.
+        timestamp: Wayback timestamp format (YYYYMMDD) used as cutoff.
+
+    Returns:
+        Extracted text content, or None if no valid snapshot exists
+        or text extraction fails.
+    """
+    snapshot = await check_wayback_availability(
+        url, timestamp, validate_before_cutoff=True
+    )
+    if not snapshot:
+        return None
+
+    actual_ts = snapshot.get("timestamp", timestamp)
+    wayback_url = rewrite_to_wayback(url, actual_ts)
+
+    async with _wayback_semaphore:
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.get(wayback_url, follow_redirects=True)
+                response.raise_for_status()
+                html = response.text
+        except httpx.HTTPError as e:
+            logger.warning("Wayback fetch failed for %s: %s", url, e)
+            return None
+
+    extracted = trafilatura.extract(
+        html,
+        include_comments=False,
+        include_tables=True,
+        no_fallback=False,
+    )
+
+    if not extracted:
+        logger.debug("Trafilatura extraction returned nothing for %s", url)
+        return None
+
+    return extracted
+
+
+async def wayback_validate_results(
+    results: list[ExaResult],
+    wayback_ts: str,
+) -> list[ExaResult]:
+    """Replace Exa snippets with Wayback-validated content.
+
+    For each search result, fetches the page from the Wayback Machine
+    (as it existed at the cutoff date) and replaces the snippet with
+    extracted text. Results without a valid pre-cutoff snapshot are dropped.
+
+    Args:
+        results: Exa search results to validate.
+        wayback_ts: Wayback timestamp (YYYYMMDD) cutoff.
+
+    Returns:
+        Filtered results with Wayback-derived snippets.
+    """
+    tasks = [
+        fetch_wayback_content(r["url"] or "", wayback_ts)
+        for r in results
+    ]
+    contents = await asyncio.gather(*tasks)
+
+    validated: list[ExaResult] = []
+    for result, content in zip(results, contents):
+        if content is None:
+            logger.warning(
+                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
+                result.get("url", "?"),
+            )
+            continue
+        result["snippet"] = content[:500]
+        validated.append(result)
+
+    logger.info(
+        "[Retrodict] Wayback validated %d/%d search results",
+        len(validated),
+        len(results),
+    )
+
+    return validated
