@@ -110,9 +110,9 @@ def find_matching_forecast(post_id: int, meta_timestamp: str) -> tuple[str, Path
     return best_match
 
 
-def generate_session_id(post_id: int, forecast_timestamp: str) -> str:
-    """Generate session ID from post_id and forecast timestamp."""
-    return f"{post_id}_{forecast_timestamp}"
+def get_session_dir(post_id: int, timestamp: str) -> Path:
+    """Get session directory: notes/sessions/<post_id>/<timestamp>/."""
+    return SESSIONS_PATH / str(post_id) / timestamp
 
 
 @app.command()
@@ -121,7 +121,7 @@ def migrate(
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Show detailed output"),
     include_unmatched: bool = typer.Option(True, "--include-unmatched/--skip-unmatched", help="Include files without post_id using filename as session"),
 ) -> None:
-    """Migrate meta files from notes/meta/ to notes/sessions/."""
+    """Migrate meta files from notes/meta/ to notes/sessions/<post_id>/<timestamp>/."""
 
     if not META_PATH.exists():
         typer.echo("No notes/meta/ directory found")
@@ -132,40 +132,42 @@ def migrate(
 
     migrated = 0
     skipped = []
+    seen_destinations: set[Path] = set()
 
     for meta_file in sorted(meta_files):
         post_id = extract_post_id_from_meta(meta_file)
         meta_timestamp = extract_timestamp_from_meta(meta_file)
 
-        # Determine session_id based on available info
         if post_id and meta_timestamp:
-            # Try to match to forecast
             forecast_match = find_matching_forecast(post_id, meta_timestamp)
             if forecast_match:
                 forecast_ts = forecast_match[0]
-                session_id = generate_session_id(post_id, forecast_ts)
+                session_dir = get_session_dir(post_id, forecast_ts)
             else:
-                # Use meta timestamp with post_id
-                session_id = generate_session_id(post_id, meta_timestamp)
+                session_dir = get_session_dir(post_id, meta_timestamp)
                 if verbose:
                     typer.echo(f"  No forecast for {meta_file.name}, using meta timestamp")
         elif post_id:
-            # Have post_id but no timestamp - use post_id with "unknown" timestamp
-            session_id = f"{post_id}_unknown"
+            session_dir = get_session_dir(post_id, "unknown")
             if verbose:
                 typer.echo(f"  No timestamp for {meta_file.name}")
         elif include_unmatched:
-            # No post_id - use filename stem as session_id (preserves descriptive name)
-            session_id = f"legacy_{meta_file.stem}"
+            session_dir = SESSIONS_PATH / "unmatched" / meta_file.stem
             if verbose:
-                typer.echo(f"  No post_id for {meta_file.name}, using filename")
+                typer.echo(f"  No post_id for {meta_file.name}, storing in unmatched/")
         else:
             skipped.append((meta_file, "no post_id found"))
             continue
 
-        # Determine destination
-        session_dir = SESSIONS_PATH / session_id
         dest_path = session_dir / "meta.md"
+
+        # Handle collisions: if meta.md already exists or already targeted
+        if dest_path.exists() or dest_path in seen_destinations:
+            dest_path = session_dir / f"meta_{meta_file.stem}.md"
+            if verbose or dry_run:
+                typer.echo(f"  Collision! Using {dest_path.name}")
+
+        seen_destinations.add(dest_path)
 
         if verbose or dry_run:
             typer.echo(f"{meta_file.name} -> {dest_path}")

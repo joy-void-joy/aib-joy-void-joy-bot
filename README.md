@@ -53,7 +53,7 @@ The idea is that the development process itself is the product. By tracking:
 - **`.claude/commands/`** — Slash commands like `/feedback-loop` that encode workflows
 - **`.claude/scripts/`** — Helper scripts for analysis, built as the feedback loop identified needs
 - **`notes/forecasts/`** — Every forecast with its reasoning, factors, and confidence
-- **`notes/meta/`** — Agent self-reflections on what worked and what didn't
+- **`notes/sessions/`** — Agent self-reflections and session data organized by post ID
 - **`notes/research/`** — Research notes organized by question
 
 ...we create a record of how the system evolved. When Claude Code runs the feedback loop, it can read its own past reasoning and identify patterns. The meta-reflections explicitly ask: what tools helped? what was missing? what would I do differently?

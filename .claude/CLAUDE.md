@@ -180,7 +180,7 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 **What goes in a forecast commit:**
 
 - Forecast markdown files (`notes/forecasts/<question_id>/`)
-- Meta-analysis notes (`notes/meta/`) — commit alongside the forecasts they relate to, not separately
+- Session notes (`notes/sessions/`) — commit alongside the forecasts they relate to, not separately
 - Resolution updates when questions resolve
 
 **What does NOT go in a forecast commit:**
