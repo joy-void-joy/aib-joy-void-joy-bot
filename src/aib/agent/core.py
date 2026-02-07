@@ -3,7 +3,7 @@
 import dataclasses
 import json
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -55,7 +55,7 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
-from aib.agent.subagents import SUBAGENTS
+from aib.agent.subagents import get_subagents
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
@@ -64,6 +64,27 @@ from aib.tools.sandbox import Sandbox
 logger = logging.getLogger(__name__)
 
 METACULUS_API_BASE = "https://www.metaculus.com/api"
+
+_PRESET_TEMPLATE = (Path(__file__).parent / "claude_code_preset.txt").read_text()
+
+
+def _build_system_prompt(
+    *,
+    cutoff: date | None,
+    tool_docs: str | None,
+) -> str:
+    """Build full system prompt from template + forecasting prompt.
+
+    In retrodict mode, substitutes the cutoff date for {{DATE}} so the
+    agent believes "today" is the blind date, preventing future leak.
+    """
+    effective_date = cutoff.isoformat() if cutoff else date.today().isoformat()
+    base = (
+        _PRESET_TEMPLATE
+        .replace("{{DATE}}", effective_date)
+        .replace("{{WORKING_DIRECTORY}}", str(Path.cwd()))
+    )
+    return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
 
 # Buffer original tool inputs so we can display post-hook params on ToolResultBlock
@@ -798,15 +819,12 @@ async def run_forecast(
 
         options = ClaudeAgentOptions(
             model=settings.model,
-            system_prompt={
-                "type": "preset",
-                "preset": "claude_code",
-                "append": get_forecasting_system_prompt(
-                    tool_docs=policy.get_tool_docs(
-                        mcp_servers, allow_spawn=allow_spawn
-                    ),
+            system_prompt=_build_system_prompt(
+                cutoff=cutoff,
+                tool_docs=policy.get_tool_docs(
+                    mcp_servers, allow_spawn=allow_spawn
                 ),
-            },
+            ),
             max_thinking_tokens=64_000 - 1,
             permission_mode="bypassPermissions",
             hooks=hooks,  # type: ignore[arg-type]
@@ -816,7 +834,7 @@ async def run_forecast(
                 "allowUnsandboxedCommands": False,
             },
             mcp_servers=mcp_servers,
-            agents=SUBAGENTS,
+            agents=get_subagents(),
             add_dirs=[str(d) for d in notes.all_dirs],
             allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
             output_format={

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from aib.agent.hooks import HooksConfig
+from aib.agent.subagents import get_subagents
 from aib.tools.exa import ExaResult
 from aib.agent.retrodict import (
     create_retrodict_hooks,
@@ -481,3 +482,52 @@ class TestWaybackValidateResults:
 
         assert len(validated) == 5
         assert len(call_order) == 5
+
+
+class TestRetrodictSubagentTools:
+    """Tests for retrodict-aware subagent tool lists."""
+
+    def test_search_news_excluded_in_retrodict(self) -> None:
+        """search_news should be excluded from all subagents in retrodict mode."""
+        with retrodict_cutoff.set(date(2026, 1, 15)):
+            subagents = get_subagents()
+            for name, agent_def in subagents.items():
+                tools = agent_def.tools or []
+                assert "mcp__forecasting__search_news" not in tools, (
+                    f"search_news should be excluded from {name} in retrodict mode"
+                )
+
+    def test_search_news_included_normally(self) -> None:
+        """search_news should be included when not in retrodict mode."""
+        with (
+            patch("aib.agent.subagents.settings.asknews_client_id", "test"),
+            patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
+        ):
+            subagents = get_subagents()
+            all_tools = []
+            for agent_def in subagents.values():
+                all_tools.extend(agent_def.tools or [])
+            assert "mcp__forecasting__search_news" in all_tools
+
+    def test_search_news_excluded_with_credentials_in_retrodict(self) -> None:
+        """search_news should be excluded even with credentials in retrodict mode."""
+        with (
+            retrodict_cutoff.set(date(2026, 1, 15)),
+            patch("aib.agent.subagents.settings.asknews_client_id", "test"),
+            patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
+        ):
+            subagents = get_subagents()
+            for name, agent_def in subagents.items():
+                tools = agent_def.tools or []
+                assert "mcp__forecasting__search_news" not in tools, (
+                    f"search_news should be excluded from {name} in retrodict mode"
+                )
+
+    def test_search_exa_always_available(self) -> None:
+        """search_exa should be available in both modes (has internal date filter)."""
+        with retrodict_cutoff.set(date(2026, 1, 15)):
+            subagents = get_subagents()
+            all_tools = []
+            for agent_def in subagents.values():
+                all_tools.extend(agent_def.tools or [])
+            assert "mcp__forecasting__search_exa" in all_tools

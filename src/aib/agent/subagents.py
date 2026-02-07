@@ -15,15 +15,17 @@ Subagents:
 from claude_agent_sdk import AgentDefinition
 
 from aib.config import settings
+from aib.retrodict_context import retrodict_cutoff
 
 
 def _search_tools() -> list[str]:
-    """Return search tools based on configured API keys."""
+    """Return search tools based on configured API keys and retrodict mode."""
     tools: list[str] = []
     if settings.exa_api_key:
         tools.append("mcp__forecasting__search_exa")
     if settings.asknews_client_id and settings.asknews_client_secret:
-        tools.append("mcp__forecasting__search_news")
+        if retrodict_cutoff.get() is None:
+            tools.append("mcp__forecasting__search_news")
     return tools
 
 
@@ -182,17 +184,6 @@ Return your research as JSON with this structure:
 Include only the sections relevant to your research (base_rate, key_factors, or enumerated_items).
 """
 
-deep_researcher = AgentDefinition(
-    description=(
-        "Deep research agent for forecasting. Can analyze base rates, identify key "
-        "factors, or enumerate items depending on what the task requires. Flexibly "
-        "adapts research approach to the question."
-    ),
-    prompt=DEEP_RESEARCHER_PROMPT,
-    tools=_research_tools(),
-    model="sonnet",
-)
-
 
 # --- Estimator ---
 # Fermi estimation with code execution for calculations
@@ -263,17 +254,6 @@ Return your estimate as JSON:
 ```
 """
 
-estimator = AgentDefinition(
-    description=(
-        "Fermi estimation agent. Breaks down estimation problems into steps, "
-        "gathers facts with citations, and can execute code for complex "
-        "calculations. Returns point estimate with confidence range."
-    ),
-    prompt=ESTIMATOR_PROMPT,
-    tools=_estimator_tools(),
-    model="sonnet",
-)
-
 
 # --- Quick Researcher ---
 # Fast initial research for explore_factors (Haiku-powered for speed)
@@ -323,17 +303,6 @@ Keep it fast - you're doing initial exploration, not deep research.
 }
 ```
 """
-
-quick_researcher = AgentDefinition(
-    description=(
-        "Fast initial research for exploring factors. Quickly gathers recent news, "
-        "basic facts, and identifies initial pro/con factors. Use for quick orientation "
-        "before deeper research."
-    ),
-    prompt=QUICK_RESEARCHER_PROMPT,
-    tools=_quick_research_tools(),
-    model="haiku",
-)
 
 
 # --- Link Explorer ---
@@ -411,17 +380,6 @@ What do prediction markets indicate?
 ```
 """
 
-link_explorer = AgentDefinition(
-    description=(
-        "Finds historical precedents, related forecasting questions, and market signals. "
-        "Searches Metaculus, Manifold, Polymarket for related questions and calculates "
-        "base rates from similar past events."
-    ),
-    prompt=LINK_EXPLORER_PROMPT,
-    tools=_link_explorer_tools(),
-    model="haiku",
-)
-
 
 # --- Fact Checker ---
 # Cross-validates claims from research
@@ -489,23 +447,67 @@ Given a set of claims or research findings, verify their accuracy:
 ```
 """
 
-fact_checker = AgentDefinition(
-    description=(
-        "Cross-validates claims from research. Finds contradictions, verifies facts "
-        "against multiple sources, and flags outdated or unreliable information."
-    ),
-    prompt=FACT_CHECKER_PROMPT,
-    tools=_fact_checker_tools(),
-    model="haiku",
-)
-
 
 # --- All Subagents ---
 
-SUBAGENTS = {
-    "deep-researcher": deep_researcher,
-    "estimator": estimator,
-    "quick-researcher": quick_researcher,
-    "link-explorer": link_explorer,
-    "fact-checker": fact_checker,
-}
+
+def get_subagents() -> dict[str, AgentDefinition]:
+    """Build subagent definitions with retrodict-aware tool lists.
+
+    Must be called at forecast time (not import time) so that the
+    retrodict_cutoff ContextVar is available for tool filtering.
+    In retrodict mode, search_news is excluded because AskNews has
+    no date filtering — it relies on hook denial, which doesn't
+    propagate to subagents.
+    """
+    return {
+        "deep-researcher": AgentDefinition(
+            description=(
+                "Deep research agent for forecasting. Can analyze base rates, identify key "
+                "factors, or enumerate items depending on what the task requires. Flexibly "
+                "adapts research approach to the question."
+            ),
+            prompt=DEEP_RESEARCHER_PROMPT,
+            tools=_research_tools(),
+            model="inherit",
+        ),
+        "estimator": AgentDefinition(
+            description=(
+                "Fermi estimation agent. Breaks down estimation problems into steps, "
+                "gathers facts with citations, and can execute code for complex "
+                "calculations. Returns point estimate with confidence range."
+            ),
+            prompt=ESTIMATOR_PROMPT,
+            tools=_estimator_tools(),
+            model="inherit",
+        ),
+        "quick-researcher": AgentDefinition(
+            description=(
+                "Fast initial research for exploring factors. Quickly gathers recent news, "
+                "basic facts, and identifies initial pro/con factors. Use for quick orientation "
+                "before deeper research."
+            ),
+            prompt=QUICK_RESEARCHER_PROMPT,
+            tools=_quick_research_tools(),
+            model="haiku",
+        ),
+        "link-explorer": AgentDefinition(
+            description=(
+                "Finds historical precedents, related forecasting questions, and market signals. "
+                "Searches Metaculus, Manifold, Polymarket for related questions and calculates "
+                "base rates from similar past events."
+            ),
+            prompt=LINK_EXPLORER_PROMPT,
+            tools=_link_explorer_tools(),
+            model="haiku",
+        ),
+        "fact-checker": AgentDefinition(
+            description=(
+                "Cross-validates claims from research. Finds contradictions, verifies facts "
+                "against multiple sources, and flags outdated or unreliable information."
+            ),
+            prompt=FACT_CHECKER_PROMPT,
+            tools=_fact_checker_tools(),
+            model="haiku",
+        ),
+    }
