@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 import httpx
 import typer
@@ -212,7 +212,7 @@ def retrodict(
     import sys
 
     sys.path.insert(0, "src")
-    from metaculus import AsyncMetaculusClient, BinaryQuestion
+    from metaculus import AsyncMetaculusClient, BinaryQuestion, NumericQuestion
 
     # Parse forecast_date if provided
     parsed_forecast_date: datetime | None = None
@@ -223,16 +223,42 @@ def retrodict(
             print(f"❌ Invalid date format: {forecast_date}. Use YYYY-MM-DD.")
             raise typer.Exit(1)
 
+    class NumericCP(TypedDict):
+        median: float
+        ci_lower: float
+        ci_upper: float
+        range_span: float
+
+    def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
+        """Extract community prediction median, CI, and range from api_json."""
+        try:
+            qdict = q.api_json.get("question", {})
+            scaling = qdict.get("scaling", {})
+            agg = qdict.get("aggregations", {})
+            method = qdict.get("default_aggregation_method", "unweighted")
+            history = agg.get(method, {}).get("history", [])
+            if not history:
+                return None
+            latest = history[-1]
+            range_min = scaling["range_min"]
+            range_max = scaling["range_max"]
+            span = range_max - range_min
+            return NumericCP(
+                median=range_min + latest["centers"][0] * span,
+                ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
+                ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
+                range_span=span,
+            )
+        except (KeyError, IndexError, TypeError):
+            return None
+
     async def get_resolution_and_published(
         post_id: int,
-    ) -> tuple[str | None, float | None, datetime | None]:
-        """Fetch resolution, final CP, and published_at for a question."""
+    ) -> tuple[str | None, float | None, NumericCP | None, datetime | None]:
+        """Fetch resolution, final CP, numeric CP, and published_at."""
         client = AsyncMetaculusClient()
         try:
             result = await client.get_question_by_post_id(post_id)
-            # Handle single question or group (list). For groups, we use the
-            # first question - if the user wants a specific sub-question, they
-            # should provide that sub-question's post_id directly.
             if isinstance(result, list):
                 if len(result) > 1:
                     logger.warning(
@@ -245,13 +271,16 @@ def retrodict(
             else:
                 q = result
             resolution = q.resolution_string
-            cp = None
+            binary_cp = None
+            numeric_cp: NumericCP | None = None
             if isinstance(q, BinaryQuestion):
-                cp = q.community_prediction_at_access_time
-            return resolution, cp, q.published_time
+                binary_cp = q.community_prediction_at_access_time
+            elif isinstance(q, NumericQuestion):
+                numeric_cp = _extract_numeric_cp(q)
+            return resolution, binary_cp, numeric_cp, q.published_time
         except Exception as e:
             logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
-            return None, None, None
+            return None, None, None, None
 
     results: list[dict] = []
 
@@ -261,7 +290,7 @@ def retrodict(
         print("=" * 60)
 
         # Fetch resolution and published_at
-        resolution, final_cp, published_at = asyncio.run(
+        resolution, final_cp, numeric_cp, published_at = asyncio.run(
             get_resolution_and_published(qid)
         )
         if resolution:
@@ -331,29 +360,59 @@ def retrodict(
 
             elif output.median is not None and resolution:
                 # Numeric question comparison
-                print(f"\n   Actual Result:    {resolution}")
-                print(f"   Our Prediction:   {output.median}")
-
                 within_ci = None
                 difference = None
 
                 if output.confidence_interval:
                     lo, hi = output.confidence_interval
-                    print(f"   90% CI:           [{lo}, {hi}]")
                     try:
                         actual_val = float(resolution.replace(",", ""))
                         difference = actual_val - output.median
-                        print(f"   Difference:       {difference:+.2f}")
+                        our_abs_err = abs(difference)
+                        range_span = numeric_cp["range_span"] if numeric_cp else None
 
-                        if lo <= actual_val <= hi:
-                            within_ci = True
-                            print("   Within 90% CI:    ✅ Yes")
+                        def _err_emoji(pct: float) -> str:
+                            if pct < 1:
+                                return "🎯"
+                            if pct < 5:
+                                return "👌"
+                            if pct < 15:
+                                return "😬"
+                            return "🫠"
+
+                        print(f"\n   🎯 Actual:    {actual_val:,.1f}")
+
+                        if range_span and range_span > 0:
+                            our_pct = our_abs_err / range_span * 100
+                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                            print(f"      error:     {_err_emoji(our_pct)} {our_pct:.1f}% of range")
                         else:
-                            within_ci = False
-                            if actual_val < lo:
-                                print(f"   Within 90% CI:    ❌ No (below by {lo - actual_val:.2f})")
-                            else:
-                                print(f"   Within 90% CI:    ❌ No (above by {actual_val - hi:.2f})")
+                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                            print(f"      error:     {our_abs_err:,.1f}")
+
+                        if numeric_cp is not None:
+                            cp_median = numeric_cp["median"]
+                            cp_abs_err = abs(actual_val - cp_median)
+                            print(f"   👥 Community: {cp_median:,.1f}  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]")
+                            if range_span and range_span > 0:
+                                cp_pct = cp_abs_err / range_span * 100
+                                print(f"      error:     {_err_emoji(cp_pct)} {cp_pct:.1f}% of range")
+                                if cp_abs_err > 0 and our_abs_err > 0:
+                                    ratio = cp_abs_err / our_abs_err
+                                    if ratio > 1:
+                                        print(f"   ⚔️  vs CP:     🏆 {ratio:.1f}x more accurate")
+                                    elif ratio < 1:
+                                        print(f"   ⚔️  vs CP:     🫠 {1/ratio:.1f}x less accurate")
+                                    else:
+                                        print("   ⚔️  vs CP:     🤝 Same")
+
+                        within_ci = lo <= actual_val <= hi
+                        if within_ci:
+                            print("   📍 In 90% CI: ✅")
+                        elif actual_val < lo:
+                            print(f"   📍 In 90% CI: 🫠 below by {lo - actual_val:,.1f}")
+                        else:
+                            print(f"   📍 In 90% CI: 🫠 above by {actual_val - hi:,.1f}")
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
