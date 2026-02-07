@@ -234,6 +234,15 @@ class Sandbox:
                     _decode_output(result.output),
                 )
 
+        # Remove network management binaries so agent code can't flush rules
+        self._exec(
+            "rm -f /usr/sbin/iptables /usr/sbin/iptables-save "
+            "/usr/sbin/iptables-restore /usr/sbin/ip6tables "
+            "/usr/sbin/iptables-nft /usr/sbin/ip6tables-nft "
+            "/sbin/iptables /sbin/ip6tables "
+            "2>/dev/null; true"
+        )
+
     def _pre_install_common_packages(self) -> None:
         """Pre-install common packages for faster agent execution."""
         logger.info("Pre-installing common packages: %s", COMMON_PACKAGES)
