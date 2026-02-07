@@ -3,7 +3,6 @@
 import sys
 from pathlib import Path
 
-# Add the hook scripts directory to the path so we can import the module
 _scripts_dir = str(
     Path(__file__).resolve().parents[2]
     / ".claude"
@@ -15,13 +14,12 @@ _scripts_dir = str(
 sys.path.insert(0, _scripts_dir)
 
 from auto_allow_edits import (  # noqa: E402
+    EditInput,
     _allow_decision,
-    count_real_changes,
+    _classify_trivial,
+    count_real_additions,
     decide,
     is_protected_file,
-    is_trivial_line,
-    is_type_definition_block,
-    strip_docstrings,
 )
 
 ALLOW = _allow_decision()
@@ -50,118 +48,141 @@ class TestIsProtectedFile:
         assert not is_protected_file("README.md")
 
 
-# --- is_trivial_line ---
+# --- _classify_trivial ---
 
 
-class TestIsTrivialLine:
-    def test_empty_and_whitespace(self) -> None:
-        assert is_trivial_line("")
-        assert is_trivial_line("   ")
-        assert is_trivial_line("\t")
-
-    def test_comments(self) -> None:
-        assert is_trivial_line("# a comment")
-        assert is_trivial_line("    # indented comment")
-
-    def test_docstring_delimiters(self) -> None:
-        assert is_trivial_line('"""')
-        assert is_trivial_line("'''")
-        assert is_trivial_line('"""A one-line docstring."""')
+class TestClassifyTrivial:
+    def test_blank_and_comments(self) -> None:
+        lines = ["", "   ", "# comment", "    # indented"]
+        assert _classify_trivial(lines) == [True, True, True, True]
 
     def test_imports(self) -> None:
-        assert is_trivial_line("import os")
-        assert is_trivial_line("from pathlib import Path")
+        lines = ["import os", "from pathlib import Path"]
+        assert _classify_trivial(lines) == [True, True]
 
     def test_pass(self) -> None:
-        assert is_trivial_line("    pass")
+        assert _classify_trivial(["    pass"]) == [True]
 
     def test_real_code(self) -> None:
-        assert not is_trivial_line("x = 1")
-        assert not is_trivial_line("return result")
-        assert not is_trivial_line("def foo():")
-
-
-# --- strip_docstrings ---
-
-
-class TestStripDocstrings:
-    def test_no_docstrings(self) -> None:
-        lines = ["x = 1", "y = 2"]
-        assert strip_docstrings(lines) == lines
+        lines = ["x = 1", "return result", "def foo():"]
+        assert _classify_trivial(lines) == [False, False, False]
 
     def test_single_line_docstring(self) -> None:
-        lines = ['"""A docstring."""']
-        result = strip_docstrings(lines)
-        assert result == lines  # count=2, not entering docstring mode
+        assert _classify_trivial(['"""A docstring."""']) == [True]
 
     def test_multi_line_docstring(self) -> None:
         lines = ['"""', "This is content.", "More content.", '"""']
-        result = strip_docstrings(lines)
-        assert all(r == "" for r in result)
-
-    def test_preserves_non_docstring_lines(self) -> None:
-        lines = ["x = 1", '"""', "docstring body", '"""', "y = 2"]
-        result = strip_docstrings(lines)
-        assert result[0] == "x = 1"
-        assert result[1] == ""
-        assert result[2] == ""
-        assert result[3] == ""
-        assert result[4] == "y = 2"
+        assert _classify_trivial(lines) == [True, True, True, True]
 
     def test_single_quote_docstring(self) -> None:
         lines = ["'''", "content", "'''"]
-        result = strip_docstrings(lines)
-        assert all(r == "" for r in result)
+        assert _classify_trivial(lines) == [True, True, True]
+
+    def test_code_around_docstring(self) -> None:
+        lines = ["x = 1", '"""', "docstring body", '"""', "y = 2"]
+        result = _classify_trivial(lines)
+        assert result == [False, True, True, True, False]
+
+    def test_typed_dict_block(self) -> None:
+        lines = [
+            "class Foo(TypedDict):",
+            "    name: str",
+            "    age: int",
+        ]
+        assert _classify_trivial(lines) == [True, True, True]
+
+    def test_base_model_block(self) -> None:
+        lines = [
+            "class Config(BaseModel):",
+            "    host: str",
+            "    port: int",
+        ]
+        assert _classify_trivial(lines) == [True, True, True]
+
+    def test_type_def_ends_on_dedent(self) -> None:
+        lines = [
+            "class Foo(TypedDict):",
+            "    name: str",
+            "",
+            "x = 1",
+        ]
+        result = _classify_trivial(lines)
+        assert result == [True, True, True, False]
+
+    def test_consecutive_type_defs(self) -> None:
+        lines = [
+            "class A(TypedDict):",
+            "    x: int",
+            "",
+            "class B(BaseModel):",
+            "    y: str",
+        ]
+        assert _classify_trivial(lines) == [True, True, True, True, True]
+
+    def test_regular_class_not_trivial(self) -> None:
+        lines = [
+            "class Foo:",
+            "    def method(self):",
+            "        pass",
+        ]
+        result = _classify_trivial(lines)
+        assert result == [False, False, True]
+
+    def test_mixed_context(self) -> None:
+        lines = [
+            "import os",
+            "class Cfg(BaseModel):",
+            "    x: int",
+            "def run():",
+            '    """Do stuff."""',
+            "    return 42",
+        ]
+        result = _classify_trivial(lines)
+        assert result == [True, True, True, False, True, False]
 
 
-# --- is_type_definition_block ---
+# --- count_real_additions ---
 
 
-class TestIsTypeDefinitionBlock:
-    def test_typed_dict(self) -> None:
-        block = "class Foo(TypedDict):\n    name: str\n    age: int"
-        assert is_type_definition_block(block)
-
-    def test_base_model(self) -> None:
-        block = "class Config(BaseModel):\n    host: str\n    port: int"
-        assert is_type_definition_block(block)
-
-    def test_regular_class(self) -> None:
-        block = "class Foo:\n    def method(self):\n        pass"
-        assert not is_type_definition_block(block)
-
-    def test_empty(self) -> None:
-        assert not is_type_definition_block("")
-        assert not is_type_definition_block("   ")
-
-
-# --- count_real_changes ---
-
-
-class TestCountRealChanges:
+class TestCountRealAdditions:
     def test_identical(self) -> None:
-        assert count_real_changes("x = 1", "x = 1") == 0
+        assert count_real_additions("x = 1", "x = 1") == 0
 
-    def test_single_real_change(self) -> None:
-        assert count_real_changes("x = 1", "x = 2") == 1
+    def test_single_real_addition(self) -> None:
+        assert count_real_additions("x = 1", "x = 2") == 1
 
     def test_trivial_only(self) -> None:
-        assert count_real_changes("", "import os\nimport sys") == 0
+        assert count_real_additions("", "import os\nimport sys") == 0
 
     def test_mixed_trivial_and_real(self) -> None:
         old = "x = 1"
         new = "import os\nx = 2\n# comment"
-        assert count_real_changes(old, new) == 1
+        assert count_real_additions(old, new) == 1
 
     def test_multi_line_docstring_is_trivial(self) -> None:
         old = "x = 1"
         new = 'x = 1\n"""\nThis is a docstring.\nWith multiple lines.\n"""'
-        assert count_real_changes(old, new) == 0
+        assert count_real_additions(old, new) == 0
 
-    def test_many_real_changes(self) -> None:
+    def test_many_real_additions(self) -> None:
         old = "a = 1\nb = 2\nc = 3\nd = 4"
         new = "a = 10\nb = 20\nc = 30\nd = 40"
-        assert count_real_changes(old, new) == 4
+        assert count_real_additions(old, new) == 4
+
+    def test_pure_removal_is_zero(self) -> None:
+        old = "a = 1\nb = 2\nc = 3"
+        new = "a = 1"
+        assert count_real_additions(old, new) == 0
+
+    def test_typed_dict_addition_is_zero(self) -> None:
+        old = ""
+        new = "class Foo(TypedDict):\n    name: str\n    age: int"
+        assert count_real_additions(old, new) == 0
+
+    def test_addition_with_removal_only_counts_adds(self) -> None:
+        old = "x = 1\ny = 2\nz = 3"
+        new = "x = 1\nw = 99"
+        assert count_real_additions(old, new) == 1
 
 
 # --- decide ---
@@ -169,66 +190,53 @@ class TestCountRealChanges:
 
 class TestDecide:
     def test_protected_file_defers(self) -> None:
-        result = decide(
-            {"file_path": ".claude/settings.json", "old_string": "x", "new_string": "y"}
-        )
-        assert result is None
+        inp = EditInput(file_path=".claude/settings.json", old_string="x", new_string="y")
+        assert decide(inp) is None
 
     def test_pure_deletion_allows(self) -> None:
-        result = decide(
-            {"file_path": "foo.py", "old_string": "x = 1", "new_string": ""}
-        )
-        assert result == ALLOW
-
-    def test_typed_dict_allows(self) -> None:
-        new = "class Foo(TypedDict):\n    name: str"
-        result = decide({"file_path": "foo.py", "old_string": "", "new_string": new})
-        assert result == ALLOW
+        inp = EditInput(file_path="foo.py", old_string="x = 1", new_string="")
+        assert decide(inp) == ALLOW
 
     def test_replace_all_single_line_allows(self) -> None:
-        result = decide(
-            {
-                "file_path": "foo.py",
-                "old_string": "old_name",
-                "new_string": "new_name",
-                "replace_all": True,
-            }
+        inp = EditInput(
+            file_path="foo.py",
+            old_string="old_name",
+            new_string="new_name",
+            replace_all=True,
         )
-        assert result == ALLOW
+        assert decide(inp) == ALLOW
 
     def test_replace_all_multi_line_defers(self) -> None:
-        result = decide(
-            {
-                "file_path": "foo.py",
-                "old_string": "line1\nline2",
-                "new_string": "new1\nnew2",
-                "replace_all": True,
-            }
+        inp = EditInput(
+            file_path="foo.py",
+            old_string="line1\nline2",
+            new_string="new1\nnew2",
+            replace_all=True,
         )
-        assert result is None
+        assert decide(inp) is None
 
     def test_small_edit_allows(self) -> None:
-        result = decide(
-            {
-                "file_path": "foo.py",
-                "old_string": "x = 1",
-                "new_string": "x = 2",
-            }
-        )
-        assert result == ALLOW
+        inp = EditInput(file_path="foo.py", old_string="x = 1", new_string="x = 2")
+        assert decide(inp) == ALLOW
 
     def test_large_edit_defers(self) -> None:
         old = "a = 1\nb = 2\nc = 3\nd = 4"
         new = "a = 10\nb = 20\nc = 30\nd = 40"
-        result = decide({"file_path": "foo.py", "old_string": old, "new_string": new})
-        assert result is None
+        inp = EditInput(file_path="foo.py", old_string=old, new_string=new)
+        assert decide(inp) is None
 
     def test_import_only_edit_allows(self) -> None:
         old = "import os"
         new = "import os\nimport sys\nfrom pathlib import Path"
-        result = decide({"file_path": "foo.py", "old_string": old, "new_string": new})
-        assert result == ALLOW
+        inp = EditInput(file_path="foo.py", old_string=old, new_string=new)
+        assert decide(inp) == ALLOW
 
-    def test_missing_fields_defers_gracefully(self) -> None:
-        result = decide({})
-        assert result is None or result == ALLOW  # empty old+new = 0 changes = allow
+    def test_typed_dict_allows(self) -> None:
+        new = "class Foo(TypedDict):\n    name: str"
+        inp = EditInput(file_path="foo.py", old_string="", new_string=new)
+        assert decide(inp) == ALLOW
+
+    def test_empty_input_allows(self) -> None:
+        inp = EditInput()
+        result = decide(inp)
+        assert result == ALLOW

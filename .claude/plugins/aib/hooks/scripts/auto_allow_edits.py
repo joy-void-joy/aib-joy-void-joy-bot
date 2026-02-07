@@ -4,16 +4,17 @@
 Decision order:
 1. Protected files (.claude/, pyproject.toml, .env*) → always defer
 2. Pure deletion (new_string is empty) → allow
-3. TypedDict/BaseModel class definition → allow
-4. replace_all: single-line rename → allow, multi-line → defer
-5. Count "real" changed lines (ignoring imports, comments, whitespace,
-   docstrings, blank lines) → allow if ≤ MAX_REAL_CHANGES
+3. replace_all: single-line rename → allow, multi-line → defer
+4. Count nontrivial added lines (using a state machine for context-aware
+   classification) → allow if ≤ MAX_REAL_CHANGES
 """
 
 import difflib
 import json
 import re
 import sys
+
+from pydantic import BaseModel, ValidationError
 
 MAX_REAL_CHANGES = 3
 
@@ -28,78 +29,64 @@ def is_protected_file(file_path: str) -> bool:
     return any(re.search(p, file_path) for p in PROTECTED_PATTERNS)
 
 
-def is_trivial_line(line: str) -> bool:
-    s = line.strip()
-    if not s:
+def _is_trivial_content(stripped: str) -> bool:
+    if not stripped:
         return True
-    if s.startswith("#"):
+    if stripped.startswith("#"):
         return True
-    if s in ('"""', "'''") or s.startswith('"""') or s.startswith("'''"):
+    if stripped.startswith("import ") or stripped.startswith("from "):
         return True
-    if s.startswith("import ") or s.startswith("from "):
-        return True
-    if s == "pass":
+    if stripped == "pass":
         return True
     return False
 
 
-def is_type_definition_line(line: str) -> bool:
-    s = line.strip()
-    if not s:
-        return True
-    if re.match(r"class\s+\w+\s*\(.*(?:TypedDict|BaseModel).*\)\s*:", s):
-        return True
-    if s.startswith("#") or s.startswith('"""') or s.startswith("'''"):
-        return True
-    if s in ('"""', "'''", "pass"):
-        return True
-    if s.startswith("@"):
-        return True
-    if re.match(r"\w+\s*:", s):
-        return True
-    return False
-
-
-def is_type_definition_block(text: str) -> bool:
-    if not text or not text.strip():
-        return False
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    has_class = any(
-        re.match(r"\s*class\s+\w+\s*\(.*(?:TypedDict|BaseModel).*\)\s*:", ln)
-        for ln in lines
-    )
-    if not has_class:
-        return False
-    return all(is_type_definition_line(ln) for ln in lines)
-
-
-def strip_docstrings(lines: list[str]) -> list[str]:
-    result: list[str] = []
+def _classify_trivial(lines: list[str]) -> list[bool]:
+    result: list[bool] = []
     in_docstring = False
-    delimiter = ""
+    docstring_delim = ""
+    in_type_def = False
+    type_def_indent = 0
+
     for line in lines:
         stripped = line.strip()
+        indent = len(line) - len(line.lstrip()) if stripped else 0
+
         if in_docstring:
-            result.append("")
-            if delimiter in stripped:
+            result.append(True)
+            if docstring_delim in stripped:
                 in_docstring = False
             continue
+
         for delim in ('"""', "'''"):
             if delim in stripped:
-                count = stripped.count(delim)
-                if count == 1:
+                if stripped.count(delim) == 1:
                     in_docstring = True
-                    delimiter = delim
-                    result.append("")
-                    break
+                    docstring_delim = delim
+                result.append(True)
+                break
         else:
-            result.append(line)
+            if in_type_def and stripped and indent <= type_def_indent:
+                in_type_def = False
+
+            m = re.match(
+                r"(\s*)class\s+\w+\s*\(.*(?:TypedDict|BaseModel).*\)\s*:", line
+            )
+            if m:
+                in_type_def = True
+                type_def_indent = len(m.group(1))
+                result.append(True)
+            elif in_type_def:
+                result.append(True)
+            else:
+                result.append(_is_trivial_content(stripped))
+
     return result
 
 
-def count_real_changes(old_string: str, new_string: str) -> int:
-    old_lines = strip_docstrings(old_string.splitlines()) if old_string else []
-    new_lines = strip_docstrings(new_string.splitlines()) if new_string else []
+def count_real_additions(old_string: str, new_string: str) -> int:
+    old_lines = old_string.splitlines() if old_string else []
+    new_lines = new_string.splitlines() if new_string else []
 
     matcher = difflib.SequenceMatcher(
         None,
@@ -107,20 +94,31 @@ def count_real_changes(old_string: str, new_string: str) -> int:
         [ln.strip() for ln in new_lines],
     )
 
-    real = 0
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal":
-            continue
-        removed_real = sum(
-            1 for i in range(i1, i2) if not is_trivial_line(old_lines[i])
-        )
-        added_real = sum(1 for j in range(j1, j2) if not is_trivial_line(new_lines[j]))
-        real += max(removed_real, added_real)
+    added_indices: set[int] = set()
+    for tag, _i1, _i2, j1, j2 in matcher.get_opcodes():
+        if tag in ("insert", "replace"):
+            added_indices.update(range(j1, j2))
 
-    return real
+    if not added_indices:
+        return 0
+
+    trivial = _classify_trivial(new_lines)
+    return sum(1 for j in added_indices if not trivial[j])
 
 
 AllowDecision = dict[str, dict[str, str]]
+
+
+class EditInput(BaseModel):
+    file_path: str = ""
+    old_string: str = ""
+    new_string: str = ""
+    replace_all: bool = False
+
+
+class HookEvent(BaseModel):
+    tool_name: str = ""
+    tool_input: EditInput = EditInput()
 
 
 def _allow_decision() -> AllowDecision:
@@ -133,19 +131,16 @@ def _allow_decision() -> AllowDecision:
     }
 
 
-def decide(tool_input: dict[str, object]) -> AllowDecision | None:
-    file_path = str(tool_input.get("file_path", ""))
-    old_string = str(tool_input.get("old_string", ""))
-    new_string = str(tool_input.get("new_string", ""))
-    replace_all = bool(tool_input.get("replace_all", False))
+def decide(tool_input: EditInput) -> AllowDecision | None:
+    file_path = tool_input.file_path
+    old_string = tool_input.old_string
+    new_string = tool_input.new_string
+    replace_all = tool_input.replace_all
 
     if is_protected_file(file_path):
         return None
 
     if old_string and not new_string:
-        return _allow_decision()
-
-    if is_type_definition_block(new_string):
         return _allow_decision()
 
     if replace_all:
@@ -155,7 +150,7 @@ def decide(tool_input: dict[str, object]) -> AllowDecision | None:
             return _allow_decision()
         return None
 
-    if count_real_changes(old_string, new_string) <= MAX_REAL_CHANGES:
+    if count_real_additions(old_string, new_string) <= MAX_REAL_CHANGES:
         return _allow_decision()
 
     return None
@@ -163,14 +158,14 @@ def decide(tool_input: dict[str, object]) -> AllowDecision | None:
 
 def main() -> None:
     try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, OSError):
+        event = HookEvent.model_validate_json(sys.stdin.read())
+    except (ValidationError, OSError):
         sys.exit(0)
 
-    if data.get("tool_name") != "Edit":
+    if event.tool_name != "Edit":
         sys.exit(0)
 
-    result = decide(data.get("tool_input", {}))
+    result = decide(event.tool_input)
     if result:
         json.dump(result, sys.stdout)
 
