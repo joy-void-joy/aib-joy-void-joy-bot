@@ -1,10 +1,12 @@
 """Tests for retrodict mode hooks and utilities."""
 
 from datetime import date
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from claude_agent_sdk.types import HookContext, PreToolUseHookInput
 
 from aib.agent.hooks import HooksConfig
 from aib.agent.subagents import get_subagents
@@ -102,13 +104,20 @@ class TestRetrodictHooks:
         self, hooks: HooksConfig, tool_name: str, tool_input: dict[str, Any]
     ) -> dict[str, Any]:
         """Helper to invoke the PreToolUse hook."""
-        pre_hook = hooks["PreToolUse"][0].hooks[0]
-        input_data = {
+        pre_hooks = hooks.get("PreToolUse")
+        assert pre_hooks is not None, "PreToolUse hooks must be configured"
+        pre_hook = pre_hooks[0].hooks[0]
+        input_data: PreToolUseHookInput = {
             "hook_event_name": "PreToolUse",
             "tool_name": tool_name,
             "tool_input": tool_input,
+            "session_id": "",
+            "transcript_path": "",
+            "cwd": "",
         }
-        return await pre_hook(input_data, None, None)
+        ctx: HookContext = {"signal": None}
+        result = await pre_hook(input_data, None, ctx)
+        return cast(dict[str, Any], result)
 
     # --- Denial tests ---
 
@@ -224,9 +233,7 @@ class TestRetrodictHooks:
         token = retrodict_cutoff.set(None)
         try:
             hooks = create_retrodict_hooks()
-            result = await self._invoke_hook(
-                hooks, "WebSearch", {"query": "test"}
-            )
+            result = await self._invoke_hook(hooks, "WebSearch", {"query": "test"})
             assert result == {}
         finally:
             retrodict_cutoff.reset(token)
@@ -243,11 +250,13 @@ class TestRetrodictToolSchemas:
         """search_exa tool schema must include published_before and livecrawl."""
         from aib.tools.forecasting import search_exa
 
-        assert "published_before" in search_exa.input_schema, (
+        schema = search_exa.input_schema
+        assert isinstance(schema, dict), "input_schema must be a dict"
+        assert "published_before" in schema, (
             "published_before must be in search_exa input_schema or it will be "
             "stripped by SDK validation before reaching the handler"
         )
-        assert "livecrawl" in search_exa.input_schema, (
+        assert "livecrawl" in schema, (
             "livecrawl must be in search_exa input_schema or it will be "
             "stripped by SDK validation before reaching the handler"
         )
@@ -464,10 +473,7 @@ class TestWaybackValidateResults:
     @pytest.mark.asyncio
     async def test_concurrent_fetching(self) -> None:
         """All URLs should be fetched concurrently via asyncio.gather."""
-        results = [
-            _make_exa_result(f"https://example.com/{i}")
-            for i in range(5)
-        ]
+        results = [_make_exa_result(f"https://example.com/{i}") for i in range(5)]
         call_order: list[str] = []
 
         async def mock_fetch(url: str, _ts: str) -> str:
