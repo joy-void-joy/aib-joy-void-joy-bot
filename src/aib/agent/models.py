@@ -562,10 +562,10 @@ class NumericForecast(BaseModel):
                 "NumericForecast requires either all 6 percentiles "
                 "(percentile_10, percentile_20, percentile_40, percentile_60, "
                 "percentile_80, percentile_90) OR components for mixture mode. "
-                "Percentiles must be strictly increasing values."
+                "Percentiles must be non-decreasing values."
             )
 
-        # Validate percentiles are strictly increasing if all provided
+        # Validate percentiles are non-decreasing if all provided
         if has_all_percentiles:
             percentiles = [
                 self.percentile_10,
@@ -576,10 +576,10 @@ class NumericForecast(BaseModel):
                 self.percentile_90,
             ]
             for i in range(len(percentiles) - 1):
-                if percentiles[i] >= percentiles[i + 1]:  # type: ignore[operator]
+                if percentiles[i] > percentiles[i + 1]:  # type: ignore[operator]
                     raise ValueError(
-                        f"Percentiles must be strictly increasing. "
-                        f"Got {percentiles[i]} >= {percentiles[i + 1]} at indices {i} and {i + 1}."
+                        f"Percentiles must be non-decreasing. "
+                        f"Got {percentiles[i]} > {percentiles[i + 1]} at indices {i} and {i + 1}."
                     )
 
         return self

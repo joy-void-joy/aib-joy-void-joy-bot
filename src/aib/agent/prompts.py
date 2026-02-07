@@ -551,7 +551,7 @@ Interpretation guide:
 - 80th percentile: 20% chance the outcome is ABOVE this value
 - 90th percentile: 10% chance the outcome is ABOVE this value
 
-Values must be strictly increasing (10th < 20th < 40th < 60th < 80th < 90th).
+Values must be non-decreasing (10th <= 20th <= 40th <= 60th <= 80th <= 90th).
 
 {bounds_info}
 """
