@@ -304,9 +304,11 @@ async def fetch_cp_for_forecasts(client: AsyncMetaculusClient) -> list[CPCompari
     logger.info("Fetching CP for %d forecasted questions", len(post_ids))
 
     for i, post_id in enumerate(post_ids):
-        # Rate limiting: small delay between requests
-        if i > 0 and i % 5 == 0:
-            await asyncio.sleep(1.0)
+        # Rate limiting: delay between requests to avoid 429s
+        if i > 0:
+            await asyncio.sleep(0.5)
+        if i > 0 and i % 10 == 0:
+            await asyncio.sleep(2.0)
 
         # Load our forecast
         forecasts = load_past_forecasts(post_id)
@@ -425,15 +427,24 @@ def collect_retrodict_results() -> list[RetrodictResult]:
     """Collect results from all retrodicted forecasts.
 
     Retrodictions have known resolutions embedded in the comparison field,
-    so no API calls are needed.
+    so no API calls are needed. When the same question is retrodicted multiple
+    times for the same date, only the latest retrodiction is kept.
     """
     forecasts = load_retrodict_forecasts()
-    results: list[RetrodictResult] = []
 
+    # Deduplicate: keep only the latest retrodiction per (post_id, retrodict_date)
+    latest: dict[tuple[int, str], Any] = {}
     for f in forecasts:
         if not f.retrodict_date:
             continue
+        key = (f.post_id or 0, f.retrodict_date)
+        existing = latest.get(key)
+        if existing is None or f.timestamp > existing.timestamp:
+            latest[key] = f
 
+    results: list[RetrodictResult] = []
+
+    for f in latest.values():
         result = RetrodictResult(
             post_id=f.post_id or 0,
             question_title=f.question_title[:80],
