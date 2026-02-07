@@ -807,7 +807,7 @@ async def run_forecast(
                     ),
                 ),
             },
-            max_thinking_tokens=64_000 - 1,
+            max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
             hooks=hooks,  # type: ignore[arg-type]
             sandbox={

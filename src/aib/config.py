@@ -75,7 +75,7 @@ class Settings(BaseSettings):
 
     # === Model ===
     model: str = Field(
-        default="claude-opus-4-5-20251101",
+        default="claude-opus-4-6",
         validation_alias="AIB_MODEL",
         description="Claude model to use for forecasting",
     )
