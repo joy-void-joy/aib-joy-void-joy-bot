@@ -4,6 +4,7 @@ import dataclasses
 import itertools
 import json
 import logging
+import shutil
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -1124,6 +1125,15 @@ async def run_forecast(
                 save_forecast(**save_kwargs)
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
+
+    # Move tmp notes to permanent retrodict storage
+    if cutoff and session_id:
+        tmp_notes = Path(f"./tmp/notes/{session_id}")
+        if tmp_notes.exists():
+            dest = Path(f"./notes/retrodict/{session_id}")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(tmp_notes), str(dest))
+            logger.info("Moved retrodict notes: %s -> %s", tmp_notes, dest)
 
     return output
 

@@ -152,8 +152,8 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (Wayback-validated)
-RETRODICT_VALIDATED_SEARCH_TOOLS: frozenset[str] = frozenset(
+# Search tools for retrodict mode (date-filtered via Exa)
+RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
     }
@@ -258,7 +258,7 @@ class ToolPolicy:
             "notes": create_notes_server(
                 session_id,
                 notes_base=(
-                    Path(f"./notes/retrodict/{session_id}")
+                    Path(f"./tmp/notes/{session_id}")
                     if self.is_retrodict and session_id
                     else None
                 ),
@@ -267,7 +267,7 @@ class ToolPolicy:
             "arxiv": arxiv_server,
         }
 
-        # Add search server in retrodict mode (Wayback-validated web search)
+        # Add search server in retrodict mode (date-filtered web search)
         if self.is_retrodict:
             servers["search"] = create_retrodict_search_server()
 
@@ -333,9 +333,9 @@ class ToolPolicy:
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
-        # Retrodict validated search tools (only in retrodict mode)
+        # Retrodict search tools (date-filtered web search)
         if self.is_retrodict:
-            tools.update(RETRODICT_VALIDATED_SEARCH_TOOLS)
+            tools.update(RETRODICT_SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools
