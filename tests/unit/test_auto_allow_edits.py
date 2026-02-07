@@ -209,7 +209,9 @@ class TestCountRealAdditions:
 
 class TestDecide:
     def test_protected_file_defers(self) -> None:
-        inp = EditInput(file_path=".claude/settings.json", old_string="x", new_string="y")
+        inp = EditInput(
+            file_path=".claude/settings.json", old_string="x", new_string="y"
+        )
         assert decide(inp) is None
 
     def test_pure_deletion_allows(self) -> None:

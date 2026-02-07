@@ -1,11 +1,15 @@
 """Forecasting agent using Claude Agent SDK."""
 
 import dataclasses
+import itertools
 import json
 import logging
+import shutil
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
+
+from rich.console import Console
 
 from claude_agent_sdk.types import HookContext
 
@@ -55,6 +59,7 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
+from aib.tools.retry import with_retry
 from aib.agent.subagents import get_subagents
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
@@ -79,16 +84,29 @@ def _build_system_prompt(
     agent believes "today" is the blind date, preventing future leak.
     """
     effective_date = cutoff.isoformat() if cutoff else date.today().isoformat()
-    base = (
-        _PRESET_TEMPLATE
-        .replace("{{DATE}}", effective_date)
-        .replace("{{WORKING_DIRECTORY}}", str(Path.cwd()))
+    base = _PRESET_TEMPLATE.replace("{{DATE}}", effective_date).replace(
+        "{{WORKING_DIRECTORY}}", str(Path.cwd())
     )
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
 
-# Buffer original tool inputs so we can display post-hook params on ToolResultBlock
-_pending_tool_inputs: dict[str, dict] = {}
+_TOOL_COLORS = [
+    "cyan",
+    "green",
+    "yellow",
+    "magenta",
+    "blue",
+    "red",
+    "bright_cyan",
+    "bright_green",
+    "bright_yellow",
+    "bright_magenta",
+    "bright_blue",
+    "bright_red",
+]
+_color_cycle = itertools.cycle(_TOOL_COLORS)
+_id_to_color: dict[str, str] = {}
+_console = Console(highlight=False, markup=False)
 
 
 def print_block(block: ContentBlock) -> None:
@@ -99,18 +117,18 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            _pending_tool_inputs[block.id] = block.input or {}
-            print(f"🔧 {block.name} [{block.id}]")
+            color = next(_color_cycle)
+            _id_to_color[block.id] = color
+            print(f"🔧 {block.name} ", end="")
+            _console.print(f"[{block.id}]", style=color)
+            if block.input:
+                print(json.dumps(block.input, indent=2))
         case ToolResultBlock():
-            # Display actual tool input (post-hook modifications if any)
-            tool_use_id = block.tool_use_id
-            original_input = _pending_tool_inputs.pop(tool_use_id, None)
-            actual_input = get_modified_input(tool_use_id) or original_input
-            if actual_input:
-                print(json.dumps(actual_input, indent=2))
-            # Note: block.is_error is unreliable (SDK bug doesn't propagate MCP isError)
-            content_preview = _truncate_content(block.content, max_len=500)
-            print(f"📋 Result [{tool_use_id}]: {content_preview}")
+            color = _id_to_color.pop(block.tool_use_id, "default")
+            print("📋 Result ", end="")
+            _console.print(f"[{block.tool_use_id}]", style=color, end="")
+            print(": ", end="")
+            print(_truncate_content(block.content, max_len=500))
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
@@ -602,11 +620,12 @@ def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfi
     }
 
 
+@with_retry(max_attempts=3)
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
     """Fetch question details from Metaculus API."""
     headers = {"Authorization": f"Token {token}"} if token else {}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(
             f"{METACULUS_API_BASE}/posts/{question_id}/",
             headers=headers,
@@ -821,9 +840,7 @@ async def run_forecast(
             model=settings.model,
             system_prompt=_build_system_prompt(
                 cutoff=cutoff,
-                tool_docs=policy.get_tool_docs(
-                    mcp_servers, allow_spawn=allow_spawn
-                ),
+                tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -913,6 +930,9 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
+        question_category=ForecastOutput.classify_category(
+            question_title, question_type
+        ),
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
@@ -1086,10 +1106,14 @@ async def run_forecast(
                 "percentiles": output.percentiles,
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
-                "log_path": str(thinking_log_path) if thinking_log_path.exists() else None,
+                "log_path": str(thinking_log_path)
+                if thinking_log_path.exists()
+                else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),
-                "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
+                "question_scheduled_resolve_time": context.get(
+                    "scheduled_resolve_time"
+                ),
             }
 
             if cutoff:
@@ -1101,6 +1125,15 @@ async def run_forecast(
                 save_forecast(**save_kwargs)
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
+
+    # Move tmp notes to permanent retrodict storage
+    if cutoff and session_id:
+        tmp_notes = Path(f"./tmp/notes/{session_id}")
+        if tmp_notes.exists():
+            dest = Path(f"./notes/retrodict/{session_id}")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(tmp_notes), str(dest))
+            logger.info("Moved retrodict notes: %s -> %s", tmp_notes, dest)
 
     return output
 

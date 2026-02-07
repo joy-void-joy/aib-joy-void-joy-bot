@@ -128,6 +128,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         from aib.agent.retrodict import _cap_trends_timeframe
+
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
@@ -217,6 +218,7 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         from aib.agent.retrodict import _cap_trends_timeframe
+
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
@@ -306,6 +308,7 @@ async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         from aib.agent.retrodict import _cap_trends_timeframe
+
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:

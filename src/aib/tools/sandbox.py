@@ -425,11 +425,19 @@ class Sandbox:
 
         timeout_seconds = settings.sandbox_timeout_seconds
 
+        network_desc = (
+            "full network access"
+            if self._network_mode == "bridge"
+            else "limited network access (package installation only)"
+            if self._network_mode == "pypi_only"
+            else "no network access"
+        )
+
         @tool(
             "execute_code",
             (
                 "Execute Python code in an isolated Docker container. Returns exit code, "
-                "stdout, stderr, and duration. The container has network access, a "
+                f"stdout, stderr, and duration. The container has {network_desc}, a "
                 "persistent /workspace directory, and a /shared directory for file exchange "
                 f"with the host. Timeout: {timeout_seconds}s."
             ),
