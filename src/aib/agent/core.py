@@ -80,10 +80,8 @@ def _build_system_prompt(
     agent believes "today" is the blind date, preventing future leak.
     """
     effective_date = cutoff.isoformat() if cutoff else date.today().isoformat()
-    base = (
-        _PRESET_TEMPLATE
-        .replace("{{DATE}}", effective_date)
-        .replace("{{WORKING_DIRECTORY}}", str(Path.cwd()))
+    base = _PRESET_TEMPLATE.replace("{{DATE}}", effective_date).replace(
+        "{{WORKING_DIRECTORY}}", str(Path.cwd())
     )
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
@@ -96,7 +94,9 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            input_summary = json.dumps(block.input, separators=(",", ":")) if block.input else ""
+            input_summary = (
+                json.dumps(block.input, separators=(",", ":")) if block.input else ""
+            )
             if len(input_summary) > 120:
                 input_summary = input_summary[:117] + "..."
             print(f"🔧 {block.name} [{block.id}] {input_summary}")
@@ -814,9 +814,7 @@ async def run_forecast(
             model=settings.model,
             system_prompt=_build_system_prompt(
                 cutoff=cutoff,
-                tool_docs=policy.get_tool_docs(
-                    mcp_servers, allow_spawn=allow_spawn
-                ),
+                tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -906,7 +904,9 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
-        question_category=ForecastOutput.classify_category(question_title, question_type),
+        question_category=ForecastOutput.classify_category(
+            question_title, question_type
+        ),
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
@@ -1080,10 +1080,14 @@ async def run_forecast(
                 "percentiles": output.percentiles,
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
-                "log_path": str(thinking_log_path) if thinking_log_path.exists() else None,
+                "log_path": str(thinking_log_path)
+                if thinking_log_path.exists()
+                else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),
-                "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
+                "question_scheduled_resolve_time": context.get(
+                    "scheduled_resolve_time"
+                ),
             }
 
             if cutoff:

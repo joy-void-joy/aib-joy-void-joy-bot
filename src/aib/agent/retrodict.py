@@ -190,7 +190,9 @@ def create_retrodict_hooks() -> HooksConfig:
         # bypassPermissions ignores allowed_tools, so we must deny explicitly
 
         if tool_name == "WebSearch":
-            return deny("WebSearch disabled in retrodict mode.", "Use web_search instead.")
+            return deny(
+                "WebSearch disabled in retrodict mode.", "Use web_search instead."
+            )
 
         if tool_name in _DENIED_TOOLS:
             return deny(f"{tool_name} disabled in retrodict mode.")

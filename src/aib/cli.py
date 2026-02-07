@@ -524,7 +524,9 @@ def retrodict(
                 )
 
                 if cp_abs_err is not None:
-                    print(f"\n   ⚔️  vs Community: {_vs_community(our_abs_err, cp_abs_err)}")
+                    print(
+                        f"\n   ⚔️  vs Community: {_vs_community(our_abs_err, cp_abs_err)}"
+                    )
 
                 comparison = RetrodictComparison(
                     actual_value=resolution,
@@ -565,7 +567,9 @@ def retrodict(
                         else:
                             print("\n   👥 Community:     (not available)")
 
-                        print(f"\n   🤖 Us:            {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                        print(
+                            f"\n   🤖 Us:            {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]"
+                        )
                         if range_span and range_span > 0:
                             our_pct = our_abs_err / range_span * 100
                             print(
@@ -584,9 +588,13 @@ def retrodict(
                         if within_ci:
                             print("\n   📍 90% CI:        ✅ within range")
                         elif actual_val < lo:
-                            print(f"\n   📍 90% CI:        🫠 below by {lo - actual_val:,.1f}")
+                            print(
+                                f"\n   📍 90% CI:        🫠 below by {lo - actual_val:,.1f}"
+                            )
                         else:
-                            print(f"\n   📍 90% CI:        🫠 above by {actual_val - hi:,.1f}")
+                            print(
+                                f"\n   📍 90% CI:        🫠 above by {actual_val - hi:,.1f}"
+                            )
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
@@ -612,12 +620,16 @@ def retrodict(
                 for option, prob in sorted(
                     output.probabilities.items(), key=lambda x: -x[1]
                 ):
-                    marker = " ← correct" if option.lower() == resolution.lower() else ""
+                    marker = (
+                        " ← correct" if option.lower() == resolution.lower() else ""
+                    )
                     print(f"      {option}: {prob:.1%}{marker}")
 
                 correct_prob = output.probabilities.get(resolution, 0)
                 log_score = math.log(correct_prob) if correct_prob > 0 else None
-                score_str = f"  ·  log score: {log_score:.4f}" if log_score is not None else ""
+                score_str = (
+                    f"  ·  log score: {log_score:.4f}" if log_score is not None else ""
+                )
                 print(
                     f"      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}{score_str}"
                 )
@@ -632,7 +644,9 @@ def retrodict(
             else:
                 print(f"\n   🎯 Reality:       {resolution or 'Unknown'}")
                 print("   👥 Community:     (not available)")
-                print(f"   🤖 Us:            {output.probability or output.median or 'N/A'}")
+                print(
+                    f"   🤖 Us:            {output.probability or output.median or 'N/A'}"
+                )
 
             print(f"\n{'═' * 60}")
 
