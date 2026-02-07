@@ -96,10 +96,8 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            input_summary = json.dumps(block.input, separators=(",", ":")) if block.input else ""
-            if len(input_summary) > 120:
-                input_summary = input_summary[:117] + "..."
-            print(f"🔧 {block.name} [{block.id}] {input_summary}")
+            input_json = json.dumps(block.input, indent=2) if block.input else ""
+            print(f"🔧 {block.name} [{block.id}]\n{input_json}" if input_json else f"🔧 {block.name} [{block.id}]")
         case ToolResultBlock():
             content_preview = _truncate_content(block.content, max_len=500)
             print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
