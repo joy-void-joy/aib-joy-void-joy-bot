@@ -10,6 +10,7 @@ from typing import Any, TypedDict
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -124,6 +125,11 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
     timeframe = validated.timeframe
     geo = validated.geo
 
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        from aib.agent.retrodict import _cap_trends_timeframe
+        timeframe = _cap_trends_timeframe(timeframe, cutoff)
+
     try:
         from pytrends.request import TrendReq
 
@@ -208,6 +214,11 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
     timeframe = validated.timeframe
     geo = validated.geo
 
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        from aib.agent.retrodict import _cap_trends_timeframe
+        timeframe = _cap_trends_timeframe(timeframe, cutoff)
+
     try:
         from pytrends.request import TrendReq
 
@@ -291,6 +302,11 @@ async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
     keyword = validated.keyword
     timeframe = validated.timeframe
     geo = validated.geo
+
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        from aib.agent.retrodict import _cap_trends_timeframe
+        timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
         from pytrends.request import TrendReq

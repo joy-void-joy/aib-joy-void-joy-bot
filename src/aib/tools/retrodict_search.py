@@ -5,8 +5,8 @@ to return only results published before the cutoff date. This prevents
 "future leak" where the agent finds information about events that haven't
 happened yet from its perspective.
 
-The cutoff_date parameter is NOT visible to the agent - it's injected by the
-retrodict PreToolUse hook. This keeps the sandboxing invisible to the agent.
+The cutoff date is read from the retrodict_cutoff ContextVar, keeping
+the sandboxing invisible to the agent.
 """
 
 import logging
@@ -15,6 +15,7 @@ from typing import Any, TypedDict
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.exa import exa_search
 from aib.tools.mcp_server import create_mcp_server
@@ -25,18 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class WebSearchInput(BaseModel):
-    """Input for web search.
-
-    Note: cutoff_date is injected by the retrodict hook, not visible to agent.
-    """
+    """Input for web search."""
 
     query: str = Field(min_length=1, description="Search query")
     num_results: int = Field(default=10, ge=1, le=20, description="Number of results")
-    # Hidden from agent - injected by retrodict hook
-    cutoff_date: str | None = Field(
-        default=None,
-        description="Internal: cutoff date injected by retrodict hook.",
-    )
 
 
 class SearchResult(TypedDict):
@@ -50,9 +43,7 @@ class SearchResult(TypedDict):
 @tool(
     "web_search",
     "Search the web for information. Returns titles, URLs, and snippets.",
-    # cutoff_date is injected by retrodict hook, but must be in schema
-    # to avoid being stripped by SDK/MCP validation
-    {"query": str, "num_results": int, "cutoff_date": str},
+    {"query": str, "num_results": int},
 )
 @tracked("web_search")
 async def web_search(args: dict[str, Any]) -> dict[str, Any]:
@@ -68,7 +59,8 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
 
     search_query = validated_input.query
     num_results = validated_input.num_results
-    cutoff_date = validated_input.cutoff_date
+    cutoff = retrodict_cutoff.get()
+    cutoff_date = cutoff.isoformat() if cutoff is not None else None
 
     # Check if Exa is available
     if not settings.exa_api_key:

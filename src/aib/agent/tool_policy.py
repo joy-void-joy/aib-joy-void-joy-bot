@@ -15,7 +15,7 @@ from claude_agent_sdk.types import (
     McpStdioServerConfig,
 )
 
-from aib.agent.retrodict import RetrodictConfig
+from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import arxiv_server
 from aib.tools.financial import financial_server
 from aib.tools.forecasting import create_forecasting_server
@@ -158,13 +158,6 @@ ARXIV_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# MCP servers to exclude in retrodict mode
-RETRODICT_EXCLUDED_SERVERS: frozenset[str] = frozenset(
-    {
-        "playwright",
-    }
-)
-
 
 @dataclass
 class ToolPolicy:
@@ -172,11 +165,11 @@ class ToolPolicy:
 
     Determines which tools are available based on:
     - API key availability (from settings)
-    - Retrodict mode (restricts live data access)
+    - Retrodict mode via retrodict_cutoff ContextVar
     - Forecast context (e.g., allow_spawn for subquestions)
 
     Example:
-        policy = ToolPolicy.from_settings(settings, retrodict_config)
+        policy = ToolPolicy.from_settings(settings)
         mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_id="41906_20260202")
         allowed_tools = policy.get_allowed_tools(allow_spawn=True)
     """
@@ -187,9 +180,6 @@ class ToolPolicy:
     asknews_client_id: str | None = None
     asknews_client_secret: str | None = None
     fred_api_key: str | None = None
-
-    # Mode configuration
-    retrodict_config: RetrodictConfig | None = None
 
     # Computed sets (populated by __post_init__)
     _excluded_tools: frozenset[str] = field(default_factory=frozenset, init=False)
@@ -208,27 +198,14 @@ class ToolPolicy:
         if not self.fred_api_key:
             excluded.update(FRED_TOOLS)
 
-        # Retrodict mode exclusions
-        if self.retrodict_config:
-            excluded.update(LIVE_MARKET_TOOLS)
-            excluded.update(PLAYWRIGHT_TOOLS)
-            # Wikipedia now supports historical lookups via cutoff_date injection
-            excluded.update(ASKNEWS_TOOLS)  # No date filtering support
-            excluded.add("WebSearch")  # Unreliable before: operator
-
         self._excluded_tools = frozenset(excluded)
 
     @classmethod
-    def from_settings(
-        cls,
-        settings: Settings,
-        retrodict_config: RetrodictConfig | None = None,
-    ) -> ToolPolicy:
+    def from_settings(cls, settings: Settings) -> ToolPolicy:
         """Create a ToolPolicy from application settings.
 
         Args:
             settings: Application settings with API keys.
-            retrodict_config: If provided, enables retrodict mode restrictions.
 
         Returns:
             ToolPolicy configured based on settings.
@@ -239,13 +216,12 @@ class ToolPolicy:
             asknews_client_id=settings.asknews_client_id,
             asknews_client_secret=settings.asknews_client_secret,
             fred_api_key=settings.fred_api_key,
-            retrodict_config=retrodict_config,
         )
 
     @property
     def is_retrodict(self) -> bool:
-        """Whether retrodict mode is active."""
-        return self.retrodict_config is not None
+        """Whether retrodict mode is active (reads ContextVar)."""
+        return retrodict_cutoff.get() is not None
 
     def get_mcp_servers(
         self,
@@ -266,13 +242,11 @@ class ToolPolicy:
             Dict mapping server name to server config.
         """
         servers: dict[str, McpServerConfig] = {
-            "forecasting": create_forecasting_server(
-                exclude_wikipedia=self.is_retrodict
-            ),
+            "forecasting": create_forecasting_server(),
             "financial": financial_server,
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
-            "markets": create_markets_server(exclude_live=self.is_retrodict),
+            "markets": create_markets_server(),
             "notes": create_notes_server(session_id),
             "trends": trends_server,
             "arxiv": arxiv_server,
@@ -327,7 +301,7 @@ class ToolPolicy:
         if allow_spawn:
             tools.update(COMPOSITION_TOOLS)
 
-        # Market tools (live excluded in retrodict via _excluded_tools)
+        # Market tools
         tools.update(LIVE_MARKET_TOOLS)
         tools.update(HISTORICAL_MARKET_TOOLS)
 
@@ -340,7 +314,7 @@ class ToolPolicy:
         # arXiv tools (supports date filtering)
         tools.update(ARXIV_TOOLS)
 
-        # Playwright tools (excluded in retrodict via _excluded_tools)
+        # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
         # Retrodict validated search tools (only in retrodict mode)

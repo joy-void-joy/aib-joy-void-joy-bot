@@ -32,7 +32,8 @@ from aib.agent.history import (
     save_retrodict,
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
-from aib.agent.retrodict import RetrodictConfig, create_retrodict_hooks, get_modified_input
+from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
+from aib.retrodict_context import retrodict_cutoff
 from aib.agent.tool_policy import ToolPolicy
 from aib.tools.classifiers import (
     classify_webfetch_content,
@@ -660,7 +661,6 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
-    retrodict_config: RetrodictConfig | None = None,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -668,12 +668,13 @@ async def run_forecast(
         question_id: Metaculus post ID (for top-level forecasts)
         question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
-        retrodict_config: If provided, enables blind retrodict mode with time-restricted
-            data access. All tools will be filtered to only return data available
-            before the forecast_date.
 
     Returns:
         ForecastOutput with the forecast results.
+
+    Note:
+        Retrodict mode is controlled via the retrodict_cutoff ContextVar.
+        When set, all tools restrict data to before the cutoff date.
     """
     # Generate session ID for notes and logging
     # Format: <post_id>_<timestamp> for traceability
@@ -721,7 +722,8 @@ async def run_forecast(
 
     # Setup notes folder (using post_id for directory structure)
     # In retrodict mode, block read access to historical data
-    notes = setup_notes_folder(session_id, post_id, retrodict=bool(retrodict_config))
+    cutoff = retrodict_cutoff.get()
+    notes = setup_notes_folder(session_id, post_id, retrodict=cutoff is not None)
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
@@ -731,7 +733,7 @@ async def run_forecast(
     # Load past forecasts for this question (if any)
     # Skip in retrodict mode to prevent future leak from resolution data
     history_context = ""
-    if post_id > 0 and not retrodict_config:
+    if post_id > 0 and cutoff is None:
         past_forecasts = load_past_forecasts(post_id)
         if past_forecasts:
             history_context = format_history_for_context(past_forecasts)
@@ -760,11 +762,11 @@ async def run_forecast(
     reasoning_logger = ReasoningLogger(notes.reasoning_log, question_title)
 
     # Determine sandbox network mode for retrodict
-    sandbox_network_mode = "pypi_only" if retrodict_config else "bridge"
-    if retrodict_config:
+    sandbox_network_mode = "pypi_only" if cutoff else "bridge"
+    if cutoff:
         logger.info(
             "Retrodict mode: restricting data to before %s",
-            retrodict_config.date_str,
+            cutoff.isoformat(),
         )
 
     with Sandbox(network_mode=sandbox_network_mode) as sandbox:
@@ -777,32 +779,17 @@ async def run_forecast(
 
         # Always add WebFetch quality detection
         webfetch_hooks = create_webfetch_quality_hooks(
-            retrodict_mode=bool(retrodict_config)
+            retrodict_mode=cutoff is not None
         )
         hooks = merge_hooks(permission_hooks, webfetch_hooks)
 
         # Compose with retrodict hooks if in retrodict mode
-        if retrodict_config:
-            retrodict_hooks = create_retrodict_hooks(retrodict_config)
+        if cutoff:
+            retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
         # Centralized tool policy determines MCP servers and allowed tools
-        policy = ToolPolicy.from_settings(settings, retrodict_config)
-
-        # Debug: verify tool exclusions in retrodict mode
-        if retrodict_config:
-            allowed = policy.get_allowed_tools(allow_spawn=allow_spawn)
-            logger.info(
-                "[Retrodict] is_retrodict=%s, excluded_tools contains wikipedia=%s, manifold=%s",
-                policy.is_retrodict,
-                "mcp__forecasting__wikipedia" in policy._excluded_tools,
-                "mcp__markets__manifold_price" in policy._excluded_tools,
-            )
-            logger.info(
-                "[Retrodict] allowed_tools contains wikipedia=%s, manifold=%s",
-                "mcp__forecasting__wikipedia" in allowed,
-                "mcp__markets__manifold_price" in allowed,
-            )
+        policy = ToolPolicy.from_settings(settings)
 
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
@@ -915,7 +902,7 @@ async def run_forecast(
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,
-        retrodict_date=retrodict_config.forecast_date if retrodict_config else None,
+        retrodict_date=cutoff,
     )
 
     if result.structured_output:
@@ -1087,10 +1074,10 @@ async def run_forecast(
                 "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
             }
 
-            if retrodict_config:
+            if cutoff:
                 save_retrodict(
                     **save_kwargs,
-                    retrodict_date=retrodict_config.date_str,
+                    retrodict_date=cutoff.isoformat(),
                 )
             else:
                 save_forecast(**save_kwargs)

@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 import httpx
 import typer
@@ -19,7 +19,7 @@ from aib.agent.history import (
     mark_submitted,
     update_retrodict_comparison,
 )
-from aib.agent.retrodict import RetrodictConfig
+from aib.retrodict_context import retrodict_cutoff
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
@@ -212,7 +212,7 @@ def retrodict(
     import sys
 
     sys.path.insert(0, "src")
-    from metaculus import AsyncMetaculusClient, BinaryQuestion
+    from metaculus import AsyncMetaculusClient, BinaryQuestion, NumericQuestion
 
     # Parse forecast_date if provided
     parsed_forecast_date: datetime | None = None
@@ -223,16 +223,42 @@ def retrodict(
             print(f"❌ Invalid date format: {forecast_date}. Use YYYY-MM-DD.")
             raise typer.Exit(1)
 
+    class NumericCP(TypedDict):
+        median: float
+        ci_lower: float
+        ci_upper: float
+        range_span: float
+
+    def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
+        """Extract community prediction median, CI, and range from api_json."""
+        try:
+            qdict = q.api_json.get("question", {})
+            scaling = qdict.get("scaling", {})
+            agg = qdict.get("aggregations", {})
+            method = qdict.get("default_aggregation_method", "unweighted")
+            history = agg.get(method, {}).get("history", [])
+            if not history:
+                return None
+            latest = history[-1]
+            range_min = scaling["range_min"]
+            range_max = scaling["range_max"]
+            span = range_max - range_min
+            return NumericCP(
+                median=range_min + latest["centers"][0] * span,
+                ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
+                ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
+                range_span=span,
+            )
+        except (KeyError, IndexError, TypeError):
+            return None
+
     async def get_resolution_and_published(
         post_id: int,
-    ) -> tuple[str | None, float | None, datetime | None]:
-        """Fetch resolution, final CP, and published_at for a question."""
+    ) -> tuple[str | None, float | None, NumericCP | None, datetime | None]:
+        """Fetch resolution, final CP, numeric CP, and published_at."""
         client = AsyncMetaculusClient()
         try:
             result = await client.get_question_by_post_id(post_id)
-            # Handle single question or group (list). For groups, we use the
-            # first question - if the user wants a specific sub-question, they
-            # should provide that sub-question's post_id directly.
             if isinstance(result, list):
                 if len(result) > 1:
                     logger.warning(
@@ -245,13 +271,16 @@ def retrodict(
             else:
                 q = result
             resolution = q.resolution_string
-            cp = None
+            binary_cp = None
+            numeric_cp: NumericCP | None = None
             if isinstance(q, BinaryQuestion):
-                cp = q.community_prediction_at_access_time
-            return resolution, cp, q.published_time
+                binary_cp = q.community_prediction_at_access_time
+            elif isinstance(q, NumericQuestion):
+                numeric_cp = _extract_numeric_cp(q)
+            return resolution, binary_cp, numeric_cp, q.published_time
         except Exception as e:
             logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
-            return None, None, None
+            return None, None, None, None
 
     results: list[dict] = []
 
@@ -261,7 +290,7 @@ def retrodict(
         print("=" * 60)
 
         # Fetch resolution and published_at
-        resolution, final_cp, published_at = asyncio.run(
+        resolution, final_cp, numeric_cp, published_at = asyncio.run(
             get_resolution_and_published(qid)
         )
         if resolution:
@@ -271,17 +300,17 @@ def retrodict(
         else:
             print("⚠️  Could not fetch resolution (question may not be resolved)")
 
-        # Determine the retrodict config
-        retrodict_config: RetrodictConfig | None = None
+        # Determine the retrodict cutoff date
+        cutoff_date = None
         if blind:
             if parsed_forecast_date:
-                retrodict_config = RetrodictConfig(forecast_date=parsed_forecast_date)
+                cutoff_date = parsed_forecast_date.date()
                 print(
-                    f"🔒 Blind mode: data restricted to before {parsed_forecast_date.date()}"
+                    f"🔒 Blind mode: data restricted to before {cutoff_date}"
                 )
             elif published_at:
-                retrodict_config = RetrodictConfig(forecast_date=published_at)
-                print(f"🔒 Blind mode: data restricted to before {published_at.date()}")
+                cutoff_date = published_at.date()
+                print(f"🔒 Blind mode: data restricted to before {cutoff_date}")
             else:
                 print("⚠️  No published_at found, running without blind mode")
 
@@ -289,9 +318,13 @@ def retrodict(
         log_file = setup_logging(qid)
         print(f"Logging to {log_file}")
 
-        # Run forecast
+        # Run forecast (set ContextVar for retrodict mode)
         try:
-            output = asyncio.run(run_forecast(qid, retrodict_config=retrodict_config))
+            token = retrodict_cutoff.set(cutoff_date)
+            try:
+                output = asyncio.run(run_forecast(qid))
+            finally:
+                retrodict_cutoff.reset(token)
             display_forecast(output)
 
             # Compute and display comparison between prediction and actual

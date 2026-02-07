@@ -11,6 +11,7 @@ from typing import Any, TypedDict
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
@@ -91,8 +92,10 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
 
     series_id = validated.series_id.upper()
 
-    # Default to last 30 days
-    end_date = validated.observation_end or datetime.now().strftime("%Y-%m-%d")
+    # Default to last 30 days; cap at retrodict cutoff
+    cutoff = retrodict_cutoff.get()
+    cutoff_str = cutoff.isoformat() if cutoff is not None else None
+    end_date = cutoff_str or validated.observation_end or datetime.now().strftime("%Y-%m-%d")
     start_date = validated.observation_start or (
         datetime.now() - timedelta(days=30)
     ).strftime("%Y-%m-%d")

@@ -749,7 +749,7 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Process reflection metadata.",
     )
-    retrodict_date: datetime | None = Field(
+    retrodict_date: date | None = Field(
         default=None,
         description="If set, forecast was made in retrodict mode with data restricted to before this date.",
     )

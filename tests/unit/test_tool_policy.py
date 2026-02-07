@@ -1,9 +1,9 @@
 """Tests for ToolPolicy class."""
 
-from datetime import datetime
+from datetime import date
 from unittest.mock import MagicMock
 
-from aib.agent.retrodict import RetrodictConfig
+from aib.retrodict_context import retrodict_cutoff
 from aib.agent.tool_policy import (
     BUILTIN_TOOLS,
     EXA_TOOLS,
@@ -58,20 +58,16 @@ class TestToolPolicyConstruction:
         assert policy.fred_api_key == "fred"
         assert not policy.is_retrodict
 
-    def test_from_settings_with_retrodict(self) -> None:
-        """Should accept retrodict config."""
-        settings = MagicMock()
-        settings.metaculus_token = None
-        settings.exa_api_key = None
-        settings.asknews_client_id = None
-        settings.asknews_client_secret = None
-        settings.fred_api_key = None
+    def test_is_retrodict_reads_contextvar(self) -> None:
+        """is_retrodict should read from retrodict_cutoff ContextVar."""
+        policy = ToolPolicy()
+        assert not policy.is_retrodict
 
-        retrodict = RetrodictConfig(forecast_date=datetime(2026, 1, 15))
-        policy = ToolPolicy.from_settings(settings, retrodict)
-
-        assert policy.is_retrodict
-        assert policy.retrodict_config == retrodict
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            assert policy.is_retrodict
+        finally:
+            retrodict_cutoff.reset(token)
 
 
 class TestToolPolicyExclusions:
@@ -109,32 +105,30 @@ class TestToolPolicyExclusions:
         for tool in FRED_TOOLS:
             assert tool not in allowed
 
-    def test_excludes_live_markets_in_retrodict(self) -> None:
-        """Should exclude live market tools in retrodict mode."""
-        retrodict = RetrodictConfig(forecast_date=datetime(2026, 1, 15))
-        policy = ToolPolicy(retrodict_config=retrodict)
+    def test_includes_live_markets_in_retrodict(self) -> None:
+        """Live market tools should be in allowed_tools in retrodict mode.
 
-        allowed = policy.get_allowed_tools()
-        for tool in LIVE_MARKET_TOOLS:
-            assert tool not in allowed
+        They handle retrodict internally by returning historical prices.
+        """
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            policy = ToolPolicy()
+            allowed = policy.get_allowed_tools()
+            for tool in LIVE_MARKET_TOOLS:
+                assert tool in allowed
+        finally:
+            retrodict_cutoff.reset(token)
 
     def test_includes_historical_markets_in_retrodict(self) -> None:
         """Should include historical market tools in retrodict mode."""
-        retrodict = RetrodictConfig(forecast_date=datetime(2026, 1, 15))
-        policy = ToolPolicy(retrodict_config=retrodict)
-
-        allowed = policy.get_allowed_tools()
-        for tool in HISTORICAL_MARKET_TOOLS:
-            assert tool in allowed
-
-    def test_excludes_playwright_in_retrodict(self) -> None:
-        """Should exclude Playwright tools in retrodict mode."""
-        retrodict = RetrodictConfig(forecast_date=datetime(2026, 1, 15))
-        policy = ToolPolicy(retrodict_config=retrodict)
-
-        allowed = policy.get_allowed_tools()
-        for tool in PLAYWRIGHT_TOOLS:
-            assert tool not in allowed
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            policy = ToolPolicy()
+            allowed = policy.get_allowed_tools()
+            for tool in HISTORICAL_MARKET_TOOLS:
+                assert tool in allowed
+        finally:
+            retrodict_cutoff.reset(token)
 
     def test_includes_playwright_normally(self) -> None:
         """Should include Playwright tools in normal mode."""
@@ -217,13 +211,40 @@ class TestToolPolicyMcpServers:
         assert "playwright" in servers
 
     def test_excludes_playwright_in_retrodict(self) -> None:
-        """Should exclude Playwright in retrodict mode."""
+        """Should exclude Playwright server in retrodict mode."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
         composition_server = MagicMock()
 
-        retrodict = RetrodictConfig(forecast_date=datetime(2026, 1, 15))
-        policy = ToolPolicy(retrodict_config=retrodict)
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            policy = ToolPolicy()
+            servers = policy.get_mcp_servers(sandbox, composition_server)
+            assert "playwright" not in servers
+        finally:
+            retrodict_cutoff.reset(token)
+
+    def test_adds_search_server_in_retrodict(self) -> None:
+        """Should add retrodict search server in retrodict mode."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        composition_server = MagicMock()
+
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            policy = ToolPolicy()
+            servers = policy.get_mcp_servers(sandbox, composition_server)
+            assert "search" in servers
+        finally:
+            retrodict_cutoff.reset(token)
+
+    def test_no_search_server_normally(self) -> None:
+        """Should not add retrodict search server in normal mode."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        composition_server = MagicMock()
+
+        policy = ToolPolicy()
         servers = policy.get_mcp_servers(sandbox, composition_server)
 
-        assert "playwright" not in servers
+        assert "search" not in servers

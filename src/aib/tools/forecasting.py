@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from metaculus import ApiFilter, BinaryQuestion
 
+from aib.retrodict_context import retrodict_cutoff
 from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
@@ -75,8 +76,6 @@ class GetMetaculusQuestionsInput(BaseModel):
     """Input for fetching one or more Metaculus questions."""
 
     post_id_list: Annotated[list[int], Field(min_length=1, max_length=20)]
-    # Hidden from agent - injected by retrodict hook to hide current CP
-    cutoff_date: str | None = None
 
     @field_validator("post_id_list", mode="before")
     @classmethod
@@ -130,10 +129,6 @@ class CPHistoryInput(BaseModel):
 
     question_id: int = Field(description="Metaculus question ID (not post ID)")
     days: int = Field(default=30, description="Number of days of history to fetch")
-    before: str | None = Field(
-        default=None,
-        description="Optional cutoff date (YYYY-MM-DD). Data after this date is excluded.",
-    )
 
 
 class WikipediaInput(BaseModel):
@@ -142,8 +137,6 @@ class WikipediaInput(BaseModel):
     query: str
     mode: Literal["search", "summary", "full"] = "search"
     num_results: int = settings.search_default_limit
-    # Hidden from agent - injected by retrodict hook for historical lookups
-    cutoff_date: str | None = None
 
 
 class PredictionHistoryInput(BaseModel):
@@ -253,7 +246,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     post_ids = validated.post_id_list
-    hide_cp = validated.cutoff_date is not None  # Hide CP in retrodict mode
+    hide_cp = retrodict_cutoff.get() is not None
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
         """Fetch a single question with error handling."""
@@ -359,6 +352,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
                 num_questions=num_results,
             )
 
+            is_retrodict = retrodict_cutoff.get() is not None
             results = [
                 {
                     "post_id": q.id_of_post,
@@ -366,10 +360,16 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
-                    "community_prediction": (
-                        q.community_prediction_at_access_time
-                        if isinstance(q, BinaryQuestion)
-                        else None
+                    **(
+                        {}
+                        if is_retrodict
+                        else {
+                            "community_prediction": (
+                                q.community_prediction_at_access_time
+                                if isinstance(q, BinaryQuestion)
+                                else None
+                            ),
+                        }
                     ),
                 }
                 for q in questions
@@ -427,8 +427,7 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
         "Returns timestamped CP values over the requested period. "
         "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
     ),
-    # `before` is injected by retrodict hook but must be in schema to avoid being stripped
-    {"question_id": int, "days": int, "before": str},
+    {"question_id": int, "days": int},
 )
 @tracked("get_cp_history")
 async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -440,21 +439,14 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
     question_id = validated.question_id
     days = min(validated.days, 365)
-    before_cutoff = validated.before
 
-    # Parse cutoff date if provided (for retrodict mode filtering)
     cutoff_dt = None
-    if before_cutoff:
-        try:
-            from datetime import datetime, timezone
-
-            cutoff_dt = datetime.strptime(before_cutoff, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-        except ValueError:
-            return mcp_error(
-                f"Invalid 'before' date format: {before_cutoff}. Use YYYY-MM-DD."
-            )
+    cutoff_date = retrodict_cutoff.get()
+    if cutoff_date is not None:
+        from datetime import datetime, timezone
+        cutoff_dt = datetime.combine(cutoff_date, datetime.min.time()).replace(
+            tzinfo=timezone.utc
+        )
 
     try:
         async with _metaculus_semaphore:
@@ -498,7 +490,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
             logger.info(
                 "[Retrodict] CP history: filtered %d points after %s",
                 filtered_count,
-                before_cutoff,
+                cutoff_date,
             )
 
         return mcp_success(
@@ -531,7 +523,6 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
         "Search the web using Exa AI-powered search. Returns raw results with titles, URLs, and snippets. "
         f"Results are cached for 5 minutes. Optional num_results (default: {settings.search_default_limit})."
     ),
-    # `published_before` and `livecrawl` are injected by retrodict hook but must be in schema
     {"query": str, "num_results": int, "published_before": str, "livecrawl": str},
 )
 @tracked("search_exa")
@@ -544,8 +535,9 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
 
     query = validated.query
     num_results = validated.num_results
-    published_before = validated.published_before
-    livecrawl = validated.livecrawl
+    cutoff = retrodict_cutoff.get()
+    published_before = cutoff.isoformat() if cutoff is not None else validated.published_before
+    livecrawl = "never" if cutoff is not None else validated.livecrawl
 
     logger.info(
         "search_exa actual params: published_before=%s, livecrawl=%s",
@@ -673,8 +665,7 @@ from aib.tools.wikipedia import (
         "'full' fetches entire article by exact title. "
         f"For search mode, optional num_results (default: {settings.search_default_limit})."
     ),
-    # cutoff_date is injected by retrodict hook, must be in schema for validation
-    {"query": str, "mode": str, "num_results": int, "cutoff_date": str},
+    {"query": str, "mode": str, "num_results": int},
 )
 @tracked("wikipedia")
 async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
@@ -687,7 +678,8 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     mode = validated.mode
     num_results = validated.num_results
-    cutoff_date = validated.cutoff_date
+    cutoff = retrodict_cutoff.get()
+    cutoff_date = cutoff.isoformat() if cutoff is not None else None
 
     if mode == "search":
         # Search for articles
@@ -864,9 +856,14 @@ async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     post_id = validated.post_id
+    cutoff = retrodict_cutoff.get()
 
     try:
         forecasts = load_past_forecasts(post_id)
+
+        if cutoff is not None:
+            cutoff_str = cutoff.isoformat()
+            forecasts = [f for f in forecasts if f.timestamp < cutoff_str]
 
         if not forecasts:
             return mcp_success({"post_id": post_id, "forecasts": [], "count": 0})
@@ -878,8 +875,9 @@ async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
                 "timestamp": f.timestamp,
                 "question_type": f.question_type,
                 "summary": f.summary,
-                "resolution": f.resolution,
             }
+            if cutoff is None:
+                result["resolution"] = f.resolution
 
             if f.question_type == "binary":
                 result["probability"] = f.probability
@@ -938,21 +936,9 @@ else:
     logger.info("search_news tool disabled: ASKNEWS credentials not configured")
 
 
-def create_forecasting_server(*, exclude_wikipedia: bool = False) -> McpSdkServerConfig:
-    """Create the forecasting MCP server.
-
-    Args:
-        exclude_wikipedia: If True, exclude wikipedia tool (for retrodict mode).
-            Wikipedia articles contain post-cutoff information.
-
-    Returns:
-        McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
-    """
-    tools = list(_BASE_FORECASTING_TOOLS)
-    for t in _OPTIONAL_FORECASTING_TOOLS:
-        if exclude_wikipedia and t.name == "wikipedia":
-            continue
-        tools.append(t)
+def create_forecasting_server() -> McpSdkServerConfig:
+    """Create the forecasting MCP server."""
+    tools = list(_BASE_FORECASTING_TOOLS) + list(_OPTIONAL_FORECASTING_TOOLS)
 
     return create_mcp_server(
         name="forecasting",

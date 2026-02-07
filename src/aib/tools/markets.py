@@ -7,6 +7,7 @@ wisdom of traders with financial incentives.
 
 import ast
 import logging
+from datetime import date, datetime, time, timedelta
 from typing import Any, TypedDict
 
 import httpx
@@ -17,6 +18,7 @@ from claude_agent_sdk.types import McpSdkServerConfig
 
 from aib.tools.mcp_server import create_mcp_server
 
+from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -166,6 +168,42 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
     }
 
 
+async def _polymarket_event_at_cutoff(
+    event: dict[str, Any], cutoff: date,
+) -> MarketPrice | None:
+    """Get historical price for a Polymarket event at the cutoff date."""
+    markets = event.get("markets", [])
+    if not markets:
+        return None
+    market = markets[0]
+    token_ids = market.get("clobTokenIds", [])
+    if not token_ids:
+        return None
+    token_id = token_ids[0]
+    cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+    start_ts = cutoff_unix - (30 * 24 * 60 * 60)
+    try:
+        history = await _fetch_polymarket_history(token_id, start_ts, cutoff_unix)
+    except Exception:
+        return None
+    if not history:
+        return None
+    closest = max(
+        (p for p in history if p.get("t", 0) <= cutoff_unix),
+        key=lambda p: p.get("t", 0),
+        default=None,
+    )
+    if closest is None:
+        return None
+    return {
+        "market_title": event.get("title", "Unknown"),
+        "probability": closest.get("p", 0.5),
+        "volume": market.get("volume"),
+        "url": f"https://polymarket.com/event/{event.get('slug', '')}",
+        "source": "polymarket",
+    }
+
+
 @tool(
     "polymarket_price",
     (
@@ -186,6 +224,8 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     limit = validated.limit
 
+    cutoff = retrodict_cutoff.get()
+
     try:
         events = await _search_polymarket(query)
 
@@ -194,7 +234,10 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
 
         results: list[MarketPrice] = []
         for event in events[:limit]:
-            parsed = parse_polymarket_event(event)
+            if cutoff is not None:
+                parsed = await _polymarket_event_at_cutoff(event, cutoff)
+            else:
+                parsed = parse_polymarket_event(event)
             if parsed is not None:
                 results.append(parsed)
 
@@ -248,6 +291,38 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
     }
 
 
+async def _manifold_market_at_cutoff(
+    market: dict[str, Any], cutoff: date,
+) -> MarketPrice | None:
+    """Get historical price for a Manifold market at the cutoff date."""
+    contract_id = market.get("id")
+    if not contract_id:
+        return None
+    cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+    cutoff_ms = cutoff_unix * 1000
+    try:
+        bets = await _fetch_manifold_bets(contract_id, cutoff_ms)
+    except Exception:
+        return None
+    if not bets:
+        return None
+    relevant = max(
+        (b for b in bets if b.get("createdTime", 0) <= cutoff_ms),
+        key=lambda b: b.get("createdTime", 0),
+        default=None,
+    )
+    if relevant is None:
+        return None
+    prob = relevant.get("probAfter", relevant.get("probBefore", 0.5))
+    return {
+        "market_title": market.get("question", "Unknown"),
+        "probability": prob,
+        "volume": market.get("volume"),
+        "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
+        "source": "manifold",
+    }
+
+
 @tool(
     "manifold_price",
     (
@@ -267,6 +342,7 @@ async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
 
     query = validated.query
     limit = validated.limit
+    cutoff = retrodict_cutoff.get()
 
     try:
         markets = await _search_manifold(query)
@@ -274,7 +350,14 @@ async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
         if not markets:
             return mcp_success({"markets": [], "query": query})
 
-        results: list[MarketPrice] = [parse_manifold_market(m) for m in markets[:limit]]
+        results: list[MarketPrice] = []
+        for m in markets[:limit]:
+            if cutoff is not None:
+                parsed = await _manifold_market_at_cutoff(m, cutoff)
+            else:
+                parsed = parse_manifold_market(m)
+            if parsed is not None:
+                results.append(parsed)
 
         return mcp_success({"markets": results, "query": query})
 
@@ -346,6 +429,10 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
 
     token_id = validated.market_id
     target_ts = validated.timestamp
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+        target_ts = min(target_ts, cutoff_unix)
 
     try:
         # Fetch history around the target timestamp
@@ -422,8 +509,13 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     contract_id = validated.market_id
+    target_ts = validated.timestamp
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+        target_ts = min(target_ts, cutoff_unix)
     # Manifold uses milliseconds
-    target_ts_ms = validated.timestamp * 1000
+    target_ts_ms = target_ts * 1000
 
     try:
         # Fetch bets before the target time
@@ -525,17 +617,39 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     symbol = validated.symbol.upper()
+    cutoff = retrodict_cutoff.get()
 
     try:
         import yfinance as yf
 
         ticker = yf.Ticker(symbol)
+
+        if cutoff is not None:
+            end_str = cutoff.isoformat()
+            start_str = (cutoff - timedelta(days=5)).isoformat()
+            hist = ticker.history(start=start_str, end=end_str)
+            if hist.empty:
+                return mcp_error(f"No data found for {symbol} before {end_str}")
+            last_row = hist.iloc[-1]
+            result: StockPrice = {
+                "symbol": symbol,
+                "name": ticker.info.get("shortName", symbol),
+                "current_price": float(last_row["Close"]),
+                "previous_close": float(hist.iloc[-2]["Close"]) if len(hist) > 1 else None,
+                "change_percent": None,
+                "currency": ticker.info.get("currency", "USD"),
+                "market_cap": None,
+                "fifty_two_week_high": None,
+                "fifty_two_week_low": None,
+            }
+            return mcp_success(result)
+
         info = ticker.info
 
         if not info or info.get("regularMarketPrice") is None:
             return mcp_error(f"No data found for symbol: {symbol}")
 
-        result: StockPrice = {
+        result = {
             "symbol": symbol,
             "name": info.get("shortName", info.get("longName", symbol)),
             "current_price": info.get("regularMarketPrice"),
@@ -575,7 +689,8 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
 
     symbol = validated.symbol.upper()
     period = validated.period
-    end_date = validated.end_date
+    cutoff = retrodict_cutoff.get()
+    end_date = cutoff.isoformat() if cutoff is not None else validated.end_date
 
     try:
         import yfinance as yf
@@ -584,8 +699,6 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
 
         # If end_date is provided, use start/end instead of period
         if end_date:
-            from datetime import datetime, timedelta
-
             end_dt = datetime.strptime(end_date, "%Y-%m-%d")
             # Calculate start date based on period
             period_days = {
@@ -647,12 +760,6 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-# Live-only tools that return current prices (excluded in retrodict mode)
-LIVE_ONLY_MARKET_TOOLS = frozenset(
-    {"polymarket_price", "manifold_price", "stock_price"}
-)
-
-# All available market tools
 _ALL_MARKET_TOOLS = [
     polymarket_price,
     manifold_price,
@@ -663,27 +770,13 @@ _ALL_MARKET_TOOLS = [
 ]
 
 
-def create_markets_server(*, exclude_live: bool = False) -> McpSdkServerConfig:
-    """Create the markets MCP server.
-
-    Args:
-        exclude_live: If True, exclude live-only tools (for retrodict mode).
-            This prevents the agent from even seeing these tools.
-
-    Returns:
-        McpSdkServerConfig for use with ClaudeAgentOptions.mcp_servers.
-    """
-    if exclude_live:
-        tools = [t for t in _ALL_MARKET_TOOLS if t.name not in LIVE_ONLY_MARKET_TOOLS]
-    else:
-        tools = _ALL_MARKET_TOOLS
-
+def create_markets_server() -> McpSdkServerConfig:
+    """Create the markets MCP server."""
     return create_mcp_server(
         name="markets",
         version="1.0.0",
-        tools=tools,
+        tools=_ALL_MARKET_TOOLS,
     )
 
 
-# Default server for backwards compatibility (includes all tools)
-markets_server = create_markets_server(exclude_live=False)
+markets_server = create_markets_server()

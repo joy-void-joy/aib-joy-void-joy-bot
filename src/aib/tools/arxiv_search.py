@@ -14,6 +14,8 @@ import arxiv
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+from aib.retrodict_context import retrodict_cutoff
+
 from claude_agent_sdk.types import McpSdkServerConfig
 
 from aib.tools.mcp_server import create_mcp_server
@@ -88,9 +90,10 @@ async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
+    retrodict_date = retrodict_cutoff.get()
     cutoff: datetime | None = None
-    if validated.cutoff_date:
-        cutoff = datetime.strptime(validated.cutoff_date, "%Y-%m-%d")
+    if retrodict_date is not None:
+        cutoff = datetime.combine(retrodict_date, datetime.min.time())
 
     try:
         # Use arxiv library - fetch more results if filtering by date
