@@ -484,9 +484,7 @@ def match_forecasts_to_resolutions(
                 result.brier_score = compute_brier_score(
                     forecast.probability, resolution
                 )
-                result.log_score = compute_log_score(
-                    forecast.probability, resolution
-                )
+                result.log_score = compute_log_score(forecast.probability, resolution)
 
         results.append(result)
 
@@ -641,9 +639,7 @@ def main(
     ] = True,
 ) -> None:
     """Collect feedback metrics from resolved forecasts."""
-    asyncio.run(
-        _main_async(tournament, since, all_time, include_retrodict, new_only)
-    )
+    asyncio.run(_main_async(tournament, since, all_time, include_retrodict, new_only))
 
 
 async def _main_async(
@@ -715,8 +711,7 @@ async def _main_async(
 
     # Filter to only new items if --new-only is set
     already_analyzed = {
-        (item.post_id, item.timestamp, item.item_type)
-        for item in state.analyzed_items
+        (item.post_id, item.timestamp, item.item_type) for item in state.analyzed_items
     }
 
     if new_only and state.last_analysis:
@@ -724,8 +719,7 @@ async def _main_async(
         results = [
             r
             for r in results
-            if (r.question_id, r.forecast_timestamp, "forecast")
-            not in already_analyzed
+            if (r.question_id, r.forecast_timestamp, "forecast") not in already_analyzed
         ]
         if prev_count != len(results):
             logger.info(
@@ -738,8 +732,7 @@ async def _main_async(
         retrodict_results = [
             r
             for r in retrodict_results
-            if (r.post_id, r.forecast_timestamp, "retrodict")
-            not in already_analyzed
+            if (r.post_id, r.forecast_timestamp, "retrodict") not in already_analyzed
         ]
         if prev_retro != len(retrodict_results):
             logger.info(
