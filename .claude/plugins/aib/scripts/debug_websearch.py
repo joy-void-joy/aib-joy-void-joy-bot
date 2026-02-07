@@ -30,7 +30,7 @@ def search(
 async def _test_search(query: str, cutoff: str, num_results: int):
     from aib.tools.retrodict_search import web_search
 
-    rprint(f"\n[bold]Testing retrodict web search (Exa-based)[/bold]")
+    rprint("\n[bold]Testing retrodict web search (Exa-based)[/bold]")
     rprint(f"Query: {query}")
     rprint(f"Cutoff: {cutoff}")
     rprint(f"Requested results: {num_results}")
@@ -38,11 +38,13 @@ async def _test_search(query: str, cutoff: str, num_results: int):
 
     # Call the underlying handler (web_search is an SdkMcpTool, not a function)
     rprint("[bold blue]Searching via Exa with publishedBefore filter...[/bold blue]")
-    result = await web_search.handler({
-        "query": query,
-        "num_results": num_results,
-        "cutoff_date": cutoff,
-    })
+    result = await web_search.handler(
+        {
+            "query": query,
+            "num_results": num_results,
+            "cutoff_date": cutoff,
+        }
+    )
 
     # Parse the MCP response
     is_error = result.get("isError", False)
@@ -96,7 +98,7 @@ async def _test_wayback(url: str, cutoff: str):
 
     result = await check_wayback_availability(url, cutoff_ts)
     if result:
-        rprint(f"[green]Found snapshot:[/green]")
+        rprint("[green]Found snapshot:[/green]")
         for k, v in result.items():
             rprint(f"  {k}: {v}")
     else:
