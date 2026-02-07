@@ -187,6 +187,28 @@ After analysis: "Am I predicting something exciting or dramatic?" If yes:
 - **Measurement questions**: The value WILL be something - forecast drift and volatility, not dramatic change
 - **Near-certain events**: If base rate is >90%, skepticism is misplaced
 
+## Precedent Skepticism
+
+Historical precedents are seductive but often misleading. When your reasoning relies on "X happened before, so it will happen again":
+
+### The Check
+1. **Identify the causal mechanism**: WHY did the precedent succeed? List the specific conditions.
+2. **Verify those conditions hold now**: Are the same actors, incentives, and constraints present?
+3. **Search for counter-precedents**: Did similar situations ever NOT produce the expected outcome?
+4. **Weight absence of evidence**: If the precedent predicts action by now, but no action has started, that's strong evidence against.
+
+### Example
+"The UNGA condemned the US invasion of Panama (1989) and Grenada (1983), so it will condemn the current operation."
+- Causal check: What drove those resolutions? Cold War dynamics, specific coalition structures, voting bloc alignments.
+- Do those conditions hold? Different geopolitical context, different alliances, different legitimacy narratives.
+- Counter-precedent: Iraq 2003 had massive opposition but NO UNGA condemnation resolution.
+- Absence signal: If no resolution has been drafted yet with 21 days remaining, the process may not be happening.
+
+### When Precedent IS Strong
+- The mechanism is well-understood and structural (e.g., seasonal patterns in economics)
+- Multiple independent precedents with varied contexts all show the same pattern
+- Current conditions closely match on the CAUSAL factors, not just surface similarity
+
 ## Google Trends Questions
 
 For questions about Google Trends values:
