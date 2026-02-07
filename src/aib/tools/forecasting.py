@@ -28,6 +28,12 @@ from aib.tools.exa import exa_search
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
+from aib.tools.wikipedia import (
+    WIKIPEDIA_API_URL,
+    WIKIPEDIA_HEADERS,
+    extract_intro as _extract_intro,
+    fetch_wikipedia_historical as _fetch_wikipedia_historical_content,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +139,9 @@ class CoherenceLinksInput(BaseModel):
 class CPHistoryInput(BaseModel):
     """Input for fetching community prediction history."""
 
-    question_id: int = Field(description="Metaculus question ID or post ID (auto-detected)")
+    question_id: int = Field(
+        description="Metaculus question ID or post ID (auto-detected)"
+    )
     days: int = Field(default=30, description="Number of days of history to fetch")
 
 
@@ -273,8 +281,14 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
                                 result["community_prediction"] = None
                             return result
                     except Exception as retry_err:
-                        return {"post_id": post_id, "error": f"Resolved question {post_id} → post {resolved}, but fetch failed: {retry_err}"}
-                return {"post_id": post_id, "error": f"ID {post_id} not found. You may have passed a question_id instead of a post_id. Use list_tournament_questions to find correct post IDs."}
+                        return {
+                            "post_id": post_id,
+                            "error": f"Resolved question {post_id} → post {resolved}, but fetch failed: {retry_err}",
+                        }
+                return {
+                    "post_id": post_id,
+                    "error": f"ID {post_id} not found. You may have passed a question_id instead of a post_id. Use list_tournament_questions to find correct post IDs.",
+                }
             return {"post_id": post_id, "error": f"HTTP {e.response.status_code}: {e}"}
         except Exception as e:
             return {"post_id": post_id, "error": str(e)}
@@ -507,7 +521,9 @@ async def _resolve_question_to_post_id(question_id: int) -> int | None:
                     f"https://www.metaculus.com/api/questions/{question_id}/",
                 )
                 resp.raise_for_status()
-                post_id = resp.json().get("post_id") or resp.json().get("post", {}).get("id")
+                post_id = resp.json().get("post_id") or resp.json().get("post", {}).get(
+                    "id"
+                )
                 if post_id:
                     logger.info("Resolved question %d → post %d", question_id, post_id)
                 return post_id
@@ -562,6 +578,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
     cutoff_date = retrodict_cutoff.get()
     if cutoff_date is not None:
         from datetime import datetime, timezone
+
         cutoff_dt = datetime.combine(cutoff_date, datetime.min.time()).replace(
             tzinfo=timezone.utc
         )
@@ -590,7 +607,9 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
                     async with _metaculus_semaphore():
                         async with httpx.AsyncClient(
                             timeout=settings.http_timeout_seconds,
-                            headers={"Authorization": f"Token {settings.metaculus_token}"},
+                            headers={
+                                "Authorization": f"Token {settings.metaculus_token}"
+                            },
                         ) as client:
                             response = await client.get(
                                 f"https://www.metaculus.com/api/questions/{resolved_id}/aggregate-history/",
@@ -598,12 +617,14 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
                             )
                             response.raise_for_status()
                             # Re-enter the processing path with resolved data
-                            return await _process_cp_history(response.json(), resolved_id, days, cutoff_dt)
+                            return await _process_cp_history(
+                                response.json(), resolved_id, days, cutoff_dt
+                            )
                 except Exception as retry_err:
-                    return mcp_error(f"Failed after resolving post {question_id} → question {resolved_id}: {retry_err}")
-            return mcp_error(
-                f"ID {question_id} not found as question_id or post_id."
-            )
+                    return mcp_error(
+                        f"Failed after resolving post {question_id} → question {resolved_id}: {retry_err}"
+                    )
+            return mcp_error(f"ID {question_id} not found as question_id or post_id.")
         logger.exception("Failed to fetch CP history")
         return mcp_error(f"Failed to fetch CP history: {e}")
     except Exception as e:
@@ -633,7 +654,9 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     num_results = validated.num_results
     cutoff = retrodict_cutoff.get()
-    published_before = cutoff.isoformat() if cutoff is not None else validated.published_before
+    published_before = (
+        cutoff.isoformat() if cutoff is not None else validated.published_before
+    )
     livecrawl = "never" if cutoff is not None else validated.livecrawl
 
     logger.info(
@@ -742,15 +765,6 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         logger.exception("News search failed")
         return mcp_error(f"News search failed: {e}")
-
-
-# Wikipedia API (historical support via aib.tools.wikipedia)
-from aib.tools.wikipedia import (
-    WIKIPEDIA_API_URL,
-    WIKIPEDIA_HEADERS,
-    extract_intro as _extract_intro,
-    fetch_wikipedia_historical as _fetch_wikipedia_historical_content,
-)
 
 
 @tool(

@@ -224,9 +224,7 @@ class TestRetrodictHooks:
         token = retrodict_cutoff.set(None)
         try:
             hooks = create_retrodict_hooks()
-            result = await self._invoke_hook(
-                hooks, "WebSearch", {"query": "test"}
-            )
+            result = await self._invoke_hook(hooks, "WebSearch", {"query": "test"})
             assert result == {}
         finally:
             retrodict_cutoff.reset(token)
@@ -464,10 +462,7 @@ class TestWaybackValidateResults:
     @pytest.mark.asyncio
     async def test_concurrent_fetching(self) -> None:
         """All URLs should be fetched concurrently via asyncio.gather."""
-        results = [
-            _make_exa_result(f"https://example.com/{i}")
-            for i in range(5)
-        ]
+        results = [_make_exa_result(f"https://example.com/{i}") for i in range(5)]
         call_order: list[str] = []
 
         async def mock_fetch(url: str, _ts: str) -> str:

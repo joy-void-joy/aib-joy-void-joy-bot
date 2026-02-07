@@ -391,7 +391,9 @@ def match_forecasts_to_resolutions(
                     if forecast_dt > resolution_dt:
                         logger.info(
                             "Skipping post-resolution forecast for %d (forecast: %s, resolved: %s)",
-                            question_id, forecast.timestamp, question.actual_resolution_time,
+                            question_id,
+                            forecast.timestamp,
+                            question.actual_resolution_time,
                         )
                         continue
                 except ValueError:
@@ -469,7 +471,12 @@ def collect_retrodict_results() -> list[RetrodictResult]:
             and f.comparison
             and f.comparison.actual_value is not None
         ):
-            resolved_true = str(f.comparison.actual_value).lower() in ("true", "yes", "1", "1.0")
+            resolved_true = str(f.comparison.actual_value).lower() in (
+                "true",
+                "yes",
+                "1",
+                "1.0",
+            )
             result.brier_score = compute_brier_score(f.probability, resolved_true)
 
         results.append(result)
@@ -614,7 +621,9 @@ async def _main_async(
 
     # Compute retrodict Brier average
     retrodict_avg_brier = None
-    retrodict_brier_scores = [r.brier_score for r in retrodict_results if r.brier_score is not None]
+    retrodict_brier_scores = [
+        r.brier_score for r in retrodict_results if r.brier_score is not None
+    ]
     if retrodict_brier_scores:
         retrodict_avg_brier = sum(retrodict_brier_scores) / len(retrodict_brier_scores)
 
@@ -641,7 +650,9 @@ async def _main_async(
         cp_comparison_count=len(cp_comparisons),
         retrodict_results=retrodict_results,
         retrodict_count=len(retrodict_results),
-        retrodict_avg_brier=round(retrodict_avg_brier, 4) if retrodict_avg_brier else None,
+        retrodict_avg_brier=round(retrodict_avg_brier, 4)
+        if retrodict_avg_brier
+        else None,
     )
 
     # Save metrics
@@ -749,7 +760,11 @@ async def _main_async(
             print(f"Average Brier (binary retrodictions): {retrodict_avg_brier:.4f}")
 
         for r in retrodict_results:
-            title = r.question_title[:50] + "..." if len(r.question_title) > 50 else r.question_title
+            title = (
+                r.question_title[:50] + "..."
+                if len(r.question_title) > 50
+                else r.question_title
+            )
             print(f"\n  [{r.post_id}] {title}")
             print(f"    Type: {r.question_type}, Retrodict date: {r.retrodict_date}")
             if r.forecasted_probability is not None:
