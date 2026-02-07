@@ -68,6 +68,23 @@ What to AVOID:
 
 Keep the system prompt fresh - periodically review and remove guidance that no longer applies. Old prompt rules can sediment into an outdated system.
 
+## Phase 0: Read Previous Analysis
+
+**Before collecting any data, read what was already done.** This prevents double-fixing.
+
+```bash
+# Check what the last session found and changed
+ls notes/feedback_loop/$(git branch --show-current)/
+cat notes/feedback_loop/$(git branch --show-current)/*_analysis.md | tail -50
+```
+
+Read the most recent `*_analysis.md` file. Understand:
+- What problems were already identified and fixed
+- What retrodictions were already analyzed
+- What changes were already made
+
+The `feedback_state.json` tracks which items have been analyzed. The `--new-only` flag (default) automatically filters these out.
+
 ## Phase 1: Ground Truth - What Actually Matters
 
 The ONLY true ground truth is **resolution outcomes**. Everything else is proxy signal.
@@ -75,7 +92,11 @@ The ONLY true ground truth is **resolution outcomes**. Everything else is proxy 
 ### 1a. Collect Resolution Data
 
 ```bash
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
+# Default: only new data since last feedback session
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
+
+# Full view when needed (e.g., first run, or to recompute everything)
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-new-only
 ```
 
 **If we have resolved forecasts**: Focus on Brier scores. This is the REAL signal.
@@ -309,6 +330,8 @@ If you find gaps, add tracking in Phase 4.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
+**Log every change** in the analysis document (see Documentation Template). The next feedback session reads this to avoid re-deriving the same improvements. Be specific: "Added X to Y because Z" — not just "improved prompts."
+
 ### Priority 1: Fix Failing Tools
 
 If a tool fails repeatedly, fix it or add an alternative.
@@ -483,11 +506,11 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 ## Scripts Available
 
 ```bash
-# Collect feedback data (live forecasts only)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
+# Incremental collection (default: only new since last session)
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
 
-# Collect feedback data including retrodictions
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --include-retrodict
+# Full collection (all-time, no filtering)
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-new-only --include-retrodict
 
 # Collect from specific tournament
 uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
