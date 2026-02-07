@@ -348,10 +348,20 @@ def retrodict(
                 brier = (output.probability - outcome) ** 2
                 diff_pct = (output.probability - outcome) * 100
 
-                print(f"\n   Actual Result:    {resolution.upper()}")
-                print(f"   Our Prediction:   {output.probability:.1%}")
-                print(f"   Difference:       {diff_pct:+.1f} percentage points")
-                print(f"   Brier Score:      {brier:.4f}")
+                def _brier_emoji(score: float) -> str:
+                    if score < 0.05:
+                        return "🎯"
+                    if score < 0.15:
+                        return "👌"
+                    if score < 0.35:
+                        return "😬"
+                    return "🫠"
+
+                res_emoji = "✅" if resolution == "yes" else "❌"
+                print(f"\n   🎯 Actual:        {res_emoji} {resolution.upper()}")
+                print(f"   🤖 Us:            {output.probability:.1%}")
+                print(f"      diff:          {abs(diff_pct):.1f}pp {'too high' if diff_pct > 0 else 'too low'}")
+                print(f"      Brier:         {_brier_emoji(brier)} {brier:.4f}")
 
                 comparison = RetrodictComparison(
                     actual_value=resolution,
@@ -363,11 +373,16 @@ def retrodict(
 
                 if final_cp is not None:
                     cp_brier = (final_cp - outcome) ** 2
-                    score_diff = brier - cp_brier
-                    better_worse = "better" if score_diff < 0 else "worse"
-                    print(f"\n   Final CP:         {final_cp:.1%}")
-                    print(f"   CP Brier:         {cp_brier:.4f}")
-                    print(f"   vs CP:            {abs(score_diff):.4f} {better_worse}")
+                    print(f"   👥 Community:     {final_cp:.1%}")
+                    print(f"      Brier:         {_brier_emoji(cp_brier)} {cp_brier:.4f}")
+                    if brier < cp_brier:
+                        ratio = cp_brier / brier if brier > 0 else float("inf")
+                        print(f"   ⚔️  vs CP:        🏆 {ratio:.1f}x better Brier")
+                    elif brier > cp_brier:
+                        ratio = brier / cp_brier if cp_brier > 0 else float("inf")
+                        print(f"   ⚔️  vs CP:        🫠 {ratio:.1f}x worse Brier")
+                    else:
+                        print("   ⚔️  vs CP:        🤝 Same")
 
             elif output.median is not None and resolution:
                 # Numeric question comparison
@@ -442,21 +457,30 @@ def retrodict(
                 # Multiple choice comparison
                 import math
 
-                print(f"\n   Actual Result:    {resolution}")
-                print("   Our Predictions:")
+                def _mc_emoji(prob: float) -> str:
+                    if prob >= 0.5:
+                        return "🎯"
+                    if prob >= 0.25:
+                        return "👌"
+                    if prob >= 0.1:
+                        return "😬"
+                    return "🫠"
+
+                print(f"\n   🎯 Actual:        {resolution}")
+                print("   🤖 Us:")
                 for option, prob in sorted(
                     output.probabilities.items(), key=lambda x: -x[1]
                 ):
-                    marker = " ✓" if option.lower() == resolution.lower() else ""
-                    print(f"     {option}: {prob:.1%}{marker}")
+                    marker = " ✅" if option.lower() == resolution.lower() else ""
+                    print(f"      {option}: {prob:.1%}{marker}")
 
                 correct_prob = output.probabilities.get(resolution, 0)
-                print(f"\n   Prob on correct:  {correct_prob:.1%}")
+                print(f"\n      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}")
 
                 log_score = None
                 if correct_prob > 0:
                     log_score = math.log(correct_prob)
-                    print(f"   Log Score:        {log_score:.4f}")
+                    print(f"      log score:     {log_score:.4f}")
 
                 comparison = RetrodictComparison(
                     actual_value=resolution,
@@ -466,8 +490,8 @@ def retrodict(
                 )
 
             else:
-                print(f"\n   Actual Result:    {resolution or 'Unknown'}")
-                print(f"   Our Prediction:   {output.probability or output.median or 'N/A'}")
+                print(f"\n   🎯 Actual:        {resolution or 'Unknown'}")
+                print(f"   🤖 Us:            {output.probability or output.median or 'N/A'}")
 
             print("\n" + "=" * 60)
 
