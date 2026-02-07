@@ -7,6 +7,7 @@ and other context. This replaces scattered conditional logic throughout core.py.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from claude_agent_sdk.types import (
@@ -82,6 +83,13 @@ FRED_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__financial__fred_series",
         "mcp__financial__fred_search",
+    }
+)
+
+# Company financials tools (no API key required, uses yfinance)
+COMPANY_FINANCIALS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__financial__company_financials",
     }
 )
 
@@ -247,7 +255,14 @@ class ToolPolicy:
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_notes_server(session_id),
+            "notes": create_notes_server(
+                session_id,
+                notes_base=(
+                    Path(f"./notes/retrodict/{session_id}")
+                    if self.is_retrodict and session_id
+                    else None
+                ),
+            ),
             "trends": trends_server,
             "arxiv": arxiv_server,
         }
@@ -293,6 +308,7 @@ class ToolPolicy:
 
         # Financial tools (conditional on API key)
         tools.update(FRED_TOOLS)
+        tools.update(COMPANY_FINANCIALS_TOOLS)
 
         # Sandbox tools
         tools.update(SANDBOX_TOOLS)

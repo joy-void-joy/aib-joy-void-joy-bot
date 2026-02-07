@@ -87,10 +87,6 @@ def _build_system_prompt(
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
 
-# Buffer original tool inputs so we can display post-hook params on ToolResultBlock
-_pending_tool_inputs: dict[str, dict] = {}
-
-
 def print_block(block: ContentBlock) -> None:
     """Print a content block with appropriate emoji prefix."""
     match block:
@@ -99,18 +95,13 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            _pending_tool_inputs[block.id] = block.input or {}
-            print(f"🔧 {block.name} [{block.id}]")
+            input_summary = json.dumps(block.input, separators=(",", ":")) if block.input else ""
+            if len(input_summary) > 120:
+                input_summary = input_summary[:117] + "..."
+            print(f"🔧 {block.name} [{block.id}] {input_summary}")
         case ToolResultBlock():
-            # Display actual tool input (post-hook modifications if any)
-            tool_use_id = block.tool_use_id
-            original_input = _pending_tool_inputs.pop(tool_use_id, None)
-            actual_input = get_modified_input(tool_use_id) or original_input
-            if actual_input:
-                print(json.dumps(actual_input, indent=2))
-            # Note: block.is_error is unreliable (SDK bug doesn't propagate MCP isError)
             content_preview = _truncate_content(block.content, max_len=500)
-            print(f"📋 Result [{tool_use_id}]: {content_preview}")
+            print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
@@ -913,6 +904,7 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
+        question_category=ForecastOutput.classify_category(question_title, question_type),
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
