@@ -128,6 +128,25 @@ class TestClassifyTrivial:
         result = _classify_trivial(lines)
         assert result == [False, False, True]
 
+    def test_multi_line_import(self) -> None:
+        lines = [
+            "from pathlib import (",
+            "    Path,",
+            "    PurePath,",
+            ")",
+        ]
+        assert _classify_trivial(lines) == [True, True, True, True]
+
+    def test_multi_line_import_with_code_after(self) -> None:
+        lines = [
+            "from os import (",
+            "    getcwd,",
+            ")",
+            "x = 1",
+        ]
+        result = _classify_trivial(lines)
+        assert result == [True, True, True, False]
+
     def test_mixed_context(self) -> None:
         lines = [
             "import os",
@@ -228,6 +247,12 @@ class TestDecide:
     def test_import_only_edit_allows(self) -> None:
         old = "import os"
         new = "import os\nimport sys\nfrom pathlib import Path"
+        inp = EditInput(file_path="foo.py", old_string=old, new_string=new)
+        assert decide(inp) == ALLOW
+
+    def test_multi_line_import_allows(self) -> None:
+        old = "import os"
+        new = "from os import (\n    getcwd,\n    listdir,\n    path,\n)"
         inp = EditInput(file_path="foo.py", old_string=old, new_string=new)
         assert decide(inp) == ALLOW
 

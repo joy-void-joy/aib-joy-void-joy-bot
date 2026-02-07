@@ -45,6 +45,7 @@ def _classify_trivial(lines: list[str]) -> list[bool]:
     result: list[bool] = []
     in_docstring = False
     docstring_delim = ""
+    in_import = False
     in_type_def = False
     type_def_indent = 0
 
@@ -58,6 +59,12 @@ def _classify_trivial(lines: list[str]) -> list[bool]:
                 in_docstring = False
             continue
 
+        if in_import:
+            result.append(True)
+            if ")" in stripped:
+                in_import = False
+            continue
+
         for delim in ('"""', "'''"):
             if delim in stripped:
                 if stripped.count(delim) == 1:
@@ -66,6 +73,11 @@ def _classify_trivial(lines: list[str]) -> list[bool]:
                 result.append(True)
                 break
         else:
+            if _is_trivial_content(stripped) and "(" in stripped and ")" not in stripped:
+                in_import = True
+                result.append(True)
+                continue
+
             if in_type_def and stripped and indent <= type_def_indent:
                 in_type_def = False
 
