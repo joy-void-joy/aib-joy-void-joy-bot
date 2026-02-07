@@ -7,6 +7,7 @@ and other context. This replaces scattered conditional logic throughout core.py.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from claude_agent_sdk.types import (
@@ -85,6 +86,13 @@ FRED_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Company financials tools (no API key required, uses yfinance)
+COMPANY_FINANCIALS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__financial__company_financials",
+    }
+)
+
 # Sandbox tools (always available when sandbox is running)
 SANDBOX_TOOLS: frozenset[str] = frozenset(
     {
@@ -144,8 +152,8 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (Wayback-validated)
-RETRODICT_VALIDATED_SEARCH_TOOLS: frozenset[str] = frozenset(
+# Search tools for retrodict mode (date-filtered via Exa)
+RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
     }
@@ -247,12 +255,19 @@ class ToolPolicy:
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_notes_server(session_id),
+            "notes": create_notes_server(
+                session_id,
+                notes_base=(
+                    Path(f"./tmp/notes/{session_id}")
+                    if self.is_retrodict and session_id
+                    else None
+                ),
+            ),
             "trends": trends_server,
             "arxiv": arxiv_server,
         }
 
-        # Add search server in retrodict mode (Wayback-validated web search)
+        # Add search server in retrodict mode (date-filtered web search)
         if self.is_retrodict:
             servers["search"] = create_retrodict_search_server()
 
@@ -293,6 +308,7 @@ class ToolPolicy:
 
         # Financial tools (conditional on API key)
         tools.update(FRED_TOOLS)
+        tools.update(COMPANY_FINANCIALS_TOOLS)
 
         # Sandbox tools
         tools.update(SANDBOX_TOOLS)
@@ -317,9 +333,9 @@ class ToolPolicy:
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
-        # Retrodict validated search tools (only in retrodict mode)
+        # Retrodict search tools (date-filtered web search)
         if self.is_retrodict:
-            tools.update(RETRODICT_VALIDATED_SEARCH_TOOLS)
+            tools.update(RETRODICT_SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools

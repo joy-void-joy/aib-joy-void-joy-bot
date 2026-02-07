@@ -108,16 +108,16 @@ class NotesInput(BaseModel):
 # --- Storage Helpers ---
 
 
-def _get_notes_dir() -> Path:
+def _get_notes_dir(base: Path = NOTES_BASE_PATH) -> Path:
     """Get the notes storage directory, creating if needed."""
-    notes_dir = NOTES_BASE_PATH / "structured"
+    notes_dir = base / "structured"
     notes_dir.mkdir(parents=True, exist_ok=True)
     return notes_dir
 
 
-async def _load_all_notes() -> list[Note]:
+async def _load_all_notes(base: Path = NOTES_BASE_PATH) -> list[Note]:
     """Load all notes from storage (async)."""
-    notes_dir = _get_notes_dir()
+    notes_dir = _get_notes_dir(base)
     notes: list[Note] = []
 
     # Get list of files (sync glob is fine for small directories)
@@ -139,9 +139,9 @@ async def _load_all_notes() -> list[Note]:
     return notes
 
 
-async def _save_note(note: Note) -> Path:
+async def _save_note(note: Note, base: Path = NOTES_BASE_PATH) -> Path:
     """Save a note to storage (async)."""
-    notes_dir = _get_notes_dir()
+    notes_dir = _get_notes_dir(base)
     filepath = notes_dir / f"{note.id}.json"
     async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
         await f.write(note.model_dump_json(indent=2))
@@ -220,12 +220,16 @@ Required: id (note ID from list/search)
 """
 
 
-def _create_notes_tool(session_id: str | None = None):
+def _create_notes_tool(session_id: str | None = None, notes_base: Path | None = None):
     """Create the notes tool with optional session context.
 
     Args:
         session_id: The session ID for write_meta mode. If None, write_meta is disabled.
+        notes_base: Override base path for all notes storage. When set, reads/writes
+            are scoped to this directory (used in retrodict mode for isolation).
     """
+    _base = notes_base or NOTES_BASE_PATH
+    _sessions = _base / "sessions"
 
     @tool(
         "notes",
@@ -261,6 +265,7 @@ def _create_notes_tool(session_id: str | None = None):
             return await _list_notes(
                 type_filter=validated.type_filter,
                 question_id=validated.question_id,
+                base=_base,
             )
         elif mode == "search":
             query = validated.query
@@ -269,20 +274,23 @@ def _create_notes_tool(session_id: str | None = None):
             return await _search_notes(
                 query=query,
                 type_filter=validated.type_filter,
+                base=_base,
             )
         elif mode == "read":
             note_id = validated.id
             if not note_id:
                 return mcp_error("Read mode requires 'id' parameter")
-            return await _read_note(note_id)
+            return await _read_note(note_id, base=_base)
         elif mode == "write":
-            return await _write_note(validated)
+            return await _write_note(validated, base=_base)
         elif mode == "write_meta":
             if not session_id:
                 return mcp_error("write_meta is not available in this context")
-            return await _write_meta(session_id, validated.content or "")
+            return await _write_meta(
+                session_id, validated.content or "", sessions_base=_sessions
+            )
         elif mode == "write_report":
-            return await _write_report(validated)
+            return await _write_report(validated, base=_base)
         else:
             return mcp_error(
                 f"Unknown mode: {mode}. Use 'list', 'search', 'read', 'write', "
@@ -295,9 +303,10 @@ def _create_notes_tool(session_id: str | None = None):
 async def _list_notes(
     type_filter: str | None = None,
     question_id: int | None = None,
+    base: Path = NOTES_BASE_PATH,
 ) -> dict[str, Any]:
     """List notes with optional filtering."""
-    notes = await _load_all_notes()
+    notes = await _load_all_notes(base)
 
     # Apply filters
     if type_filter:
@@ -333,9 +342,10 @@ async def _list_notes(
 async def _search_notes(
     query: str,
     type_filter: str | None = None,
+    base: Path = NOTES_BASE_PATH,
 ) -> dict[str, Any]:
     """Search notes by query, returning summaries only."""
-    notes = await _load_all_notes()
+    notes = await _load_all_notes(base)
 
     # Apply type filter first
     if type_filter:
@@ -375,9 +385,9 @@ async def _search_notes(
     )
 
 
-async def _read_note(note_id: str) -> dict[str, Any]:
+async def _read_note(note_id: str, base: Path = NOTES_BASE_PATH) -> dict[str, Any]:
     """Read full note content by ID."""
-    notes_dir = _get_notes_dir()
+    notes_dir = _get_notes_dir(base)
     filepath = notes_dir / f"{note_id}.json"
 
     if not filepath.exists():
@@ -393,7 +403,9 @@ async def _read_note(note_id: str) -> dict[str, Any]:
         return mcp_error(f"Failed to read note: {e}")
 
 
-async def _write_note(validated: NotesInput) -> dict[str, Any]:
+async def _write_note(
+    validated: NotesInput, base: Path = NOTES_BASE_PATH
+) -> dict[str, Any]:
     """Create a new structured note."""
     # Validate required fields
     required_fields = {
@@ -427,7 +439,7 @@ async def _write_note(validated: NotesInput) -> dict[str, Any]:
     )
 
     # Save
-    filepath = await _save_note(note)
+    filepath = await _save_note(note, base)
     logger.info("Created note %s at %s", note.id, filepath)
 
     return mcp_success(
@@ -463,7 +475,9 @@ def _parse_session_id(session_id: str) -> tuple[str, str]:
     return (session_id, "unknown")
 
 
-async def _write_meta(session_id: str, content: str) -> dict[str, Any]:
+async def _write_meta(
+    session_id: str, content: str, sessions_base: Path = SESSIONS_PATH
+) -> dict[str, Any]:
     """Write meta-reflection to the session directory.
 
     Meta-reflections are write-only by design. The agent cannot read meta from
@@ -474,7 +488,7 @@ async def _write_meta(session_id: str, content: str) -> dict[str, Any]:
 
     # Parse session_id to get path: notes/sessions/<post_id>/<timestamp>/
     post_id, timestamp = _parse_session_id(session_id)
-    session_dir = SESSIONS_PATH / post_id / timestamp
+    session_dir = sessions_base / post_id / timestamp
     session_dir.mkdir(parents=True, exist_ok=True)
 
     filepath = session_dir / "meta.md"
@@ -497,7 +511,9 @@ async def _write_meta(session_id: str, content: str) -> dict[str, Any]:
         return mcp_error(f"Failed to write meta-reflection: {e}")
 
 
-async def _write_report(validated: NotesInput) -> dict[str, Any]:
+async def _write_report(
+    validated: NotesInput, base: Path = NOTES_BASE_PATH
+) -> dict[str, Any]:
     """Write a long markdown report for a question.
 
     Reports are stored in notes/research/<post_id>/ and ARE readable by future
@@ -514,7 +530,7 @@ async def _write_report(validated: NotesInput) -> dict[str, Any]:
     filename = f"{timestamp}_{title_slug}.md"
 
     # Create directory
-    report_dir = NOTES_BASE_PATH / "research" / str(validated.post_id)
+    report_dir = base / "research" / str(validated.post_id)
     report_dir.mkdir(parents=True, exist_ok=True)
 
     filepath = report_dir / filename
@@ -541,12 +557,13 @@ async def _write_report(validated: NotesInput) -> dict[str, Any]:
 # --- MCP Server Factory ---
 
 
-def create_notes_server(session_id: str | None = None):
+def create_notes_server(session_id: str | None = None, notes_base: Path | None = None):
     """Create the notes MCP server with session context.
 
     Args:
         session_id: Session ID for write_meta mode. Format: "<post_id>_<timestamp>".
             If None, write_meta mode is disabled.
+        notes_base: Override base path for notes storage (retrodict isolation).
 
     Returns:
         MCP server configured with the notes tool.
@@ -554,7 +571,7 @@ def create_notes_server(session_id: str | None = None):
     return create_mcp_server(
         name="notes",
         version="3.0.0",
-        tools=[_create_notes_tool(session_id)],
+        tools=[_create_notes_tool(session_id, notes_base=notes_base)],
     )
 
 
