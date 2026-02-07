@@ -364,29 +364,59 @@ def retrodict(
 
             elif output.median is not None and resolution:
                 # Numeric question comparison
-                print(f"\n   Actual Result:    {resolution}")
-                print(f"   Our Prediction:   {output.median}")
-
                 within_ci = None
                 difference = None
 
                 if output.confidence_interval:
                     lo, hi = output.confidence_interval
-                    print(f"   90% CI:           [{lo}, {hi}]")
                     try:
                         actual_val = float(resolution.replace(",", ""))
                         difference = actual_val - output.median
-                        print(f"   Difference:       {difference:+.2f}")
+                        our_abs_err = abs(difference)
+                        range_span = numeric_cp["range_span"] if numeric_cp else None
 
-                        if lo <= actual_val <= hi:
-                            within_ci = True
-                            print("   Within 90% CI:    ✅ Yes")
+                        def _err_emoji(pct: float) -> str:
+                            if pct < 1:
+                                return "🎯"
+                            if pct < 5:
+                                return "👌"
+                            if pct < 15:
+                                return "😬"
+                            return "🫠"
+
+                        print(f"\n   🎯 Actual:    {actual_val:,.1f}")
+
+                        if range_span and range_span > 0:
+                            our_pct = our_abs_err / range_span * 100
+                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                            print(f"      error:     {_err_emoji(our_pct)} {our_pct:.1f}% of range")
                         else:
-                            within_ci = False
-                            if actual_val < lo:
-                                print(f"   Within 90% CI:    ❌ No (below by {lo - actual_val:.2f})")
-                            else:
-                                print(f"   Within 90% CI:    ❌ No (above by {actual_val - hi:.2f})")
+                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                            print(f"      error:     {our_abs_err:,.1f}")
+
+                        if numeric_cp is not None:
+                            cp_median = numeric_cp["median"]
+                            cp_abs_err = abs(actual_val - cp_median)
+                            print(f"   👥 Community: {cp_median:,.1f}  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]")
+                            if range_span and range_span > 0:
+                                cp_pct = cp_abs_err / range_span * 100
+                                print(f"      error:     {_err_emoji(cp_pct)} {cp_pct:.1f}% of range")
+                                if cp_abs_err > 0 and our_abs_err > 0:
+                                    ratio = cp_abs_err / our_abs_err
+                                    if ratio > 1:
+                                        print(f"   ⚔️  vs CP:     🏆 {ratio:.1f}x more accurate")
+                                    elif ratio < 1:
+                                        print(f"   ⚔️  vs CP:     🫠 {1/ratio:.1f}x less accurate")
+                                    else:
+                                        print("   ⚔️  vs CP:     🤝 Same")
+
+                        within_ci = lo <= actual_val <= hi
+                        if within_ci:
+                            print("   📍 In 90% CI: ✅")
+                        elif actual_val < lo:
+                            print(f"   📍 In 90% CI: 🫠 below by {lo - actual_val:,.1f}")
+                        else:
+                            print(f"   📍 In 90% CI: 🫠 above by {actual_val - hi:,.1f}")
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
