@@ -413,9 +413,10 @@ async def _fetch_polymarket_history(
 @tool(
     "polymarket_history",
     (
-        "Get historical Polymarket price at a specific timestamp. "
-        "Requires the market token ID (not slug). Returns the price closest "
-        "to but not after the given timestamp. Use for retrodict mode."
+        "Get historical Polymarket price at a specific past timestamp. "
+        "USE THIS to see how prediction market sentiment evolved over time — "
+        "useful for understanding trend direction. Get the token ID from polymarket_price first, "
+        "then query specific timestamps. Returns price closest to but not after the timestamp."
     ),
     {"market_id": str, "timestamp": int},
 )
@@ -493,10 +494,10 @@ async def _fetch_manifold_bets(
 @tool(
     "manifold_history",
     (
-        "Get historical Manifold market price at a specific timestamp. "
-        "Reconstructs price from bet history. Requires the contract ID. "
-        "Returns the probability just after the last bet before the timestamp. "
-        "Use for retrodict mode."
+        "Get historical Manifold market price at a specific past timestamp. "
+        "USE THIS to track how Manifold probability changed over time. "
+        "Get the contract ID from manifold_price first, then query timestamps. "
+        "Returns probability just after the last bet before the given timestamp."
     ),
     {"market_id": str, "timestamp": int},
 )

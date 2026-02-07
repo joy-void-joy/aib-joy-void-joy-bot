@@ -79,10 +79,10 @@ class SubForecastResult(BaseModel):
 @tool(
     "spawn_subquestions",
     (
-        "Decompose a forecasting question into sub-questions and forecast each in "
-        "parallel. Each sub-question gets its own forecasting agent with full research "
-        "capabilities. Returns all individual sub-forecasts for you to synthesize. "
-        "No automatic aggregation — you decide how to combine results."
+        "Decompose a complex question into independent sub-questions and research each "
+        "in parallel. USE THIS for questions that depend on multiple independent factors — "
+        "e.g., 'Will X happen?' can be broken into P(condition_A) × P(condition_B|A). "
+        "Each sub-question gets its own research agent. You synthesize the results."
     ),
     {"subquestions": list},
 )

@@ -74,11 +74,11 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
 @tool(
     "search_arxiv",
     (
-        "Search arXiv for academic papers. Returns paper titles, abstracts, authors, "
-        "and publication dates. Useful for scientific and technical research where "
-        "publication dates are important. Supports arXiv query syntax: "
-        "au:lastname (author), ti:word (title), cat:category (e.g., cs.AI). "
-        "Results sorted by relevance. Max 50 results."
+        "Search arXiv for academic papers. USE THIS for questions about AI benchmarks, "
+        "scientific discoveries, medical research, climate science, or any topic where "
+        "peer-reviewed research provides base rates or expert analysis. "
+        "Returns titles, abstracts, authors, dates. "
+        "Supports arXiv query syntax: au:lastname, ti:word, cat:cs.AI. Max 50 results."
     ),
     {"query": str, "max_results": int, "cutoff_date": str},
 )

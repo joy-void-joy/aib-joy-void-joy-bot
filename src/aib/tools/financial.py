@@ -165,8 +165,10 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
 @tool(
     "fred_search",
     (
-        "Search for FRED series by keyword. Use to find the correct series ID "
-        "for economic indicators. Returns series IDs, titles, and descriptions."
+        "Search FRED for economic data series by keyword. USE THIS when you don't know "
+        "the series ID for an economic indicator — search for 'inflation', 'GDP', "
+        "'unemployment', 'interest rate', 'CPI', etc. to find the right series ID, "
+        "then use fred_series to get the actual data."
     ),
     {"query": str, "limit": int},
 )
@@ -227,6 +229,80 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"FRED search failed: {e}")
 
 
+# --- Company Financials (yfinance) ---
+
+
+class CompanyFinancialsInput(BaseModel):
+    """Input for company financial data lookup."""
+
+    ticker: str = Field(min_length=1, max_length=10, description="Stock ticker symbol (e.g., GOOG, AAPL, MSFT)")
+    period: str = Field(
+        default="quarterly",
+        description="'quarterly' or 'annual'",
+    )
+
+
+@tool(
+    "company_financials",
+    (
+        "Get quarterly or annual income statements for a public company. "
+        "USE THIS FIRST for any earnings/revenue forecast question — provides "
+        "historical revenue, net income, EPS, and growth trends. "
+        "Ticker symbols: GOOG (Alphabet), AAPL (Apple), LLY (Eli Lilly), etc. "
+        "For regional/segment breakdowns, supplement with search_exa on earnings press releases."
+    ),
+    {"ticker": str, "period": str},
+)
+@tracked("company_financials")
+async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
+    """Get company financial statements via yfinance."""
+    try:
+        validated = CompanyFinancialsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(validated.ticker.upper())
+
+        if validated.period == "annual":
+            income = ticker.financials
+        else:
+            income = ticker.quarterly_financials
+
+        if income is None or income.empty:
+            return mcp_error(f"No financial data found for {validated.ticker.upper()}")
+
+        # Convert DataFrame to serializable format
+        # Columns are dates, rows are line items
+        periods: list[dict[str, Any]] = []
+        for col in income.columns:
+            period_data: dict[str, Any] = {"period_end": str(col)[:10]}
+            for row_name in income.index:
+                value = income.loc[row_name, col]
+                if value == value:  # not NaN
+                    period_data[str(row_name)] = float(value)
+            periods.append(period_data)
+
+        # Also get basic info
+        info = ticker.info or {}
+
+        return mcp_success(
+            {
+                "ticker": validated.ticker.upper(),
+                "company_name": info.get("shortName", validated.ticker.upper()),
+                "period_type": validated.period,
+                "num_periods": len(periods),
+                "financials": periods[:8],  # Last 8 periods
+            }
+        )
+
+    except Exception as e:
+        logger.exception("Company financials lookup failed")
+        return mcp_error(f"Failed to fetch financials for {validated.ticker}: {e}")
+
+
 # --- Common FRED Series Reference ---
 # This is documentation for the agent, not code
 
@@ -278,7 +354,7 @@ Stock Market:
 # Tools are gated at BOTH layers:
 # 1. MCP server registration (here) - so agent doesn't discover unavailable tools
 # 2. allowed_tools in core.py - defense in depth
-_financial_tools = []
+_financial_tools = [company_financials]
 
 if settings.fred_api_key:
     _financial_tools.extend([fred_series, fred_search])
