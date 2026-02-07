@@ -35,5 +35,3 @@ Review all current changes and create atomic commits—each commit should repres
 - **Don't bundle unrelated changes** — A typo fix shouldn't be in the same commit as a feature
 - **Tests with implementation** — Keep tests in the same commit as the code they test
 - **Clear commit messages** — Focus on *what* and *why*, not *how*
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>

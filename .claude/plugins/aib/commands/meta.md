@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Edit, Write, Glob, Grep, AskUserQuestion, Task, Bash(mkdir:*, cp:*, mv:*, rm:*, find:*, ls:*)
-description: Review and modify .claude structure, brainstorm improvements interactively
+description: Review and modify .claude structure, update docs (CLAUDE.md/PLAN.md), brainstorm improvements
 argument-hint: <problem or area to explore>
 ---
 
@@ -16,8 +16,8 @@ $ARGUMENTS
 
 Based on the user's input above, explore the relevant parts of `.claude/` and brainstorm solutions. The `.claude/` directory contains:
 
-- `CLAUDE.md` - Project instructions and documentation
-- `commands/` - Slash commands
+- `CLAUDE.md` - Project instructions and documentation ("how to work in this codebase")
+- `PLAN.md` - Implementation plan and task tracking ("what to build and current status")
 - `settings.json` - Permissions and plugin configuration
 - `plugins/aib/` - Main project plugin with all commands, scripts, and workflows
 
@@ -86,6 +86,16 @@ plugins/aib/
 - User corrects your approach → Update command to prevent future errors
 - User asks for something the command should have covered → Expand command scope
 - User repeatedly ignores a section → Consider removing or simplifying it
+
+## Updating Documentation
+
+When the task involves updating CLAUDE.md or PLAN.md:
+
+1. **Read current state** of both files to understand content and organization
+2. **Determine scope**: CLAUDE.md for coding standards/workflows/tooling; PLAN.md for tasks/phases/status
+3. **Make modifications** as directed
+4. **Refactor for coherence**: ensure sections are logically ordered, no duplicates, consistent formatting
+5. **Report changes**: summarize what was modified
 
 ## Process
 
