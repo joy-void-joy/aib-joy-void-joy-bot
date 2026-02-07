@@ -94,7 +94,9 @@ async def fetch_wikipedia_historical(
         # Fetch HTML content for this specific revision via RESTbase API
         # Wikipedia uses underscores for spaces, and percent-encodes other special chars
         encoded_title = url_quote(resolved_title.replace(" ", "_"), safe="")
-        rest_url = f"https://en.wikipedia.org/api/rest_v1/page/html/{encoded_title}/{rev_id}"
+        rest_url = (
+            f"https://en.wikipedia.org/api/rest_v1/page/html/{encoded_title}/{rev_id}"
+        )
 
         html_response = await client.get(rest_url)
         html_response.raise_for_status()
@@ -109,7 +111,9 @@ async def fetch_wikipedia_historical(
         )
 
         if not extracted:
-            raise ValueError(f"Could not extract text from revision {rev_id} for: {title}")
+            raise ValueError(
+                f"Could not extract text from revision {rev_id} for: {title}"
+            )
 
         return {
             "title": resolved_title,

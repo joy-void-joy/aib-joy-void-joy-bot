@@ -70,7 +70,9 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         )
 
     try:
-        logger.info("[WebSearch] Searching for: %s (cutoff: %s)", search_query, cutoff_date)
+        logger.info(
+            "[WebSearch] Searching for: %s (cutoff: %s)", search_query, cutoff_date
+        )
 
         # Use Exa with publishedBefore filter and livecrawl=never for retrodict
         exa_results = await exa_search(
