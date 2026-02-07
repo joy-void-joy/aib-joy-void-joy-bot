@@ -87,7 +87,7 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
 - Tool failures (what's blocking the agent?)
 - Do NOT treat CP divergence as evidence of error
 
-### 1b. Retrodict Missed Questions
+### 1b. Retrodict Missed Questions (and Check Airtightness)
 
 If questions resolved before we forecast them, **retrodict** them to build calibration data. Blind mode restricts all tools to data that was available before the question resolved, ensuring the agent cannot "cheat" by looking up the answer.
 
@@ -157,7 +157,37 @@ cat logs/<question_id>/*.log
 - Uncertainty reflects what was knowable at `forecast_date`
 - No mentions of resolution or what "actually happened"
 
-### 1b. About Community Prediction
+### 1c. Collect and Analyze Retrodiction Results
+
+Retrodictions are our **best** calibration signal — they have known resolutions by definition. After running retrodictions (1b) and checking for future leaks, incorporate them into analysis.
+
+**Collect retrodiction data:**
+```bash
+# List all retrodictions
+ls notes/retrodict/*/
+
+# Summarize retrodiction accuracy (uses known resolutions embedded in the JSON)
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
+```
+
+**For each retrodiction, evaluate:**
+1. **Accuracy**: Compare forecast vs actual resolution (Brier score for binary, error for numeric)
+2. **Airtightness**: Did the agent access post-resolution information? (see Future-Leak Detection above)
+3. **Reasoning quality**: Read the session trace — was the reasoning sound given only pre-resolution data?
+4. **Tool effectiveness**: Which tools worked under blind-mode constraints? Which failed?
+
+**Airtightness checklist** (run for every retrodiction before trusting its calibration value):
+- [ ] No references to events after `retrodict_date` in reasoning trace
+- [ ] No suspiciously high confidence on genuinely uncertain questions
+- [ ] WebSearch results all predate the cutoff
+- [ ] WebFetch URLs went through Wayback Machine (check logs)
+- [ ] No financial data beyond the cutoff date
+
+**If a retrodiction fails airtightness**: Exclude it from calibration data and file a bug against the retrodict hooks.
+
+**IMPORTANT**: `feedback_collect.py` must be updated to process `notes/retrodict/` alongside `notes/forecasts/`. Until then, manually read retrodiction JSONs and compute accuracy. This is a known meta-meta gap — see Phase 5 for the fix.
+
+### 1d. About Community Prediction
 
 CP is just another forecaster. Diverging from CP is not inherently bad - we WANT an edge.
 
@@ -453,8 +483,11 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 ## Scripts Available
 
 ```bash
-# Collect feedback data
+# Collect feedback data (live forecasts only)
 uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time
+
+# Collect feedback data including retrodictions
+uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --include-retrodict
 
 # Collect from specific tournament
 uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
@@ -503,3 +536,40 @@ Every few feedback loop sessions, take time to:
 4. **What does the agent say it needs?** Trust and provide.
 5. **Is the agent's reasoning sound?** Read traces deeply to find out.
 6. **What would make this process better?** Update this document.
+
+## Phase 6: Queue Retrodictions
+
+**This is the final output of every feedback loop session.** After all analysis and changes are complete, propose retrodictions for the user to run before the next session.
+
+### Why This Is Last
+
+Retrodictions build calibration data. Each feedback loop session should:
+1. Analyze existing retrodictions (Phase 1c)
+2. Make improvements based on findings (Phase 4)
+3. Queue NEW retrodictions that will test whether those improvements helped
+
+### Selection Criteria
+
+Pick 3-5 resolved questions that:
+- Have clear, unambiguous resolutions (not annulled)
+- Are diverse in type (binary, numeric, multiple choice)
+- Would test the agent's reasoning on challenging topics (not trivial stock comparisons)
+- Have enough pre-resolution time for blind mode to be meaningful
+
+### Output Format
+
+End your analysis document with a concrete command the user can run:
+
+```bash
+# Retrodiction queue from feedback loop YYYY-MM-DD
+# Rationale: [brief explanation of why these were chosen]
+uv run forecast retrodict <id1> <id2> <id3> [--forecast-date YYYY-MM-DD]
+```
+
+### Feedback Cycle
+
+The user runs the retrodictions, then the next feedback loop session:
+1. Collects those retrodictions in Phase 1c
+2. Checks airtightness
+3. Evaluates accuracy against the improvements made
+4. Queues more retrodictions → repeat

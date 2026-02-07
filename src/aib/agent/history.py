@@ -370,6 +370,39 @@ def load_past_forecasts(post_id: int) -> list[SavedForecast]:
     return forecasts
 
 
+def load_retrodict_forecasts(post_id: int | None = None) -> list[SavedForecast]:
+    """Load retrodicted forecasts, optionally filtered by post ID.
+
+    Args:
+        post_id: If provided, load only retrodictions for this post ID.
+                 If None, load all retrodictions across all post IDs.
+
+    Returns:
+        List of SavedForecast objects with retrodict_date set, sorted by timestamp.
+    """
+    if not RETRODICT_BASE_PATH.exists():
+        return []
+
+    dirs = (
+        [RETRODICT_BASE_PATH / str(post_id)]
+        if post_id
+        else [d for d in RETRODICT_BASE_PATH.iterdir() if d.is_dir()]
+    )
+
+    forecasts = []
+    for question_dir in dirs:
+        if not question_dir.exists():
+            continue
+        for filepath in sorted(question_dir.glob("*.json")):
+            try:
+                data = json.loads(filepath.read_text(encoding="utf-8"))
+                forecasts.append(SavedForecast.model_validate(data))
+            except Exception as e:
+                logger.warning("Failed to load retrodict from %s: %s", filepath, e)
+
+    return sorted(forecasts, key=lambda f: f.timestamp)
+
+
 def get_latest_forecast(post_id: int) -> SavedForecast | None:
     """Get the most recent forecast for a question.
 

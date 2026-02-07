@@ -26,7 +26,11 @@ from pydantic import BaseModel
 # Resolve imports from src/
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from metaculus import ApiFilter, AsyncMetaculusClient, BinaryQuestion, MetaculusQuestion
-from aib.agent.history import load_past_forecasts, FORECASTS_BASE_PATH
+from aib.agent.history import (
+    load_past_forecasts,
+    load_retrodict_forecasts,
+    FORECASTS_BASE_PATH,
+)
 
 app = typer.Typer(help="Collect feedback data from resolved forecasts")
 logger = logging.getLogger(__name__)
@@ -100,6 +104,25 @@ class CPComparison(BaseModel):
     question_status: str
 
 
+class RetrodictResult(BaseModel):
+    """A retrodicted forecast with its known resolution."""
+
+    post_id: int
+    question_title: str
+    question_type: str
+    retrodict_date: str
+    forecast_timestamp: str
+    forecasted_probability: float | None = None
+    forecasted_median: float | None = None
+    actual_value: float | str | None = None
+    predicted_value: float | str | None = None
+    difference: float | None = None
+    within_ci: bool | None = None
+    brier_score: float | None = None
+    score: float | None = None
+    score_name: str | None = None
+
+
 class FeedbackMetrics(BaseModel):
     """Aggregated metrics from resolved forecasts."""
 
@@ -118,6 +141,10 @@ class FeedbackMetrics(BaseModel):
     cp_comparisons: list[CPComparison] = []
     avg_cp_divergence: float | None = None
     cp_comparison_count: int = 0
+    # Retrodiction results (known ground truth)
+    retrodict_results: list[RetrodictResult] = []
+    retrodict_count: int = 0
+    retrodict_avg_brier: float | None = None
 
 
 def compute_brier_score(probability: float, resolved_true: bool) -> float:
@@ -354,6 +381,20 @@ def match_forecasts_to_resolutions(
             continue
 
         for forecast in past_forecasts:
+            # Skip forecasts made after resolution (hindsight, not valid)
+            if question.actual_resolution_time:
+                try:
+                    forecast_dt = datetime.strptime(forecast.timestamp, "%Y%m%d_%H%M%S")
+                    resolution_dt = question.actual_resolution_time.replace(tzinfo=None)
+                    if forecast_dt > resolution_dt:
+                        logger.info(
+                            "Skipping post-resolution forecast for %d (forecast: %s, resolved: %s)",
+                            question_id, forecast.timestamp, question.actual_resolution_time,
+                        )
+                        continue
+                except ValueError:
+                    pass
+
             result = ForecastResult(
                 question_id=question_id,
                 question_title=question.question_text[:100],
@@ -376,6 +417,51 @@ def match_forecasts_to_resolutions(
                     )
 
             results.append(result)
+
+    return results
+
+
+def collect_retrodict_results() -> list[RetrodictResult]:
+    """Collect results from all retrodicted forecasts.
+
+    Retrodictions have known resolutions embedded in the comparison field,
+    so no API calls are needed.
+    """
+    forecasts = load_retrodict_forecasts()
+    results: list[RetrodictResult] = []
+
+    for f in forecasts:
+        if not f.retrodict_date:
+            continue
+
+        result = RetrodictResult(
+            post_id=f.post_id or 0,
+            question_title=f.question_title[:80],
+            question_type=f.question_type,
+            retrodict_date=f.retrodict_date,
+            forecast_timestamp=f.timestamp,
+            forecasted_probability=f.probability,
+            forecasted_median=f.median,
+        )
+
+        if f.comparison:
+            result.actual_value = f.comparison.actual_value
+            result.predicted_value = f.comparison.predicted_value
+            result.difference = f.comparison.difference
+            result.within_ci = f.comparison.within_ci
+            result.score = f.comparison.score
+            result.score_name = f.comparison.score_name
+
+        if (
+            f.question_type == "binary"
+            and f.probability is not None
+            and f.comparison
+            and f.comparison.actual_value is not None
+        ):
+            resolved_true = str(f.comparison.actual_value).lower() in ("true", "yes", "1", "1.0")
+            result.brier_score = compute_brier_score(f.probability, resolved_true)
+
+        results.append(result)
 
     return results
 
@@ -421,15 +507,23 @@ def main(
             help="Ignore last run timestamp and fetch all resolved questions.",
         ),
     ] = False,
+    include_retrodict: Annotated[
+        bool,
+        typer.Option(
+            "--include-retrodict",
+            help="Include retrodicted forecasts (from notes/retrodict/) in results.",
+        ),
+    ] = False,
 ) -> None:
     """Collect feedback metrics from resolved forecasts."""
-    asyncio.run(_main_async(tournament, since, all_time))
+    asyncio.run(_main_async(tournament, since, all_time, include_retrodict))
 
 
 async def _main_async(
     tournament: list[str] | None,
     since: str | None,
     all_time: bool,
+    include_retrodict: bool = False,
 ) -> None:
     """Async implementation of the main command."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -483,6 +577,12 @@ async def _main_async(
     cp_comparisons = await fetch_cp_for_forecasts(client)
     logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
 
+    # Collect retrodiction results
+    retrodict_results: list[RetrodictResult] = []
+    if include_retrodict:
+        retrodict_results = collect_retrodict_results()
+        logger.info("Collected %d retrodictions", len(retrodict_results))
+
     # Compute aggregate metrics
     binary_results = [r for r in results if r.brier_score is not None]
     numeric_results = [r for r in results if r.question_type in ("numeric", "discrete")]
@@ -500,6 +600,12 @@ async def _main_async(
             avg_log = sum(log_scores) / len(log_scores)
 
     calibration = compute_calibration_buckets(results)
+
+    # Compute retrodict Brier average
+    retrodict_avg_brier = None
+    retrodict_brier_scores = [r.brier_score for r in retrodict_results if r.brier_score is not None]
+    if retrodict_brier_scores:
+        retrodict_avg_brier = sum(retrodict_brier_scores) / len(retrodict_brier_scores)
 
     # Compute CP divergence stats
     avg_cp_divergence = None
@@ -522,6 +628,9 @@ async def _main_async(
         cp_comparisons=cp_comparisons,
         avg_cp_divergence=round(avg_cp_divergence, 4) if avg_cp_divergence else None,
         cp_comparison_count=len(cp_comparisons),
+        retrodict_results=retrodict_results,
+        retrodict_count=len(retrodict_results),
+        retrodict_avg_brier=round(retrodict_avg_brier, 4) if retrodict_avg_brier else None,
     )
 
     # Save metrics
@@ -618,6 +727,33 @@ async def _main_async(
             print(
                 f"\nBias check: {higher_count} forecasts higher than CP, {lower_count} lower"
             )
+
+    # Report retrodiction results
+    if retrodict_results:
+        print("\n" + "-" * 60)
+        print("RETRODICTION RESULTS (Known Ground Truth)")
+        print("-" * 60)
+        print(f"Retrodictions collected: {len(retrodict_results)}")
+        if retrodict_avg_brier is not None:
+            print(f"Average Brier (binary retrodictions): {retrodict_avg_brier:.4f}")
+
+        for r in retrodict_results:
+            title = r.question_title[:50] + "..." if len(r.question_title) > 50 else r.question_title
+            print(f"\n  [{r.post_id}] {title}")
+            print(f"    Type: {r.question_type}, Retrodict date: {r.retrodict_date}")
+            if r.forecasted_probability is not None:
+                print(f"    Forecast: {r.forecasted_probability:.0%}", end="")
+            elif r.forecasted_median is not None:
+                print(f"    Forecast: median={r.forecasted_median}", end="")
+            if r.actual_value is not None:
+                print(f"  |  Actual: {r.actual_value}", end="")
+            if r.brier_score is not None:
+                print(f"  |  Brier: {r.brier_score:.4f}", end="")
+            elif r.score is not None:
+                print(f"  |  {r.score_name or 'Score'}: {r.score:.4f}", end="")
+            if r.within_ci is not None:
+                print(f"  |  Within CI: {'Yes' if r.within_ci else 'No'}", end="")
+            print()
 
     print(f"\nMetrics saved to: {output_file}")
 
