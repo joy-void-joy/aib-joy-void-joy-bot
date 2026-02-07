@@ -30,8 +30,16 @@ from aib.tools.cache import cached
 
 logger = logging.getLogger(__name__)
 
-# Limit concurrent Wayback API requests to be respectful
-_wayback_semaphore = asyncio.Semaphore(5)
+# Lazily create semaphores per-event-loop to avoid binding issues
+_wayback_semaphore_store: dict[str, asyncio.Semaphore] = {}
+
+
+def _wayback_semaphore() -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    key = f"wayback_{id(loop)}"
+    if key not in _wayback_semaphore_store:
+        _wayback_semaphore_store[key] = asyncio.Semaphore(5)
+    return _wayback_semaphore_store[key]
 
 # Custom exception for rate limiting
 class WaybackRateLimitError(Exception):
@@ -93,7 +101,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with _wayback_semaphore:
+    async with _wayback_semaphore():
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -201,7 +209,7 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with _wayback_semaphore:
+    async with _wayback_semaphore():
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.get(wayback_url, follow_redirects=True)

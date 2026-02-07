@@ -5,7 +5,7 @@ All tools return raw data; Claude does the reasoning.
 """
 
 import logging
-from asyncio import Semaphore
+import asyncio
 from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
@@ -33,22 +33,28 @@ logger = logging.getLogger(__name__)
 
 # --- Rate Limiting ---
 #
-# These semaphores are intentionally global (module-level) to enforce rate limits
-# across ALL concurrent forecast sessions, including subforecasts spawned by
-# spawn_subquestions. This prevents exceeding API rate limits when running
-# multiple forecasts in parallel.
-#
-# Behavior:
-# - Main forecast and all subforecasts share the same semaphore slots
-# - If max_concurrent=5 and main forecast uses 2 slots, subforecasts get 3
-# - Subforecasts may queue waiting for slots
-#
-# Configure via environment:
-# - AIB_METACULUS_MAX_CONCURRENT (default: 5)
-# - AIB_SEARCH_MAX_CONCURRENT (default: 3)
+# Semaphores enforce rate limits across concurrent forecast sessions.
+# They are lazily created per-event-loop to avoid "bound to a different event loop"
+# errors when asyncio.run() creates fresh loops (e.g., tournament mode).
 
-_metaculus_semaphore = Semaphore(settings.metaculus_max_concurrent)
-_search_semaphore = Semaphore(settings.search_max_concurrent)
+_semaphore_store: dict[str, asyncio.Semaphore] = {}
+
+
+def _get_semaphore(name: str, limit: int) -> asyncio.Semaphore:
+    """Get or create a semaphore for the current event loop."""
+    loop = asyncio.get_running_loop()
+    key = f"{name}_{id(loop)}"
+    if key not in _semaphore_store:
+        _semaphore_store[key] = asyncio.Semaphore(limit)
+    return _semaphore_store[key]
+
+
+def _metaculus_semaphore() -> asyncio.Semaphore:
+    return _get_semaphore("metaculus", settings.metaculus_max_concurrent)
+
+
+def _search_semaphore() -> asyncio.Semaphore:
+    return _get_semaphore("search", settings.search_max_concurrent)
 
 
 # --- Input Schemas (Pydantic models with runtime validation) ---
@@ -238,8 +244,6 @@ async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
 @tracked("get_metaculus_questions")
 async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     """Fetch one or more Metaculus questions (cached for 5 minutes)."""
-    import asyncio
-
     try:
         validated = GetMetaculusQuestionsInput.model_validate(args)
     except Exception as e:
@@ -249,15 +253,29 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     hide_cp = retrodict_cutoff.get() is not None
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
-        """Fetch a single question with error handling."""
+        """Fetch a single question, auto-detecting if a question_id was passed."""
         try:
-            async with _metaculus_semaphore:
+            async with _metaculus_semaphore():
                 result = await _fetch_metaculus_question(post_id)
-                # Hide community prediction in retrodict mode
                 if hide_cp and "community_prediction" in result:
-                    result = dict(result)  # Don't modify cached result
+                    result = dict(result)
                     result["community_prediction"] = None
                 return result
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                resolved = await _resolve_question_to_post_id(post_id)
+                if resolved:
+                    try:
+                        async with _metaculus_semaphore():
+                            result = await _fetch_metaculus_question(resolved)
+                            if hide_cp and "community_prediction" in result:
+                                result = dict(result)
+                                result["community_prediction"] = None
+                            return result
+                    except Exception as retry_err:
+                        return {"post_id": post_id, "error": f"Resolved question {post_id} → post {resolved}, but fetch failed: {retry_err}"}
+                return {"post_id": post_id, "error": f"ID {post_id} not found. You may have passed a question_id instead of a post_id. Use list_tournament_questions to find correct post IDs."}
+            return {"post_id": post_id, "error": f"HTTP {e.response.status_code}: {e}"}
         except Exception as e:
             return {"post_id": post_id, "error": str(e)}
 
@@ -300,7 +318,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
     num_questions = validated.num_questions
 
     try:
-        async with _metaculus_semaphore:
+        async with _metaculus_semaphore():
             client = get_metaculus_client()
             questions = await client.get_all_open_questions_from_tournament(
                 tournament_id
@@ -344,7 +362,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
     num_results = validated.num_results
 
     try:
-        async with _metaculus_semaphore:
+        async with _metaculus_semaphore():
             client = get_metaculus_client()
             api_filter = ApiFilter(other_url_parameters={"search": query})
             questions = await client.get_questions_matching_filter(
@@ -384,9 +402,11 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
 @tool(
     "get_coherence_links",
     (
-        "Get questions related to this one via coherence links. "
-        "Used for consistency checking between related forecasts. "
-        "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
+        "Get Metaculus questions that are logically related to this one. "
+        "USE THIS to check if your forecast is consistent with related questions — "
+        "e.g., if you forecast 80% on 'Will X happen by 2027?', your forecast on "
+        "'Will X happen by 2026?' should be ≤80%. "
+        "Requires question_id (not post_id) — get this from get_metaculus_questions."
     ),
     {"question_id": int},
 )
@@ -400,7 +420,7 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
 
     question_id = validated.question_id
     try:
-        async with _metaculus_semaphore:
+        async with _metaculus_semaphore():
             client = get_metaculus_client()
             links = await client.get_links_for_question(question_id)
             results = [
@@ -458,20 +478,47 @@ async def _process_cp_history(
             cutoff_date,
         )
 
-    return mcp_success(
-        {
-            "question_id": question_id,
-            "days_requested": days,
-            "data_points": len(results),
-            "history": results,
-        }
-    )
+    response: dict[str, object] = {
+        "question_id": question_id,
+        "days_requested": days,
+        "data_points": len(results),
+        "history": results,
+    }
+
+    if filtered_count > 0 and len(results) == 0:
+        response["note"] = (
+            f"All {filtered_count} CP data points were after the retrodict cutoff date. "
+            "This is expected when the question was published near the cutoff. "
+            "No pre-cutoff CP data is available."
+        )
+
+    return mcp_success(response)
+
+
+async def _resolve_question_to_post_id(question_id: int) -> int | None:
+    """Resolve a Metaculus question_id to its post_id via search."""
+    try:
+        async with _metaculus_semaphore():
+            async with httpx.AsyncClient(
+                timeout=settings.http_timeout_seconds,
+                headers={"Authorization": f"Token {settings.metaculus_token}"},
+            ) as client:
+                resp = await client.get(
+                    f"https://www.metaculus.com/api/questions/{question_id}/",
+                )
+                resp.raise_for_status()
+                post_id = resp.json().get("post_id") or resp.json().get("post", {}).get("id")
+                if post_id:
+                    logger.info("Resolved question %d → post %d", question_id, post_id)
+                return post_id
+    except Exception:
+        return None
 
 
 async def _resolve_post_to_question_id(post_id: int) -> int | None:
     """Resolve a Metaculus post_id to its internal question_id."""
     try:
-        async with _metaculus_semaphore:
+        async with _metaculus_semaphore():
             async with httpx.AsyncClient(
                 timeout=settings.http_timeout_seconds,
                 headers={"Authorization": f"Token {settings.metaculus_token}"},
@@ -492,9 +539,11 @@ async def _resolve_post_to_question_id(post_id: int) -> int | None:
     "get_cp_history",
     (
         "Fetch historical community prediction (CP) data for a question. "
-        "Useful for meta-prediction questions about CP movements. "
-        "Returns timestamped CP values over the requested period. "
-        "Pass any Metaculus ID (question_id or post_id) — auto-detected."
+        "ESSENTIAL for meta-prediction questions ('Will CP be above X%?') — "
+        "shows CP trajectory over time to predict future movements. "
+        "Also useful for checking consensus shifts on any question. "
+        "Pass any Metaculus ID (question_id or post_id) — auto-detected. "
+        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP."
     ),
     {"question_id": int, "days": int},
 )
@@ -518,7 +567,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
         )
 
     try:
-        async with _metaculus_semaphore:
+        async with _metaculus_semaphore():
             async with httpx.AsyncClient(
                 timeout=settings.http_timeout_seconds,
                 headers={"Authorization": f"Token {settings.metaculus_token}"},
@@ -538,7 +587,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
             resolved_id = await _resolve_post_to_question_id(question_id)
             if resolved_id:
                 try:
-                    async with _metaculus_semaphore:
+                    async with _metaculus_semaphore():
                         async with httpx.AsyncClient(
                             timeout=settings.http_timeout_seconds,
                             headers={"Authorization": f"Token {settings.metaculus_token}"},
@@ -594,7 +643,7 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        async with _search_semaphore:
+        async with _search_semaphore():
             formatted = await exa_search(
                 query, num_results, published_before, livecrawl
             )
@@ -687,7 +736,7 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         return formatted
 
     try:
-        async with _search_semaphore:
+        async with _search_semaphore():
             results = await _search()
         return mcp_success({"query": query, "results": results})
     except Exception as e:
@@ -771,7 +820,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 return results
 
         try:
-            async with _search_semaphore:
+            async with _search_semaphore():
                 results = await _search()
 
             # In retrodict mode, replace snippets with historical content
@@ -810,7 +859,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         # In retrodict mode, use historical fetch
         if cutoff_date:
             try:
-                async with _search_semaphore:
+                async with _search_semaphore():
                     historical = await _fetch_wikipedia_historical_content(
                         query, cutoff_date
                     )
@@ -878,7 +927,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 }
 
         try:
-            async with _search_semaphore:
+            async with _search_semaphore():
                 result = await _fetch()
             return mcp_success(result)
         except Exception as e:
