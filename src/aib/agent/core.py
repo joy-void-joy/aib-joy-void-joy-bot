@@ -1,6 +1,7 @@
 """Forecasting agent using Claude Agent SDK."""
 
 import dataclasses
+import itertools
 import json
 import logging
 from datetime import date, datetime
@@ -24,6 +25,8 @@ from claude_agent_sdk import (
     ToolUseBlock,
     UserMessage,
 )
+
+from rich.console import Console
 
 from aib.agent.history import (
     format_history_for_context,
@@ -88,6 +91,16 @@ def _build_system_prompt(
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
 
+_TOOL_COLORS = [
+    "cyan", "green", "yellow", "magenta", "blue",
+    "red", "bright_cyan", "bright_green", "bright_yellow",
+    "bright_magenta", "bright_blue", "bright_red",
+]
+_color_cycle = itertools.cycle(_TOOL_COLORS)
+_id_to_color: dict[str, str] = {}
+_console = Console(highlight=False)
+
+
 def print_block(block: ContentBlock) -> None:
     """Print a content block with appropriate emoji prefix."""
     match block:
@@ -96,11 +109,15 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            input_json = json.dumps(block.input, indent=2) if block.input else ""
-            print(f"🔧 {block.name} [{block.id}]\n{input_json}" if input_json else f"🔧 {block.name} [{block.id}]")
+            color = next(_color_cycle)
+            _id_to_color[block.id] = color
+            _console.print(f"🔧 {block.name} [{block.id}]", style=color)
+            if block.input:
+                print(json.dumps(block.input, indent=2))
         case ToolResultBlock():
-            content_preview = _truncate_content(block.content, max_len=500)
-            print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
+            color = _id_to_color.pop(block.tool_use_id, "default")
+            _console.print(f"📋 Result [{block.tool_use_id}]:", style=color, end=" ")
+            print(_truncate_content(block.content, max_len=500))
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
