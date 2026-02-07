@@ -341,7 +341,9 @@ def update_retrodict_comparison(
         )
         return True
     except Exception as e:
-        logger.warning("Failed to update retrodict comparison for post %d: %s", post_id, e)
+        logger.warning(
+            "Failed to update retrodict comparison for post %d: %s", post_id, e
+        )
         return False
 
 

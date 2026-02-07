@@ -95,7 +95,9 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
     # Default to last 30 days; cap at retrodict cutoff
     cutoff = retrodict_cutoff.get()
     cutoff_str = cutoff.isoformat() if cutoff is not None else None
-    end_date = cutoff_str or validated.observation_end or datetime.now().strftime("%Y-%m-%d")
+    end_date = (
+        cutoff_str or validated.observation_end or datetime.now().strftime("%Y-%m-%d")
+    )
     start_date = validated.observation_start or (
         datetime.now() - timedelta(days=30)
     ).strftime("%Y-%m-%d")
@@ -235,7 +237,11 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
 class CompanyFinancialsInput(BaseModel):
     """Input for company financial data lookup."""
 
-    ticker: str = Field(min_length=1, max_length=10, description="Stock ticker symbol (e.g., GOOG, AAPL, MSFT)")
+    ticker: str = Field(
+        min_length=1,
+        max_length=10,
+        description="Stock ticker symbol (e.g., GOOG, AAPL, MSFT)",
+    )
     period: str = Field(
         default="quarterly",
         description="'quarterly' or 'annual'",

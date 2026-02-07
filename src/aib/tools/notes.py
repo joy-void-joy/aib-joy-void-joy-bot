@@ -220,9 +220,7 @@ Required: id (note ID from list/search)
 """
 
 
-def _create_notes_tool(
-    session_id: str | None = None, notes_base: Path | None = None
-):
+def _create_notes_tool(session_id: str | None = None, notes_base: Path | None = None):
     """Create the notes tool with optional session context.
 
     Args:
@@ -288,7 +286,9 @@ def _create_notes_tool(
         elif mode == "write_meta":
             if not session_id:
                 return mcp_error("write_meta is not available in this context")
-            return await _write_meta(session_id, validated.content or "", sessions_base=_sessions)
+            return await _write_meta(
+                session_id, validated.content or "", sessions_base=_sessions
+            )
         elif mode == "write_report":
             return await _write_report(validated, base=_base)
         else:
@@ -403,7 +403,9 @@ async def _read_note(note_id: str, base: Path = NOTES_BASE_PATH) -> dict[str, An
         return mcp_error(f"Failed to read note: {e}")
 
 
-async def _write_note(validated: NotesInput, base: Path = NOTES_BASE_PATH) -> dict[str, Any]:
+async def _write_note(
+    validated: NotesInput, base: Path = NOTES_BASE_PATH
+) -> dict[str, Any]:
     """Create a new structured note."""
     # Validate required fields
     required_fields = {
@@ -509,7 +511,9 @@ async def _write_meta(
         return mcp_error(f"Failed to write meta-reflection: {e}")
 
 
-async def _write_report(validated: NotesInput, base: Path = NOTES_BASE_PATH) -> dict[str, Any]:
+async def _write_report(
+    validated: NotesInput, base: Path = NOTES_BASE_PATH
+) -> dict[str, Any]:
     """Write a long markdown report for a question.
 
     Reports are stored in notes/research/<post_id>/ and ARE readable by future
@@ -553,9 +557,7 @@ async def _write_report(validated: NotesInput, base: Path = NOTES_BASE_PATH) -> 
 # --- MCP Server Factory ---
 
 
-def create_notes_server(
-    session_id: str | None = None, notes_base: Path | None = None
-):
+def create_notes_server(session_id: str | None = None, notes_base: Path | None = None):
     """Create the notes MCP server with session context.
 
     Args:

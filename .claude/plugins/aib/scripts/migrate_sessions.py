@@ -23,7 +23,9 @@ BARE_ID_PATTERN = re.compile(r"^\d+$")  # just post_id (no timestamp)
 
 @app.command()
 def archive(
-    dry_run: bool = typer.Option(True, "--dry-run/--execute", help="Show what would be archived"),
+    dry_run: bool = typer.Option(
+        True, "--dry-run/--execute", help="Show what would be archived"
+    ),
     delete: bool = typer.Option(False, "--delete", help="Delete instead of archive"),
 ) -> None:
     """Archive or delete old session directories."""
@@ -50,7 +52,9 @@ def archive(
         return
 
     action = "delete" if delete else "archive"
-    typer.echo(f"\n{'Would ' + action if dry_run else action.title() + 'ing'} {len(to_archive)} directories:\n")
+    typer.echo(
+        f"\n{'Would ' + action if dry_run else action.title() + 'ing'} {len(to_archive)} directories:\n"
+    )
 
     if not delete and not dry_run:
         ARCHIVE_PATH.mkdir(parents=True, exist_ok=True)
@@ -64,7 +68,9 @@ def archive(
         else:
             new_path = ARCHIVE_PATH / old_path.name
             old_path.rename(new_path)
-            typer.echo(f"  [archived] {old_path.name} -> {new_path.relative_to(Path('notes'))}")
+            typer.echo(
+                f"  [archived] {old_path.name} -> {new_path.relative_to(Path('notes'))}"
+            )
 
     if dry_run:
         typer.echo(f"\nRun with --execute to {action}.")
