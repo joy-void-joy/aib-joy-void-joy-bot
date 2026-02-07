@@ -111,12 +111,15 @@ def print_block(block: ContentBlock) -> None:
         case ToolUseBlock():
             color = next(_color_cycle)
             _id_to_color[block.id] = color
-            _console.print(f"🔧 {block.name} [{block.id}]", style=color)
+            print(f"🔧 {block.name} ", end="")
+            _console.print(f"[{block.id}]", style=color)
             if block.input:
                 print(json.dumps(block.input, indent=2))
         case ToolResultBlock():
             color = _id_to_color.pop(block.tool_use_id, "default")
-            _console.print(f"📋 Result [{block.tool_use_id}]:", style=color, end=" ")
+            print("📋 Result ", end="")
+            _console.print(f"[{block.tool_use_id}]", style=color, end="")
+            print(": ", end="")
             print(_truncate_content(block.content, max_len=500))
         case _:
             print(f"❓ {type(block).__name__}: {block}")
