@@ -46,9 +46,20 @@ class TTLCache:
         self._cache: dict[str, CacheEntry] = {}
         self._default_ttl = default_ttl
         self._max_size = max_size
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None
+        self._lock_loop_id: int | None = None
         self._hits = 0
         self._misses = 0
+
+    def _get_lock(self) -> asyncio.Lock:
+        """Get or create a lock bound to the current event loop."""
+        loop_id = id(asyncio.get_running_loop())
+        if self._lock is None or self._lock_loop_id != loop_id:
+            lock = asyncio.Lock()
+            self._lock = lock
+            self._lock_loop_id = loop_id
+            return lock
+        return self._lock
 
     def _make_key(self, func_name: str, args: tuple, kwargs: dict) -> str:
         """Generate a cache key from function name and arguments."""
@@ -73,7 +84,7 @@ class TTLCache:
         Returns:
             Tuple of (found, value). If not found or expired, (False, None).
         """
-        async with self._lock:
+        async with self._get_lock():
             entry = self._cache.get(key)
 
             if entry is None:
@@ -100,7 +111,7 @@ class TTLCache:
         if ttl is None:
             ttl = self._default_ttl
 
-        async with self._lock:
+        async with self._get_lock():
             # Evict oldest entries if at max size
             if len(self._cache) >= self._max_size:
                 self._evict_expired()
@@ -128,7 +139,7 @@ class TTLCache:
 
     async def clear(self) -> None:
         """Clear all cached entries."""
-        async with self._lock:
+        async with self._get_lock():
             self._cache.clear()
 
     @property
