@@ -1,11 +1,11 @@
 ---
-allowed-tools: Bash(git:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
-description: Create a clean rebase branch with atomic commits and merge to main
+allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
+description: Create a clean rebase branch with atomic commits and open a PR
 ---
 
-# Rebase and Merge
+# Rebase and PR
 
-Create a temporary rebase branch with a clean, logical commit history, then merge directly to main.
+Create a rebase branch with a clean, logical commit history, push it, and open a PR.
 
 **Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
 
@@ -74,18 +74,19 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    - Order commits logically (dependencies first, then features, then polish)
    - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 
-6. **Merge to main**:
+6. **Push rebase branch and create PR**:
    ```bash
-   git checkout main
-   git merge --no-ff <branch>-rebase
-   ```
-   Use `--no-ff` to preserve the branch history as a merge commit.
+   git push -u origin <branch>-rebase
+   gh pr create --title "<conventional commit style title>" --body "$(cat <<'EOF'
+   ## Summary
+   <1-3 bullet points describing the changes>
 
-7. **Push main and clean up**:
-   ```bash
-   git push origin main
-   git branch -d <branch>-rebase
+   ## Commits
+   <list each commit with its message>
+   EOF
+   )"
    ```
+   Return the PR URL to the user when done.
 
 ## Guidelines
 
