@@ -169,7 +169,8 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
 
 
 async def _polymarket_event_at_cutoff(
-    event: dict[str, Any], cutoff: date,
+    event: dict[str, Any],
+    cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Polymarket event at the cutoff date."""
     markets = event.get("markets", [])
@@ -292,7 +293,8 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
 
 
 async def _manifold_market_at_cutoff(
-    market: dict[str, Any], cutoff: date,
+    market: dict[str, Any],
+    cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Manifold market at the cutoff date."""
     contract_id = market.get("id")
@@ -413,9 +415,10 @@ async def _fetch_polymarket_history(
 @tool(
     "polymarket_history",
     (
-        "Get historical Polymarket price at a specific timestamp. "
-        "Requires the market token ID (not slug). Returns the price closest "
-        "to but not after the given timestamp. Use for retrodict mode."
+        "Get historical Polymarket price at a specific past timestamp. "
+        "USE THIS to see how prediction market sentiment evolved over time — "
+        "useful for understanding trend direction. Get the token ID from polymarket_price first, "
+        "then query specific timestamps. Returns price closest to but not after the timestamp."
     ),
     {"market_id": str, "timestamp": int},
 )
@@ -493,10 +496,10 @@ async def _fetch_manifold_bets(
 @tool(
     "manifold_history",
     (
-        "Get historical Manifold market price at a specific timestamp. "
-        "Reconstructs price from bet history. Requires the contract ID. "
-        "Returns the probability just after the last bet before the timestamp. "
-        "Use for retrodict mode."
+        "Get historical Manifold market price at a specific past timestamp. "
+        "USE THIS to track how Manifold probability changed over time. "
+        "Get the contract ID from manifold_price first, then query timestamps. "
+        "Returns probability just after the last bet before the given timestamp."
     ),
     {"market_id": str, "timestamp": int},
 )
@@ -635,7 +638,9 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
                 "symbol": symbol,
                 "name": ticker.info.get("shortName", symbol),
                 "current_price": float(last_row["Close"]),
-                "previous_close": float(hist.iloc[-2]["Close"]) if len(hist) > 1 else None,
+                "previous_close": float(hist.iloc[-2]["Close"])
+                if len(hist) > 1
+                else None,
                 "change_percent": None,
                 "currency": ticker.info.get("currency", "USD"),
                 "market_cap": None,
