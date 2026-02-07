@@ -71,15 +71,22 @@ def wait_for_credit_reset(error: CreditExhaustedError) -> None:
 
 def display_forecast(output: ForecastOutput) -> None:
     """Display forecast results to console."""
+    type_emoji = {
+        "binary": "✅",
+        "numeric": "📊",
+        "discrete": "🔢",
+        "multiple_choice": "🎲",
+    }.get(output.question_type, "❓")
+
     print(f"\n{'=' * 60}")
     print(f"Question: {output.question_title}")
-    print(f"Type: {output.question_type}")
+    print(f"Type: {type_emoji} {output.question_type}")
     print("=" * 60)
 
     print(f"\nSummary: {output.summary}")
 
     if output.probability is not None:
-        line = f"\nForecast: {output.probability * 100:.1f}%"
+        line = f"\n🎯 Forecast: {output.probability * 100:.1f}%"
         if output.logit is not None:
             line += f" (logit: {output.logit:+.2f})"
             if output.probability_from_logit is not None:
@@ -89,15 +96,15 @@ def display_forecast(output: ForecastOutput) -> None:
         print(line)
 
     if output.probabilities:
-        print("\nProbabilities:")
+        print("\n🎲 Probabilities:")
         for option, prob in output.probabilities.items():
             print(f"  {option}: {prob * 100:.1f}%")
 
     if output.median is not None:
-        print(f"\nEstimate: {output.median}")
+        print(f"\n📊 Estimate: {output.median}")
         if output.confidence_interval:
             lo, hi = output.confidence_interval
-            print(f"90% CI: [{lo}, {hi}]")
+            print(f"   90% CI: [{lo}, {hi}]")
 
     if output.factors:
         print("\nFactors:")
