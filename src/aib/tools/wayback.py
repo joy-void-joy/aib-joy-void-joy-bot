@@ -41,6 +41,7 @@ def _wayback_semaphore() -> asyncio.Semaphore:
         _wayback_semaphore_store[key] = asyncio.Semaphore(5)
     return _wayback_semaphore_store[key]
 
+
 # Custom exception for rate limiting
 class WaybackRateLimitError(Exception):
     """Raised when Wayback API returns 429 Too Many Requests."""
@@ -106,7 +107,9 @@ async def check_wayback_availability(
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
                 wait=wait_exponential_jitter(initial=1, max=30, jitter=2),
-                retry=retry_if_exception_type((WaybackRateLimitError, httpx.HTTPStatusError)),
+                retry=retry_if_exception_type(
+                    (WaybackRateLimitError, httpx.HTTPStatusError)
+                ),
                 reraise=True,
             ):
                 with attempt:
@@ -120,10 +123,14 @@ async def check_wayback_availability(
                         # Validate snapshot is not after the cutoff if requested
                         if validate_before_cutoff:
                             actual_ts = closest.get("timestamp", "")
-                            if actual_ts and normalize_wayback_timestamp(actual_ts) > normalize_wayback_timestamp(timestamp):
+                            if actual_ts and normalize_wayback_timestamp(
+                                actual_ts
+                            ) > normalize_wayback_timestamp(timestamp):
                                 logger.debug(
                                     "Wayback snapshot %s is after cutoff %s for %s",
-                                    actual_ts, timestamp, url
+                                    actual_ts,
+                                    timestamp,
+                                    url,
                                 )
                                 return None
                         return closest
@@ -250,10 +257,7 @@ async def wayback_validate_results(
     Returns:
         Filtered results with Wayback-derived snippets.
     """
-    tasks = [
-        fetch_wayback_content(r["url"] or "", wayback_ts)
-        for r in results
-    ]
+    tasks = [fetch_wayback_content(r["url"] or "", wayback_ts) for r in results]
     contents = await asyncio.gather(*tasks)
 
     validated: list[ExaResult] = []

@@ -1,6 +1,5 @@
 """System prompts for the forecasting agent."""
 
-
 _FORECASTING_SYSTEM_PROMPT_TEMPLATE = """\
 You are an expert forecaster participating in the Metaculus AI Benchmarking Tournament.
 

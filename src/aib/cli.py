@@ -312,9 +312,7 @@ def retrodict(
         if blind:
             if parsed_forecast_date:
                 cutoff_date = parsed_forecast_date.date()
-                print(
-                    f"🔒 Blind mode: data restricted to before {cutoff_date}"
-                )
+                print(f"🔒 Blind mode: data restricted to before {cutoff_date}")
             elif published_at:
                 cutoff_date = published_at.date()
                 print(f"🔒 Blind mode: data restricted to before {cutoff_date}")
@@ -360,7 +358,9 @@ def retrodict(
                 res_emoji = "✅" if resolution == "yes" else "❌"
                 print(f"\n   🎯 Actual:        {res_emoji} {resolution.upper()}")
                 print(f"   🤖 Us:            {output.probability:.1%}")
-                print(f"      diff:          {abs(diff_pct):.1f}pp {'too high' if diff_pct > 0 else 'too low'}")
+                print(
+                    f"      diff:          {abs(diff_pct):.1f}pp {'too high' if diff_pct > 0 else 'too low'}"
+                )
                 print(f"      Brier:         {_brier_emoji(brier)} {brier:.4f}")
 
                 comparison = RetrodictComparison(
@@ -374,7 +374,9 @@ def retrodict(
                 if final_cp is not None:
                     cp_brier = (final_cp - outcome) ** 2
                     print(f"   👥 Community:     {final_cp:.1%}")
-                    print(f"      Brier:         {_brier_emoji(cp_brier)} {cp_brier:.4f}")
+                    print(
+                        f"      Brier:         {_brier_emoji(cp_brier)} {cp_brier:.4f}"
+                    )
                     if brier < cp_brier:
                         ratio = cp_brier / brier if brier > 0 else float("inf")
                         print(f"   ⚔️  vs CP:        🏆 {ratio:.1f}x better Brier")
@@ -410,25 +412,39 @@ def retrodict(
 
                         if range_span and range_span > 0:
                             our_pct = our_abs_err / range_span * 100
-                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
-                            print(f"      error:     {_err_emoji(our_pct)} {our_pct:.1f}% of range")
+                            print(
+                                f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]"
+                            )
+                            print(
+                                f"      error:     {_err_emoji(our_pct)} {our_pct:.1f}% of range"
+                            )
                         else:
-                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                            print(
+                                f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]"
+                            )
                             print(f"      error:     {our_abs_err:,.1f}")
 
                         if numeric_cp is not None:
                             cp_median = numeric_cp["median"]
                             cp_abs_err = abs(actual_val - cp_median)
-                            print(f"   👥 Community: {cp_median:,.1f}  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]")
+                            print(
+                                f"   👥 Community: {cp_median:,.1f}  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]"
+                            )
                             if range_span and range_span > 0:
                                 cp_pct = cp_abs_err / range_span * 100
-                                print(f"      error:     {_err_emoji(cp_pct)} {cp_pct:.1f}% of range")
+                                print(
+                                    f"      error:     {_err_emoji(cp_pct)} {cp_pct:.1f}% of range"
+                                )
                                 if cp_abs_err > 0 and our_abs_err > 0:
                                     ratio = cp_abs_err / our_abs_err
                                     if ratio > 1:
-                                        print(f"   ⚔️  vs CP:     🏆 {ratio:.1f}x more accurate")
+                                        print(
+                                            f"   ⚔️  vs CP:     🏆 {ratio:.1f}x more accurate"
+                                        )
                                     elif ratio < 1:
-                                        print(f"   ⚔️  vs CP:     🫠 {1/ratio:.1f}x less accurate")
+                                        print(
+                                            f"   ⚔️  vs CP:     🫠 {1 / ratio:.1f}x less accurate"
+                                        )
                                     else:
                                         print("   ⚔️  vs CP:     🤝 Same")
 
@@ -436,9 +452,13 @@ def retrodict(
                         if within_ci:
                             print("   📍 In 90% CI: ✅")
                         elif actual_val < lo:
-                            print(f"   📍 In 90% CI: 🫠 below by {lo - actual_val:,.1f}")
+                            print(
+                                f"   📍 In 90% CI: 🫠 below by {lo - actual_val:,.1f}"
+                            )
                         else:
-                            print(f"   📍 In 90% CI: 🫠 above by {actual_val - hi:,.1f}")
+                            print(
+                                f"   📍 In 90% CI: 🫠 above by {actual_val - hi:,.1f}"
+                            )
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
@@ -475,7 +495,9 @@ def retrodict(
                     print(f"      {option}: {prob:.1%}{marker}")
 
                 correct_prob = output.probabilities.get(resolution, 0)
-                print(f"\n      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}")
+                print(
+                    f"\n      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}"
+                )
 
                 log_score = None
                 if correct_prob > 0:
@@ -491,7 +513,9 @@ def retrodict(
 
             else:
                 print(f"\n   🎯 Actual:        {resolution or 'Unknown'}")
-                print(f"   🤖 Us:            {output.probability or output.median or 'N/A'}")
+                print(
+                    f"   🤖 Us:            {output.probability or output.median or 'N/A'}"
+                )
 
             print("\n" + "=" * 60)
 

@@ -83,18 +83,25 @@ def _build_system_prompt(
     agent believes "today" is the blind date, preventing future leak.
     """
     effective_date = cutoff.isoformat() if cutoff else date.today().isoformat()
-    base = (
-        _PRESET_TEMPLATE
-        .replace("{{DATE}}", effective_date)
-        .replace("{{WORKING_DIRECTORY}}", str(Path.cwd()))
+    base = _PRESET_TEMPLATE.replace("{{DATE}}", effective_date).replace(
+        "{{WORKING_DIRECTORY}}", str(Path.cwd())
     )
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
 
 
 _TOOL_COLORS = [
-    "cyan", "green", "yellow", "magenta", "blue",
-    "red", "bright_cyan", "bright_green", "bright_yellow",
-    "bright_magenta", "bright_blue", "bright_red",
+    "cyan",
+    "green",
+    "yellow",
+    "magenta",
+    "blue",
+    "red",
+    "bright_cyan",
+    "bright_green",
+    "bright_yellow",
+    "bright_magenta",
+    "bright_blue",
+    "bright_red",
 ]
 _color_cycle = itertools.cycle(_TOOL_COLORS)
 _id_to_color: dict[str, str] = {}
@@ -832,9 +839,7 @@ async def run_forecast(
             model=settings.model,
             system_prompt=_build_system_prompt(
                 cutoff=cutoff,
-                tool_docs=policy.get_tool_docs(
-                    mcp_servers, allow_spawn=allow_spawn
-                ),
+                tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -924,7 +929,9 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
-        question_category=ForecastOutput.classify_category(question_title, question_type),
+        question_category=ForecastOutput.classify_category(
+            question_title, question_type
+        ),
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
@@ -1098,10 +1105,14 @@ async def run_forecast(
                 "percentiles": output.percentiles,
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
-                "log_path": str(thinking_log_path) if thinking_log_path.exists() else None,
+                "log_path": str(thinking_log_path)
+                if thinking_log_path.exists()
+                else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),
-                "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
+                "question_scheduled_resolve_time": context.get(
+                    "scheduled_resolve_time"
+                ),
             }
 
             if cutoff:

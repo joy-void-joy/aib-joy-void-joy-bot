@@ -169,7 +169,8 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
 
 
 async def _polymarket_event_at_cutoff(
-    event: dict[str, Any], cutoff: date,
+    event: dict[str, Any],
+    cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Polymarket event at the cutoff date."""
     markets = event.get("markets", [])
@@ -292,7 +293,8 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
 
 
 async def _manifold_market_at_cutoff(
-    market: dict[str, Any], cutoff: date,
+    market: dict[str, Any],
+    cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Manifold market at the cutoff date."""
     contract_id = market.get("id")
@@ -636,7 +638,9 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
                 "symbol": symbol,
                 "name": ticker.info.get("shortName", symbol),
                 "current_price": float(last_row["Close"]),
-                "previous_close": float(hist.iloc[-2]["Close"]) if len(hist) > 1 else None,
+                "previous_close": float(hist.iloc[-2]["Close"])
+                if len(hist) > 1
+                else None,
                 "change_percent": None,
                 "currency": ticker.info.get("currency", "USD"),
                 "market_cap": None,

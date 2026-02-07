@@ -68,7 +68,9 @@ def extract_timestamp_from_meta(filepath: Path) -> str | None:
     return None
 
 
-def find_matching_forecast(post_id: int, meta_timestamp: str) -> tuple[str, Path] | None:
+def find_matching_forecast(
+    post_id: int, meta_timestamp: str
+) -> tuple[str, Path] | None:
     """Find the forecast that best matches this meta file.
 
     Returns (forecast_timestamp, forecast_path) or None.
@@ -117,9 +119,17 @@ def get_session_dir(post_id: int, timestamp: str) -> Path:
 
 @app.command()
 def migrate(
-    dry_run: bool = typer.Option(True, "--dry-run/--execute", help="Show what would be done without making changes"),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--execute",
+        help="Show what would be done without making changes",
+    ),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Show detailed output"),
-    include_unmatched: bool = typer.Option(True, "--include-unmatched/--skip-unmatched", help="Include files without post_id using filename as session"),
+    include_unmatched: bool = typer.Option(
+        True,
+        "--include-unmatched/--skip-unmatched",
+        help="Include files without post_id using filename as session",
+    ),
 ) -> None:
     """Migrate meta files from notes/meta/ to notes/sessions/<post_id>/<timestamp>/."""
 
@@ -146,7 +156,9 @@ def migrate(
             else:
                 session_dir = get_session_dir(post_id, meta_timestamp)
                 if verbose:
-                    typer.echo(f"  No forecast for {meta_file.name}, using meta timestamp")
+                    typer.echo(
+                        f"  No forecast for {meta_file.name}, using meta timestamp"
+                    )
         elif post_id:
             session_dir = get_session_dir(post_id, "unknown")
             if verbose:
@@ -218,10 +230,14 @@ def check() -> None:
         if forecast_match:
             forecast_ts = forecast_match[0]
             diff = abs(
-                (datetime.strptime(forecast_ts, "%Y%m%d_%H%M%S") -
-                 datetime.strptime(meta_timestamp, "%Y%m%d_%H%M%S")).total_seconds()
+                (
+                    datetime.strptime(forecast_ts, "%Y%m%d_%H%M%S")
+                    - datetime.strptime(meta_timestamp, "%Y%m%d_%H%M%S")
+                ).total_seconds()
             )
-            typer.echo(f"✓ {meta_file.name} -> post {post_id}, forecast {forecast_ts} (diff: {diff:.0f}s)")
+            typer.echo(
+                f"✓ {meta_file.name} -> post {post_id}, forecast {forecast_ts} (diff: {diff:.0f}s)"
+            )
             matched += 1
         else:
             typer.echo(f"? {meta_file.name}: post_id {post_id} has no forecasts")
