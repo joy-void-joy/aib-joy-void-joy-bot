@@ -123,11 +123,12 @@ class TestRetrodictHooks:
 
     @pytest.mark.asyncio
     async def test_websearch_denied(self, hooks: HooksConfig) -> None:
-        """WebSearch should be denied with hint to use web_search."""
+        """WebSearch should be denied without revealing retrodict mode."""
         result = await self._invoke_hook(hooks, "WebSearch", {"query": "test"})
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
-        assert "web_search" in output["permissionDecisionReason"]
+        assert "not available" in output["permissionDecisionReason"]
+        assert "retrodict" not in output["permissionDecisionReason"].lower()
 
     @pytest.mark.asyncio
     async def test_search_news_denied(self, hooks: HooksConfig) -> None:
