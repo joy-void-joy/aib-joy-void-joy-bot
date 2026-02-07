@@ -127,7 +127,7 @@ class CoherenceLinksInput(BaseModel):
 class CPHistoryInput(BaseModel):
     """Input for fetching community prediction history."""
 
-    question_id: int = Field(description="Metaculus question ID (not post ID)")
+    question_id: int = Field(description="Metaculus question ID or post ID (auto-detected)")
     days: int = Field(default=30, description="Number of days of history to fetch")
 
 
@@ -419,13 +419,82 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Failed to fetch links: {e}")
 
 
+async def _process_cp_history(
+    data: dict[str, Any],
+    question_id: int,
+    days: int,
+    cutoff_dt: Any | None,
+) -> dict[str, Any]:
+    """Process raw CP history API response into tool output."""
+    history = data.get("history", [])
+    results = []
+    filtered_count = 0
+    for entry in history:
+        timestamp = entry.get("start_time") or entry.get("end_time")
+        centers = entry.get("centers", [])
+        if centers and len(centers) > 0:
+            cp = centers[0]
+            if cp is not None:
+                if cutoff_dt and timestamp:
+                    from datetime import datetime
+
+                    ts_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    if ts_dt > cutoff_dt:
+                        filtered_count += 1
+                        continue
+
+                results.append(
+                    {
+                        "timestamp": timestamp,
+                        "community_prediction": round(cp, 4),
+                    }
+                )
+
+    if filtered_count > 0:
+        cutoff_date = retrodict_cutoff.get()
+        logger.info(
+            "[Retrodict] CP history: filtered %d points after %s",
+            filtered_count,
+            cutoff_date,
+        )
+
+    return mcp_success(
+        {
+            "question_id": question_id,
+            "days_requested": days,
+            "data_points": len(results),
+            "history": results,
+        }
+    )
+
+
+async def _resolve_post_to_question_id(post_id: int) -> int | None:
+    """Resolve a Metaculus post_id to its internal question_id."""
+    try:
+        async with _metaculus_semaphore:
+            async with httpx.AsyncClient(
+                timeout=settings.http_timeout_seconds,
+                headers={"Authorization": f"Token {settings.metaculus_token}"},
+            ) as client:
+                resp = await client.get(
+                    f"https://www.metaculus.com/api/posts/{post_id}/",
+                )
+                resp.raise_for_status()
+                qid = resp.json().get("question", {}).get("id")
+                if qid:
+                    logger.info("Resolved post %d → question %d", post_id, qid)
+                return qid
+    except Exception:
+        return None
+
+
 @tool(
     "get_cp_history",
     (
         "Fetch historical community prediction (CP) data for a question. "
         "Useful for meta-prediction questions about CP movements. "
         "Returns timestamped CP values over the requested period. "
-        "Note: Requires question_id (not post_id) - get this from get_metaculus_questions."
+        "Pass any Metaculus ID (question_id or post_id) — auto-detected."
     ),
     {"question_id": int, "days": int},
 )
@@ -461,51 +530,30 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
                 response.raise_for_status()
                 data = response.json()
 
-        history = data.get("history", [])
-        results = []
-        filtered_count = 0
-        for entry in history:
-            timestamp = entry.get("start_time") or entry.get("end_time")
-            centers = entry.get("centers", [])
-            if centers and len(centers) > 0:
-                cp = centers[0]
-                if cp is not None:
-                    # Filter by cutoff date if specified
-                    if cutoff_dt and timestamp:
-                        from datetime import datetime
-
-                        ts_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                        if ts_dt > cutoff_dt:
-                            filtered_count += 1
-                            continue
-
-                    results.append(
-                        {
-                            "timestamp": timestamp,
-                            "community_prediction": round(cp, 4),
-                        }
-                    )
-
-        if filtered_count > 0:
-            logger.info(
-                "[Retrodict] CP history: filtered %d points after %s",
-                filtered_count,
-                cutoff_date,
-            )
-
-        return mcp_success(
-            {
-                "question_id": question_id,
-                "days_requested": days,
-                "data_points": len(results),
-                "history": results,
-            }
-        )
+        return await _process_cp_history(data, question_id, days, cutoff_dt)
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
+            # ID might be a post_id — try resolving to question_id and retry
+            logger.info("Question %d not found, trying as post_id...", question_id)
+            resolved_id = await _resolve_post_to_question_id(question_id)
+            if resolved_id:
+                try:
+                    async with _metaculus_semaphore:
+                        async with httpx.AsyncClient(
+                            timeout=settings.http_timeout_seconds,
+                            headers={"Authorization": f"Token {settings.metaculus_token}"},
+                        ) as client:
+                            response = await client.get(
+                                f"https://www.metaculus.com/api/questions/{resolved_id}/aggregate-history/",
+                                params={"days": days},
+                            )
+                            response.raise_for_status()
+                            # Re-enter the processing path with resolved data
+                            return await _process_cp_history(response.json(), resolved_id, days, cutoff_dt)
+                except Exception as retry_err:
+                    return mcp_error(f"Failed after resolving post {question_id} → question {resolved_id}: {retry_err}")
             return mcp_error(
-                f"Question {question_id} not found or has no CP history. "
-                "Note: This tool needs the question_id (internal ID), not the post_id (URL ID)."
+                f"ID {question_id} not found as question_id or post_id."
             )
         logger.exception("Failed to fetch CP history")
         return mcp_error(f"Failed to fetch CP history: {e}")
