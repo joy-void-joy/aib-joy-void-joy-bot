@@ -6,31 +6,30 @@ computes accuracy metrics (Brier score, log loss), and compares our forecasts
 to community predictions as an early calibration signal.
 
 Examples:
-    uv run python .claude/scripts/feedback_collect.py
-    uv run python .claude/scripts/feedback_collect.py --tournament spring-aib-2026
-    uv run python .claude/scripts/feedback_collect.py --since 2026-01-01
+    uv run python .claude/plugins/aib/scripts/feedback_collect.py
+    uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
+    uv run python .claude/plugins/aib/scripts/feedback_collect.py --since 2026-01-01
 """
 
 import asyncio
 import json
 import logging
 import math
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, TypedDict
 
+import sh
 import typer
 from pydantic import BaseModel
 
-# Resolve imports from src/
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-from metaculus import ApiFilter, AsyncMetaculusClient, BinaryQuestion, MetaculusQuestion
 from aib.agent.history import (
+    FORECASTS_BASE_PATH,
+    SavedForecast,
     load_past_forecasts,
     load_retrodict_forecasts,
-    FORECASTS_BASE_PATH,
 )
+from metaculus import ApiFilter, AsyncMetaculusClient, BinaryQuestion, MetaculusQuestion
 
 app = typer.Typer(help="Collect feedback data from resolved forecasts")
 logger = logging.getLogger(__name__)
@@ -40,17 +39,10 @@ FEEDBACK_BASE_PATH = Path("./notes/feedback_loop")
 
 def get_current_branch() -> str:
     """Get the current git branch name."""
-    import subprocess
-
+    git = sh.Command("git")
     try:
-        result = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip() or "main"
-    except subprocess.CalledProcessError:
+        return str(git("branch", "--show-current")).strip() or "main"
+    except sh.ErrorReturnCode:
         return "main"
 
 
@@ -501,7 +493,7 @@ def collect_retrodict_results() -> list[RetrodictResult]:
     forecasts = load_retrodict_forecasts()
 
     # Deduplicate: keep only the latest retrodiction per (post_id, retrodict_date)
-    latest: dict[tuple[int, str], Any] = {}
+    latest: dict[tuple[int, str], SavedForecast] = {}
     for f in forecasts:
         if not f.retrodict_date:
             continue
@@ -582,15 +574,21 @@ def save_feedback_state(state: FeedbackState) -> None:
     get_state_file().write_text(state.model_dump_json(indent=2))
 
 
-def load_last_run() -> dict[str, Any]:
+class LastRunData(TypedDict, total=False):
+    last_collection: str
+    last_metrics_file: str
+    tournaments: list[str]
+
+
+def load_last_run() -> LastRunData:
     """Load last run metadata."""
     last_run_file = get_last_run_file()
     if last_run_file.exists():
         return json.loads(last_run_file.read_text())
-    return {}
+    return LastRunData()
 
 
-def save_last_run(data: dict[str, Any]) -> None:
+def save_last_run(data: LastRunData) -> None:
     """Save last run metadata."""
     feedback_path = get_feedback_path()
     feedback_path.mkdir(parents=True, exist_ok=True)
@@ -679,8 +677,9 @@ async def _main_async(
             since_dt = datetime.fromisoformat(since)
         else:
             last_run = load_last_run()
-            if last_run.get("last_collection"):
-                since_dt = datetime.fromisoformat(last_run["last_collection"])
+            last_collection = last_run.get("last_collection")
+            if last_collection:
+                since_dt = datetime.fromisoformat(last_collection)
 
     logger.info(
         "Collecting feedback for tournaments %s since %s",
