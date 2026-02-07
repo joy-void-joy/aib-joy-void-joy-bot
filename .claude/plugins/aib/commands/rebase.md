@@ -1,11 +1,11 @@
 ---
-allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
-description: Create a clean rebase branch with atomic commits and open a PR
+allowed-tools: Bash(git:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
+description: Create a clean rebase branch with atomic commits and merge to main
 ---
 
-# Rebase and PR
+# Rebase and Merge
 
-Create a temporary rebase branch with a clean, logical commit history, then open a pull request.
+Create a temporary rebase branch with a clean, logical commit history, then merge directly to main.
 
 **Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
 
@@ -48,14 +48,10 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 1. **Sync main with remote**:
    ```bash
-   # If local main is behind origin:
    git fetch origin main
    git checkout main && git merge --ff-only origin/main
-
-   # If local main is ahead of origin (has unpushed commits):
-   git push origin main
    ```
-   PRs compare against origin/main, so local and remote must be in sync. If they diverge, the PR will show incorrect commit counts.
+   Ensure local main is up-to-date before creating the rebase branch.
 
 2. **Gather context**:
    - Identify the current branch and its base (typically `main`)
@@ -78,19 +74,17 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    - Order commits logically (dependencies first, then features, then polish)
    - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 
-6. **Push and create PR**:
+6. **Merge to main**:
    ```bash
-   git push -u origin <branch>-rebase
-   gh pr create --title "..." --body "..."
+   git checkout main
+   git merge --no-ff <branch>-rebase
    ```
+   Use `--no-ff` to preserve the branch history as a merge commit.
 
-7. **Refresh PR base and verify**:
+7. **Push main and clean up**:
    ```bash
-   # Always refresh after pushing (GitHub caches the base reference)
-   gh pr edit <num> --base main
-
-   # Verify commit count matches expectation
-   gh pr view <num> --json commits --jq '.commits | length'
+   git push origin main
+   git branch -d <branch>-rebase
    ```
 
 ## Guidelines
@@ -99,17 +93,3 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 - **Logical ordering** — Put foundational changes before features that depend on them
 - **Atomic commits** — Each commit should compile/run independently if possible
 - **Meaningful messages** — Commit messages should explain *what* and *why*
-
-## PR Format
-
-```markdown
-## Summary
-- [1-3 bullet points describing the changes]
-
-## Test plan
-- [How to verify the changes work]
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>

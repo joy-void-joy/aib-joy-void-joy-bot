@@ -375,7 +375,7 @@ Creates worktree in `tree/`, copies `.env.local` and `logs/`, runs `uv sync`, mi
 Collect calibration data from resolved forecasts.
 
 ```bash
-uv run python .claude/plugins/aib/scripts/feedback_collect.py [--tournament X] [--all-time] [--since DATE]
+uv run python .claude/plugins/aib/scripts/feedback_collect.py [--tournament X] [--all-time] [--since DATE] [--include-retrodict] [--new-only/--no-new-only]
 ```
 
 ### trace_forecast.py

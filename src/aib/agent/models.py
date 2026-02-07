@@ -749,7 +749,30 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Process reflection metadata.",
     )
+    question_category: str | None = Field(
+        default=None,
+        description="Question category: predictive, definitional, meta, or measurement.",
+    )
     retrodict_date: date | None = Field(
         default=None,
         description="If set, forecast was made in retrodict mode with data restricted to before this date.",
     )
+
+    @staticmethod
+    def classify_category(title: str, question_type: str) -> str:
+        """Classify question into category based on title and type heuristics."""
+        title_lower = title.lower()
+
+        if "community prediction" in title_lower or "will the cp " in title_lower:
+            return "meta"
+
+        if question_type in ("numeric", "discrete"):
+            return "measurement"
+
+        if any(
+            phrase in title_lower
+            for phrase in ("has ", "does ", "did ", "is there", "are there", "qualify")
+        ):
+            return "definitional"
+
+        return "predictive"

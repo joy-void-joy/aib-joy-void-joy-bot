@@ -30,8 +30,17 @@ from aib.tools.cache import cached
 
 logger = logging.getLogger(__name__)
 
-# Limit concurrent Wayback API requests to be respectful
-_wayback_semaphore = asyncio.Semaphore(5)
+# Lazily create semaphores per-event-loop to avoid binding issues
+_wayback_semaphore_store: dict[str, asyncio.Semaphore] = {}
+
+
+def _wayback_semaphore() -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    key = f"wayback_{id(loop)}"
+    if key not in _wayback_semaphore_store:
+        _wayback_semaphore_store[key] = asyncio.Semaphore(5)
+    return _wayback_semaphore_store[key]
+
 
 # Custom exception for rate limiting
 class WaybackRateLimitError(Exception):
@@ -93,12 +102,14 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with _wayback_semaphore:
+    async with _wayback_semaphore():
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
                 wait=wait_exponential_jitter(initial=1, max=30, jitter=2),
-                retry=retry_if_exception_type((WaybackRateLimitError, httpx.HTTPStatusError)),
+                retry=retry_if_exception_type(
+                    (WaybackRateLimitError, httpx.HTTPStatusError)
+                ),
                 reraise=True,
             ):
                 with attempt:
@@ -112,10 +123,14 @@ async def check_wayback_availability(
                         # Validate snapshot is not after the cutoff if requested
                         if validate_before_cutoff:
                             actual_ts = closest.get("timestamp", "")
-                            if actual_ts and normalize_wayback_timestamp(actual_ts) > normalize_wayback_timestamp(timestamp):
+                            if actual_ts and normalize_wayback_timestamp(
+                                actual_ts
+                            ) > normalize_wayback_timestamp(timestamp):
                                 logger.debug(
                                     "Wayback snapshot %s is after cutoff %s for %s",
-                                    actual_ts, timestamp, url
+                                    actual_ts,
+                                    timestamp,
+                                    url,
                                 )
                                 return None
                         return closest
@@ -201,7 +216,7 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with _wayback_semaphore:
+    async with _wayback_semaphore():
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.get(wayback_url, follow_redirects=True)
@@ -242,10 +257,7 @@ async def wayback_validate_results(
     Returns:
         Filtered results with Wayback-derived snippets.
     """
-    tasks = [
-        fetch_wayback_content(r["url"] or "", wayback_ts)
-        for r in results
-    ]
+    tasks = [fetch_wayback_content(r["url"] or "", wayback_ts) for r in results]
     contents = await asyncio.gather(*tasks)
 
     validated: list[ExaResult] = []

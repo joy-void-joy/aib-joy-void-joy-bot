@@ -73,7 +73,11 @@ def _classify_trivial(lines: list[str]) -> list[bool]:
                 result.append(True)
                 break
         else:
-            if _is_trivial_content(stripped) and "(" in stripped and ")" not in stripped:
+            if (
+                _is_trivial_content(stripped)
+                and "(" in stripped
+                and ")" not in stripped
+            ):
                 in_import = True
                 result.append(True)
                 continue
