@@ -219,7 +219,14 @@ def retrodict(
     import sys
 
     sys.path.insert(0, "src")
-    from metaculus import AsyncMetaculusClient, BinaryQuestion, NumericQuestion
+    from metaculus import (
+        AsyncMetaculusClient,
+        BinaryQuestion,
+        DateQuestion,
+        DiscreteQuestion,
+        MultipleChoiceQuestion,
+        NumericQuestion,
+    )
 
     # Parse forecast_date if provided
     parsed_forecast_date: datetime | None = None
@@ -235,6 +242,21 @@ def retrodict(
         ci_lower: float
         ci_upper: float
         range_span: float
+
+    class QuestionMeta(TypedDict):
+        resolution: str | None
+        binary_cp: float | None
+        numeric_cp: NumericCP | None
+        published_at: datetime | None
+        title: str
+        question_type: str
+        description: str
+        resolution_criteria: str
+        fine_print: str
+        close_time: datetime | None
+        scheduled_resolution_time: datetime | None
+        num_forecasters: int
+        num_predictions: int
 
     def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
         """Extract community prediction median, CI, and range from api_json."""
@@ -259,10 +281,8 @@ def retrodict(
         except (KeyError, IndexError, TypeError):
             return None
 
-    async def get_resolution_and_published(
-        post_id: int,
-    ) -> tuple[str | None, float | None, NumericCP | None, datetime | None]:
-        """Fetch resolution, final CP, numeric CP, and published_at."""
+    async def get_question_meta(post_id: int) -> QuestionMeta | None:
+        """Fetch question metadata including resolution and community prediction."""
         client = AsyncMetaculusClient()
         try:
             result = await client.get_question_by_post_id(post_id)
@@ -277,51 +297,182 @@ def retrodict(
                 q = result[0]
             else:
                 q = result
-            resolution = q.resolution_string
+
+            if isinstance(q, BinaryQuestion):
+                qtype = "binary"
+            elif isinstance(q, DiscreteQuestion):
+                qtype = "discrete"
+            elif isinstance(q, NumericQuestion):
+                qtype = "numeric"
+            elif isinstance(q, DateQuestion):
+                qtype = "date"
+            elif isinstance(q, MultipleChoiceQuestion):
+                qtype = "multiple_choice"
+            else:
+                qtype = "unknown"
+
             binary_cp = None
             numeric_cp: NumericCP | None = None
             if isinstance(q, BinaryQuestion):
                 binary_cp = q.community_prediction_at_access_time
             elif isinstance(q, NumericQuestion):
                 numeric_cp = _extract_numeric_cp(q)
-            return resolution, binary_cp, numeric_cp, q.published_time
+
+            return QuestionMeta(
+                resolution=q.resolution_string,
+                binary_cp=binary_cp,
+                numeric_cp=numeric_cp,
+                published_at=q.published_time,
+                title=q.question_text,
+                question_type=qtype,
+                description=q.background_info or "",
+                resolution_criteria=q.resolution_criteria or "",
+                fine_print=q.fine_print or "",
+                close_time=q.close_time,
+                scheduled_resolution_time=q.scheduled_resolution_time,
+                num_forecasters=q.num_forecasters or 0,
+                num_predictions=q.num_predictions or 0,
+            )
         except Exception as e:
-            logger.warning(f"Failed to fetch resolution for {post_id}: {e}")
-            return None, None, None, None
+            logger.warning(f"Failed to fetch question {post_id}: {e}")
+            return None
+
+    type_emoji_map = {
+        "binary": "✅",
+        "numeric": "📊",
+        "discrete": "🔢",
+        "multiple_choice": "🎲",
+        "date": "📅",
+    }
+
+    def _brier_emoji(score: float) -> str:
+        if score < 0.05:
+            return "🎯"
+        if score < 0.15:
+            return "👌"
+        if score < 0.35:
+            return "😬"
+        return "🫠"
+
+    def _err_emoji(pct: float) -> str:
+        if pct < 1:
+            return "🎯"
+        if pct < 5:
+            return "👌"
+        if pct < 15:
+            return "😬"
+        return "🫠"
+
+    def _mc_emoji(prob: float) -> str:
+        if prob >= 0.5:
+            return "🎯"
+        if prob >= 0.25:
+            return "👌"
+        if prob >= 0.1:
+            return "😬"
+        return "🫠"
+
+    def _vs_community(our_err: float, cp_err: float) -> str:
+        """Scaled emoji comparison against community prediction."""
+        if our_err == 0 and cp_err == 0:
+            return "🤝 tied"
+        if our_err == 0:
+            return "🏆🏆🏆 perfect"
+        if cp_err == 0:
+            return "📉📉📉 CP was perfect"
+        if our_err < cp_err:
+            ratio = cp_err / our_err
+            if ratio >= 3.0:
+                return f"🏆🏆🏆 {ratio:.1f}x closer"
+            if ratio >= 2.0:
+                return f"🏆🏆 {ratio:.1f}x closer"
+            if ratio >= 1.2:
+                return f"🏆 {ratio:.1f}x closer"
+            return f"🤝 ~tied ({ratio:.2f}x)"
+        else:
+            ratio = our_err / cp_err
+            if ratio >= 3.0:
+                return f"📉📉📉 {ratio:.1f}x further"
+            if ratio >= 2.0:
+                return f"📉📉 {ratio:.1f}x further"
+            if ratio >= 1.2:
+                return f"📉 {ratio:.1f}x further"
+            return f"🤝 ~tied ({1 / ratio:.2f}x)"
+
+    def _truncate(text: str, max_len: int = 300) -> str:
+        if not text or len(text) <= max_len:
+            return text
+        return text[:max_len].rsplit(" ", 1)[0] + "..."
 
     results: list[dict] = []
 
     for i, qid in enumerate(question_ids, 1):
-        print(f"\n{'=' * 60}")
-        print(f"[{i}/{len(question_ids)}] Retrodicting question {qid}")
-        print("=" * 60)
+        print(f"\n{'═' * 60}")
+        print(f"[{i}/{len(question_ids)}] RETRODICTING #{qid}")
+        print("═" * 60)
 
-        # Fetch resolution and published_at
-        resolution, final_cp, numeric_cp, published_at = asyncio.run(
-            get_resolution_and_published(qid)
-        )
+        meta = asyncio.run(get_question_meta(qid))
+        if meta is None:
+            print("❌ Could not fetch question metadata")
+            results.append({"post_id": qid, "error": "fetch_failed"})
+            continue
+
+        resolution = meta["resolution"]
+        final_cp = meta["binary_cp"]
+        numeric_cp = meta["numeric_cp"]
+        published_at = meta["published_at"]
+
+        te = type_emoji_map.get(meta["question_type"], "❓")
+        print(f"\n📋 {meta['title']}")
+        stats_parts = [f"{te} {meta['question_type']}"]
+        if meta["num_forecasters"]:
+            stats_parts.append(f"{meta['num_forecasters']} forecasters")
+        if meta["num_predictions"]:
+            stats_parts.append(f"{meta['num_predictions']} predictions")
+        print(f"   Type:      {' · '.join(stats_parts)}")
+
+        date_parts: list[str] = []
+        if published_at:
+            date_parts.append(f"Published: {published_at.strftime('%Y-%m-%d')}")
+        if meta["close_time"]:
+            date_parts.append(f"Closes: {meta['close_time'].strftime('%Y-%m-%d')}")
+        if meta["scheduled_resolution_time"]:
+            date_parts.append(
+                f"Resolves: {meta['scheduled_resolution_time'].strftime('%Y-%m-%d')}"
+            )
+        if date_parts:
+            print(f"   Dates:     {' → '.join(date_parts)}")
+
+        if meta["description"]:
+            desc = _truncate(meta["description"])
+            print(f"\n   Description:\n   {desc}")
+        if meta["resolution_criteria"]:
+            rc = _truncate(meta["resolution_criteria"])
+            print(f"\n   Resolution criteria:\n   {rc}")
+        if meta["fine_print"]:
+            fp = _truncate(meta["fine_print"], 200)
+            print(f"\n   Fine print:\n   {fp}")
+
+        print(f"\n{'─' * 60}")
         if resolution:
-            print(f"Resolution: {resolution}")
+            print(f"   Resolved:  {resolution}")
             if final_cp is not None:
-                print(f"Final CP: {final_cp:.1%}")
+                print(f"   Final CP:  {final_cp:.1%}")
         else:
-            print("⚠️  Could not fetch resolution (question may not be resolved)")
+            print("   ⚠️  Not resolved (question may still be open)")
 
-        # Determine the retrodict cutoff date
         cutoff_date = None
         if blind:
             if parsed_forecast_date:
                 cutoff_date = parsed_forecast_date.date()
-                print(
-                    f"🔒 Blind mode: data restricted to before {cutoff_date}"
-                )
             elif published_at:
                 cutoff_date = published_at.date()
-                print(f"🔒 Blind mode: data restricted to before {cutoff_date}")
+            if cutoff_date:
+                print(f"   🔒 Blind mode: data restricted to before {cutoff_date}")
             else:
-                print("⚠️  No published_at found, running without blind mode")
+                print("   ⚠️  No published_at found, running without blind mode")
+        print("─" * 60)
 
-        # Setup logging
         log_file = setup_logging(qid)
         print(f"Logging to {log_file}")
 
@@ -338,54 +489,52 @@ def retrodict(
             comparison: RetrodictComparison | None = None
             brier = None
 
-            print("\n" + "=" * 60)
+            print(f"\n{'═' * 60}")
             print("📊 RETRODICT COMPARISON")
-            print("=" * 60)
+            print("═" * 60)
 
             if output.probability is not None and resolution in ("yes", "no"):
-                # Binary question comparison
                 outcome = 1.0 if resolution == "yes" else 0.0
                 brier = (output.probability - outcome) ** 2
-                diff_pct = (output.probability - outcome) * 100
-
-                def _brier_emoji(score: float) -> str:
-                    if score < 0.05:
-                        return "🎯"
-                    if score < 0.15:
-                        return "👌"
-                    if score < 0.35:
-                        return "😬"
-                    return "🫠"
+                our_abs_err = abs(output.probability - outcome)
+                diff_pp = (output.probability - outcome) * 100
 
                 res_emoji = "✅" if resolution == "yes" else "❌"
-                print(f"\n   🎯 Actual:        {res_emoji} {resolution.upper()}")
-                print(f"   🤖 Us:            {output.probability:.1%}")
-                print(f"      diff:          {abs(diff_pct):.1f}pp {'too high' if diff_pct > 0 else 'too low'}")
-                print(f"      Brier:         {_brier_emoji(brier)} {brier:.4f}")
+                print(f"\n   🎯 Reality:       {res_emoji} {resolution.upper()}")
+
+                cp_abs_err: float | None = None
+                if final_cp is not None:
+                    cp_brier = (final_cp - outcome) ** 2
+                    cp_abs_err = abs(final_cp - outcome)
+                    cp_diff_pp = (final_cp - outcome) * 100
+                    print(f"\n   👥 Community:     {final_cp:.1%}")
+                    print(
+                        f"      error:         {_brier_emoji(cp_brier)} "
+                        f"{abs(cp_diff_pp):.1f}pp {'too high' if cp_diff_pp > 0 else 'too low'}"
+                        f"  ·  Brier: {cp_brier:.4f}"
+                    )
+                else:
+                    print("\n   👥 Community:     (not available)")
+
+                print(f"\n   🤖 Us:            {output.probability:.1%}")
+                print(
+                    f"      error:         {_brier_emoji(brier)} "
+                    f"{abs(diff_pp):.1f}pp {'too high' if diff_pp > 0 else 'too low'}"
+                    f"  ·  Brier: {brier:.4f}"
+                )
+
+                if cp_abs_err is not None:
+                    print(f"\n   ⚔️  vs Community: {_vs_community(our_abs_err, cp_abs_err)}")
 
                 comparison = RetrodictComparison(
                     actual_value=resolution,
                     predicted_value=output.probability,
-                    difference_pct=diff_pct,
+                    difference_pct=diff_pp,
                     score=brier,
                     score_name="brier",
                 )
 
-                if final_cp is not None:
-                    cp_brier = (final_cp - outcome) ** 2
-                    print(f"   👥 Community:     {final_cp:.1%}")
-                    print(f"      Brier:         {_brier_emoji(cp_brier)} {cp_brier:.4f}")
-                    if brier < cp_brier:
-                        ratio = cp_brier / brier if brier > 0 else float("inf")
-                        print(f"   ⚔️  vs CP:        🏆 {ratio:.1f}x better Brier")
-                    elif brier > cp_brier:
-                        ratio = brier / cp_brier if cp_brier > 0 else float("inf")
-                        print(f"   ⚔️  vs CP:        🫠 {ratio:.1f}x worse Brier")
-                    else:
-                        print("   ⚔️  vs CP:        🤝 Same")
-
             elif output.median is not None and resolution:
-                # Numeric question comparison
                 within_ci = None
                 difference = None
 
@@ -397,48 +546,47 @@ def retrodict(
                         our_abs_err = abs(difference)
                         range_span = numeric_cp["range_span"] if numeric_cp else None
 
-                        def _err_emoji(pct: float) -> str:
-                            if pct < 1:
-                                return "🎯"
-                            if pct < 5:
-                                return "👌"
-                            if pct < 15:
-                                return "😬"
-                            return "🫠"
+                        print(f"\n   🎯 Reality:       {actual_val:,.1f}")
 
-                        print(f"\n   🎯 Actual:    {actual_val:,.1f}")
-
-                        if range_span and range_span > 0:
-                            our_pct = our_abs_err / range_span * 100
-                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
-                            print(f"      error:     {_err_emoji(our_pct)} {our_pct:.1f}% of range")
-                        else:
-                            print(f"   🤖 Us:        {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
-                            print(f"      error:     {our_abs_err:,.1f}")
-
+                        cp_abs_err_num: float | None = None
                         if numeric_cp is not None:
                             cp_median = numeric_cp["median"]
-                            cp_abs_err = abs(actual_val - cp_median)
-                            print(f"   👥 Community: {cp_median:,.1f}  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]")
+                            cp_abs_err_num = abs(actual_val - cp_median)
+                            print(
+                                f"\n   👥 Community:     {cp_median:,.1f}"
+                                f"  [{numeric_cp['ci_lower']:,.1f} – {numeric_cp['ci_upper']:,.1f}]"
+                            )
                             if range_span and range_span > 0:
-                                cp_pct = cp_abs_err / range_span * 100
-                                print(f"      error:     {_err_emoji(cp_pct)} {cp_pct:.1f}% of range")
-                                if cp_abs_err > 0 and our_abs_err > 0:
-                                    ratio = cp_abs_err / our_abs_err
-                                    if ratio > 1:
-                                        print(f"   ⚔️  vs CP:     🏆 {ratio:.1f}x more accurate")
-                                    elif ratio < 1:
-                                        print(f"   ⚔️  vs CP:     🫠 {1/ratio:.1f}x less accurate")
-                                    else:
-                                        print("   ⚔️  vs CP:     🤝 Same")
+                                cp_pct = cp_abs_err_num / range_span * 100
+                                print(
+                                    f"      error:         {_err_emoji(cp_pct)} "
+                                    f"{cp_abs_err_num:,.1f}  ({cp_pct:.1f}% of range)"
+                                )
+                        else:
+                            print("\n   👥 Community:     (not available)")
+
+                        print(f"\n   🤖 Us:            {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]")
+                        if range_span and range_span > 0:
+                            our_pct = our_abs_err / range_span * 100
+                            print(
+                                f"      error:         {_err_emoji(our_pct)} "
+                                f"{our_abs_err:,.1f}  ({our_pct:.1f}% of range)"
+                            )
+                        else:
+                            print(f"      error:         {our_abs_err:,.1f}")
+
+                        if cp_abs_err_num is not None:
+                            print(
+                                f"\n   ⚔️  vs Community: {_vs_community(our_abs_err, cp_abs_err_num)}"
+                            )
 
                         within_ci = lo <= actual_val <= hi
                         if within_ci:
-                            print("   📍 In 90% CI: ✅")
+                            print("\n   📍 90% CI:        ✅ within range")
                         elif actual_val < lo:
-                            print(f"   📍 In 90% CI: 🫠 below by {lo - actual_val:,.1f}")
+                            print(f"\n   📍 90% CI:        🫠 below by {lo - actual_val:,.1f}")
                         else:
-                            print(f"   📍 In 90% CI: 🫠 above by {actual_val - hi:,.1f}")
+                            print(f"\n   📍 90% CI:        🫠 above by {actual_val - hi:,.1f}")
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
@@ -454,33 +602,25 @@ def retrodict(
                         )
 
             elif output.probabilities and resolution:
-                # Multiple choice comparison
                 import math
 
-                def _mc_emoji(prob: float) -> str:
-                    if prob >= 0.5:
-                        return "🎯"
-                    if prob >= 0.25:
-                        return "👌"
-                    if prob >= 0.1:
-                        return "😬"
-                    return "🫠"
+                print(f"\n   🎯 Reality:       {resolution}")
 
-                print(f"\n   🎯 Actual:        {resolution}")
-                print("   🤖 Us:")
+                print("\n   👥 Community:     (not available)")
+
+                print("\n   🤖 Us:")
                 for option, prob in sorted(
                     output.probabilities.items(), key=lambda x: -x[1]
                 ):
-                    marker = " ✅" if option.lower() == resolution.lower() else ""
+                    marker = " ← correct" if option.lower() == resolution.lower() else ""
                     print(f"      {option}: {prob:.1%}{marker}")
 
                 correct_prob = output.probabilities.get(resolution, 0)
-                print(f"\n      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}")
-
-                log_score = None
-                if correct_prob > 0:
-                    log_score = math.log(correct_prob)
-                    print(f"      log score:     {log_score:.4f}")
+                log_score = math.log(correct_prob) if correct_prob > 0 else None
+                score_str = f"  ·  log score: {log_score:.4f}" if log_score is not None else ""
+                print(
+                    f"      on correct:    {_mc_emoji(correct_prob)} {correct_prob:.1%}{score_str}"
+                )
 
                 comparison = RetrodictComparison(
                     actual_value=resolution,
@@ -490,10 +630,11 @@ def retrodict(
                 )
 
             else:
-                print(f"\n   🎯 Actual:        {resolution or 'Unknown'}")
+                print(f"\n   🎯 Reality:       {resolution or 'Unknown'}")
+                print("   👥 Community:     (not available)")
                 print(f"   🤖 Us:            {output.probability or output.median or 'N/A'}")
 
-            print("\n" + "=" * 60)
+            print(f"\n{'═' * 60}")
 
             # Save comparison to retrodict file
             if comparison is not None:
@@ -525,9 +666,9 @@ def retrodict(
             results.append({"post_id": qid, "error": str(e)})
 
     # Summary
-    print(f"\n{'=' * 60}")
-    print("RETRODICT SUMMARY")
-    print("=" * 60)
+    print(f"\n{'═' * 60}")
+    print("📊 RETRODICT SUMMARY")
+    print("═" * 60)
 
     binary_results = [r for r in results if r.get("brier") is not None]
     if binary_results:
