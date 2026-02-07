@@ -1,6 +1,7 @@
 """Forecasting agent using Claude Agent SDK."""
 
 import dataclasses
+import itertools
 import json
 import logging
 from datetime import date, datetime
@@ -24,6 +25,8 @@ from claude_agent_sdk import (
     ToolUseBlock,
     UserMessage,
 )
+
+from rich.console import Console
 
 from aib.agent.history import (
     format_history_for_context,
@@ -80,12 +83,29 @@ def _build_system_prompt(
     agent believes "today" is the blind date, preventing future leak.
     """
     effective_date = cutoff.isoformat() if cutoff else date.today().isoformat()
-    base = (
-        _PRESET_TEMPLATE
-        .replace("{{DATE}}", effective_date)
-        .replace("{{WORKING_DIRECTORY}}", str(Path.cwd()))
+    base = _PRESET_TEMPLATE.replace("{{DATE}}", effective_date).replace(
+        "{{WORKING_DIRECTORY}}", str(Path.cwd())
     )
     return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
+
+
+_TOOL_COLORS = [
+    "cyan",
+    "green",
+    "yellow",
+    "magenta",
+    "blue",
+    "red",
+    "bright_cyan",
+    "bright_green",
+    "bright_yellow",
+    "bright_magenta",
+    "bright_blue",
+    "bright_red",
+]
+_color_cycle = itertools.cycle(_TOOL_COLORS)
+_id_to_color: dict[str, str] = {}
+_console = Console(highlight=False, markup=False)
 
 
 def print_block(block: ContentBlock) -> None:
@@ -96,11 +116,18 @@ def print_block(block: ContentBlock) -> None:
         case TextBlock():
             print(f"💬 {block.text}")
         case ToolUseBlock():
-            input_json = json.dumps(block.input, indent=2) if block.input else ""
-            print(f"🔧 {block.name} [{block.id}]\n{input_json}" if input_json else f"🔧 {block.name} [{block.id}]")
+            color = next(_color_cycle)
+            _id_to_color[block.id] = color
+            print(f"🔧 {block.name} ", end="")
+            _console.print(f"[{block.id}]", style=color)
+            if block.input:
+                print(json.dumps(block.input, indent=2))
         case ToolResultBlock():
-            content_preview = _truncate_content(block.content, max_len=500)
-            print(f"📋 Result [{block.tool_use_id}]: {content_preview}")
+            color = _id_to_color.pop(block.tool_use_id, "default")
+            print("📋 Result ", end="")
+            _console.print(f"[{block.tool_use_id}]", style=color, end="")
+            print(": ", end="")
+            print(_truncate_content(block.content, max_len=500))
         case _:
             print(f"❓ {type(block).__name__}: {block}")
 
@@ -812,9 +839,7 @@ async def run_forecast(
             model=settings.model,
             system_prompt=_build_system_prompt(
                 cutoff=cutoff,
-                tool_docs=policy.get_tool_docs(
-                    mcp_servers, allow_spawn=allow_spawn
-                ),
+                tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -904,7 +929,9 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
-        question_category=ForecastOutput.classify_category(question_title, question_type),
+        question_category=ForecastOutput.classify_category(
+            question_title, question_type
+        ),
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
@@ -1078,10 +1105,14 @@ async def run_forecast(
                 "percentiles": output.percentiles,
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
-                "log_path": str(thinking_log_path) if thinking_log_path.exists() else None,
+                "log_path": str(thinking_log_path)
+                if thinking_log_path.exists()
+                else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),
-                "question_scheduled_resolve_time": context.get("scheduled_resolve_time"),
+                "question_scheduled_resolve_time": context.get(
+                    "scheduled_resolve_time"
+                ),
             }
 
             if cutoff:
