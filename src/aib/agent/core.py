@@ -55,6 +55,7 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
+from aib.tools.retry import with_retry
 from aib.agent.subagents import get_subagents
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
@@ -593,11 +594,12 @@ def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfi
     }
 
 
+@with_retry(max_attempts=3)
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
     """Fetch question details from Metaculus API."""
     headers = {"Authorization": f"Token {token}"} if token else {}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(
             f"{METACULUS_API_BASE}/posts/{question_id}/",
             headers=headers,

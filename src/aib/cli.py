@@ -517,7 +517,7 @@ def retrodict(
                 reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
             print(f"❌ Credit exhausted.{reset_msg}")
             results.append({"post_id": qid, "error": "credit_exhausted"})
-        except httpx.HTTPStatusError as e:
+        except (httpx.HTTPStatusError, httpx.TimeoutException) as e:
             print(f"❌ Failed to fetch question: {e}")
             results.append({"post_id": qid, "error": str(e)})
         except RuntimeError as e:
