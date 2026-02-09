@@ -71,7 +71,24 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    - Think about what logical units of work exist (features, refactors, fixes, tests, docs)
    - **Ignore the existing commit history** — focus on what makes sense as a clean sequence
 
-4. **Create rebase branch**:
+4. **Create rebase branch** (or recreate if re-running):
+
+   Check if a `-rebase` branch already exists:
+   ```bash
+   git branch --list "<branch>-rebase"
+   ```
+
+   **If it exists** (re-running after review feedback):
+   ```bash
+   # Switch back to the feature branch first (if currently on the rebase branch)
+   git checkout <branch>
+   # Delete the old local rebase branch
+   git branch -D <branch>-rebase
+   # Create fresh from main
+   git checkout -b <branch>-rebase main
+   ```
+
+   **If it doesn't exist** (first run):
    ```bash
    git checkout -b <branch>-rebase main
    ```
@@ -82,7 +99,20 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    - Order commits logically (dependencies first, then features, then polish)
    - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 
-6. **Push rebase branch and create PR**:
+6. **Push rebase branch and create/update PR**:
+
+   Check if a PR already exists for this rebase branch:
+   ```bash
+   gh pr list --head "<branch>-rebase" --state open --json number,url
+   ```
+
+   **If a PR already exists** (re-running):
+   ```bash
+   git push --force-with-lease origin <branch>-rebase
+   ```
+   The existing PR updates automatically. Return the existing PR URL.
+
+   **If no PR exists** (first run):
    ```bash
    git push -u origin <branch>-rebase
    gh pr create --title "<conventional commit style title>" --body "$(cat <<'EOF'
@@ -94,7 +124,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    EOF
    )"
    ```
-   Return the PR URL to the user when done.
+   Return the new PR URL to the user when done.
 
 ## Guidelines
 
