@@ -18,9 +18,12 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 2. **Merge main into feature branch**:
    ```bash
-   # Fetch and merge main to get latest changes
-   git fetch origin main
-   git merge origin/main
+   # Update local main worktree and merge into feature branch
+   cd ../main
+   git pull
+   git push
+   cd -
+   git merge main
    ```
    Resolve any merge conflicts before proceeding. This ensures the rebase branch will be up-to-date.
 
@@ -51,8 +54,10 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 1. **Sync main with remote**:
    ```bash
-   git fetch origin main
-   git checkout main && git merge --ff-only origin/main
+   cd ../main
+   git pull
+   git push
+   cd -
    ```
    Ensure local main is up-to-date before creating the rebase branch.
 

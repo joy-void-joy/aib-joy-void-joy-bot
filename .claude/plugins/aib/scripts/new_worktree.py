@@ -157,7 +157,7 @@ def create(
             typer.echo(f"Warning: plugin install failed: {e.stderr.decode()}", err=True)
 
     typer.echo()
-    cd_command = f"cd {new_worktree_path}"
+    cd_command = f"cd /; cd {new_worktree_path}"
 
     # Try to copy to clipboard
     try:
