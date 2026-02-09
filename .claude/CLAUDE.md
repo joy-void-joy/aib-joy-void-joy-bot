@@ -362,13 +362,13 @@ uv run python .claude/plugins/aib/scripts/module_info.py source <module> [--line
 
 ### new_worktree.py
 
-Create a new git worktree with Claude session migration.
+Create a new git worktree with plugin cache refresh.
 
 ```bash
-uv run python .claude/plugins/aib/scripts/new_worktree.py <name> [--session-id UUID] [--no-sync] [--no-copy-data]
+uv run python .claude/plugins/aib/scripts/new_worktree.py <name> [--no-sync] [--no-copy-data] [--no-plugin-refresh]
 ```
 
-Creates worktree in `tree/`, copies `.env.local` and `logs/`, runs `uv sync`, migrates Claude session. After running, `cd` to the worktree and run `claude --resume`.
+Creates worktree in `tree/`, copies `.env.local` and `logs/`, runs `uv sync`, clears stale plugin cache and installs aib-workflow at project scope.
 
 ### feedback_collect.py
 
