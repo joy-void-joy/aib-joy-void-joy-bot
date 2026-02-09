@@ -73,6 +73,12 @@ cd -
 # Delete the local rebase branch (if it exists locally)
 git branch -d "$REBASE_BRANCH" 2>/dev/null || true
 
+# Delete the original feature branch locally
+# Use -D (force): the base branch has merge commits that diverge from main's
+# rebased history, so -d always fails. This is expected and safe since the
+# PR is merged.
+git branch -D "$CURRENT_BRANCH" 2>/dev/null || true
+
 # Delete the original feature branch on remote
 git push origin --delete "$CURRENT_BRANCH" 2>/dev/null || true
 ```
@@ -90,6 +96,6 @@ Summarize what was done:
 
 - Always show review comments before merging — never skip review feedback
 - Use `--squash` merge to keep main history clean
-- Use `-d` (not `-D`) for local branch deletion to catch unmerged work
+- Use `-d` for the rebase branch (should be fully merged). Use `-D` for the base branch — its merge commits always diverge from main's rebased history, so `-d` fails even though the work is merged.
 - The user must confirm before merging via AskUserQuestion
 - If the current branch IS the rebase branch (not the original), adapt the cleanup accordingly
