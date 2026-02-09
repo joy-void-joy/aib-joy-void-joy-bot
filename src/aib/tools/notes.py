@@ -11,7 +11,7 @@ import asyncio
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from claude_agent_sdk import tool
 
+from aib.retrodict_context import effective_now
 from aib.tools.mcp_server import create_mcp_server
 
 from aib.tools.metrics import tracked
@@ -62,7 +63,7 @@ class Note(BaseModel):
     report_path: str | None = Field(
         default=None, description="Path to detailed .md report file if any"
     )
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: effective_now())
 
 
 class NoteSummary(BaseModel):
@@ -524,8 +525,7 @@ async def _write_report(
     if not validated.content or not validated.content.strip():
         return mcp_error("write_report requires 'content' parameter")
 
-    # Generate filename
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
     title_slug = _slugify(validated.title or "report")
     filename = f"{timestamp}_{title_slug}.md"
 
