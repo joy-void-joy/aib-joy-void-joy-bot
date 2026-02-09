@@ -8,10 +8,9 @@ The cutoff date is stored in a ContextVar (retrodict_cutoff) so that it
 propagates automatically through asyncio.gather() to sub-forecasts.
 
 Most tools read the ContextVar directly in their implementations. The hook
-handles two responsibilities:
-- Rewriting WebFetch URLs to Wayback Machine (built-in SDK tool, can't modify)
-- Denying tools that have no retrodict support (WebSearch, live market prices,
-  Playwright, search_news) — needed because bypassPermissions ignores allowed_tools
+denies tools that have no retrodict support (WebSearch, WebFetch, live market
+prices, Playwright, search_news) — needed because bypassPermissions ignores
+allowed_tools.
 """
 
 import logging
@@ -25,10 +24,6 @@ from claude_agent_sdk.types import HookContext
 
 from aib.agent.hooks import HooksConfig
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.wayback import (
-    check_wayback_availability,
-    rewrite_to_wayback,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +132,7 @@ def create_retrodict_hooks() -> HooksConfig:
 
     async def pre_tool_use_hook(
         input_data: Any,
-        tool_use_id: str | None,
+        _tool_use_id: str | None,
         _context: HookContext,
     ) -> dict[str, Any]:
         """Filter and modify tool inputs for time restriction."""
@@ -148,10 +143,7 @@ def create_retrodict_hooks() -> HooksConfig:
         if cutoff is None:
             return {}
 
-        wayback_ts = cutoff.strftime("%Y%m%d")
-
         tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
         hook_event = input_data["hook_event_name"]
 
         def deny(reason: str, hint: str = "") -> dict[str, Any]:
@@ -163,18 +155,6 @@ def create_retrodict_hooks() -> HooksConfig:
                     "hookEventName": hook_event,
                     "permissionDecision": "deny",
                     "permissionDecisionReason": msg,
-                }
-            }
-
-        def modify_input(new_input: dict[str, Any]) -> dict[str, Any]:
-            """Return modified tool input and record for display."""
-            if tool_use_id:
-                _modified_inputs[tool_use_id] = new_input
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                    "updatedInput": new_input,
                 }
             }
 
@@ -195,34 +175,13 @@ def create_retrodict_hooks() -> HooksConfig:
         if tool_name in _DENIED_TOOLS:
             return deny(f"{tool_name} is not available.")
 
-        # --- WebFetch: rewrite URL to Wayback Machine ---
+        # --- WebFetch: deny entirely (use mcp__search__fetch instead) ---
 
         if tool_name == "WebFetch":
-            url = tool_input.get("url", "")
-            if url and "web.archive.org" not in url:
-                availability = await check_wayback_availability(
-                    url, wayback_ts, validate_before_cutoff=True
-                )
-
-                if availability is None:
-                    logger.warning(
-                        "[Retrodict] No valid Wayback snapshot for %s at %s",
-                        url,
-                        wayback_ts,
-                    )
-                    return deny("HTTP 404: URL not found or unavailable.")
-
-                actual_ts = availability.get("timestamp", wayback_ts)
-                wayback_url = rewrite_to_wayback(url, actual_ts)
-                logger.info(
-                    "[Retrodict] WebFetch URL rewritten to Wayback: %s -> %s (snapshot: %s)",
-                    url,
-                    wayback_url,
-                    actual_ts,
-                )
-                new_input = {**tool_input, "url": wayback_url}
-                return modify_input(new_input)
-            return allow()
+            return deny(
+                "WebFetch is not available.",
+                "Use mcp__search__fetch to fetch page content.",
+            )
 
         # All other tools read retrodict_cutoff ContextVar internally
         return allow()

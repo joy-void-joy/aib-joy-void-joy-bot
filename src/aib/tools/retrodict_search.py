@@ -21,6 +21,7 @@ from aib.tools.exa import exa_search
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.wayback import fetch_wayback_content
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,13 @@ class WebSearchInput(BaseModel):
 
     query: str = Field(min_length=1, description="Search query")
     num_results: int = Field(default=10, ge=1, le=20, description="Number of results")
+
+
+class FetchInput(BaseModel):
+    """Input for page fetch."""
+
+    url: str = Field(min_length=1, description="URL to fetch content from")
+    prompt: str = Field(default="", description="What information to extract")
 
 
 class SearchResult(TypedDict):
@@ -102,9 +110,39 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Search failed: {e}")
 
 
+@tool(
+    "fetch",
+    "Fetch and extract text content from a URL. Returns clean text from the page.",
+    {"url": str, "prompt": str},
+)
+@tracked("fetch")
+async def fetch(args: dict[str, Any]) -> dict[str, Any]:
+    """Fetch URL content via Wayback Machine for retrodict mode."""
+    try:
+        validated_input = FetchInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    cutoff = retrodict_cutoff.get()
+    if cutoff is None:
+        return mcp_error("fetch is only available in retrodict mode")
+
+    wayback_ts = cutoff.strftime("%Y%m%d")
+
+    try:
+        content = await fetch_wayback_content(validated_input.url, wayback_ts)
+        if content is None:
+            return mcp_error("No archived version available for this URL.")
+
+        return mcp_success({"url": validated_input.url, "content": content})
+    except Exception as e:
+        logger.exception("Fetch failed for %s", validated_input.url)
+        return mcp_error(f"Fetch failed: {e}")
+
+
 def create_retrodict_search_server():
-    """Create MCP server with web search tool."""
+    """Create MCP server with web search and fetch tools."""
     return create_mcp_server(
         "search",
-        tools=[web_search],
+        tools=[web_search, fetch],
     )

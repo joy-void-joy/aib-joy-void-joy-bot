@@ -269,6 +269,7 @@ async def wayback_validate_results(
             )
             continue
         result["snippet"] = content[:500]
+        result["highlights"] = None
         validated.append(result)
 
     logger.info(
