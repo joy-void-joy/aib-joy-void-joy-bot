@@ -687,20 +687,19 @@ async def _main_async(
         since_dt.isoformat() if since_dt else "all time",
     )
 
-    # Create client for API calls
-    client = AsyncMetaculusClient()
+    # Create client for API calls (context manager reuses connections)
+    async with AsyncMetaculusClient() as client:
+        # Fetch resolved questions
+        questions = await fetch_resolved_questions(tournament_ids, since_dt, client)
+        logger.info("Total resolved questions found: %d", len(questions))
 
-    # Fetch resolved questions
-    questions = await fetch_resolved_questions(tournament_ids, since_dt, client)
-    logger.info("Total resolved questions found: %d", len(questions))
+        # Fetch community predictions for all our forecasts (early signal)
+        cp_comparisons = await fetch_cp_for_forecasts(client, state)
+        logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
 
-    # Match to our forecasts
+    # Match to our forecasts (no API calls needed)
     results = match_forecasts_to_resolutions(questions)
     logger.info("Matched %d forecasts to resolutions", len(results))
-
-    # Fetch community predictions for all our forecasts (early signal)
-    cp_comparisons = await fetch_cp_for_forecasts(client, state)
-    logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
 
     # Collect retrodiction results
     retrodict_results: list[RetrodictResult] = []
