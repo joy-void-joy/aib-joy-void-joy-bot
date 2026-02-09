@@ -1,3 +1,5 @@
 """AIB - Metaculus AI Benchmarking Forecasting Bot."""
 
-__version__ = "0.1.0"
+from aib.version import AGENT_VERSION
+
+__version__ = AGENT_VERSION

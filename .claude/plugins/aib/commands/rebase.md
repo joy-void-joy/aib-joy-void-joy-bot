@@ -33,7 +33,10 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    ```
    Fix any issues found. The rebase branch should only contain passing code.
 
-4. **Commit remaining changes**:
+4. **Check AGENT_VERSION bump**:
+   If the branch includes changes to agent behavior (prompts, tools, subagents, scoring logic), verify that `AGENT_VERSION` in `src/aib/version.py` has been bumped. This is required for regression tracking. Data-only or infrastructure changes do not need a version bump.
+
+5. **Commit remaining changes**:
    ```bash
    git status
    # Stage and commit any uncommitted work

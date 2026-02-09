@@ -35,6 +35,17 @@ logger = logging.getLogger(__name__)
 LOGS_BASE_PATH = Path("./logs")
 
 
+def _rebuild_scores_csv() -> None:
+    """Rebuild the scores CSV after forecast/retrodict changes."""
+    try:
+        from aib.scoring import rebuild_scores_csv
+
+        count = rebuild_scores_csv()
+        print(f"Updated scores.csv ({count} rows)")
+    except OSError as e:
+        logger.debug("Could not rebuild scores.csv: %s", e)
+
+
 def wait_for_credit_reset(error: CreditExhaustedError) -> None:
     """Wait until credit reset time, with progress updates."""
     if error.reset_time is None:
@@ -710,6 +721,8 @@ def retrodict(
         for r in errors:
             print(f"  {r['post_id']}: {r['error']}")
 
+    _rebuild_scores_csv()
+
 
 @app.command()
 def submit(
@@ -787,6 +800,8 @@ def submit(
             print(f"✅ Comment posted on post {output.post_id}")
         except SubmissionError as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
+
+    _rebuild_scores_csv()
 
 
 # Known tournament IDs

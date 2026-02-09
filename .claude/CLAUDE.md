@@ -13,7 +13,7 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 ### Important Context
 
 - **Submission is handled separately** — This codebase generates forecasts; a separate system handles submission to Metaculus
-- **No community predictions available** — The AIB tournament does not expose community predictions, so we cannot use them for sanity-checking
+- **No CP during live forecasting** — The agent cannot see the community prediction for the question it is currently forecasting (tournament rule). CP data is available post-hoc via individual API fetches for calibration analysis.
 - **CDF required for numeric questions** — Numeric and discrete questions require a 201-point CDF (cumulative distribution function), not just point estimates
 
 ---
@@ -133,8 +133,9 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
    ```
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
-4. **Rebase before merging** — Once complete, rebase to create semantically meaningful commits. Squash fixups, reorder for clarity.
-5. Create a PR for review
+4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump.
+5. **Rebase before merging** — Once complete, rebase to create semantically meaningful commits. Squash fixups, reorder for clarity.
+6. Create a PR for review
 6. **Clean up worktree** after merge:
    ```bash
    git worktree remove ./worktrees/feat-name
@@ -415,9 +416,20 @@ uv run python .claude/plugins/aib/scripts/resolution_update.py status
 uv run python .claude/plugins/aib/scripts/resolution_update.py set <id> <yes|no>
 ```
 
+### calibration_analysis.py
+
+Comprehensive calibration analysis: ECE/MCE, reliability diagrams, PIT histograms, overconfidence detection. Primary diagnostic tool for the feedback loop.
+
+```bash
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary [--source all|live|retrodict] [--buckets 10]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric [--source all|live|retrodict]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py export [-o FILE]
+```
+
 ### calibration_report.py
 
-Generate calibration reports from resolved forecasts.
+Basic calibration reports: Brier/log scores, bucket tables.
 
 ```bash
 uv run python .claude/plugins/aib/scripts/calibration_report.py summary|detail
