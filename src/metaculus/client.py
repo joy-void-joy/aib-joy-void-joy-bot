@@ -2,7 +2,9 @@
 
 import logging
 import os
-from typing import Any
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Any, Self
 
 import httpx
 
@@ -63,8 +65,26 @@ class AsyncMetaculusClient:
         self.base_url = base_url
         self.timeout = timeout
         self.token = token or os.getenv("METACULUS_TOKEN")
+        self._managed_client: httpx.AsyncClient | None = None
         if self.token is None:
             logger.warning("METACULUS_TOKEN not set")
+
+    async def __aenter__(self) -> Self:
+        self._managed_client = httpx.AsyncClient(timeout=self.timeout)
+        return self
+
+    async def __aexit__(self, *_exc: object) -> None:
+        if self._managed_client:
+            await self._managed_client.aclose()
+            self._managed_client = None
+
+    @asynccontextmanager
+    async def _http_client(self) -> AsyncIterator[httpx.AsyncClient]:
+        if self._managed_client is not None:
+            yield self._managed_client
+        else:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                yield client
 
     def _get_headers(self) -> dict[str, str]:
         if self.token is None:
@@ -81,7 +101,7 @@ class AsyncMetaculusClient:
         """Fetch a question by post ID."""
         logger.debug("Fetching question %d", post_id)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with self._http_client() as client:
             response = await client.get(
                 f"{self.base_url}/posts/{post_id}/",
                 headers=self._get_headers(),
@@ -120,7 +140,7 @@ class AsyncMetaculusClient:
         offset = 0
         limit = 100
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with self._http_client() as client:
             while True:
                 params["offset"] = offset
                 params["limit"] = limit
@@ -167,7 +187,7 @@ class AsyncMetaculusClient:
         """Fetch coherence links for a question."""
         logger.debug("Fetching coherence links for question %d", question_id)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with self._http_client() as client:
             response = await client.get(
                 f"{self.base_url}/coherence/question/{question_id}/links/",
                 headers=self._get_headers(),
