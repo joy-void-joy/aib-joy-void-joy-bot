@@ -99,9 +99,21 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodic
 uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-new-only
 ```
 
-**If we have resolved forecasts**: Focus on Brier scores. This is the REAL signal.
-- Which forecasts performed worst? Read their meta-reflections.
-- Are there systematic patterns in errors?
+**If we have resolved forecasts**: Run calibration analysis first, then check Brier.
+- Calibration tells you WHERE you're wrong (actionable diagnostic)
+- Brier/log scores tell you HOW you're scoring (tournament metric)
+```bash
+# Calibration analysis (primary diagnostic)
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
+
+# Detailed binary calibration with reliability diagram
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary
+
+# Numeric PIT calibration
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric
+```
+- Which probability ranges have the worst calibration gaps? Read those traces.
+- Are there systematic patterns (overconfidence? underconfidence in a range?)
 
 **If we have NO resolved forecasts yet**: We're flying blind on accuracy. Focus on:
 - Process quality (is the agent reasoning well?)
@@ -113,10 +125,14 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-ne
 If questions resolved before we forecast them, **retrodict** them to build calibration data. Blind mode restricts all tools to data that was available before the question resolved, ensuring the agent cannot "cheat" by looking up the answer.
 
 ```bash
-# Check which questions we missed
+# Check which questions we missed (validates resolution + shows CP status)
 uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
 
+# Use --all to see questions without confirmed resolution too
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14 --all
+
 # Retrodict with blind mode (default - recommended)
+# ONLY retrodict questions where the missed command shows R=Y
 uv run forecast retrodict 41835 41521 41517
 
 # Retrodict with a specific cutoff date
@@ -196,6 +212,7 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodic
 2. **Airtightness**: Did the agent access post-resolution information? (see Future-Leak Detection above)
 3. **Reasoning quality**: Read the session trace — was the reasoning sound given only pre-resolution data?
 4. **Tool effectiveness**: Which tools worked under blind-mode constraints? Which failed?
+5. **Calibration contribution**: After collecting retrodictions, run `calibration_analysis.py summary` to see how new data points shift ECE and bucket-level gaps.
 
 **Airtightness checklist** (run for every retrodiction before trusting its calibration value):
 - [ ] No references to events after `retrodict_date` in reasoning trace
@@ -536,10 +553,15 @@ uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
 # Aggregate metrics across all forecasts
 uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
 
-# Calibration report (needs resolved forecasts)
+# Calibration analysis (primary diagnostic — ECE, reliability diagrams, PIT)
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --source retrodict
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric
+
+# Basic calibration report (Brier/log scores, bucket table)
 uv run python .claude/plugins/aib/scripts/calibration_report.py summary
 
-# (Add more scripts as you build them)
+# (Add more scripts as you build them — this tooling is in constant evolution)
 ```
 
 ## Periodic Maintenance
@@ -554,11 +576,14 @@ Every few feedback loop sessions, take time to:
 ## Key Questions to Answer Each Session
 
 1. **Do we have resolution data?** If no, focus on process not accuracy.
-2. **What's our Brier score?** This is the REAL metric (when available).
-3. **What tools fail repeatedly?** Fix or replace them.
-4. **What does the agent say it needs?** Trust and provide.
-5. **Is the agent's reasoning sound?** Read traces deeply to find out.
-6. **What would make this process better?** Update this document.
+2. **How is our calibration?** Run `calibration_analysis.py summary`. Are we overconfident or underconfident? In which probability ranges?
+3. **What's our Brier score?** This is the REAL metric (when available).
+4. **What tools fail repeatedly?** Fix or replace them.
+5. **What tools go unused?** Check traces for tools/subagents that were available but never called. Are there capabilities the agent doesn't know about or doesn't reach for?
+6. **Is the subagent structure coherent?** Are subagents well-scoped and well-used? Is work being duplicated or dropped between them? Does the orchestration make sense?
+7. **What does the agent say it needs?** Trust and provide.
+8. **Is the agent's reasoning sound?** Read traces deeply to find out.
+9. **What would make this process better?** Update this document.
 
 ## Phase 6: Queue Retrodictions
 
@@ -573,15 +598,33 @@ Retrodictions build calibration data. Each feedback loop session should:
 
 ### Selection Criteria
 
-Pick 3-5 resolved questions that:
-- Have clear, unambiguous resolutions (not annulled)
-- Are diverse in type (binary, numeric, multiple choice)
-- Would test the agent's reasoning on challenging topics (not trivial stock comparisons)
+**Use the `missed` command to find candidates** — it validates resolution and CP automatically:
+
+```bash
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
+```
+
+The command filters to questions with confirmed resolutions, shows CP availability,
+marks already-retrodicted questions, and outputs a ready-to-use retrodict command.
+
+**Only suggest questions where `R=Y`** (confirmed resolution). The Metaculus API often
+lists questions as `status: "resolved"` before the resolution value is populated.
+Running retrodict on these wastes API credits and produces zero calibration data.
+
+**Note on CP:** The listing API (`/api/posts/?status=resolved`) strips aggregation
+data, so CP may show as unavailable in listing results. Individual API fetches
+(`/api/posts/{id}/`) include full CP data. The `missed` command fetches individually
+when needed. The agent cannot see CP for its own question during live forecasting
+(tournament rule), but CP is available post-hoc for calibration analysis.
+
+Additional criteria for manual selection:
+- Diverse in type (binary, numeric, multiple choice)
+- Would test the agent's reasoning on challenging topics
 - Have enough pre-resolution time for blind mode to be meaningful
 
 ### Output Format
 
-End your analysis document with a concrete command the user can run:
+End your analysis document with the retrodict command from the `missed` output (or a subset):
 
 ```bash
 # Retrodiction queue from feedback loop YYYY-MM-DD
