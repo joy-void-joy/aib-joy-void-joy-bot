@@ -13,6 +13,7 @@ import logging
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal, Self, TypedDict
 
@@ -140,6 +141,7 @@ class Sandbox:
         shared_dir: str = DEFAULT_SHARED_DIR,
         network_mode: NetworkMode = "bridge",
         pre_install_packages: bool = True,
+        fake_date: date | None = None,
     ) -> None:
         self._container_name = container_name
         self._docker_image = docker_image
@@ -147,6 +149,7 @@ class Sandbox:
         self._shared_dir = Path(shared_dir).resolve()
         self._network_mode = network_mode
         self._pre_install_packages = pre_install_packages
+        self._fake_date = fake_date
         self._container: Container | None = None
         self._client: docker.DockerClient | None = None
 
@@ -243,6 +246,31 @@ class Sandbox:
             "2>/dev/null; true"
         )
 
+    _FAKETIME_LIB = "/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1"
+
+    def _setup_fake_clock(self) -> None:
+        """Install libfaketime so all code sees the retrodict cutoff date."""
+        logger.info("Installing faketime for date %s", self._fake_date)
+        result = self._exec(
+            "apt-get update -qq && apt-get install -y -qq faketime 2>&1"
+        )
+        if result.exit_code != 0:
+            logger.warning(
+                "Failed to install faketime (exit %d): %s",
+                result.exit_code,
+                _decode_output(result.output)[:500],
+            )
+
+    @property
+    def _faketime_env(self) -> dict[str, str]:
+        """Environment variables to inject libfaketime into subprocesses."""
+        if self._fake_date is None:
+            return {}
+        return {
+            "LD_PRELOAD": self._FAKETIME_LIB,
+            "FAKETIME": f"{self._fake_date.isoformat()} 00:00:00",
+        }
+
     def _pre_install_common_packages(self) -> None:
         """Pre-install common packages for faster agent execution."""
         logger.info("Pre-installing common packages: %s", COMMON_PACKAGES)
@@ -302,6 +330,10 @@ class Sandbox:
             network_mode=docker_network_mode,
             cap_add=cap_add or None,
         )
+
+        # Install faketime before network lockdown (requires apt-get)
+        if self._fake_date is not None and self._network_mode != "none":
+            self._setup_fake_clock()
 
         # Pre-install common packages (if enabled and network available)
         if self._pre_install_packages and self._network_mode != "none":
@@ -368,6 +400,7 @@ class Sandbox:
             cmd,
             demux=True,
             workdir="/workspace",
+            environment=self._faketime_env or None,
         )
 
         duration_ms = int((time.perf_counter() - start) * 1000)
