@@ -14,6 +14,7 @@ import sh
 from pydantic import BaseModel
 
 from aib.agent.models import TokenUsage
+from aib.version import AGENT_VERSION
 
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
@@ -69,12 +70,7 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
 
     try:
         git = sh.Command("git")
-
-        for path in paths_to_stage:
-            try:
-                git.add(path)
-            except sh.ErrorReturnCode:
-                logger.debug("Skipping git add for %s (ignored or missing)", path)
+        git.add(*paths_to_stage)
 
         diff = str(git.diff("--cached", "--stat", _ok_code=[0, 1])).strip()
         if not diff:
@@ -121,6 +117,7 @@ class SavedForecast(BaseModel):
     question_scheduled_resolve_time: str | None = (
         None  # ISO timestamp when resolution expected
     )
+    agent_version: str | None = None
     # Retrodict tracking
     retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
     # Retrodict comparison (actual vs predicted)
@@ -200,6 +197,7 @@ def save_forecast(
         question_published_at=question_published_at,
         question_close_time=question_close_time,
         question_scheduled_resolve_time=question_scheduled_resolve_time,
+        agent_version=AGENT_VERSION,
     )
 
     # Save to file
@@ -291,6 +289,7 @@ def save_retrodict(
         question_close_time=question_close_time,
         question_scheduled_resolve_time=question_scheduled_resolve_time,
         retrodict_date=retrodict_date,
+        agent_version=AGENT_VERSION,
     )
 
     # Include retrodict_date in filename for easy identification
