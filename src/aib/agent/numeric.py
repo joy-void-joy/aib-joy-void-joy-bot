@@ -651,9 +651,9 @@ class DistributionComponent(BaseModel):
     @model_validator(mode="after")
     def validate_bounds(self) -> Self:
         """Ensure bounds are ordered correctly."""
-        if self.lower_bound >= self.upper_bound:
+        if self.lower_bound > self.upper_bound:
             raise ValueError(
-                f"lower_bound ({self.lower_bound}) must be less than upper_bound ({self.upper_bound})"
+                f"lower_bound ({self.lower_bound}) must be <= upper_bound ({self.upper_bound})"
             )
         if not self.lower_bound <= self.mode <= self.upper_bound:
             raise ValueError(
@@ -736,6 +736,11 @@ def _fit_distribution_from_percentiles(
     # For symmetric case, mu = mode, sigma = (p90 - p10) / (2 * z_90)
     z_90 = stats.norm.ppf(0.9)  # ~1.28
     sigma = (p90 - p10) / (2 * z_90)
+
+    if sigma < 1e-9:
+        # Point mass: use very narrow distribution as approximation
+        sigma = abs(mode) * 1e-4 or 1e-6
+        return stats.norm(loc=mode, scale=sigma)
 
     # Check if mode is centered (within 10% of median)
     midpoint = (p10 + p90) / 2
