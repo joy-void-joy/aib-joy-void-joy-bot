@@ -436,17 +436,30 @@ uv run python .claude/plugins/aib/scripts/calibration_report.py summary|detail
 uv run python .claude/plugins/aib/scripts/calibration_report.py export [-o FILE]
 ```
 
+### scores_table.py
+
+Unified scores CLI (wraps `aib.scoring`). Auto-rebuilt after `forecast retrodict` and `forecast submit`.
+
+```bash
+uv run python .claude/plugins/aib/scripts/scores_table.py build
+uv run python .claude/plugins/aib/scripts/scores_table.py show [--post-id ID] [--version V] [--source S] [--resolved]
+uv run python .claude/plugins/aib/scripts/scores_table.py summary
+uv run python .claude/plugins/aib/scripts/scores_table.py compare <v1> <v2>
+uv run python .claude/plugins/aib/scripts/scores_table.py regression
+```
+
 ### forecast_queue.py
 
-Manage forecasting queue and priorities.
+Manage forecasting queue, retrodiction candidates, and question search.
 
 ```bash
 uv run python .claude/plugins/aib/scripts/forecast_queue.py status <tournament>
 uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming <tournament> [--days N] [--all]
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed <tournament> [--days N]
+uv run python .claude/plugins/aib/scripts/forecast_queue.py missed <tournament> [--days N] [--all]
+uv run python .claude/plugins/aib/scripts/forecast_queue.py search <query> [--type binary] [--limit 20] [--resolved/--open]
 ```
 
-Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup)
+Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup), `all` (cross-tournament)
 
 ## Settings & Configuration
 
