@@ -156,6 +156,7 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
 RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
+        "mcp__search__fetch",
     }
 )
 

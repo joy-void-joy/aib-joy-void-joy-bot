@@ -92,15 +92,12 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
 
     series_id = validated.series_id.upper()
 
-    # Default to last 30 days; cap at retrodict cutoff
     cutoff = retrodict_cutoff.get()
-    cutoff_str = cutoff.isoformat() if cutoff is not None else None
-    end_date = (
-        cutoff_str or validated.observation_end or datetime.now().strftime("%Y-%m-%d")
+    reference_date = cutoff or datetime.now().date()
+    end_date = validated.observation_end or reference_date.isoformat()
+    start_date = (
+        validated.observation_start or (reference_date - timedelta(days=30)).isoformat()
     )
-    start_date = validated.observation_start or (
-        datetime.now() - timedelta(days=30)
-    ).strftime("%Y-%m-%d")
 
     try:
         from fredapi import Fred
@@ -279,6 +276,23 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
 
         if income is None or income.empty:
             return mcp_error(f"No financial data found for {validated.ticker.upper()}")
+
+        cutoff = retrodict_cutoff.get()
+        if cutoff is not None:
+            earnings_lag = timedelta(days=45)
+            income = income.loc[
+                :,
+                [
+                    col
+                    for col in income.columns
+                    if (col.date() if hasattr(col, "date") else col) + earnings_lag
+                    <= cutoff
+                ],
+            ]
+            if income.empty:
+                return mcp_error(
+                    f"No financial data for {validated.ticker.upper()} available before {cutoff}"
+                )
 
         # Convert DataFrame to serializable format
         # Columns are dates, rows are line items

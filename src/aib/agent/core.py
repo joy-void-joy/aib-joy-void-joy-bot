@@ -5,7 +5,7 @@ import itertools
 import json
 import logging
 import shutil
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Any, cast
 
@@ -37,7 +37,7 @@ from aib.agent.history import (
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
-from aib.retrodict_context import retrodict_cutoff
+from aib.retrodict_context import effective_now, retrodict_cutoff
 from aib.agent.tool_policy import ToolPolicy
 from aib.tools.classifiers import (
     classify_webfetch_content,
@@ -107,15 +107,18 @@ _TOOL_COLORS = [
 _color_cycle = itertools.cycle(_TOOL_COLORS)
 _id_to_color: dict[str, str] = {}
 _console = Console(highlight=False, markup=False)
+_stream_log = logging.getLogger("aib.agent.stream")
 
 
 def print_block(block: ContentBlock) -> None:
-    """Print a content block with appropriate emoji prefix."""
+    """Print a content block with appropriate emoji prefix and log it."""
     match block:
         case ThinkingBlock():
             print(f"💭 {block.thinking}")
+            _stream_log.info("THINKING: %s", block.thinking)
         case TextBlock():
             print(f"💬 {block.text}")
+            _stream_log.info("TEXT: %s", block.text)
         case ToolUseBlock():
             color = next(_color_cycle)
             _id_to_color[block.id] = color
@@ -123,30 +126,47 @@ def print_block(block: ContentBlock) -> None:
             _console.print(f"[{block.id}]", style=color)
             if block.input:
                 print(json.dumps(block.input, indent=2))
+            _stream_log.info(
+                "TOOL_USE [%s] %s: %s",
+                block.id,
+                block.name,
+                json.dumps(block.input) if block.input else "",
+            )
         case ToolResultBlock():
             color = _id_to_color.pop(block.tool_use_id, "default")
             print("📋 Result ", end="")
             _console.print(f"[{block.tool_use_id}]", style=color, end="")
             print(": ", end="")
             print(_truncate_content(block.content, max_len=500))
+            _stream_log.info(
+                "TOOL_RESULT [%s]: %s",
+                block.tool_use_id,
+                _normalize_content(block.content),
+            )
         case _:
             print(f"❓ {type(block).__name__}: {block}")
+            _stream_log.info("UNKNOWN: %s: %s", type(block).__name__, block)
 
 
-def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
-    """Truncate content for display, handling various content types."""
+def _normalize_content(content: str | list | None) -> str:
+    """Convert MCP content blocks to a plain string."""
     if content is None:
         return "(empty)"
     if isinstance(content, list):
-        # MCP-style content blocks
         texts = []
         for item in content:
             if isinstance(item, dict) and item.get("type") == "text":
                 texts.append(item.get("text", ""))
-        content = "\n".join(texts)
-    if len(content) > max_len:
-        return content[:max_len] + "..."
+        return "\n".join(texts)
     return content
+
+
+def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
+    """Normalize and truncate content for display."""
+    text = _normalize_content(content)
+    if len(text) > max_len:
+        return text[:max_len] + "..."
+    return text
 
 
 class ReasoningLogger:
@@ -161,7 +181,7 @@ class ReasoningLogger:
         self.lines: list[str] = []
         self._pending_inputs: dict[str, tuple[str, dict]] = {}
         self.lines.append(f"# Reasoning Log: {question_title}\n")
-        self.lines.append(f"*Generated: {datetime.now().isoformat()}*\n\n")
+        self.lines.append(f"*Generated: {effective_now().isoformat()}*\n\n")
 
     def format_block(self, block: ContentBlock) -> str:
         """Format a content block as markdown."""
@@ -360,7 +380,7 @@ def _parse_session_id(session_id: str) -> tuple[str, str]:
     parts = session_id.split("_", 1)
     if len(parts) == 2:
         return (parts[0], parts[1])
-    return (session_id, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    return (session_id, effective_now().strftime("%Y%m%d_%H%M%S"))
 
 
 def setup_notes_folder(
@@ -718,7 +738,7 @@ async def run_forecast(
     """
     # Generate session ID for notes and logging
     # Format: <post_id>_<timestamp> for traceability
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
     if question_id is not None:
         session_id = f"{question_id}_{timestamp}"
     else:
@@ -788,18 +808,20 @@ async def run_forecast(
         prompt += f"\n\n{history_context}"
 
     collected_text: list[str] = []
-    collected_thinking: list[str] = []
     assistant_messages: list[AssistantMessage] = []
     result: ResultMessage | None = None
 
-    # Setup thinking log file (verbose, gitignored)
-    thinking_log_path = (
-        LOGS_BASE_PATH / session_id / datetime.now().strftime("%Y%m%d_%H%M%S.log")
+    # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
+    log_path = (
+        LOGS_BASE_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
-    thinking_log_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Setup reasoning logger (committed, for feedback loop)
-    reasoning_logger = ReasoningLogger(notes.reasoning_log, question_title)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    _log_handler = logging.FileHandler(log_path)
+    _log_handler.setLevel(logging.DEBUG)
+    _log_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
+    logging.getLogger().addHandler(_log_handler)
 
     # Determine sandbox network mode for retrodict
     sandbox_network_mode = "pypi_only" if cutoff else "bridge"
@@ -809,7 +831,7 @@ async def run_forecast(
             cutoff.isoformat(),
         )
 
-    with Sandbox(network_mode=sandbox_network_mode) as sandbox:
+    with Sandbox(network_mode=sandbox_network_mode, fake_date=cutoff) as sandbox:
         # tmp/ for scratch work + session-specific notes directories
         rw_dirs = [Path("tmp")] + notes.rw
         ro_dirs = notes.ro
@@ -861,68 +883,63 @@ async def run_forecast(
             extra_args={"no-session-persistence": None},
         )
 
-        async with ClaudeSDKClient(options=options) as client:
-            await client.query(prompt)
+        try:
+            async with ClaudeSDKClient(options=options) as client:
+                await client.query(prompt)
 
-            async for message in client.receive_response():
-                match message:
-                    case AssistantMessage():
-                        assistant_messages.append(message)
-                        for block in message.content:
-                            print_block(block)
-                            reasoning_logger.log_block(block)
-                            match block:
-                                case TextBlock():
-                                    collected_text.append(block.text)
-                                    # Check for credit exhaustion
-                                    credit_error = CreditExhaustedError.from_message(
-                                        block.text
-                                    )
-                                    if credit_error:
-                                        raise credit_error
-                                case ThinkingBlock():
-                                    collected_thinking.append(block.thinking)
-                                case ToolUseBlock():
-                                    pass
-                                case ToolResultBlock():
-                                    pass
-                                case _:
-                                    logger.debug(
-                                        "Unhandled content block: %s",
-                                        type(block).__name__,
-                                    )
-                    case ResultMessage():
-                        result = message
-                        if message.is_error:
-                            raise RuntimeError(f"Agent error: {message.result}")
-                    case SystemMessage():
-                        logger.info(
-                            "System message [%s]: %s",
-                            message.subtype,
-                            json.dumps(message.data, indent=2),
-                        )
-                    case UserMessage():
-                        if isinstance(message.content, list):
+                async for message in client.receive_response():
+                    match message:
+                        case AssistantMessage():
+                            assistant_messages.append(message)
                             for block in message.content:
                                 print_block(block)
-                                reasoning_logger.log_block(block)
-                    case _:
-                        print(f"📨 {type(message).__name__}: {message}")
-                        logger.debug(
-                            "Unhandled message type: %s", type(message).__name__
-                        )
+                                match block:
+                                    case TextBlock():
+                                        collected_text.append(block.text)
+                                        # Check for credit exhaustion
+                                        credit_error = (
+                                            CreditExhaustedError.from_message(
+                                                block.text
+                                            )
+                                        )
+                                        if credit_error:
+                                            raise credit_error
+                                    case ThinkingBlock():
+                                        pass
+                                    case ToolUseBlock():
+                                        pass
+                                    case ToolResultBlock():
+                                        pass
+                                    case _:
+                                        logger.debug(
+                                            "Unhandled content block: %s",
+                                            type(block).__name__,
+                                        )
+                        case ResultMessage():
+                            result = message
+                            if message.is_error:
+                                raise RuntimeError(f"Agent error: {message.result}")
+                        case SystemMessage():
+                            logger.info(
+                                "System message [%s]: %s",
+                                message.subtype,
+                                json.dumps(message.data, indent=2),
+                            )
+                        case UserMessage():
+                            if isinstance(message.content, list):
+                                for block in message.content:
+                                    print_block(block)
+                        case _:
+                            print(f"📨 {type(message).__name__}: {message}")
+                            logger.debug(
+                                "Unhandled message type: %s", type(message).__name__
+                            )
+        finally:
+            logging.getLogger().removeHandler(_log_handler)
+            _log_handler.close()
 
     if result is None:
         raise RuntimeError("No result received from agent")
-
-    # Save thinking log (verbose, gitignored)
-    if collected_thinking:
-        thinking_log_content = "\n\n---\n\n".join(collected_thinking)
-        thinking_log_path.write_text(thinking_log_content, encoding="utf-8")
-        logger.info("Saved thinking log to %s", thinking_log_path)
-
-    # Save reasoning log (committed, for feedback loop)
-    reasoning_logger.save()
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
@@ -1068,7 +1085,7 @@ async def run_forecast(
                 duration_seconds=output.duration_seconds,
                 cost_usd=output.cost_usd,
                 token_usage=output.token_usage,
-                log_path=thinking_log_path if thinking_log_path.exists() else None,
+                log_path=log_path if log_path.exists() else None,
                 post_id=post_id,
                 question_id=actual_question_id,
                 sources=output.sources_consulted,
@@ -1106,9 +1123,7 @@ async def run_forecast(
                 "percentiles": output.percentiles,
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
-                "log_path": str(thinking_log_path)
-                if thinking_log_path.exists()
-                else None,
+                "log_path": str(log_path) if log_path.exists() else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),
                 "question_scheduled_resolve_time": context.get(

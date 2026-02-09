@@ -7,6 +7,8 @@ for a given question. Used for historical learning and calibration.
 import json
 import logging
 from datetime import datetime
+
+from aib.retrodict_context import effective_now
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -170,7 +172,7 @@ def save_forecast(
     Returns:
         Path to the saved forecast file.
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
 
     # Create directory by post_id (what users see in URLs)
     question_dir = FORECASTS_BASE_PATH / str(post_id)
@@ -261,7 +263,7 @@ def save_retrodict(
     Returns:
         Path to the saved retrodict file.
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
 
     # Create directory by post_id
     question_dir = RETRODICT_BASE_PATH / str(post_id)

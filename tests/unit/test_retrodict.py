@@ -83,8 +83,7 @@ class TestRetrodictHooks:
     """Tests for the PreToolUse hooks.
 
     The hooks handle:
-    - Denying tools with no retrodict support (WebSearch, Playwright, search_news)
-    - Rewriting WebFetch URLs to Wayback Machine
+    - Denying tools with no retrodict support (WebSearch, WebFetch, Playwright, search_news)
     - Allowing everything else (tools read ContextVar internally)
     """
 
@@ -148,73 +147,19 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
 
-    # --- WebFetch tests (URL rewriting to Wayback Machine) ---
+    # --- WebFetch tests (denied, use mcp__search__fetch instead) ---
 
     @pytest.mark.asyncio
-    async def test_webfetch_rewrites_to_wayback(self, hooks: HooksConfig) -> None:
-        """WebFetch URLs should be rewritten to Wayback Machine."""
-        mock_availability = {"timestamp": "20260115", "available": True}
-        with patch(
-            "aib.agent.retrodict.check_wayback_availability",
-            return_value=mock_availability,
-        ):
-            result = await self._invoke_hook(
-                hooks, "WebFetch", {"url": "https://example.com/page"}
-            )
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert "updatedInput" in output
-        updated_url = output["updatedInput"]["url"]
-        assert updated_url.startswith("https://web.archive.org/web/")
-        assert "example.com/page" in updated_url
-
-    @pytest.mark.asyncio
-    async def test_webfetch_denies_when_no_snapshot(self, hooks: HooksConfig) -> None:
-        """WebFetch should deny URLs without archived snapshots (appears as 404)."""
-        with patch(
-            "aib.agent.retrodict.check_wayback_availability",
-            return_value=None,
-        ):
-            result = await self._invoke_hook(
-                hooks, "WebFetch", {"url": "https://nonexistent-site.example/page"}
-            )
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
-        assert "404" in output["permissionDecisionReason"]
-
-    @pytest.mark.asyncio
-    async def test_webfetch_uses_actual_snapshot_timestamp(
-        self, hooks: HooksConfig
-    ) -> None:
-        """WebFetch should use the actual snapshot timestamp from Wayback API."""
-        actual_snapshot_ts = "20260110120000"
-        mock_availability = {"timestamp": actual_snapshot_ts, "available": True}
-        with patch(
-            "aib.agent.retrodict.check_wayback_availability",
-            return_value=mock_availability,
-        ):
-            result = await self._invoke_hook(
-                hooks, "WebFetch", {"url": "https://example.com/page"}
-            )
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert actual_snapshot_ts in output["updatedInput"]["url"]
-
-    @pytest.mark.asyncio
-    async def test_webfetch_skips_wayback_urls(self, hooks: HooksConfig) -> None:
-        """Should not rewrite URLs that are already Wayback URLs."""
+    async def test_webfetch_denied(self, hooks: HooksConfig) -> None:
+        """WebFetch should be denied with hint to use fetch tool."""
         result = await self._invoke_hook(
-            hooks,
-            "WebFetch",
-            {"url": "https://web.archive.org/web/20260115/https://example.com"},
+            hooks, "WebFetch", {"url": "https://example.com/page"}
         )
 
         output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert "updatedInput" not in output
+        assert output["permissionDecision"] == "deny"
+        assert "not available" in output["permissionDecisionReason"]
+        assert "mcp__search__fetch" in output["permissionDecisionReason"]
 
     # --- Passthrough tests ---
 
@@ -449,6 +394,29 @@ class TestWaybackValidateResults:
         assert len(validated) == 1
         assert validated[0]["snippet"] == wayback_text[:500]
         assert validated[0]["snippet"] != "original snippet"
+
+    @pytest.mark.asyncio
+    async def test_clears_highlights(self) -> None:
+        """Highlights should be cleared to prevent live index data leaking."""
+        results: list[ExaResult] = [
+            {
+                "title": "Test",
+                "url": "https://example.com/a",
+                "snippet": "original",
+                "highlights": ["live highlight 1", "live highlight 2"],
+                "published_date": "2026-01-10",
+                "score": 1.0,
+            }
+        ]
+        with patch(
+            "aib.tools.wayback.fetch_wayback_content",
+            new_callable=AsyncMock,
+            return_value="Archived content",
+        ):
+            validated = await wayback_validate_results(results, "20260115")
+
+        assert len(validated) == 1
+        assert validated[0]["highlights"] is None
 
     @pytest.mark.asyncio
     async def test_keeps_results_with_snapshot_drops_without(self) -> None:
