@@ -4,7 +4,6 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated, TypedDict
 
 import httpx
@@ -31,8 +30,6 @@ from aib.submission import (
 
 app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
 logger = logging.getLogger(__name__)
-
-LOGS_BASE_PATH = Path("./logs")
 
 
 def _rebuild_scores_csv() -> None:
@@ -140,28 +137,9 @@ def display_forecast(output: ForecastOutput) -> None:
     print()
 
 
-def setup_logging(question_id: int) -> Path:
-    """Configure logging to file only.
-
-    Returns the path to the log file.
-    """
-    log_dir = LOGS_BASE_PATH / str(question_id)
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    log_file = log_dir / f"{timestamp}.log"
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-    )
-    root_logger.addHandler(file_handler)
-
-    return log_file
+def setup_logging() -> None:
+    """Configure root logger level. File handler is set up by run_forecast."""
+    logging.getLogger().setLevel(logging.DEBUG)
 
 
 @app.command()
@@ -169,8 +147,7 @@ def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
 ) -> None:
     """Test forecasting on a single question without submitting."""
-    log_file = setup_logging(question_id)
-    print(f"Logging to {log_file}")
+    setup_logging()
 
     try:
         output = asyncio.run(run_forecast(question_id))
@@ -484,8 +461,7 @@ def retrodict(
                 print("   ⚠️  No published_at found, running without blind mode")
         print("─" * 60)
 
-        log_file = setup_logging(qid)
-        print(f"Logging to {log_file}")
+        setup_logging()
 
         # Run forecast (set ContextVar for retrodict mode)
         try:
@@ -758,8 +734,7 @@ def submit(
 
     # Run forecast if not loaded from cache
     if output is None:
-        log_file = setup_logging(question_id)
-        print(f"Logging to {log_file}")
+        setup_logging()
 
         try:
             output = asyncio.run(run_forecast(question_id))
@@ -879,9 +854,7 @@ def tournament(
             skip_count += 1
             continue
 
-        # Setup logging for this question
-        log_file = setup_logging(q.post_id)
-        print(f"  📝 Logging to {log_file}")
+        setup_logging()
 
         # Run forecast with credit exhaustion retry
         output: ForecastOutput | None = None
@@ -1026,8 +999,7 @@ def loop(
 
                 # Run agent if no cached forecast
                 if output is None:
-                    log_file = setup_logging(q.post_id)
-                    print(f"    📝 Logging to {log_file}")
+                    setup_logging()
 
                     # Retry loop for credit exhaustion
                     while True:
