@@ -19,6 +19,14 @@ from aib.agent.history import (
     update_retrodict_comparison,
 )
 from aib.retrodict_context import retrodict_cutoff
+from metaculus import (
+    AsyncMetaculusClient,
+    BinaryQuestion,
+    DateQuestion,
+    DiscreteQuestion,
+    MultipleChoiceQuestion,
+    NumericQuestion,
+)
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
@@ -30,6 +38,182 @@ from aib.submission import (
 
 app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
 logger = logging.getLogger(__name__)
+
+
+class NumericCP(TypedDict):
+    median: float
+    ci_lower: float
+    ci_upper: float
+    range_span: float
+
+
+class QuestionMeta(TypedDict):
+    resolution: str | None
+    binary_cp: float | None
+    numeric_cp: NumericCP | None
+    published_at: datetime | None
+    title: str
+    question_type: str
+    description: str
+    resolution_criteria: str
+    fine_print: str
+    close_time: datetime | None
+    scheduled_resolution_time: datetime | None
+    num_forecasters: int
+    num_predictions: int
+
+
+_TYPE_EMOJI_MAP = {
+    "binary": "✅",
+    "numeric": "📊",
+    "discrete": "🔢",
+    "multiple_choice": "🎲",
+    "date": "📅",
+}
+
+
+def _truncate(text: str, max_len: int = 300) -> str:
+    if not text or len(text) <= max_len:
+        return text
+    return text[:max_len].rsplit(" ", 1)[0] + "..."
+
+
+def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
+    """Extract community prediction median, CI, and range from api_json."""
+    try:
+        qdict = q.api_json.get("question", {})
+        scaling = qdict.get("scaling", {})
+        agg = qdict.get("aggregations", {})
+        method = qdict.get("default_aggregation_method", "unweighted")
+        history = agg.get(method, {}).get("history", [])
+        if not history:
+            return None
+        latest = history[-1]
+        range_min = scaling["range_min"]
+        range_max = scaling["range_max"]
+        span = range_max - range_min
+        return NumericCP(
+            median=range_min + latest["centers"][0] * span,
+            ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
+            ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
+            range_span=span,
+        )
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
+async def get_question_meta(post_id: int) -> QuestionMeta | None:
+    """Fetch question metadata including resolution and community prediction."""
+    client = AsyncMetaculusClient()
+    try:
+        result = await client.get_question_by_post_id(post_id)
+        if isinstance(result, list):
+            if len(result) > 1:
+                logger.warning(
+                    "Post %d contains %d questions. Using first: %s",
+                    post_id,
+                    len(result),
+                    result[0].question_text[:50],
+                )
+            q = result[0]
+        else:
+            q = result
+
+        if isinstance(q, BinaryQuestion):
+            qtype = "binary"
+        elif isinstance(q, DiscreteQuestion):
+            qtype = "discrete"
+        elif isinstance(q, NumericQuestion):
+            qtype = "numeric"
+        elif isinstance(q, DateQuestion):
+            qtype = "date"
+        elif isinstance(q, MultipleChoiceQuestion):
+            qtype = "multiple_choice"
+        else:
+            qtype = "unknown"
+
+        binary_cp = None
+        numeric_cp: NumericCP | None = None
+        if isinstance(q, BinaryQuestion):
+            binary_cp = q.community_prediction_at_access_time
+        elif isinstance(q, NumericQuestion):
+            numeric_cp = _extract_numeric_cp(q)
+
+        return QuestionMeta(
+            resolution=q.resolution_string,
+            binary_cp=binary_cp,
+            numeric_cp=numeric_cp,
+            published_at=q.published_time,
+            title=q.question_text,
+            question_type=qtype,
+            description=q.background_info or "",
+            resolution_criteria=q.resolution_criteria or "",
+            fine_print=q.fine_print or "",
+            close_time=q.close_time,
+            scheduled_resolution_time=q.scheduled_resolution_time,
+            num_forecasters=q.num_forecasters or 0,
+            num_predictions=q.num_predictions or 0,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to fetch question {post_id}: {e}")
+        return None
+
+
+class RetrodictInfo(TypedDict):
+    resolution: str | None
+    final_cp: float | None
+    cutoff_date: str | None
+
+
+def display_question_preview(
+    meta: QuestionMeta,
+    *,
+    retrodict_info: RetrodictInfo | None = None,
+) -> None:
+    """Display question metadata before forecasting."""
+    te = _TYPE_EMOJI_MAP.get(meta["question_type"], "❓")
+    print(f"\n📋 {meta['title']}")
+
+    stats_parts = [f"{te} {meta['question_type']}"]
+    if meta["num_forecasters"]:
+        stats_parts.append(f"{meta['num_forecasters']} forecasters")
+    if meta["num_predictions"]:
+        stats_parts.append(f"{meta['num_predictions']} predictions")
+    print(f"   Type:      {' · '.join(stats_parts)}")
+
+    date_parts: list[str] = []
+    if meta["published_at"]:
+        date_parts.append(f"Published: {meta['published_at'].strftime('%Y-%m-%d')}")
+    if meta["close_time"]:
+        date_parts.append(f"Closes: {meta['close_time'].strftime('%Y-%m-%d')}")
+    if meta["scheduled_resolution_time"]:
+        date_parts.append(
+            f"Resolves: {meta['scheduled_resolution_time'].strftime('%Y-%m-%d')}"
+        )
+    if date_parts:
+        print(f"   Dates:     {' → '.join(date_parts)}")
+
+    if meta["description"]:
+        print(f"\n   Description:\n   {_truncate(meta['description'])}")
+    if meta["resolution_criteria"]:
+        print(f"\n   Resolution criteria:\n   {_truncate(meta['resolution_criteria'])}")
+    if meta["fine_print"]:
+        print(f"\n   Fine print:\n   {_truncate(meta['fine_print'], 200)}")
+
+    if retrodict_info is not None:
+        print(f"\n{'─' * 60}")
+        resolution = retrodict_info["resolution"]
+        if resolution:
+            print(f"   Resolved:  {resolution}")
+            final_cp = retrodict_info["final_cp"]
+            if final_cp is not None:
+                print(f"   Final CP:  {final_cp:.1%}")
+        else:
+            print("   ⚠️  Not resolved (question may still be open)")
+        cutoff = retrodict_info["cutoff_date"]
+        if cutoff:
+            print(f"   🔒 Blind mode: data restricted to before {cutoff}")
+        print("─" * 60)
 
 
 def _rebuild_scores_csv() -> None:
@@ -147,6 +331,10 @@ def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
 ) -> None:
     """Test forecasting on a single question without submitting."""
+    meta = asyncio.run(get_question_meta(question_id))
+    if meta is not None:
+        display_question_preview(meta)
+
     setup_logging()
 
     try:
@@ -204,19 +392,6 @@ def retrodict(
         uv run forecast retrodict 41835 --forecast-date 2026-01-15
         uv run forecast retrodict 41835 --no-blind  # No time restriction
     """
-    import sys
-
-    sys.path.insert(0, "src")
-    from metaculus import (
-        AsyncMetaculusClient,
-        BinaryQuestion,
-        DateQuestion,
-        DiscreteQuestion,
-        MultipleChoiceQuestion,
-        NumericQuestion,
-    )
-
-    # Parse forecast_date if provided
     parsed_forecast_date: datetime | None = None
     if forecast_date:
         try:
@@ -224,114 +399,6 @@ def retrodict(
         except ValueError:
             print(f"❌ Invalid date format: {forecast_date}. Use YYYY-MM-DD.")
             raise typer.Exit(1)
-
-    class NumericCP(TypedDict):
-        median: float
-        ci_lower: float
-        ci_upper: float
-        range_span: float
-
-    class QuestionMeta(TypedDict):
-        resolution: str | None
-        binary_cp: float | None
-        numeric_cp: NumericCP | None
-        published_at: datetime | None
-        title: str
-        question_type: str
-        description: str
-        resolution_criteria: str
-        fine_print: str
-        close_time: datetime | None
-        scheduled_resolution_time: datetime | None
-        num_forecasters: int
-        num_predictions: int
-
-    def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
-        """Extract community prediction median, CI, and range from api_json."""
-        try:
-            qdict = q.api_json.get("question", {})
-            scaling = qdict.get("scaling", {})
-            agg = qdict.get("aggregations", {})
-            method = qdict.get("default_aggregation_method", "unweighted")
-            history = agg.get(method, {}).get("history", [])
-            if not history:
-                return None
-            latest = history[-1]
-            range_min = scaling["range_min"]
-            range_max = scaling["range_max"]
-            span = range_max - range_min
-            return NumericCP(
-                median=range_min + latest["centers"][0] * span,
-                ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
-                ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
-                range_span=span,
-            )
-        except (KeyError, IndexError, TypeError):
-            return None
-
-    async def get_question_meta(post_id: int) -> QuestionMeta | None:
-        """Fetch question metadata including resolution and community prediction."""
-        client = AsyncMetaculusClient()
-        try:
-            result = await client.get_question_by_post_id(post_id)
-            if isinstance(result, list):
-                if len(result) > 1:
-                    logger.warning(
-                        "Post %d contains %d questions. Using first: %s",
-                        post_id,
-                        len(result),
-                        result[0].question_text[:50],
-                    )
-                q = result[0]
-            else:
-                q = result
-
-            if isinstance(q, BinaryQuestion):
-                qtype = "binary"
-            elif isinstance(q, DiscreteQuestion):
-                qtype = "discrete"
-            elif isinstance(q, NumericQuestion):
-                qtype = "numeric"
-            elif isinstance(q, DateQuestion):
-                qtype = "date"
-            elif isinstance(q, MultipleChoiceQuestion):
-                qtype = "multiple_choice"
-            else:
-                qtype = "unknown"
-
-            binary_cp = None
-            numeric_cp: NumericCP | None = None
-            if isinstance(q, BinaryQuestion):
-                binary_cp = q.community_prediction_at_access_time
-            elif isinstance(q, NumericQuestion):
-                numeric_cp = _extract_numeric_cp(q)
-
-            return QuestionMeta(
-                resolution=q.resolution_string,
-                binary_cp=binary_cp,
-                numeric_cp=numeric_cp,
-                published_at=q.published_time,
-                title=q.question_text,
-                question_type=qtype,
-                description=q.background_info or "",
-                resolution_criteria=q.resolution_criteria or "",
-                fine_print=q.fine_print or "",
-                close_time=q.close_time,
-                scheduled_resolution_time=q.scheduled_resolution_time,
-                num_forecasters=q.num_forecasters or 0,
-                num_predictions=q.num_predictions or 0,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to fetch question {post_id}: {e}")
-            return None
-
-    type_emoji_map = {
-        "binary": "✅",
-        "numeric": "📊",
-        "discrete": "🔢",
-        "multiple_choice": "🎲",
-        "date": "📅",
-    }
 
     def _brier_emoji(score: float) -> str:
         if score < 0.05:
@@ -387,11 +454,6 @@ def retrodict(
                 return f"📉 {ratio:.1f}x further"
             return f"🤝 ~tied ({1 / ratio:.2f}x)"
 
-    def _truncate(text: str, max_len: int = 300) -> str:
-        if not text or len(text) <= max_len:
-            return text
-        return text[:max_len].rsplit(" ", 1)[0] + "..."
-
     results: list[dict] = []
 
     for i, qid in enumerate(question_ids, 1):
@@ -410,56 +472,24 @@ def retrodict(
         numeric_cp = meta["numeric_cp"]
         published_at = meta["published_at"]
 
-        te = type_emoji_map.get(meta["question_type"], "❓")
-        print(f"\n📋 {meta['title']}")
-        stats_parts = [f"{te} {meta['question_type']}"]
-        if meta["num_forecasters"]:
-            stats_parts.append(f"{meta['num_forecasters']} forecasters")
-        if meta["num_predictions"]:
-            stats_parts.append(f"{meta['num_predictions']} predictions")
-        print(f"   Type:      {' · '.join(stats_parts)}")
-
-        date_parts: list[str] = []
-        if published_at:
-            date_parts.append(f"Published: {published_at.strftime('%Y-%m-%d')}")
-        if meta["close_time"]:
-            date_parts.append(f"Closes: {meta['close_time'].strftime('%Y-%m-%d')}")
-        if meta["scheduled_resolution_time"]:
-            date_parts.append(
-                f"Resolves: {meta['scheduled_resolution_time'].strftime('%Y-%m-%d')}"
-            )
-        if date_parts:
-            print(f"   Dates:     {' → '.join(date_parts)}")
-
-        if meta["description"]:
-            desc = _truncate(meta["description"])
-            print(f"\n   Description:\n   {desc}")
-        if meta["resolution_criteria"]:
-            rc = _truncate(meta["resolution_criteria"])
-            print(f"\n   Resolution criteria:\n   {rc}")
-        if meta["fine_print"]:
-            fp = _truncate(meta["fine_print"], 200)
-            print(f"\n   Fine print:\n   {fp}")
-
-        print(f"\n{'─' * 60}")
-        if resolution:
-            print(f"   Resolved:  {resolution}")
-            if final_cp is not None:
-                print(f"   Final CP:  {final_cp:.1%}")
-        else:
-            print("   ⚠️  Not resolved (question may still be open)")
-
         cutoff_date = None
         if blind:
             if parsed_forecast_date:
                 cutoff_date = parsed_forecast_date.date()
             elif published_at:
                 cutoff_date = published_at.date()
-            if cutoff_date:
-                print(f"   🔒 Blind mode: data restricted to before {cutoff_date}")
-            else:
-                print("   ⚠️  No published_at found, running without blind mode")
-        print("─" * 60)
+
+        display_question_preview(
+            meta,
+            retrodict_info=RetrodictInfo(
+                resolution=resolution,
+                final_cp=final_cp,
+                cutoff_date=str(cutoff_date) if cutoff_date else None,
+            ),
+        )
+
+        if blind and not cutoff_date:
+            print("   ⚠️  No published_at found, running without blind mode")
 
         setup_logging()
 
@@ -720,6 +750,10 @@ def submit(
     ] = True,
 ) -> None:
     """Forecast a question and submit the prediction to Metaculus."""
+    meta = asyncio.run(get_question_meta(question_id))
+    if meta is not None:
+        display_question_preview(meta)
+
     output: ForecastOutput | None = None
 
     # Try to load from cache if requested
@@ -854,6 +888,10 @@ def tournament(
             skip_count += 1
             continue
 
+        meta = asyncio.run(get_question_meta(q.post_id))
+        if meta is not None:
+            display_question_preview(meta)
+
         setup_logging()
 
         # Run forecast with credit exhaustion retry
@@ -987,6 +1025,10 @@ def loop(
                 if use_cache and is_submitted(q.post_id):
                     print("    ⏭️  Already submitted (from local cache)")
                     continue
+
+                meta = asyncio.run(get_question_meta(q.post_id))
+                if meta is not None:
+                    display_question_preview(meta)
 
                 output: ForecastOutput | None = None
 
