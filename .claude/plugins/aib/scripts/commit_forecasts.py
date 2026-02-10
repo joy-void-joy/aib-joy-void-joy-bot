@@ -32,9 +32,14 @@ def _get_uncommitted_post_ids() -> set[int]:
         parts = Path(file_path).parts
 
         # notes/forecasts/<post_id>/... or notes/sessions/<post_id>/...
-        if len(parts) >= 3 and parts[0] == "notes" and parts[1] in (
-            "forecasts",
-            "sessions",
+        if (
+            len(parts) >= 3
+            and parts[0] == "notes"
+            and parts[1]
+            in (
+                "forecasts",
+                "sessions",
+            )
         ):
             try:
                 post_ids.add(int(parts[2]))
@@ -115,7 +120,9 @@ def _commit_post(post_id: int, *, dry_run: bool = False) -> bool:
 
 @app.command()
 def main(
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be committed"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Show what would be committed"
+    ),
 ) -> None:
     """Commit all uncommitted forecast files, one commit per question."""
     post_ids = _get_uncommitted_post_ids()
