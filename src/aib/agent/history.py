@@ -72,7 +72,12 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
 
     try:
         git = sh.Command("git")
-        git.add(*paths_to_stage)
+
+        for path in paths_to_stage:
+            try:
+                git.add(path)
+            except sh.ErrorReturnCode:
+                logger.debug("Skipping git add for %s (ignored or missing)", path)
 
         diff = str(git.diff("--cached", "--stat", _ok_code=[0, 1])).strip()
         if not diff:
