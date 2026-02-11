@@ -1,11 +1,11 @@
 ---
-allowed-tools: Bash(git:*), AskUserQuestion
-description: Clean up local branches deleted on remote and their worktrees
+allowed-tools: Bash(git:*), Bash(gh:*), AskUserQuestion
+description: Review branches/worktrees and clean up merged ones
 ---
 
-# Clean Gone Branches
+# Clean Merged Branches
 
-Remove local branches marked as `[gone]` (deleted on remote) and their associated worktrees.
+Review all local branches and worktrees. Identify branches that are fully merged (into main or any other active branch) or have completed PRs. Present the merge graph and ask before deleting.
 
 ## Process
 
@@ -14,34 +14,62 @@ Remove local branches marked as `[gone]` (deleted on remote) and their associate
    git fetch --prune
    ```
 
-2. **List gone branches**:
+2. **Inventory** all local branches and worktrees:
    ```bash
-   git branch -vv | grep ': gone]'
-   ```
-
-3. **Check for associated worktrees**:
-   ```bash
+   git branch -vv
    git worktree list
    ```
-   Cross-reference gone branches with active worktrees.
 
-4. **Confirm with user**: Use AskUserQuestion to show which branches (and worktrees) will be removed. Do not proceed without confirmation.
+3. **Check containment** — for every pair of branches, check if one is an ancestor of another:
+   ```bash
+   git merge-base --is-ancestor <branch> <target>
+   ```
+   A branch is "consumed" if it's fully contained in main OR any other active branch (not just main).
 
-5. **Remove worktrees first** (if any):
+4. **Check PR status** for branches that aren't ancestors of anything:
+   ```bash
+   gh pr list --state all --json number,title,headRefName,state,mergedAt
+   ```
+   A branch is also deletable if:
+   - It has a merged PR (direct or via a `-rebase` suffix branch)
+   - Its corresponding rebase branch's PR was merged (content reached main through rebased commits)
+
+5. **Categorize** each branch:
+   - **DELETE** — fully contained in another branch, or PR merged
+   - **KEEP** — has unique commits not captured elsewhere, or has an open PR
+   - **CURRENT** — the branch we're on (never delete, warn if it qualifies)
+
+6. **Present the merge graph** showing:
+   - Which branches are contained in which (use `⊂` notation)
+   - PR status for each branch
+   - Which have worktrees
+   - Proposed action (DELETE/KEEP) with reason
+   - Format as a table for DELETE candidates and a tree for the merge flow
+
+7. **Confirm with user** via AskUserQuestion before deleting anything.
+
+8. **Remove worktrees first** (if any):
    ```bash
    git worktree remove <path>
    ```
 
-6. **Delete branches**:
+9. **Delete branches**:
    ```bash
    git branch -d <branch-name>
    ```
-   Use `-d` (not `-D`) to prevent deleting unmerged work. If a branch fails to delete, report it to the user.
+   Use `-d` (not `-D`). If `-d` fails (branch not recognized as merged due to rebase), report to user and ask if `-D` is acceptable.
 
-7. **Report results**: List what was cleaned up.
+10. **Delete remote branches** if they still exist:
+    ```bash
+    git push origin --delete <branch-name>
+    ```
+
+11. **Report results**: List what was cleaned up.
 
 ## Guidelines
 
-- Never force-delete (`-D`) without explicit user approval
+- Never force-delete (`-D`) without explicit user approval for that specific branch
 - Always confirm before deleting anything
-- Skip the current branch if it's marked as gone — warn the user instead
+- Skip the current branch — warn the user instead
+- A branch merged into ANY other active branch counts as consumed (not just main)
+- For rebased branches: the original feature branch content is in main via the rebase PR, even though `--is-ancestor` returns false (commits were rewritten)

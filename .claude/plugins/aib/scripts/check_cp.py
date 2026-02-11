@@ -67,12 +67,11 @@ def single(
 
 
 async def _check_single(post_id: int) -> None:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            f"https://www.metaculus.com/api/posts/{post_id}/",
-        )
-        response.raise_for_status()
-        r = response.json()
+    from aib.config import settings  # noqa: F401 — loads env
+    from metaculus.client import AsyncMetaculusClient
+
+    async with AsyncMetaculusClient() as mc:
+        r = await mc.fetch_post_json(post_id)
 
         title = r.get("title", "")[:60]
         q = r.get("question", {})

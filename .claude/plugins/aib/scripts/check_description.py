@@ -70,9 +70,9 @@ def _print_info(q) -> None:  # noqa: ANN001
             print(f"  question['{key}']: NOT PRESENT")
 
     # Show all top-level keys for reference
-    print(f"\n=== All post-level keys ===")
+    print("\n=== All post-level keys ===")
     print(f"  {sorted(api.keys())}")
-    print(f"\n=== All question-level keys ===")
+    print("\n=== All question-level keys ===")
     print(f"  {sorted(question_json.keys())}")
 
 
