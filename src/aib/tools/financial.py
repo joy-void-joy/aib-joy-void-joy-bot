@@ -5,7 +5,7 @@ avoiding the need for web scraping which often fails on JS-heavy sites.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, TypedDict
 
 from claude_agent_sdk import tool
@@ -231,6 +231,63 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
 # --- Company Financials (yfinance) ---
 
 
+_FALLBACK_EARNINGS_LAG = timedelta(days=45)
+
+
+def _build_earnings_release_map(ticker_obj: object) -> dict[date, date]:
+    """Map fiscal period-end dates to their actual earnings release dates.
+
+    Returns {period_end: earnings_release_date} built from yfinance
+    earnings_dates. Falls back to empty dict on any error.
+    """
+    import yfinance as yf
+
+    if not isinstance(ticker_obj, yf.Ticker):
+        return {}
+    try:
+        df = ticker_obj.get_earnings_dates(limit=40)
+        if df is None or df.empty:
+            return {}
+    except Exception:
+        return {}
+
+    import pandas as pd
+
+    eh = ticker_obj.get_earnings_history()
+    if eh is None or not isinstance(eh, pd.DataFrame) or eh.empty:
+        return {}
+
+    release_map: dict[date, date] = {}
+    for idx in eh.index:
+        quarter_end: date
+        if hasattr(idx, "date"):
+            quarter_end = idx.date()
+        elif isinstance(idx, str):
+            quarter_end = datetime.strptime(idx, "%Y-%m-%d").date()
+        else:
+            continue
+
+        for earnings_dt in df.index:
+            edt: date = (
+                earnings_dt.date() if hasattr(earnings_dt, "date") else earnings_dt
+            )
+            if abs((edt - quarter_end).days) <= 60:
+                release_map[quarter_end] = edt
+                break
+
+    return release_map
+
+
+def _period_available_before(
+    period_end: date, cutoff: date, release_map: dict[date, date]
+) -> bool:
+    """Check if a fiscal period's data would have been public before cutoff."""
+    release_date = release_map.get(period_end)
+    if release_date is not None:
+        return release_date <= cutoff
+    return period_end + _FALLBACK_EARNINGS_LAG <= cutoff
+
+
 class CompanyFinancialsInput(BaseModel):
     """Input for company financial data lookup."""
 
@@ -279,19 +336,22 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
 
         cutoff = retrodict_cutoff.get()
         if cutoff is not None:
-            earnings_lag = timedelta(days=45)
+            release_map = _build_earnings_release_map(ticker)
             income = income.loc[
                 :,
                 [
                     col
                     for col in income.columns
-                    if (col.date() if hasattr(col, "date") else col) + earnings_lag
-                    <= cutoff
+                    if _period_available_before(
+                        col.date() if hasattr(col, "date") else col,
+                        cutoff,
+                        release_map,
+                    )
                 ],
             ]
             if income.empty:
                 return mcp_error(
-                    f"No financial data for {validated.ticker.upper()} available before {cutoff}"
+                    f"No financial data available for {validated.ticker.upper()}"
                 )
 
         # Convert DataFrame to serializable format

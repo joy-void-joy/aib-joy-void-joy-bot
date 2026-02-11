@@ -36,10 +36,11 @@ def get_modified_input(tool_use_id: str) -> dict[str, Any] | None:
     return _modified_inputs.get(tool_use_id)
 
 
-# Tools explicitly denied in retrodict mode (no date filtering support).
-# WebSearch is denied separately with a hint to use web_search instead.
 _DENIED_TOOLS = frozenset(
     {
+        "Bash",
+        "WebSearch",
+        "WebFetch",
         "mcp__forecasting__search_news",
         "mcp__playwright__browser_navigate",
         "mcp__playwright__browser_snapshot",
@@ -47,6 +48,12 @@ _DENIED_TOOLS = frozenset(
         "mcp__playwright__browser_type",
     }
 )
+
+_DENY_HINTS: dict[str, str] = {
+    "Bash": "Use mcp__sandbox__execute_code for computation.",
+    "WebSearch": "Use mcp__search__web_search for web search.",
+    "WebFetch": "Use mcp__search__fetch to fetch page content.",
+}
 
 
 def _parse_trends_duration(timeframe: str) -> int:
@@ -169,18 +176,10 @@ def create_retrodict_hooks() -> HooksConfig:
         # --- Deny tools with no retrodict support ---
         # bypassPermissions ignores allowed_tools, so we must deny explicitly
 
-        if tool_name == "WebSearch":
-            return deny("WebSearch is not available.")
-
         if tool_name in _DENIED_TOOLS:
-            return deny(f"{tool_name} is not available.")
-
-        # --- WebFetch: deny entirely (use mcp__search__fetch instead) ---
-
-        if tool_name == "WebFetch":
             return deny(
-                "WebFetch is not available.",
-                "Use mcp__search__fetch to fetch page content.",
+                f"{tool_name} is not available.",
+                _DENY_HINTS.get(tool_name, ""),
             )
 
         # All other tools read retrodict_cutoff ContextVar internally

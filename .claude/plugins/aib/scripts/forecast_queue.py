@@ -7,11 +7,28 @@ Helps prevent missing questions before they close.
 
 import asyncio
 import csv
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TypeVar
 
 import httpx
 import typer
+
+T = TypeVar("T")
+
+
+def run_async(coro: Coroutine[object, object, T]) -> T:
+    """Run an async coroutine, handling existing event loops."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    import nest_asyncio
+
+    nest_asyncio.apply()
+    return asyncio.run(coro)
+
 
 app = typer.Typer(help="Manage forecasting queue and priorities")
 
@@ -129,23 +146,27 @@ async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
 async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     """Fetch individual posts to get full resolution and CP data.
 
-    The listing endpoint strips aggregation data; individual fetches include it.
-    Uses a semaphore to avoid overwhelming the API.
+    Uses AsyncMetaculusClient which automatically enriches null fields
+    (description, resolution, aggregations) from the HTML API fallback.
     """
+    from aib.config import settings  # noqa: F401 — loads env
+    from metaculus.client import AsyncMetaculusClient
+
     results: dict[int, dict] = {}
-    sem = asyncio.Semaphore(5)
+    sem = asyncio.Semaphore(3)
 
-    async def _fetch_one(client: httpx.AsyncClient, pid: int) -> None:
-        async with sem:
-            try:
-                resp = await client.get(f"https://www.metaculus.com/api/posts/{pid}/")
-                if resp.status_code == 200:
-                    results[pid] = resp.json()
-            except httpx.HTTPError:
-                pass
+    async with AsyncMetaculusClient() as client:
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        await asyncio.gather(*[_fetch_one(client, pid) for pid in post_ids])
+        async def _fetch_one(pid: int) -> None:
+            async with sem:
+                try:
+                    data = await client.fetch_post_json(pid)
+                    results[pid] = data
+                except Exception:
+                    pass
+                await asyncio.sleep(0.5)
+
+        await asyncio.gather(*[_fetch_one(pid) for pid in post_ids])
 
     return results
 
@@ -229,7 +250,7 @@ def upcoming(
     forecasted = get_forecasted_post_ids()
 
     typer.echo(f"\nFetching open questions from {tournament}...")
-    questions = asyncio.run(fetch_tournament_questions(tournament_id))
+    questions = run_async(fetch_tournament_questions(tournament_id))
 
     parsed = []
     for q in questions:
@@ -286,7 +307,7 @@ def status(
     forecasted = get_forecasted_post_ids()
 
     typer.echo(f"\nFetching questions from {tournament}...")
-    questions = asyncio.run(fetch_tournament_questions(tournament_id))
+    questions = run_async(fetch_tournament_questions(tournament_id))
 
     parsed = [parse_question(q) for q in questions]
     parsed = [p for p in parsed if p is not None]
@@ -351,7 +372,7 @@ def missed(
     retrodicted = get_retrodicted_post_ids()
 
     typer.echo(f"\nFetching recently resolved questions from {label}...")
-    questions = asyncio.run(_fetch_resolved(tournament_ids))
+    questions = run_async(_fetch_resolved(tournament_ids))
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
@@ -397,7 +418,7 @@ def missed(
         typer.echo(
             f"Fetching details for {len(needs_fetch)} questions (missing resolution/CP)..."
         )
-        individual = asyncio.run(fetch_individual_posts(needs_fetch))
+        individual = run_async(fetch_individual_posts(needs_fetch))
         for c in candidates:
             if c["post_id"] in individual:
                 resolution, has_cp, _ = _extract_resolution_and_cp(
@@ -509,7 +530,7 @@ def search(
             response.raise_for_status()
             return response.json().get("results", [])
 
-    questions = asyncio.run(_search())
+    questions = run_async(_search())
 
     # Filter by question type
     filtered: list[dict] = []
@@ -525,7 +546,7 @@ def search(
     # Individual fetches to get resolution + CP data
     post_ids: list[int] = [q["id"] for q in filtered if q.get("id")]
     typer.echo(f"Fetching details for {len(post_ids)} questions...")
-    individual = asyncio.run(fetch_individual_posts(post_ids))
+    individual = run_async(fetch_individual_posts(post_ids))
 
     typer.echo(f"\n=== Search Results: '{query}' ({len(filtered)} {question_type}) ===")
     typer.echo("Legend: [R]esolution [C]P available  (*=already retrodicted)\n")

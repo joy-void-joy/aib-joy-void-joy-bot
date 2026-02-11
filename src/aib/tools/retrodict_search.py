@@ -1,43 +1,50 @@
-"""Web search for retrodict mode using Exa with date filtering.
+"""Web search and fetch tools for the search MCP server.
 
-This module provides a web search tool that uses Exa's publishedBefore filter
-to return only results published before the cutoff date. This prevents
-"future leak" where the agent finds information about events that haven't
-happened yet from its perspective.
-
-The cutoff date is read from the retrodict_cutoff ContextVar, keeping
-the sandboxing invisible to the agent.
+Provides web_search and fetch tools backed by SDK WebSearch and a page content
+extraction pipeline. Interface matches the built-in WebSearch/WebFetch tools.
 """
 
+import asyncio
+import json
 import logging
 from typing import Any, TypedDict
 
-from claude_agent_sdk import tool
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, tool
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.config import settings
-from aib.tools.exa import exa_search
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
-from aib.tools.wayback import fetch_wayback_content
+from aib.tools.wayback import (
+    WaybackRateLimitError,
+    check_wayback_availability,
+    fetch_wayback_content,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class WebSearchInput(BaseModel):
-    """Input for web search."""
+    """Input for web search (matches WebSearch interface)."""
 
     query: str = Field(min_length=1, description="Search query")
-    num_results: int = Field(default=10, ge=1, le=20, description="Number of results")
+    allowed_domains: list[str] | None = Field(
+        default=None, description="Only include results from these domains"
+    )
+    blocked_domains: list[str] | None = Field(
+        default=None, description="Never include results from these domains"
+    )
 
 
 class FetchInput(BaseModel):
-    """Input for page fetch."""
+    """Input for page fetch (matches WebFetch interface)."""
 
-    url: str = Field(min_length=1, description="URL to fetch content from")
-    prompt: str = Field(default="", description="What information to extract")
+    url: str = Field(min_length=1, description="The URL to fetch content from")
+    prompt: str = Field(
+        default="",
+        description="What information to extract from the page",
+    )
 
 
 class SearchResult(TypedDict):
@@ -48,99 +55,333 @@ class SearchResult(TypedDict):
     snippet: str | None
 
 
+class _SearchResultItem(BaseModel):
+    title: str
+    url: str
+    snippet: str
+
+
+class _SearchResultsOutput(BaseModel):
+    results: list[_SearchResultItem]
+
+
+async def _wayback_filter_results(
+    results: list[SearchResult],
+    cutoff_date: str,
+) -> list[SearchResult]:
+    """Validate search results via Wayback Machine and replace snippets.
+
+    Drops results without a pre-cutoff Wayback snapshot. Replaces snippets
+    with Wayback-extracted content to prevent future data leaks.
+
+    Args:
+        results: Search results to validate.
+        cutoff_date: YYYY-MM-DD cutoff date.
+
+    Returns:
+        Filtered results with Wayback-derived snippets.
+    """
+    wayback_ts = cutoff_date.replace("-", "")
+    tasks = [fetch_wayback_content(r["url"], wayback_ts) for r in results]
+    contents = await asyncio.gather(*tasks)
+
+    validated: list[SearchResult] = []
+    for result, content in zip(results, contents):
+        if content is None:
+            logger.warning(
+                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
+                result.get("url", "?"),
+            )
+            continue
+        result["snippet"] = content[:500]
+        validated.append(result)
+
+    logger.info(
+        "[Retrodict] Wayback validated %d/%d search results",
+        len(validated),
+        len(results),
+    )
+
+    return validated
+
+
+async def _raw_web_search(
+    search_query: str,
+    cutoff_date: str,
+    allowed_domains: list[str] | None = None,
+    blocked_domains: list[str] | None = None,
+) -> list[SearchResult]:
+    """One-shot web search via a minimal Haiku sub-agent with WebSearch.
+
+    Returns raw results without Wayback validation.
+    """
+    constraints: list[str] = [
+        f"Focus on information published before {cutoff_date}. "
+        "Include date context in your search query."
+    ]
+    if allowed_domains:
+        constraints.append(
+            f"Pass allowed_domains={json.dumps(allowed_domains)} to WebSearch."
+        )
+    elif blocked_domains:
+        constraints.append(
+            f"Pass blocked_domains={json.dumps(blocked_domains)} to WebSearch."
+        )
+
+    constraint_text = "\n\nConstraints:\n" + "\n".join(f"- {c}" for c in constraints)
+
+    prompt = (
+        f"Search the web for: {search_query}{constraint_text}\n\n"
+        "Return the search results."
+    )
+
+    options = ClaudeAgentOptions(
+        model="haiku",
+        max_turns=1,
+        allowed_tools=["WebSearch"],
+        system_prompt=(
+            "You are a web search assistant. Use WebSearch to find information, "
+            "then return the results with title, url, and snippet for each."
+        ),
+        output_format={
+            "type": "json_schema",
+            "schema": _SearchResultsOutput.model_json_schema(),
+        },
+    )
+
+    data: dict[str, Any] | None = None
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(prompt)
+        async for message in client.receive_response():
+            if data is None and isinstance(message, ResultMessage):
+                if message.structured_output:
+                    data = message.structured_output
+                elif message.result:
+                    data = json.loads(message.result)
+
+    if not data or not isinstance(data.get("results"), list):
+        return []
+
+    return [
+        SearchResult(
+            title=item.get("title", ""),
+            url=item["url"],
+            snippet=item.get("snippet"),
+        )
+        for item in data["results"]
+        if isinstance(item, dict) and item.get("url")
+    ]
+
+
 @tool(
     "web_search",
-    "Search the web for information. Returns titles, URLs, and snippets.",
-    {"query": str, "num_results": int},
+    (
+        "Search the web for information. Returns titles, URLs, and snippets. "
+        "Supports allowed_domains/blocked_domains for domain filtering."
+    ),
+    {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search query"},
+            "allowed_domains": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Only include results from these domains",
+            },
+            "blocked_domains": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Never include results from these domains",
+            },
+        },
+        "required": ["query"],
+    },
 )
 @tracked("web_search")
 async def web_search(args: dict[str, Any]) -> dict[str, Any]:
-    """Perform web search with date filtering via Exa.
+    """Perform web search via SDK sub-agent with optional Wayback validation.
 
-    If cutoff_date is provided (injected by retrodict hook), uses Exa's
-    publishedBefore filter to only return results from before that date.
+    In retrodict mode, validates results via Wayback Machine to ensure
+    only pre-cutoff content is returned.
     """
     try:
-        validated_input = WebSearchInput.model_validate(args)
+        validated = WebSearchInput.model_validate(args)
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    search_query = validated_input.query
-    num_results = validated_input.num_results
-    cutoff = retrodict_cutoff.get()
-    cutoff_date = cutoff.isoformat() if cutoff is not None else None
+    if validated.allowed_domains and validated.blocked_domains:
+        return mcp_error("Cannot use both allowed_domains and blocked_domains.")
 
-    # Check if Exa is available
-    if not settings.exa_api_key:
-        return mcp_error(
-            "Web search unavailable: EXA_API_KEY not configured. "
-            "Use search_arxiv for academic papers or wikipedia for encyclopedic content."
-        )
+    cutoff = retrodict_cutoff.get()
+    assert cutoff is not None, "web_search requires retrodict mode"
+    cutoff_date = cutoff.isoformat()
 
     try:
         logger.info(
-            "[WebSearch] Searching for: %s (cutoff: %s)", search_query, cutoff_date
+            "[WebSearch] query=%s cutoff=%s domains=%s",
+            validated.query,
+            cutoff_date,
+            validated.allowed_domains or validated.blocked_domains,
         )
 
-        # Use Exa with publishedBefore filter and livecrawl=never for retrodict
-        exa_results = await exa_search(
-            query=search_query,
-            num_results=num_results,
-            published_before=cutoff_date,
-            livecrawl="never" if cutoff_date else "always",
+        results = await _raw_web_search(
+            validated.query,
+            cutoff_date,
+            validated.allowed_domains,
+            validated.blocked_domains,
+        )
+        results = await _wayback_filter_results(results, cutoff_date)
+
+        logger.info("[WebSearch] Returning %d results", len(results))
+        return mcp_success({"query": validated.query, "results": results})
+
+    except BaseException as e:
+        cause = e
+        if isinstance(e, BaseExceptionGroup):
+            cause = e.exceptions[0] if e.exceptions else e
+        logger.exception("Web search failed: %s", cause)
+        return mcp_error(
+            "Web search is temporarily unavailable. "
+            "Try again with a different query, or use alternative tools."
         )
 
-        logger.info("[WebSearch] Got %d results from Exa", len(exa_results))
 
-        # Convert to SearchResult format
-        results: list[SearchResult] = []
-        for r in exa_results:
-            results.append(
-                SearchResult(
-                    title=r.get("title") or r.get("url") or "",
-                    url=r.get("url") or "",
-                    snippet=r.get("snippet"),
-                )
-            )
+async def _extract_with_prompt(content: str, prompt: str, url: str) -> str:
+    """Use a one-shot LLM call to extract information from content.
 
-        return mcp_success({"query": search_query, "results": results})
+    Args:
+        content: Raw text content from the page.
+        prompt: What information to extract.
+        url: Source URL (for context in the prompt).
 
-    except Exception as e:
-        logger.exception("Web search failed")
-        return mcp_error(f"Search failed: {e}")
+    Returns:
+        Extracted information as a string.
+    """
+    extraction_prompt = (
+        f"The following is the text content of {url}.\n\n"
+        f"---\n{content[:15000]}\n---\n\n"
+        f"Based on the above content, answer the following: {prompt}\n\n"
+        "Be concise and factual. If the content doesn't contain "
+        "relevant information, say so."
+    )
+
+    options = ClaudeAgentOptions(
+        model="haiku",
+        max_turns=1,
+        system_prompt="You extract information from web page content. Be concise and factual.",
+    )
+
+    result_text = ""
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(extraction_prompt)
+        async for message in client.receive_response():
+            if (
+                not result_text
+                and isinstance(message, ResultMessage)
+                and message.result
+            ):
+                result_text = message.result
+
+    return result_text or content[:5000]
 
 
 @tool(
     "fetch",
-    "Fetch and extract text content from a URL. Returns clean text from the page.",
-    {"url": str, "prompt": str},
+    (
+        "Fetch and extract content from a URL. "
+        "If a prompt is provided, extracts specific information from the page."
+    ),
+    {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "description": "The URL to fetch content from"},
+            "prompt": {
+                "type": "string",
+                "description": "What information to extract from the page",
+            },
+        },
+        "required": ["url"],
+    },
 )
 @tracked("fetch")
 async def fetch(args: dict[str, Any]) -> dict[str, Any]:
-    """Fetch URL content via Wayback Machine for retrodict mode."""
+    """Fetch URL content via Wayback Machine for retrodict mode.
+
+    Handles specific failure modes:
+    - No archived snapshot: suggests alternatives
+    - Rate limiting (429): advises retry
+    - Extraction failure: returns raw content
+    """
     try:
-        validated_input = FetchInput.model_validate(args)
+        validated = FetchInput.model_validate(args)
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
     cutoff = retrodict_cutoff.get()
     if cutoff is None:
-        return mcp_error("fetch is only available in retrodict mode")
+        return mcp_error("fetch is not available in this context.")
 
     wayback_ts = cutoff.strftime("%Y%m%d")
 
+    # Step 1: Check availability (surfaces rate-limit vs no-snapshot)
     try:
-        content = await fetch_wayback_content(validated_input.url, wayback_ts)
-        if content is None:
-            return mcp_error("No archived version available for this URL.")
+        snapshot = await check_wayback_availability(
+            validated.url,
+            wayback_ts,
+            validate_before_cutoff=True,
+            raise_on_rate_limit=True,
+        )
+    except WaybackRateLimitError:
+        return mcp_error(
+            f"Unable to fetch {validated.url}. The page may be temporarily "
+            "unavailable. Try again shortly, or use web_search to find "
+            "alternative sources."
+        )
 
-        return mcp_success({"url": validated_input.url, "content": content})
-    except Exception as e:
-        logger.exception("Fetch failed for %s", validated_input.url)
-        return mcp_error(f"Fetch failed: {e}")
+    if snapshot is None:
+        return mcp_error(
+            f"Unable to access content at {validated.url}. "
+            "The page may not be available. "
+            "Try web_search to find alternative sources with the same information, "
+            "or try a different URL for this content."
+        )
+
+    # Step 2: Fetch the content
+    try:
+        content = await fetch_wayback_content(validated.url, wayback_ts)
+    except WaybackRateLimitError:
+        return mcp_error(
+            f"Unable to fetch {validated.url}. The page may be temporarily "
+            "unavailable. Try again shortly."
+        )
+
+    if content is None:
+        return mcp_error(
+            f"Content extraction failed for {validated.url}. "
+            "The page may be a PDF, image, or JavaScript-rendered content. "
+            "Try web_search to find alternative sources."
+        )
+
+    # Step 3: If prompt provided, use LLM to extract relevant information
+    if validated.prompt:
+        try:
+            extracted = await _extract_with_prompt(
+                content, validated.prompt, validated.url
+            )
+            return mcp_success(
+                {
+                    "url": validated.url,
+                    "content": extracted,
+                }
+            )
+        except Exception as e:
+            logger.warning("Prompt extraction failed for %s: %s", validated.url, e)
+            # Fall through to return raw content
+
+    return mcp_success({"url": validated.url, "content": content[:10000]})
 
 
-def create_retrodict_search_server():
+def create_retrodict_search_server() -> Any:
     """Create MCP server with web search and fetch tools."""
     return create_mcp_server(
         "search",

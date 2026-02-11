@@ -235,22 +235,7 @@ def _create_notes_tool(session_id: str | None = None, notes_base: Path | None = 
     @tool(
         "notes",
         _NOTES_TOOL_DESCRIPTION,
-        {
-            "mode": str,
-            "type_filter": str,
-            "question_id": int,
-            "query": str,
-            "id": str,
-            "type": str,
-            "topic": str,
-            "summary": str,
-            "content": str,
-            "sources": list,
-            "confidence": float,
-            "report_path": str,
-            "post_id": int,
-            "title": str,
-        },
+        NotesInput,
     )
     @tracked("notes")
     async def notes_tool(args: dict[str, Any]) -> dict[str, Any]:

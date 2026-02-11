@@ -310,14 +310,11 @@ async def classify_haiku(content: str) -> WebFetchQuality:
     try:
         data = None
         async for message in query(prompt=prompt, options=options):
-            if isinstance(message, ResultMessage):
-                # With output_format, structured_output contains parsed JSON
+            if data is None and isinstance(message, ResultMessage):
                 if message.structured_output:
                     data = message.structured_output
                 elif message.result:
-                    # Fallback to parsing result string
                     data = json.loads(message.result)
-                break
 
         if not data:
             logger.warning("Haiku classification returned empty result")

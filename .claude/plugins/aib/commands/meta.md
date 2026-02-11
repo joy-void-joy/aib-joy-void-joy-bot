@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Write, Glob, Grep, AskUserQuestion, Task, Bash(mkdir:*, cp:*, mv:*, rm:*, find:*, ls:*)
 description: Review and modify .claude structure, update docs (CLAUDE.md/PLAN.md), brainstorm improvements
-argument-hint: <problem or area to explore>
+argument-hint: [problem or area to explore]
 ---
 
 # Meta: .claude Structure Review & Improvement

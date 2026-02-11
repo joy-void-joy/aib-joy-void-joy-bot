@@ -390,8 +390,18 @@ def compute_pit_calibration(
             if ci[0] <= actual <= ci[1]:
                 within_90 += 1
 
-        p25 = pct.get(20) or pct.get(25)
-        p75 = pct.get(80) or pct.get(75)
+        p20, p40 = pct.get(20), pct.get(40)
+        p60, p80 = pct.get(60), pct.get(80)
+        p25 = (
+            p20 + (p40 - p20) * 0.25
+            if p20 is not None and p40 is not None
+            else pct.get(25)
+        )
+        p75 = (
+            p60 + (p80 - p60) * 0.75
+            if p60 is not None and p80 is not None
+            else pct.get(75)
+        )
         if p25 is not None and p75 is not None:
             if p25 <= actual <= p75:
                 within_50 += 1

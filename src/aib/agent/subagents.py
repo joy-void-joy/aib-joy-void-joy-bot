@@ -5,6 +5,7 @@ specialized research tasks. Each is a flexible agent that adapts to
 the specific research needs of the task.
 
 Subagents:
+- searcher: Web search and content retrieval
 - deep-researcher: Flexible research (base rates, key factors, enumeration)
 - estimator: Fermi estimation with code execution
 - quick-researcher: Fast initial research (Haiku)
@@ -78,12 +79,48 @@ def _fact_checker_tools() -> list[str]:
     ]
 
 
+def _searcher_tools() -> list[str]:
+    """Tools for the searcher subagent (web search + fetch + wikipedia)."""
+    if retrodict_cutoff.get() is not None:
+        return [
+            "mcp__search__web_search",
+            "mcp__search__fetch",
+            "mcp__forecasting__wikipedia",
+        ]
+    return [
+        *_search_tools(),
+        "WebSearch",
+        "WebFetch",
+        "mcp__forecasting__wikipedia",
+    ]
+
+
 def _quick_research_tools() -> list[str]:
     """Tools for quick researcher (minimal, fast)."""
     return [
         *_search_tools(),
         "mcp__forecasting__wikipedia",
     ]
+
+
+# --- Searcher ---
+# Lightweight search agent for web search and content retrieval
+
+SEARCHER_PROMPT = """\
+You are a web search assistant gathering information for a forecasting question.
+
+## Your Task
+Search the web and retrieve content on the topic given to you. Return what you find.
+
+## Approach
+1. Search for the topic using different query formulations
+2. Fetch pages that look most relevant
+3. Check Wikipedia for background context if useful
+4. Return key findings with sources
+
+## Output
+Return a concise summary of what you found, with URLs for each source.
+"""
 
 
 # --- Deep Researcher ---
@@ -461,6 +498,16 @@ def get_subagents() -> dict[str, AgentDefinition]:
     propagate to subagents.
     """
     return {
+        "searcher": AgentDefinition(
+            description=(
+                "Web search and content retrieval agent. Searches the web, fetches "
+                "pages, and retrieves Wikipedia articles. Use for gathering information "
+                "from multiple sources on a specific topic."
+            ),
+            prompt=SEARCHER_PROMPT,
+            tools=_searcher_tools(),
+            model="haiku",
+        ),
         "deep-researcher": AgentDefinition(
             description=(
                 "Deep research agent for forecasting. Can analyze base rates, identify key "

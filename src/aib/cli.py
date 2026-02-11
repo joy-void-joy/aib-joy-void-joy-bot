@@ -36,7 +36,10 @@ from aib.submission import (
     submit_forecast,
 )
 
-app = typer.Typer(help="Metaculus AI Benchmarking Forecasting Bot")
+app = typer.Typer(
+    help="Metaculus AI Benchmarking Forecasting Bot",
+    pretty_exceptions_show_locals=False,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -81,11 +84,11 @@ def _truncate(text: str, max_len: int = 300) -> str:
 def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
     """Extract community prediction median, CI, and range from api_json."""
     try:
-        qdict = q.api_json.get("question", {})
-        scaling = qdict.get("scaling", {})
-        agg = qdict.get("aggregations", {})
+        qdict = q.api_json.get("question") or {}
+        scaling = qdict.get("scaling") or {}
+        agg = qdict.get("aggregations") or {}
         method = qdict.get("default_aggregation_method", "unweighted")
-        history = agg.get(method, {}).get("history", [])
+        history = (agg.get(method) or {}).get("history", [])
         if not history:
             return None
         latest = history[-1]
@@ -457,11 +460,10 @@ def retrodict(
     results: list[dict] = []
 
     for i, qid in enumerate(question_ids, 1):
-        print(f"\n{'═' * 60}")
-        print(f"[{i}/{len(question_ids)}] RETRODICTING #{qid}")
-        print("═" * 60)
-
         meta = asyncio.run(get_question_meta(qid))
+        title_part = f": {meta['title'][:50]}..." if meta else ""
+        print(f"\n[{i}/{len(question_ids)}] Retrodicting #{qid}{title_part}")
+
         if meta is None:
             print("❌ Could not fetch question metadata")
             results.append({"post_id": qid, "error": "fetch_failed"})

@@ -152,7 +152,7 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (date-filtered via Exa)
+# Search tools for retrodict mode (SDK WebSearch + Wayback validation)
 RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",

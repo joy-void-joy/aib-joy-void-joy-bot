@@ -1,7 +1,7 @@
 ---
 allowed-tools: Write, Read, Glob
 description: Create a new slash command
-argument-hint: <command-name> <description of what the command should do>
+argument-hint: [command-name] [description] [--args hint1 hint2]
 ---
 
 # Create New Slash Command
@@ -14,11 +14,19 @@ argument-hint: <command-name> <description of what the command should do>
 
 ### How to Parse Arguments
 
-The first word is the **command name**. Everything after is the **description of what the command should do**.
+The first word is the **command name**. Everything after is the **description of what the command should do**, with an optional `--args` flag at the end.
 
-Example: `/add-command commit Please review all diffs and commit atomically`
+**Basic:** `/add-command commit Please review all diffs and commit atomically`
 - Command name: `commit`
 - Description: "Please review all diffs and commit atomically"
+- Argument hints: *(none)*
+
+**With args:** `/add-command commit Review diffs and commit --args [message]`
+- Command name: `commit`
+- Description: "Review diffs and commit"
+- Argument hints: `[message]`
+
+When `--args` is provided, set the new command's `argument-hint` frontmatter to the specified hints and include `$ARGUMENTS` handling in the command body. When not provided, omit `argument-hint` from the frontmatter.
 
 ### Steps
 
