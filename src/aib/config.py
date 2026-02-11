@@ -96,16 +96,6 @@ class Settings(BaseSettings):
         validation_alias="AIB_SANDBOX_MEMORY_LIMIT",
         description="Memory limit for sandbox container",
     )
-    sandbox_volume_name: str = Field(
-        default="aib-sandbox-workspace",
-        validation_alias="AIB_SANDBOX_VOLUME_NAME",
-        description="Docker volume name for sandbox workspace",
-    )
-    sandbox_container_name: str = Field(
-        default="aib-sandbox",
-        validation_alias="AIB_SANDBOX_CONTAINER_NAME",
-        description="Docker container name for sandbox",
-    )
 
     # === Paths ===
     notes_path: str = Field(

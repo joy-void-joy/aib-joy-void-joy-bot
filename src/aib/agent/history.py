@@ -6,7 +6,7 @@ for a given question. Used for historical learning and calibration.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aib.retrodict_context import effective_now
 from pathlib import Path
@@ -268,7 +268,7 @@ def save_retrodict(
     Returns:
         Path to the saved retrodict file.
     """
-    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     # Create directory by post_id
     question_dir = RETRODICT_BASE_PATH / str(post_id)

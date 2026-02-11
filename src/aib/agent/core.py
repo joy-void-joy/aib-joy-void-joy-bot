@@ -1,19 +1,15 @@
 """Forecasting agent using Claude Agent SDK."""
 
 import dataclasses
-import itertools
 import json
 import logging
 import shutil
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from rich.console import Console
-
 from claude_agent_sdk.types import HookContext
 
-import httpx
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
@@ -29,6 +25,12 @@ from claude_agent_sdk import (
     UserMessage,
 )
 
+from aib.agent.display import (
+    normalize_content as _normalize_content,
+    print_block,
+    stream_log as _stream_log,
+    truncate_content as _truncate_content,
+)
 from aib.agent.history import (
     format_history_for_context,
     load_past_forecasts,
@@ -36,6 +38,7 @@ from aib.agent.history import (
     save_retrodict,
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
+from aib.agent.meta_hooks import create_meta_gate_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
 from aib.agent.tool_policy import ToolPolicy
@@ -59,7 +62,6 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
-from aib.tools.retry import with_retry
 from aib.agent.subagents import get_subagents
 from aib.config import settings
 from aib.tools.composition import composition_server, set_run_forecast_fn
@@ -77,6 +79,7 @@ def _build_system_prompt(
     *,
     cutoff: date | None,
     tool_docs: str | None,
+    sandbox_shared_dir: str,
 ) -> str:
     """Build full system prompt from template + forecasting prompt.
 
@@ -87,86 +90,15 @@ def _build_system_prompt(
     base = _PRESET_TEMPLATE.replace("{{DATE}}", effective_date).replace(
         "{{WORKING_DIRECTORY}}", str(Path.cwd())
     )
-    return base + "\n\n" + get_forecasting_system_prompt(tool_docs=tool_docs)
-
-
-_TOOL_COLORS = [
-    "cyan",
-    "green",
-    "yellow",
-    "magenta",
-    "blue",
-    "red",
-    "bright_cyan",
-    "bright_green",
-    "bright_yellow",
-    "bright_magenta",
-    "bright_blue",
-    "bright_red",
-]
-_color_cycle = itertools.cycle(_TOOL_COLORS)
-_id_to_color: dict[str, str] = {}
-_console = Console(highlight=False, markup=False)
-_stream_log = logging.getLogger("aib.agent.stream")
-
-
-def print_block(block: ContentBlock) -> None:
-    """Print a content block with appropriate emoji prefix and log it."""
-    match block:
-        case ThinkingBlock():
-            print(f"💭 {block.thinking}")
-            _stream_log.info("THINKING: %s", block.thinking)
-        case TextBlock():
-            print(f"💬 {block.text}")
-            _stream_log.info("TEXT: %s", block.text)
-        case ToolUseBlock():
-            color = next(_color_cycle)
-            _id_to_color[block.id] = color
-            print(f"🔧 {block.name} ", end="")
-            _console.print(f"[{block.id}]", style=color)
-            if block.input:
-                print(json.dumps(block.input, indent=2))
-            _stream_log.info(
-                "TOOL_USE [%s] %s: %s",
-                block.id,
-                block.name,
-                json.dumps(block.input) if block.input else "",
-            )
-        case ToolResultBlock():
-            color = _id_to_color.pop(block.tool_use_id, "default")
-            print("📋 Result ", end="")
-            _console.print(f"[{block.tool_use_id}]", style=color, end="")
-            print(": ", end="")
-            print(_truncate_content(block.content, max_len=500))
-            _stream_log.info(
-                "TOOL_RESULT [%s]: %s",
-                block.tool_use_id,
-                _normalize_content(block.content),
-            )
-        case _:
-            print(f"❓ {type(block).__name__}: {block}")
-            _stream_log.info("UNKNOWN: %s: %s", type(block).__name__, block)
-
-
-def _normalize_content(content: str | list | None) -> str:
-    """Convert MCP content blocks to a plain string."""
-    if content is None:
-        return "(empty)"
-    if isinstance(content, list):
-        texts = []
-        for item in content:
-            if isinstance(item, dict) and item.get("type") == "text":
-                texts.append(item.get("text", ""))
-        return "\n".join(texts)
-    return content
-
-
-def _truncate_content(content: str | list | None, max_len: int = 500) -> str:
-    """Normalize and truncate content for display."""
-    text = _normalize_content(content)
-    if len(text) > max_len:
-        return text[:max_len] + "..."
-    return text
+    return (
+        base
+        + "\n\n"
+        + get_forecasting_system_prompt(
+            tool_docs=tool_docs,
+            retrodict=cutoff is not None,
+            sandbox_shared_dir=sandbox_shared_dir,
+        )
+    )
 
 
 class ReasoningLogger:
@@ -640,18 +572,12 @@ def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfi
     }
 
 
-@with_retry(max_attempts=3)
 async def fetch_question(question_id: int, token: str | None = None) -> dict:
     """Fetch question details from Metaculus API."""
-    headers = {"Authorization": f"Token {token}"} if token else {}
+    from metaculus.client import AsyncMetaculusClient
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            f"{METACULUS_API_BASE}/posts/{question_id}/",
-            headers=headers,
-        )
-        response.raise_for_status()
-        return response.json()
+    async with AsyncMetaculusClient(token=token) as client:
+        return await client.fetch_post_json(question_id)
 
 
 def build_question_context(post_data: dict) -> dict:
@@ -823,6 +749,10 @@ async def run_forecast(
     )
     logging.getLogger().addHandler(_log_handler)
 
+    # Session-specific scratch directory for sandbox file exchange
+    sandbox_shared_dir = LOGS_BASE_PATH / session_id / "sandbox-shared"
+    sandbox_shared_dir.mkdir(parents=True, exist_ok=True)
+
     # Determine sandbox network mode for retrodict
     sandbox_network_mode = "pypi_only" if cutoff else "bridge"
     if cutoff:
@@ -831,9 +761,14 @@ async def run_forecast(
             cutoff.isoformat(),
         )
 
-    with Sandbox(network_mode=sandbox_network_mode, fake_date=cutoff) as sandbox:
-        # tmp/ for scratch work + session-specific notes directories
-        rw_dirs = [Path("tmp")] + notes.rw
+    with Sandbox(
+        session_id=session_id,
+        shared_dir=sandbox_shared_dir,
+        network_mode=sandbox_network_mode,
+        fake_date=cutoff,
+    ) as sandbox:
+        # Sandbox shared dir for scratch work + session-specific notes directories
+        rw_dirs = [sandbox_shared_dir] + notes.rw
         ro_dirs = notes.ro
 
         # Create base permission hooks
@@ -850,6 +785,17 @@ async def run_forecast(
             retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
+        # Gate StructuredOutput behind meta-reflection (top-level forecasts only)
+        if post_id > 0:
+            if cutoff and session_id:
+                _, ts = _parse_session_id(session_id)
+                meta_path = Path(
+                    f"./tmp/notes/{session_id}/sessions/{post_id}/{ts}/meta.md"
+                )
+            else:
+                meta_path = notes.session / "meta.md"
+            hooks = merge_hooks(hooks, create_meta_gate_hooks(meta_path))
+
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
 
@@ -863,6 +809,7 @@ async def run_forecast(
             system_prompt=_build_system_prompt(
                 cutoff=cutoff,
                 tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
+                sandbox_shared_dir=str(sandbox_shared_dir),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -874,7 +821,7 @@ async def run_forecast(
             },
             mcp_servers=mcp_servers,
             agents=get_subagents(),
-            add_dirs=[str(d) for d in notes.all_dirs],
+            add_dirs=[*notes.all_dirs, sandbox_shared_dir],
             allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
             output_format={
                 "type": "json_schema",
@@ -920,12 +867,16 @@ async def run_forecast(
                             if message.is_error:
                                 raise RuntimeError(f"Agent error: {message.result}")
                         case SystemMessage():
-                            logger.info(
-                                "System message [%s]: %s",
+                            _stream_log.info(
+                                "SYSTEM [%s]: %s",
                                 message.subtype,
                                 json.dumps(message.data, indent=2),
                             )
                         case UserMessage():
+                            _stream_log.info(
+                                "USER_MESSAGE: %s",
+                                _normalize_content(message.content),
+                            )
                             if isinstance(message.content, list):
                                 for block in message.content:
                                     print_block(block)
@@ -1145,7 +1096,8 @@ async def run_forecast(
     if cutoff and session_id:
         tmp_notes = Path(f"./tmp/notes/{session_id}")
         if tmp_notes.exists():
-            dest = Path(f"./notes/retrodict/{session_id}")
+            real_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            dest = Path(f"./notes/retrodict/{post_id}_{real_ts}")
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(tmp_notes), str(dest))
             logger.info("Moved retrodict notes: %s -> %s", tmp_notes, dest)
