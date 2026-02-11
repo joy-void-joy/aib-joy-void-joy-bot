@@ -3,12 +3,18 @@
 import json
 import logging
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import Any, Self
 
 import httpx
 from bs4 import BeautifulSoup
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from metaculus.models import (
     ApiFilter,
@@ -45,38 +51,35 @@ def _parse_html_api_response(html: str) -> dict[str, Any] | None:
         return None
 
 
-def with_retry(max_attempts: int = 3):
-    """Decorator for retrying async functions on failure."""
-    import asyncio
-    import functools
-    import random
+def with_retry[T](
+    max_attempts: int = 4,
+    min_wait: float = 5,
+    max_wait: float = 120,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator for retrying async functions with exponential backoff.
 
-    def decorator[T](func):  # noqa: ANN401
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs) -> T:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Exponential backoff with jitter
-                        delay = (2**attempt) + random.uniform(0, 1)
-                        logger.warning(
-                            "Retry %d/%d for %s after %.1fs. Error: %s",
-                            attempt + 1,
-                            max_attempts,
-                            func.__name__,
-                            delay,
-                            e,
-                        )
-                        await asyncio.sleep(delay)
-            raise last_error  # type: ignore[misc]
-
-        return wrapper
-
-    return decorator
+    Tuned for Metaculus API rate limits (429s need 30-60s+ cooldown).
+    """
+    return retry(
+        stop=stop_after_attempt(max_attempts),
+        wait=wait_exponential(multiplier=2, min=min_wait, max=max_wait),
+        retry=retry_if_exception_type(
+            (
+                httpx.HTTPStatusError,
+                httpx.TimeoutException,
+                httpx.ConnectError,
+            )
+        ),
+        reraise=True,
+        before_sleep=lambda rs: logger.warning(
+            "Retry %d/%d for %s after %.1fs. Error: %s",
+            rs.attempt_number,
+            max_attempts,
+            rs.fn.__name__ if rs.fn else "unknown",
+            rs.next_action.sleep,  # type: ignore[union-attr]
+            rs.outcome.exception() if rs.outcome else "unknown",
+        ),
+    )
 
 
 class AsyncMetaculusClient:
@@ -157,7 +160,7 @@ class AsyncMetaculusClient:
 
         return {**post_json, "question": merged_question}
 
-    @with_retry(max_attempts=3)
+    @with_retry()
     async def fetch_post_json(self, post_id: int) -> dict[str, Any]:
         """Fetch enriched post JSON by post ID.
 
@@ -174,7 +177,6 @@ class AsyncMetaculusClient:
             post_json = response.json()
             return await self._enrich_post_json(post_json, client, post_id)
 
-    @with_retry(max_attempts=3)
     async def get_question_by_post_id(
         self, post_id: int
     ) -> MetaculusQuestion | list[MetaculusQuestion]:
@@ -186,7 +188,6 @@ class AsyncMetaculusClient:
             return questions[0]
         return questions
 
-    @with_retry(max_attempts=3)
     async def get_all_open_questions_from_tournament(
         self, tournament_id: int | str
     ) -> list[MetaculusQuestion]:
@@ -200,7 +201,7 @@ class AsyncMetaculusClient:
         )
         return await self.get_questions_matching_filter(api_filter)
 
-    @with_retry(max_attempts=3)
+    @with_retry()
     async def get_questions_matching_filter(
         self,
         api_filter: ApiFilter,
@@ -252,7 +253,7 @@ class AsyncMetaculusClient:
 
         return questions
 
-    @with_retry(max_attempts=3)
+    @with_retry()
     async def get_links_for_question(
         self, question_id: int
     ) -> list[DetailedCoherenceLink]:
