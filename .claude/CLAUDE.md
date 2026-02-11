@@ -85,10 +85,14 @@ uv run pytest -k "test_forecast"
 
 ## Debugging
 
+**Do not hypothesize — trace.** When debugging errors, find the actual logs and read the exact exception. Do not list "likely causes" or suggest the user check things. Open the log files yourself, grep for the error, read the traceback, and report what actually happened. If the logs don't contain enough information, say exactly what logging to add and where, so the error is captured next time.
+
+Use `/debug <error message>` to trace an error through the logs automatically.
+
 **When a forecast fails:**
 
-1. Check the notes folder (`notes/sessions/<session_id>/`) for intermediate reasoning
-2. Run with `--verbose` flag for detailed tool call logging
+1. Search `logs/<question_id>/` for the error text and grep for ERROR/exception — read the full traceback, don't stop at the catch-all error message
+2. Check `notes/sessions/<session_id>/` for the agent's intermediate reasoning and meta-reflection
 3. Check API key configuration: missing keys log warnings at startup
 
 **Common issues:**
@@ -225,6 +229,15 @@ The `forecasting-tools` library has some type annotation limitations:
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
+### No Regex/String Parsing for Structured Data
+
+Never use regex or string substitution to parse HTML, XML, JSON, or other structured formats. Use proper parsing libraries:
+
+- **Web page text extraction**: Use `trafilatura` — it handles boilerplate removal, content extraction, and metadata
+- **HTML DOM manipulation**: Use `beautifulsoup4` when you need to navigate/query the DOM tree
+- **XML**: Use `xml.etree.ElementTree` or `lxml`
+- **JSON embedded in HTML**: Parse the HTML with BeautifulSoup first, then `json.loads()`
+
 ### Use Standard Libraries
 
 When integrating with external services (APIs, data sources, etc.):
@@ -333,7 +346,7 @@ The `pyright-lsp` plugin is enabled and provides code intelligence tools. **Use 
 
 ## Helper Scripts
 
-The `.claude/plugins/aib/scripts/` directory contains reusable scripts. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied in settings.json.
+The `.claude/plugins/aib/scripts/` directory contains reusable scripts. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied by the Bash permission hook.
 
 If you find yourself running the same command repeatedly, **create a script** in `.claude/plugins/aib/scripts/` and document it here.
 
@@ -384,6 +397,17 @@ Link forecasts to their logs and metrics.
 uv run python .claude/plugins/aib/scripts/trace_forecast.py show <id> [--verbose]
 uv run python .claude/plugins/aib/scripts/trace_forecast.py list
 uv run python .claude/plugins/aib/scripts/trace_forecast.py errors
+```
+
+### trace_log.py
+
+Extract agent reasoning from noisy forecast logs (strips Docker, HTTP, debug noise).
+
+```bash
+uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id>
+uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --full
+uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --tools-only
+uv run python .claude/plugins/aib/scripts/trace_log.py list
 ```
 
 ### debug.py
@@ -457,6 +481,20 @@ uv run python .claude/plugins/aib/scripts/forecast_queue.py search <query> [--ty
 ```
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup), `all` (cross-tournament)
+
+## Permission Hooks
+
+Permissions are managed by **PreToolUse hook scripts** in `.claude/plugins/aib/hooks/scripts/` rather than glob patterns in `settings.json`. Each hook uses regex patterns for precise control.
+
+| Hook | Tool | Config |
+|---|---|---|
+| `auto_allow_fetch.py` | WebFetch | `ALLOW_PATTERNS` (regex), `DENY_PATTERNS` (regex + reason) |
+| `auto_allow_bash.py` | Bash | `ALLOW_PATTERNS` (regex), `DENY_PATTERNS` (regex + reason) |
+| `auto_allow_edits.py` | Edit | Trivial-line counting, protected file list |
+
+**To add a new allowed URL or command**, edit the pattern list at the top of the corresponding hook script. Non-matching inputs fall through to the user prompt (ask).
+
+`settings.json` only contains rules that don't need regex: `WebSearch` (allow), `Read(.local)` (deny), `Edit(pyproject.toml)` (ask).
 
 ## Settings & Configuration
 
