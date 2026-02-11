@@ -11,8 +11,6 @@ Network modes for retrodict (blind forecasting):
 
 import logging
 import time
-from collections.abc import Generator
-from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal, Self, TypedDict
@@ -106,46 +104,34 @@ class CodeExecutionTimeoutError(RuntimeError):
 class Sandbox:
     """Docker-based Python sandbox for isolated code execution.
 
-    Manages a Docker container lifecycle and provides tools for executing
-    Python code and installing packages.
+    Each session gets a unique container and volume, so concurrent forecasts
+    cannot interfere with each other.
 
     Args:
-        container_name: Name for the Docker container.
+        session_id: Unique identifier for this session (used in container/volume names).
+        shared_dir: Local directory to mount at /shared for host-sandbox file exchange.
         docker_image: Docker image to use for the sandbox.
-        volume_name: Name of the Docker volume for persistent workspace.
-        shared_dir: Local directory to mount for file sharing (default: ./tmp/sandbox-shared).
         network_mode: Network access level ("bridge", "pypi_only", "none").
         pre_install_packages: Whether to pre-install common packages on start.
-
-    Example:
-        with Sandbox() as sandbox:
-            result = sandbox.run_code("print('hello')")
-            server = sandbox.create_mcp_server()
-
-        # Retrodict mode with pypi-only network
-        with Sandbox(network_mode="pypi_only") as sandbox:
-            result = sandbox.run_code("import yfinance")  # Works (pre-installed)
-            # But: requests.get("https://news.com") would fail
+        fake_date: Retrodict cutoff date for libfaketime clock spoofing.
     """
 
-    DEFAULT_CONTAINER_NAME = "aib-sandbox"
     DEFAULT_DOCKER_IMAGE = "ghcr.io/astral-sh/uv:python3.12-bookworm-slim"
-    DEFAULT_VOLUME_NAME = "aib-sandbox-workspace"
-    DEFAULT_SHARED_DIR = "./tmp/sandbox-shared"
 
     def __init__(
         self,
-        container_name: str = DEFAULT_CONTAINER_NAME,
+        *,
+        session_id: str,
+        shared_dir: str | Path,
         docker_image: str = DEFAULT_DOCKER_IMAGE,
-        volume_name: str = DEFAULT_VOLUME_NAME,
-        shared_dir: str = DEFAULT_SHARED_DIR,
         network_mode: NetworkMode = "bridge",
         pre_install_packages: bool = True,
         fake_date: date | None = None,
     ) -> None:
-        self._container_name = container_name
+        suffix = session_id.replace("/", "-")
+        self._container_name = f"aib-sandbox-{suffix}"
         self._docker_image = docker_image
-        self._volume_name = volume_name
+        self._volume_name = f"aib-sandbox-ws-{suffix}"
         self._shared_dir = Path(shared_dir).resolve()
         self._network_mode = network_mode
         self._pre_install_packages = pre_install_packages
@@ -171,20 +157,19 @@ class Sandbox:
         """Check if the sandbox container is currently running."""
         return self._container is not None
 
-    def _cleanup_stale_container(self) -> None:
-        """Remove any stale container from previous runs."""
+    def _remove_stale_container(self) -> None:
+        """Remove a pre-existing container with the same name, if any."""
         if self._client is None:
             return
         try:
             old = self._client.containers.get(self._container_name)
-            logger.info("Removing stale sandbox container")
-            old.stop(timeout=5)
-            old.remove()
+            logger.warning("Removing stale container: %s", self._container_name)
+            old.remove(force=True)
         except NotFound:
             pass
 
     def _destroy_container(self) -> None:
-        """Stop and remove the current container."""
+        """Stop and remove the current container and its session volume."""
         if self._container is None:
             return
         try:
@@ -194,6 +179,13 @@ class Sandbox:
             logger.warning("Failed to cleanup container: %s", e)
         finally:
             self._container = None
+
+        if self._client is not None:
+            try:
+                vol = self._client.volumes.get(self._volume_name)
+                vol.remove()
+            except (NotFound, APIError):
+                pass
 
     def _exec(self, cmd: str | list[str]) -> ExecResult:
         """Execute a command in the container.
@@ -219,6 +211,18 @@ class Sandbox:
             generate_pypi_only_iptables_rules,
             get_pypi_allowed_ips,
         )
+
+        logger.info("Installing iptables for network isolation")
+        install = self._exec(
+            "apt-get update -qq && apt-get install -y -qq iptables 2>&1"
+        )
+        if install.exit_code != 0:
+            logger.error(
+                "Failed to install iptables (exit %d): %s",
+                install.exit_code,
+                _decode_output(install.output)[:500],
+            )
+            return
 
         allowed_ips = get_pypi_allowed_ips()
         if not allowed_ips:
@@ -300,7 +304,9 @@ class Sandbox:
             DockerException: If container creation fails.
         """
         self._client = docker.from_env()
-        self._cleanup_stale_container()
+
+        # Remove stale container with the same name (e.g. from a crashed session)
+        self._remove_stale_container()
 
         # Ensure shared directory exists
         self._shared_dir.mkdir(parents=True, exist_ok=True)
@@ -351,7 +357,13 @@ class Sandbox:
 
     def __enter__(self) -> Self:
         """Enter context manager, starting the sandbox."""
-        self.start()
+        started = False
+        try:
+            self.start()
+            started = True
+        finally:
+            if not started:
+                self.stop()
         return self
 
     def __exit__(
@@ -540,48 +552,3 @@ class Sandbox:
             version=version,
             tools=self.create_tools(),
         )
-
-
-# --- Convenience context manager ---
-
-
-@contextmanager
-def sandbox_context(
-    container_name: str = Sandbox.DEFAULT_CONTAINER_NAME,
-    docker_image: str = Sandbox.DEFAULT_DOCKER_IMAGE,
-    volume_name: str = Sandbox.DEFAULT_VOLUME_NAME,
-    network_mode: NetworkMode = "bridge",
-    pre_install_packages: bool = True,
-) -> Generator[Sandbox, None, None]:
-    """Context manager that creates a sandbox and destroys it on exit.
-
-    This is a convenience wrapper around `Sandbox` for cases where you
-    prefer a functional style.
-
-    Args:
-        container_name: Name for the Docker container.
-        docker_image: Docker image to use for the sandbox.
-        volume_name: Name of the Docker volume for persistent workspace.
-        network_mode: Network access level ("bridge", "pypi_only", "none").
-        pre_install_packages: Whether to pre-install common packages.
-
-    Yields:
-        The running Sandbox instance.
-
-    Example:
-        with sandbox_context() as sandbox:
-            result = sandbox.run_code("print('hello')")
-
-        # Retrodict mode
-        with sandbox_context(network_mode="pypi_only") as sandbox:
-            result = sandbox.run_code("import yfinance")
-    """
-    sandbox = Sandbox(
-        container_name=container_name,
-        docker_image=docker_image,
-        volume_name=volume_name,
-        network_mode=network_mode,
-        pre_install_packages=pre_install_packages,
-    )
-    with sandbox:
-        yield sandbox
