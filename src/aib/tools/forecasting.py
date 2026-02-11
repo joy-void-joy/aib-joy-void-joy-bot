@@ -516,9 +516,8 @@ async def _process_cp_history(
 
     if filtered_count > 0 and len(results) == 0:
         response["note"] = (
-            f"All {filtered_count} CP data points were after the cutoff date. "
-            "This is expected when the question was recently published. "
-            "No historical CP data is available for the requested period."
+            "No historical CP data is available yet. "
+            "This is expected when the question was recently published."
         )
 
     return mcp_success(response)
@@ -546,11 +545,18 @@ async def _resolve_question_to_post_id(question_id: int) -> int | None:
         return None
 
 
+_post_id_cache: dict[int, int | None] = {}
+
+
 async def _ensure_post_id(input_id: int) -> int | None:
     """Resolve any Metaculus ID to a post_id.
 
+    Results are cached to avoid redundant API calls within a session.
     Tries as post_id first, then as question_id.
     """
+    if input_id in _post_id_cache:
+        return _post_id_cache[input_id]
+
     try:
         async with _metaculus_semaphore():
             async with httpx.AsyncClient(
@@ -561,10 +567,26 @@ async def _ensure_post_id(input_id: int) -> int | None:
                     f"https://www.metaculus.com/api/posts/{input_id}/",
                 )
                 if resp.status_code == 200:
+                    _post_id_cache[input_id] = input_id
                     return input_id
     except Exception:
         pass
-    return await _resolve_question_to_post_id(input_id)
+
+    resolved = await _resolve_question_to_post_id(input_id)
+    _post_id_cache[input_id] = resolved
+    return resolved
+
+
+async def _fetch_question_with_history(post_id: int) -> dict[str, Any]:
+    """Fetch question data with CP history using the client library.
+
+    Uses AsyncMetaculusClient.fetch_post_json which automatically falls
+    back to HTML parsing when the JSON API returns null fields (including
+    aggregations/CP history data).
+    """
+    client = get_metaculus_client()
+    data = await client.fetch_post_json(post_id)
+    return data.get("question") or {}
 
 
 @tool(
@@ -605,24 +627,10 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Could not resolve ID {input_id} to a valid post.")
 
     try:
-        async with _metaculus_semaphore():
-            async with httpx.AsyncClient(
-                timeout=settings.http_timeout_seconds,
-                headers={"Authorization": f"Token {settings.metaculus_token}"},
-            ) as client:
-                response = await client.get(
-                    f"https://www.metaculus.com/api/posts/{post_id}/",
-                    params={"with_cp_history": "true"},
-                )
-                response.raise_for_status()
-                data = response.json()
-
-        history = (
-            data.get("question", {})
-            .get("aggregations", {})
-            .get("recency_weighted", {})
-            .get("history", [])
-        )
+        question = await _fetch_question_with_history(post_id)
+        aggregations = question.get("aggregations") or {}
+        recency_weighted = aggregations.get("recency_weighted") or {}
+        history = recency_weighted.get("history", [])
 
         return await _process_cp_history(
             {"history": history}, input_id, days, cutoff_dt
@@ -888,7 +896,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                         "mode": mode,
                         "revision_id": historical["revision_id"],
                         "revision_timestamp": historical["revision_timestamp"],
-                        "cutoff_date": cutoff_date,
+                        "revision_date": historical["revision_timestamp"][:10],
                     }
                 )
             except Exception as e:

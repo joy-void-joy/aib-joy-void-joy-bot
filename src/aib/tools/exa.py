@@ -33,6 +33,8 @@ async def exa_search(
     num_results: int,
     published_before: str | None = None,
     livecrawl: str = "always",
+    include_domains: list[str] | None = None,
+    exclude_domains: list[str] | None = None,
 ) -> list[ExaResult]:
     """Execute an Exa search (cached for 5 minutes).
 
@@ -45,6 +47,8 @@ async def exa_search(
         num_results: Number of results to return.
         published_before: Optional ISO date (YYYY-MM-DD) to filter results.
         livecrawl: Livecrawl mode ('always', 'fallback', 'never').
+        include_domains: Only include results from these domains.
+        exclude_domains: Exclude results from these domains.
 
     Returns:
         List of ExaResult dicts with title, url, snippet, etc.
@@ -81,6 +85,10 @@ async def exa_search(
 
     if published_before:
         payload["publishedBefore"] = f"{published_before}T23:59:59.999Z"
+    if include_domains:
+        payload["includeDomains"] = include_domains
+    if exclude_domains:
+        payload["excludeDomains"] = exclude_domains
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, json=payload, headers=headers)

@@ -82,7 +82,11 @@ async def _make_wayback_request(url: str, timestamp: str) -> dict[str, Any] | No
 
 @cached(ttl=86400)  # 24 hours - availability rarely changes
 async def check_wayback_availability(
-    url: str, timestamp: str, *, validate_before_cutoff: bool = True
+    url: str,
+    timestamp: str,
+    *,
+    validate_before_cutoff: bool = True,
+    raise_on_rate_limit: bool = False,
 ) -> dict[str, Any] | None:
     """Check if a URL has a Wayback Machine snapshot near the given timestamp.
 
@@ -137,6 +141,8 @@ async def check_wayback_availability(
                     return None
 
         except WaybackRateLimitError as e:
+            if raise_on_rate_limit:
+                raise
             logger.warning("Wayback rate limited after retries: %s", e)
             return None
         except httpx.HTTPStatusError as e:
