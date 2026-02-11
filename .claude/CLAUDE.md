@@ -489,7 +489,7 @@ Permissions are managed by **PreToolUse hook scripts** in `.claude/plugins/aib/h
 | Hook | Tool | Config |
 |---|---|---|
 | `auto_allow_fetch.py` | WebFetch | `ALLOW_PATTERNS` (regex), `DENY_PATTERNS` (regex + reason) |
-| `auto_allow_bash.py` | Bash | `ALLOW_PATTERNS` (regex), `DENY_PATTERNS` (regex + reason) |
+| `auto_allow_bash.py` | Bash | `RULES` list (gitignore-style: last match wins) |
 | `auto_allow_edits.py` | Edit | Trivial-line counting, protected file list |
 
 **To add a new allowed URL or command**, edit the pattern list at the top of the corresponding hook script. Non-matching inputs fall through to the user prompt (ask).
