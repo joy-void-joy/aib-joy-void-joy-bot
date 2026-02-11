@@ -1191,6 +1191,8 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
                 median=saved.median,
                 confidence_interval=saved.confidence_interval,
                 percentiles=saved.percentiles,
+                reasoning=saved.reasoning,
+                sources_consulted=saved.sources_consulted,
             )
 
             comment_text = format_reasoning_comment(output)

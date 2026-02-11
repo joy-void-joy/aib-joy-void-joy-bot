@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import sh
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
 from aib.version import AGENT_VERSION
@@ -124,6 +124,8 @@ class SavedForecast(BaseModel):
     question_scheduled_resolve_time: str | None = (
         None  # ISO timestamp when resolution expected
     )
+    reasoning: str = ""
+    sources_consulted: list[str] = Field(default_factory=list)
     agent_version: str | None = None
     # Retrodict tracking
     retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
@@ -151,6 +153,8 @@ def save_forecast(
     question_published_at: str | None = None,
     question_close_time: str | None = None,
     question_scheduled_resolve_time: str | None = None,
+    reasoning: str = "",
+    sources_consulted: list[str] | None = None,
 ) -> Path:
     """Save a forecast to the history storage.
 
@@ -173,6 +177,8 @@ def save_forecast(
         question_published_at: ISO timestamp when question was published on Metaculus.
         question_close_time: ISO timestamp when question closes for forecasting.
         question_scheduled_resolve_time: ISO timestamp when question is expected to resolve.
+        reasoning: Full agent reasoning trace.
+        sources_consulted: URLs or search queries the agent consulted.
 
     Returns:
         Path to the saved forecast file.
@@ -204,6 +210,8 @@ def save_forecast(
         question_published_at=question_published_at,
         question_close_time=question_close_time,
         question_scheduled_resolve_time=question_scheduled_resolve_time,
+        reasoning=reasoning,
+        sources_consulted=sources_consulted or [],
         agent_version=AGENT_VERSION,
     )
 
@@ -236,6 +244,8 @@ def save_retrodict(
     question_published_at: str | None = None,
     question_close_time: str | None = None,
     question_scheduled_resolve_time: str | None = None,
+    reasoning: str = "",
+    sources_consulted: list[str] | None = None,
 ) -> Path:
     """Save a retrodicted forecast to the retrodict storage.
 
@@ -295,6 +305,8 @@ def save_retrodict(
         question_published_at=question_published_at,
         question_close_time=question_close_time,
         question_scheduled_resolve_time=question_scheduled_resolve_time,
+        reasoning=reasoning,
+        sources_consulted=sources_consulted or [],
         retrodict_date=retrodict_date,
         agent_version=AGENT_VERSION,
     )

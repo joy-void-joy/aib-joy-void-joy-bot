@@ -1080,6 +1080,8 @@ async def run_forecast(
                 "question_scheduled_resolve_time": context.get(
                     "scheduled_resolve_time"
                 ),
+                "reasoning": output.reasoning,
+                "sources_consulted": output.sources_consulted,
             }
 
             if cutoff:
