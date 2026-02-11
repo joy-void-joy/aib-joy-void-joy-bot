@@ -1,5 +1,6 @@
 """Async Metaculus API client using httpx."""
 
+import json
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -7,6 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Self
 
 import httpx
+from bs4 import BeautifulSoup
 
 from metaculus.models import (
     ApiFilter,
@@ -17,6 +19,30 @@ from metaculus.models import (
 logger = logging.getLogger(__name__)
 
 API_BASE_URL = os.getenv("METACULUS_API_BASE_URL", "https://www.metaculus.com/api")
+
+
+def _parse_html_api_response(html: str) -> dict[str, Any] | None:
+    """Parse JSON from the DRF browsable API HTML response.
+
+    The Metaculus API serves a Django REST Framework browsable page when
+    Accept: text/html is sent. The page embeds the full JSON response
+    (including description fields that the JSON API now omits) inside a
+    <div class="response-info"> element.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    response_div = soup.find("div", class_="response-info")
+    if response_div is None:
+        return None
+
+    raw = response_div.get_text()
+    json_start = raw.find("{")
+    if json_start == -1:
+        return None
+
+    try:
+        return json.loads(raw[json_start:])
+    except json.JSONDecodeError:
+        return None
 
 
 def with_retry(max_attempts: int = 3):
@@ -94,13 +120,51 @@ class AsyncMetaculusClient:
             "Accept-Language": "en",
         }
 
-    @with_retry(max_attempts=3)
-    async def get_question_by_post_id(
-        self, post_id: int
-    ) -> MetaculusQuestion | list[MetaculusQuestion]:
-        """Fetch a question by post ID."""
-        logger.debug("Fetching question %d", post_id)
+    async def _enrich_post_json(
+        self,
+        post_json: dict[str, Any],
+        client: httpx.AsyncClient,
+        post_id: int,
+    ) -> dict[str, Any]:
+        """Fill nulls in the JSON API response from the HTML API.
 
+        The Metaculus JSON API may return null for various question fields
+        (description, resolution, aggregations, etc.). The DRF browsable
+        HTML page still includes them. Use HTML as the base, then overlay
+        non-null JSON values on top.
+        """
+        question = post_json.get("question") or {}
+        has_nulls = any(v is None for v in question.values())
+        if not has_nulls:
+            return post_json
+
+        response = await client.get(
+            f"{self.base_url}/posts/{post_id}/",
+            headers={**self._get_headers(), "Accept": "text/html"},
+        )
+        if response.status_code != 200:
+            return post_json
+
+        html_data = _parse_html_api_response(response.text)
+        if html_data is None:
+            return post_json
+
+        html_question = html_data.get("question") or {}
+        merged_question = {
+            **html_question,
+            **{k: v for k, v in question.items() if v is not None},
+        }
+
+        return {**post_json, "question": merged_question}
+
+    @with_retry(max_attempts=3)
+    async def fetch_post_json(self, post_id: int) -> dict[str, Any]:
+        """Fetch enriched post JSON by post ID.
+
+        Returns the raw API JSON with content fields (description,
+        resolution_criteria, fine_print) populated from the HTML
+        fallback if the JSON API returns nulls.
+        """
         async with self._http_client() as client:
             response = await client.get(
                 f"{self.base_url}/posts/{post_id}/",
@@ -108,7 +172,15 @@ class AsyncMetaculusClient:
             )
             response.raise_for_status()
             post_json = response.json()
+            return await self._enrich_post_json(post_json, client, post_id)
 
+    @with_retry(max_attempts=3)
+    async def get_question_by_post_id(
+        self, post_id: int
+    ) -> MetaculusQuestion | list[MetaculusQuestion]:
+        """Fetch a question by post ID."""
+        logger.debug("Fetching question %d", post_id)
+        post_json = await self.fetch_post_json(post_id)
         questions = self._parse_post_json(post_json)
         if len(questions) == 1:
             return questions[0]
