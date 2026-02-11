@@ -799,8 +799,11 @@ def submit(
         print(f"❌ Submission failed: {e}")
         raise typer.Exit(1)
 
-    if commit_forecast(output.post_id, output.question_title):
-        print("  📦 Committed to git")
+    try:
+        if commit_forecast(output.post_id, output.question_title):
+            print("  📦 Committed to git")
+    except Exception as e:
+        print(f"⚠️  Git commit failed: {e}")
 
     if comment:
         print("Posting reasoning comment...")
@@ -809,7 +812,7 @@ def submit(
             # Comments use post_id, not question_id
             asyncio.run(post_comment(output.post_id, comment_text))
             print(f"✅ Comment posted on post {output.post_id}")
-        except SubmissionError as e:
+        except Exception as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
 
     _rebuild_scores_csv()
@@ -931,8 +934,11 @@ def tournament(
             error_count += 1
             continue
 
-        if commit_forecast(output.post_id, output.question_title):
-            print("  📦 Committed to git")
+        try:
+            if commit_forecast(output.post_id, output.question_title):
+                print("  📦 Committed to git")
+        except Exception as e:
+            print(f"  ⚠️  Git commit failed: {e}")
 
         # Post comment if requested
         if comment:
@@ -940,7 +946,7 @@ def tournament(
                 comment_text = format_reasoning_comment(output)
                 asyncio.run(post_comment(q.post_id, comment_text))
                 print("  💬 Comment posted")
-            except SubmissionError as e:
+            except Exception as e:
                 print(f"  ⚠️  Comment failed: {e}")
 
     # Summary
@@ -1076,15 +1082,18 @@ def loop(
                     print(f"    ❌ Submission failed: {e}")
                     continue
 
-                if commit_forecast(output.post_id, output.question_title):
-                    print("    📦 Committed to git")
+                try:
+                    if commit_forecast(output.post_id, output.question_title):
+                        print("    📦 Committed to git")
+                except Exception as e:
+                    print(f"    ⚠️  Git commit failed: {e}")
 
                 if comment:
                     try:
                         comment_text = format_reasoning_comment(output)
                         asyncio.run(post_comment(q.post_id, comment_text))
                         print("    💬 Comment posted")
-                    except SubmissionError as e:
+                    except Exception as e:
                         print(f"    ⚠️  Comment failed: {e}")
 
         cycle_duration = time.time() - cycle_start

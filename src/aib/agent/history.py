@@ -71,24 +71,27 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
         return False
 
     try:
+        env = {"GIT_PAGER": ""}
         git = sh.Command("git")
 
         for path in paths_to_stage:
             try:
-                git.add(path)
+                git.add(path, _tty_out=False, _env=env)
             except sh.ErrorReturnCode:
                 logger.debug("Skipping git add for %s (ignored or missing)", path)
 
-        diff = str(git.diff("--cached", "--stat", _ok_code=[0, 1])).strip()
+        diff = str(
+            git.diff("--cached", "--name-only", _tty_out=False, _env=env)
+        ).strip()
         if not diff:
             logger.info("Nothing to commit for post %d (already committed?)", post_id)
             return False
 
         slug = question_title[:50].strip().rstrip(".")
-        git.commit("-m", f"data(forecasts): {slug}")
+        git.commit("-m", f"data(forecasts): {slug}", _tty_out=False, _env=env)
         logger.info("Committed forecast for post %d", post_id)
         return True
-    except sh.ErrorReturnCode as e:
+    except Exception as e:
         logger.warning("Git commit failed for post %d: %s", post_id, e)
         return False
 
