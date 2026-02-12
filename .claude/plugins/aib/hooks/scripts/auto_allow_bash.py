@@ -32,6 +32,12 @@ class Deny(BaseModel):
 # ---------------------------------------------------------------------------
 
 RULES: list[Allow | Deny] = [
+    # Block python anywhere in command (lowest priority — any later Allow overrides)
+    Deny(
+        pattern=r"(^|\b)python3?\b",
+        reason="Denied: python is only allowed for scripts in .claude/plugins/aib/scripts/ or ./tmp/."
+        " Create a script there instead.",
+    ),
     # Safe read-only / common commands
     Allow(pattern=r"^ls\b"),
     Allow(pattern=r"^grep\b"),
@@ -43,13 +49,7 @@ RULES: list[Allow | Deny] = [
     Allow(pattern=r"^uv (sync|add|remove|lock)\b"),
     Allow(pattern=r"^uv run (pyright|pytest|ruff|forecast)\b"),
     Allow(pattern=r"^uv run \S+ --help$"),
-    # Block all python invocations...
-    Deny(
-        pattern=r"(^|\b)python3?\b",
-        reason="Denied: python is only allowed for scripts in .claude/plugins/aib/scripts/ or ./tmp/."
-        " Create a script there instead.",
-    ),
-    # ...except scripts in allowed folders (overrides the deny above)
+    # Allow python scripts in specific folders (overrides the deny above)
     Allow(pattern=r"^uv run (python )?\.claude/plugins/aib/scripts/"),
     Allow(pattern=r"^uv run (python )?\./tmp/\S+\.py\b"),
 ]
