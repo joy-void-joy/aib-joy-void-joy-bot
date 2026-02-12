@@ -9,7 +9,10 @@ Network modes for retrodict (blind forecasting):
 - "none": No network access at all
 """
 
+import io
+import json
 import logging
+import tarfile
 import time
 from datetime import date
 from pathlib import Path
@@ -23,6 +26,7 @@ from aib.tools.mcp_server import create_mcp_server
 from claude_agent_sdk.types import McpSdkServerConfig
 from docker.errors import APIError, DockerException, NotFound
 from docker.models.containers import Container, ExecResult
+from docker.utils.socket import next_frame_header, read_exactly, SocketError
 
 from aib.config import settings
 from aib.tools.metrics import tracked
@@ -101,6 +105,196 @@ class CodeExecutionTimeoutError(RuntimeError):
     """Raised when code execution exceeds the timeout."""
 
 
+class ReplCrashedError(RuntimeError):
+    """Raised when the persistent REPL process has exited unexpectedly."""
+
+
+_REPL_SERVER_SCRIPT = r"""
+import json, signal, sys, time, traceback
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
+
+_MAX_OUTPUT = 1_048_576
+_namespace = {"__builtins__": __builtins__}
+
+class _Timeout(Exception):
+    pass
+
+def _alarm(signum, frame):
+    raise _Timeout()
+
+_proto_in = sys.stdin
+_proto_out = sys.stdout
+sys.stdin = open("/dev/null", "r")
+sys.stdout = open("/dev/null", "w")
+sys.stderr = open("/dev/null", "w")
+
+for _line in _proto_in:
+    _line = _line.strip()
+    if not _line:
+        continue
+    try:
+        _req = json.loads(_line)
+    except json.JSONDecodeError:
+        _proto_out.write(json.dumps({"exit_code": 1, "stdout": "", "stderr": "Invalid JSON", "duration_ms": 0}) + "\n")
+        _proto_out.flush()
+        continue
+
+    _code = _req.get("code", "")
+    _timeout = _req.get("timeout", 30)
+    _so = StringIO()
+    _se = StringIO()
+    _ec = 0
+    _t0 = time.perf_counter()
+    _old_alarm = signal.signal(signal.SIGALRM, _alarm)
+    try:
+        if _timeout > 0:
+            signal.alarm(_timeout)
+        with redirect_stdout(_so), redirect_stderr(_se):
+            exec(compile(_code, "<cell>", "exec"), _namespace)
+    except _Timeout:
+        _ec = 124
+        _se.write(f"Execution timed out after {_timeout} seconds\n")
+    except SystemExit as _e:
+        _ec = _e.code if isinstance(_e.code, int) else 1
+    except BaseException:
+        _ec = 1
+        _se.write(traceback.format_exc())
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, _old_alarm)
+
+    _ms = int((time.perf_counter() - _t0) * 1000)
+    _proto_out.write(json.dumps({
+        "exit_code": _ec,
+        "stdout": _so.getvalue()[:_MAX_OUTPUT],
+        "stderr": _se.getvalue()[:_MAX_OUTPUT],
+        "duration_ms": _ms,
+    }) + "\n")
+    _proto_out.flush()
+"""
+
+
+class ReplSession:
+    """Persistent Python REPL inside a Docker container.
+
+    Communicates over Docker's exec socket API using a JSON-line protocol.
+    The REPL maintains a shared namespace across code executions, so
+    variables and imports persist between calls.
+    """
+
+    def __init__(
+        self,
+        client: docker.DockerClient,
+        container: Container,
+        environment: dict[str, str],
+    ) -> None:
+        self._client = client
+        self._container = container
+        self._environment = environment
+        self._sock: Any = None
+        self._exec_id: str | None = None
+
+    def start(self) -> None:
+        """Start the REPL process and verify it responds."""
+        exec_result: dict[str, str] = self._client.api.exec_create(
+            self._container.id,
+            ["python", "-u", "/workspace/.repl_server.py"],
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            workdir="/workspace",
+            environment=self._environment or None,
+        )
+        self._exec_id = exec_result["Id"]
+        self._sock = self._client.api.exec_start(self._exec_id, socket=True)
+        result = self.execute("pass", timeout_seconds=10)
+        if result["exit_code"] != 0:
+            raise RuntimeError(f"REPL startup failed: {result['stderr']}")
+        logger.info("Persistent REPL started")
+
+    def stop(self) -> None:
+        """Close the socket connection to the REPL."""
+        if self._sock is not None:
+            try:
+                response = getattr(self._sock, "_response", None)
+                if response is not None:
+                    response.close()
+                self._sock.close()
+            except Exception:
+                pass
+            self._sock = None
+        self._exec_id = None
+
+    def execute(self, code: str, timeout_seconds: int) -> ExecuteCodeResult:
+        """Send code to the REPL and return the result."""
+        if self._sock is None:
+            raise SandboxNotInitializedError("REPL not connected")
+
+        request = json.dumps({"code": code, "timeout": timeout_seconds}) + "\n"
+        self._send(request.encode("utf-8"))
+
+        deadline = time.monotonic() + timeout_seconds + 5
+        try:
+            response = self._recv_response(deadline)
+        except (SocketError, OSError) as e:
+            raise ReplCrashedError(f"REPL exited: {e}") from e
+
+        if response.get("exit_code") == 124:
+            raise CodeExecutionTimeoutError(
+                f"Code execution timed out after {timeout_seconds} seconds"
+            )
+
+        return {
+            "exit_code": response.get("exit_code", 1),
+            "stdout": response.get("stdout", ""),
+            "stderr": response.get("stderr", ""),
+            "duration_ms": response.get("duration_ms", 0),
+        }
+
+    def _send(self, data: bytes) -> None:
+        """Write raw bytes to the exec socket stdin."""
+        try:
+            sock = getattr(self._sock, "_sock", self._sock)
+            if hasattr(sock, "sendall"):
+                sock.sendall(data)
+            else:
+                self._sock.write(data)
+        except (BrokenPipeError, OSError) as e:
+            raise ReplCrashedError(f"REPL write failed: {e}") from e
+
+    def _recv_response(self, deadline: float) -> dict[str, Any]:
+        """Read Docker multiplex frames until a complete JSON line arrives."""
+        stdout_buf = b""
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ReplCrashedError("Timed out waiting for REPL response")
+            self._set_socket_timeout(remaining)
+
+            stream_type, size = next_frame_header(self._sock)
+            if size < 0:
+                raise ReplCrashedError("REPL EOF")
+
+            data = read_exactly(self._sock, size)
+            if stream_type == 1:  # stdout
+                stdout_buf += data
+                if b"\n" in stdout_buf:
+                    line, _, _ = stdout_buf.partition(b"\n")
+                    return json.loads(line.decode("utf-8"))
+            elif stream_type == 2:  # stderr
+                logger.debug("REPL stderr: %s", data.decode("utf-8", errors="replace"))
+
+    def _set_socket_timeout(self, timeout: float) -> None:
+        """Set timeout on the underlying socket."""
+        sock = self._sock
+        for candidate in [sock, getattr(sock, "_sock", None)]:
+            if hasattr(candidate, "settimeout"):
+                candidate.settimeout(timeout)
+                return
+
+
 class Sandbox:
     """Docker-based Python sandbox for isolated code execution.
 
@@ -138,6 +332,7 @@ class Sandbox:
         self._fake_date = fake_date
         self._container: Container | None = None
         self._client: docker.DockerClient | None = None
+        self._repl: ReplSession | None = None
 
     @property
     def container(self) -> Container:
@@ -275,6 +470,18 @@ class Sandbox:
             "FAKETIME": f"{self._fake_date.isoformat()} 00:00:00",
         }
 
+    def _write_repl_script(self) -> None:
+        """Write the REPL server script into the container via tar archive."""
+        script_bytes = _REPL_SERVER_SCRIPT.encode("utf-8")
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as tar:
+            info = tarfile.TarInfo(name=".repl_server.py")
+            info.size = len(script_bytes)
+            info.mode = 0o644
+            tar.addfile(info, io.BytesIO(script_bytes))
+        buf.seek(0)
+        self.container.put_archive("/workspace", buf)
+
     def _pre_install_common_packages(self) -> None:
         """Pre-install common packages for faster agent execution."""
         logger.info("Pre-installing common packages: %s", COMMON_PACKAGES)
@@ -349,8 +556,18 @@ class Sandbox:
         if self._network_mode == "pypi_only":
             self._setup_pypi_only_network()
 
+        # Start persistent REPL
+        self._write_repl_script()
+        assert self._client is not None
+        assert self._container is not None
+        self._repl = ReplSession(self._client, self._container, self._faketime_env)
+        self._repl.start()
+
     def stop(self) -> None:
         """Stop and remove the sandbox container."""
+        if self._repl is not None:
+            self._repl.stop()
+            self._repl = None
         logger.info("Destroying sandbox container")
         self._destroy_container()
         self._client = None
@@ -380,7 +597,11 @@ class Sandbox:
     def run_code(
         self, code: str, timeout_seconds: int | None = None
     ) -> ExecuteCodeResult:
-        """Execute Python code in the sandbox container.
+        """Execute Python code in the sandbox's persistent REPL.
+
+        Variables, imports, and data persist between calls within the same
+        session. If the REPL crashes, it is restarted automatically (but
+        state from previous cells is lost).
 
         Args:
             code: Python code to execute.
@@ -394,44 +615,32 @@ class Sandbox:
             SandboxNotInitializedError: If sandbox is not running.
             CodeExecutionTimeoutError: If execution exceeds timeout.
         """
+        if self._repl is None:
+            raise SandboxNotInitializedError("REPL not initialized")
         if timeout_seconds is None:
             timeout_seconds = settings.sandbox_timeout_seconds
 
-        start = time.perf_counter()
-
-        # Use `timeout` command inside container for reliable timeout handling.
-        # The `timeout` utility (from coreutils) returns exit code 124 on timeout
-        # and actually kills the process, unlike threading-based timeouts which
-        # leave zombie processes running.
-        if timeout_seconds > 0:
-            cmd = ["timeout", str(timeout_seconds), "python", "-c", code]
-        else:
-            cmd = ["python", "-c", code]
-
-        result: ExecResult = self.container.exec_run(
-            cmd,
-            demux=True,
-            workdir="/workspace",
-            environment=self._faketime_env or None,
-        )
-
-        duration_ms = int((time.perf_counter() - start) * 1000)
-
-        # Check for timeout (exit code 124 from `timeout` command)
-        if result.exit_code == 124:
-            raise CodeExecutionTimeoutError(
-                f"Code execution timed out after {timeout_seconds} seconds"
-            )
-
-        # When demux=True, output is a tuple of (stdout, stderr)
-        stdout_bytes, stderr_bytes = result.output
-
-        return {
-            "exit_code": result.exit_code,
-            "stdout": _decode_output(stdout_bytes),
-            "stderr": _decode_output(stderr_bytes),
-            "duration_ms": duration_ms,
-        }
+        try:
+            return self._repl.execute(code, timeout_seconds)
+        except ReplCrashedError:
+            logger.warning("REPL crashed, restarting")
+            self._repl.stop()
+            try:
+                self._repl.start()
+            except Exception:
+                logger.exception("REPL restart failed")
+                self._repl = None
+                raise SandboxNotInitializedError("REPL restart failed")
+            return {
+                "exit_code": 1,
+                "stdout": "",
+                "stderr": (
+                    "REPL process crashed and was restarted. "
+                    "Variables from previous cells have been lost. "
+                    "Please re-run any setup code."
+                ),
+                "duration_ms": 0,
+            }
 
     def run_install(self, packages: list[str]) -> InstallPackageResult:
         """Install Python packages using uv.
@@ -481,10 +690,10 @@ class Sandbox:
         @tool(
             "execute_code",
             (
-                "Execute Python code in an isolated Docker container. Returns exit code, "
-                f"stdout, stderr, and duration. The container has {network_desc}, a "
-                "persistent /workspace directory, and a /shared directory for file exchange "
-                f"with the host. Timeout: {timeout_seconds}s."
+                "Execute Python code in an isolated Docker container with persistent state. "
+                "Variables, imports, and data persist between calls — no need to re-define them. "
+                f"The container has {network_desc}, a persistent /workspace directory, and a "
+                f"/shared directory for file exchange with the host. Timeout: {timeout_seconds}s."
             ),
             {"code": str},
         )
