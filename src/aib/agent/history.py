@@ -6,9 +6,8 @@ for a given question. Used for historical learning and calibration.
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
-
-from aib.retrodict_context import effective_now
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +15,7 @@ import sh
 from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
+from aib.retrodict_context import effective_now
 from aib.version import AGENT_VERSION
 
 if TYPE_CHECKING:
@@ -71,7 +71,7 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
         return False
 
     try:
-        env = {"GIT_PAGER": ""}
+        env = {**os.environ, "GIT_PAGER": ""}
         git = sh.Command("git")
 
         for path in paths_to_stage:
