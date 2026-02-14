@@ -63,14 +63,10 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
-from aib.agent.subagents import SUBAGENT_DESCRIPTIONS
 from aib.config import settings
 from aib.tools.composition import (
-    SandboxConfig,
     composition_server,
     set_run_forecast_fn,
-    set_sandbox_config,
-    set_session_id,
 )
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
@@ -102,7 +98,6 @@ def _build_system_prompt(
             tool_docs=tool_docs,
             retrodict=cutoff is not None,
             sandbox_shared_dir=sandbox_shared_dir,
-            subagents=SUBAGENT_DESCRIPTIONS,
         )
     )
 
@@ -658,7 +653,7 @@ async def run_forecast(
 
     Args:
         question_id: Metaculus post ID (for top-level forecasts)
-        question_context: Pre-built context dict (for sub-forecasts from spawn_subagents)
+        question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
 
     Returns:
@@ -812,16 +807,6 @@ async def run_forecast(
         mcp_servers = policy.get_mcp_servers(
             sandbox, composition_server, session_id=session_id
         )
-
-        # Wire sandbox config and session ID for subagents
-        set_sandbox_config(
-            SandboxConfig(
-                network_mode=sandbox_network_mode,
-                fake_date=cutoff,
-                shared_dir=sandbox_shared_dir,
-            )
-        )
-        set_session_id(session_id)
 
         options = ClaudeAgentOptions(
             model=settings.model,
@@ -1038,8 +1023,8 @@ async def run_forecast(
         subagents_used = []
         if metrics and "by_tool" in metrics:
             for tool_name in metrics["by_tool"]:
-                if tool_name == "spawn_subagents":
-                    subagents_used.append("(via spawn_subagents)")
+                if tool_name == "spawn_subquestions":
+                    subagents_used.append("(via spawn_subquestions)")
 
         if meta_file.exists():
             output.meta = ForecastMeta(
@@ -1130,5 +1115,5 @@ async def run_forecast(
     return output
 
 
-# Wire up spawn_subagents to use run_forecast recursively
+# Wire up spawn_subquestions to use run_forecast recursively
 set_run_forecast_fn(run_forecast)
