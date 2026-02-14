@@ -566,6 +566,82 @@ class NumericDistribution(BaseModel):
         return cdf_array.tolist()
 
 
+def standardize_cdf(
+    cdf: list[float],
+    *,
+    open_lower_bound: bool,
+    open_upper_bound: bool,
+) -> list[float]:
+    """Apply Metaculus standardization rules to a raw CDF.
+
+    Standalone version of NumericDistribution._standardize_cdf for use with
+    pre-computed CDFs (e.g., from mixture distributions).
+
+    Args:
+        cdf: Raw CDF values (length = cdf_size).
+        open_lower_bound: Whether values can go below the question's lower bound.
+        open_upper_bound: Whether values can exceed the question's upper bound.
+
+    Returns:
+        Standardized CDF values satisfying Metaculus API requirements.
+    """
+    cdf_array = np.array(cdf, dtype=np.float64)
+
+    scale_lower_to = 0.0 if open_lower_bound else cdf_array[0]
+    scale_upper_to = 1.0 if open_upper_bound else cdf_array[-1]
+    rescaled_inbound_mass = scale_upper_to - scale_lower_to
+
+    if rescaled_inbound_mass <= 0:
+        rescaled_inbound_mass = 1e-10
+
+    def apply_minimum(f: float, location: float) -> float:
+        rescaled_f = (f - scale_lower_to) / rescaled_inbound_mass
+        if open_lower_bound and open_upper_bound:
+            return 0.988 * rescaled_f + 0.01 * location + 0.001
+        elif open_lower_bound:
+            return 0.989 * rescaled_f + 0.01 * location + 0.001
+        elif open_upper_bound:
+            return 0.989 * rescaled_f + 0.01 * location
+        return 0.99 * rescaled_f + 0.01 * location
+
+    for i in range(len(cdf_array)):
+        cdf_array[i] = apply_minimum(cdf_array[i], i / (len(cdf_array) - 1))
+
+    pmf = np.diff(cdf_array, prepend=0, append=1)
+    cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
+
+    def cap_pmf(scale: float) -> np.ndarray:
+        return np.concatenate(
+            [pmf[:1], np.minimum(cap, scale * pmf[1:-1]), pmf[-1:]]
+        )
+
+    def capped_sum(scale: float) -> float:
+        return float(cap_pmf(scale).sum())
+
+    lo = hi = scale = 1.0
+    while capped_sum(hi) < 1.0:
+        hi *= 1.2
+
+    for _ in range(100):
+        scale = 0.5 * (lo + hi)
+        s = capped_sum(scale)
+        if s < 1.0:
+            lo = scale
+        else:
+            hi = scale
+        if s == 1.0 or (hi - lo) < 2e-5:
+            break
+
+    pmf = cap_pmf(scale)
+    inner_sum = pmf[1:-1].sum()
+    if inner_sum > 0:
+        pmf[1:-1] *= (cdf_array[-1] - cdf_array[0]) / inner_sum
+
+    cdf_array = np.cumsum(pmf)[:-1]
+    cdf_array = np.round(cdf_array, 10)
+    return cdf_array.tolist()
+
+
 def percentiles_to_cdf(
     percentile_values: dict[int, float],
     *,
@@ -834,50 +910,15 @@ def mixture_components_to_cdf(
     for dist, weight in zip(distributions, weights, strict=True):
         mixture_cdf += weight * dist.cdf(x_values)
 
-    # Convert to percentiles for standardization via NumericDistribution
-    # Sample enough percentiles to capture the distribution shape
-    sampled_percentiles = []
-    for i, (x, cdf_val) in enumerate(zip(x_values, mixture_cdf, strict=True)):
-        if i % 20 == 0 or i == cdf_size - 1:  # Sample every 20th point plus endpoints
-            sampled_percentiles.append(
-                Percentile(percentile=float(cdf_val), value=float(x))
-            )
+    # Clamp to [0, 1] and ensure monotonicity
+    clamped = np.clip(mixture_cdf, 0.0, 1.0)
+    for i in range(1, len(clamped)):
+        if clamped[i] < clamped[i - 1]:
+            clamped[i] = clamped[i - 1]
 
-    # Ensure percentiles are valid (monotonically increasing)
-    cleaned_percentiles = []
-    prev_pct = -1e-10
-    for p in sampled_percentiles:
-        if p.percentile > prev_pct:
-            cleaned_percentiles.append(p)
-            prev_pct = p.percentile
-
-    if len(cleaned_percentiles) < 2:
-        logger.warning("Mixture CDF degenerate, falling back to uniform")
-        cleaned_percentiles = [
-            Percentile(percentile=0.0, value=lower),
-            Percentile(percentile=1.0, value=upper),
-        ]
-
-    # Use NumericDistribution for standardization
-    try:
-        dist = NumericDistribution(
-            declared_percentiles=cleaned_percentiles,
-            open_upper_bound=config.open_upper_bound,
-            open_lower_bound=config.open_lower_bound,
-            upper_bound=upper,
-            lower_bound=lower,
-            zero_point=config.zero_point,
-            cdf_size=cdf_size,
-            standardize_cdf=True,
-            strict_validation=False,  # More lenient for mixture CDFs
-        )
-        return dist.get_cdf_as_floats()
-    except ValueError as e:
-        logger.warning("NumericDistribution failed for mixture CDF: %s", e)
-        # Fallback: return the raw mixture CDF clamped to [0, 1]
-        clamped = np.clip(mixture_cdf, 0.0, 1.0)
-        # Apply basic monotonicity fix
-        for i in range(1, len(clamped)):
-            if clamped[i] < clamped[i - 1]:
-                clamped[i] = clamped[i - 1] + 1e-6
-        return clamped.tolist()
+    # Apply Metaculus standardization directly to the full CDF
+    return standardize_cdf(
+        clamped.tolist(),
+        open_lower_bound=config.open_lower_bound,
+        open_upper_bound=config.open_upper_bound,
+    )
