@@ -1,7 +1,7 @@
-"""Async Metaculus API client - re-exports from metaculus package.
+"""Metaculus API clients - re-exports from metaculus package.
 
-This module re-exports the AsyncMetaculusClient and related types from
-the metaculus package for backward compatibility with existing aib code.
+This module re-exports the clients and related types from the metaculus
+package, and provides singleton accessors configured from aib settings.
 """
 
 from metaculus import (
@@ -9,6 +9,7 @@ from metaculus import (
     AsyncMetaculusClient,
     BinaryQuestion,
     DetailedCoherenceLink,
+    MetaculusClient,
     MetaculusQuestion,
 )
 
@@ -19,8 +20,10 @@ __all__ = [
     "AsyncMetaculusClient",
     "BinaryQuestion",
     "DetailedCoherenceLink",
+    "MetaculusClient",
     "MetaculusQuestion",
     "get_client",
+    "get_sync_client",
 ]
 
 # Module-level singleton for convenience
@@ -34,5 +37,15 @@ def get_client() -> AsyncMetaculusClient:
         _client = AsyncMetaculusClient(
             timeout=settings.http_timeout_seconds,
             token=settings.metaculus_token,
+            min_request_interval=settings.metaculus_request_interval,
         )
     return _client
+
+
+def get_sync_client() -> MetaculusClient:
+    """Create a sync Metaculus client configured from settings."""
+    return MetaculusClient(
+        timeout=settings.http_timeout_seconds,
+        token=settings.metaculus_token,
+        min_request_interval=settings.metaculus_request_interval,
+    )

@@ -62,6 +62,10 @@ class ApiFilter(BaseModel):
     num_forecasters_gte: int | None = None
     scheduled_resolve_time_gt: datetime | None = None
     scheduled_resolve_time_lt: datetime | None = None
+    publish_time_gt: datetime | None = None
+    publish_time_lt: datetime | None = None
+    open_time_gt: datetime | None = None
+    open_time_lt: datetime | None = None
     community_prediction_exists: bool | None = None
     group_question_mode: str = "exclude"
     other_url_parameters: dict[str, Any] = Field(default_factory=dict)
