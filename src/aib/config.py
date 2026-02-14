@@ -105,6 +105,11 @@ class Settings(BaseSettings):
     )
 
     # === Rate Limits ===
+    metaculus_request_interval: float = Field(
+        default=3.0,
+        validation_alias="AIB_METACULUS_REQUEST_INTERVAL",
+        description="Minimum seconds between Metaculus API requests",
+    )
     metaculus_max_concurrent: int = Field(
         default=5,
         validation_alias="AIB_METACULUS_MAX_CONCURRENT",

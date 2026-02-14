@@ -4,7 +4,7 @@ A lightweight async client for the Metaculus API, ported from forecasting-tools
 with only the functionality needed for the AIB forecasting bot.
 """
 
-from metaculus.client import AsyncMetaculusClient
+from metaculus.client import AsyncMetaculusClient, MetaculusClient
 from metaculus.models import (
     ApiFilter,
     BinaryQuestion,
@@ -26,6 +26,7 @@ __all__ = [
     "DateQuestion",
     "DetailedCoherenceLink",
     "DiscreteQuestion",
+    "MetaculusClient",
     "MetaculusQuestion",
     "MultipleChoiceQuestion",
     "NumericQuestion",

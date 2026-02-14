@@ -1158,8 +1158,6 @@ def backfill_comments(
 
 async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
     """Async implementation of backfill_comments."""
-    import httpx
-
     from aib.agent.history import (
         FORECASTS_BASE_PATH,
         get_latest_forecast,
@@ -1167,7 +1165,7 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
         mark_comment_posted,
     )
     from aib.agent.models import Factor, ForecastOutput
-    from aib.config import settings
+    from aib.clients.metaculus import get_client
 
     if not FORECASTS_BASE_PATH.exists():
         print("No forecasts directory found")
@@ -1185,79 +1183,58 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
     skip_count = 0
     error_count = 0
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for d in forecast_dirs:
-            post_id = int(d.name)
+    metaculus = get_client()
 
-            # Check if already has comment (unless force)
-            if not force and has_comment(post_id):
-                print(f"  ⏭️  {post_id}: Already has comment")
-                skip_count += 1
-                continue
+    for d in forecast_dirs:
+        post_id = int(d.name)
 
-            saved = get_latest_forecast(post_id)
+        # Check if already has comment (unless force)
+        if not force and has_comment(post_id):
+            print(f"  ⏭️  {post_id}: Already has comment")
+            skip_count += 1
+            continue
 
-            if saved is None:
-                print(f"  ⚠️  {post_id}: No forecast files found")
-                skip_count += 1
-                continue
+        saved = get_latest_forecast(post_id)
 
-            print(f"  📝 {post_id}: {saved.question_title[:50]}...")
+        if saved is None:
+            print(f"  ⚠️  {post_id}: No forecast files found")
+            skip_count += 1
+            continue
 
-            if dry_run:
-                success_count += 1
-                continue
+        print(f"  📝 {post_id}: {saved.question_title[:50]}...")
 
-            # Convert SavedForecast to ForecastOutput for format_reasoning_comment
-            output = ForecastOutput(
-                question_id=saved.question_id,
-                post_id=saved.post_id or saved.question_id,
-                question_title=saved.question_title,
-                question_type=saved.question_type,
-                summary=saved.summary,
-                factors=[Factor.model_validate(f) for f in saved.factors],
-                probability=saved.probability,
-                logit=saved.logit,
-                probabilities=saved.probabilities,
-                median=saved.median,
-                confidence_interval=saved.confidence_interval,
-                percentiles=saved.percentiles,
-                reasoning=saved.reasoning,
-                sources_consulted=saved.sources_consulted,
-            )
+        if dry_run:
+            success_count += 1
+            continue
 
-            comment_text = format_reasoning_comment(output)
+        # Convert SavedForecast to ForecastOutput for format_reasoning_comment
+        output = ForecastOutput(
+            question_id=saved.question_id,
+            post_id=saved.post_id or saved.question_id,
+            question_title=saved.question_title,
+            question_type=saved.question_type,
+            summary=saved.summary,
+            factors=[Factor.model_validate(f) for f in saved.factors],
+            probability=saved.probability,
+            logit=saved.logit,
+            probabilities=saved.probabilities,
+            median=saved.median,
+            confidence_interval=saved.confidence_interval,
+            percentiles=saved.percentiles,
+            reasoning=saved.reasoning,
+            sources_consulted=saved.sources_consulted,
+        )
 
-            try:
-                response = await client.post(
-                    "https://www.metaculus.com/api/comments/create/",
-                    json={
-                        "text": comment_text,
-                        "parent": None,
-                        "included_forecast": True,
-                        "is_private": True,
-                        "on_post": post_id,
-                    },
-                    headers={"Authorization": f"Token {settings.metaculus_token}"},
-                )
+        comment_text = format_reasoning_comment(output)
 
-                if response.is_success:
-                    mark_comment_posted(post_id)
-                    print("    ✅ Comment posted")
-                    success_count += 1
-                else:
-                    print(f"    ❌ Failed: {response.status_code}")
-                    error_count += 1
-                    if response.status_code in (429, 403):
-                        print("    ⏳ Rate limited, waiting 30s...")
-                        await asyncio.sleep(30)
-
-            except httpx.HTTPError as e:
-                print(f"    ❌ HTTP error: {e}")
-                error_count += 1
-
-            # Small delay between requests
-            await asyncio.sleep(1)
+        try:
+            await metaculus.post_question_comment(post_id, comment_text)
+            mark_comment_posted(post_id)
+            print("    ✅ Comment posted")
+            success_count += 1
+        except Exception as e:
+            print(f"    ❌ Error: {e}")
+            error_count += 1
 
     print(
         f"\nDone: {success_count} comments posted, {skip_count} skipped, {error_count} errors"

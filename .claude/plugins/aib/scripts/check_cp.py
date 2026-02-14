@@ -2,7 +2,7 @@
 """Check what aggregation/CP data the Metaculus API returns for resolved AIB questions."""
 
 import asyncio
-import httpx
+
 import typer
 
 app = typer.Typer()
@@ -18,18 +18,17 @@ def main(
 
 
 async def _check(tournament_id: int, limit: int) -> None:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            "https://www.metaculus.com/api/posts/",
-            params={
+    from aib.clients.metaculus import AsyncMetaculusClient
+
+    async with AsyncMetaculusClient() as mc:
+        results = await mc.fetch_posts_list(
+            {
                 "order_by": "-resolve_time",
                 "status": "resolved",
                 "tournaments": tournament_id,
                 "limit": limit,
-            },
+            }
         )
-        response.raise_for_status()
-        results = response.json().get("results", [])
 
         for r in results:
             post_id = r.get("id")
@@ -67,8 +66,7 @@ def single(
 
 
 async def _check_single(post_id: int) -> None:
-    from aib.config import settings  # noqa: F401 — loads env
-    from metaculus.client import AsyncMetaculusClient
+    from aib.clients.metaculus import AsyncMetaculusClient
 
     async with AsyncMetaculusClient() as mc:
         r = await mc.fetch_post_json(post_id)

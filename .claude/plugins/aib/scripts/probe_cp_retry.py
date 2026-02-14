@@ -1,23 +1,12 @@
 #!/usr/bin/env python
-"""Focused retry: test aggregation_explorer with minimize=true + aggregation_methods."""
+"""Probe aggregation/CP data availability via the Metaculus client."""
 
 import asyncio
 import json
-import time
 
-import httpx
 import typer
 
-from aib.config import settings
-
 app = typer.Typer()
-
-
-def _headers() -> dict[str, str]:
-    return {
-        "Authorization": f"Token {settings.metaculus_token}",
-        "Accept-Language": "en",
-    }
 
 
 def _print_agg(data: dict) -> None:
@@ -44,72 +33,36 @@ def _print_agg(data: dict) -> None:
 
 
 async def run_probes() -> None:
-    print("Waiting 30s for rate limit cooldown...")
-    time.sleep(30)
+    from aib.clients.metaculus import AsyncMetaculusClient
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        # Test 1: minimize=true with aggregation_methods for resolved
-        print("\n=== T1: resolved 41835, minimize=true, aggregation_methods ===")
-        resp1 = await client.get(
-            "https://www.metaculus.com/api/aggregation_explorer/",
-            headers=_headers(),
-            params={
-                "post_id": 41835,
-                "aggregation_methods": "recency_weighted,unweighted",
-            },
-        )
-        print(f"Status: {resp1.status_code}")
-        if resp1.status_code == 200:
-            _print_agg(resp1.json())
-        else:
-            print(f"Body: {resp1.text[:400]}")
+    async with AsyncMetaculusClient() as mc:
+        # Test 1: resolved question with CP
+        print("\n=== T1: resolved 41835, with_cp=True ===")
+        data1 = await mc.fetch_post_json(41835, with_cp=True)
+        print(f"  title: {data1.get('title', '')[:60]}")
+        _print_agg(data1)
 
-        time.sleep(5)
+        # Test 2: open question with CP
+        print("\n=== T2: open 3479, with_cp=True ===")
+        data2 = await mc.fetch_post_json(3479, with_cp=True)
+        print(f"  title: {data2.get('title', '')[:60]}")
+        _print_agg(data2)
 
-        # Test 2: minimize=true with aggregation_methods for open
-        print(
-            "\n=== T2: open 3479, minimize=true, aggregation_methods=recency_weighted ==="
-        )
-        resp2 = await client.get(
-            "https://www.metaculus.com/api/aggregation_explorer/",
-            headers=_headers(),
-            params={
-                "post_id": 3479,
-                "aggregation_methods": "recency_weighted",
-            },
-        )
-        print(f"Status: {resp2.status_code}")
-        if resp2.status_code == 200:
-            _print_agg(resp2.json())
-        else:
-            print(f"Body: {resp2.text[:400]}")
+        # Test 3: resolved question without CP
+        print("\n=== T3: resolved 41835, with_cp=False (default) ===")
+        data3 = await mc.fetch_post_json(41835)
+        print(f"  title: {data3.get('title', '')[:60]}")
+        _print_agg(data3)
 
-        time.sleep(5)
-
-        # Test 3: For the resolved question, check if CP is hidden on the question object
-        print("\n=== T3: resolved 41835, no aggregation_methods (default) ===")
-        resp3 = await client.get(
-            "https://www.metaculus.com/api/aggregation_explorer/",
-            headers=_headers(),
-            params={"post_id": 41835},
-        )
-        print(f"Status: {resp3.status_code}")
-        if resp3.status_code == 200:
-            _print_agg(resp3.json())
-            # Also check other top-level keys
-            data = resp3.json()
-            print(f"  top-level keys: {list(data.keys())[:20]}")
-            q = data.get("question") or {}
-            for k in (
-                "is_cp_hidden",
-                "cp_reveal_time",
-                "status",
-                "default_aggregation_method",
-            ):
-                if k in q:
-                    print(f"  question.{k}: {q[k]}")
-        else:
-            print(f"Body: {resp3.text[:400]}")
+        q = data3.get("question") or {}
+        for k in (
+            "is_cp_hidden",
+            "cp_reveal_time",
+            "status",
+            "default_aggregation_method",
+        ):
+            if k in q:
+                print(f"  question.{k}: {q[k]}")
 
 
 @app.command()

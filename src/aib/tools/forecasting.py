@@ -12,6 +12,7 @@ from typing import Annotated, Any, Literal, TypedDict
 import httpx
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 
+
 from claude_agent_sdk import SdkMcpTool
 from claude_agent_sdk.types import McpSdkServerConfig
 
@@ -55,10 +56,6 @@ def _get_semaphore(name: str, limit: int) -> asyncio.Semaphore:
     if key not in _semaphore_store:
         _semaphore_store[key] = asyncio.Semaphore(limit)
     return _semaphore_store[key]
-
-
-def _metaculus_semaphore() -> asyncio.Semaphore:
-    return _get_semaphore("metaculus", settings.metaculus_max_concurrent)
 
 
 def _search_semaphore() -> asyncio.Semaphore:
@@ -328,17 +325,15 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
     async def fetch_one(post_id: int) -> dict[str, Any]:
         """Fetch a single question, auto-detecting if a question_id was passed."""
         try:
-            async with _metaculus_semaphore():
-                result = await _fetch_metaculus_question(post_id)
-                return await _apply_retrodict_filters(result)
+            result = await _fetch_metaculus_question(post_id)
+            return await _apply_retrodict_filters(result)
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 resolved = await _resolve_question_to_post_id(post_id)
                 if resolved:
                     try:
-                        async with _metaculus_semaphore():
-                            result = await _fetch_metaculus_question(resolved)
-                            return await _apply_retrodict_filters(result)
+                        result = await _fetch_metaculus_question(resolved)
+                        return await _apply_retrodict_filters(result)
                     except Exception as retry_err:
                         return {
                             "post_id": post_id,
@@ -391,35 +386,32 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
     num_questions = validated.num_questions
 
     try:
-        async with _metaculus_semaphore():
-            client = get_metaculus_client()
-            questions = await client.get_all_open_questions_from_tournament(
-                tournament_id
+        client = get_metaculus_client()
+        questions = await client.get_all_open_questions_from_tournament(tournament_id)
+
+        cutoff = retrodict_cutoff.get()
+        if cutoff is not None:
+            cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                tzinfo=timezone.utc
             )
-
-            cutoff = retrodict_cutoff.get()
-            if cutoff is not None:
-                cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
-                    tzinfo=timezone.utc
-                )
-                questions = [
-                    q
-                    for q in questions
-                    if q.published_time is None or q.published_time <= cutoff_dt
-                ]
-
-            questions = questions[:num_questions]
-
-            results = [
-                {
-                    "post_id": q.id_of_post,
-                    "question_id": q.id_of_question,
-                    "title": q.question_text,
-                    "type": q.get_question_type(),
-                    "url": q.page_url,
-                }
+            questions = [
+                q
                 for q in questions
+                if q.published_time is None or q.published_time <= cutoff_dt
             ]
+
+        questions = questions[:num_questions]
+
+        results = [
+            {
+                "post_id": q.id_of_post,
+                "question_id": q.id_of_question,
+                "title": q.question_text,
+                "type": q.get_question_type(),
+                "url": q.page_url,
+            }
+            for q in questions
+        ]
 
         return mcp_success(results)
     except Exception as e:
@@ -447,45 +439,44 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
     num_results = validated.num_results
 
     try:
-        async with _metaculus_semaphore():
-            client = get_metaculus_client()
-            api_filter = ApiFilter(other_url_parameters={"search": query})
-            questions = await client.get_questions_matching_filter(
-                api_filter=api_filter,
-                num_questions=num_results,
+        client = get_metaculus_client()
+        api_filter = ApiFilter(other_url_parameters={"search": query})
+        questions = await client.get_questions_matching_filter(
+            api_filter=api_filter,
+            num_questions=num_results,
+        )
+
+        cutoff = retrodict_cutoff.get()
+
+        if cutoff is not None:
+            cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                tzinfo=timezone.utc
             )
-
-            cutoff = retrodict_cutoff.get()
-
-            if cutoff is not None:
-                cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
-                    tzinfo=timezone.utc
-                )
-                questions = [
-                    q
-                    for q in questions
-                    if q.published_time is None or q.published_time <= cutoff_dt
-                ]
-
-            results = [
-                {
-                    "post_id": q.id_of_post,
-                    "question_id": q.id_of_question,
-                    "title": q.question_text,
-                    "type": q.get_question_type(),
-                    "url": q.page_url,
-                    "community_prediction": (
-                        None
-                        if cutoff is not None
-                        else (
-                            q.community_prediction_at_access_time
-                            if isinstance(q, BinaryQuestion)
-                            else None
-                        )
-                    ),
-                }
+            questions = [
+                q
                 for q in questions
+                if q.published_time is None or q.published_time <= cutoff_dt
             ]
+
+        results = [
+            {
+                "post_id": q.id_of_post,
+                "question_id": q.id_of_question,
+                "title": q.question_text,
+                "type": q.get_question_type(),
+                "url": q.page_url,
+                "community_prediction": (
+                    None
+                    if cutoff is not None
+                    else (
+                        q.community_prediction_at_access_time
+                        if isinstance(q, BinaryQuestion)
+                        else None
+                    )
+                ),
+            }
+            for q in questions
+        ]
 
         return mcp_success(results)
     except Exception as e:
@@ -514,19 +505,18 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
 
     question_id = validated.question_id
     try:
-        async with _metaculus_semaphore():
-            client = get_metaculus_client()
-            links = await client.get_links_for_question(question_id)
-            results = [
-                {
-                    "question1_id": link.question1_id,
-                    "question2_id": link.question2_id,
-                    "direction": link.direction,
-                    "strength": link.strength,
-                    "type": link.type,
-                }
-                for link in links
-            ]
+        client = get_metaculus_client()
+        links = await client.get_links_for_question(question_id)
+        results = [
+            {
+                "question1_id": link.question1_id,
+                "question2_id": link.question2_id,
+                "direction": link.direction,
+                "strength": link.strength,
+                "type": link.type,
+            }
+            for link in links
+        ]
         return mcp_success(results)
     except Exception as e:
         logger.exception("Failed to fetch coherence links")
@@ -598,20 +588,12 @@ _post_id_cache: dict[int, int] = {}
 async def _resolve_question_to_post_id(question_id: int) -> int | None:
     """Resolve a Metaculus question_id to its post_id."""
     try:
-        async with _metaculus_semaphore():
-            async with httpx.AsyncClient(
-                timeout=settings.http_timeout_seconds,
-                headers={"Authorization": f"Token {settings.metaculus_token}"},
-            ) as http:
-                resp = await http.get(
-                    f"https://www.metaculus.com/api/questions/{question_id}/",
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                post_id = data.get("post_id") or data.get("post", {}).get("id")
-                if post_id:
-                    logger.info("Resolved question %d → post %d", question_id, post_id)
-                return post_id
+        client = get_metaculus_client()
+        data = await client.fetch_question_json(question_id)
+        post_id = data.get("post_id") or data.get("post", {}).get("id")
+        if post_id:
+            logger.info("Resolved question %d → post %d", question_id, post_id)
+        return post_id
     except Exception:
         logger.exception("Failed to resolve question_id %d to post_id", question_id)
         return None
