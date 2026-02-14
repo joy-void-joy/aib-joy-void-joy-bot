@@ -3,6 +3,7 @@
 import asyncio
 import csv
 import logging
+import math
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,6 +50,7 @@ class NumericCP(TypedDict):
     median: float
     ci_lower: float
     ci_upper: float
+    range_min: float
     range_span: float
 
 
@@ -77,6 +79,33 @@ _TYPE_EMOJI_MAP = {
 }
 
 
+def _compute_crps(
+    cdf: list[float], actual: float, range_min: float, range_span: float
+) -> float:
+    """CRPS from a 201-point CDF. Lower is better, 0 = perfect."""
+    n = len(cdf)
+    dx = range_span / (n - 1)
+    total = 0.0
+    for i in range(n):
+        x = range_min + i * dx
+        step = 0.0 if x < actual else 1.0
+        total += (cdf[i] - step) ** 2
+    return total * dx
+
+
+def _crps_emoji(crps: float, range_span: float) -> str:
+    if range_span <= 0:
+        return "❓"
+    pct = crps / range_span * 100
+    if pct < 1:
+        return "🎯"
+    if pct < 5:
+        return "👌"
+    if pct < 15:
+        return "😬"
+    return "🫠"
+
+
 def _truncate(text: str, max_len: int = 300) -> str:
     if not text or len(text) <= max_len:
         return text
@@ -101,6 +130,7 @@ def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
             median=range_min + latest["centers"][0] * span,
             ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
             ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
+            range_min=range_min,
             range_span=span,
         )
     except (KeyError, IndexError, TypeError):
@@ -547,21 +577,30 @@ def retrodict(
                 if final_cp is not None:
                     cp_brier = (final_cp - outcome) ** 2
                     cp_abs_err = abs(final_cp - outcome)
-                    cp_diff_pp = (final_cp - outcome) * 100
+                    cp_clamped = max(0.001, min(0.999, final_cp))
+                    cp_log = (
+                        -math.log(cp_clamped)
+                        if outcome == 1.0
+                        else -math.log(1 - cp_clamped)
+                    )
                     print(f"\n   👥 Community:     {final_cp:.1%}")
                     print(
-                        f"      error:         {_brier_emoji(cp_brier)} "
-                        f"{abs(cp_diff_pp):.1f}pp {'too high' if cp_diff_pp > 0 else 'too low'}"
-                        f"  ·  Brier: {cp_brier:.4f}"
+                        f"      score:         {_brier_emoji(cp_brier)} "
+                        f"Brier: {cp_brier:.4f}  ·  log: {cp_log:.4f}"
                     )
                 else:
                     print("\n   👥 Community:     (not available)")
 
+                our_clamped = max(0.001, min(0.999, output.probability))
+                our_log = (
+                    -math.log(our_clamped)
+                    if outcome == 1.0
+                    else -math.log(1 - our_clamped)
+                )
                 print(f"\n   🤖 Us:            {output.probability:.1%}")
                 print(
-                    f"      error:         {_brier_emoji(brier)} "
-                    f"{abs(diff_pp):.1f}pp {'too high' if diff_pp > 0 else 'too low'}"
-                    f"  ·  Brier: {brier:.4f}"
+                    f"      score:         {_brier_emoji(brier)} "
+                    f"Brier: {brier:.4f}  ·  log: {our_log:.4f}"
                 )
 
                 if cp_abs_err is not None:
@@ -603,22 +642,36 @@ def retrodict(
                                 cp_pct = cp_abs_err_num / range_span * 100
                                 print(
                                     f"      error:         {_err_emoji(cp_pct)} "
-                                    f"{cp_abs_err_num:,.1f}  ({cp_pct:.1f}% of range)"
+                                    f"off by {cp_abs_err_num:,.1f}  ({cp_pct:.1f}% of range)"
                                 )
                         else:
                             print("\n   👥 Community:     (not available)")
 
+                        crps_score: float | None = None
+                        if output.cdf and numeric_cp and range_span and range_span > 0:
+                            crps_score = _compute_crps(
+                                output.cdf,
+                                actual_val,
+                                numeric_cp["range_min"],
+                                range_span,
+                            )
+
                         print(
                             f"\n   🤖 Us:            {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]"
                         )
-                        if range_span and range_span > 0:
+                        if crps_score is not None and range_span and range_span > 0:
+                            print(
+                                f"      score:         {_crps_emoji(crps_score, range_span)} "
+                                f"CRPS: {crps_score:,.2f}  ({crps_score / range_span * 100:.1f}% of range)"
+                            )
+                        elif range_span and range_span > 0:
                             our_pct = our_abs_err / range_span * 100
                             print(
                                 f"      error:         {_err_emoji(our_pct)} "
-                                f"{our_abs_err:,.1f}  ({our_pct:.1f}% of range)"
+                                f"off by {our_abs_err:,.1f}  ({our_pct:.1f}% of range)"
                             )
                         else:
-                            print(f"      error:         {our_abs_err:,.1f}")
+                            print(f"      error:         off by {our_abs_err:,.1f}")
 
                         if cp_abs_err_num is not None:
                             print(
@@ -642,6 +695,8 @@ def retrodict(
                             predicted_value=output.median,
                             difference=difference,
                             within_ci=within_ci,
+                            score=crps_score,
+                            score_name="crps" if crps_score is not None else None,
                         )
                     except (ValueError, TypeError):
                         print("   (Could not parse resolution as numeric)")
@@ -651,8 +706,6 @@ def retrodict(
                         )
 
             elif output.probabilities and resolution:
-                import math
-
                 print(f"\n   🎯 Reality:       {resolution}")
 
                 print("\n   👥 Community:     (not available)")
