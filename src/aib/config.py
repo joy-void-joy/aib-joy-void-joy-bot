@@ -157,12 +157,12 @@ class Settings(BaseSettings):
     subforecast_max_turns: int = Field(
         default=50,
         validation_alias="AIB_SUBFORECAST_MAX_TURNS",
-        description="Maximum turns for sub-forecasts spawned by spawn_subquestions",
+        description="Maximum turns for sub-forecasts spawned by spawn_subagents",
     )
     subforecast_max_budget_usd: float = Field(
         default=5.0,
         validation_alias="AIB_SUBFORECAST_MAX_BUDGET_USD",
-        description="Maximum budget for each sub-forecast spawned by spawn_subquestions",
+        description="Maximum budget for each sub-forecast spawned by spawn_subagents",
     )
     sandbox_timeout_seconds: int = Field(
         default=30,

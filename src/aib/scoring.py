@@ -33,6 +33,7 @@ CSV_COLUMNS = [
     "brier",
     "log_score",
     "abs_error",
+    "norm_error",
     "within_ci",
     "duration_seconds",
     "cost_usd",
@@ -130,6 +131,7 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
     brier = ""
     log_score = ""
     abs_error = ""
+    norm_error = ""
     within_ci = ""
 
     if qtype == "binary":
@@ -153,6 +155,9 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
             ci = data.get("confidence_interval")
             if isinstance(ci, list) and len(ci) == 2:
                 within_ci = str(ci[0] <= actual <= ci[1])
+                ci_half = (ci[1] - ci[0]) / 2
+                if ci_half > 0 and isinstance(median, (int, float)):
+                    norm_error = f"{abs(actual - median) / ci_half:.4f}"
 
     elif qtype == "multiple_choice":
         mc_res = resolve_mc(data)
@@ -195,6 +200,7 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
         "brier": brier,
         "log_score": log_score,
         "abs_error": abs_error,
+        "norm_error": norm_error,
         "within_ci": within_ci,
         "duration_seconds": str(duration) if duration else "",
         "cost_usd": str(cost) if cost else "",
