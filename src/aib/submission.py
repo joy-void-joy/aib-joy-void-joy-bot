@@ -296,13 +296,14 @@ def format_reasoning_comment(output: ForecastOutput, *, max_length: int = 15000)
         lines.append("\n---\n*No sources recorded*")
 
     # Meta info
+    from aib.version import AGENT_VERSION
+
+    meta_parts = [f"Agent: v{AGENT_VERSION}"]
     if output.meta:
-        meta_parts = []
         if output.meta.subagents_used:
             meta_parts.append(f"Subagents: {', '.join(output.meta.subagents_used)}")
         if output.meta.tools_used_count:
             meta_parts.append(f"Tool calls: {output.meta.tools_used_count}")
-        if meta_parts:
-            lines.append(f"\n---\n*{' | '.join(meta_parts)}*")
+    lines.append(f"\n---\n*{' | '.join(meta_parts)}*")
 
     return "\n".join(lines)
