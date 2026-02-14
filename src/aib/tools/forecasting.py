@@ -6,10 +6,11 @@ All tools return raw data; Claude does the reasoning.
 
 import logging
 import asyncio
+from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
-from claude_agent_sdk import tool
+from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 
 from claude_agent_sdk import SdkMcpTool
 from claude_agent_sdk.types import McpSdkServerConfig
@@ -18,6 +19,7 @@ from aib.tools.mcp_server import create_mcp_server
 from pydantic import BaseModel, Field, field_validator
 
 from metaculus import ApiFilter, BinaryQuestion
+from metaculus.models import AggregationMethod
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.history import load_past_forecasts
@@ -178,6 +180,57 @@ class QuestionDict(TypedDict, total=False):
     upper_bound: float | None
 
 
+class CPHistoryEntry(BaseModel):
+    """A single CP data point in the history."""
+
+    timestamp: str
+    community_prediction: float
+
+
+class CPHistoryResponse(BaseModel):
+    """Response from the get_cp_history tool."""
+
+    question_id: int
+    days_requested: int
+    data_points: int
+    history: list[CPHistoryEntry]
+    note: str | None = None
+
+
+# --- Retrodict text redaction ---
+
+
+async def _redact_future_info(text: str, cutoff_date: str) -> str:
+    """Use haiku to remove references to events after the cutoff date."""
+    if not text or len(text) < 20:
+        return text
+
+    prompt = (
+        f"Remove any references to events, dates, or outcomes that occur after {cutoff_date}. "
+        f"Keep all other content unchanged. Return ONLY the redacted text, nothing else.\n\n"
+        f"Text:\n{text}"
+    )
+    options = ClaudeAgentOptions(
+        model="sonnet",
+        max_turns=1,
+        allowed_tools=[],
+        system_prompt=(
+            "You redact temporal information from text. Remove sentences or clauses "
+            "that reference events after the given date. Preserve everything else verbatim. "
+            "Return only the redacted text."
+        ),
+    )
+    try:
+        result_text = None
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, ResultMessage) and message.result:
+                result_text = message.result
+        return result_text or text
+    except Exception:
+        logger.warning("Fine-print redaction failed, returning original")
+        return text
+
+
 # --- Cached API helpers ---
 
 
@@ -247,7 +300,7 @@ async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
         "Note: Community predictions are NOT available in the AIB tournament. "
         "Maximum 20 questions per request."
     ),
-    {"post_id_list": list},
+    GetMetaculusQuestionsInput.model_json_schema(),
 )
 @tracked("get_metaculus_questions")
 async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
@@ -258,17 +311,26 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     post_ids = validated.post_id_list
-    hide_cp = retrodict_cutoff.get() is not None
+    cutoff = retrodict_cutoff.get()
+
+    async def _apply_retrodict_filters(result: dict[str, Any]) -> dict[str, Any]:
+        """Apply CP hiding and fine_print redaction for retrodict mode."""
+        if cutoff is None:
+            return result
+        result = dict(result)
+        if "community_prediction" in result:
+            result["community_prediction"] = None
+        fine_print = result.get("fine_print")
+        if isinstance(fine_print, str) and len(fine_print) > 20:
+            result["fine_print"] = await _redact_future_info(fine_print, str(cutoff))
+        return result
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
         """Fetch a single question, auto-detecting if a question_id was passed."""
         try:
             async with _metaculus_semaphore():
                 result = await _fetch_metaculus_question(post_id)
-                if hide_cp and "community_prediction" in result:
-                    result = dict(result)
-                    result["community_prediction"] = None
-                return result
+                return await _apply_retrodict_filters(result)
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 resolved = await _resolve_question_to_post_id(post_id)
@@ -276,10 +338,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
                     try:
                         async with _metaculus_semaphore():
                             result = await _fetch_metaculus_question(resolved)
-                            if hide_cp and "community_prediction" in result:
-                                result = dict(result)
-                                result["community_prediction"] = None
-                            return result
+                            return await _apply_retrodict_filters(result)
                     except Exception as retry_err:
                         return {
                             "post_id": post_id,
@@ -318,7 +377,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         "Returns question post IDs that can be used with get_metaculus_questions. "
         f"Optional num_questions (default: {settings.tournament_default_limit})."
     ),
-    {"tournament_id": int, "num_questions": int},
+    ListTournamentQuestionsInput.model_json_schema(),
 )
 @tracked("list_tournament_questions")
 async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
@@ -337,6 +396,18 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
             questions = await client.get_all_open_questions_from_tournament(
                 tournament_id
             )
+
+            cutoff = retrodict_cutoff.get()
+            if cutoff is not None:
+                cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                    tzinfo=timezone.utc
+                )
+                questions = [
+                    q
+                    for q in questions
+                    if q.published_time is None or q.published_time <= cutoff_dt
+                ]
+
             questions = questions[:num_questions]
 
             results = [
@@ -362,7 +433,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
         "Search Metaculus questions by text query. Returns matching questions with IDs, titles, and types. "
         f"Optional num_results (default: {settings.metaculus_default_limit})."
     ),
-    {"query": str, "num_results": int},
+    SearchMetaculusInput.model_json_schema(),
 )
 @tracked("search_metaculus")
 async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
@@ -384,7 +455,18 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
                 num_questions=num_results,
             )
 
-            is_retrodict = retrodict_cutoff.get() is not None
+            cutoff = retrodict_cutoff.get()
+
+            if cutoff is not None:
+                cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                    tzinfo=timezone.utc
+                )
+                questions = [
+                    q
+                    for q in questions
+                    if q.published_time is None or q.published_time <= cutoff_dt
+                ]
+
             results = [
                 {
                     "post_id": q.id_of_post,
@@ -392,16 +474,14 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
                     "title": q.question_text,
                     "type": q.get_question_type(),
                     "url": q.page_url,
-                    **(
-                        {}
-                        if is_retrodict
-                        else {
-                            "community_prediction": (
-                                q.community_prediction_at_access_time
-                                if isinstance(q, BinaryQuestion)
-                                else None
-                            ),
-                        }
+                    "community_prediction": (
+                        None
+                        if cutoff is not None
+                        else (
+                            q.community_prediction_at_access_time
+                            if isinstance(q, BinaryQuestion)
+                            else None
+                        )
                     ),
                 }
                 for q in questions
@@ -422,7 +502,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
         "'Will X happen by 2026?' should be ≤80%. "
         "Requires question_id (not post_id) — get this from get_metaculus_questions."
     ),
-    {"question_id": int},
+    CoherenceLinksInput.model_json_schema(),
 )
 @tracked("get_coherence_links")
 async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
@@ -456,48 +536,37 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
 def _format_timestamp(raw_ts: object) -> str:
     """Convert a Unix timestamp (float) or ISO string to ISO 8601."""
     if isinstance(raw_ts, (int, float)):
-        from datetime import datetime, timezone
-
         return datetime.fromtimestamp(raw_ts, tz=timezone.utc).isoformat()
     return str(raw_ts)
 
 
-async def _process_cp_history(
-    data: dict[str, Any],
+def _build_cp_history_response(
+    aggregation: AggregationMethod,
     question_id: int,
     days: int,
-    cutoff_dt: Any | None,
-) -> dict[str, Any]:
-    """Process raw CP history API response into tool output."""
-    history = data.get("history", [])
-    results = []
+    cutoff_dt: datetime | None,
+) -> CPHistoryResponse:
+    """Build a typed CP history response from aggregation data."""
+    entries: list[CPHistoryEntry] = []
     filtered_count = 0
-    for entry in history:
-        raw_ts = entry.get("start_time") or entry.get("end_time")
-        centers = entry.get("centers", [])
-        if centers and len(centers) > 0:
-            cp = centers[0]
-            if cp is not None:
-                if cutoff_dt and raw_ts is not None:
-                    from datetime import datetime, timezone
 
-                    if isinstance(raw_ts, (int, float)):
-                        ts_dt = datetime.fromtimestamp(raw_ts, tz=timezone.utc)
-                    else:
-                        ts_dt = datetime.fromisoformat(
-                            str(raw_ts).replace("Z", "+00:00")
-                        )
-                    if ts_dt > cutoff_dt:
-                        filtered_count += 1
-                        continue
+    for point in aggregation.history:
+        if not point.centers:
+            continue
+        cp = point.centers[0]
 
-                timestamp = _format_timestamp(raw_ts)
-                results.append(
-                    {
-                        "timestamp": timestamp,
-                        "community_prediction": round(cp, 4),
-                    }
-                )
+        if cutoff_dt is not None:
+            ts_dt = datetime.fromtimestamp(point.start_time, tz=timezone.utc)
+            if ts_dt > cutoff_dt:
+                filtered_count += 1
+                continue
+
+        entries.append(
+            CPHistoryEntry(
+                timestamp=_format_timestamp(point.start_time),
+                community_prediction=round(cp, 4),
+            )
+        )
 
     if filtered_count > 0:
         cutoff_date = retrodict_cutoff.get()
@@ -507,20 +576,23 @@ async def _process_cp_history(
             cutoff_date,
         )
 
-    response: dict[str, object] = {
-        "question_id": question_id,
-        "days_requested": days,
-        "data_points": len(results),
-        "history": results,
-    }
-
-    if filtered_count > 0 and len(results) == 0:
-        response["note"] = (
+    note = None
+    if filtered_count > 0 and len(entries) == 0:
+        note = (
             "No historical CP data is available yet. "
             "This is expected when the question was recently published."
         )
 
-    return mcp_success(response)
+    return CPHistoryResponse(
+        question_id=question_id,
+        days_requested=days,
+        data_points=len(entries),
+        history=entries,
+        note=note,
+    )
+
+
+_post_id_cache: dict[int, int] = {}
 
 
 async def _resolve_question_to_post_id(question_id: int) -> int | None:
@@ -530,8 +602,8 @@ async def _resolve_question_to_post_id(question_id: int) -> int | None:
             async with httpx.AsyncClient(
                 timeout=settings.http_timeout_seconds,
                 headers={"Authorization": f"Token {settings.metaculus_token}"},
-            ) as client:
-                resp = await client.get(
+            ) as http:
+                resp = await http.get(
                     f"https://www.metaculus.com/api/questions/{question_id}/",
                 )
                 resp.raise_for_status()
@@ -545,48 +617,40 @@ async def _resolve_question_to_post_id(question_id: int) -> int | None:
         return None
 
 
-_post_id_cache: dict[int, int | None] = {}
-
-
 async def _ensure_post_id(input_id: int) -> int | None:
     """Resolve any Metaculus ID to a post_id.
 
-    Results are cached to avoid redundant API calls within a session.
-    Tries as post_id first, then as question_id.
+    Successful results are cached. Failures are NOT cached so transient
+    errors (429 rate limits) don't permanently break CP history lookups.
+    Uses MetaculusClient.fetch_post_json which has built-in retry logic.
     """
     if input_id in _post_id_cache:
         return _post_id_cache[input_id]
 
+    client = get_metaculus_client()
+
+    # Try as post_id first (most common case) — uses retry
     try:
-        async with _metaculus_semaphore():
-            async with httpx.AsyncClient(
-                timeout=settings.http_timeout_seconds,
-                headers={"Authorization": f"Token {settings.metaculus_token}"},
-            ) as client:
-                resp = await client.get(
-                    f"https://www.metaculus.com/api/posts/{input_id}/",
-                )
-                if resp.status_code == 200:
-                    _post_id_cache[input_id] = input_id
-                    return input_id
+        await client.fetch_post_json(input_id)
+        _post_id_cache[input_id] = input_id
+        return input_id
     except Exception:
         pass
 
+    # Try resolving as question_id
     resolved = await _resolve_question_to_post_id(input_id)
-    _post_id_cache[input_id] = resolved
+    if resolved is not None:
+        _post_id_cache[input_id] = resolved
     return resolved
 
 
-async def _fetch_question_with_history(post_id: int) -> dict[str, Any]:
-    """Fetch question data with CP history using the client library.
+async def _fetch_aggregation(post_id: int) -> AggregationMethod:
+    """Fetch CP history from the aggregation_explorer endpoint.
 
-    Uses AsyncMetaculusClient.fetch_post_json which automatically falls
-    back to HTML parsing when the JSON API returns null fields (including
-    aggregations/CP history data).
+    Works for both open and resolved questions.
     """
     client = get_metaculus_client()
-    data = await client.fetch_post_json(post_id)
-    return data.get("question") or {}
+    return await client.fetch_aggregation_history(post_id)
 
 
 @tool(
@@ -597,9 +661,14 @@ async def _fetch_question_with_history(post_id: int) -> dict[str, Any]:
         "shows CP trajectory over time to predict future movements. "
         "Also useful for checking consensus shifts on any question. "
         "Pass any Metaculus ID (question_id or post_id) — auto-detected. "
-        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP."
+        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP.\n\n"
+        "Examples:\n"
+        "  get_cp_history(question_id=41906) → last 30 days of CP\n"
+        "  get_cp_history(question_id=41906, days=90) → last 90 days\n"
+        "For meta-predictions: pass the UNDERLYING question's ID (from the meta-question's description), "
+        "not the meta-question's own ID."
     ),
-    {"question_id": int, "days": int},
+    CPHistoryInput.model_json_schema(),
 )
 @tracked("get_cp_history")
 async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -615,26 +684,18 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
     cutoff_dt = None
     cutoff_date = retrodict_cutoff.get()
     if cutoff_date is not None:
-        from datetime import datetime, timezone
-
         cutoff_dt = datetime.combine(cutoff_date, datetime.min.time()).replace(
             tzinfo=timezone.utc
         )
 
-    # Resolve to post_id — the posts API is the only working endpoint for CP history
     post_id = await _ensure_post_id(input_id)
     if post_id is None:
         return mcp_error(f"Could not resolve ID {input_id} to a valid post.")
 
     try:
-        question = await _fetch_question_with_history(post_id)
-        aggregations = question.get("aggregations") or {}
-        recency_weighted = aggregations.get("recency_weighted") or {}
-        history = recency_weighted.get("history", [])
-
-        return await _process_cp_history(
-            {"history": history}, input_id, days, cutoff_dt
-        )
+        aggregation = await _fetch_aggregation(post_id)
+        response = _build_cp_history_response(aggregation, input_id, days, cutoff_dt)
+        return mcp_success(response.model_dump())
     except Exception as e:
         logger.exception("Failed to fetch CP history for post %d", post_id)
         return mcp_error(f"Failed to fetch CP history: {e}")
@@ -647,9 +708,14 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
     "search_exa",
     (
         "Search the web using Exa AI-powered search. Returns raw results with titles, URLs, and snippets. "
-        f"Results are cached for 5 minutes. Optional num_results (default: {settings.search_default_limit})."
+        f"Results are cached for 5 minutes. Optional num_results (default: {settings.search_default_limit}).\n\n"
+        "Examples:\n"
+        '  search_exa(query="EU AI Act implementation timeline 2026")\n'
+        '  search_exa(query="MSFT earnings Q1 2026 results", num_results=10)\n'
+        '  search_exa(query="Germany coalition government formation", published_before="2026-01-15")\n'
+        "Use diverse query formulations — the same topic found with different keywords produces richer results."
     ),
-    {"query": str, "num_results": int, "published_before": str, "livecrawl": str},
+    SearchExaInput.model_json_schema(),
 )
 @tracked("search_exa")
 async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
@@ -690,7 +756,7 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
         "Search for recent news using AskNews API. Returns raw news results with headlines, sources, and summaries. "
         f"Optional num_results (default: {settings.news_default_limit})."
     ),
-    {"query": str, "num_results": int},
+    SearchNewsInput.model_json_schema(),
 )
 @tracked("search_news")
 async def search_news(args: dict[str, Any]) -> dict[str, Any]:
@@ -782,9 +848,14 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         "Modes: 'search' (default) finds articles matching query; "
         "'summary' fetches article intro by exact title; "
         "'full' fetches entire article by exact title. "
-        f"For search mode, optional num_results (default: {settings.search_default_limit})."
+        f"For search mode, optional num_results (default: {settings.search_default_limit}).\n\n"
+        "Examples:\n"
+        '  wikipedia(query="European Central Bank") → search for articles\n'
+        '  wikipedia(query="European Central Bank", mode="summary") → get article intro\n'
+        '  wikipedia(query="List of recessions in the United States", mode="full") → full article\n'
+        "Two-step workflow: search first to find the right article title, then summary/full to read it."
     ),
-    {"query": str, "mode": str, "num_results": int},
+    WikipediaInput.model_json_schema(),
 )
 @tracked("wikipedia")
 async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
@@ -964,7 +1035,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         "forecasts with timestamps, probabilities/medians, and summaries. "
         "Useful for tracking how your forecasts evolved and learning from resolved questions."
     ),
-    {"post_id": int},
+    PredictionHistoryInput.model_json_schema(),
 )
 @tracked("get_prediction_history")
 async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -1056,8 +1127,18 @@ else:
 
 
 def create_forecasting_server() -> McpSdkServerConfig:
-    """Create the forecasting MCP server."""
-    tools = list(_BASE_FORECASTING_TOOLS) + list(_OPTIONAL_FORECASTING_TOOLS)
+    """Create the forecasting MCP server.
+
+    In retrodict mode, excludes search_exa and search_news (no date filtering).
+    """
+    tools = list(_BASE_FORECASTING_TOOLS)
+    is_retrodict = retrodict_cutoff.get() is not None
+    excluded_in_retrodict = (search_exa, search_news)
+    for t in _OPTIONAL_FORECASTING_TOOLS:
+        if is_retrodict and t in excluded_in_retrodict:
+            logger.info("%s excluded in retrodict mode", t.name)
+            continue
+        tools.append(t)
 
     return create_mcp_server(
         name="forecasting",

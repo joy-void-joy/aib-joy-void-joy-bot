@@ -140,19 +140,19 @@ class TestToolPolicyExclusions:
 
 
 class TestToolPolicySpawn:
-    """Tests for spawn_subquestions availability."""
+    """Tests for spawn_subagents availability."""
 
     def test_spawn_allowed_by_default(self) -> None:
-        """spawn_subquestions should be allowed by default."""
+        """spawn_subagents should be allowed by default."""
         policy = ToolPolicy()
         allowed = policy.get_allowed_tools(allow_spawn=True)
-        assert "mcp__composition__spawn_subquestions" in allowed
+        assert "mcp__composition__spawn_subagents" in allowed
 
     def test_spawn_excluded_when_disabled(self) -> None:
-        """spawn_subquestions should be excluded when allow_spawn=False."""
+        """spawn_subagents should be excluded when allow_spawn=False."""
         policy = ToolPolicy()
         allowed = policy.get_allowed_tools(allow_spawn=False)
-        assert "mcp__composition__spawn_subquestions" not in allowed
+        assert "mcp__composition__spawn_subagents" not in allowed
 
 
 class TestToolPolicyIsToolAvailable:
