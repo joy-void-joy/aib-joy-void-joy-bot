@@ -78,9 +78,13 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
         "scientific discoveries, medical research, climate science, or any topic where "
         "peer-reviewed research provides base rates or expert analysis. "
         "Returns titles, abstracts, authors, dates. "
-        "Supports arXiv query syntax: au:lastname, ti:word, cat:cs.AI. Max 50 results."
+        "Supports arXiv query syntax: au:lastname, ti:word, cat:cs.AI. Max 50 results.\n\n"
+        "Examples:\n"
+        "  search_arxiv(query='GPT-5 benchmark performance') → find AI capability papers\n"
+        "  search_arxiv(query='cat:cs.AI AND ti:reasoning', max_results=20) → AI reasoning papers\n"
+        "  search_arxiv(query='au:hinton AND ti:capsule') → papers by author on topic"
     ),
-    {"query": str, "max_results": int, "cutoff_date": str},
+    SearchArxivInput.model_json_schema(),
 )
 @tracked("search_arxiv")
 async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:

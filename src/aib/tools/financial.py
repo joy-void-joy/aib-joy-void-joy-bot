@@ -72,9 +72,14 @@ class FredSeriesInfo(TypedDict):
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
         "Common series: DGS10 (10-year Treasury), DGS3MO (3-month Treasury), "
         "FEDFUNDS (Fed Funds Rate), UNRATE (Unemployment), CPIAUCSL (CPI). "
-        "Returns recent observations and series metadata."
+        "Returns recent observations and series metadata.\n\n"
+        "Examples:\n"
+        '  fred_series(series_id="DGS10") → last 30 days of 10-year Treasury yields\n'
+        '  fred_series(series_id="UNRATE", observation_start="2025-01-01") → unemployment from Jan 2025\n'
+        '  fred_series(series_id="CPIAUCSL", observation_start="2024-01-01") → CPI over last ~2 years\n'
+        "Use fred_search first if you don't know the series ID."
     ),
-    {"series_id": str, "observation_start": str, "observation_end": str},
+    FredSeriesInput.model_json_schema(),
 )
 @tracked("fred_series")
 async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
@@ -93,11 +98,18 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
     series_id = validated.series_id.upper()
 
     cutoff = retrodict_cutoff.get()
-    reference_date = cutoff or datetime.now().date()
-    end_date = validated.observation_end or reference_date.isoformat()
-    start_date = (
-        validated.observation_start or (reference_date - timedelta(days=30)).isoformat()
-    )
+    if cutoff is not None:
+        end_date = cutoff.isoformat()
+        start_date = (
+            validated.observation_start or (cutoff - timedelta(days=30)).isoformat()
+        )
+    else:
+        reference_date = datetime.now().date()
+        end_date = validated.observation_end or reference_date.isoformat()
+        start_date = (
+            validated.observation_start
+            or (reference_date - timedelta(days=30)).isoformat()
+        )
 
     try:
         from fredapi import Fred
@@ -167,9 +179,13 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
         "Search FRED for economic data series by keyword. USE THIS when you don't know "
         "the series ID for an economic indicator — search for 'inflation', 'GDP', "
         "'unemployment', 'interest rate', 'CPI', etc. to find the right series ID, "
-        "then use fred_series to get the actual data."
+        "then use fred_series to get the actual data.\n\n"
+        "Examples:\n"
+        '  fred_search(query="SOFR rate") → find the series ID for SOFR\n'
+        '  fred_search(query="housing starts seasonally adjusted") → find HOUST or similar\n'
+        "Two-step workflow: fred_search to find the ID, then fred_series to get data."
     ),
-    {"query": str, "limit": int},
+    FredSearchInput.model_json_schema(),
 )
 @tracked("fred_search")
 async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
@@ -309,9 +325,13 @@ class CompanyFinancialsInput(BaseModel):
         "USE THIS FIRST for any earnings/revenue forecast question — provides "
         "historical revenue, net income, EPS, and growth trends. "
         "Ticker symbols: GOOG (Alphabet), AAPL (Apple), LLY (Eli Lilly), etc. "
-        "For regional/segment breakdowns, supplement with search_exa on earnings press releases."
+        "For regional/segment breakdowns, supplement with search_exa on earnings press releases.\n\n"
+        "Examples:\n"
+        '  company_financials(ticker="MSFT") → last 8 quarters of income statements\n'
+        '  company_financials(ticker="GOOG", period="annual") → last 8 years of annual financials\n'
+        "Returns: Revenue, Net Income, EPS, Operating Income, Gross Profit, etc. per period."
     ),
-    {"ticker": str, "period": str},
+    CompanyFinancialsInput.model_json_schema(),
 )
 @tracked("company_financials")
 async def company_financials(args: dict[str, Any]) -> dict[str, Any]:

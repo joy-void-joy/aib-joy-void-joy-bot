@@ -679,13 +679,7 @@ class Sandbox:
 
         timeout_seconds = settings.sandbox_timeout_seconds
 
-        network_desc = (
-            "full network access"
-            if self._network_mode == "bridge"
-            else "limited network access (package installation only)"
-            if self._network_mode == "pypi_only"
-            else "no network access"
-        )
+        network_desc = "network access"
 
         @tool(
             "execute_code",
@@ -693,9 +687,16 @@ class Sandbox:
                 "Execute Python code in an isolated Docker container with persistent state. "
                 "Variables, imports, and data persist between calls — no need to re-define them. "
                 f"The container has {network_desc}, a persistent /workspace directory, and a "
-                f"/shared directory for file exchange with the host. Timeout: {timeout_seconds}s."
+                f"/shared directory for file exchange with the host. Timeout: {timeout_seconds}s.\n\n"
+                "Examples:\n"
+                "  execute_code(code='import numpy as np; data = [1,2,3]; print(np.mean(data))')\n"
+                "  execute_code(code='# Monte Carlo simulation\\nimport numpy as np\\n"
+                "returns = np.random.normal(0.0005, 0.015, (10000, 14))\\n"
+                "paths = 100 * np.cumprod(1 + returns, axis=1)\\n"
+                "print(np.percentile(paths[:,-1], [10,25,50,75,90]))')\n"
+                "State persists: define variables in one call, use them in the next."
             ),
-            {"code": str},
+            ExecuteCodeInput.model_json_schema(),
         )
         @tracked("execute_code")
         async def execute_code(args: dict[str, Any]) -> dict[str, Any]:
@@ -721,7 +722,7 @@ class Sandbox:
             "install_package",
             "Install one or more Python packages from PyPI using uv. Packages persist "
             "in the container across executions.",
-            {"packages": list},
+            InstallPackageInput.model_json_schema(),
         )
         @tracked("install_package")
         async def install_package(args: dict[str, Any]) -> dict[str, Any]:

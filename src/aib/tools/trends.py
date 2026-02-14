@@ -111,7 +111,7 @@ def _calculate_trend_direction(values: list[int]) -> str:
         "'today 3-m', 'today 12-m', 'today 5-y', 'all'. "
         "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide."
     ),
-    {"keyword": str, "timeframe": str, "geo": str},
+    TrendsQueryInput.model_json_schema(),
 )
 @tracked("google_trends")
 async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
@@ -201,7 +201,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
         "Values are relative to each other within the comparison. "
         "Useful for comparing popularity of different topics or candidates."
     ),
-    {"keywords": list, "timeframe": str, "geo": str},
+    TrendsCompareInput.model_json_schema(),
 )
 @tracked("google_trends_compare")
 async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
@@ -291,7 +291,7 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
         "Returns 'top' (most searched) and 'rising' (fastest growing) related queries. "
         "Useful for understanding what people search alongside a topic."
     ),
-    {"keyword": str, "timeframe": str, "geo": str},
+    TrendsQueryInput.model_json_schema(),
 )
 @tracked("google_trends_related")
 async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:

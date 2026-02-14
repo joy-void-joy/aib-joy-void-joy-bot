@@ -210,9 +210,13 @@ async def _polymarket_event_at_cutoff(
     (
         "Search Polymarket for prediction markets and return current prices. "
         "Returns YES price as probability, trading volume, and URL. "
-        f"Optional limit (default: {settings.market_default_limit})."
+        f"Optional limit (default: {settings.market_default_limit}).\n\n"
+        "Examples:\n"
+        "  polymarket_price(query='US election 2026') → find election markets\n"
+        "  polymarket_price(query='Fed rate cut') → find Fed policy markets\n"
+        "Check volume before trusting — low-volume markets (<$1k) may be stale."
     ),
-    {"query": str, "limit": int},
+    MarketQueryInput.model_json_schema(),
 )
 @tracked("polymarket_price")
 async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
@@ -332,7 +336,7 @@ async def _manifold_market_at_cutoff(
         "Returns probability, trading volume (in mana), and URL. "
         f"Optional limit (default: {settings.market_default_limit})."
     ),
-    {"query": str, "limit": int},
+    MarketQueryInput.model_json_schema(),
 )
 @tracked("manifold_price")
 async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
@@ -420,7 +424,7 @@ async def _fetch_polymarket_history(
         "useful for understanding trend direction. Get the token ID from polymarket_price first, "
         "then query specific timestamps. Returns price closest to but not after the timestamp."
     ),
-    {"market_id": str, "timestamp": int},
+    HistoricalPriceInput.model_json_schema(),
 )
 @tracked("polymarket_history")
 async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -501,7 +505,7 @@ async def _fetch_manifold_bets(
         "Get the contract ID from manifold_price first, then query timestamps. "
         "Returns probability just after the last bet before the given timestamp."
     ),
-    {"market_id": str, "timestamp": int},
+    HistoricalPriceInput.model_json_schema(),
 )
 @tracked("manifold_history")
 async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
@@ -607,9 +611,13 @@ class StockPrice(TypedDict):
     (
         "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
         "Returns current price, previous close, 52-week range, and market cap. "
-        "Use for stock price comparison questions."
+        "Use for stock price comparison questions.\n\n"
+        "Examples:\n"
+        "  stock_price(symbol='AAPL') → current Apple price and metrics\n"
+        "  stock_price(symbol='^VIX') → current VIX level\n"
+        "  stock_price(symbol='^GSPC') → current S&P 500 level"
     ),
-    {"symbol": str, "period": str},
+    StockQueryInput.model_json_schema(),
 )
 @tracked("stock_price")
 async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
@@ -632,7 +640,7 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             start_str = (cutoff - timedelta(days=5)).isoformat()
             hist = ticker.history(start=start_str, end=end_str)
             if hist.empty:
-                return mcp_error(f"No data found for {symbol} before {end_str}")
+                return mcp_error(f"No recent data found for {symbol}")
             last_row = hist.iloc[-1]
             result: StockPrice = {
                 "symbol": symbol,
@@ -680,9 +688,15 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
         "Returns OHLCV data for the specified period. "
         "Periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max. "
         "Optional end_date (YYYY-MM-DD) to cap data at a specific date. "
-        "Use for analyzing price trends and volatility."
+        "Use for analyzing price trends and volatility.\n\n"
+        "Examples:\n"
+        "  stock_history(symbol='AAPL', period='3mo') → 3 months of Apple OHLCV\n"
+        "  stock_history(symbol='^GSPC', period='1y') → 1 year of S&P 500\n"
+        "  stock_history(symbol='^VIX', period='6mo') → 6 months of VIX for volatility analysis\n"
+        "  stock_history(symbol='GC=F', period='3mo') → 3 months of gold futures\n"
+        "Feed the output to execute_code for Monte Carlo simulation or rolling volatility analysis."
     ),
-    {"symbol": str, "period": str, "end_date": str},
+    StockQueryInput.model_json_schema(),
 )
 @tracked("stock_history")
 async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
