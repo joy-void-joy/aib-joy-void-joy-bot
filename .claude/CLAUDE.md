@@ -138,9 +138,9 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
 4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump.
-5. **`/rebase`** — Creates a clean rebase branch with atomic commits and opens a PR.
-6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run `/rebase` (it force-pushes over the existing rebase branch, updating the PR).
-7. **`/close`** — Once the PR is approved, merges it and cleans up both branches (rebase + original) and remote refs.
+5. **`/rebase`** — Pushes the branch, opens a PR, then cleans up the commit history with `git reset --soft main` and force-pushes.
+6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run `/rebase` (it rebuilds the history and force-pushes, updating the PR).
+7. **`/close`** — Once the PR is approved, merges it and cleans up the branch.
 
 ### Commit Guidelines
 

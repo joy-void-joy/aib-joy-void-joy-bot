@@ -1,11 +1,11 @@
 ---
 allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
-description: Create a clean rebase branch with atomic commits and open a PR
+description: Clean up commit history on the feature branch and open/update a PR
 ---
 
 # Rebase and PR
 
-Create a rebase branch with a clean, logical commit history, push it, and open a PR.
+Clean up the commit history on the current feature branch, push it, and open (or update) a PR.
 
 **Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
 
@@ -25,7 +25,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    cd -
    git merge main
    ```
-   Resolve any merge conflicts before proceeding. This ensures the rebase branch will be up-to-date.
+   Resolve any merge conflicts before proceeding. This ensures the branch is up-to-date.
 
 3. **Run all checks**:
    ```bash
@@ -34,7 +34,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    uv run ruff format --check .
    uv run pytest
    ```
-   Fix any issues found. The rebase branch should only contain passing code.
+   Fix any issues found. The rebased branch should only contain passing code.
 
 4. **Check AGENT_VERSION bump**:
    If the branch includes changes to agent behavior (prompts, tools, subagents, scoring logic), verify that `AGENT_VERSION` in `src/aib/version.py` has been bumped. This is required for regression tracking. Data-only or infrastructure changes do not need a version bump.
@@ -59,63 +59,62 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    git push
    cd -
    ```
-   Ensure local main is up-to-date before creating the rebase branch.
+   Ensure local main is up-to-date before rebasing.
 
-2. **Gather context**:
+2. **Push and open PR** (if not already open):
+
+   Push the feature branch:
+   ```bash
+   git push -u origin <branch>
+   ```
+
+   Check if a PR already exists:
+   ```bash
+   gh pr list --head "<branch>" --state open --json number,url
+   ```
+
+   **If no PR exists** (first run):
+   ```bash
+   gh pr create --title "<conventional commit style title>" --body "$(cat <<'EOF'
+   ## Summary
+   <1-3 bullet points describing the changes>
+   EOF
+   )"
+   ```
+
+   **If a PR already exists**, skip this step — we'll force-push the cleaned history later.
+
+3. **Gather context**:
    - Identify the current branch and its base (typically `main`)
    - Review the full diff from base to HEAD: `git diff main...HEAD`
    - List existing commits: `git log --oneline main..HEAD`
 
-3. **Understand all changes**:
+4. **Understand all changes**:
    - Read the changed files to understand the complete set of modifications
    - Think about what logical units of work exist (features, refactors, fixes, tests, docs)
    - **Ignore the existing commit history** — focus on what makes sense as a clean sequence
 
-4. **Create rebase branch** (or recreate if re-running):
+5. **Reset and rebuild commits**:
 
-   Check if a `-rebase` branch already exists:
+   Reset all commits back to staged changes:
    ```bash
-   git branch --list "<branch>-rebase"
+   git reset --soft main
    ```
 
-   **If it exists** (re-running after review feedback):
-   ```bash
-   # Switch back to the feature branch first (if currently on the rebase branch)
-   git checkout <branch>
-   # Delete the old local rebase branch
-   git branch -D <branch>-rebase
-   # Create fresh from main
-   git checkout -b <branch>-rebase main
-   ```
-
-   **If it doesn't exist** (first run):
-   ```bash
-   git checkout -b <branch>-rebase main
-   ```
-
-5. **Build clean commits**:
-   - For each logical unit of work, cherry-pick or manually stage the relevant changes
-   - Create atomic commits with clear messages
+   Now all changes are staged. For each logical unit of work:
+   - Selectively unstage with `git reset HEAD <files>`, then stage and commit the relevant pieces
+   - Or use `git commit` with specific files to build atomic commits
    - Order commits logically (dependencies first, then features, then polish)
    - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
 
-6. **Push rebase branch and create/update PR**:
-
-   Check if a PR already exists for this rebase branch:
+6. **Force push to update the PR**:
    ```bash
-   gh pr list --head "<branch>-rebase" --state open --json number,url
+   git push --force-with-lease
    ```
 
-   **If a PR already exists** (re-running):
+   Return the PR URL to the user when done. Include a commit list in the PR body:
    ```bash
-   git push --force-with-lease origin <branch>-rebase
-   ```
-   The existing PR updates automatically. Return the existing PR URL.
-
-   **If no PR exists** (first run):
-   ```bash
-   git push -u origin <branch>-rebase
-   gh pr create --title "<conventional commit style title>" --body "$(cat <<'EOF'
+   gh pr edit <PR_NUMBER> --body "$(cat <<'EOF'
    ## Summary
    <1-3 bullet points describing the changes>
 
@@ -124,7 +123,6 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    EOF
    )"
    ```
-   Return the new PR URL to the user when done.
 
 ## Guidelines
 
