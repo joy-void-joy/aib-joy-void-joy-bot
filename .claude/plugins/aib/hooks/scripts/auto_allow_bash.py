@@ -41,6 +41,10 @@ RULES: list[Allow | Deny] = [
     # Safe read-only / common commands
     Allow(pattern=r"^ls\b"),
     Allow(pattern=r"^grep\b"),
+    Allow(pattern=r"|\sxargs\b"),
+    Allow(pattern=r"^test "),
+    Allow(pattern=r"^find"),
+
     # Git (safe subset)
     Allow(
         pattern=r"git (status|log|diff|show|branch|worktree|stash|remote|fetch|tag|add|commit)\b"
@@ -50,8 +54,8 @@ RULES: list[Allow | Deny] = [
     Allow(pattern=r"uv run (pyright|pytest|ruff|forecast)\b"),
     Allow(pattern=r"uv run \S+ --help$"),
     # Allow python scripts in specific folders (overrides the deny above)
-    Allow(pattern=r"uv run (python )?\.claude/plugins/aib/scripts/"),
-    Allow(pattern=r"uv run (python )?\./tmp/\S+\.py\b"),
+    Allow(pattern=r"uv run (python )?(\./)?\.claude/plugins/aib/scripts/"),
+    Allow(pattern=r"uv run (python )?(\./)?tmp/\S+\.py\b"),
 ]
 
 # ---------------------------------------------------------------------------
