@@ -73,12 +73,14 @@ class PitCalibration(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _load_jsons(base_path: Path) -> list[dict]:
+def _load_jsons(base_path: Path, version: str | None = None) -> list[dict]:
     """Load all forecast JSON files from a directory tree.
 
     Expects structure: base_path/{post_id}/{timestamp}.json
     For each post_id, loads ALL files (not just latest) so we can
     deduplicate later based on context.
+
+    If version is provided, only returns forecasts with matching agent_version.
     """
     results = []
     if not base_path.exists():
@@ -90,6 +92,8 @@ def _load_jsons(base_path: Path) -> list[dict]:
             try:
                 data = json.loads(filepath.read_text())
                 if "question_type" in data and "timestamp" in data:
+                    if version and data.get("agent_version", "") != version:
+                        continue
                     results.append(data)
             except Exception:
                 continue
@@ -107,12 +111,14 @@ def _dedup_latest(forecasts: list[dict], key_fields: tuple[str, ...]) -> list[di
     return list(latest.values())
 
 
-def load_binary_data(source: str = "all") -> list[tuple[float, bool]]:
+def load_binary_data(
+    source: str = "all", version: str | None = None
+) -> list[tuple[float, bool]]:
     """Load resolved binary forecasts as (probability, outcome) pairs."""
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(FORECASTS_PATH):
+        for f in _load_jsons(FORECASTS_PATH, version):
             if (
                 f.get("question_type") == "binary"
                 and f.get("resolution") in ("yes", "no")
@@ -121,7 +127,7 @@ def load_binary_data(source: str = "all") -> list[tuple[float, bool]]:
                 forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(RETRODICT_PATH)
+        retro = _load_jsons(RETRODICT_PATH, version)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") != "binary":
@@ -149,6 +155,7 @@ def load_binary_data(source: str = "all") -> list[tuple[float, bool]]:
 
 def load_numeric_data(
     source: str = "all",
+    version: str | None = None,
 ) -> list[tuple[dict[int, float], float, tuple[float, float] | None]]:
     """Load resolved numeric/discrete forecasts.
 
@@ -157,7 +164,7 @@ def load_numeric_data(
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(FORECASTS_PATH):
+        for f in _load_jsons(FORECASTS_PATH, version):
             if f.get("question_type") not in ("numeric", "discrete"):
                 continue
             if f.get("percentiles") is None:
@@ -172,7 +179,7 @@ def load_numeric_data(
             forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(RETRODICT_PATH)
+        retro = _load_jsons(RETRODICT_PATH, version)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") not in ("numeric", "discrete"):
@@ -535,9 +542,12 @@ def binary_cmd(
     buckets: Annotated[
         int, typer.Option("--buckets", "-b", help="Number of calibration buckets")
     ] = 10,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Filter by agent version")
+    ] = None,
 ) -> None:
     """Binary forecast calibration analysis."""
-    data = load_binary_data(source)
+    data = load_binary_data(source, version)
     if not data:
         typer.echo("No resolved binary forecasts found.")
         typer.echo(
@@ -547,8 +557,9 @@ def binary_cmd(
 
     cal = compute_binary_calibration(data, n_buckets=buckets, source=source)
 
+    ver_label = f", version: {version}" if version else ""
     typer.echo(
-        f"\n=== Binary Calibration ({cal.n_forecasts} forecasts, source: {source}) ===\n"
+        f"\n=== Binary Calibration ({cal.n_forecasts} forecasts, source: {source}{ver_label}) ===\n"
     )
 
     if cal.n_forecasts < 20:
@@ -601,9 +612,12 @@ def numeric_cmd(
     source: Annotated[
         str, typer.Option("--source", "-s", help="all, live, or retrodict")
     ] = "all",
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Filter by agent version")
+    ] = None,
 ) -> None:
     """Numeric/discrete forecast calibration via PIT analysis."""
-    data = load_numeric_data(source)
+    data = load_numeric_data(source, version)
     if not data:
         typer.echo("No resolved numeric/discrete forecasts found.")
         typer.echo("Run retrodictions on numeric questions first.")
@@ -611,8 +625,9 @@ def numeric_cmd(
 
     pit = compute_pit_calibration(data, source=source)
 
+    ver_label = f", version: {version}" if version else ""
     typer.echo(
-        f"\n=== Numeric Calibration ({pit.n_forecasts} forecasts, source: {source}) ===\n"
+        f"\n=== Numeric Calibration ({pit.n_forecasts} forecasts, source: {source}{ver_label}) ===\n"
     )
 
     if pit.n_forecasts < 10:
@@ -658,12 +673,16 @@ def summary_cmd(
     source: Annotated[
         str, typer.Option("--source", "-s", help="all, live, or retrodict")
     ] = "all",
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Filter by agent version")
+    ] = None,
 ) -> None:
     """Combined calibration summary for feedback loop sessions."""
-    typer.echo("\n=== Calibration Summary ===\n")
+    ver_label = f" (version: {version})" if version else ""
+    typer.echo(f"\n=== Calibration Summary{ver_label} ===\n")
 
-    binary_data = load_binary_data(source)
-    numeric_data = load_numeric_data(source)
+    binary_data = load_binary_data(source, version)
+    numeric_data = load_numeric_data(source, version)
 
     if not binary_data and not numeric_data:
         typer.echo("  No resolved forecasts found (binary or numeric).")
@@ -723,12 +742,19 @@ def export_cmd(
         Path | None, typer.Option("-o", "--output", help="Output file path")
     ] = None,
     source: Annotated[str, typer.Option("--source", "-s")] = "all",
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Filter by agent version")
+    ] = None,
 ) -> None:
     """Export calibration data to JSON."""
-    binary_data = load_binary_data(source)
-    numeric_data = load_numeric_data(source)
+    binary_data = load_binary_data(source, version)
+    numeric_data = load_numeric_data(source, version)
 
-    result: dict = {"generated_at": datetime.now().isoformat(), "source": source}
+    result: dict = {
+        "generated_at": datetime.now().isoformat(),
+        "source": source,
+        "version": version,
+    }
 
     if binary_data:
         cal = compute_binary_calibration(binary_data, source=source)

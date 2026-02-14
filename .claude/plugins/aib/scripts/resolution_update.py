@@ -4,12 +4,16 @@
 Queries Metaculus API for resolved questions and updates the
 corresponding saved forecasts with resolution outcomes. Scans both
 live forecasts (notes/forecasts/) and retrodictions (notes/retrodict/).
+
+Uses batch tournament listing to minimize API calls (~3 paginated calls
+instead of ~N individual fetches).
 """
 
 import asyncio
 import json
 from pathlib import Path
 
+import httpx
 import typer
 
 from aib.config import settings  # noqa: F401 — loads env
@@ -19,6 +23,12 @@ app = typer.Typer(help="Update forecasts with resolution data")
 
 FORECASTS_PATH = Path("./notes/forecasts")
 RETRODICT_PATH = Path("./notes/retrodict")
+
+TOURNAMENT_IDS = [
+    32916,  # AIB Spring 2026
+    32715,  # MiniBench
+    32585,  # Metaculus Cup
+]
 
 
 def get_resolution(question_data: dict) -> str | float | None:
@@ -96,6 +106,64 @@ def find_unresolved(base_path: Path) -> list[dict]:
     return unresolved
 
 
+async def batch_fetch_resolved_ids(
+    tournament_ids: list[int],
+) -> set[int]:
+    """Fetch post IDs of all resolved questions from tournaments.
+
+    Uses the listing endpoint (~3 paginated calls per tournament) to identify
+    which questions have resolved, avoiding N individual API fetches.
+    The listing endpoint doesn't include resolution values, so individual
+    fetches are still needed for matches — but only for the small subset
+    that actually resolved.
+    """
+    resolved_ids: set[int] = set()
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for tid in tournament_ids:
+            offset = 0
+            limit = 100
+            while True:
+                try:
+                    response = await client.get(
+                        "https://www.metaculus.com/api/posts/",
+                        params={
+                            "order_by": "-resolve_time",
+                            "status": "resolved",
+                            "tournaments": tid,
+                            "offset": offset,
+                            "limit": limit,
+                        },
+                    )
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429:
+                        typer.echo(f"  Rate limited on tournament {tid}, retrying...")
+                        await asyncio.sleep(5.0)
+                        continue
+                    if e.response.status_code == 400:
+                        typer.echo(f"  Tournament {tid} returned 400, skipping")
+                        break
+                    typer.echo(f"  Error fetching tournament {tid}: {e}")
+                    break
+
+                results = response.json().get("results", [])
+                if not results:
+                    break
+
+                for item in results:
+                    post_id = item.get("id")
+                    if post_id is not None:
+                        resolved_ids.add(post_id)
+
+                if len(results) < limit:
+                    break
+                offset += limit
+                await asyncio.sleep(0.3)
+
+    return resolved_ids
+
+
 @app.command("check")
 def check(
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
@@ -107,17 +175,35 @@ def check(
         typer.echo("All forecasts already have resolutions")
         return
 
-    typer.echo(f"Checking {len(unresolved)} unresolved forecasts...")
+    unresolved_ids = {item["post_id"] for item in unresolved}
+    typer.echo(f"Found {len(unresolved)} unresolved forecasts")
 
     async def check_all() -> tuple[int, int]:
         updated = 0
         still_open = 0
 
-        async with AsyncMetaculusClient() as client:
-            for item in unresolved:
-                post_id = item["post_id"]
-                typer.echo(f"  Checking post {post_id}...")
+        typer.echo("Batch-fetching resolved question IDs from tournaments...")
+        resolved_ids = await batch_fetch_resolved_ids(TOURNAMENT_IDS)
+        typer.echo(f"  Found {len(resolved_ids)} resolved questions across tournaments")
 
+        needs_fetch = unresolved_ids & resolved_ids
+        skipped = unresolved_ids - resolved_ids
+        typer.echo(
+            f"  {len(needs_fetch)} of our forecasts have resolved, "
+            f"{len(skipped)} still open (skipping)"
+        )
+        still_open = len(skipped)
+
+        if not needs_fetch:
+            typer.echo("  No new resolutions to apply")
+            return updated, still_open
+
+        items_by_id = {item["post_id"]: item for item in unresolved}
+
+        typer.echo(f"\nFetching resolution values for {len(needs_fetch)} questions...")
+        async with AsyncMetaculusClient() as client:
+            for post_id in sorted(needs_fetch):
+                typer.echo(f"  Fetching {post_id}...")
                 try:
                     question_data = await client.fetch_post_json(post_id)
                 except Exception as e:
@@ -128,23 +214,21 @@ def check(
                 if resolution is not None:
                     typer.echo(f"    Resolved: {resolution}")
                     if not dry_run:
-                        post_dir = item["dir"]
+                        post_dir = items_by_id[post_id]["dir"]
                         for f in post_dir.glob("*.json"):
                             if update_forecast_file(f, resolution):
                                 updated += 1
                     else:
                         updated += 1
-                else:
-                    still_open += 1
 
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(2.0)
 
         return updated, still_open
 
     updated, still_open = asyncio.run(check_all())
 
     typer.echo("\nResults:")
-    typer.echo(f"  Updated: {updated}")
+    typer.echo(f"  Updated: {updated} files")
     typer.echo(f"  Still open: {still_open}")
     if dry_run:
         typer.echo("  (dry run - no files changed)")

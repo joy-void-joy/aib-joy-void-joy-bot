@@ -362,11 +362,11 @@ async def fetch_cp_for_forecasts(
                 cached_count += 1
                 continue
 
-        # Rate limiting for API calls only
+        # Rate limiting for API calls (each fetch_post_json makes 2 requests)
         if fetched_count > 0:
-            await asyncio.sleep(0.5)
-        if fetched_count > 0 and fetched_count % 10 == 0:
             await asyncio.sleep(2.0)
+        if fetched_count > 0 and fetched_count % 5 == 0:
+            await asyncio.sleep(5.0)
 
         try:
             question = await client.get_question_by_post_id(post_id)
