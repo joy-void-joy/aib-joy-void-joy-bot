@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 import shutil
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, cast
@@ -991,6 +992,7 @@ async def run_forecast(
                         output.cdf = None
                 except Exception as e:
                     logger.exception("Failed to generate CDF: %s", e)
+                    print(f"CDF generation failed: {e}", file=sys.stderr)
                     output.cdf = None
         elif isinstance(forecast, MultipleChoiceForecast):
             output.probabilities = forecast.probabilities
