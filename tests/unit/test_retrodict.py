@@ -9,7 +9,6 @@ import pytest
 from claude_agent_sdk.types import HookContext, PreToolUseHookInput
 
 from aib.agent.hooks import HooksConfig
-from aib.agent.subagents import researcher_tools
 from aib.tools.exa import ExaResult
 from aib.agent.retrodict import (
     create_retrodict_hooks,
@@ -458,38 +457,3 @@ class TestWaybackValidateResults:
 
         assert len(validated) == 5
         assert len(call_order) == 5
-
-
-class TestRetrodictSubagentTools:
-    """Tests for retrodict-aware subagent tool lists."""
-
-    def test_search_news_excluded_in_retrodict(self) -> None:
-        """search_news should be excluded from researcher tools in retrodict mode."""
-        with retrodict_cutoff.set(date(2026, 1, 15)):
-            tools = researcher_tools()
-            assert "mcp__forecasting__search_news" not in tools
-
-    def test_search_news_included_normally(self) -> None:
-        """search_news should be included when not in retrodict mode."""
-        with (
-            patch("aib.agent.subagents.settings.asknews_client_id", "test"),
-            patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
-        ):
-            tools = researcher_tools()
-            assert "mcp__forecasting__search_news" in tools
-
-    def test_search_news_excluded_with_credentials_in_retrodict(self) -> None:
-        """search_news should be excluded even with credentials in retrodict mode."""
-        with (
-            retrodict_cutoff.set(date(2026, 1, 15)),
-            patch("aib.agent.subagents.settings.asknews_client_id", "test"),
-            patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
-        ):
-            tools = researcher_tools()
-            assert "mcp__forecasting__search_news" not in tools
-
-    def test_search_exa_always_available(self) -> None:
-        """search_exa should be available in both modes (has internal date filter)."""
-        with retrodict_cutoff.set(date(2026, 1, 15)):
-            tools = researcher_tools()
-            assert "mcp__forecasting__search_exa" in tools

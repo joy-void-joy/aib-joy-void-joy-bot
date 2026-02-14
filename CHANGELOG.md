@@ -2,6 +2,16 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v1.1.0 (2026-02-14)
+
+Remove subagent infrastructure, keep only spawn_subquestions
+- delete spawn_subagents tool and all subagent types (researcher
+- analyst
+- premortem)
+- remove subagents.py module
+- remove 15 dead Pydantic output models from models.py
+- simplify prompts and composition server
+
 ## v1.0.0 (2026-02-14)
 
 feedback loop: prompt rewrite, subagent fixes, scoring improvements

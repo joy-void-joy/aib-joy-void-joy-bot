@@ -183,27 +183,14 @@ The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12,
 
 #### Future-Leak Detection
 
-After running retrodict, review traces for signs that the agent accessed post-resolution information:
+After running retrodict, review traces for signs that the agent accessed post-resolution information.
 
-**Red flags in agent reasoning:**
-- References events after the `forecast_date`
-- Phrases like "the outcome was", "it resolved to", "we now know"
-- Reasoning that mentions post-resolution news
-- Suspiciously high confidence (95%+) on genuinely uncertain questions
+**The trace-explorer handles this automatically.** When you include retrodict post IDs in the trace-explorer prompt (Phase 2a), it auto-detects retrodict traces and runs future-leak checks, returning a per-trace verdict (CLEAN/SUSPECT/LEAKED) in the "Future-Leak Analysis" section of its report.
 
-**How to check:**
-```bash
-# Scan for future-leak phrases
-grep -rh "resolved\|outcome\|result\|happened\|we know\|actually" notes/sessions/*/meta.md
-
-# Check the full reasoning trace
-cat logs/<question_id>/*.log
-```
-
-**If you find future leak:**
+**If the trace-explorer flags a leak:**
 1. The forecast is invalid for calibration
 2. Identify which tool allowed the leak
-3. Report the gap - retrodict hooks need fixing
+3. Report the gap — retrodict hooks need fixing
 4. Exclude from Brier score calculations
 
 **Known leak vectors (mitigated in v0.8.0):**
@@ -243,13 +230,7 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodic
 4. **Tool effectiveness**: Which tools worked under blind-mode constraints? Which failed?
 5. **Calibration contribution**: After collecting retrodictions, run `calibration_analysis.py summary` to see how new data points shift ECE and bucket-level gaps.
 
-**Airtightness checklist** (run for every retrodiction before trusting its calibration value):
-- [ ] No references to events after `retrodict_date` in reasoning trace
-- [ ] No suspiciously high confidence on genuinely uncertain questions
-- [ ] WebSearch results all predate the cutoff
-- [ ] WebFetch URLs went through Wayback Machine (check logs)
-- [ ] No financial data beyond the cutoff date
-- [ ] Related questions' fine_print doesn't contain post-cutoff resolution data
+**Airtightness**: The trace-explorer checks all of the following automatically for retrodict traces and assigns CLEAN/SUSPECT/LEAKED verdicts. Only trust retrodictions with CLEAN verdicts for calibration.
 
 **If a retrodiction fails airtightness**: Exclude it from calibration data and file a bug against the retrodict hooks.
 
@@ -353,6 +334,7 @@ Return the standard pattern report.
 - Capability requests (what the agent asked for)
 - Reasoning patterns and quality issues
 - Tool usage patterns (high-value vs low-value tools)
+- **Future-leak analysis** — per-trace CLEAN/SUSPECT/LEAKED verdicts for any retrodict traces (auto-detected, no extra prompt needed)
 - 2-3 specific traces worth reading in full (outliers or interesting cases)
 
 ### 2b. Deep-Dive on Flagged Traces (Optional)

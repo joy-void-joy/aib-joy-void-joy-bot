@@ -18,32 +18,6 @@ You are an expert forecaster participating in the Metaculus AI Benchmarking Tour
 
 **Sandbox:** `{{SANDBOX_SHARED_DIR}}` is mounted at `/shared` in the code sandbox.
 
-## Subagents
-
-Use spawn_subagents for parallel work. Pass multiple agents in a single call to run them concurrently:
-
-{{SUBAGENTS}}
-
-**Why subagents matter.** The main benefit is not just speed — it's independent perspective. Each subagent approaches the question fresh, without being anchored by your evolving hypothesis. A researcher that searches from a different angle may find evidence you'd never encounter. A premortem genuinely argues against your position without confirmation bias. An analyst does quantitative work without being primed by your narrative reasoning. This mirrors what makes superforecasting teams effective: diverse, independent viewpoints synthesized by an integrator (you).
-
-**How they work.** Subagents run concurrently with each other and with your own work. Researcher subagents are cheap (haiku model, 5 turns max); analyst
-and premortem use the same model as you (10 and 5 turns respectively). Each gets its own isolated environment with appropriate tools. You receive their o
-utputs and synthesize — there is no automatic aggregation.
-
-**When subagents help:**
-- You have multiple independent research threads that don't inform each other
-- You need computation done in parallel with your research (analyst runs Monte Carlo while you gather evidence)
-- You want to stress-test your reasoning (premortem after forming an initial estimate)
-- You want to decompose a complex question into independent sub-forecasts
-
-**Two decomposition patterns:**
-
-1. **Structural decomposition** (independent parts that sum/multiply): Use `subquestion`. Example: forecast each revenue segment independently, then sum. Each sub-question needs its own research, so a full agent is justified.
-
-2. **Scenario decomposition** (same question, different assumptions): Use `execute_code` in the main thread. Example: GAAP vs non-GAAP interpretation of EPS — same data, different simulation parameters. Run separate Monte Carlo simulations and combine as a weighted mixture. No need for separate agents.
-
-Spawn subquestions via `spawn_subagents` with `type: "subquestion"` (you can spawn several subagents by giving it a list of [{"type": "subquestion", ...}, {"type": "subquestion", ...}. Each gets its own full forecasting agent. You receive all individual responses — synthesize them yourself. There is no automatic aggregation.
-
 ## Output Format
 
 Provide your forecast as:
@@ -158,13 +132,10 @@ Organize your research in phases. Don't jump to deep research before understandi
 - **polymarket_history / manifold_history**: Historical market prices at specific timestamps. Track how sentiment has evolved.
 
 ### Phase 4: Deep Research (complex questions only)
-- **spawn_subagents (researcher)**: Parallel web research across multiple angles.
-- **spawn_subagents (analyst)**: Quantitative analysis — Monte Carlo, financial data, distribution fitting.
-- **spawn_subagents (subquestion)**: Decompose the question into independent sub-forecasts, each with full pipeline.
+- **spawn_subquestions**: Decompose the question into independent sub-forecasts, each with its own full pipeline. Useful for compound questions where P(A and B) = P(A) * P(B|A), or revenue forecasts that sum independent segments.
 
 ### Phase 5: Validation
 - **get_cp_history**: Community prediction trajectory — how has consensus moved and why?
-- **spawn_subagents (premortem)**: After forming your initial estimate, spawn a premortem to argue against your position. The best forecasts are stress-tested.
 
 ### Phase 6: Computation
 - **execute_code**: Monte Carlo simulations, statistical analysis, complex math, data processing. Always prefer code for quantitative reasoning.
@@ -352,11 +323,7 @@ IMPORTANT: Distinguish between tool FAILURES and empty RESULTS — these are com
 
 Report which tools provided useful information, which had actual failures with specific error details, and any capability gaps (what you couldn't do that would have helped).
 
-**5. Subagent Decision**
-- Did I use subagents? Which ones? Did they provide value or just overhead?
-- If I didn't use them, should I have? Why or why not?
-
-**6. Update Triggers**
+**5. Update Triggers**
 - What specific events would move my forecast significantly?
 - My 80% confidence interval for my probability estimate: [X%, Y%]
 
@@ -381,21 +348,11 @@ Write this grounded in the specifics of THIS forecast. Generic reflections that 
 _RETRODICT_ADDENDUM = ""
 
 
-def _format_subagents(subagents: dict[str, str] | None) -> str:
-    """Format subagent descriptions for the system prompt."""
-    if not subagents:
-        return "(No subagents configured)"
-    return "\n".join(
-        f"- **{name}**: {description}" for name, description in subagents.items()
-    )
-
-
 def get_forecasting_system_prompt(
     *,
     tool_docs: str | None = None,
     retrodict: bool = False,
     sandbox_shared_dir: str = "./tmp/sandbox-shared",
-    subagents: dict[str, str] | None = None,
 ) -> str:
     """Generate the forecasting system prompt.
 
@@ -404,14 +361,13 @@ def get_forecasting_system_prompt(
             Generated by ToolPolicy.get_tool_docs().
         retrodict: Whether to include retrodict-mode overrides.
         sandbox_shared_dir: Host path for sandbox file exchange (mounted at /shared).
-        subagents: Subagent definitions to include in the prompt.
 
     Returns:
         The system prompt.
     """
     prompt = _FORECASTING_SYSTEM_PROMPT_TEMPLATE.replace(
         "{{SANDBOX_SHARED_DIR}}", sandbox_shared_dir
-    ).replace("{{SUBAGENTS}}", _format_subagents(subagents))
+    )
 
     if retrodict:
         prompt += _RETRODICT_ADDENDUM

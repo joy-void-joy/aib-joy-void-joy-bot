@@ -31,16 +31,7 @@ class TestForecastingSystemPrompt:
         prompt = get_forecasting_system_prompt()
         assert "## Available Tools" not in prompt
 
-    def test_subagents_rendered_from_descriptions(self) -> None:
-        """Subagent descriptions come from the descriptions dict."""
-        agents = {
-            "test_agent": "A test agent for testing",
-        }
-        prompt = get_forecasting_system_prompt(subagents=agents)
-        assert "**test_agent**" in prompt
-        assert "A test agent for testing" in prompt
-
-    def test_no_subagents_shows_placeholder(self) -> None:
-        """Without subagents, prompt shows a placeholder."""
+    def test_spawn_subquestions_in_prompt(self) -> None:
+        """spawn_subquestions tool is mentioned in research phases."""
         prompt = get_forecasting_system_prompt()
-        assert "No subagents configured" in prompt
+        assert "spawn_subquestions" in prompt
