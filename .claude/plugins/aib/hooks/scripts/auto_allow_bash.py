@@ -44,7 +44,6 @@ RULES: list[Allow | Deny] = [
     Allow(pattern=r"|\sxargs\b"),
     Allow(pattern=r"^test "),
     Allow(pattern=r"^find"),
-
     # Git (safe subset)
     Allow(
         pattern=r"git (status|log|diff|show|branch|worktree|stash|remote|fetch|tag|add|commit)\b"

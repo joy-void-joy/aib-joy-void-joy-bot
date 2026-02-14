@@ -13,11 +13,9 @@ import asyncio
 import json
 from pathlib import Path
 
-import httpx
 import typer
 
-from aib.config import settings  # noqa: F401 — loads env
-from metaculus.client import AsyncMetaculusClient
+from aib.clients.metaculus import AsyncMetaculusClient
 
 app = typer.Typer(help="Update forecasts with resolution data")
 
@@ -119,35 +117,21 @@ async def batch_fetch_resolved_ids(
     """
     resolved_ids: set[int] = set()
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with AsyncMetaculusClient() as mc:
         for tid in tournament_ids:
             offset = 0
             limit = 100
             while True:
-                try:
-                    response = await client.get(
-                        "https://www.metaculus.com/api/posts/",
-                        params={
-                            "order_by": "-resolve_time",
-                            "status": "resolved",
-                            "tournaments": tid,
-                            "offset": offset,
-                            "limit": limit,
-                        },
-                    )
-                    response.raise_for_status()
-                except httpx.HTTPStatusError as e:
-                    if e.response.status_code == 429:
-                        typer.echo(f"  Rate limited on tournament {tid}, retrying...")
-                        await asyncio.sleep(5.0)
-                        continue
-                    if e.response.status_code == 400:
-                        typer.echo(f"  Tournament {tid} returned 400, skipping")
-                        break
-                    typer.echo(f"  Error fetching tournament {tid}: {e}")
-                    break
+                results = await mc.fetch_posts_list(
+                    {
+                        "order_by": "-resolve_time",
+                        "status": "resolved",
+                        "tournaments": tid,
+                        "offset": offset,
+                        "limit": limit,
+                    }
+                )
 
-                results = response.json().get("results", [])
                 if not results:
                     break
 
@@ -159,7 +143,6 @@ async def batch_fetch_resolved_ids(
                 if len(results) < limit:
                     break
                 offset += limit
-                await asyncio.sleep(0.3)
 
     return resolved_ids
 

@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TypeVar
 
-import httpx
 import typer
 
 T = TypeVar("T")
@@ -115,22 +114,20 @@ async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
     questions = []
     offset = 0
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    from aib.clients.metaculus import AsyncMetaculusClient
+
+    async with AsyncMetaculusClient() as mc:
         while True:
-            response = await client.get(
-                "https://www.metaculus.com/api/posts/",
-                params={
+            results = await mc.fetch_posts_list(
+                {
                     "order_by": "close_time",
                     "status": "open",
                     "tournaments": tournament_id,
                     "offset": offset,
                     "limit": 100,
-                },
+                }
             )
-            response.raise_for_status()
-            data = response.json()
 
-            results = data.get("results", [])
             if not results:
                 break
 
@@ -149,8 +146,7 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     Uses AsyncMetaculusClient which automatically enriches null fields
     (description, resolution, aggregations) from the HTML API fallback.
     """
-    from aib.config import settings  # noqa: F401 — loads env
-    from metaculus.client import AsyncMetaculusClient
+    from aib.clients.metaculus import AsyncMetaculusClient
 
     results: dict[int, dict] = {}
 
@@ -171,19 +167,18 @@ async def _fetch_resolved(tournament_ids: list[int], limit: int = 50) -> list[di
     """Fetch resolved questions from one or more tournaments."""
     all_questions: list[dict] = []
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    from aib.clients.metaculus import AsyncMetaculusClient
+
+    async with AsyncMetaculusClient() as mc:
         for tid in tournament_ids:
-            response = await client.get(
-                "https://www.metaculus.com/api/posts/",
-                params={
+            results = await mc.fetch_posts_list(
+                {
                     "order_by": "-resolve_time",
                     "status": "resolved",
                     "tournaments": tid,
                     "limit": limit,
-                },
+                }
             )
-            response.raise_for_status()
-            results = response.json().get("results", [])
             all_questions.extend(results)
 
     # Deduplicate by post ID (a question may appear in multiple tournaments)
@@ -513,18 +508,17 @@ def search(
     typer.echo(f"\nSearching Metaculus for '{query}' ({status}, {question_type})...")
 
     async def _search() -> list[dict]:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                "https://www.metaculus.com/api/posts/",
-                params={
+        from aib.clients.metaculus import AsyncMetaculusClient
+
+        async with AsyncMetaculusClient() as mc:
+            return await mc.fetch_posts_list(
+                {
                     "search": query,
                     "status": status,
                     "order_by": "-resolve_time" if resolved_only else "-publish_time",
                     "limit": limit,
-                },
+                }
             )
-            response.raise_for_status()
-            return response.json().get("results", [])
 
     questions = run_async(_search())
 

@@ -5,8 +5,7 @@ import asyncio
 
 import typer
 
-from aib.config import settings
-from metaculus.client import AsyncMetaculusClient
+from aib.clients.metaculus import AsyncMetaculusClient
 
 app = typer.Typer()
 
@@ -18,39 +17,12 @@ def main(
     field: str = typer.Option(
         "", "--field", "-f", help="Show specific field path (dot-separated)"
     ),
-    raw: bool = typer.Option(
-        False, "--raw", help="Use raw JSON API (no HTML fallback)"
-    ),
 ) -> None:
     """Inspect raw Metaculus API response for a post."""
 
     async def fetch() -> dict:
-        if raw:
-            import httpx
-
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"https://www.metaculus.com/api/posts/{post_id}/",
-                    headers={
-                        "Authorization": f"Token {settings.metaculus_token}",
-                        "Accept-Language": "en",
-                    },
-                )
-                response.raise_for_status()
-                return response.json()
-        else:
-            async with AsyncMetaculusClient(token=settings.metaculus_token) as client:
-                import httpx
-
-                http = client._managed_client
-                assert http is not None
-                response = await http.get(
-                    f"{client.base_url}/posts/{post_id}/",
-                    headers=client._get_headers(),
-                )
-                response.raise_for_status()
-                post_json = response.json()
-                return await client._enrich_post_json(post_json, http, post_id)
+        async with AsyncMetaculusClient() as mc:
+            return await mc.fetch_post_json(post_id)
 
     data = asyncio.run(fetch())
 

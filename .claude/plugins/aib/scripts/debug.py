@@ -4,11 +4,9 @@
 import asyncio
 import traceback
 
-import httpx
 import typer
 
-from aib.clients.metaculus import get_client
-from aib.config import settings
+from aib.clients.metaculus import AsyncMetaculusClient, get_client
 from metaculus.models import MetaculusQuestion
 
 app = typer.Typer(help="Debug tools for the forecasting agent.")
@@ -20,21 +18,14 @@ app = typer.Typer(help="Debug tools for the forecasting agent.")
 async def test_raw_parse(tournament: str, limit: int) -> None:
     """Test raw API fetch and parsing."""
     print("=== Raw API Parse Test ===")
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            "https://www.metaculus.com/api/posts/",
-            headers={
-                "Authorization": f"Token {settings.metaculus_token}",
-                "Accept-Language": "en",
-            },
-            params={
+    async with AsyncMetaculusClient() as mc:
+        results = await mc.fetch_posts_list(
+            {
                 "tournaments": tournament,
                 "status": "open",
                 "limit": limit,
-            },
+            }
         )
-        data = response.json()
-        results = data["results"]
         print(f"Fetched {len(results)} posts")
 
         for i, result in enumerate(results):
@@ -57,18 +48,14 @@ async def test_client(tournament: str) -> None:
     print(f"Token length: {len(client.token) if client.token else 0}", flush=True)
 
     # First, fetch raw to see the structure
-    async with httpx.AsyncClient(timeout=30.0) as http_client:
-        response = await http_client.get(
-            "https://www.metaculus.com/api/posts/",
-            headers=client._get_headers(),
-            params={
+    async with AsyncMetaculusClient() as mc:
+        results = await mc.fetch_posts_list(
+            {
                 "tournaments": tournament,
                 "status": "open",
                 "limit": 10,
-            },
+            }
         )
-        data = response.json()
-        results = data["results"]
         print(f"Raw fetch: {len(results)} posts")
         for r in results:
             has_question = "question" in r and r["question"] is not None
@@ -94,21 +81,14 @@ async def check_raw_status(tournament: str, limit: int) -> None:
     from datetime import datetime, timezone
 
     print(f"=== Raw API Status Check for {tournament} ===")
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            "https://www.metaculus.com/api/posts/",
-            headers={
-                "Authorization": f"Token {settings.metaculus_token}",
-                "Accept-Language": "en",
-            },
-            params={
+    async with AsyncMetaculusClient() as mc:
+        results = await mc.fetch_posts_list(
+            {
                 "tournaments": tournament,
                 "status": "open",
                 "limit": limit,
-            },
+            }
         )
-        data = response.json()
-        results = data["results"]
 
     now = datetime.now(timezone.utc)
     print(f"Current time: {now.isoformat()}")
@@ -146,7 +126,7 @@ async def check_question_times(tournament: str, limit: int) -> None:
 
     # Sort by close_time
     questions_with_close = [q for q in questions if q.close_time]
-    questions_with_close.sort(key=lambda q: q.close_time)  # type: ignore
+    questions_with_close.sort(key=lambda q: q.close_time or now)
 
     for q in questions_with_close[:limit]:
         close_time = q.close_time
