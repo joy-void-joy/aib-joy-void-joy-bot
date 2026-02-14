@@ -5,6 +5,7 @@ import logging
 import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Self
 
 import httpx
@@ -201,6 +202,43 @@ class AsyncMetaculusClient:
         )
         return await self.get_questions_matching_filter(api_filter)
 
+    def _load_posts_override(
+        self, api_filter: ApiFilter
+    ) -> list[MetaculusQuestion] | None:
+        """Load questions from a local JSON file instead of the API.
+
+        Set METACULUS_POSTS_OVERRIDE to a path containing the raw API JSON
+        response (the full {"results": [...], "count": N} object). Useful
+        when rate-limited (429) — save the response once, then re-use it.
+        """
+        override_path = os.getenv("METACULUS_POSTS_OVERRIDE")
+        if not override_path:
+            return None
+
+        path = Path(override_path)
+        if not path.exists():
+            logger.warning("METACULUS_POSTS_OVERRIDE file not found: %s", path)
+            return None
+
+        logger.info("Loading posts from override file: %s", path)
+        data = json.loads(path.read_text())
+
+        results = data.get("results", data) if isinstance(data, dict) else data
+
+        questions: list[MetaculusQuestion] = []
+        for post_json in results:
+            if api_filter.allowed_statuses:
+                post_status = post_json.get("status")
+                if post_status not in api_filter.allowed_statuses:
+                    continue
+            parsed = self._parse_post_json(
+                post_json, api_filter.group_question_mode
+            )
+            questions.extend(parsed)
+
+        logger.info("Loaded %d questions from override file", len(questions))
+        return questions
+
     @with_retry()
     async def get_questions_matching_filter(
         self,
@@ -208,6 +246,10 @@ class AsyncMetaculusClient:
         num_questions: int | None = None,
     ) -> list[MetaculusQuestion]:
         """Fetch questions matching a filter."""
+        override = self._load_posts_override(api_filter)
+        if override is not None:
+            return override[:num_questions] if num_questions else override
+
         params = self._build_filter_params(api_filter)
         questions: list[MetaculusQuestion] = []
         offset = 0
