@@ -43,15 +43,15 @@ RULES: list[Allow | Deny] = [
     Allow(pattern=r"^grep\b"),
     # Git (safe subset)
     Allow(
-        pattern=r"^git (status|log|diff|show|branch|worktree|stash|remote|fetch|tag|add|commit)\b"
+        pattern=r"git (status|log|diff|show|branch|worktree|stash|remote|fetch|tag|add|commit)\b"
     ),
     # uv package management
-    Allow(pattern=r"^uv (sync|add|remove|lock)\b"),
-    Allow(pattern=r"^uv run (pyright|pytest|ruff|forecast)\b"),
-    Allow(pattern=r"^uv run \S+ --help$"),
+    Allow(pattern=r"uv (sync|add|remove|lock)\b"),
+    Allow(pattern=r"uv run (pyright|pytest|ruff|forecast)\b"),
+    Allow(pattern=r"uv run \S+ --help$"),
     # Allow python scripts in specific folders (overrides the deny above)
-    Allow(pattern=r"^uv run (python )?\.claude/plugins/aib/scripts/"),
-    Allow(pattern=r"^uv run (python )?\./tmp/\S+\.py\b"),
+    Allow(pattern=r"uv run (python )?\.claude/plugins/aib/scripts/"),
+    Allow(pattern=r"uv run (python )?\./tmp/\S+\.py\b"),
 ]
 
 # ---------------------------------------------------------------------------
