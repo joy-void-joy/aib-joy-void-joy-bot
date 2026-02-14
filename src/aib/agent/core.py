@@ -77,8 +77,6 @@ from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
-METACULUS_API_BASE = "https://www.metaculus.com/api"
-
 _PRESET_TEMPLATE = (Path(__file__).parent / "claude_code_preset.txt").read_text()
 
 

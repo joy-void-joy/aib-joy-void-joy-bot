@@ -7,11 +7,8 @@ import httpx
 
 from aib.agent.models import ForecastOutput
 from aib.clients.metaculus import get_client
-from aib.config import settings
 
 logger = logging.getLogger(__name__)
-
-METACULUS_API_BASE = "https://www.metaculus.com/api"
 
 
 class SubmissionError(Exception):
@@ -133,42 +130,28 @@ async def submit_forecast(output: ForecastOutput) -> None:
         SubmissionError: If the submission fails.
     """
     payload = create_forecast_payload(output)
+    client = get_client()
 
-    request_body = [
-        {
-            "question": output.question_id,
-            **payload,
-        }
-    ]
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{METACULUS_API_BASE}/questions/forecast/",
-            json=request_body,
-            headers={"Authorization": f"Token {settings.metaculus_token}"},
-            timeout=30.0,
-        )
-
-        if response.status_code == 400:
-            error_detail = response.text
-            if "already closed" in error_detail.lower():
+    try:
+        await client.post_question_prediction(output.question_id, payload)
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code
+        detail = e.response.text
+        if status == 400:
+            if "already closed" in detail.lower():
                 raise SubmissionError(
                     f"Question {output.question_id} is already closed"
-                )
-            raise SubmissionError(f"Bad request: {error_detail}")
-
-        if response.status_code == 401:
-            raise SubmissionError("Invalid Metaculus token")
-
-        if response.status_code == 403:
+                ) from e
+            raise SubmissionError(f"Bad request: {detail}") from e
+        if status == 401:
+            raise SubmissionError("Invalid Metaculus token") from e
+        if status == 403:
             raise SubmissionError(
                 f"Not authorized to forecast on question {output.question_id}"
-            )
-
-        if not response.is_success:
-            raise SubmissionError(
-                f"Submission failed with status {response.status_code}: {response.text}"
-            )
+            ) from e
+        raise SubmissionError(
+            f"Submission failed with status {status}: {detail}"
+        ) from e
 
     logger.info("Submitted forecast for question %d", output.question_id)
 
@@ -191,26 +174,18 @@ async def post_comment(
     Raises:
         SubmissionError: If posting the comment fails.
     """
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{METACULUS_API_BASE}/comments/create/",
-            json={
-                "text": comment_text,
-                "parent": None,
-                "included_forecast": include_forecast,
-                "is_private": is_private,
-                "on_post": post_id,
-            },
-            headers={"Authorization": f"Token {settings.metaculus_token}"},
-            timeout=30.0,
+    client = get_client()
+    try:
+        await client.post_question_comment(
+            post_id,
+            comment_text,
+            is_private=is_private,
+            included_forecast=include_forecast,
         )
-
-        if not response.is_success:
-            raise SubmissionError(
-                f"Comment failed with status {response.status_code}: {response.text}"
-            )
-
-    logger.info("Posted comment on post %d", post_id)
+    except httpx.HTTPStatusError as e:
+        raise SubmissionError(
+            f"Comment failed with status {e.response.status_code}: {e.response.text}"
+        ) from e
 
 
 def format_reasoning_comment(output: ForecastOutput, *, max_length: int = 15000) -> str:
