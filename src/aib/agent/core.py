@@ -885,9 +885,10 @@ async def run_forecast(
                             logger.debug(
                                 "Unhandled message type: %s", type(message).__name__
                             )
-        finally:
+        except Exception:
             logging.getLogger().removeHandler(_log_handler)
             _log_handler.close()
+            raise
 
     if result is None:
         raise RuntimeError("No result received from agent")
@@ -1103,6 +1104,9 @@ async def run_forecast(
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(tmp_notes), str(dest))
             logger.info("Moved retrodict notes: %s -> %s", tmp_notes, dest)
+
+    logging.getLogger().removeHandler(_log_handler)
+    _log_handler.close()
 
     return output
 
