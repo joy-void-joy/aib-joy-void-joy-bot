@@ -24,7 +24,7 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 
 - **src/aib/cli.py**: CLI entry point (`uv run forecast test <question_id>`)
 - **src/aib/agent/core.py**: Main forecasting agent orchestration using Claude Agent SDK
-- **src/aib/agent/subagents.py**: Subagent definitions (deep-researcher, estimator, etc.)
+- **src/aib/agent/subagents.py**: Subagent definitions (researcher, analyst)
 - **src/aib/agent/numeric.py**: CDF generation for numeric/discrete questions
 - **src/aib/submission.py**: Metaculus API submission functions
 - **src/aib/tools/**: MCP tool implementations (forecasting, sandbox, composition, markets)
@@ -442,10 +442,10 @@ uv run python .claude/plugins/aib/scripts/resolution_update.py set <id> <yes|no>
 Comprehensive calibration analysis: ECE/MCE, reliability diagrams, PIT histograms, overconfidence detection. Primary diagnostic tool for the feedback loop.
 
 ```bash
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary [--source all|live|retrodict] [--buckets 10]
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric [--source all|live|retrodict]
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py export [-o FILE]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary [--version X.Y.Z]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary [--source all|live|retrodict] [--buckets 10] [--version X.Y.Z]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric [--source all|live|retrodict] [--version X.Y.Z]
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py export [-o FILE] [--version X.Y.Z]
 ```
 
 ### calibration_report.py
@@ -467,6 +467,7 @@ uv run python .claude/plugins/aib/scripts/scores_table.py show [--post-id ID] [-
 uv run python .claude/plugins/aib/scripts/scores_table.py summary
 uv run python .claude/plugins/aib/scripts/scores_table.py compare <v1> <v2>
 uv run python .claude/plugins/aib/scripts/scores_table.py regression
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes [--non-meta] [--meta-only] [--version V] [--type T] [-n N]
 ```
 
 ### forecast_queue.py
@@ -481,6 +482,18 @@ uv run python .claude/plugins/aib/scripts/forecast_queue.py search <query> [--ty
 ```
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup), `all` (cross-tournament)
+
+### version_tag.py
+
+Bump agent version, create git tags, and maintain CHANGELOG.md.
+
+```bash
+uv run python .claude/plugins/aib/scripts/version_tag.py bump <patch|minor|major> "<summary>" [--detail "a, b, c"]
+uv run python .claude/plugins/aib/scripts/version_tag.py tag [--commit HASH] [--message MSG]
+uv run python .claude/plugins/aib/scripts/version_tag.py list
+uv run python .claude/plugins/aib/scripts/version_tag.py history
+uv run python .claude/plugins/aib/scripts/version_tag.py changelog <version> "<summary>"
+```
 
 ## Permission Hooks
 

@@ -7,6 +7,9 @@ from contextvars import ContextVar
 from datetime import date, datetime, time, timezone
 
 retrodict_cutoff: ContextVar[date | None] = ContextVar("retrodict_cutoff", default=None)
+forecasted_post_id: ContextVar[int | None] = ContextVar(
+    "forecasted_post_id", default=None
+)
 
 
 def effective_now() -> datetime:

@@ -1,12 +1,13 @@
-"""Tests for CP history processing with the new posts API format."""
+"""Tests for CP history processing."""
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
+
+from metaculus.models import AggregationHistoryPoint, AggregationMethod
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -19,6 +20,27 @@ def fc() -> ModuleType:
     from aib.tools import forecasting
 
     return forecasting
+
+
+SAMPLE_AGGREGATION = AggregationMethod(
+    history=[
+        AggregationHistoryPoint(
+            start_time=1738800000.0,  # 2025-02-06 ~00:00 UTC
+            forecaster_count=50,
+            centers=[0.35, 0.65],
+        ),
+        AggregationHistoryPoint(
+            start_time=1738886400.0,  # 2025-02-07 00:00 UTC
+            forecaster_count=55,
+            centers=[0.40, 0.60],
+        ),
+        AggregationHistoryPoint(
+            start_time=1738972800.0,  # 2025-02-08 00:00 UTC
+            forecaster_count=60,
+            centers=[0.45, 0.55],
+        ),
+    ]
+)
 
 
 class TestFormatTimestamp:
@@ -37,62 +59,30 @@ class TestFormatTimestamp:
         assert result == "2025-02-07T00:00:00Z"
 
 
-UNIX_HISTORY: dict[str, Any] = {
-    "history": [
-        {
-            "start_time": 1738800000.0,  # 2025-02-06 ~00:00 UTC
-            "end_time": None,
-            "forecaster_count": 50,
-            "centers": [0.35, 0.65],
-        },
-        {
-            "start_time": 1738886400.0,  # 2025-02-07 00:00 UTC
-            "end_time": None,
-            "forecaster_count": 55,
-            "centers": [0.40, 0.60],
-        },
-        {
-            "start_time": 1738972800.0,  # 2025-02-08 00:00 UTC
-            "end_time": None,
-            "forecaster_count": 60,
-            "centers": [0.45, 0.55],
-        },
-    ]
-}
+class TestBuildCPHistoryResponse:
+    """Tests for _build_cp_history_response with AggregationMethod input."""
 
+    def test_processes_unix_timestamps(self, fc: ModuleType) -> None:
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, None)
+        assert result.data_points == 3
+        assert result.history[0].community_prediction == 0.35
+        assert result.history[1].community_prediction == 0.40
+        assert result.history[2].community_prediction == 0.45
 
-class TestProcessCPHistory:
-    """Tests for _process_cp_history with new API data format."""
-
-    @pytest.mark.asyncio
-    async def test_processes_unix_timestamps(self, fc: ModuleType) -> None:
-        result = await fc._process_cp_history(UNIX_HISTORY, 12345, 30, None)
-        data = json.loads(result["content"][0]["text"])
-        assert data["data_points"] == 3
-        assert data["history"][0]["community_prediction"] == 0.35
-        assert data["history"][1]["community_prediction"] == 0.40
-        assert data["history"][2]["community_prediction"] == 0.45
-
-    @pytest.mark.asyncio
-    async def test_retrodict_cutoff_filters_unix(self, fc: ModuleType) -> None:
+    def test_retrodict_cutoff_filters(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 7, 0, 0, tzinfo=timezone.utc)
-        result = await fc._process_cp_history(UNIX_HISTORY, 12345, 30, cutoff)
-        data = json.loads(result["content"][0]["text"])
-        # Feb 6 00:00 and Feb 7 00:00 both pass (cutoff filters strictly >)
-        assert data["data_points"] == 2
-        assert data["history"][0]["community_prediction"] == 0.35
-        assert data["history"][1]["community_prediction"] == 0.40
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, cutoff)
+        assert result.data_points == 2
+        assert result.history[0].community_prediction == 0.35
+        assert result.history[1].community_prediction == 0.40
 
-    @pytest.mark.asyncio
-    async def test_empty_history(self, fc: ModuleType) -> None:
-        result = await fc._process_cp_history({"history": []}, 12345, 30, None)
-        data = json.loads(result["content"][0]["text"])
-        assert data["data_points"] == 0
+    def test_empty_history(self, fc: ModuleType) -> None:
+        empty = AggregationMethod(history=[])
+        result = fc._build_cp_history_response(empty, 12345, 30, None)
+        assert result.data_points == 0
 
-    @pytest.mark.asyncio
-    async def test_all_filtered_shows_note(self, fc: ModuleType) -> None:
+    def test_all_filtered_shows_note(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 5, 0, 0, tzinfo=timezone.utc)
-        result = await fc._process_cp_history(UNIX_HISTORY, 12345, 30, cutoff)
-        data = json.loads(result["content"][0]["text"])
-        assert data["data_points"] == 0
-        assert "note" in data
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, cutoff)
+        assert result.data_points == 0
+        assert result.note is not None

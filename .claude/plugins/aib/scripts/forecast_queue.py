@@ -153,20 +153,16 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     from metaculus.client import AsyncMetaculusClient
 
     results: dict[int, dict] = {}
-    sem = asyncio.Semaphore(3)
 
     async with AsyncMetaculusClient() as client:
-
-        async def _fetch_one(pid: int) -> None:
-            async with sem:
-                try:
-                    data = await client.fetch_post_json(pid)
-                    results[pid] = data
-                except Exception:
-                    pass
-                await asyncio.sleep(0.5)
-
-        await asyncio.gather(*[_fetch_one(pid) for pid in post_ids])
+        for i, pid in enumerate(post_ids):
+            if i > 0:
+                await asyncio.sleep(2.0)
+            try:
+                data = await client.fetch_post_json(pid)
+                results[pid] = data
+            except Exception:
+                pass
 
     return results
 

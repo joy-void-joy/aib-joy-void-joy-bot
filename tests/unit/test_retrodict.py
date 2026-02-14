@@ -9,7 +9,7 @@ import pytest
 from claude_agent_sdk.types import HookContext, PreToolUseHookInput
 
 from aib.agent.hooks import HooksConfig
-from aib.agent.subagents import get_subagents
+from aib.agent.subagents import researcher_tools
 from aib.tools.exa import ExaResult
 from aib.agent.retrodict import (
     create_retrodict_hooks,
@@ -198,11 +198,12 @@ class TestRetrodictToolSchemas:
 
         schema = search_exa.input_schema
         assert isinstance(schema, dict), "input_schema must be a dict"
-        assert "published_before" in schema, (
+        props = schema.get("properties", schema)
+        assert "published_before" in props, (
             "published_before must be in search_exa input_schema or it will be "
             "stripped by SDK validation before reaching the handler"
         )
-        assert "livecrawl" in schema, (
+        assert "livecrawl" in props, (
             "livecrawl must be in search_exa input_schema or it will be "
             "stripped by SDK validation before reaching the handler"
         )
@@ -463,14 +464,10 @@ class TestRetrodictSubagentTools:
     """Tests for retrodict-aware subagent tool lists."""
 
     def test_search_news_excluded_in_retrodict(self) -> None:
-        """search_news should be excluded from all subagents in retrodict mode."""
+        """search_news should be excluded from researcher tools in retrodict mode."""
         with retrodict_cutoff.set(date(2026, 1, 15)):
-            subagents = get_subagents()
-            for name, agent_def in subagents.items():
-                tools = agent_def.tools or []
-                assert "mcp__forecasting__search_news" not in tools, (
-                    f"search_news should be excluded from {name} in retrodict mode"
-                )
+            tools = researcher_tools()
+            assert "mcp__forecasting__search_news" not in tools
 
     def test_search_news_included_normally(self) -> None:
         """search_news should be included when not in retrodict mode."""
@@ -478,11 +475,8 @@ class TestRetrodictSubagentTools:
             patch("aib.agent.subagents.settings.asknews_client_id", "test"),
             patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
         ):
-            subagents = get_subagents()
-            all_tools = []
-            for agent_def in subagents.values():
-                all_tools.extend(agent_def.tools or [])
-            assert "mcp__forecasting__search_news" in all_tools
+            tools = researcher_tools()
+            assert "mcp__forecasting__search_news" in tools
 
     def test_search_news_excluded_with_credentials_in_retrodict(self) -> None:
         """search_news should be excluded even with credentials in retrodict mode."""
@@ -491,18 +485,11 @@ class TestRetrodictSubagentTools:
             patch("aib.agent.subagents.settings.asknews_client_id", "test"),
             patch("aib.agent.subagents.settings.asknews_client_secret", "test"),
         ):
-            subagents = get_subagents()
-            for name, agent_def in subagents.items():
-                tools = agent_def.tools or []
-                assert "mcp__forecasting__search_news" not in tools, (
-                    f"search_news should be excluded from {name} in retrodict mode"
-                )
+            tools = researcher_tools()
+            assert "mcp__forecasting__search_news" not in tools
 
     def test_search_exa_always_available(self) -> None:
         """search_exa should be available in both modes (has internal date filter)."""
         with retrodict_cutoff.set(date(2026, 1, 15)):
-            subagents = get_subagents()
-            all_tools = []
-            for agent_def in subagents.values():
-                all_tools.extend(agent_def.tools or [])
-            assert "mcp__forecasting__search_exa" in all_tools
+            tools = researcher_tools()
+            assert "mcp__forecasting__search_exa" in tools

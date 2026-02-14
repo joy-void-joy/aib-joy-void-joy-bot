@@ -104,7 +104,7 @@ SANDBOX_TOOLS: frozenset[str] = frozenset(
 # Composition tools
 COMPOSITION_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__composition__spawn_subquestions",
+        "mcp__composition__spawn_subagents",
     }
 )
 
@@ -243,7 +243,7 @@ class ToolPolicy:
 
         Args:
             sandbox: The sandbox instance for code execution.
-            composition_server: The composition MCP server for spawn_subquestions.
+            composition_server: The composition MCP server for spawn_subagents.
             session_id: Session ID for the notes tool. Format: "<post_id>_<timestamp>".
                 Enables write_meta mode. If None, write_meta is disabled.
 
@@ -286,7 +286,7 @@ class ToolPolicy:
         """Get list of allowed tools based on policy.
 
         Args:
-            allow_spawn: Whether to allow spawn_subquestions (False for sub-forecasts).
+            allow_spawn: Whether to allow spawn_subagents (False for sub-forecasts).
 
         Returns:
             List of tool names that are allowed for this forecast.
@@ -370,7 +370,7 @@ class ToolPolicy:
 
         Args:
             mcp_servers: Dict of MCP servers from get_mcp_servers().
-            allow_spawn: Whether to include spawn_subquestions.
+            allow_spawn: Whether to include spawn_subagents.
 
         Returns:
             Markdown-formatted tool documentation.

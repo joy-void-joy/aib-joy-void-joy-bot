@@ -281,5 +281,151 @@ def regression() -> None:
         typer.echo(f"\nMissing retrodictions:\n  uv run forecast retrodict {ids}")
 
 
+META_PATTERNS = [
+    "community prediction",
+    "will the cp ",
+    "will cp ",
+]
+
+
+def _is_meta(title: str) -> bool:
+    """Detect meta-predictions by title keywords."""
+    t = title.lower()
+    return any(p in t for p in META_PATTERNS)
+
+
+@app.command()
+def extremes(
+    top_n: int = typer.Option(10, "-n", help="Number of best/worst to show"),
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+    source: str | None = typer.Option(
+        None, "--source", "-s", help="Filter by source (live/retrodict)"
+    ),
+    non_meta: bool = typer.Option(False, "--non-meta", help="Exclude meta-predictions"),
+    meta_only: bool = typer.Option(False, "--meta-only", help="Only meta-predictions"),
+    qtype: str | None = typer.Option(
+        None, "--type", "-t", help="Filter by question type (binary/numeric)"
+    ),
+) -> None:
+    """Show best and worst forecasts across all versions.
+
+    Ranks binary by Brier score, numeric by absolute error and CI membership.
+    Use --non-meta to focus on event-level predictions, --meta-only for CP questions.
+    """
+    rows = read_scores_csv()
+    if not rows:
+        typer.echo("No scores.csv found. Run 'build' first.")
+        raise typer.Exit(1)
+
+    resolved = [r for r in rows if r["resolved"] == "True"]
+
+    if version:
+        resolved = [r for r in resolved if r.get("agent_version", "") == version]
+    if source:
+        resolved = [r for r in resolved if r["source"] == source]
+    if non_meta:
+        resolved = [r for r in resolved if not _is_meta(r.get("question_title", ""))]
+    if meta_only:
+        resolved = [r for r in resolved if _is_meta(r.get("question_title", ""))]
+    if qtype:
+        resolved = [r for r in resolved if r["question_type"] == qtype]
+
+    # --- Binary ---
+    binary = [r for r in resolved if r.get("brier")]
+    if binary:
+        binary.sort(key=lambda x: float(x["brier"]))
+
+        typer.echo(f"\n=== TOP {top_n} BEST BINARY (lowest Brier) ===")
+        _print_binary_rows(binary[:top_n])
+
+        typer.echo(f"\n=== TOP {top_n} WORST BINARY (highest Brier) ===")
+        _print_binary_rows(binary[-top_n:])
+
+        typer.echo("\n=== BINARY SUMMARY BY VERSION ===")
+        by_ver: dict[str, list[float]] = {}
+        for r in binary:
+            v = r.get("agent_version", "?") or "?"
+            by_ver.setdefault(v, []).append(float(r["brier"]))
+
+        for v in sorted(by_ver.keys()):
+            scores = sorted(by_ver[v])
+            avg = sum(scores) / len(scores)
+            scores_str = ", ".join(f"{s:.3f}" for s in scores)
+            typer.echo(f"  v{v}: avg={avg:.3f} n={len(scores)} [{scores_str}]")
+
+    # --- Numeric (ranked by norm_error: 0=perfect, 1=at CI boundary, >1=outside) ---
+    numeric = [
+        r
+        for r in resolved
+        if r["question_type"] in ("numeric", "discrete") and r.get("norm_error")
+    ]
+    if numeric:
+        in_ci = sum(1 for r in numeric if r.get("within_ci") == "True")
+        pct = in_ci / len(numeric) * 100 if numeric else 0
+        norm_vals = [float(r["norm_error"]) for r in numeric]
+        avg_norm = sum(norm_vals) / len(norm_vals)
+
+        typer.echo(
+            f"\n=== NUMERIC: {in_ci}/{len(numeric)} within 90% CI ({pct:.0f}%), "
+            f"avg norm_error={avg_norm:.2f} ==="
+        )
+
+        numeric.sort(key=lambda x: float(x["norm_error"]))
+        typer.echo(f"\n--- Best {top_n} (lowest norm_error) ---")
+        _print_numeric_rows(numeric[:top_n])
+
+        typer.echo(f"\n--- Worst {top_n} (highest norm_error) ---")
+        _print_numeric_rows(numeric[-top_n:])
+
+        ci_misses = [r for r in numeric if r.get("within_ci") == "False"]
+        if ci_misses:
+            typer.echo(f"\n--- CI Misses ({len(ci_misses)}) ---")
+            _print_numeric_rows(ci_misses)
+
+        # Sharpness check: how many resolutions fall in the inner 50% of CI?
+        inner_50 = sum(1 for r in numeric if float(r["norm_error"]) < 0.5)
+        inner_pct = inner_50 / len(numeric) * 100
+        typer.echo(
+            f"\n--- Sharpness: {inner_50}/{len(numeric)} ({inner_pct:.0f}%) "
+            f"within inner 50% of CI (ideal ~50%) ---"
+        )
+        if inner_pct > 70:
+            typer.echo("  --> CDFs are too WIDE (over-dispersed)")
+        elif inner_pct < 30:
+            typer.echo("  --> CDFs are too NARROW (under-dispersed)")
+
+
+def _print_binary_rows(rows: list[dict[str, str]]) -> None:
+    for r in rows:
+        ver = r.get("agent_version", "?") or "?"
+        brier = float(r["brier"])
+        prob = r.get("probability", "?")
+        res = r.get("resolution", "?")
+        pid = r.get("post_id", "?")
+        title = r.get("question_title", "")[:78]
+        meta = " [META]" if _is_meta(title) else ""
+        typer.echo(f"  Brier={brier:.3f} v{ver} post={pid} prob={prob} res={res}{meta}")
+        typer.echo(f"    {title}")
+
+
+def _print_numeric_rows(rows: list[dict[str, str]]) -> None:
+    for r in rows:
+        ver = r.get("agent_version", "?") or "?"
+        ne = r.get("norm_error", "")
+        ne_str = f"{float(ne):.2f}" if ne else "?"
+        median = r.get("median", "?")
+        res = r.get("resolution", "?")
+        pid = r.get("post_id", "?")
+        ci = r.get("within_ci", "")
+        ci_str = "Y" if ci == "True" else "N" if ci == "False" else "?"
+        title = r.get("question_title", "")[:78]
+        typer.echo(
+            f"  NE={ne_str} v{ver} post={pid} median={median} res={res} CI={ci_str}"
+        )
+        typer.echo(f"    {title}")
+
+
 if __name__ == "__main__":
     app()

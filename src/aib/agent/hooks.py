@@ -7,6 +7,13 @@ enabling better type checking and IDE support.
 from typing import Literal, TypedDict
 
 from claude_agent_sdk import HookMatcher
+from claude_agent_sdk.types import (
+    HookContext,
+    HookInput,
+    HookJSONOutput,
+    PreToolUseHookSpecificOutput,
+    SyncHookJSONOutput,
+)
 
 # All hook event types supported by the Claude Agent SDK
 HookEventType = Literal[
@@ -72,3 +79,35 @@ def merge_hooks(base: HooksConfig, additional: HooksConfig) -> HooksConfig:
             merged[event] = additional[event]  # type: ignore[literal-required]
 
     return merged
+
+
+def create_allowed_tools_hook(allowed_tools: list[str]) -> HooksConfig:
+    """Enforce an allowed_tools list via PreToolUse hook.
+
+    bypassPermissions mode ignores the allowed_tools option on
+    ClaudeAgentOptions. This hook provides equivalent enforcement
+    by denying any tool not in the list.
+    """
+    allowed = frozenset(allowed_tools)
+
+    async def hook(
+        input_data: HookInput,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> HookJSONOutput:
+        if input_data["hook_event_name"] == "PreToolUse":
+            if input_data["tool_name"] not in allowed:
+                return SyncHookJSONOutput(
+                    hookSpecificOutput=PreToolUseHookSpecificOutput(
+                        hookEventName="PreToolUse",
+                        permissionDecision="deny",
+                        permissionDecisionReason=(
+                            f"{input_data['tool_name']} is not available."
+                        ),
+                    ),
+                )
+        return SyncHookJSONOutput()
+
+    return {
+        "PreToolUse": [HookMatcher(hooks=[hook])],
+    }

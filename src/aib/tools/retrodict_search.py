@@ -179,23 +179,7 @@ async def _raw_web_search(
         "Search the web for information. Returns titles, URLs, and snippets. "
         "Supports allowed_domains/blocked_domains for domain filtering."
     ),
-    {
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "Search query"},
-            "allowed_domains": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Only include results from these domains",
-            },
-            "blocked_domains": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Never include results from these domains",
-            },
-        },
-        "required": ["query"],
-    },
+    WebSearchInput.model_json_schema(),
 )
 @tracked("web_search")
 async def web_search(args: dict[str, Any]) -> dict[str, Any]:
@@ -291,17 +275,7 @@ async def _extract_with_prompt(content: str, prompt: str, url: str) -> str:
         "Fetch and extract content from a URL. "
         "If a prompt is provided, extracts specific information from the page."
     ),
-    {
-        "type": "object",
-        "properties": {
-            "url": {"type": "string", "description": "The URL to fetch content from"},
-            "prompt": {
-                "type": "string",
-                "description": "What information to extract from the page",
-            },
-        },
-        "required": ["url"],
-    },
+    FetchInput.model_json_schema(),
 )
 @tracked("fetch")
 async def fetch(args: dict[str, Any]) -> dict[str, Any]:

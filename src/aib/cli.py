@@ -1,9 +1,11 @@
 """Metaculus Forecasting Bot - CLI Entry Point."""
 
 import asyncio
+import csv
 import logging
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated, TypedDict
 
 import httpx
@@ -18,7 +20,7 @@ from aib.agent.history import (
     mark_submitted,
     update_retrodict_comparison,
 )
-from aib.retrodict_context import retrodict_cutoff
+from aib.retrodict_context import forecasted_post_id, retrodict_cutoff
 from metaculus import (
     AsyncMetaculusClient,
     BinaryQuestion,
@@ -105,6 +107,24 @@ def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
         return None
 
 
+_SCORES_PATH = Path("notes/scores.csv")
+
+
+def _lookup_cached_resolution(post_id: int) -> str | None:
+    """Look up resolution from scores.csv when the API returns null."""
+    if not _SCORES_PATH.exists():
+        return None
+    with open(_SCORES_PATH) as f:
+        for row in csv.DictReader(f):
+            if (
+                row["post_id"] == str(post_id)
+                and row["resolution"]
+                and row["resolved"] == "True"
+            ):
+                return row["resolution"]
+    return None
+
+
 async def get_question_meta(post_id: int) -> QuestionMeta | None:
     """Fetch question metadata including resolution and community prediction."""
     client = AsyncMetaculusClient()
@@ -143,7 +163,7 @@ async def get_question_meta(post_id: int) -> QuestionMeta | None:
             numeric_cp = _extract_numeric_cp(q)
 
         return QuestionMeta(
-            resolution=q.resolution_string,
+            resolution=q.resolution_string or _lookup_cached_resolution(post_id),
             binary_cp=binary_cp,
             numeric_cp=numeric_cp,
             published_at=q.published_time,
@@ -498,9 +518,11 @@ def retrodict(
         # Run forecast (set ContextVar for retrodict mode)
         try:
             token = retrodict_cutoff.set(cutoff_date)
+            pid_token = forecasted_post_id.set(qid)
             try:
                 output = asyncio.run(run_forecast(qid))
             finally:
+                forecasted_post_id.reset(pid_token)
                 retrodict_cutoff.reset(token)
             display_forecast(output)
 

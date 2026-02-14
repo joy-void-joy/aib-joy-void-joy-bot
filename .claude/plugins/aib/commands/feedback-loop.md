@@ -102,15 +102,22 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-ne
 **If we have resolved forecasts**: Run calibration analysis first, then check Brier.
 - Calibration tells you WHERE you're wrong (actionable diagnostic)
 - Brier/log scores tell you HOW you're scoring (tournament metric)
+- **Always pass `--version`** to scope analysis to the current agent version
 ```bash
-# Calibration analysis (primary diagnostic)
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
+# Get current version
+grep AGENT_VERSION src/aib/version.py
+
+# Calibration analysis scoped to current version
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary --version 0.7.2
 
 # Detailed binary calibration with reliability diagram
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --version 0.7.2
 
 # Numeric PIT calibration
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric --version 0.7.2
+
+# Cross-version comparison via scores table
+uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.6.0 0.7.2
 ```
 - Which probability ranges have the worst calibration gaps? Read those traces.
 - Are there systematic patterns (overconfidence? underconfidence in a range?)
@@ -149,6 +156,8 @@ uv run forecast retrodict 41835 --no-blind
 - **Financial tools**: Caps `end_date` parameters to the forecast date
 - **Live-only tools**: Blocked with hints to use historical alternatives (e.g., `stock_price` → `stock_history`)
 - **CP history**: Filters response to exclude data after the cutoff
+- **CP visibility**: Only hides CP for the forecasted question (not underlying questions in meta-predictions)
+- **Fine print**: Redacted via haiku to remove post-cutoff temporal references
 
 The agent forecasts as if it were making the prediction at the original question date, using only information that was available at that time.
 
@@ -158,6 +167,14 @@ The agent forecasts as if it were making the prediction at the original question
 - Filename includes the cutoff date for easy identification
 - Shows actual resolution and final CP for comparison
 - Computes Brier scores for binary questions
+
+**Resolution data workaround (as of Feb 2026):**
+
+The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12, 2026. This means `fetch_post_json()` can no longer enrich resolution data — the `resolution` field is null for all questions. Until this is fixed upstream:
+- Retrodict will save forecasts with `resolution: null` and `comparison: null`
+- Use `resolution_update.py set <post_id> <value>` to manually apply known resolutions
+- For re-retrodictions of questions with existing v0.3.1 data, the resolution is cached in `notes/scores.csv`
+- Run `scores_table.py build` after setting resolutions to rebuild calibration data
 
 **Retrodict vs Live forecasts:**
 - Live forecasts go to `notes/forecasts/`
@@ -188,6 +205,18 @@ cat logs/<question_id>/*.log
 2. Identify which tool allowed the leak
 3. Report the gap - retrodict hooks need fixing
 4. Exclude from Brier score calculations
+
+**Known leak vectors (mitigated in v0.8.0):**
+- **Question fine_print**: `get_metaculus_questions` redacts fine_print via haiku to remove post-cutoff temporal references. Example: Q40971's fine_print contained an OPM archive from Jan 31 that leaked the government shutdown outcome. Haiku redaction removes such references but may not catch all cases — still check manually.
+
+**LLM training data leakage (distinct from tool leaks):**
+
+Tool-level sandboxing prevents the agent from *fetching* future data, but the LLM's training data may contain knowledge of past outcomes. This is especially dangerous for retrodicting questions about well-known historical events (elections, economic crises, wars). Signs of training data leakage:
+- Subagent reasoning that states the actual outcome without citing a source
+- Suspiciously precise forecasts on events with clear historical outcomes
+- Analyst subagent "reasoning" that mirrors post-hoc narratives
+
+**Mitigation:** For historical retrodictions (pre-training-cutoff), the forecast is still useful if the *main agent's* reasoning chain doesn't reference the outcome. Subagent leaks can be tolerated if the main agent's probability reflects genuine uncertainty. However, flag these in the analysis so calibration data isn't contaminated.
 
 **Expected behavior in proper retrodict:**
 - Agent uses historical data and base rates
@@ -220,10 +249,11 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodic
 - [ ] WebSearch results all predate the cutoff
 - [ ] WebFetch URLs went through Wayback Machine (check logs)
 - [ ] No financial data beyond the cutoff date
+- [ ] Related questions' fine_print doesn't contain post-cutoff resolution data
 
 **If a retrodiction fails airtightness**: Exclude it from calibration data and file a bug against the retrodict hooks.
 
-**IMPORTANT**: `feedback_collect.py` must be updated to process `notes/retrodict/` alongside `notes/forecasts/`. Until then, manually read retrodiction JSONs and compute accuracy. This is a known meta-meta gap — see Phase 5 for the fix.
+**Note**: `feedback_collect.py --include-retrodict` processes both `notes/forecasts/` and `notes/retrodict/`.
 
 ### 1d. About Community Prediction
 
@@ -246,70 +276,104 @@ CP is just another forecaster. Diverging from CP is not inherently bad - we WANT
 
 **This is the most important phase.** Do not skip to aggregate patterns.
 
-### 2a. Read Full Reasoning Traces (logs/)
+### CRITICAL: Filter by AGENT_VERSION
 
-The `logs/` directory contains the ACTUAL reasoning traces from each forecast session. These are more detailed than meta-reflections and show exactly what the agent thought and did.
+**Every analysis must be version-aware.** Different agent versions have different prompts,
+tools, and subagent configurations. Mixing data across versions produces meaningless
+aggregate statistics.
 
+1. Check the current version: `grep AGENT_VERSION src/aib/version.py`
+2. **Pass `--version` to all scripts** that support it:
+   - `calibration_analysis.py summary --version 0.7.2`
+   - `calibration_analysis.py binary --version 0.7.2`
+   - `scores_table.py show --version 0.7.2`
+3. When comparing to previous versions, always report metrics PER VERSION
+4. If the `agent_version` field is missing or inconsistent, note this as a data quality
+   issue — do not silently include unversioned data in current-version metrics
+
+**Use `scores_table.py compare` for version-to-version comparisons:**
 ```bash
-# List all logged forecasts
-ls logs/
-
-# Read the full trace for a specific question
-cat logs/<question_id>/*.log
+uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.6.0 0.7.2
 ```
 
-**For questions with large CP divergence, READ THE FULL LOG.** The meta-reflection is a summary; the log shows:
-- The agent's raw thinking process
-- Which searches and tools were called
-- How evidence was interpreted
-- Where reasoning may have gone wrong
-
-### 2b. Read 5-10 Meta-Reflections
-
-Pick a sample including:
-- Questions with large CP divergence (if available)
-- Questions where tools failed
-- Questions across different types (binary, numeric, meta)
-
-For each, ask:
-1. **Is the reasoning sound?** Does the logic follow from the evidence?
-2. **What tools worked?** What provided high-value information?
-3. **What tools failed?** What blocked progress?
-4. **What does the agent say it needs?** Explicit capability requests
-
-**Cross-reference with logs**: If the meta-reflection says "I used 8 tool calls", check the log to see what actually happened.
-
-### 2c. Extract Tool Failures
-
+**Use `scores_table.py extremes` to find best/worst forecasts for deep trace reading:**
 ```bash
-# Tool failures mentioned in meta-reflections
-grep -rh "failed\|error\|Error\|didn't work\|couldn't\|blocked\|403\|404\|405" notes/sessions/*/meta.md | sort | uniq -c | sort -rn | head -20
+# All forecasts — best and worst by Brier (binary) and abs error (numeric)
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes
+
+# Non-meta only (exclude CP questions) — for event-level analysis
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --non-meta
+
+# Meta-predictions only
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --meta-only
+
+# Filter by version, source, or type
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --version 0.11.0 --type numeric
 ```
 
-Common patterns:
-- WebFetch fails on JS-heavy sites → Add API-based tool
-- Specific API returns errors → Fix or add fallback
-- Tool exists but agent doesn't use it → Improve discoverability
+### 2a. Launch Trace Explorer (Subagent)
 
-### 2d. Extract Capability Requests
+**Do NOT read traces directly in this conversation.** Traces consume ~1160 lines each and will
+exhaust the context window before you reach later phases. Instead, launch the `trace-explorer`
+subagent which reads traces in its own context and returns a compact pattern report.
+
+**Select which traces to analyze:**
 
 ```bash
-# What the agent explicitly says it needs
-grep -rh "would be useful\|would have helped\|would benefit\|wish I had\|tool that\|specialized tool" notes/sessions/*/meta.md | head -20
+# Use extremes to find best/worst forecasts
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --version <current>
+
+# Or list all available traces
+uv run python .claude/plugins/aib/scripts/trace_log.py list
 ```
 
-**Trust these requests.** The agent knows what it needs. Build the tools it asks for.
+**Launch the trace explorer:**
 
-### 2e. Evaluate Reasoning Quality
+```
+Task(subagent_type="aib-workflow:trace-explorer", prompt="""
+Analyze traces for these post IDs: [list of 5-15 IDs]
 
-For forecasts with large CP divergence, ask:
-1. Is the agent's evidence valid?
-2. Is the logic sound?
-3. Are there gaps in the analysis?
-4. Would a different forecast be MORE justified by the evidence?
+Context:
+- Current agent version: [X.Y.Z]
+- Focus areas: [e.g., "tool failures", "reasoning on meta-predictions", "numeric CDF quality"]
+- Known issues from Phase 1: [brief summary of calibration findings]
 
-**If reasoning is sound**: Divergence may be an edge. Wait for resolution.
-**If reasoning is flawed**: Identify the specific failure. Is it a capability gap or a reasoning error?
+Return the standard pattern report.
+""")
+```
+
+**What to include in the prompt:**
+- Post IDs to analyze (from extremes, or all recent forecasts)
+- Current agent version (so the explorer can filter)
+- Any specific focus areas from Phase 1 calibration findings
+- Known issues from the previous feedback session (Phase 0)
+
+**What you get back:**
+- Tool failure patterns (aggregated across all traces)
+- Capability requests (what the agent asked for)
+- Reasoning patterns and quality issues
+- Tool usage patterns (high-value vs low-value tools)
+- 2-3 specific traces worth reading in full (outliers or interesting cases)
+
+### 2b. Deep-Dive on Flagged Traces (Optional)
+
+The trace explorer flags 2-3 traces worth reading fully. **Only read these if the pattern
+report raises specific questions** that need full-trace context to answer.
+
+If you do read a trace, use `trace_log.py show <id>` (NOT raw logs) and read it with a
+specific question in mind — don't just browse.
+
+### 2c. Evaluate Findings
+
+Based on the trace explorer's pattern report:
+
+1. **Tool failures**: Which tools fail most? Are they fixable or should we add alternatives?
+2. **Capability requests**: What does the agent say it needs? Trust these requests.
+3. **Reasoning quality**: Are there systematic reasoning errors, or just individual misjudgments?
+4. **Tool value**: Are expensive tools (sandbox, web search) providing proportional value?
+
+**If reasoning is sound but diverges from CP**: May be an edge. Wait for resolution.
+**If reasoning is systematically flawed**: Identify whether it's a capability gap or a prompt issue.
 
 ## Phase 3: Meta Level - Analysis Process Quality
 
@@ -347,7 +411,35 @@ If you find gaps, add tracking in Phase 4.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
+**Do NOT edit `version.py` manually.** Use `version_tag.py bump <patch|minor|major> "<summary>"` — pick the right level based on the scope of changes (see Version Bumps below).
+
 **Log every change** in the analysis document (see Documentation Template). The next feedback session reads this to avoid re-deriving the same improvements. Be specific: "Added X to Y because Z" — not just "improved prompts."
+
+### Priority 0: Evaluate Prompt Health
+
+Before patching individual issues, assess whether the system prompt needs a structural
+rewrite rather than another incremental patch.
+
+**When to rewrite vs patch:**
+
+A full rewrite is warranted when:
+- Sections read as addendums rather than integrated guidance (conditional exceptions, "if X fails, do Y" patches)
+- The same question type (meta-predictions, numeric) has been patched 3+ times across sessions
+- Best-performing traces succeed despite the prompt, not because of it
+- Worst-performing traces fail because the prompt's decision tree doesn't match how the agent should think
+- The prompt has grown >20% since the last rewrite without corresponding accuracy improvement
+
+**How to do a principled rewrite:**
+1. **Study the best-performing traces.** Use `scores_table.py show --resolved` and `trace_log.py show <id>` to read the full reasoning for the top 5-10 forecasts by Brier score. What patterns do they follow? What decisions led to success?
+2. **Study the worst-performing traces.** Same process for the bottom 5-10. What went wrong — capability gap or reasoning error the prompt could have prevented?
+3. **Read the full current prompt** (`src/aib/agent/prompts.py`). Identify sections that feel patched, redundant, or irrelevant. Look for conditional exceptions that accumulated over time.
+4. **Draft from scratch.** Write the prompt as you would if starting today with all accumulated knowledge. Don't copy-paste from the old prompt — rewrite each section from first principles, incorporating the patterns from best traces.
+5. **Ensure monolithic coherence.** The result must read as a single authored document — no references to "previous behavior," no "Exception:" patches, no "Note: as of version X."
+
+**When NOT to rewrite:**
+- If you found only 1-2 clear bugs or gaps, a targeted patch is better
+- If the prompt's structure is sound and only needs a new principle or tool reference
+- If there isn't enough calibration data (< 20 resolved forecasts) to identify structural issues
 
 ### Priority 1: Fix Failing Tools
 
@@ -391,7 +483,7 @@ If subagents aren't used:
 
 ### Priority 4: Simplify Prompts (Not Add Rules)
 
-Prompt changes should:
+For incremental prompt changes (when Priority 0 determined a full rewrite isn't needed):
 - ADD general principles that help across domains
 - REMOVE prescriptive rules that add complexity
 - PREFER "use tool X for Y" over "when pattern P, do Q"
@@ -400,6 +492,25 @@ Prompt changes should:
 - Specific rules for specific question types
 - Numeric adjustments ("subtract 0.5 logits when...")
 - Patches for observed patterns
+- Conditional exceptions that reference specific failure modes
+
+**Track patch count.** If you add a patch this session, count how many patches have been
+added since the last rewrite. If the count exceeds 3, flag it in your analysis — the next
+session should evaluate a full rewrite (Priority 0).
+
+### Version Bumps
+
+After implementing changes that affect agent behavior, **always bump the version** at the appropriate level using the bump script:
+
+```bash
+uv run python .claude/plugins/aib/scripts/version_tag.py bump <level> "<summary>" [--detail "a, b, c"]
+```
+
+- **Patch (0.x.Y)**: Bug fixes, tool fixes, config tweaks. Default when unsure.
+- **Minor (0.X.0)**: Small prompt changes, new tools, subagent modifications.
+- **Major (X.0.0)**: Architecture changes (new LLM, new framework, major restructuring).
+
+Data-only or infrastructure changes (scripts, feedback-loop docs) don't need a bump.
 
 ## Phase 5: Meta-Meta Level - Improve This Document
 
@@ -449,8 +560,11 @@ Every session should leave this document better:
 ### DON'T: Patch prompts for observed patterns
 ❌ "When forecasting meta-predictions, subtract 0.5 logits"
 ❌ "For definitional questions, cap confidence at 70%"
+❌ Adding "Exception:" clauses to existing rules
+❌ "If X fails, do Y" conditional patches
 ✅ Build tool that provides historical calibration data
 ✅ Add general principle about interpretation uncertainty
+✅ When patches accumulate, rewrite the section from scratch (Priority 0)
 
 ### DON'T: Over-rely on CP divergence
 ❌ "Large CP divergence means we're wrong"
@@ -554,12 +668,21 @@ uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
 uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
 
 # Calibration analysis (primary diagnostic — ECE, reliability diagrams, PIT)
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --source retrodict
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric
+# Always pass --version to scope to the current agent version
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary --version 0.7.2
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --version 0.7.2 --source retrodict
+uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric --version 0.7.2
 
 # Basic calibration report (Brier/log scores, bucket table)
 uv run python .claude/plugins/aib/scripts/calibration_report.py summary
+
+# Best/worst forecasts (for deep trace reading)
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --non-meta
+uv run python .claude/plugins/aib/scripts/scores_table.py extremes --meta-only --version 0.11.0
+
+# Version comparison
+uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.10.0 0.11.0
 
 # (Add more scripts as you build them — this tooling is in constant evolution)
 ```
@@ -569,21 +692,24 @@ uv run python .claude/plugins/aib/scripts/calibration_report.py summary
 Every few feedback loop sessions, take time to:
 
 1. **Reread this entire document** - Is it still accurate? Remove outdated guidance.
-2. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
-3. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
-4. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
+2. **Prompt health audit** - Read the entire system prompt (`src/aib/agent/prompts.py`) with fresh eyes. Does it read as a coherent, monolithic document? Are there visible patches? Would a new reader understand the decision tree? If not, trigger a rewrite (Phase 4, Priority 0).
+3. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
+4. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
+5. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
 
 ## Key Questions to Answer Each Session
 
-1. **Do we have resolution data?** If no, focus on process not accuracy.
-2. **How is our calibration?** Run `calibration_analysis.py summary`. Are we overconfident or underconfident? In which probability ranges?
-3. **What's our Brier score?** This is the REAL metric (when available).
+1. **What AGENT_VERSION am I analyzing?** Filter ALL data by version. Pass `--version` to every script. Do not mix versions.
+2. **Do we have resolution data?** If no, focus on process not accuracy. Check HTML enrichment status (may return 406).
+3. **How is calibration FOR THIS VERSION?** Run `calibration_analysis.py summary --version X.Y.Z`. Compare to previous version with `scores_table.py compare`.
 4. **What tools fail repeatedly?** Fix or replace them.
-5. **What tools go unused?** Check traces for tools/subagents that were available but never called. Are there capabilities the agent doesn't know about or doesn't reach for?
-6. **Is the subagent structure coherent?** Are subagents well-scoped and well-used? Is work being duplicated or dropped between them? Does the orchestration make sense?
+5. **What tools go unused?** Check traces for tools/subagents that were available but never called.
+6. **Is the subagent structure coherent?** Are subagents well-scoped and well-used?
 7. **What does the agent say it needs?** Trust and provide.
 8. **Is the agent's reasoning sound?** Read traces deeply to find out.
-9. **What would make this process better?** Update this document.
+9. **Are retrodictions airtight?** Check for future leaks in reasoning (LLM training data, post-cutoff references).
+10. **Is the prompt accumulating patches?** Count conditional exceptions and "if X fails" clauses added in recent sessions. If >3 patches since last rewrite, evaluate a structural rewrite (Phase 4, Priority 0).
+11. **What would make this process better?** Update this document.
 
 ## Phase 6: Queue Retrodictions
 

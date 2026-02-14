@@ -1,7 +1,10 @@
-"""PreToolUse hook that gates StructuredOutput behind meta-reflection.
+"""PreToolUse hook for StructuredOutput.
 
-Denies StructuredOutput until meta.md exists on disk, forcing the agent
-to call notes(write_meta) before providing its final forecast.
+Combines two concerns into a single hook to work around CLI bug #15897
+(updatedInput is discarded when multiple PreToolUse hooks execute):
+
+- Meta-gate: Denies StructuredOutput until meta.md exists on disk.
+- Unwrap: Fixes model hallucination where output is wrapped in {"parameter": {...}}.
 """
 
 import logging
@@ -16,11 +19,15 @@ from aib.agent.hooks import HooksConfig
 logger = logging.getLogger(__name__)
 
 
-def create_meta_gate_hooks(meta_path: Path) -> HooksConfig:
-    """Create PreToolUse hook that denies StructuredOutput until meta-reflection exists.
+def create_structured_output_hooks(meta_path: Path | None = None) -> HooksConfig:
+    """Combined StructuredOutput hook: unwrap + optional meta-gate.
+
+    Must be the LAST PreToolUse hook registered to ensure updatedInput
+    is not overwritten by subsequent hooks (CLI bug #15897).
 
     Args:
-        meta_path: Expected path to meta.md (varies by retrodict mode).
+        meta_path: Path to meta.md. If set, StructuredOutput is denied
+            until this file exists. If None, meta-gate is skipped.
 
     Returns:
         HooksConfig with a single PreToolUse hook.
@@ -38,29 +45,46 @@ def create_meta_gate_hooks(meta_path: Path) -> HooksConfig:
             return {}
 
         hook_event = input_data["hook_event_name"]
+        tool_input = input_data.get("tool_input", {})
 
-        if meta_path.exists():
+        # --- Meta-gate: deny until meta-reflection exists ---
+        if meta_path is not None and not meta_path.exists():
+            logger.warning(
+                "Denying StructuredOutput — meta-reflection not yet written at %s",
+                meta_path,
+            )
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": hook_event,
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": (
+                        "You must write a meta-reflection using "
+                        "notes(mode='write_meta', content='...') BEFORE providing "
+                        "your final forecast. Write your meta-reflection first, "
+                        "then call StructuredOutput again."
+                    ),
+                }
+            }
+
+        # --- Unwrap {"parameter": {...}} wrapper ---
+        if "parameter" in tool_input and isinstance(tool_input["parameter"], dict):
+            unwrapped = tool_input["parameter"]
+            logger.info(
+                "Unwrapping StructuredOutput 'parameter' wrapper (%d fields)",
+                len(unwrapped),
+            )
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
                     "permissionDecision": "allow",
+                    "updatedInput": unwrapped,
                 }
             }
 
-        logger.warning(
-            "Denying StructuredOutput — meta-reflection not yet written at %s",
-            meta_path,
-        )
         return {
             "hookSpecificOutput": {
                 "hookEventName": hook_event,
-                "permissionDecision": "deny",
-                "permissionDecisionReason": (
-                    "You must write a meta-reflection using "
-                    "notes(mode='write_meta', content='...') BEFORE providing "
-                    "your final forecast. Write your meta-reflection first, "
-                    "then call StructuredOutput again."
-                ),
+                "permissionDecision": "allow",
             }
         }
 

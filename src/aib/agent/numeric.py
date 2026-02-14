@@ -611,9 +611,7 @@ def standardize_cdf(
     cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
 
     def cap_pmf(scale: float) -> np.ndarray:
-        return np.concatenate(
-            [pmf[:1], np.minimum(cap, scale * pmf[1:-1]), pmf[-1:]]
-        )
+        return np.concatenate([pmf[:1], np.minimum(cap, scale * pmf[1:-1]), pmf[-1:]])
 
     def capped_sum(scale: float) -> float:
         return float(cap_pmf(scale).sum())

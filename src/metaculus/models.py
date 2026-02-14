@@ -16,7 +16,7 @@ Metaculus has two different ID systems:
 - **question_id** (id_of_question): The internal ID of the actual question.
   Used for:
   - Coherence links: GET /api/coherence/question/{question_id}/links/
-  - CP history: GET /api/questions/{question_id}/aggregate-history/
+  - CP history: GET /api/aggregation_explorer/?post_id={post_id}
   - Submitting forecasts: POST /api/questions/{question_id}/predict/
 
 For most questions, post_id == question_id, but for group questions
@@ -147,7 +147,7 @@ class MetaculusQuestion(BaseModel):
     @classmethod
     def _from_api_json_impl(cls, post_json: dict[str, Any]) -> Self:
         """Internal implementation for parsing API JSON."""
-        question_json = post_json.get("question") or post_json.get("conditional", {})
+        question_json = post_json.get("question", {})
 
         # Parse tournament slugs
         tournament_slugs: list[str] = []
@@ -312,6 +312,26 @@ class MultipleChoiceQuestion(MetaculusQuestion):
         ]
 
         return base
+
+
+# --- Aggregation History ---
+
+
+class AggregationHistoryPoint(BaseModel):
+    """A single point in the CP history time series."""
+
+    start_time: float
+    end_time: float | None = None
+    centers: list[float] = Field(default_factory=list)
+    means: list[float] = Field(default_factory=list)
+    forecaster_count: int | None = None
+
+
+class AggregationMethod(BaseModel):
+    """Aggregation data for a single method (recency_weighted, unweighted)."""
+
+    history: list[AggregationHistoryPoint] = Field(default_factory=list)
+    latest: AggregationHistoryPoint | None = None
 
 
 # --- Coherence Links ---

@@ -18,6 +18,7 @@ from tenacity import (
 )
 
 from metaculus.models import (
+    AggregationMethod,
     ApiFilter,
     DetailedCoherenceLink,
     MetaculusQuestion,
@@ -162,6 +163,35 @@ class AsyncMetaculusClient:
         return {**post_json, "question": merged_question}
 
     @with_retry()
+    async def fetch_aggregation_history(
+        self,
+        post_id: int,
+    ) -> AggregationMethod:
+        """Fetch CP history from the aggregation_explorer endpoint.
+
+        Works for both open and resolved questions, unlike the posts API
+        which returns null aggregations.
+        """
+        async with self._http_client() as client:
+            response = await client.get(
+                f"{self.base_url}/aggregation_explorer/",
+                headers=self._get_headers(),
+                params={
+                    "post_id": post_id,
+                    "aggregation_methods": "recency_weighted",
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        recency = data.get("recency_weighted") or data.get("aggregations", {}).get(
+            "recency_weighted"
+        )
+        if recency is None:
+            return AggregationMethod()
+        return AggregationMethod.model_validate(recency)
+
+    @with_retry()
     async def fetch_post_json(self, post_id: int) -> dict[str, Any]:
         """Fetch enriched post JSON by post ID.
 
@@ -231,9 +261,7 @@ class AsyncMetaculusClient:
                 post_status = post_json.get("status")
                 if post_status not in api_filter.allowed_statuses:
                     continue
-            parsed = self._parse_post_json(
-                post_json, api_filter.group_question_mode
-            )
+            parsed = self._parse_post_json(post_json, api_filter.group_question_mode)
             questions.extend(parsed)
 
         logger.info("Loaded %d questions from override file", len(questions))
@@ -324,8 +352,7 @@ class AsyncMetaculusClient:
             elif group_question_mode == "unpack_subquestions":
                 return self._unpack_group_question(post_json)
         elif "conditional" in post_json:
-            post_json["question"] = post_json["conditional"]
-            post_json["question"]["type"] = "conditional"
+            return self._unpack_conditional(post_json)
 
         # Skip posts without question data (e.g., notebooks)
         if post_json.get("question") is None:
@@ -349,6 +376,25 @@ class AsyncMetaculusClient:
                 "question": sub_question_json,
             }
             sub_post_json.pop("group_of_questions", None)
+            questions.append(MetaculusQuestion.from_api_json(sub_post_json))
+
+        return questions
+
+    @staticmethod
+    def _unpack_conditional(post_json: dict[str, Any]) -> list[MetaculusQuestion]:
+        """Unpack a conditional post into its question_yes and question_no."""
+        cond_json = post_json["conditional"]
+        questions: list[MetaculusQuestion] = []
+
+        for key in ("question_yes", "question_no"):
+            sub_question_json = cond_json.get(key)
+            if sub_question_json is None:
+                continue
+            sub_post_json = {
+                **post_json,
+                "question": sub_question_json,
+            }
+            sub_post_json.pop("conditional", None)
             questions.append(MetaculusQuestion.from_api_json(sub_post_json))
 
         return questions

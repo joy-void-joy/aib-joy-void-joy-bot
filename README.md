@@ -27,7 +27,7 @@ The forecasting agent can use:
 - **Computation**: Sandboxed Python execution in Docker for Monte Carlo simulations, statistical analysis
 - **Decomposition**: Spawn parallel sub-forecasts for complex questions
 
-It also has five specialized subagents it can delegate to: deep-researcher, estimator, quick-researcher, link-explorer, and fact-checker. Each runs with its own tool access and returns structured results.
+It has three subagents: researcher (information gathering), analyst (quantitative computation), and premortem (devil's advocate that stress-tests the forecast). Each runs with its own tool access for parallel work.
 
 ## The Feedback Loop
 

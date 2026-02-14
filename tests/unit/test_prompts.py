@@ -9,11 +9,10 @@ class TestForecastingSystemPrompt:
     def test_prompt_contains_expected_sections(self) -> None:
         """Prompt includes key forecasting guidance sections."""
         prompt = get_forecasting_system_prompt()
-        # Core methodology sections
-        assert "## Research Principles" in prompt
+        assert "## Core Principles" in prompt
         assert "## Output Format" in prompt
-        assert "Nothing Ever Happens" in prompt
-        assert "Resolution Criteria" in prompt
+        assert "## STEP 4: Calibration" in prompt
+        assert "## Meta-Predictions" in prompt
 
     def test_prompt_does_not_contain_date(self) -> None:
         """Prompt should not mention today's date (avoids agent self-restricting)."""
@@ -30,5 +29,18 @@ class TestForecastingSystemPrompt:
     def test_tool_docs_not_included_by_default(self) -> None:
         """Without tool_docs, prompt has no tool section."""
         prompt = get_forecasting_system_prompt()
-        # Base prompt doesn't have tool listing (tools are dynamically generated)
         assert "## Available Tools" not in prompt
+
+    def test_subagents_rendered_from_descriptions(self) -> None:
+        """Subagent descriptions come from the descriptions dict."""
+        agents = {
+            "test_agent": "A test agent for testing",
+        }
+        prompt = get_forecasting_system_prompt(subagents=agents)
+        assert "**test_agent**" in prompt
+        assert "A test agent for testing" in prompt
+
+    def test_no_subagents_shows_placeholder(self) -> None:
+        """Without subagents, prompt shows a placeholder."""
+        prompt = get_forecasting_system_prompt()
+        assert "No subagents configured" in prompt
