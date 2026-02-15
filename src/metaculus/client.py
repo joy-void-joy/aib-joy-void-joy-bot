@@ -146,36 +146,80 @@ class AsyncMetaculusClient:
         client: httpx.AsyncClient,
         post_id: int,
     ) -> dict[str, Any]:
-        """Fill nulls in the JSON API response from the HTML API.
+        """Fill nulls in the JSON API response using fallback sources.
 
-        The Metaculus JSON API may return null for various question fields
-        (description, resolution, aggregations, etc.). The DRF browsable
-        HTML page still includes them. Use HTML as the base, then overlay
-        non-null JSON values on top.
+        The Metaculus /api/posts/ endpoint may return null for various question
+        fields. Two fallback sources are tried in order:
+
+        1. HTML API — The DRF browsable HTML page includes description,
+           resolution_criteria, and fine_print that the JSON API omits.
+        2. Old API — The /api2/questions/ endpoint (unauthenticated) returns
+           resolution and aggregation data hidden from tournament participants.
         """
         question = post_json.get("question") or {}
         has_nulls = any(v is None for v in question.values())
         if not has_nulls:
             return post_json
 
-        response = await client.get(
-            f"{self.base_url}/posts/{post_id}/",
-            headers={**self._get_headers(), "Accept": "text/html"},
+        # HTML enrichment for text fields (description, criteria, fine_print)
+        text_fields = ("description", "resolution_criteria", "fine_print")
+        if any(question.get(f) is None for f in text_fields):
+            response = await client.get(
+                f"{self.base_url}/posts/{post_id}/",
+                headers={**self._get_headers(), "Accept": "text/html"},
+            )
+            if response.status_code == 200:
+                html_data = _parse_html_api_response(response.text)
+                if html_data is not None:
+                    html_question = html_data.get("question") or {}
+                    question = {
+                        **html_question,
+                        **{k: v for k, v in question.items() if v is not None},
+                    }
+                    post_json = {**post_json, "question": question}
+
+        return await self._enrich_from_old_api(post_json, client, post_id)
+
+    async def _enrich_from_old_api(
+        self,
+        post_json: dict[str, Any],
+        client: httpx.AsyncClient,
+        post_id: int,
+    ) -> dict[str, Any]:
+        """Fill nulls using the old API which returns data hidden from authenticated users.
+
+        The /api2/questions/ endpoint (unauthenticated) returns resolution and
+        aggregation data that the new /api/posts/ endpoint withholds from
+        tournament participants.
+        """
+        question = post_json.get("question") or {}
+        needs_resolution = (
+            question.get("resolution") is None and question.get("status") == "resolved"
         )
-        if response.status_code != 200:
+        needs_aggregations = question.get("aggregations") is None
+        if not needs_resolution and not needs_aggregations:
             return post_json
 
-        html_data = _parse_html_api_response(response.text)
-        if html_data is None:
+        try:
+            response = await client.get(
+                f"https://www.metaculus.com/api2/questions/{post_id}/",
+            )
+            if response.status_code != 200:
+                return post_json
+            old_data = response.json()
+        except (httpx.HTTPError, ValueError):
             return post_json
 
-        html_question = html_data.get("question") or {}
-        merged_question = {
-            **html_question,
-            **{k: v for k, v in question.items() if v is not None},
-        }
+        old_question = old_data.get("question") or {}
+        merged_question = dict(question)
+        if needs_resolution and old_question.get("resolution") is not None:
+            merged_question["resolution"] = old_question["resolution"]
+        if needs_aggregations and old_question.get("aggregations") is not None:
+            merged_question["aggregations"] = old_question["aggregations"]
 
-        return {**post_json, "question": merged_question}
+        if merged_question != question:
+            return {**post_json, "question": merged_question}
+        return post_json
 
     @with_retry()
     async def fetch_aggregation_history(
