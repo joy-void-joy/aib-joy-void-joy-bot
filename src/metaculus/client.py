@@ -14,11 +14,13 @@ from typing import Any, Self
 import httpx
 from bs4 import BeautifulSoup
 from tenacity import (
+    RetryCallState,
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
+from tenacity.wait import wait_base
 
 from metaculus.models import (
     AggregationMethod,
@@ -56,25 +58,53 @@ def _parse_html_api_response(html: str) -> dict[str, Any] | None:
         return None
 
 
-def with_retry[T](
-    max_attempts: int = 4,
-    min_wait: float = 5,
-    max_wait: float = 120,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """Decorator for retrying async functions with exponential backoff.
+def _is_retryable(exc: BaseException) -> bool:
+    """Return True for 429, 5xx, timeouts, and connection errors."""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status == 429 or status >= 500
+    return False
 
-    Tuned for Metaculus API rate limits (429s need 30-60s+ cooldown).
+
+class _wait_with_retry_after(wait_base):
+    """Use Retry-After header from 429 responses, fall back to exponential."""
+
+    def __init__(self, min_wait: float, max_wait: float, multiplier: float) -> None:
+        self._exponential = wait_exponential(
+            multiplier=multiplier, min=min_wait, max=max_wait
+        )
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+            retry_after = exc.response.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    return float(retry_after)
+                except ValueError:
+                    pass
+        return self._exponential(retry_state=retry_state)
+
+
+def with_retry[T](
+    max_attempts: int = 6,
+    min_wait: float = 10,
+    max_wait: float = 120,
+    multiplier: float = 5,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator for retrying async functions on Metaculus API errors.
+
+    Respects Retry-After headers on 429 responses. Falls back to exponential
+    backoff. Only retries on 429, 5xx, timeouts, and connection errors.
     """
     return retry(
         stop=stop_after_attempt(max_attempts),
-        wait=wait_exponential(multiplier=2, min=min_wait, max=max_wait),
-        retry=retry_if_exception_type(
-            (
-                httpx.HTTPStatusError,
-                httpx.TimeoutException,
-                httpx.ConnectError,
-            )
+        wait=_wait_with_retry_after(
+            min_wait=min_wait, max_wait=max_wait, multiplier=multiplier
         ),
+        retry=retry_if_exception(_is_retryable),
         reraise=True,
         before_sleep=lambda rs: logger.warning(
             "Retry %d/%d for %s after %.1fs. Error: %s",
