@@ -186,6 +186,7 @@ class ToolPolicy:
     # API keys (None means not available)
     metaculus_token: str | None = None
     exa_api_key: str | None = None
+    asknews_api_key: str | None = None
     asknews_client_id: str | None = None
     asknews_client_secret: str | None = None
     fred_api_key: str | None = None
@@ -202,7 +203,9 @@ class ToolPolicy:
             excluded.update(METACULUS_TOOLS)
         if not self.exa_api_key:
             excluded.update(EXA_TOOLS)
-        if not self.asknews_client_id or not self.asknews_client_secret:
+        if not self.asknews_api_key and (
+            not self.asknews_client_id or not self.asknews_client_secret
+        ):
             excluded.update(ASKNEWS_TOOLS)
         if not self.fred_api_key:
             excluded.update(FRED_TOOLS)
@@ -222,6 +225,7 @@ class ToolPolicy:
         return cls(
             metaculus_token=settings.metaculus_token,
             exa_api_key=settings.exa_api_key,
+            asknews_api_key=settings.asknews_api_key,
             asknews_client_id=settings.asknews_client_id,
             asknews_client_secret=settings.asknews_client_secret,
             fred_api_key=settings.fred_api_key,

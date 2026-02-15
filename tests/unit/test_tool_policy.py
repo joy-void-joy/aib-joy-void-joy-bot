@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.tool_policy import (
+    ASKNEWS_TOOLS,
     BUILTIN_TOOLS,
     EXA_TOOLS,
     FRED_TOOLS,
@@ -45,6 +46,7 @@ class TestToolPolicyConstruction:
         settings = MagicMock()
         settings.metaculus_token = "token"
         settings.exa_api_key = "exa"
+        settings.asknews_api_key = "asknews_key"
         settings.asknews_client_id = "asknews_id"
         settings.asknews_client_secret = "asknews_secret"
         settings.fred_api_key = "fred"
@@ -53,6 +55,7 @@ class TestToolPolicyConstruction:
 
         assert policy.metaculus_token == "token"
         assert policy.exa_api_key == "exa"
+        assert policy.asknews_api_key == "asknews_key"
         assert policy.asknews_client_id == "asknews_id"
         assert policy.asknews_client_secret == "asknews_secret"
         assert policy.fred_api_key == "fred"
@@ -96,6 +99,32 @@ class TestToolPolicyExclusions:
         allowed = policy.get_allowed_tools()
         for tool in EXA_TOOLS:
             assert tool not in allowed
+
+    def test_excludes_asknews_without_any_credentials(self) -> None:
+        """Should exclude AskNews tools without any credentials."""
+        policy = ToolPolicy()
+
+        allowed = policy.get_allowed_tools()
+        for tool in ASKNEWS_TOOLS:
+            assert tool not in allowed
+
+    def test_includes_asknews_with_api_key_only(self) -> None:
+        """Should include AskNews tools with just api_key."""
+        policy = ToolPolicy(asknews_api_key="key")
+
+        allowed = policy.get_allowed_tools()
+        for tool in ASKNEWS_TOOLS:
+            assert tool in allowed
+
+    def test_includes_asknews_with_client_credentials(self) -> None:
+        """Should include AskNews tools with client_id + client_secret."""
+        policy = ToolPolicy(
+            asknews_client_id="id", asknews_client_secret="secret"
+        )
+
+        allowed = policy.get_allowed_tools()
+        for tool in ASKNEWS_TOOLS:
+            assert tool in allowed
 
     def test_excludes_fred_without_key(self) -> None:
         """Should exclude FRED tools without API key."""

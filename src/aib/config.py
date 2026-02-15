@@ -34,8 +34,10 @@ class Settings(BaseSettings):
         missing = []
         if not self.exa_api_key:
             missing.append("EXA_API_KEY")
-        if not self.asknews_client_id or not self.asknews_client_secret:
-            missing.append("ASKNEWS_CLIENT_ID/ASKNEWS_SECRET")
+        if not self.asknews_api_key and (
+            not self.asknews_client_id or not self.asknews_client_secret
+        ):
+            missing.append("ASKNEWS_API_KEY (or ASKNEWS_CLIENT_ID/ASKNEWS_SECRET)")
         if not self.fred_api_key:
             missing.append("FRED_API_KEY")
 
@@ -56,6 +58,11 @@ class Settings(BaseSettings):
     # NOTE: No AIB_ prefix for external library compatibility
     exa_api_key: str | None = Field(
         default=None, validation_alias="EXA_API_KEY", description="Exa search API key"
+    )
+    asknews_api_key: str | None = Field(
+        default=None,
+        validation_alias="ASKNEWS_API_KEY",
+        description="AskNews API key (alternative to client_id/secret)",
     )
     asknews_client_id: str | None = Field(
         default=None,
@@ -189,6 +196,7 @@ settings = Settings.model_validate({})
 _ENV_EXPORTS = [
     ("METACULUS_TOKEN", settings.metaculus_token),
     ("EXA_API_KEY", settings.exa_api_key),
+    ("ASKNEWS_API_KEY", settings.asknews_api_key),
     ("ASKNEWS_CLIENT_ID", settings.asknews_client_id),
     ("ASKNEWS_SECRET", settings.asknews_client_secret),
     ("FRED_API_KEY", settings.fred_api_key),

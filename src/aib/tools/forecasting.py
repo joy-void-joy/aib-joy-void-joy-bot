@@ -753,64 +753,65 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
 
     @with_retry(max_attempts=3)
     async def _search() -> str:
-        from asknews_sdk import AskNewsSDK
+        from asknews_sdk import AsyncAskNewsSDK
 
+        api_key = settings.asknews_api_key
         client_id = settings.asknews_client_id
         client_secret = settings.asknews_client_secret
-        if not client_id or not client_secret:
+
+        if api_key:
+            ask_ctx = AsyncAskNewsSDK(api_key=api_key, scopes={"news"})
+        elif client_id and client_secret:
+            ask_ctx = AsyncAskNewsSDK(
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes={"news"},
+            )
+        else:
             raise ValueError("AskNews credentials not configured")
 
-        ask = AskNewsSDK(
-            client_id=client_id,
-            client_secret=client_secret,
-            scopes={"news"},
-        )
+        async with ask_ctx as ask:
+            hot_response = await ask.news.search_news(
+                query=query,
+                n_articles=min(num_results, 6),
+                return_type="both",
+                strategy="latest news",
+            )
 
-        # Get latest news (within past 48 hours)
-        hot_response = ask.news.search_news(
-            query=query,
-            n_articles=min(num_results, 6),
-            return_type="both",
-            strategy="latest news",
-        )
+            historical_response = await ask.news.search_news(
+                query=query,
+                n_articles=num_results,
+                return_type="both",
+                strategy="news knowledge",
+            )
 
-        # Get historical news (up to 60 days back)
-        historical_response = ask.news.search_news(
-            query=query,
-            n_articles=num_results,
-            return_type="both",
-            strategy="news knowledge",
-        )
-
-        formatted = "Here are the relevant news articles:\n\n"
-
-        for articles, _ in [
-            (hot_response.as_dicts, "Latest"),
-            (historical_response.as_dicts, "Historical"),
-        ]:
+        # Deduplicate by article_id, preserving order
+        seen: set[str] = set()
+        all_articles = []
+        for articles in (hot_response.as_dicts, historical_response.as_dicts):
             if not articles:
                 continue
-            articles_list = [a.__dict__ for a in articles]
-            articles_list.sort(key=lambda x: x.get("pub_date", ""), reverse=True)
+            for article in articles:
+                aid = str(article.article_id)
+                if aid not in seen:
+                    seen.add(aid)
+                    all_articles.append(article)
 
-            for article in articles_list:
-                pub_date = article.get("pub_date")
-                if pub_date:
-                    try:
-                        pub_date = pub_date.strftime("%B %d, %Y %I:%M %p")
-                    except (AttributeError, ValueError):
-                        pub_date = str(pub_date)
+        all_articles.sort(key=lambda a: a.pub_date, reverse=True)
 
-                formatted += (
-                    f"**{article.get('eng_title', 'Untitled')}**\n"
-                    f"{article.get('summary', 'No summary')}\n"
-                    f"Language: {article.get('language', 'unknown')}\n"
-                    f"Published: {pub_date or 'unknown'}\n"
-                    f"Source: [{article.get('source_id', 'unknown')}]({article.get('article_url', '')})\n\n"
-                )
+        if not all_articles:
+            return "No articles were found.\n"
 
-        if "articles" not in formatted.lower() or formatted.count("**") == 0:
-            formatted += "No articles were found.\n"
+        formatted = "Here are the relevant news articles:\n\n"
+        for article in all_articles:
+            pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
+            formatted += (
+                f"**{article.eng_title}**\n"
+                f"{article.summary}\n"
+                f"Language: {article.language}\n"
+                f"Published: {pub_date}\n"
+                f"Source: [{article.source_id}]({article.article_url})\n\n"
+            )
 
         return formatted
 
@@ -1102,7 +1103,9 @@ if settings.exa_api_key:
 else:
     logger.info("search_exa tool disabled: EXA_API_KEY not configured")
 
-if settings.asknews_client_id and settings.asknews_client_secret:
+if settings.asknews_api_key or (
+    settings.asknews_client_id and settings.asknews_client_secret
+):
     _OPTIONAL_FORECASTING_TOOLS.append(search_news)
 else:
     logger.info("search_news tool disabled: ASKNEWS credentials not configured")
