@@ -348,7 +348,7 @@ The `pyright-lsp` plugin is enabled and provides code intelligence tools. **Use 
 Bare `python`/`python3` and `uv run python -c "..."` are denied by the Bash permission hook. When you need to run Python:
 
 1. **Prefer `aib-devtools`** — Use existing commands (`uv run aib-devtools <group> <command>`), or add new functionality to `src/aib/devtools/` if a capability is missing.
-2. **Use `tmp/*.py` only as a stepping stone** — Write a throwaway script in `tmp/` and run it with `uv run python tmp/my_script.py`. **Once it works, always promote it to `aib-devtools`** — extract the logic into the appropriate sub-group in `src/aib/devtools/`, register the command, and delete the tmp script. Tmp scripts are prototypes, not permanent tools.
+2. **Use `tmp/*.py` only as a stepping stone** — Write a throwaway script in `tmp/` and run it with `uv run python tmp/my_script.py`. **Once it works, always promote it to `aib-devtools`** — don't just copy it verbatim; generalize the functionality with proper CLI arguments, help text, and error handling so it's reusable beyond the immediate task. Extract the logic into the appropriate sub-group in `src/aib/devtools/`, register the command, and delete the tmp script. Tmp scripts are prototypes, not permanent tools.
 
 ## aib-devtools CLI
 
