@@ -72,6 +72,7 @@ class _wait_with_retry_after(wait_base):
     """Use Retry-After header from 429 responses, fall back to exponential."""
 
     def __init__(self, min_wait: float, max_wait: float, multiplier: float) -> None:
+        self._min_wait = min_wait
         self._exponential = wait_exponential(
             multiplier=multiplier, min=min_wait, max=max_wait
         )
@@ -82,7 +83,7 @@ class _wait_with_retry_after(wait_base):
             retry_after = exc.response.headers.get("Retry-After")
             if retry_after:
                 try:
-                    return float(retry_after)
+                    return max(self._min_wait, float(retry_after))
                 except ValueError:
                     pass
         return self._exponential(retry_state=retry_state)
