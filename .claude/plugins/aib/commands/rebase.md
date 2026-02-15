@@ -1,5 +1,6 @@
 ---
-allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob
+allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob, AskUserQuestion
+argument-hint: [base-branch]
 description: Clean up commit history on the feature branch and open/update a PR
 ---
 
@@ -7,7 +8,13 @@ description: Clean up commit history on the feature branch and open/update a PR
 
 Clean up the commit history on the current feature branch, push it, and open (or update) a PR.
 
-**Scope:** Only rebase changes since the branch diverged from the base branch (typically `main`). Do not touch commits that already exist on the base branch.
+## Determine Base Branch
+
+If a base branch was provided as an argument, use it. Otherwise, use `AskUserQuestion` to ask which branch to rebase onto, offering `main` as the default and the option to specify a different branch.
+
+Store the result as `<base>` — all references below use this value.
+
+**Scope:** Only rebase changes since the branch diverged from `<base>`. Do not touch commits that already exist on `<base>`.
 
 ## Pre-rebase Validation
 
@@ -16,14 +23,14 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 1. **Merge local settings into shared config**:
    Check if `.claude/settings.local.json` exists. If it does, review it and merge all sensible settings into `.claude/settings.json` — including permissions (allow/deny/ask rules), auto-accept patterns, and any other configuration that would benefit all contributors. Skip anything user-specific (e.g., personal paths, tokens). Commit the settings update as a separate commit.
 
-2. **Merge main into feature branch**:
+2. **Merge `<base>` into feature branch**:
    ```bash
-   # Update local main worktree and merge into feature branch
-   cd ../main
+   # Update local <base> and merge into feature branch
+   cd ../<base>
    git pull
    git push
    cd -
-   git merge main
+   git merge <base>
    ```
    Resolve any merge conflicts before proceeding. This ensures the branch is up-to-date.
 
@@ -52,14 +59,14 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 ## Process
 
-1. **Sync main with remote**:
+1. **Sync `<base>` with remote**:
    ```bash
-   cd ../main
+   cd ../<base>
    git pull
    git push
    cd -
    ```
-   Ensure local main is up-to-date before rebasing.
+   Ensure local `<base>` is up-to-date before rebasing.
 
 2. **Push and open PR** (if not already open):
 
@@ -85,9 +92,9 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    **If a PR already exists**, skip this step — we'll force-push the cleaned history later.
 
 3. **Gather context**:
-   - Identify the current branch and its base (typically `main`)
-   - Review the full diff from base to HEAD: `git diff main...HEAD`
-   - List existing commits: `git log --oneline main..HEAD`
+   - Identify the current branch and confirm `<base>`
+   - Review the full diff from base to HEAD: `git diff <base>...HEAD`
+   - List existing commits: `git log --oneline <base>..HEAD`
 
 4. **Understand all changes**:
    - Read the changed files to understand the complete set of modifications
@@ -98,7 +105,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
    Reset all commits back to staged changes:
    ```bash
-   git reset --soft main
+   git reset --soft <base>
    ```
 
    Now all changes are staged. For each logical unit of work:
