@@ -1,12 +1,7 @@
-#!/usr/bin/env python3
 """Fetch resolutions from Metaculus and update saved forecasts.
 
-Queries Metaculus API for resolved questions and updates the
-corresponding saved forecasts with resolution outcomes. Scans both
-live forecasts (notes/forecasts/) and retrodictions (notes/retrodict/).
-
-Uses batch tournament listing to minimize API calls (~3 paginated calls
-instead of ~N individual fetches).
+Scans both live forecasts (notes/forecasts/) and retrodictions (notes/retrodict/).
+Uses batch tournament listing to minimize API calls.
 """
 
 import asyncio
@@ -17,7 +12,7 @@ import typer
 
 from aib.clients.metaculus import AsyncMetaculusClient
 
-app = typer.Typer(help="Update forecasts with resolution data")
+app = typer.Typer(no_args_is_help=True)
 
 FORECASTS_PATH = Path("./notes/forecasts")
 RETRODICT_PATH = Path("./notes/retrodict")
@@ -30,10 +25,7 @@ TOURNAMENT_IDS = [
 
 
 def get_resolution(question_data: dict) -> str | float | None:
-    """Extract resolution from question data.
-
-    Returns: 'yes', 'no', float (numeric), str (MC), or None if unresolved.
-    """
+    """Extract resolution from question data."""
     question = question_data.get("question", {})
     if not question:
         return None
@@ -56,7 +48,7 @@ def get_resolution(question_data: dict) -> str | float | None:
             isinstance(resolution, str)
             and not resolution.replace(".", "").replace("-", "").isdigit()
         ):
-            return resolution  # "annulled", "ambiguous", etc.
+            return resolution
         return float(resolution)
 
     if q_type == "multiple_choice":
@@ -74,14 +66,14 @@ def update_forecast_file(filepath: Path, resolution: str | float) -> bool:
         data["resolution"] = resolution
         filepath.write_text(json.dumps(data, indent=2))
         return True
-    except Exception as e:
+    except (json.JSONDecodeError, OSError) as e:
         typer.echo(f"  Error updating {filepath}: {e}")
         return False
 
 
 def find_unresolved(base_path: Path) -> list[dict]:
     """Find all forecast files without resolution in a directory tree."""
-    unresolved = []
+    unresolved: list[dict] = []
     if not base_path.exists():
         return unresolved
     for post_dir in base_path.iterdir():
@@ -99,7 +91,7 @@ def find_unresolved(base_path: Path) -> list[dict]:
                             "title": data.get("question_title", "Unknown")[:50],
                         }
                     )
-            except Exception:
+            except (json.JSONDecodeError, OSError, ValueError):
                 continue
     return unresolved
 
@@ -107,14 +99,7 @@ def find_unresolved(base_path: Path) -> list[dict]:
 async def batch_fetch_resolved_ids(
     tournament_ids: list[int],
 ) -> set[int]:
-    """Fetch post IDs of all resolved questions from tournaments.
-
-    Uses the listing endpoint (~3 paginated calls per tournament) to identify
-    which questions have resolved, avoiding N individual API fetches.
-    The listing endpoint doesn't include resolution values, so individual
-    fetches are still needed for matches — but only for the small subset
-    that actually resolved.
-    """
+    """Fetch post IDs of all resolved questions from tournaments."""
     resolved_ids: set[int] = set()
 
     async with AsyncMetaculusClient() as mc:
@@ -189,7 +174,7 @@ def check(
                 typer.echo(f"  Fetching {post_id}...")
                 try:
                     question_data = await client.fetch_post_json(post_id)
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     typer.echo(f"    Error: {e}")
                     continue
 
@@ -243,7 +228,7 @@ def status() -> None:
                         resolved_other += 1
                     else:
                         unresolved += 1
-                except Exception:
+                except (json.JSONDecodeError, OSError):
                     continue
 
     total = resolved_yes + resolved_no + resolved_other + unresolved
@@ -276,7 +261,3 @@ def set_resolution(
         raise typer.Exit(1)
 
     typer.echo(f"Updated {updated} forecast files for post {post_id}")
-
-
-if __name__ == "__main__":
-    app()

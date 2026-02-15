@@ -14,7 +14,7 @@ The feedback loop operates at three levels. Be clear about which level you're wo
 **Clarification**:
 - Object level = "How can the agent forecast better?" (tools, APIs, reasoning)
 - Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/sessions/)
-- Meta-meta level = "How can this feedback loop command work better?" (feedback_collect.py, this document, analysis workflows)
+- Meta-meta level = "How can this feedback loop command work better?" (aib-devtools feedback, this document, analysis workflows)
 
 **Examples**:
 - Object: Add a new stock_price tool, fix a failing API
@@ -93,10 +93,10 @@ The ONLY true ground truth is **resolution outcomes**. Everything else is proxy 
 
 ```bash
 # Default: only new data since last feedback session
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
+uv run aib-devtools feedback collect --include-retrodict
 
 # Full view when needed (e.g., first run, or to recompute everything)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-new-only
+uv run aib-devtools feedback collect --all-time --no-new-only
 ```
 
 **If we have resolved forecasts**: Run calibration analysis first, then check Brier.
@@ -108,16 +108,16 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-ne
 grep AGENT_VERSION src/aib/version.py
 
 # Calibration analysis scoped to current version
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary --version 0.7.2
+uv run aib-devtools calibration summary --version 0.7.2
 
 # Detailed binary calibration with reliability diagram
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --version 0.7.2
+uv run aib-devtools calibration binary --version 0.7.2
 
 # Numeric PIT calibration
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric --version 0.7.2
+uv run aib-devtools calibration numeric --version 0.7.2
 
 # Cross-version comparison via scores table
-uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.6.0 0.7.2
+uv run aib-devtools scores compare 0.6.0 0.7.2
 ```
 - Which probability ranges have the worst calibration gaps? Read those traces.
 - Are there systematic patterns (overconfidence? underconfidence in a range?)
@@ -133,10 +133,10 @@ If questions resolved before we forecast them, **retrodict** them to build calib
 
 ```bash
 # Check which questions we missed (validates resolution + shows CP status)
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
+uv run aib-devtools queue missed aib --days 14
 
 # Use --all to see questions without confirmed resolution too
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14 --all
+uv run aib-devtools queue missed aib --days 14 --all
 
 # Retrodict with blind mode (default - recommended)
 # ONLY retrodict questions where the missed command shows R=Y
@@ -172,9 +172,9 @@ The agent forecasts as if it were making the prediction at the original question
 
 The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12, 2026. This means `fetch_post_json()` can no longer enrich resolution data — the `resolution` field is null for all questions. Until this is fixed upstream:
 - Retrodict will save forecasts with `resolution: null` and `comparison: null`
-- Use `resolution_update.py set <post_id> <value>` to manually apply known resolutions
+- Use `uv run aib-devtools resolution set <post_id> <value>` to manually apply known resolutions
 - For re-retrodictions of questions with existing v0.3.1 data, the resolution is cached in `notes/scores.csv`
-- Run `scores_table.py build` after setting resolutions to rebuild calibration data
+- Run `uv run aib-devtools scores build` after setting resolutions to rebuild calibration data
 
 **Retrodict vs Live forecasts:**
 - Live forecasts go to `notes/forecasts/`
@@ -220,7 +220,7 @@ Retrodictions are our **best** calibration signal — they have known resolution
 ls notes/retrodict/*/
 
 # Summarize retrodiction accuracy (uses known resolutions embedded in the JSON)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
+uv run aib-devtools feedback collect --include-retrodict
 ```
 
 **For each retrodiction, evaluate:**
@@ -228,13 +228,13 @@ uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodic
 2. **Airtightness**: Did the agent access post-resolution information? (see Future-Leak Detection above)
 3. **Reasoning quality**: Read the session trace — was the reasoning sound given only pre-resolution data?
 4. **Tool effectiveness**: Which tools worked under blind-mode constraints? Which failed?
-5. **Calibration contribution**: After collecting retrodictions, run `calibration_analysis.py summary` to see how new data points shift ECE and bucket-level gaps.
+5. **Calibration contribution**: After collecting retrodictions, run `uv run aib-devtools calibration summary` to see how new data points shift ECE and bucket-level gaps.
 
 **Airtightness**: The trace-explorer checks all of the following automatically for retrodict traces and assigns CLEAN/SUSPECT/LEAKED verdicts. Only trust retrodictions with CLEAN verdicts for calibration.
 
 **If a retrodiction fails airtightness**: Exclude it from calibration data and file a bug against the retrodict hooks.
 
-**Note**: `feedback_collect.py --include-retrodict` processes both `notes/forecasts/` and `notes/retrodict/`.
+**Note**: `uv run aib-devtools feedback collect --include-retrodict` processes both `notes/forecasts/` and `notes/retrodict/`.
 
 ### 1d. About Community Prediction
 
@@ -264,32 +264,32 @@ tools, and subagent configurations. Mixing data across versions produces meaning
 aggregate statistics.
 
 1. Check the current version: `grep AGENT_VERSION src/aib/version.py`
-2. **Pass `--version` to all scripts** that support it:
-   - `calibration_analysis.py summary --version 0.7.2`
-   - `calibration_analysis.py binary --version 0.7.2`
-   - `scores_table.py show --version 0.7.2`
+2. **Pass `--version` to all commands** that support it:
+   - `uv run aib-devtools calibration summary --version 0.7.2`
+   - `uv run aib-devtools calibration binary --version 0.7.2`
+   - `uv run aib-devtools scores show --version 0.7.2`
 3. When comparing to previous versions, always report metrics PER VERSION
 4. If the `agent_version` field is missing or inconsistent, note this as a data quality
    issue — do not silently include unversioned data in current-version metrics
 
-**Use `scores_table.py compare` for version-to-version comparisons:**
+**Use `scores compare` for version-to-version comparisons:**
 ```bash
-uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.6.0 0.7.2
+uv run aib-devtools scores compare 0.6.0 0.7.2
 ```
 
-**Use `scores_table.py extremes` to find best/worst forecasts for deep trace reading:**
+**Use `scores extremes` to find best/worst forecasts for deep trace reading:**
 ```bash
 # All forecasts — best and worst by Brier (binary) and abs error (numeric)
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes
+uv run aib-devtools scores extremes
 
 # Non-meta only (exclude CP questions) — for event-level analysis
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --non-meta
+uv run aib-devtools scores extremes --non-meta
 
 # Meta-predictions only
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --meta-only
+uv run aib-devtools scores extremes --meta-only
 
 # Filter by version, source, or type
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --version 0.11.0 --type numeric
+uv run aib-devtools scores extremes --version 0.11.0 --type numeric
 ```
 
 ### 2a. Launch Trace Explorer (Subagent)
@@ -302,10 +302,10 @@ subagent which reads traces in its own context and returns a compact pattern rep
 
 ```bash
 # Use extremes to find best/worst forecasts
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --version <current>
+uv run aib-devtools scores extremes --version <current>
 
 # Or list all available traces
-uv run python .claude/plugins/aib/scripts/trace_log.py list
+uv run aib-devtools trace logs
 ```
 
 **Launch the trace explorer:**
@@ -342,7 +342,7 @@ Return the standard pattern report.
 The trace explorer flags 2-3 traces worth reading fully. **Only read these if the pattern
 report raises specific questions** that need full-trace context to answer.
 
-If you do read a trace, use `trace_log.py show <id>` (NOT raw logs) and read it with a
+If you do read a trace, use `uv run aib-devtools trace log <id>` (NOT raw logs) and read it with a
 specific question in mind — don't just browse.
 
 ### 2c. Evaluate Findings
@@ -379,7 +379,7 @@ Check if the data we collect is sufficient for analysis:
 
 ```bash
 # Check what tracking data we have
-uv run python .claude/plugins/aib/scripts/trace_forecast.py list
+uv run aib-devtools trace list
 ```
 
 ### 3c. Identify Missing Data
@@ -393,7 +393,7 @@ If you find gaps, add tracking in Phase 4.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
-**Do NOT edit `version.py` manually.** Use `version_tag.py bump <patch|minor|major> "<summary>"` — pick the right level based on the scope of changes (see Version Bumps below).
+**Do NOT edit `version.py` manually.** Use `uv run aib-devtools dev version-bump <patch|minor|major> "<summary>"` -- pick the right level based on the scope of changes (see Version Bumps below).
 
 **Log every change** in the analysis document (see Documentation Template). The next feedback session reads this to avoid re-deriving the same improvements. Be specific: "Added X to Y because Z" — not just "improved prompts."
 
@@ -412,7 +412,7 @@ A full rewrite is warranted when:
 - The prompt has grown >20% since the last rewrite without corresponding accuracy improvement
 
 **How to do a principled rewrite:**
-1. **Study the best-performing traces.** Use `scores_table.py show --resolved` and `trace_log.py show <id>` to read the full reasoning for the top 5-10 forecasts by Brier score. What patterns do they follow? What decisions led to success?
+1. **Study the best-performing traces.** Use `uv run aib-devtools scores show --resolved` and `uv run aib-devtools trace log <id>` to read the full reasoning for the top 5-10 forecasts by Brier score. What patterns do they follow? What decisions led to success?
 2. **Study the worst-performing traces.** Same process for the bottom 5-10. What went wrong — capability gap or reasoning error the prompt could have prevented?
 3. **Read the full current prompt** (`src/aib/agent/prompts.py`). Identify sections that feel patched, redundant, or irrelevant. Look for conditional exceptions that accumulated over time.
 4. **Draft from scratch.** Write the prompt as you would if starting today with all accumulated knowledge. Don't copy-paste from the old prompt — rewrite each section from first principles, incorporating the patterns from best traces.
@@ -485,7 +485,7 @@ session should evaluate a full rewrite (Priority 0).
 After implementing changes that affect agent behavior, **always bump the version** at the appropriate level using the bump script:
 
 ```bash
-uv run python .claude/plugins/aib/scripts/version_tag.py bump <level> "<summary>" [--detail "a, b, c"]
+uv run aib-devtools dev version-bump <level> "<summary>" [--detail "a, b, c"]
 ```
 
 - **Patch (0.x.Y)**: Bug fixes, tool fixes, config tweaks. Default when unsure.
@@ -512,13 +512,13 @@ If yes to any, update this document NOW before you forget.
 If you found yourself doing repetitive analysis, automate it:
 
 ```bash
-# Scripts that already exist:
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --help
-uv run python .claude/plugins/aib/scripts/trace_forecast.py --help
-uv run python .claude/plugins/aib/scripts/calibration_report.py --help
+# Commands that already exist:
+uv run aib-devtools feedback collect --help
+uv run aib-devtools trace --help
+uv run aib-devtools calibration --help
 ```
 
-If you need a script that doesn't exist, create it in `.claude/plugins/aib/scripts/` and document it in CLAUDE.md.
+If you need a command that doesn't exist, add it to `src/aib/devtools/` and document it in CLAUDE.md.
 
 ### 5c. Improve Data Collection
 
@@ -531,7 +531,7 @@ If the feedback loop lacked data, fix the source:
 
 Every session should leave this document better:
 - Remove outdated guidance
-- Add new scripts to the "Scripts Available" section
+- Add new commands to the "Commands Available" section
 - Clarify confusing terminology
 - Add examples from actual analysis
 
@@ -567,7 +567,7 @@ Every session should leave this document better:
 
 Write to `notes/feedback_loop/<branch_name>/<timestamp>_analysis.md`:
 
-The feedback_collect.py script automatically organizes data by branch. When writing analysis, use the same structure:
+The `aib-devtools feedback collect` command automatically organizes data by branch. When writing analysis, use the same structure:
 
 ```markdown
 # Feedback Loop Analysis: YYYY-MM-DD
@@ -602,8 +602,8 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 ### Updates to This Document
 - [Changes made to feedback-loop.md]
 
-### Scripts Created/Updated
-- [New scripts added to .claude/plugins/aib/scripts/]
+### Commands Created/Updated
+- [New commands added to src/aib/devtools/]
 
 ### Data Collection Improvements
 - [Changes to forecast tracking, metrics, etc.]
@@ -616,23 +616,23 @@ The feedback_collect.py script automatically organizes data by branch. When writ
 | Meta-Meta | Updated feedback-loop.md | Clarified Z section |
 ```
 
-## Scripts Available
+## Commands Available
 
 ```bash
 # Incremental collection (default: only new since last session)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --include-retrodict
+uv run aib-devtools feedback collect --include-retrodict
 
 # Full collection (all-time, no filtering)
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --all-time --no-new-only --include-retrodict
+uv run aib-devtools feedback collect --all-time --no-new-only --include-retrodict
 
 # Collect from specific tournament
-uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
+uv run aib-devtools feedback collect --tournament spring-aib-2026
 
 # Check missed questions
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
+uv run aib-devtools queue missed aib --days 14
 
 # Check resolutions for specific questions
-uv run python .claude/plugins/aib/scripts/resolution_update.py check
+uv run aib-devtools resolution check
 
 # Retrodict resolved questions (blind mode - restricts to historical data)
 uv run forecast retrodict 41835 41521 41517
@@ -644,29 +644,29 @@ uv run forecast retrodict 41835 --forecast-date 2026-01-15
 uv run forecast retrodict 41835 --no-blind
 
 # Trace a forecast to its logs and metrics
-uv run python .claude/plugins/aib/scripts/trace_forecast.py show 41906
+uv run aib-devtools trace show 41906
 
 # Aggregate metrics across all forecasts
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary
+uv run aib-devtools metrics summary
 
 # Calibration analysis (primary diagnostic — ECE, reliability diagrams, PIT)
 # Always pass --version to scope to the current agent version
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary --version 0.7.2
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --version 0.7.2 --source retrodict
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric --version 0.7.2
+uv run aib-devtools calibration summary --version 0.7.2
+uv run aib-devtools calibration binary --version 0.7.2 --source retrodict
+uv run aib-devtools calibration numeric --version 0.7.2
 
 # Basic calibration report (Brier/log scores, bucket table)
-uv run python .claude/plugins/aib/scripts/calibration_report.py summary
+uv run aib-devtools calibration report
 
 # Best/worst forecasts (for deep trace reading)
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --non-meta
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes --meta-only --version 0.11.0
+uv run aib-devtools scores extremes
+uv run aib-devtools scores extremes --non-meta
+uv run aib-devtools scores extremes --meta-only --version 0.11.0
 
 # Version comparison
-uv run python .claude/plugins/aib/scripts/scores_table.py compare 0.10.0 0.11.0
+uv run aib-devtools scores compare 0.10.0 0.11.0
 
-# (Add more scripts as you build them — this tooling is in constant evolution)
+# (Add more commands as you build them — this tooling is in constant evolution)
 ```
 
 ## Periodic Maintenance
@@ -675,15 +675,15 @@ Every few feedback loop sessions, take time to:
 
 1. **Reread this entire document** - Is it still accurate? Remove outdated guidance.
 2. **Prompt health audit** - Read the entire system prompt (`src/aib/agent/prompts.py`) with fresh eyes. Does it read as a coherent, monolithic document? Are there visible patches? Would a new reader understand the decision tree? If not, trigger a rewrite (Phase 4, Priority 0).
-3. **Refactor scripts** - Consolidate duplicate functionality, improve error handling.
+3. **Refactor devtools** - Consolidate duplicate functionality, improve error handling.
 4. **Clean up notes/** - Archive old analysis files, ensure naming is consistent.
 5. **Update CLAUDE.md** - Sync any learnings that should persist to the main project docs.
 
 ## Key Questions to Answer Each Session
 
-1. **What AGENT_VERSION am I analyzing?** Filter ALL data by version. Pass `--version` to every script. Do not mix versions.
+1. **What AGENT_VERSION am I analyzing?** Filter ALL data by version. Pass `--version` to every command. Do not mix versions.
 2. **Do we have resolution data?** If no, focus on process not accuracy. Check HTML enrichment status (may return 406).
-3. **How is calibration FOR THIS VERSION?** Run `calibration_analysis.py summary --version X.Y.Z`. Compare to previous version with `scores_table.py compare`.
+3. **How is calibration FOR THIS VERSION?** Run `uv run aib-devtools calibration summary --version X.Y.Z`. Compare to previous version with `uv run aib-devtools scores compare`.
 4. **What tools fail repeatedly?** Fix or replace them.
 5. **What tools go unused?** Check traces for tools/subagents that were available but never called.
 6. **Is the subagent structure coherent?** Are subagents well-scoped and well-used?
@@ -709,7 +709,7 @@ Retrodictions build calibration data. Each feedback loop session should:
 **Use the `missed` command to find candidates** — it validates resolution and CP automatically:
 
 ```bash
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed aib --days 14
+uv run aib-devtools queue missed aib --days 14
 ```
 
 The command filters to questions with confirmed resolutions, shows CP availability,

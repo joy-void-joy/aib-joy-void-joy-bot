@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Forecasting queue management.
 
 Shows questions that need forecasting, sorted by urgency.
@@ -29,21 +28,21 @@ def run_async(coro: Coroutine[object, object, T]) -> T:
     return asyncio.run(coro)
 
 
-app = typer.Typer(help="Manage forecasting queue and priorities")
+app = typer.Typer(no_args_is_help=True)
 
 FORECASTS_PATH = Path("./notes/forecasts")
 RETRODICT_PATH = Path("./notes/retrodict")
 SCORES_CSV_PATH = Path("./notes/scores.csv")
 TOURNAMENTS = {
-    "aib": 32916,  # AIB Spring 2026
-    "minibench": 32715,  # MiniBench
-    "cup": 32585,  # Metaculus Cup
+    "aib": 32916,
+    "minibench": 32715,
+    "cup": 32585,
 }
 
 
 def get_forecasted_post_ids() -> set[int]:
     """Get post IDs that have already been forecast."""
-    forecasted = set()
+    forecasted: set[int] = set()
     if not FORECASTS_PATH.exists():
         return forecasted
 
@@ -58,7 +57,7 @@ def get_forecasted_post_ids() -> set[int]:
 
 def get_retrodicted_post_ids() -> set[int]:
     """Get post IDs that have already been retrodicted."""
-    retrodicted = set()
+    retrodicted: set[int] = set()
     if not RETRODICT_PATH.exists():
         return retrodicted
 
@@ -111,7 +110,7 @@ def _load_scores_for_posts(post_ids: set[int]) -> dict[int, dict[str, str]]:
 
 async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
     """Fetch open questions from a tournament."""
-    questions = []
+    questions: list[dict] = []
     offset = 0
 
     from aib.clients.metaculus import AsyncMetaculusClient
@@ -141,11 +140,7 @@ async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
 
 
 async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
-    """Fetch individual posts to get full resolution and CP data.
-
-    Uses AsyncMetaculusClient which automatically enriches null fields
-    (description, resolution, aggregations) from the HTML API fallback.
-    """
+    """Fetch individual posts to get full resolution and CP data."""
     from aib.clients.metaculus import AsyncMetaculusClient
 
     results: dict[int, dict] = {}
@@ -157,7 +152,7 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
             try:
                 data = await client.fetch_post_json(pid)
                 results[pid] = data
-            except Exception:
+            except (OSError, ValueError, KeyError):
                 pass
 
     return results
@@ -181,7 +176,6 @@ async def _fetch_resolved(tournament_ids: list[int], limit: int = 50) -> list[di
             )
             all_questions.extend(results)
 
-    # Deduplicate by post ID (a question may appear in multiple tournaments)
     seen: set[int] = set()
     deduped: list[dict] = []
     for q in all_questions:
@@ -223,6 +217,25 @@ def parse_question(q: dict) -> dict | None:
     }
 
 
+def format_timedelta(td: timedelta) -> str:
+    """Format a timedelta for display."""
+    total_seconds = int(td.total_seconds())
+
+    if total_seconds < 0:
+        return "CLOSED"
+
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, _ = divmod(remainder, 60)
+
+    if days > 0:
+        return f"{days}d {hours}h"
+    elif hours > 0:
+        return f"{hours}h {minutes}m"
+    else:
+        return f"{minutes}m"
+
+
 @app.command("upcoming")
 def upcoming(
     tournament: str = typer.Argument("aib", help="Tournament: aib, minibench, or cup"),
@@ -249,7 +262,6 @@ def upcoming(
         if p:
             parsed.append(p)
 
-    # Filter to questions closing soon
     cutoff = timedelta(days=days)
     closing_soon = [
         q
@@ -257,10 +269,8 @@ def upcoming(
         if q["time_left"] <= cutoff and q["time_left"].total_seconds() > 0
     ]
 
-    # Sort by time left
     closing_soon.sort(key=lambda x: x["time_left"])
 
-    # Optionally filter out already forecasted
     if not show_all:
         closing_soon = [q for q in closing_soon if q["post_id"] not in forecasted]
 
@@ -303,11 +313,9 @@ def status(
     parsed = [parse_question(q) for q in questions]
     parsed = [p for p in parsed if p is not None]
 
-    # Stats
     total = len(parsed)
     done = sum(1 for q in parsed if q["post_id"] in forecasted)
 
-    # By type
     by_type: dict[str, dict[str, int]] = {}
     for q in parsed:
         qtype = q["question_type"]
@@ -342,12 +350,7 @@ def missed(
         False, "--all", help="Include questions without confirmed resolution"
     ),
 ) -> None:
-    """Show recently resolved questions suitable for retrodiction.
-
-    Validates each question has a confirmed resolution via individual API fetches.
-    Shows resolution value, CP availability, question type, and retrodiction scores.
-    Use --tournament all to search across all tournaments.
-    """
+    """Show recently resolved questions suitable for retrodiction."""
     if tournament == "all":
         tournament_ids = list(TOURNAMENTS.values())
         label = "all tournaments"
@@ -367,7 +370,6 @@ def missed(
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
-    # First pass: filter by time and collect candidates
     candidates: list[dict] = []
     for q in questions:
         post_id = q.get("id")
@@ -401,7 +403,6 @@ def missed(
             }
         )
 
-    # Individual fetches for questions missing resolution or CP
     needs_fetch = [
         c["post_id"] for c in candidates if not c["resolution"] or not c["has_cp"]
     ]
@@ -420,7 +421,6 @@ def missed(
                 if has_cp:
                     c["has_cp"] = has_cp
 
-    # Filter out null-resolution unless --all
     missed_questions: list[dict] = []
     skipped_no_resolution = 0
     for c in candidates:
@@ -436,7 +436,6 @@ def missed(
         typer.echo(msg)
         return
 
-    # Load scores for retrodicted questions
     retrodicted_ids = {q["post_id"] for q in missed_questions if q["retrodicted"]}
     scores = _load_scores_for_posts(retrodicted_ids)
 
@@ -497,15 +496,13 @@ def search(
         True, "--resolved/--open", help="Only resolved questions (default) or open"
     ),
 ) -> None:
-    """Search Metaculus for questions suitable for retrodiction.
-
-    Searches across all of Metaculus (not limited to any tournament).
-    By default shows resolved questions with confirmed resolution values.
-    """
+    """Search Metaculus for questions suitable for retrodiction."""
     retrodicted = get_retrodicted_post_ids()
 
-    status = "resolved" if resolved_only else "open"
-    typer.echo(f"\nSearching Metaculus for '{query}' ({status}, {question_type})...")
+    api_status = "resolved" if resolved_only else "open"
+    typer.echo(
+        f"\nSearching Metaculus for '{query}' ({api_status}, {question_type})..."
+    )
 
     async def _search() -> list[dict]:
         from aib.clients.metaculus import AsyncMetaculusClient
@@ -514,7 +511,7 @@ def search(
             return await mc.fetch_posts_list(
                 {
                     "search": query,
-                    "status": status,
+                    "status": api_status,
                     "order_by": "-resolve_time" if resolved_only else "-publish_time",
                     "limit": limit,
                 }
@@ -522,7 +519,6 @@ def search(
 
     questions = run_async(_search())
 
-    # Filter by question type
     filtered: list[dict] = []
     for q in questions:
         qdata = q.get("question", {})
@@ -533,7 +529,6 @@ def search(
         typer.echo(f"\nNo {question_type} questions found matching '{query}'.")
         return
 
-    # Individual fetches to get resolution + CP data
     post_ids: list[int] = [q["id"] for q in filtered if q.get("id")]
     typer.echo(f"Fetching details for {len(post_ids)} questions...")
     individual = run_async(fetch_individual_posts(post_ids))
@@ -564,26 +559,3 @@ def search(
     if retrodict_ready:
         ids = " ".join(str(pid) for pid in retrodict_ready)
         typer.echo(f"\nRetrodict command:\n  uv run forecast retrodict {ids}")
-
-
-def format_timedelta(td: timedelta) -> str:
-    """Format a timedelta for display."""
-    total_seconds = int(td.total_seconds())
-
-    if total_seconds < 0:
-        return "CLOSED"
-
-    days, remainder = divmod(total_seconds, 86400)
-    hours, remainder = divmod(remainder, 3600)
-    minutes, _ = divmod(remainder, 60)
-
-    if days > 0:
-        return f"{days}d {hours}h"
-    elif hours > 0:
-        return f"{hours}h {minutes}m"
-    else:
-        return f"{minutes}m"
-
-
-if __name__ == "__main__":
-    app()

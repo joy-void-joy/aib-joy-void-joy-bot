@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Unified scores table CLI.
 
 Thin CLI wrapper around aib.scoring for interactive use.
@@ -16,9 +15,20 @@ from aib.scoring import (
     read_scores_csv,
 )
 
-app = typer.Typer(help="Unified scores table for forecasts and retrodictions")
+app = typer.Typer(no_args_is_help=True)
 
 REGRESSION_SUITE_PATH = Path("./notes/regression_suite.json")
+
+META_PATTERNS = [
+    "community prediction",
+    "will the cp ",
+    "will cp ",
+]
+
+
+def _is_meta(title: str) -> bool:
+    t = title.lower()
+    return any(p in t for p in META_PATTERNS)
 
 
 @app.command()
@@ -26,9 +36,9 @@ def build(
     output: Path = typer.Option(SCORES_CSV_PATH, "-o", help="Output CSV path"),
 ) -> None:
     """Rebuild the scores CSV from all forecast/retrodict JSONs."""
-    rows = load_all_score_rows()
-
     import csv
+
+    rows = load_all_score_rows()
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="", encoding="utf-8") as f:
@@ -220,11 +230,7 @@ def compare(
 
 @app.command()
 def regression() -> None:
-    """Show latest scores for curated regression suite questions.
-
-    Reads notes/regression_suite.json and displays the most recent score for
-    each question, enabling quick comparison across agent versions.
-    """
+    """Show latest scores for curated regression suite questions."""
     if not REGRESSION_SUITE_PATH.exists():
         typer.echo("No regression suite found at notes/regression_suite.json")
         raise typer.Exit(1)
@@ -281,19 +287,6 @@ def regression() -> None:
         typer.echo(f"\nMissing retrodictions:\n  uv run forecast retrodict {ids}")
 
 
-META_PATTERNS = [
-    "community prediction",
-    "will the cp ",
-    "will cp ",
-]
-
-
-def _is_meta(title: str) -> bool:
-    """Detect meta-predictions by title keywords."""
-    t = title.lower()
-    return any(p in t for p in META_PATTERNS)
-
-
 @app.command()
 def extremes(
     top_n: int = typer.Option(10, "-n", help="Number of best/worst to show"),
@@ -309,11 +302,7 @@ def extremes(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
 ) -> None:
-    """Show best and worst forecasts across all versions.
-
-    Ranks binary by Brier score, numeric by absolute error and CI membership.
-    Use --non-meta to focus on event-level predictions, --meta-only for CP questions.
-    """
+    """Show best and worst forecasts across all versions."""
     rows = read_scores_csv()
     if not rows:
         typer.echo("No scores.csv found. Run 'build' first.")
@@ -332,7 +321,6 @@ def extremes(
     if qtype:
         resolved = [r for r in resolved if r["question_type"] == qtype]
 
-    # --- Binary ---
     binary = [r for r in resolved if r.get("brier")]
     if binary:
         binary.sort(key=lambda x: float(x["brier"]))
@@ -355,7 +343,6 @@ def extremes(
             scores_str = ", ".join(f"{s:.3f}" for s in scores)
             typer.echo(f"  v{v}: avg={avg:.3f} n={len(scores)} [{scores_str}]")
 
-    # --- Numeric (ranked by norm_error: 0=perfect, 1=at CI boundary, >1=outside) ---
     numeric = [
         r
         for r in resolved
@@ -384,7 +371,6 @@ def extremes(
             typer.echo(f"\n--- CI Misses ({len(ci_misses)}) ---")
             _print_numeric_rows(ci_misses)
 
-        # Sharpness check: how many resolutions fall in the inner 50% of CI?
         inner_50 = sum(1 for r in numeric if float(r["norm_error"]) < 0.5)
         inner_pct = inner_50 / len(numeric) * 100
         typer.echo(
@@ -425,7 +411,3 @@ def _print_numeric_rows(rows: list[dict[str, str]]) -> None:
             f"  NE={ne_str} v{ver} post={pid} median={median} res={res} CI={ci_str}"
         )
         typer.echo(f"    {title}")
-
-
-if __name__ == "__main__":
-    app()

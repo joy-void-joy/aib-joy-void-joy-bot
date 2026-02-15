@@ -1,21 +1,14 @@
-#!/usr/bin/env python3
-"""Comprehensive calibration analysis for forecasts and retrodictions.
-
-Calibration is the primary diagnostic: it tells you WHERE you're wrong.
-Brier/log scores are outcome metrics (what the tournament scores).
+"""Calibration analysis and diagnostics.
 
 Binary: ECE, MCE, reliability diagram, overconfidence detection, Wilson CIs.
 Numeric: PIT histogram, K-S uniformity test, coverage statistics.
-
-Examples:
-    uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary
-    uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary --source retrodict
-    uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric
-    uv run python .claude/plugins/aib/scripts/calibration_analysis.py export -o cal.json
+CDF sharpness analysis for numeric forecasts.
+Basic calibration reports: Brier/log scores, bucket tables.
 """
 
 import json
 import math
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -23,7 +16,7 @@ from typing import Annotated
 import typer
 from pydantic import BaseModel
 
-app = typer.Typer(help="Calibration analysis and diagnostics")
+app = typer.Typer(no_args_is_help=True)
 
 FORECASTS_PATH = Path("./notes/forecasts")
 RETRODICT_PATH = Path("./notes/retrodict")
@@ -74,15 +67,8 @@ class PitCalibration(BaseModel):
 
 
 def _load_jsons(base_path: Path, version: str | None = None) -> list[dict]:
-    """Load all forecast JSON files from a directory tree.
-
-    Expects structure: base_path/{post_id}/{timestamp}.json
-    For each post_id, loads ALL files (not just latest) so we can
-    deduplicate later based on context.
-
-    If version is provided, only returns forecasts with matching agent_version.
-    """
-    results = []
+    """Load all forecast JSON files from a directory tree."""
+    results: list[dict] = []
     if not base_path.exists():
         return results
     for post_dir in base_path.iterdir():
@@ -95,7 +81,7 @@ def _load_jsons(base_path: Path, version: str | None = None) -> list[dict]:
                     if version and data.get("agent_version", "") != version:
                         continue
                     results.append(data)
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 continue
     return results
 
@@ -157,10 +143,7 @@ def load_numeric_data(
     source: str = "all",
     version: str | None = None,
 ) -> list[tuple[dict[int, float], float, tuple[float, float] | None]]:
-    """Load resolved numeric/discrete forecasts.
-
-    Returns (percentiles, actual_value, confidence_interval) tuples.
-    """
+    """Load resolved numeric/discrete forecasts."""
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
@@ -200,7 +183,7 @@ def load_numeric_data(
     if source in ("all",):
         forecasts = _dedup_latest(forecasts, ("post_id",))
 
-    results = []
+    results: list[tuple[dict[int, float], float, tuple[float, float] | None]] = []
     for f in forecasts:
         pct_raw = f["percentiles"]
         pct = {int(k): float(v) for k, v in pct_raw.items()}
@@ -331,11 +314,7 @@ def compute_binary_calibration(
 
 
 def pit_from_percentiles(percentiles: dict[int, float], actual: float) -> float:
-    """Approximate CDF(actual) by interpolating between stored percentiles.
-
-    Extrapolates linearly below p10 (to CDF=0) and above p90 (to CDF=1),
-    using the slope of the nearest segment.
-    """
+    """Approximate CDF(actual) by interpolating between stored percentiles."""
     sorted_pcts = sorted(percentiles.items())
     pct_levels = [p / 100.0 for p, _ in sorted_pcts]
     pct_values = [v for _, v in sorted_pcts]
@@ -454,8 +433,7 @@ def compute_pit_calibration(
 
 def render_reliability_diagram(cal: BinaryCalibration) -> str:
     """ASCII reliability diagram: predicted vs actual with CI bars."""
-    lines = [f"  Reliability Diagram (n={cal.n_forecasts})"]
-    lines.append("")
+    lines = [f"  Reliability Diagram (n={cal.n_forecasts})", ""]
 
     height = 11
     width = 10
@@ -465,21 +443,17 @@ def render_reliability_diagram(cal: BinaryCalibration) -> str:
         lo_str = bucket.bucket_label.split("-")[0]
         col = int(float(lo_str.strip("%")) / 100 * width)
         col = min(col, width - 1)
-
         actual_row = height - 1 - round(bucket.actual_rate * (height - 1))
         actual_row = max(0, min(height - 1, actual_row))
-
         marker = "!" if bucket.significant else "#"
         grid[actual_row][col] = marker
 
     for row in range(height):
         pct = (height - 1 - row) / (height - 1) * 100
         label = f"{pct:>4.0f}% |"
-
         diag_col = round(pct / 100 * width)
         if 0 <= diag_col <= width - 1 and grid[row][diag_col] == " ":
             grid[row][diag_col] = "."
-
         lines.append(f"{label} {''.join(grid[row])}")
 
     lines.append("       +" + "-" * (width + 1))
@@ -499,9 +473,8 @@ def render_reliability_diagram(cal: BinaryCalibration) -> str:
 
 
 def render_pit_histogram(pit: PitCalibration) -> str:
-    """ASCII PIT histogram: bars should be uniform height if well-calibrated."""
-    lines = [f"  PIT Histogram (n={pit.n_forecasts})"]
-    lines.append("")
+    """ASCII PIT histogram."""
+    lines = [f"  PIT Histogram (n={pit.n_forecasts})", ""]
 
     max_freq = max(pit.bin_frequencies) if pit.bin_frequencies else 0.1
     bar_height = 8
@@ -530,7 +503,7 @@ def render_pit_histogram(pit: PitCalibration) -> str:
 
 
 # ---------------------------------------------------------------------------
-# CLI commands
+# CLI commands — comprehensive analysis
 # ---------------------------------------------------------------------------
 
 
@@ -551,7 +524,7 @@ def binary_cmd(
     if not data:
         typer.echo("No resolved binary forecasts found.")
         typer.echo(
-            "Run 'resolution_update.py check' or retrodict some questions first."
+            "Run 'aib-devtools resolution check' or retrodict some questions first."
         )
         raise typer.Exit(1)
 
@@ -773,5 +746,320 @@ def export_cmd(
     typer.echo(f"Exported calibration data to {output}")
 
 
-if __name__ == "__main__":
-    app()
+# ---------------------------------------------------------------------------
+# CLI commands — basic report (from calibration_report.py)
+# ---------------------------------------------------------------------------
+
+
+def _load_resolved_binary() -> list[dict]:
+    """Load all resolved binary forecasts (live only, latest per post)."""
+    forecasts: list[dict] = []
+    if not FORECASTS_PATH.exists():
+        return forecasts
+
+    for post_dir in FORECASTS_PATH.iterdir():
+        if not post_dir.is_dir():
+            continue
+        for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+            try:
+                data = json.loads(forecast_file.read_text())
+                if (
+                    data.get("question_type") == "binary"
+                    and data.get("resolution") in ("yes", "no")
+                    and data.get("probability") is not None
+                ):
+                    forecasts.append(data)
+            except (json.JSONDecodeError, OSError):
+                continue
+    return forecasts
+
+
+def _get_calibration_bucket(probability: float) -> str:
+    if probability < 0.1:
+        return "0-10%"
+    elif probability < 0.2:
+        return "10-20%"
+    elif probability < 0.3:
+        return "20-30%"
+    elif probability < 0.4:
+        return "30-40%"
+    elif probability < 0.5:
+        return "40-50%"
+    elif probability < 0.6:
+        return "50-60%"
+    elif probability < 0.7:
+        return "60-70%"
+    elif probability < 0.8:
+        return "70-80%"
+    elif probability < 0.9:
+        return "80-90%"
+    else:
+        return "90-100%"
+
+
+@app.command("report")
+def report_cmd() -> None:
+    """Basic calibration report: Brier/log scores and bucket table."""
+    forecasts = _load_resolved_binary()
+    if not forecasts:
+        typer.echo("No resolved binary forecasts found")
+        raise typer.Exit(1)
+
+    typer.echo(f"\n=== Calibration Report ({len(forecasts)} resolved binary) ===\n")
+
+    brier_scores_list = []
+    log_scores_list = []
+    for f in forecasts:
+        prob = f["probability"]
+        outcome = 1 if f["resolution"] == "yes" else 0
+        brier_scores_list.append((prob - outcome) ** 2)
+        p = max(0.001, min(0.999, prob))
+        log_scores_list.append(math.log(p) if outcome == 1 else math.log(1 - p))
+
+    avg_brier = sum(brier_scores_list) / len(brier_scores_list)
+    avg_log = sum(log_scores_list) / len(log_scores_list)
+
+    typer.echo(f"Average Brier Score: {avg_brier:.4f} (lower is better, 0.25 = random)")
+    typer.echo(f"Average Log Score:   {avg_log:.4f} (higher is better, -0.69 = random)")
+
+    buckets: dict[str, dict[str, int | float]] = defaultdict(
+        lambda: {"count": 0, "yes": 0, "total_prob": 0.0}
+    )
+
+    for f in forecasts:
+        bucket = _get_calibration_bucket(f["probability"])
+        buckets[bucket]["count"] += 1
+        if f["resolution"] == "yes":
+            buckets[bucket]["yes"] += 1
+        buckets[bucket]["total_prob"] += f["probability"]
+
+    typer.echo("\n--- Calibration by Bucket ---\n")
+    typer.echo(
+        f"{'Bucket':<12} {'Count':>6} {'Actual%':>10} {'Predicted%':>12} {'Gap':>8}"
+    )
+    typer.echo("-" * 50)
+
+    bucket_order = [
+        "0-10%",
+        "10-20%",
+        "20-30%",
+        "30-40%",
+        "40-50%",
+        "50-60%",
+        "60-70%",
+        "70-80%",
+        "80-90%",
+        "90-100%",
+    ]
+
+    for bucket in bucket_order:
+        if bucket not in buckets:
+            continue
+        data = buckets[bucket]
+        count = data["count"]
+        actual_pct = 100 * data["yes"] / count if count > 0 else 0
+        pred_pct = 100 * data["total_prob"] / count if count > 0 else 0
+        gap = actual_pct - pred_pct
+        gap_indicator = ""
+        if abs(gap) > 15:
+            gap_indicator = " !"
+        typer.echo(
+            f"{bucket:<12} {count:>6} {actual_pct:>9.1f}% {pred_pct:>11.1f}% {gap:>+7.1f}%{gap_indicator}"
+        )
+
+
+@app.command("detail")
+def detail_cmd(
+    limit: int = typer.Option(20, "-n", "--limit", help="Max forecasts to show"),
+) -> None:
+    """Show detailed forecast-by-forecast results."""
+    forecasts = _load_resolved_binary()
+    if not forecasts:
+        typer.echo("No resolved binary forecasts found")
+        raise typer.Exit(1)
+
+    scored = []
+    for f in forecasts:
+        prob = f["probability"]
+        outcome = 1 if f["resolution"] == "yes" else 0
+        bs = (prob - outcome) ** 2
+        scored.append(
+            {
+                "post_id": f.get("post_id") or f.get("question_id"),
+                "title": (f.get("question_title") or "Unknown")[:40],
+                "prob": prob,
+                "outcome": f["resolution"],
+                "brier": bs,
+            }
+        )
+
+    scored.sort(key=lambda x: -x["brier"])
+
+    typer.echo("\n=== Forecast Details (sorted by Brier, worst first) ===\n")
+    typer.echo(f"{'Post':<8} {'Prob':>6} {'Outcome':>8} {'Brier':>8} Title")
+    typer.echo("-" * 70)
+
+    for item in scored[:limit]:
+        typer.echo(
+            f"{item['post_id']:<8} {item['prob']:>5.0%} {item['outcome']:>8} "
+            f"{item['brier']:>7.3f}  {item['title']}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# CLI commands — CDF sharpness (from cdf_sharpness.py)
+# ---------------------------------------------------------------------------
+
+
+def _load_numeric_with_cdf(base: Path, source: str) -> list[dict[str, object]]:
+    """Load numeric forecasts that have CDF data and resolutions."""
+    results: list[dict[str, object]] = []
+    if not base.exists():
+        return results
+
+    for post_dir in base.iterdir():
+        if not post_dir.is_dir():
+            continue
+        for filepath in post_dir.glob("*.json"):
+            try:
+                data = json.loads(filepath.read_text())
+            except (json.JSONDecodeError, OSError):
+                continue
+
+            qtype = data.get("question_type", "")
+            if qtype not in ("numeric", "discrete"):
+                continue
+
+            resolution = data.get("resolution")
+            if resolution is None:
+                comp = data.get("comparison", {})
+                if isinstance(comp, dict):
+                    resolution = comp.get("actual_value")
+            if resolution is None:
+                continue
+
+            try:
+                res_val = float(str(resolution).replace(",", ""))
+            except (ValueError, TypeError):
+                continue
+
+            results.append(
+                {
+                    "post_id": data.get("post_id"),
+                    "version": data.get("agent_version", "?"),
+                    "title": str(data.get("question_title", ""))[:60],
+                    "resolution": res_val,
+                    "median": data.get("median"),
+                    "ci": data.get("confidence_interval"),
+                    "cdf": data.get("cdf"),
+                    "percentiles": data.get("percentiles"),
+                    "source": source,
+                }
+            )
+
+    return results
+
+
+def _compute_pit(data: dict[str, object]) -> float | None:
+    """Compute PIT value: where does resolution fall in the CDF?"""
+    percentiles = data.get("percentiles")
+    if isinstance(percentiles, dict) and percentiles:
+        res = float(str(data["resolution"]))
+        sorted_pcts = sorted((int(k), float(v)) for k, v in percentiles.items())
+
+        if res <= sorted_pcts[0][1]:
+            return sorted_pcts[0][0] / 100.0
+        if res >= sorted_pcts[-1][1]:
+            return sorted_pcts[-1][0] / 100.0
+
+        for i in range(len(sorted_pcts) - 1):
+            p1, v1 = sorted_pcts[i]
+            p2, v2 = sorted_pcts[i + 1]
+            if v1 <= res <= v2:
+                if v2 == v1:
+                    return (p1 + p2) / 200.0
+                frac = (res - v1) / (v2 - v1)
+                return (p1 + frac * (p2 - p1)) / 100.0
+
+    return None
+
+
+@app.command("cdf")
+def cdf_cmd(
+    version: str | None = typer.Option(None, "--version", "-v"),
+    source: str | None = typer.Option(None, "--source", "-s"),
+) -> None:
+    """Analyze CDF sharpness across numeric forecasts."""
+    all_data = _load_numeric_with_cdf(RETRODICT_PATH, "retrodict")
+    all_data.extend(_load_numeric_with_cdf(FORECASTS_PATH, "live"))
+
+    if version:
+        all_data = [d for d in all_data if d.get("version") == version]
+    if source:
+        all_data = [d for d in all_data if d.get("source") == source]
+
+    if not all_data:
+        typer.echo("No numeric forecasts with resolutions found.")
+        raise typer.Exit(1)
+
+    pit_values: list[tuple[dict[str, object], float]] = []
+    for d in all_data:
+        pit = _compute_pit(d)
+        if pit is not None:
+            pit_values.append((d, pit))
+
+    if not pit_values:
+        typer.echo("No forecasts with percentile data for PIT analysis.")
+        raise typer.Exit(1)
+
+    typer.echo(f"\n=== CDF Sharpness Analysis ({len(pit_values)} forecasts) ===\n")
+
+    bins = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    bin_labels = ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"]
+    counts = [0] * 5
+    for _, pit in pit_values:
+        for i in range(5):
+            if bins[i] <= pit < bins[i + 1] or (i == 4 and pit == 1.0):
+                counts[i] += 1
+                break
+
+    expected = len(pit_values) / 5
+    typer.echo("PIT Histogram (should be uniform if well-calibrated):")
+    typer.echo(f"  Expected per bin: {expected:.1f}")
+    for label, count in zip(bin_labels, counts):
+        bar = "\u2588" * count + "\u2591" * max(0, int(expected) - count)
+        typer.echo(f"  {label:>8}: {count:>3} {bar}")
+
+    center_count = counts[2]
+    center_frac = center_count / len(pit_values)
+    typer.echo(f"\n  Center concentration (40-60%): {center_frac:.0%} (ideal: 20%)")
+    if center_frac > 0.35:
+        typer.echo("  CDFs are too WIDE — resolutions cluster near the median")
+    elif center_frac < 0.10:
+        typer.echo("  CDFs are too NARROW — resolutions avoid the center")
+
+    typer.echo("\n--- Effective CI Coverage ---")
+    for target_pct in [50, 80, 90]:
+        lo_pct = (100 - target_pct) / 2 / 100
+        hi_pct = 1 - lo_pct
+        in_range = sum(1 for _, pit in pit_values if lo_pct <= pit <= hi_pct)
+        actual_pct = in_range / len(pit_values) * 100
+        delta = actual_pct - target_pct
+        flag = " OVER-DISPERSED" if delta > 15 else ""
+        typer.echo(
+            f"  {target_pct}% CI covers {actual_pct:.0f}% of outcomes "
+            f"(delta: {delta:+.0f}pp){flag}"
+        )
+
+    typer.echo("\n--- Individual PIT Values (sorted) ---")
+    pit_values.sort(key=lambda x: x[1])
+    for d, pit in pit_values:
+        ci = d.get("ci")
+        ci_str = ""
+        if isinstance(ci, (list, tuple)) and len(ci) >= 2:
+            ci_str = f" CI=[{ci[0]}, {ci[1]}]"
+        typer.echo(
+            f"  PIT={pit:.2f} v{d['version']} post={d['post_id']} "
+            f"median={d['median']} res={d['resolution']}{ci_str}"
+        )
+        typer.echo(f"    {d['title']}")

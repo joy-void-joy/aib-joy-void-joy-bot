@@ -63,7 +63,7 @@ Write a concise one-line summary of the behavioral changes. If there are multipl
 ### 6. Execute bump
 
 ```bash
-uv run python .claude/plugins/aib/scripts/version_tag.py bump <level> "<summary>" [--detail "<a>, <b>, <c>"]
+uv run aib-devtools dev version-bump <level> "<summary>" [--detail "<a>, <b>, <c>"]
 ```
 
 ### 7. Verify and report

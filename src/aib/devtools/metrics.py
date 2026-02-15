@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-"""Aggregate metrics across all forecasts.
-
-Summarizes tool usage, costs, token counts, and error rates
-across all saved forecasts for analysis.
-"""
+"""Aggregate metrics across all forecasts."""
 
 import json
 from collections import defaultdict
@@ -11,14 +6,14 @@ from pathlib import Path
 
 import typer
 
-app = typer.Typer(help="Aggregate metrics across forecasts")
+app = typer.Typer(no_args_is_help=True)
 
 FORECASTS_PATH = Path("./notes/forecasts")
 
 
 def load_all_forecasts() -> list[dict]:
     """Load all forecast files."""
-    forecasts = []
+    forecasts: list[dict] = []
     if not FORECASTS_PATH.exists():
         return forecasts
 
@@ -31,7 +26,7 @@ def load_all_forecasts() -> list[dict]:
                 data["_file"] = str(forecast_file)
                 data["_post_id"] = post_dir.name
                 forecasts.append(data)
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 continue
     return forecasts
 
@@ -44,7 +39,6 @@ def summary() -> None:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
 
-    # Basic counts
     total = len(forecasts)
     with_metrics = sum(1 for f in forecasts if f.get("tool_metrics"))
     with_tokens = sum(1 for f in forecasts if f.get("token_usage"))
@@ -57,20 +51,17 @@ def summary() -> None:
     typer.echo(f"Submitted:    {submitted} ({100 * submitted / total:.0f}%)")
     typer.echo(f"Resolved:     {resolved} ({100 * resolved / total:.0f}%)")
 
-    # Aggregate costs
     total_cost = sum(
         f.get("tool_metrics", {}).get("total_cost_usd", 0) or 0
         for f in forecasts
         if f.get("tool_metrics")
     )
-    # Try from token_usage if not in tool_metrics
     for f in forecasts:
         if not f.get("tool_metrics") and f.get("cost_usd"):
             total_cost += f.get("cost_usd", 0) or 0
 
     typer.echo(f"\nTotal cost:   ${total_cost:.2f}")
 
-    # Aggregate tokens
     total_input = 0
     total_output = 0
     total_cache_read = 0
@@ -97,7 +88,6 @@ def tools() -> None:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
 
-    # Aggregate by tool
     tool_stats: dict[str, dict[str, int | float]] = defaultdict(
         lambda: {"calls": 0, "errors": 0, "total_ms": 0}
     )
@@ -171,7 +161,6 @@ def errors() -> None:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
 
-    # Find forecasts with errors
     with_errors = []
     for f in forecasts:
         metrics = f.get("tool_metrics", {})
@@ -194,13 +183,9 @@ def errors() -> None:
 
     typer.echo(f"\n=== Forecasts with Errors ({len(with_errors)} total) ===\n")
 
-    for item in with_errors[:20]:  # Top 20
+    for item in with_errors[:20]:
         typer.echo(f"Post {item['post_id']}: {item['errors']} errors - {item['title']}")
         for tool_name, tool_data in item["by_tool"].items():
             errs = tool_data.get("error_count", 0)
             if errs > 0:
                 typer.echo(f"  - {tool_name}: {errs}")
-
-
-if __name__ == "__main__":
-    app()

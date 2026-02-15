@@ -1,14 +1,8 @@
-#!/usr/bin/env python3
 """Collect feedback data from resolved forecasts and community prediction comparisons.
 
 Fetches resolved questions from Metaculus, matches them to our past forecasts,
 computes accuracy metrics (Brier score, log loss), and compares our forecasts
 to community predictions as an early calibration signal.
-
-Examples:
-    uv run python .claude/plugins/aib/scripts/feedback_collect.py
-    uv run python .claude/plugins/aib/scripts/feedback_collect.py --tournament spring-aib-2026
-    uv run python .claude/plugins/aib/scripts/feedback_collect.py --since 2026-01-01
 """
 
 import asyncio
@@ -31,10 +25,18 @@ from aib.agent.history import (
 )
 from metaculus import ApiFilter, AsyncMetaculusClient, BinaryQuestion, MetaculusQuestion
 
-app = typer.Typer(help="Collect feedback data from resolved forecasts")
+app = typer.Typer(no_args_is_help=True)
 logger = logging.getLogger(__name__)
 
 FEEDBACK_BASE_PATH = Path("./notes/feedback_loop")
+
+TOURNAMENTS = {
+    "spring-aib-2026": 32916,
+    "fall-aib-2025": "fall-aib-2025",
+    "metaculus-cup": 32921,
+}
+
+CP_CACHE_TTL_HOURS = 6
 
 
 def get_current_branch() -> str:
@@ -47,44 +49,31 @@ def get_current_branch() -> str:
 
 
 def get_feedback_path() -> Path:
-    """Get the feedback path for the current branch."""
-    branch = get_current_branch()
-    return FEEDBACK_BASE_PATH / branch
+    return FEEDBACK_BASE_PATH / get_current_branch()
 
 
 def get_last_run_file() -> Path:
-    """Get the last run file for the current branch."""
     return get_feedback_path() / "last_run.json"
 
 
-# Tournament IDs
-TOURNAMENTS = {
-    "spring-aib-2026": 32916,
-    "fall-aib-2025": "fall-aib-2025",
-    "metaculus-cup": 32921,
-}
+def get_state_file() -> Path:
+    return get_feedback_path() / "feedback_state.json"
 
 
 class AnalyzedItem(BaseModel):
-    """Record of a forecast/retrodiction that was already analyzed in a feedback session."""
-
     post_id: int
     timestamp: str
-    item_type: str  # "forecast" | "retrodict"
+    item_type: str
     analysis_session: str
 
 
 class CachedCP(BaseModel):
-    """Cached community prediction for a question."""
-
     cp: float
     fetched_at: str
     question_status: str
 
 
 class FeedbackState(BaseModel):
-    """Persistent state across feedback loop sessions."""
-
     last_analysis: str | None = None
     last_collection: str | None = None
     analyzed_items: list[AnalyzedItem] = []
@@ -93,8 +82,6 @@ class FeedbackState(BaseModel):
 
 
 class ForecastResult(BaseModel):
-    """A forecast matched with its resolution."""
-
     question_id: int
     question_title: str
     question_type: str
@@ -103,7 +90,7 @@ class ForecastResult(BaseModel):
     forecasted_median: float | None = None
     forecasted_percentiles: dict[int, float] | None = None
     community_prediction: float | None = None
-    cp_divergence: float | None = None  # Our forecast - CP (positive = we're higher)
+    cp_divergence: float | None = None
     resolution: bool | float | str | None = None
     resolution_time: datetime | None = None
     brier_score: float | None = None
@@ -111,25 +98,21 @@ class ForecastResult(BaseModel):
 
 
 class CPComparison(BaseModel):
-    """Community prediction comparison for an unresolved forecast."""
-
     question_id: int
     question_title: str
     question_type: str
     forecast_timestamp: str
     our_probability: float
     community_prediction: float
-    divergence: float  # Our forecast - CP
+    divergence: float
     question_status: str
 
 
 class RetrodictResult(BaseModel):
-    """A retrodicted forecast with its known resolution."""
-
     post_id: int
     question_title: str
     question_type: str
-    retrodict_date: str
+    retrodict_date: str | None = None
     forecast_timestamp: str
     forecasted_probability: float | None = None
     forecasted_median: float | None = None
@@ -143,8 +126,6 @@ class RetrodictResult(BaseModel):
 
 
 class FeedbackMetrics(BaseModel):
-    """Aggregated metrics from resolved forecasts."""
-
     collection_timestamp: str
     since_timestamp: str | None
     tournaments: list[str]
@@ -156,28 +137,20 @@ class FeedbackMetrics(BaseModel):
     avg_log_score: float | None = None
     calibration_buckets: dict[str, dict[str, float]] | None = None
     results: list[ForecastResult]
-    # Community prediction comparison (early signal)
     cp_comparisons: list[CPComparison] = []
     avg_cp_divergence: float | None = None
     cp_comparison_count: int = 0
-    # Retrodiction results (known ground truth)
     retrodict_results: list[RetrodictResult] = []
     retrodict_count: int = 0
     retrodict_avg_brier: float | None = None
 
 
 def compute_brier_score(probability: float, resolved_true: bool) -> float:
-    """Compute Brier score for a binary forecast."""
     outcome = 1.0 if resolved_true else 0.0
     return (probability - outcome) ** 2
 
 
 def compute_log_score(probability: float, resolved_true: bool) -> float:
-    """Compute log score for a binary forecast.
-
-    Returns negative log probability of the correct outcome.
-    Lower is better. Capped to avoid -inf for p=0 or p=1.
-    """
     p = max(0.001, min(0.999, probability))
     if resolved_true:
         return -math.log(p)
@@ -188,10 +161,6 @@ def compute_log_score(probability: float, resolved_true: bool) -> float:
 def compute_calibration_buckets(
     results: list[ForecastResult],
 ) -> dict[str, dict[str, float]]:
-    """Compute calibration data by probability bucket.
-
-    Returns buckets like {"0.0-0.1": {"count": 5, "avg_forecast": 0.05, "resolution_rate": 0.0}}
-    """
     buckets: dict[str, list[tuple[float, bool]]] = {
         "0.0-0.1": [],
         "0.1-0.2": [],
@@ -210,13 +179,12 @@ def compute_calibration_buckets(
             continue
         if not isinstance(r.resolution, bool):
             continue
-
         p = r.forecasted_probability
         bucket_idx = min(9, int(p * 10))
         bucket_name = list(buckets.keys())[bucket_idx]
         buckets[bucket_name].append((p, r.resolution))
 
-    output = {}
+    output: dict[str, dict[str, float]] = {}
     for bucket_name, entries in buckets.items():
         if entries:
             avg_forecast = sum(p for p, _ in entries) / len(entries)
@@ -233,37 +201,23 @@ def compute_calibration_buckets(
 
 
 def get_resolution_value(question: MetaculusQuestion) -> bool | float | str | None:
-    """Extract typed resolution from a question.
-
-    The resolution_string from the API can be:
-    - "yes" / "no" for binary questions
-    - A numeric string for numeric/discrete questions
-    - An option label for multiple choice
-    - "ambiguous" or "annulled" for special cases
-    """
     res = question.resolution_string
     if res is None:
         return None
 
     res_lower = res.lower().strip()
-
-    # Binary resolutions
     if res_lower == "yes":
         return True
     if res_lower == "no":
         return False
-
-    # Special cases
     if res_lower in ("ambiguous", "annulled"):
         return res_lower
 
-    # Try parsing as numeric
     try:
         return float(res)
     except ValueError:
         pass
 
-    # Return as string (e.g., multiple choice option)
     return res
 
 
@@ -272,19 +226,16 @@ async def fetch_resolved_questions(
     since: datetime | None = None,
     client: AsyncMetaculusClient | None = None,
 ) -> list[MetaculusQuestion]:
-    """Fetch resolved questions from specified tournaments."""
     all_questions: list[MetaculusQuestion] = []
     if client is None:
         client = AsyncMetaculusClient()
 
     for tournament_id in tournament_ids:
         logger.info("Fetching resolved questions from tournament %s", tournament_id)
-
         api_filter = ApiFilter(
             allowed_statuses=["resolved"],
             allowed_tournaments=[tournament_id],
         )
-
         if since:
             api_filter.scheduled_resolve_time_gt = since
 
@@ -297,7 +248,7 @@ async def fetch_resolved_questions(
                 "Found %d resolved questions in %s", len(questions), tournament_id
             )
             all_questions.extend(questions)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.warning("Failed to fetch from tournament %s: %s", tournament_id, e)
 
     return all_questions
@@ -307,10 +258,6 @@ async def fetch_cp_for_forecasts(
     client: AsyncMetaculusClient,
     state: FeedbackState,
 ) -> list[CPComparison]:
-    """Fetch community predictions for all our saved forecasts.
-
-    Uses cached CP values when available and within TTL.
-    """
     comparisons: list[CPComparison] = []
 
     if not FORECASTS_BASE_PATH.exists():
@@ -333,14 +280,12 @@ async def fetch_cp_for_forecasts(
             continue
 
         latest_forecast = forecasts[-1]
-
         if (
             latest_forecast.question_type != "binary"
             or latest_forecast.probability is None
         ):
             continue
 
-        # Check CP cache
         cache_key = str(post_id)
         cached = state.cp_cache.get(cache_key)
         if cached:
@@ -362,7 +307,6 @@ async def fetch_cp_for_forecasts(
                 cached_count += 1
                 continue
 
-        # Rate limiting for API calls (each fetch_post_json makes 2 requests)
         if fetched_count > 0:
             await asyncio.sleep(2.0)
         if fetched_count > 0 and fetched_count % 5 == 0:
@@ -381,8 +325,6 @@ async def fetch_cp_for_forecasts(
                 continue
 
             q_status = question.status.value if question.status else "unknown"
-
-            # Update cache
             state.cp_cache[cache_key] = CachedCP(
                 cp=cp,
                 fetched_at=now.isoformat(),
@@ -403,7 +345,7 @@ async def fetch_cp_for_forecasts(
                 )
             )
             fetched_count += 1
-        except Exception as e:
+        except (OSError, ValueError, AttributeError) as e:
             logger.debug("Failed to fetch CP for post %d: %s", post_id, e)
 
     logger.info(
@@ -415,7 +357,6 @@ async def fetch_cp_for_forecasts(
 def match_forecasts_to_resolutions(
     questions: list[MetaculusQuestion],
 ) -> list[ForecastResult]:
-    """Match our past forecasts to resolved questions."""
     results: list[ForecastResult] = []
 
     for question in questions:
@@ -425,24 +366,19 @@ def match_forecasts_to_resolutions(
 
         past_forecasts = load_past_forecasts(question_id)
         if not past_forecasts:
-            logger.debug("No forecasts found for question %d", question_id)
             continue
 
         resolution = get_resolution_value(question)
         if resolution is None:
-            logger.debug("No resolution for question %d", question_id)
             continue
 
-        # Use only the latest pre-resolution forecast per question
         forecast = past_forecasts[-1]
 
-        # Skip if forecast was made after resolution
         if question.actual_resolution_time:
             try:
                 forecast_dt = datetime.strptime(forecast.timestamp, "%Y%m%d_%H%M%S")
                 resolution_dt = question.actual_resolution_time.replace(tzinfo=None)
                 if forecast_dt > resolution_dt:
-                    # Try earlier forecasts
                     pre_resolution = [
                         f
                         for f in past_forecasts
@@ -450,10 +386,6 @@ def match_forecasts_to_resolutions(
                         < resolution_dt
                     ]
                     if not pre_resolution:
-                        logger.info(
-                            "All forecasts for %d are post-resolution, skipping",
-                            question_id,
-                        )
                         continue
                     forecast = pre_resolution[-1]
             except ValueError:
@@ -484,15 +416,8 @@ def match_forecasts_to_resolutions(
 
 
 def collect_retrodict_results() -> list[RetrodictResult]:
-    """Collect results from all retrodicted forecasts.
-
-    Retrodictions have known resolutions embedded in the comparison field,
-    so no API calls are needed. When the same question is retrodicted multiple
-    times for the same date, only the latest retrodiction is kept.
-    """
     forecasts = load_retrodict_forecasts()
 
-    # Deduplicate: keep only the latest retrodiction per (post_id, retrodict_date)
     latest: dict[tuple[int, str], SavedForecast] = {}
     for f in forecasts:
         if not f.retrodict_date:
@@ -503,7 +428,6 @@ def collect_retrodict_results() -> list[RetrodictResult]:
             latest[key] = f
 
     results: list[RetrodictResult] = []
-
     for f in latest.values():
         result = RetrodictResult(
             post_id=f.post_id or 0,
@@ -542,33 +466,20 @@ def collect_retrodict_results() -> list[RetrodictResult]:
     return results
 
 
-CP_CACHE_TTL_HOURS = 6
-
-
-def get_state_file() -> Path:
-    """Get the feedback state file for the current branch."""
-    return get_feedback_path() / "feedback_state.json"
-
-
 def load_feedback_state() -> FeedbackState:
-    """Load persistent feedback state, migrating from last_run.json if needed."""
     state_file = get_state_file()
     if state_file.exists():
         return FeedbackState.model_validate_json(state_file.read_text())
 
-    # Migrate from legacy last_run.json
     last_run_file = get_last_run_file()
     if last_run_file.exists():
         data = json.loads(last_run_file.read_text())
-        return FeedbackState(
-            last_collection=data.get("last_collection"),
-        )
+        return FeedbackState(last_collection=data.get("last_collection"))
 
     return FeedbackState()
 
 
 def save_feedback_state(state: FeedbackState) -> None:
-    """Save persistent feedback state."""
     feedback_path = get_feedback_path()
     feedback_path.mkdir(parents=True, exist_ok=True)
     get_state_file().write_text(state.model_dump_json(indent=2))
@@ -581,7 +492,6 @@ class LastRunData(TypedDict, total=False):
 
 
 def load_last_run() -> LastRunData:
-    """Load last run metadata."""
     last_run_file = get_last_run_file()
     if last_run_file.exists():
         return json.loads(last_run_file.read_text())
@@ -589,50 +499,37 @@ def load_last_run() -> LastRunData:
 
 
 def save_last_run(data: LastRunData) -> None:
-    """Save last run metadata."""
     feedback_path = get_feedback_path()
     feedback_path.mkdir(parents=True, exist_ok=True)
-    last_run_file = get_last_run_file()
-    last_run_file.write_text(json.dumps(data, indent=2, default=str))
+    get_last_run_file().write_text(json.dumps(data, indent=2, default=str))
 
 
-@app.command()
-def main(
+@app.command("collect")
+def collect(
     tournament: Annotated[
         list[str] | None,
-        typer.Option(
-            "--tournament",
-            "-t",
-            help="Tournament ID or slug (can specify multiple). Default: spring-aib-2026",
-        ),
+        typer.Option("--tournament", "-t", help="Tournament ID or slug"),
     ] = None,
     since: Annotated[
         str | None,
         typer.Option(
             "--since",
             "-s",
-            help="Only fetch questions resolved after this date (YYYY-MM-DD). Default: last run.",
+            help="Only fetch questions resolved after this date (YYYY-MM-DD)",
         ),
     ] = None,
     all_time: Annotated[
         bool,
-        typer.Option(
-            "--all-time",
-            help="Ignore last run timestamp and fetch all resolved questions.",
-        ),
+        typer.Option("--all-time", help="Ignore last run timestamp"),
     ] = False,
     include_retrodict: Annotated[
         bool,
-        typer.Option(
-            "--include-retrodict",
-            help="Include retrodicted forecasts (from notes/retrodict/) in results.",
-        ),
+        typer.Option("--include-retrodict", help="Include retrodicted forecasts"),
     ] = False,
     new_only: Annotated[
         bool,
         typer.Option(
-            "--new-only/--no-new-only",
-            help="Only show forecasts/retrodictions created since last analysis session.",
+            "--new-only/--no-new-only", help="Only show new items since last analysis"
         ),
     ] = True,
 ) -> None:
@@ -647,30 +544,25 @@ async def _main_async(
     include_retrodict: bool = False,
     new_only: bool = True,
 ) -> None:
-    """Async implementation of the main command."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     state = load_feedback_state()
 
-    # Resolve tournament IDs
     tournament_ids: list[str | int] = []
     if tournament:
         for t in tournament:
             if t in TOURNAMENTS:
                 tournament_ids.append(TOURNAMENTS[t])
             else:
-                # Try as numeric ID or slug directly
                 try:
                     tournament_ids.append(int(t))
                 except ValueError:
                     tournament_ids.append(t)
     else:
-        # Default to AIB Spring 2026
         tournament_ids = [TOURNAMENTS["spring-aib-2026"]]
 
     tournament_names = tournament if tournament else ["spring-aib-2026"]
 
-    # Determine since date
     since_dt: datetime | None = None
     if not all_time:
         if since:
@@ -687,27 +579,20 @@ async def _main_async(
         since_dt.isoformat() if since_dt else "all time",
     )
 
-    # Create client for API calls (context manager reuses connections)
     async with AsyncMetaculusClient() as client:
-        # Fetch resolved questions
         questions = await fetch_resolved_questions(tournament_ids, since_dt, client)
         logger.info("Total resolved questions found: %d", len(questions))
-
-        # Fetch community predictions for all our forecasts (early signal)
         cp_comparisons = await fetch_cp_for_forecasts(client, state)
         logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
 
-    # Match to our forecasts (no API calls needed)
     results = match_forecasts_to_resolutions(questions)
     logger.info("Matched %d forecasts to resolutions", len(results))
 
-    # Collect retrodiction results
     retrodict_results: list[RetrodictResult] = []
     if include_retrodict:
         retrodict_results = collect_retrodict_results()
         logger.info("Collected %d retrodictions", len(retrodict_results))
 
-    # Filter to only new items if --new-only is set
     already_analyzed = {
         (item.post_id, item.timestamp, item.item_type) for item in state.analyzed_items
     }
@@ -721,9 +606,7 @@ async def _main_async(
         ]
         if prev_count != len(results):
             logger.info(
-                "Filtered forecasts: %d total → %d new (--new-only)",
-                prev_count,
-                len(results),
+                "Filtered forecasts: %d total -> %d new", prev_count, len(results)
             )
 
         prev_retro = len(retrodict_results)
@@ -734,12 +617,11 @@ async def _main_async(
         ]
         if prev_retro != len(retrodict_results):
             logger.info(
-                "Filtered retrodictions: %d total → %d new (--new-only)",
+                "Filtered retrodictions: %d total -> %d new",
                 prev_retro,
                 len(retrodict_results),
             )
 
-    # Compute aggregate metrics
     binary_results = [r for r in results if r.brier_score is not None]
     numeric_results = [r for r in results if r.question_type in ("numeric", "discrete")]
 
@@ -757,7 +639,6 @@ async def _main_async(
 
     calibration = compute_calibration_buckets(results)
 
-    # Compute retrodict Brier average
     retrodict_avg_brier = None
     retrodict_brier_scores = [
         r.brier_score for r in retrodict_results if r.brier_score is not None
@@ -765,7 +646,6 @@ async def _main_async(
     if retrodict_brier_scores:
         retrodict_avg_brier = sum(retrodict_brier_scores) / len(retrodict_brier_scores)
 
-    # Compute CP divergence stats
     avg_cp_divergence = None
     if cp_comparisons:
         divergences = [c.divergence for c in cp_comparisons]
@@ -793,15 +673,12 @@ async def _main_async(
         else None,
     )
 
-    # Save metrics
     feedback_path = get_feedback_path()
     feedback_path.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = feedback_path / f"{timestamp}_metrics.json"
     output_file.write_text(metrics.model_dump_json(indent=2))
-    logger.info("Saved metrics to %s", output_file)
 
-    # Update last run (legacy)
     save_last_run(
         {
             "last_collection": datetime.now().isoformat(),
@@ -810,7 +687,6 @@ async def _main_async(
         }
     )
 
-    # Update feedback state with newly analyzed items
     now_iso = datetime.now().isoformat()
     for r in results:
         state.analyzed_items.append(
@@ -834,7 +710,6 @@ async def _main_async(
     state.last_collection = now_iso
     save_feedback_state(state)
 
-    # Print summary
     print("\n" + "=" * 60)
     print("FEEDBACK COLLECTION SUMMARY")
     print("=" * 60)
@@ -854,13 +729,12 @@ async def _main_async(
         print(f"Average Log Score: {avg_log:.4f}")
 
     if calibration:
-        print("\nCalibration (forecasted → actual resolution rate):")
+        print("\nCalibration (forecasted -> actual resolution rate):")
         for bucket, data in calibration.items():
             print(
-                f"  {bucket}: {data['avg_forecast']:.0%} → {data['resolution_rate']:.0%} (n={data['count']})"
+                f"  {bucket}: {data['avg_forecast']:.0%} -> {data['resolution_rate']:.0%} (n={data['count']})"
             )
 
-    # Report missed questions (resolved but no forecast)
     forecasted_ids = {r.question_id for r in results}
     missed_questions = [
         q
@@ -878,9 +752,8 @@ async def _main_async(
                 if len(q.question_text) > 60
                 else q.question_text
             )
-            print(f"  - [{q.id_of_post}] {title} → {res_str}")
+            print(f"  - [{q.id_of_post}] {title} -> {res_str}")
 
-    # Report community prediction comparison (early signal)
     if cp_comparisons:
         print("\n" + "-" * 60)
         print("COMMUNITY PREDICTION COMPARISON (Early Signal)")
@@ -892,13 +765,11 @@ async def _main_async(
                 f"Average divergence: {avg_cp_divergence:+.1%} (we are {direction} than CP)"
             )
 
-        # Show large divergences (>15pp)
         large_divergences = [c for c in cp_comparisons if abs(c.divergence) > 0.15]
         if large_divergences:
             print(f"\nLarge divergences (>15pp): {len(large_divergences)}")
-            # Sort by absolute divergence
             large_divergences.sort(key=lambda c: abs(c.divergence), reverse=True)
-            for c in large_divergences[:10]:  # Top 10
+            for c in large_divergences[:10]:
                 title = (
                     c.question_title[:50] + "..."
                     if len(c.question_title) > 50
@@ -909,7 +780,6 @@ async def _main_async(
                 )
                 print(f"      {title}")
 
-        # Show systematic bias
         higher_count = sum(1 for c in cp_comparisons if c.divergence > 0.02)
         lower_count = sum(1 for c in cp_comparisons if c.divergence < -0.02)
         if higher_count + lower_count > 0:
@@ -917,7 +787,6 @@ async def _main_async(
                 f"\nBias check: {higher_count} forecasts higher than CP, {lower_count} lower"
             )
 
-    # Report retrodiction results
     if retrodict_results:
         print("\n" + "-" * 60)
         print("RETRODICTION RESULTS (Known Ground Truth)")
@@ -949,7 +818,3 @@ async def _main_async(
             print()
 
     print(f"\nMetrics saved to: {output_file}")
-
-
-if __name__ == "__main__":
-    app()
