@@ -297,7 +297,6 @@ async def classify_haiku(content: str) -> WebFetchQuality:
 
     options = ClaudeAgentOptions(
         model="haiku",
-        max_turns=1,
         allowed_tools=[],  # No tools - just classification
         system_prompt=(
             "You are a classifier. Analyze web content and determine if it's "

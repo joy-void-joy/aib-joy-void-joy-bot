@@ -209,13 +209,13 @@ async def _redact_future_info(text: str, cutoff_date: str) -> str:
     )
     options = ClaudeAgentOptions(
         model="sonnet",
-        max_turns=1,
         allowed_tools=[],
         system_prompt=(
             "You redact temporal information from text. Remove sentences or clauses "
             "that reference events after the given date. Preserve everything else verbatim. "
             "Return only the redacted text."
         ),
+        extra_args={"no-session-persistence": None},
     )
     try:
         result_text = None
@@ -554,7 +554,7 @@ def _build_cp_history_response(
         entries.append(
             CPHistoryEntry(
                 timestamp=_format_timestamp(point.start_time),
-                community_prediction=round(cp, 4),
+                community_prediction=cp,
             )
         )
 
@@ -613,9 +613,13 @@ async def _ensure_post_id(input_id: int) -> int | None:
 
     # Try as post_id first (most common case) — uses retry
     try:
-        await client.fetch_post_json(input_id)
-        _post_id_cache[input_id] = input_id
-        return input_id
+        post_json = await client.fetch_post_json(input_id)
+        q = post_json.get("question", {})
+        question_id = q.get("id")
+        if question_id is None or question_id == input_id:
+            _post_id_cache[input_id] = input_id
+            return input_id
+        # input_id collided with a different post — fall through
     except Exception:
         pass
 
