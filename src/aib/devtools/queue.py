@@ -113,47 +113,47 @@ async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
     questions: list[dict] = []
     offset = 0
 
-    from aib.clients.metaculus import AsyncMetaculusClient
+    from aib.clients.metaculus import get_client
 
-    async with AsyncMetaculusClient() as mc:
-        while True:
-            results = await mc.fetch_posts_list(
-                {
-                    "order_by": "close_time",
-                    "status": "open",
-                    "tournaments": tournament_id,
-                    "offset": offset,
-                    "limit": 100,
-                }
-            )
+    mc = get_client()
+    while True:
+        results = await mc.fetch_posts_list(
+            {
+                "order_by": "close_time",
+                "status": "open",
+                "tournaments": tournament_id,
+                "offset": offset,
+                "limit": 100,
+            }
+        )
 
-            if not results:
-                break
+        if not results:
+            break
 
-            questions.extend(results)
-            offset += len(results)
+        questions.extend(results)
+        offset += len(results)
 
-            if len(results) < 100:
-                break
+        if len(results) < 100:
+            break
 
     return questions
 
 
 async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     """Fetch individual posts to get full resolution and CP data."""
-    from aib.clients.metaculus import AsyncMetaculusClient
+    from aib.clients.metaculus import get_client
 
     results: dict[int, dict] = {}
 
-    async with AsyncMetaculusClient() as client:
-        for i, pid in enumerate(post_ids):
-            if i > 0:
-                await asyncio.sleep(2.0)
-            try:
-                data = await client.fetch_post_json(pid)
-                results[pid] = data
-            except (OSError, ValueError, KeyError):
-                pass
+    client = get_client()
+    for i, pid in enumerate(post_ids):
+        if i > 0:
+            await asyncio.sleep(2.0)
+        try:
+            data = await client.fetch_post_json(pid)
+            results[pid] = data
+        except (OSError, ValueError, KeyError):
+            pass
 
     return results
 
@@ -162,19 +162,19 @@ async def _fetch_resolved(tournament_ids: list[int], limit: int = 50) -> list[di
     """Fetch resolved questions from one or more tournaments."""
     all_questions: list[dict] = []
 
-    from aib.clients.metaculus import AsyncMetaculusClient
+    from aib.clients.metaculus import get_client
 
-    async with AsyncMetaculusClient() as mc:
-        for tid in tournament_ids:
-            results = await mc.fetch_posts_list(
-                {
-                    "order_by": "-resolve_time",
-                    "status": "resolved",
-                    "tournaments": tid,
-                    "limit": limit,
-                }
-            )
-            all_questions.extend(results)
+    mc = get_client()
+    for tid in tournament_ids:
+        results = await mc.fetch_posts_list(
+            {
+                "order_by": "-resolve_time",
+                "status": "resolved",
+                "tournaments": tid,
+                "limit": limit,
+            }
+        )
+        all_questions.extend(results)
 
     seen: set[int] = set()
     deduped: list[dict] = []
@@ -505,17 +505,17 @@ def search(
     )
 
     async def _search() -> list[dict]:
-        from aib.clients.metaculus import AsyncMetaculusClient
+        from aib.clients.metaculus import get_client
 
-        async with AsyncMetaculusClient() as mc:
-            return await mc.fetch_posts_list(
-                {
-                    "search": query,
-                    "status": api_status,
-                    "order_by": "-resolve_time" if resolved_only else "-publish_time",
-                    "limit": limit,
-                }
-            )
+        mc = get_client()
+        return await mc.fetch_posts_list(
+            {
+                "search": query,
+                "status": api_status,
+                "order_by": "-resolve_time" if resolved_only else "-publish_time",
+                "limit": limit,
+            }
+        )
 
     questions = run_async(_search())
 

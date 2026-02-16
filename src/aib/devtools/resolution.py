@@ -10,7 +10,7 @@ from pathlib import Path
 
 import typer
 
-from aib.clients.metaculus import AsyncMetaculusClient
+from aib.clients.metaculus import get_client
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -102,32 +102,32 @@ async def batch_fetch_resolved_ids(
     """Fetch post IDs of all resolved questions from tournaments."""
     resolved_ids: set[int] = set()
 
-    async with AsyncMetaculusClient() as mc:
-        for tid in tournament_ids:
-            offset = 0
-            limit = 100
-            while True:
-                results = await mc.fetch_posts_list(
-                    {
-                        "order_by": "-resolve_time",
-                        "status": "resolved",
-                        "tournaments": tid,
-                        "offset": offset,
-                        "limit": limit,
-                    }
-                )
+    mc = get_client()
+    for tid in tournament_ids:
+        offset = 0
+        limit = 100
+        while True:
+            results = await mc.fetch_posts_list(
+                {
+                    "order_by": "-resolve_time",
+                    "status": "resolved",
+                    "tournaments": tid,
+                    "offset": offset,
+                    "limit": limit,
+                }
+            )
 
-                if not results:
-                    break
+            if not results:
+                break
 
-                for item in results:
-                    post_id = item.get("id")
-                    if post_id is not None:
-                        resolved_ids.add(post_id)
+            for item in results:
+                post_id = item.get("id")
+                if post_id is not None:
+                    resolved_ids.add(post_id)
 
-                if len(results) < limit:
-                    break
-                offset += limit
+            if len(results) < limit:
+                break
+            offset += limit
 
     return resolved_ids
 
@@ -169,27 +169,27 @@ def check(
         items_by_id = {item["post_id"]: item for item in unresolved}
 
         typer.echo(f"\nFetching resolution values for {len(needs_fetch)} questions...")
-        async with AsyncMetaculusClient() as client:
-            for post_id in sorted(needs_fetch):
-                typer.echo(f"  Fetching {post_id}...")
-                try:
-                    question_data = await client.fetch_post_json(post_id)
-                except (OSError, ValueError) as e:
-                    typer.echo(f"    Error: {e}")
-                    continue
+        client = get_client()
+        for post_id in sorted(needs_fetch):
+            typer.echo(f"  Fetching {post_id}...")
+            try:
+                question_data = await client.fetch_post_json(post_id)
+            except (OSError, ValueError) as e:
+                typer.echo(f"    Error: {e}")
+                continue
 
-                resolution = get_resolution(question_data)
-                if resolution is not None:
-                    typer.echo(f"    Resolved: {resolution}")
-                    if not dry_run:
-                        post_dir = items_by_id[post_id]["dir"]
-                        for f in post_dir.glob("*.json"):
-                            if update_forecast_file(f, resolution):
-                                updated += 1
-                    else:
-                        updated += 1
+            resolution = get_resolution(question_data)
+            if resolution is not None:
+                typer.echo(f"    Resolved: {resolution}")
+                if not dry_run:
+                    post_dir = items_by_id[post_id]["dir"]
+                    for f in post_dir.glob("*.json"):
+                        if update_forecast_file(f, resolution):
+                            updated += 1
+                else:
+                    updated += 1
 
-                await asyncio.sleep(2.0)
+            await asyncio.sleep(2.0)
 
         return updated, still_open
 

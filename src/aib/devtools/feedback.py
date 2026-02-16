@@ -23,7 +23,8 @@ from aib.agent.history import (
     load_past_forecasts,
     load_retrodict_forecasts,
 )
-from metaculus import ApiFilter, AsyncMetaculusClient, BinaryQuestion, MetaculusQuestion
+from aib.clients.metaculus import AsyncMetaculusClient, get_client
+from metaculus import ApiFilter, BinaryQuestion, MetaculusQuestion
 
 app = typer.Typer(no_args_is_help=True)
 logger = logging.getLogger(__name__)
@@ -86,6 +87,7 @@ class ForecastResult(BaseModel):
     question_title: str
     question_type: str
     forecast_timestamp: str
+    agent_version: str | None = None
     forecasted_probability: float | None = None
     forecasted_median: float | None = None
     forecasted_percentiles: dict[int, float] | None = None
@@ -102,6 +104,7 @@ class CPComparison(BaseModel):
     question_title: str
     question_type: str
     forecast_timestamp: str
+    agent_version: str | None = None
     our_probability: float
     community_prediction: float
     divergence: float
@@ -114,6 +117,7 @@ class RetrodictResult(BaseModel):
     question_type: str
     retrodict_date: str | None = None
     forecast_timestamp: str
+    agent_version: str | None = None
     forecasted_probability: float | None = None
     forecasted_median: float | None = None
     actual_value: float | str | None = None
@@ -228,7 +232,7 @@ async def fetch_resolved_questions(
 ) -> list[MetaculusQuestion]:
     all_questions: list[MetaculusQuestion] = []
     if client is None:
-        client = AsyncMetaculusClient()
+        client = get_client()
 
     for tournament_id in tournament_ids:
         logger.info("Fetching resolved questions from tournament %s", tournament_id)
@@ -298,6 +302,7 @@ async def fetch_cp_for_forecasts(
                         question_title=latest_forecast.question_title[:80],
                         question_type=latest_forecast.question_type,
                         forecast_timestamp=latest_forecast.timestamp,
+                        agent_version=latest_forecast.agent_version,
                         our_probability=latest_forecast.probability,
                         community_prediction=cached.cp,
                         divergence=divergence,
@@ -313,7 +318,7 @@ async def fetch_cp_for_forecasts(
             await asyncio.sleep(5.0)
 
         try:
-            question = await client.get_question_by_post_id(post_id)
+            question = await client.get_question_by_post_id(post_id, include_text=False)
             if isinstance(question, list):
                 question = question[0]
 
@@ -338,6 +343,7 @@ async def fetch_cp_for_forecasts(
                     question_title=latest_forecast.question_title[:80],
                     question_type=latest_forecast.question_type,
                     forecast_timestamp=latest_forecast.timestamp,
+                    agent_version=latest_forecast.agent_version,
                     our_probability=latest_forecast.probability,
                     community_prediction=cp,
                     divergence=divergence,
@@ -396,6 +402,7 @@ def match_forecasts_to_resolutions(
             question_title=question.question_text[:100],
             question_type=forecast.question_type,
             forecast_timestamp=forecast.timestamp,
+            agent_version=forecast.agent_version,
             forecasted_probability=forecast.probability,
             forecasted_median=forecast.median,
             forecasted_percentiles=forecast.percentiles,
@@ -433,8 +440,9 @@ def collect_retrodict_results() -> list[RetrodictResult]:
             post_id=f.post_id or 0,
             question_title=f.question_title[:80],
             question_type=f.question_type,
-            retrodict_date=f.retrodict_date,
+            retrodict_date=f.retrodict_date or "",
             forecast_timestamp=f.timestamp,
+            agent_version=f.agent_version,
             forecasted_probability=f.probability,
             forecasted_median=f.median,
         )
@@ -532,9 +540,19 @@ def collect(
             "--new-only/--no-new-only", help="Only show new items since last analysis"
         ),
     ] = True,
+    version: Annotated[
+        str | None,
+        typer.Option(
+            "--version",
+            "-v",
+            help="Filter results to a specific agent version (e.g., 1.1.0).",
+        ),
+    ] = None,
 ) -> None:
     """Collect feedback metrics from resolved forecasts."""
-    asyncio.run(_main_async(tournament, since, all_time, include_retrodict, new_only))
+    asyncio.run(
+        _main_async(tournament, since, all_time, include_retrodict, new_only, version)
+    )
 
 
 async def _main_async(
@@ -543,6 +561,7 @@ async def _main_async(
     all_time: bool,
     include_retrodict: bool = False,
     new_only: bool = True,
+    version: str | None = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -579,11 +598,11 @@ async def _main_async(
         since_dt.isoformat() if since_dt else "all time",
     )
 
-    async with AsyncMetaculusClient() as client:
-        questions = await fetch_resolved_questions(tournament_ids, since_dt, client)
-        logger.info("Total resolved questions found: %d", len(questions))
-        cp_comparisons = await fetch_cp_for_forecasts(client, state)
-        logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
+    client = get_client()
+    questions = await fetch_resolved_questions(tournament_ids, since_dt, client)
+    logger.info("Total resolved questions found: %d", len(questions))
+    cp_comparisons = await fetch_cp_for_forecasts(client, state)
+    logger.info("Fetched CP for %d forecasts", len(cp_comparisons))
 
     results = match_forecasts_to_resolutions(questions)
     logger.info("Matched %d forecasts to resolutions", len(results))
@@ -621,6 +640,18 @@ async def _main_async(
                 prev_retro,
                 len(retrodict_results),
             )
+
+    if version:
+        results = [r for r in results if r.agent_version == version]
+        retrodict_results = [r for r in retrodict_results if r.agent_version == version]
+        cp_comparisons = [c for c in cp_comparisons if c.agent_version == version]
+        logger.info(
+            "Filtered to version %s: %d forecasts, %d retrodictions, %d CP comparisons",
+            version,
+            len(results),
+            len(retrodict_results),
+            len(cp_comparisons),
+        )
 
     binary_results = [r for r in results if r.brier_score is not None]
     numeric_results = [r for r in results if r.question_type in ("numeric", "discrete")]
@@ -714,6 +745,8 @@ async def _main_async(
     print("FEEDBACK COLLECTION SUMMARY")
     print("=" * 60)
     print(f"Tournaments: {', '.join(tournament_names)}")
+    if version:
+        print(f"Version filter: {version}")
     if new_only and state.last_analysis:
         print(f"Mode: incremental (new since {state.last_analysis[:10]})")
         print(f"Previously analyzed: {len(already_analyzed)} items")
@@ -727,6 +760,33 @@ async def _main_async(
     if avg_brier is not None:
         print(f"\nAverage Brier Score: {avg_brier:.4f}")
         print(f"Average Log Score: {avg_log:.4f}")
+
+    # Show per-version breakdown when no --version filter
+    if not version:
+        all_scored = [r for r in results if r.brier_score is not None]
+        all_retro_scored = [r for r in retrodict_results if r.brier_score is not None]
+        scored_items = all_scored + [
+            ForecastResult(
+                question_id=r.post_id,
+                question_title=r.question_title,
+                question_type=r.question_type,
+                forecast_timestamp=r.forecast_timestamp,
+                agent_version=r.agent_version,
+                brier_score=r.brier_score,
+            )
+            for r in all_retro_scored
+        ]
+        versions: dict[str, list[float]] = {}
+        for item in scored_items:
+            v = item.agent_version or "(unknown)"
+            if item.brier_score is not None:
+                versions.setdefault(v, []).append(item.brier_score)
+        if len(versions) > 1:
+            print("\nAverage Brier by version:")
+            for v in sorted(versions.keys()):
+                scores = versions[v]
+                avg = sum(scores) / len(scores)
+                print(f"  v{v}: {avg:.4f} (n={len(scores)})")
 
     if calibration:
         print("\nCalibration (forecasted -> actual resolution rate):")
