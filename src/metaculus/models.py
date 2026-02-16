@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +329,11 @@ class AggregationHistoryPoint(BaseModel):
     centers: list[float] = Field(default_factory=list)
     means: list[float] = Field(default_factory=list)
     forecaster_count: int | None = None
+
+    @field_validator("centers", "means", mode="before")
+    @classmethod
+    def _coerce_none_to_list(cls, v: list[float] | None) -> list[float]:
+        return v if v is not None else []
 
 
 class AggregationMethod(BaseModel):

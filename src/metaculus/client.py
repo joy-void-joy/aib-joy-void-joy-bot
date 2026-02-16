@@ -134,6 +134,7 @@ class AsyncMetaculusClient:
         self.min_request_interval = min_request_interval
         self._managed_client: httpx.AsyncClient | None = None
         self._last_request_time: float = 0.0
+        self._post_cache: dict[tuple[int, bool], dict[str, Any]] = {}
         if self.token is None:
             logger.warning("METACULUS_TOKEN not set")
 
@@ -155,12 +156,10 @@ class AsyncMetaculusClient:
                 yield client
 
     def _get_headers(self) -> dict[str, str]:
-        if self.token is None:
-            raise ValueError("METACULUS_TOKEN not set")
-        return {
-            "Authorization": f"Token {self.token}",
-            "Accept-Language": "en",
-        }
+        headers: dict[str, str] = {"Accept-Language": "en"}
+        if self.token is not None:
+            headers["Authorization"] = f"Token {self.token}"
+        return headers
 
     async def _throttle(self) -> None:
         """Enforce minimum delay between requests to avoid 429s."""
@@ -176,37 +175,90 @@ class AsyncMetaculusClient:
         post_json: dict[str, Any],
         client: httpx.AsyncClient,
         post_id: int,
+        *,
+        include_text: bool = True,
     ) -> dict[str, Any]:
-        """Fill nulls in the JSON API response from the HTML API.
+        """Fill nulls in the JSON API response using fallback sources.
 
-        The Metaculus JSON API may return null for various question fields
-        (description, resolution, aggregations, etc.). The DRF browsable
-        HTML page still includes them. Use HTML as the base, then overlay
-        non-null JSON values on top.
+        The Metaculus /api/posts/ endpoint may return null for various question
+        fields. Two fallback sources are tried in order:
+
+        1. HTML API — The DRF browsable HTML page includes description,
+           resolution_criteria, and fine_print that the JSON API omits.
+           Skipped when include_text=False.
+        2. Old API — The /api2/questions/ endpoint (unauthenticated) returns
+           resolution and aggregation data hidden from tournament participants.
+
+        Args:
+            include_text: If False, skip HTML enrichment for description/criteria
+                fields. Use this when you only need resolution + aggregation data.
         """
         question = post_json.get("question") or {}
         has_nulls = any(v is None for v in question.values())
         if not has_nulls:
             return post_json
 
-        response = await client.get(
-            f"{self.base_url}/posts/{post_id}/",
-            headers={**self._get_headers(), "Accept": "text/html"},
+        # HTML enrichment for text fields (description, criteria, fine_print)
+        text_fields = ("description", "resolution_criteria", "fine_print")
+        if include_text and any(question.get(f) is None for f in text_fields):
+            await self._throttle()
+            response = await client.get(
+                f"{self.base_url}/posts/{post_id}/",
+                headers={**self._get_headers(), "Accept": "text/html"},
+            )
+            if response.status_code == 200:
+                html_data = _parse_html_api_response(response.text)
+                if html_data is not None:
+                    html_question = html_data.get("question") or {}
+                    question = {
+                        **html_question,
+                        **{k: v for k, v in question.items() if v is not None},
+                    }
+                    post_json = {**post_json, "question": question}
+
+        return await self._enrich_from_old_api(post_json, client, post_id)
+
+    async def _enrich_from_old_api(
+        self,
+        post_json: dict[str, Any],
+        client: httpx.AsyncClient,
+        post_id: int,
+    ) -> dict[str, Any]:
+        """Fill nulls using the old API which returns data hidden from authenticated users.
+
+        The /api2/questions/ endpoint (unauthenticated) returns resolution and
+        aggregation data that the new /api/posts/ endpoint withholds from
+        tournament participants.
+        """
+        question = post_json.get("question") or {}
+        needs_resolution = (
+            question.get("resolution") is None and question.get("status") == "resolved"
         )
-        if response.status_code != 200:
+        needs_aggregations = question.get("aggregations") is None
+        if not needs_resolution and not needs_aggregations:
             return post_json
 
-        html_data = _parse_html_api_response(response.text)
-        if html_data is None:
+        try:
+            await self._throttle()
+            response = await client.get(
+                f"https://www.metaculus.com/api2/questions/{post_id}/",
+            )
+            if response.status_code != 200:
+                return post_json
+            old_data = response.json()
+        except (httpx.HTTPError, ValueError):
             return post_json
 
-        html_question = html_data.get("question") or {}
-        merged_question = {
-            **html_question,
-            **{k: v for k, v in question.items() if v is not None},
-        }
+        old_question = old_data.get("question") or {}
+        merged_question = dict(question)
+        if needs_resolution and old_question.get("resolution") is not None:
+            merged_question["resolution"] = old_question["resolution"]
+        if needs_aggregations and old_question.get("aggregations") is not None:
+            merged_question["aggregations"] = old_question["aggregations"]
 
-        return {**post_json, "question": merged_question}
+        if merged_question != question:
+            return {**post_json, "question": merged_question}
+        return post_json
 
     @with_retry()
     async def fetch_aggregation_history(
@@ -240,18 +292,28 @@ class AsyncMetaculusClient:
 
     @with_retry()
     async def fetch_post_json(
-        self, post_id: int, *, with_cp: bool = False
+        self,
+        post_id: int,
+        *,
+        with_cp: bool = False,
+        include_text: bool = True,
     ) -> dict[str, Any]:
         """Fetch enriched post JSON by post ID.
 
-        Returns the raw API JSON with content fields (description,
-        resolution_criteria, fine_print) populated from the HTML
-        fallback if the JSON API returns nulls.
+        Returns the raw API JSON with null fields populated from
+        fallback sources (HTML API for text, old API for resolution).
 
         Args:
             with_cp: If True, include community prediction/aggregation data
                 via with_cp and include_conditional_cps params.
+            include_text: If False, skip HTML enrichment for description/criteria
+                fields. Reduces requests from 3 to 2 per question. Use when you
+                only need resolution + aggregation data.
         """
+        cache_key = (post_id, with_cp)
+        if cache_key in self._post_cache:
+            return self._post_cache[cache_key]
+
         await self._throttle()
         params: dict[str, str] = {}
         if with_cp:
@@ -265,14 +327,18 @@ class AsyncMetaculusClient:
             )
             response.raise_for_status()
             post_json = response.json()
-            return await self._enrich_post_json(post_json, client, post_id)
+            result = await self._enrich_post_json(
+                post_json, client, post_id, include_text=include_text
+            )
+            self._post_cache[cache_key] = result
+            return result
 
     async def get_question_by_post_id(
-        self, post_id: int
+        self, post_id: int, *, include_text: bool = True
     ) -> MetaculusQuestion | list[MetaculusQuestion]:
         """Fetch a question by post ID."""
         logger.debug("Fetching question %d", post_id)
-        post_json = await self.fetch_post_json(post_id)
+        post_json = await self.fetch_post_json(post_id, include_text=include_text)
         questions = self._parse_post_json(post_json)
         if len(questions) == 1:
             return questions[0]
@@ -755,13 +821,21 @@ class MetaculusClient:
     def _run(self, coro: Any) -> Any:
         return asyncio.run(coro)
 
-    def fetch_post_json(self, post_id: int, *, with_cp: bool = False) -> dict[str, Any]:
-        return self._run(self._async.fetch_post_json(post_id, with_cp=with_cp))
+    def fetch_post_json(
+        self, post_id: int, *, with_cp: bool = False, include_text: bool = True
+    ) -> dict[str, Any]:
+        return self._run(
+            self._async.fetch_post_json(
+                post_id, with_cp=with_cp, include_text=include_text
+            )
+        )
 
     def get_question_by_post_id(
-        self, post_id: int
+        self, post_id: int, *, include_text: bool = True
     ) -> MetaculusQuestion | list[MetaculusQuestion]:
-        return self._run(self._async.get_question_by_post_id(post_id))
+        return self._run(
+            self._async.get_question_by_post_id(post_id, include_text=include_text)
+        )
 
     def get_question_by_url(
         self, url: str
