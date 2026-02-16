@@ -116,7 +116,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 6. **Force push to update the PR**:
    ```bash
-   git push --force-with-lease
+   git push --force
    ```
 
    Return the PR URL to the user when done. Include a commit list in the PR body:
