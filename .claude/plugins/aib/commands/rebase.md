@@ -10,24 +10,7 @@ Clean up the commit history on the current feature branch, push it, and open (or
 
 ## Determine Base Branch
 
-If a base branch was provided as an argument, use it. Otherwise, auto-detect the branch this was forked from:
-
-```bash
-# Get the current branch name
-current=$(git rev-parse --abbrev-ref HEAD)
-
-# Find the nearest ancestor branch by checking merge-base distance against all local branches
-# Exclude the current branch and HEAD
-for branch in $(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -v "^${current}$"); do
-  merge_base=$(git merge-base "$branch" HEAD 2>/dev/null) || continue
-  # Count commits between merge-base and HEAD (fewer = closer fork point)
-  distance=$(git rev-list --count "$merge_base"..HEAD)
-  echo "$distance $branch"
-done | sort -n | head -1
-# Use the branch with the smallest distance (most recent fork point)
-```
-
-Pick the branch with the fewest commits since divergence. If auto-detection fails (no local branches share history), fall back to `AskUserQuestion`.
+If a base branch was provided as an argument, use it. Otherwise, use `AskUserQuestion` to ask which branch to rebase onto, offering `main` as the default and the option to specify a different branch.
 
 Store the result as `<base>` — all references below use this value.
 

@@ -68,6 +68,17 @@ What to AVOID:
 
 Keep the system prompt fresh - periodically review and remove guidance that no longer applies. Old prompt rules can sediment into an outdated system.
 
+## Offline Mode
+
+When the Metaculus API is rate-limited (429), skip all API-calling scripts. In offline mode:
+
+1. **Skip** `aib-devtools feedback collect` and `aib-devtools resolution check` (both hit the authenticated DRF API)
+2. **Ask the user** if they want to run `aib-devtools fetch-resolutions fetch` — it uses the unauthenticated `/api2/` endpoint with separate rate limits and may still work
+3. **Use cached data**: `feedback_state.json` (CP cache), `data/api_cache/` (resolution cache), `notes/scores.csv`
+4. **All analysis scripts work offline**: `aib-devtools calibration`, `aib-devtools scores`, `aib-devtools trace`, trace-explorer
+
+If the user ran fetch-resolutions and got fresh data, run `uv run aib-devtools scores build` to rebuild scores before proceeding to analysis.
+
 ## Phase 0: Read Previous Analysis
 
 **Before collecting any data, read what was already done.** This prevents double-fixing.
@@ -160,6 +171,8 @@ uv run forecast retrodict 41835 --no-blind
 - **Fine print**: Redacted via haiku to remove post-cutoff temporal references
 
 The agent forecasts as if it were making the prediction at the original question date, using only information that was available at that time.
+
+**Data scarcity in blind mode**: Retrodict systematically has less data than live forecasting. Wayback Machine coverage is spotty (many pages uncached), date-restricted web searches return far fewer results, live-only tools (prediction markets, real-time APIs) are blocked entirely, and sandbox network access is PyPI-only. This means retrodict scores are expected to be worse than live scores for the same agent version — the gap reflects data availability, not reasoning quality. When comparing new retrodicts against old live forecasts, account for this baseline disadvantage before attributing score differences to agent changes.
 
 **What retrodict outputs:**
 - Saves forecasts to `notes/retrodict/<post_id>/<forecast_date>_<timestamp>.json`
@@ -336,6 +349,19 @@ Return the standard pattern report.
 - Tool usage patterns (high-value vs low-value tools)
 - **Future-leak analysis** — per-trace CLEAN/SUSPECT/LEAKED verdicts for any retrodict traces (auto-detected, no extra prompt needed)
 - 2-3 specific traces worth reading in full (outliers or interesting cases)
+
+**Other subagents for deeper analysis:**
+
+- **Version reviewer**: For a holistic assessment of a single past version (especially before prompt rewrites), use:
+  ```
+  Task(subagent_type="aib-workflow:version-reviewer", prompt="Review version [X.Y.Z]")
+  ```
+- **Version explorer**: For quick file retrieval and diffs across versions (e.g., "fetch me the prompt at v0.3" or "compare v0.3 and v0.9 prompts"):
+  ```
+  Task(subagent_type="aib-workflow:version-explorer", prompt="Compare v0.3.1 and v0.9.2")
+  ```
+
+The trace explorer finds cross-cutting patterns; the version reviewer explains why those patterns exist by connecting them to the prompt; the version explorer retrieves and diffs the actual code. You can run all three — they serve complementary purposes.
 
 ### 2b. Deep-Dive on Flagged Traces (Optional)
 
@@ -573,6 +599,7 @@ The `aib-devtools feedback collect` command automatically organizes data by bran
 # Feedback Loop Analysis: YYYY-MM-DD
 
 ## Ground Truth Status
+- Agent version analyzed: X.Y.Z
 - Resolved forecasts with our predictions: N
 - Average Brier score: X.XX (or "none yet - process analysis only")
 
@@ -614,6 +641,9 @@ The `aib-devtools feedback collect` command automatically organizes data by bran
 | Object | Added X tool | Agent requested it in N meta-reflections |
 | Meta | Improved analysis queries | Was missing Y data |
 | Meta-Meta | Updated feedback-loop.md | Clarified Z section |
+
+## Retrodiction Queue
+uv run forecast retrodict <ids>
 ```
 
 ## Commands Available
