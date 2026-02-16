@@ -113,6 +113,8 @@ LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__markets__polymarket_price",
         "mcp__markets__manifold_price",
+        "mcp__markets__kalshi_price",
+        "mcp__markets__kalshi_event",
         "mcp__markets__stock_price",
     }
 )
@@ -122,6 +124,7 @@ HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__markets__polymarket_history",
         "mcp__markets__manifold_history",
+        "mcp__markets__kalshi_history",
         "mcp__markets__stock_history",
     }
 )

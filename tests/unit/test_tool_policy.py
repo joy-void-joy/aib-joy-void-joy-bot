@@ -118,9 +118,7 @@ class TestToolPolicyExclusions:
 
     def test_includes_asknews_with_client_credentials(self) -> None:
         """Should include AskNews tools with client_id + client_secret."""
-        policy = ToolPolicy(
-            asknews_client_id="id", asknews_client_secret="secret"
-        )
+        policy = ToolPolicy(asknews_client_id="id", asknews_client_secret="secret")
 
         allowed = policy.get_allowed_tools()
         for tool in ASKNEWS_TOOLS:

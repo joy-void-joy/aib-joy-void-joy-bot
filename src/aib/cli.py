@@ -22,8 +22,8 @@ from aib.agent.history import (
     update_retrodict_comparison,
 )
 from aib.retrodict_context import forecasted_post_id, retrodict_cutoff
+from aib.clients.metaculus import get_client as get_metaculus_client
 from metaculus import (
-    AsyncMetaculusClient,
     BinaryQuestion,
     DateQuestion,
     DiscreteQuestion,
@@ -157,7 +157,7 @@ def _lookup_cached_resolution(post_id: int) -> str | None:
 
 async def get_question_meta(post_id: int) -> QuestionMeta | None:
     """Fetch question metadata including resolution and community prediction."""
-    client = AsyncMetaculusClient()
+    client = get_metaculus_client()
     try:
         result = await client.get_question_by_post_id(post_id)
         if isinstance(result, list):

@@ -573,12 +573,12 @@ def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfi
     }
 
 
-async def fetch_question(question_id: int, token: str | None = None) -> dict:
+async def fetch_question(question_id: int) -> dict:
     """Fetch question details from Metaculus API."""
-    from metaculus.client import AsyncMetaculusClient
+    from aib.clients.metaculus import get_client
 
-    async with AsyncMetaculusClient(token=token) as client:
-        return await client.fetch_post_json(question_id)
+    client = get_client()
+    return await client.fetch_post_json(question_id)
 
 
 def build_question_context(post_data: dict) -> dict:

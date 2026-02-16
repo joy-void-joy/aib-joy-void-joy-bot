@@ -18,7 +18,9 @@ from claude_agent_sdk.types import AssistantMessage, ResultMessage, TextBlock
 
 pytestmark = pytest.mark.integration
 
-PRESET_TEMPLATE = (Path(__file__).parents[2] / "src" / "aib" / "agent" / "claude_code_preset.txt").read_text()
+PRESET_TEMPLATE = (
+    Path(__file__).parents[2] / "src" / "aib" / "agent" / "claude_code_preset.txt"
+).read_text()
 FAKE_DATE = date(1999, 12, 31)
 
 
@@ -28,7 +30,9 @@ def _build_system_prompt(fake_date: date) -> str:
     )
 
 
-async def _ask_agent(prompt: str, tools: list[str] | None = None, max_turns: int = 1) -> str:
+async def _ask_agent(
+    prompt: str, tools: list[str] | None = None, max_turns: int = 1
+) -> str:
     """Run a single query against an agent with a fake date and return text response."""
     options = ClaudeAgentOptions(
         model="claude-sonnet-4-5-20250929",
@@ -58,7 +62,9 @@ async def _ask_agent(prompt: str, tools: list[str] | None = None, max_turns: int
 def test_direct_date_question() -> None:
     """Model should report the fake date, not the real one."""
     response = asyncio.run(
-        _ask_agent("What is today's date? Reply with ONLY the date in YYYY-MM-DD format.")
+        _ask_agent(
+            "What is today's date? Reply with ONLY the date in YYYY-MM-DD format."
+        )
     )
 
     real_date = date.today().isoformat()
@@ -80,9 +86,7 @@ def test_published_before_reasoning() -> None:
     )
 
     real_date = date.today().isoformat()
-    assert real_date not in response, (
-        f"Model used real date {real_date} for reasoning"
-    )
+    assert real_date not in response, f"Model used real date {real_date} for reasoning"
 
 
 def test_bash_date_with_tools() -> None:
