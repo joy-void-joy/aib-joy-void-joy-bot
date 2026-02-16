@@ -33,6 +33,11 @@ class FredSeriesInput(BaseModel):
     observation_end: str | None = Field(
         default=None, description="End date (YYYY-MM-DD). Default: today"
     )
+    limit: int | None = Field(
+        default=30,
+        ge=1,
+        description="Max observations to return (from end of range). Default: 30. Set to null for all observations.",
+    )
 
 
 class FredSearchInput(BaseModel):
@@ -72,11 +77,11 @@ class FredSeriesInfo(TypedDict):
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
         "Common series: DGS10 (10-year Treasury), DGS3MO (3-month Treasury), "
         "FEDFUNDS (Fed Funds Rate), UNRATE (Unemployment), CPIAUCSL (CPI). "
-        "Returns recent observations and series metadata.\n\n"
+        "Returns observations and series metadata. Set observation_start/observation_end to control the date range.\n\n"
         "Examples:\n"
         '  fred_series(series_id="DGS10") → last 30 days of 10-year Treasury yields\n'
-        '  fred_series(series_id="UNRATE", observation_start="2025-01-01") → unemployment from Jan 2025\n'
-        '  fred_series(series_id="CPIAUCSL", observation_start="2024-01-01") → CPI over last ~2 years\n'
+        '  fred_series(series_id="UNRATE", observation_start="2024-01-01") → unemployment from Jan 2024 to now\n'
+        '  fred_series(series_id="CPIAUCSL", observation_start="2024-01-01", observation_end="2025-06-01") → CPI for a specific window\n'
         "Use fred_search first if you don't know the series ID."
     ),
     FredSeriesInput.model_json_schema(),
@@ -147,13 +152,17 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
                 latest_date = obs["date"]
                 break
 
+        raw_updated = str(info.get("last_updated", ""))[:10]
+        if cutoff is not None and raw_updated > cutoff.isoformat():
+            raw_updated = cutoff.isoformat()
+
         series_info: FredSeriesInfo = {
             "id": series_id,
             "title": str(info.get("title", series_id)),
             "frequency": str(info.get("frequency", "Unknown")),
             "units": str(info.get("units", "Unknown")),
             "seasonal_adjustment": str(info.get("seasonal_adjustment", "Unknown")),
-            "last_updated": str(info.get("last_updated", ""))[:10],
+            "last_updated": raw_updated,
         }
 
         return mcp_success(
@@ -164,7 +173,9 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
                 "observation_start": start_date,
                 "observation_end": end_date,
                 "data_points": len(obs_list),
-                "observations": obs_list[-30:],  # Limit to last 30
+                "observations": obs_list[-validated.limit :]
+                if validated.limit
+                else obs_list,
             }
         )
 

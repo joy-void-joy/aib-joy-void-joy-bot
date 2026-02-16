@@ -37,6 +37,12 @@ class MarketQueryInput(BaseModel):
     limit: int = Field(default=settings.market_default_limit, ge=1, le=50)
 
 
+class KalshiEventInput(BaseModel):
+    """Input for fetching a single Kalshi event with all its markets."""
+
+    event_ticker: str = Field(min_length=1)
+
+
 # --- Output Schemas ---
 
 
@@ -47,7 +53,40 @@ class MarketPrice(TypedDict):
     probability: float  # 0-1, derived from price
     volume: float | None  # Trading volume if available
     url: str
-    source: str  # "polymarket" or "manifold"
+    source: str  # "polymarket", "manifold", or "kalshi"
+
+
+class KalshiMarketPrice(MarketPrice):
+    """Kalshi market price with ticker identifiers for drill-down.
+
+    Use event_ticker with kalshi_event to get all bracket markets.
+    Use market_ticker with kalshi_history for historical prices.
+    """
+
+    market_ticker: str
+    event_ticker: str
+
+
+class KalshiEventMarket(TypedDict):
+    """A single bracket market within a Kalshi event."""
+
+    ticker: str
+    title: str
+    probability: float
+    volume: float | None
+    strike_type: str | None  # "greater", "less", "between", etc.
+    floor_strike: float | None
+    cap_strike: float | None
+    url: str
+
+
+class KalshiEvent(TypedDict):
+    """A Kalshi event with its bracket markets."""
+
+    event_ticker: str
+    event_title: str
+    markets: list[KalshiEventMarket]
+    url: str
 
 
 # --- Polymarket API ---
@@ -777,13 +816,390 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
 
 
+# --- Kalshi API ---
+
+KALSHI_API = "https://api.elections.kalshi.com/trade-api/v2"
+
+
+def _series_ticker_from_market(ticker: str) -> str:
+    """Extract series ticker from a market ticker (e.g. 'KXFED' from 'KXFED-26APR')."""
+    return ticker.split("-")[0]
+
+
+def _parse_kalshi_probability(market: dict[str, Any]) -> float | None:
+    """Extract probability from a Kalshi market's dollar-string price fields.
+
+    Tries last_price_dollars first (most recent trade), then yes_ask/yes_bid
+    midpoint as fallback.
+    """
+    last_price = market.get("last_price_dollars")
+    if last_price is not None:
+        try:
+            return float(last_price)
+        except (ValueError, TypeError):
+            pass
+
+    yes_ask = market.get("yes_ask_dollars")
+    yes_bid = market.get("yes_bid_dollars")
+    if yes_ask is not None and yes_bid is not None:
+        try:
+            return (float(yes_ask) + float(yes_bid)) / 2.0
+        except (ValueError, TypeError):
+            pass
+
+    return None
+
+
+def _kalshi_matches_query(event: dict[str, Any], query_words: list[str]) -> bool:
+    """Check if a Kalshi event matches all query words (AND logic, case-insensitive).
+
+    Searches event title, sub_title, and all market yes_sub_title fields.
+    """
+    text_parts: list[str] = [
+        event.get("title", ""),
+        event.get("sub_title", ""),
+    ]
+    for m in event.get("markets", []):
+        text_parts.append(m.get("yes_sub_title", ""))
+        text_parts.append(m.get("title", ""))
+    combined = " ".join(text_parts).lower()
+    return all(w in combined for w in query_words)
+
+
+@with_retry(max_attempts=3)
+async def _fetch_kalshi_events(
+    query: str, *, status: str | None = "open"
+) -> list[dict[str, Any]]:
+    """Fetch events from Kalshi API with client-side text filtering."""
+    params: dict[str, str | int] = {
+        "with_nested_markets": "true",
+        "limit": 200,
+    }
+    if status is not None:
+        params["status"] = status
+    async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+        response = await client.get(
+            f"{KALSHI_API}/events",
+            params=params,
+        )
+        response.raise_for_status()
+        data = response.json()
+        events: list[dict[str, Any]] = data.get("events", [])
+
+    query_words = query.lower().split()
+    return [e for e in events if _kalshi_matches_query(e, query_words)]
+
+
+@with_retry(max_attempts=3)
+async def _fetch_kalshi_event(event_ticker: str) -> dict[str, Any]:
+    """Fetch a single Kalshi event with all its markets."""
+    async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+        response = await client.get(
+            f"{KALSHI_API}/events/{event_ticker}",
+            params={"with_nested_markets": "true"},
+        )
+        response.raise_for_status()
+        return response.json().get("event", {})
+
+
+@with_retry(max_attempts=3)
+async def _fetch_kalshi_candlestick(
+    series_ticker: str,
+    market_ticker: str,
+    start_ts: int,
+    end_ts: int,
+) -> list[dict[str, Any]]:
+    """Fetch candlestick data for a Kalshi market."""
+    async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+        response = await client.get(
+            f"{KALSHI_API}/series/{series_ticker}/markets/{market_ticker}/candlesticks",
+            params={
+                "start_ts": start_ts,
+                "end_ts": end_ts,
+                "period_interval": 1440,
+            },
+        )
+        response.raise_for_status()
+        return response.json().get("candlesticks", [])
+
+
+async def _kalshi_market_at_cutoff(
+    market: dict[str, Any], cutoff: date
+) -> float | None:
+    """Get historical price for a Kalshi market at the retrodict cutoff.
+
+    Returns None if the market was created after the cutoff or if no
+    candlestick data is available.
+    """
+    created_time = market.get("created_time")
+    if created_time:
+        try:
+            created_dt = datetime.fromisoformat(created_time.replace("Z", "+00:00"))
+            cutoff_dt = datetime.combine(cutoff, time())
+            if created_dt.replace(tzinfo=None) > cutoff_dt:
+                return None
+        except (ValueError, TypeError):
+            pass
+
+    ticker = market.get("ticker", "")
+    series_ticker = _series_ticker_from_market(ticker)
+    cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+    start_ts = cutoff_unix - (30 * 24 * 60 * 60)
+
+    try:
+        candles = await _fetch_kalshi_candlestick(
+            series_ticker, ticker, start_ts, cutoff_unix
+        )
+    except Exception:
+        return None
+
+    if not candles:
+        return None
+
+    closest = max(
+        (c for c in candles if c.get("end_period_ts", 0) <= cutoff_unix),
+        key=lambda c: c.get("end_period_ts", 0),
+        default=None,
+    )
+    if closest is None:
+        return None
+
+    close_price = closest.get("price_dollars")
+    if close_price is not None:
+        try:
+            return float(close_price)
+        except (ValueError, TypeError):
+            pass
+
+    yes_close = closest.get("yes_close_dollars")
+    if yes_close is not None:
+        try:
+            return float(yes_close)
+        except (ValueError, TypeError):
+            pass
+
+    return None
+
+
+@tool(
+    "kalshi_price",
+    (
+        "Search Kalshi (CFTC-regulated event contracts exchange) for prediction markets. "
+        "Strong coverage of economic/policy events: Fed rate decisions, CPI, GDP, jobs reports. "
+        "Returns YES price as probability, trading volume, and URL. "
+        f"Optional limit (default: {settings.market_default_limit}).\n\n"
+        "Examples:\n"
+        "  kalshi_price(query='Fed rate') → find Fed funds rate markets\n"
+        "  kalshi_price(query='CPI inflation') → find CPI markets\n"
+        "  kalshi_price(query='GDP') → find GDP growth markets\n"
+        "Use kalshi_event to drill into bracket markets for numeric distributions."
+    ),
+    MarketQueryInput.model_json_schema(),
+)
+@tracked("kalshi_price")
+async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
+    """Search Kalshi and return market prices."""
+    try:
+        validated = MarketQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    limit = validated.limit
+    cutoff = retrodict_cutoff.get()
+
+    try:
+        if cutoff is not None:
+            events = await _fetch_kalshi_events(query, status=None)
+        else:
+            events = await _fetch_kalshi_events(query, status="open")
+
+        if not events:
+            return mcp_success({"markets": [], "query": query})
+
+        results: list[KalshiMarketPrice] = []
+        for event in events[:limit]:
+            event_tick = event.get("event_ticker", "")
+            for market in event.get("markets", []):
+                if cutoff is not None:
+                    prob = await _kalshi_market_at_cutoff(market, cutoff)
+                    if prob is None:
+                        continue
+                else:
+                    prob = _parse_kalshi_probability(market)
+                    if prob is None:
+                        continue
+
+                ticker = market.get("ticker", "")
+                results.append(
+                    {
+                        "market_title": market.get(
+                            "title", event.get("title", "Unknown")
+                        ),
+                        "probability": prob,
+                        "volume": market.get("volume_fp"),
+                        "url": f"https://kalshi.com/markets/{ticker}",
+                        "source": "kalshi",
+                        "market_ticker": ticker,
+                        "event_ticker": event_tick,
+                    }
+                )
+
+        return mcp_success({"markets": results[:limit], "query": query})
+
+    except httpx.HTTPStatusError as e:
+        logger.exception("Kalshi API error")
+        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+    except Exception as e:
+        logger.exception("Kalshi search failed")
+        return mcp_error(f"Kalshi search failed: {e}")
+
+
+@tool(
+    "kalshi_event",
+    (
+        "Get all bracket markets within a Kalshi event. Events like 'Fed funds rate March' "
+        "have multiple bracket markets forming a probability distribution — very valuable "
+        "for numeric CDF questions. Returns event title and all markets with probabilities, "
+        "bracket info (strike_type, floor_strike, cap_strike), and volumes.\n\n"
+        "Get event tickers from kalshi_price results, then drill in:\n"
+        "  kalshi_event(event_ticker='KXFED-26MAR12') → all Fed rate brackets for March"
+    ),
+    KalshiEventInput.model_json_schema(),
+)
+@tracked("kalshi_event")
+async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
+    """Get all markets in a Kalshi event."""
+    try:
+        validated = KalshiEventInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    event_ticker = validated.event_ticker
+    cutoff = retrodict_cutoff.get()
+
+    try:
+        event = await _fetch_kalshi_event(event_ticker)
+        if not event:
+            return mcp_error(f"Event not found: {event_ticker}")
+
+        event_markets: list[KalshiEventMarket] = []
+        for market in event.get("markets", []):
+            if cutoff is not None:
+                prob = await _kalshi_market_at_cutoff(market, cutoff)
+                if prob is None:
+                    continue
+            else:
+                prob = _parse_kalshi_probability(market)
+                if prob is None:
+                    continue
+
+            ticker = market.get("ticker", "")
+            event_markets.append(
+                {
+                    "ticker": ticker,
+                    "title": market.get("title", market.get("yes_sub_title", "")),
+                    "probability": prob,
+                    "volume": market.get("volume_fp"),
+                    "strike_type": market.get("strike_type"),
+                    "floor_strike": market.get("floor_strike"),
+                    "cap_strike": market.get("cap_strike"),
+                    "url": f"https://kalshi.com/markets/{ticker}",
+                }
+            )
+
+        result: KalshiEvent = {
+            "event_ticker": event_ticker,
+            "event_title": event.get("title", "Unknown"),
+            "markets": event_markets,
+            "url": f"https://kalshi.com/events/{event_ticker}",
+        }
+        return mcp_success(result)
+
+    except httpx.HTTPStatusError as e:
+        logger.exception("Kalshi API error")
+        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+    except Exception as e:
+        logger.exception("Kalshi event fetch failed")
+        return mcp_error(f"Kalshi event fetch failed: {e}")
+
+
+@tool(
+    "kalshi_history",
+    (
+        "Get historical Kalshi market price at a specific past timestamp via candlestick data. "
+        "USE THIS to track how Kalshi probability changed over time. "
+        "Get the market ticker from kalshi_price first, then query specific timestamps. "
+        "Returns the closing price of the last daily candle at or before the timestamp."
+    ),
+    HistoricalPriceInput.model_json_schema(),
+)
+@tracked("kalshi_history")
+async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
+    """Get historical Kalshi price at a timestamp."""
+    try:
+        validated = HistoricalPriceInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    market_ticker = validated.market_id
+    target_ts = validated.timestamp
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
+        target_ts = min(target_ts, cutoff_unix)
+
+    series_ticker = _series_ticker_from_market(market_ticker)
+    start_ts = target_ts - (30 * 24 * 60 * 60)
+
+    try:
+        candles = await _fetch_kalshi_candlestick(
+            series_ticker, market_ticker, start_ts, target_ts
+        )
+
+        if not candles:
+            return mcp_error(f"No historical data found for market {market_ticker}")
+
+        closest = max(
+            (c for c in candles if c.get("end_period_ts", 0) <= target_ts),
+            key=lambda c: c.get("end_period_ts", 0),
+            default=None,
+        )
+        if closest is None:
+            return mcp_error(
+                f"No price data found before timestamp {target_ts} for market {market_ticker}"
+            )
+
+        price = closest.get("price_dollars") or closest.get("yes_close_dollars")
+        if price is None:
+            return mcp_error(f"No price in candlestick data for {market_ticker}")
+
+        result: HistoricalPrice = {
+            "market_id": market_ticker,
+            "timestamp": closest.get("end_period_ts", 0),
+            "probability": float(price),
+            "source": "kalshi",
+        }
+        return mcp_success(result)
+
+    except httpx.HTTPStatusError as e:
+        logger.exception("Kalshi history API error")
+        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+    except Exception as e:
+        logger.exception("Kalshi history lookup failed")
+        return mcp_error(f"Kalshi history lookup failed: {e}")
+
+
 # --- MCP Server ---
 
 _ALL_MARKET_TOOLS = [
     polymarket_price,
     manifold_price,
+    kalshi_price,
     polymarket_history,
     manifold_history,
+    kalshi_history,
+    kalshi_event,
     stock_price,
     stock_history,
 ]

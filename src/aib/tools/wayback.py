@@ -227,13 +227,17 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.get(wayback_url, follow_redirects=True)
                 response.raise_for_status()
-                html = response.text
+                content_type = response.headers.get("content-type", "")
+                raw_text = response.text
         except httpx.HTTPError as e:
             logger.warning("Wayback fetch failed for %s: %s", url, e)
             return None
 
+    if "text/plain" in content_type:
+        return raw_text
+
     extracted = trafilatura.extract(
-        html,
+        raw_text,
         include_comments=False,
         include_tables=True,
         no_fallback=False,

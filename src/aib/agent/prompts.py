@@ -105,6 +105,7 @@ Before researching, identify the question type — this determines which analyti
 | **Meta-prediction** | "Will CP be above X%?" | Model forecaster behavior, not the event. See Meta-Predictions section. |
 | **Measurement** | "What will value of X be?" | Current value + drift + volatility. Anchor on quantitative data. |
 | **Stock direction** | "Will price be higher on date Y vs date X?" | Near coin-flip over short horizons. Monte Carlo from empirical volatility. |
+| **Google Trends MC** | "Will search interest increase/decrease/stay same?" | Threshold arithmetic + change_stats base rates. Compute possibility space before researching. |
 
 ---
 
@@ -460,6 +461,25 @@ Before forecasting, consider:
 (a) Time left until resolution
 (b) Status quo outcome if nothing changes
 (c) An unexpected scenario that could shift the outcome
+
+### Directional Change Questions ("Increases / Decreases / Doesn't change")
+
+**Threshold arithmetic:** The resolution uses a ±3 absolute threshold. Given current value X:
+- "Increases" requires end value > X+3
+- "Decreases" requires end value < X-3
+- "Doesn't change" covers the range [X-3, X+3]
+
+Compute the asymmetric possibility space early: at value=1, Decreases requires <-2 (impossible), Increases requires >4 (needs a catalyst), and DC covers [0, 4] — a wide range that encompasses all baseline noise. At value=50, all three outcomes are plausible. The current value relative to the threshold determines which outcomes are even possible.
+
+**Base rates from change_stats:** The google_trends tool returns change_stats with empirical base rates (computed with the ±3 threshold). These rates are your starting prior — they show how often this specific term historically increased, decreased, or stayed the same. Start from these rates and adjust based on context.
+
+**Proportional research:** When threshold arithmetic clearly identifies one dominant outcome (e.g., value at baseline floor, DC near-certain), additional news research tends to introduce narrative bias — speculative catalysts that inflate P(Increase) at the expense of the quantitatively dominant outcome. Match research depth to genuine uncertainty.
+
+**Resolution semantics for "Doesn't change":** At low absolute values (0-5), Google Trends reports coarse integers. A value fluctuating between 0, 1, and 2 due to noise is functionally at baseline — this resolves as "Doesn't change." The resolution criterion is ±3, not exact integer equality.
+
+**Post-spike decay:** After a news spike, values rapidly return to baseline (often 0-2). Once at baseline, they stay at baseline. A value that was at 100 a week ago and is now at 2 is not "trending down" — it has already returned to its equilibrium. The most likely next-period outcome is staying at baseline, not continuing to decline below it.
+
+### General Multiple Choice
 
 Leave moderate probability on most options to account for genuine surprise.
 Probabilities must sum to 1.0.
