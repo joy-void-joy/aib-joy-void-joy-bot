@@ -74,9 +74,9 @@ def _build_routes() -> list[DomainRoute]:
         ),
         DomainRoute(
             domain="polymarket.com",
-            pattern=re.compile(r"polymarket\.com/event/"),
+            pattern=re.compile(r"polymarket\.com/event/([^/?#]+)"),
             handler=polymarket_price.handler,
-            param_builder=lambda m: {"query": m.string},
+            param_builder=lambda m: {"query": m.group(1).replace("-", " ")},
         ),
     ]
 
