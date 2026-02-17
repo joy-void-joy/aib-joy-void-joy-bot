@@ -419,7 +419,7 @@ If you find gaps, add tracking in Phase 4.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
-**Do NOT edit `version.py` manually.** Use `uv run aib-devtools dev version-bump <patch|minor|major> "<summary>"` -- pick the right level based on the scope of changes (see Version Bumps below).
+**Do NOT edit `version.py` manually.** Use `uv run aib-devtools version bump <patch|minor|major> "<summary>"` -- pick the right level based on the scope of changes (see Version Bumps below).
 
 **Log every change** in the analysis document (see Documentation Template). The next feedback session reads this to avoid re-deriving the same improvements. Be specific: "Added X to Y because Z" — not just "improved prompts."
 
@@ -511,7 +511,7 @@ session should evaluate a full rewrite (Priority 0).
 After implementing changes that affect agent behavior, **always bump the version** at the appropriate level using the bump script:
 
 ```bash
-uv run aib-devtools dev version-bump <level> "<summary>" [--detail "a, b, c"]
+uv run aib-devtools version bump <level> "<summary>" [--detail "a, b, c"]
 ```
 
 - **Patch (0.x.Y)**: Bug fixes, tool fixes, config tweaks. Default when unsure.

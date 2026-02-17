@@ -13,6 +13,7 @@ from aib.devtools.queue import app as queue_app
 from aib.devtools.resolution import app as resolution_app
 from aib.devtools.scores import app as scores_app
 from aib.devtools.trace import app as trace_app
+from aib.devtools.version import app as version_app
 
 app = typer.Typer(
     help="aib-devtools: forecasting analysis and development tools",
@@ -33,6 +34,7 @@ app.add_typer(api_app, name="api", help="API inspection and debugging")
 app.add_typer(dev_app, name="dev", help="Development tools")
 app.add_typer(git_app, name="git", help="Git operations for forecasts")
 app.add_typer(health_app, name="health", help="Service health checks")
+app.add_typer(version_app, name="version", help="Agent version management")
 
 if __name__ == "__main__":
     app()

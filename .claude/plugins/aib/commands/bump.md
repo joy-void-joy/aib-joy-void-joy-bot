@@ -63,7 +63,7 @@ Write a concise one-line summary of the behavioral changes. If there are multipl
 ### 6. Execute bump
 
 ```bash
-uv run aib-devtools dev version-bump <level> "<summary>" [--detail "<a>, <b>, <c>"]
+uv run aib-devtools version bump <level> "<summary>" [--detail "<a>, <b>, <c>"]
 ```
 
 ### 7. Verify and report
@@ -77,4 +77,4 @@ uv run aib-devtools dev version-bump <level> "<summary>" [--detail "<a>, <b>, <c
 - **Only bump for behavior changes** — Data, docs, and infra commits don't warrant a bump
 - **Summarize what changed for the agent**, not for the codebase — focus on how forecasting behavior differs
 - **When in doubt, ask** — Use AskUserQuestion if the level is ambiguous
-- **Don't tag yet** — This command bumps the version; tagging happens separately or during `/rebase`
+- **Auto-tags** — The bump command creates a git tag automatically. Use `--no-tag` to skip.

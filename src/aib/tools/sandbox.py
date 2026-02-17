@@ -43,6 +43,7 @@ COMMON_PACKAGES = [
     "requests",
     "pandas",
     "numpy",
+    "scipy",
     "fredapi",
     "beautifulsoup4",
     "lxml",
