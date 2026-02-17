@@ -167,6 +167,7 @@ RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
 ARXIV_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__arxiv__search_arxiv",
+        "mcp__arxiv__fetch_arxiv",
     }
 )
 
