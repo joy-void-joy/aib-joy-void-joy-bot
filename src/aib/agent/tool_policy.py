@@ -52,7 +52,6 @@ METACULUS_TOOLS: frozenset[str] = frozenset(
         "mcp__forecasting__list_tournament_questions",
         "mcp__forecasting__search_metaculus",
         "mcp__forecasting__get_coherence_links",
-        "mcp__forecasting__get_prediction_history",
         "mcp__forecasting__get_cp_history",
     }
 )

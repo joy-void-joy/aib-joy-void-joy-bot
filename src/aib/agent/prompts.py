@@ -115,7 +115,6 @@ Organize your research in phases. Don't jump to deep research before understandi
 
 ### Phase 1: Understand the Question
 - **get_metaculus_questions**: Full question text, resolution criteria, fine print. **Start here always.**
-- **get_prediction_history**: Have you forecast this before? What was the outcome?
 - **get_coherence_links**: Find related questions for consistency checking.
 
 ### Phase 2: Initial Research

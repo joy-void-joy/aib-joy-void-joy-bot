@@ -24,7 +24,6 @@ from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.cache import cached
@@ -131,10 +130,6 @@ class WikipediaInput(BaseModel):
     query: str
     mode: Literal["search", "summary", "full"] = "search"
     num_results: int = settings.search_default_limit
-
-
-class PredictionHistoryInput(BaseModel):
-    post_id: int
 
 
 # --- Output Schemas ---
@@ -1001,72 +996,6 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
             return mcp_error(f"Wikipedia article fetch failed: {e}")
 
 
-@tool(
-    "get_prediction_history",
-    (
-        "Get past forecasts made for a Metaculus question. Returns your previous "
-        "forecasts with timestamps, probabilities/medians, and summaries. "
-        "Useful for tracking how your forecasts evolved and learning from resolved questions."
-    ),
-    PredictionHistoryInput.model_json_schema(),
-)
-@tracked("get_prediction_history")
-async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
-    """Get past forecasts for a question from local storage."""
-    try:
-        validated = PredictionHistoryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    post_id = validated.post_id
-    cutoff = retrodict_cutoff.get()
-
-    try:
-        forecasts = load_past_forecasts(post_id)
-
-        if cutoff is not None:
-            cutoff_str = cutoff.isoformat()
-            forecasts = [f for f in forecasts if f.timestamp < cutoff_str]
-
-        if not forecasts:
-            return mcp_success({"post_id": post_id, "forecasts": [], "count": 0})
-
-        # Convert to serializable format
-        results = []
-        for f in forecasts:
-            result: dict[str, Any] = {
-                "timestamp": f.timestamp,
-                "question_type": f.question_type,
-                "summary": f.summary,
-            }
-            if cutoff is None:
-                result["resolution"] = f.resolution
-
-            if f.question_type == "binary":
-                result["probability"] = f.probability
-                result["logit"] = f.logit
-            elif f.question_type == "multiple_choice":
-                result["probabilities"] = f.probabilities
-            elif f.question_type in ("numeric", "discrete"):
-                result["median"] = f.median
-                result["confidence_interval"] = f.confidence_interval
-                result["percentiles"] = f.percentiles
-
-            results.append(result)
-
-        return mcp_success(
-            {
-                "post_id": post_id,
-                "question_title": forecasts[0].question_title,
-                "forecasts": results,
-                "count": len(results),
-            }
-        )
-    except Exception as e:
-        logger.exception("Failed to load prediction history")
-        return mcp_error(f"Failed to load history: {e}")
-
-
 # --- Create MCP Server ---
 
 # Build tool list conditionally based on available credentials.
@@ -1080,7 +1009,6 @@ _BASE_FORECASTING_TOOLS = [
     search_metaculus,
     get_coherence_links,
     get_cp_history,
-    get_prediction_history,
 ]
 
 _OPTIONAL_FORECASTING_TOOLS: list[SdkMcpTool[Any]] = []

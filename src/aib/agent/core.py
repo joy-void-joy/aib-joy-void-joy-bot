@@ -36,8 +36,6 @@ from aib.agent.display import (
     truncate_content as _truncate_content,
 )
 from aib.agent.history import (
-    format_history_for_context,
-    load_past_forecasts,
     save_forecast,
     save_retrodict,
 )
@@ -833,22 +831,7 @@ async def run_forecast(
     model_class, output_schema = get_output_schema_for_question(question_type)
     type_guidance = get_type_specific_guidance(question_type, context)
 
-    # Load past forecasts for this question (if any)
-    # Skip in retrodict mode to prevent future leak from resolution data
-    history_context = ""
-    if post_id > 0 and cutoff is None:
-        past_forecasts = load_past_forecasts(post_id)
-        if past_forecasts:
-            history_context = format_history_for_context(past_forecasts)
-            logger.info(
-                "Loaded %d past forecasts for post %d",
-                len(past_forecasts),
-                post_id,
-            )
-
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
-    if history_context:
-        prompt += f"\n\n{history_context}"
 
     collected_text: list[str] = []
     assistant_messages: list[AssistantMessage] = []
