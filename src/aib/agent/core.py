@@ -508,6 +508,7 @@ _WEBFETCH_DOMAIN_REDIRECTS: dict[str, str] = {
     "arxiv.org": "Use search_arxiv or fetch_arxiv instead.",
     "fred.stlouisfed.org": "Use fred_search or fred_series instead.",
     "wikipedia.org": "Use the wikipedia tool instead.",
+    "metaculus.com": "Use the Metaculus API tools (get_prediction_history, etc.) instead.",
 }
 
 

@@ -190,24 +190,16 @@ def _suggest_alternatives_for_url(
     alternatives: list[str] = []
     url_lower = url.lower()
 
-    # Stock/financial data
-    if any(
-        d in url_lower
-        for d in ["finance.yahoo.com", "tradingview", "marketwatch", "bloomberg"]
-    ):
+    # Financial data (tradingview/marketwatch/bloomberg — not in deny list)
+    if any(d in url_lower for d in ["tradingview", "marketwatch", "bloomberg"]):
         alternatives.append(
             "Use mcp__markets__stock_price or stock_history for stock data"
         )
-        alternatives.append("Use mcp__financial__fred_series for economic indicators")
 
     # News sites
     if any(d in url_lower for d in ["reuters", "bbc", "cnn", "nytimes", "wsj"]):
         alternatives.append("Use mcp__forecasting__search_news for news content")
         alternatives.append("Use mcp__forecasting__search_exa for web search")
-
-    # Wikipedia
-    if "wikipedia" in url_lower:
-        alternatives.append("Use mcp__forecasting__wikipedia for Wikipedia content")
 
     # Social media / dynamic content
     if any(d in url_lower for d in ["twitter", "x.com", "reddit", "facebook"]):
@@ -220,9 +212,7 @@ def _suggest_alternatives_for_url(
                 "Use Playwright browser tools for JS-heavy sites (mcp__playwright__browser_navigate)"
             )
 
-    # Prediction markets
-    if "polymarket" in url_lower:
-        alternatives.append("Use mcp__markets__polymarket_price for Polymarket data")
+    # Manifold (not in deny list — WebFetch works but is suboptimal)
     if "manifold" in url_lower:
         alternatives.append("Use mcp__markets__manifold_price for Manifold data")
 
