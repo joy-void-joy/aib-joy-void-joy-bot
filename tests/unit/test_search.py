@@ -50,7 +50,7 @@ class TestWebSearchLiveMode:
         with (
             patch("aib.tools.search._raw_web_search", new_callable=AsyncMock, return_value=[]),
             patch("aib.tools.search._augment_with_api_data", new_callable=AsyncMock, return_value=[]),
-            patch("aib.tools.search._wayback_filter_results", new_callable=AsyncMock) as mock_wb,
+            patch("aib.tools.search._wayback_filter_non_api_results", new_callable=AsyncMock) as mock_wb,
         ):
             await _handler({"query": "test"})
 
@@ -78,30 +78,36 @@ class TestWebSearchRetrodictMode:
         retrodict_cutoff.reset(token)
 
     @pytest.mark.asyncio
-    async def test_wayback_called(self) -> None:
+    async def test_wayback_called_after_augmentation(self) -> None:
+        """Wayback filter runs after augmentation, not before."""
         raw = [_make_result("https://example.com")]
+        augmented = [
+            AugmentedSearchResult(
+                title="Test", url="https://example.com", snippet="snippet",
+                api_data=None, hint=None,
+            )
+        ]
         with (
             patch("aib.tools.search._raw_web_search", new_callable=AsyncMock, return_value=raw),
-            patch("aib.tools.search._wayback_filter_results", new_callable=AsyncMock, return_value=raw) as mock_wb,
-            patch("aib.tools.search._augment_with_api_data", new_callable=AsyncMock, return_value=[]),
+            patch("aib.tools.search._augment_with_api_data", new_callable=AsyncMock, return_value=augmented),
+            patch("aib.tools.search._wayback_filter_non_api_results", new_callable=AsyncMock, return_value=augmented) as mock_wb,
         ):
             await _handler({"query": "test"})
 
-        mock_wb.assert_called_once_with(raw, "2026-01-15")
+        mock_wb.assert_called_once_with(augmented, "2026-01-15")
 
     @pytest.mark.asyncio
-    async def test_augmentation_after_wayback(self) -> None:
-        """Augmentation should run on Wayback-filtered results, not raw results."""
+    async def test_augmentation_runs_on_raw_results(self) -> None:
+        """Augmentation runs on raw results (before Wayback filter)."""
         raw = [_make_result("https://a.com"), _make_result("https://b.com")]
-        filtered = [_make_result("https://a.com")]
         with (
             patch("aib.tools.search._raw_web_search", new_callable=AsyncMock, return_value=raw),
-            patch("aib.tools.search._wayback_filter_results", new_callable=AsyncMock, return_value=filtered),
             patch("aib.tools.search._augment_with_api_data", new_callable=AsyncMock, return_value=[]) as mock_aug,
+            patch("aib.tools.search._wayback_filter_non_api_results", new_callable=AsyncMock, return_value=[]),
         ):
             await _handler({"query": "test"})
 
-        mock_aug.assert_called_once_with(filtered)
+        mock_aug.assert_called_once_with(raw)
 
     @pytest.mark.asyncio
     async def test_cutoff_passed_to_raw_search(self) -> None:

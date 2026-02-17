@@ -191,6 +191,17 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
             "Expected format: '2301.12345' or 'https://arxiv.org/abs/2301.12345'."
         )
 
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        cutoff_dt = datetime.combine(cutoff, datetime.min.time())
+        try:
+            search = arxiv.Search(id_list=[paper_id])
+            result = next(arxiv.Client().results(search), None)
+            if result and result.published and result.published > cutoff_dt:
+                return mcp_error(f"Paper not found: {paper_id}")
+        except Exception as e:
+            logger.warning("arXiv metadata check failed for %s: %s", paper_id, e)
+
     # Step 1: Try HTML version
     html_url = f"https://arxiv.org/html/{paper_id}"
     async with httpx.AsyncClient(

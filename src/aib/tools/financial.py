@@ -152,6 +152,11 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
                 latest_date = obs["date"]
                 break
 
+        if cutoff is not None and latest_value is None:
+            return mcp_error(
+                f"No observations available for {series_id}."
+            )
+
         raw_updated = str(info.get("last_updated", ""))[:10]
         if cutoff is not None and raw_updated > cutoff.isoformat():
             raw_updated = cutoff.isoformat()

@@ -291,6 +291,11 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
             if parsed is not None:
                 results.append(parsed)
 
+        if not results and cutoff is not None:
+            return mcp_error(
+                f"Found markets for '{query}' but no price data is available."
+            )
+
         return mcp_success({"markets": results, "query": query})
 
     except httpx.HTTPStatusError as e:

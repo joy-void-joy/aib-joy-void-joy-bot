@@ -171,10 +171,19 @@ async def check_wayback_filter_layer(
     results: list[SearchResult], cutoff_date: str
 ) -> list[SearchResult]:
     """Layer 4: How many results survive Wayback filtering?"""
-    from aib.tools.search import _wayback_filter_results
+    from aib.tools.wayback import wayback_replace_snippets
+
+    wayback_ts = cutoff_date.replace("-", "")
+
+    def _set_snippet(r: SearchResult, snippet: str) -> None:
+        r["snippet"] = snippet
 
     log.info("--- Layer 4: Wayback filter on %d results ---", len(results))
-    filtered = await _wayback_filter_results(results, cutoff_date)
+    filtered = await wayback_replace_snippets(
+        results, wayback_ts,
+        get_url=lambda r: r["url"],
+        set_snippet=_set_snippet,
+    )
     log.info("Filtered: %d/%d survived", len(filtered), len(results))
     for i, r in enumerate(filtered):
         log.info("  [%d] %s", i, r.get("url", "?"))

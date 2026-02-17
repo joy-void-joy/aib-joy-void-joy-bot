@@ -931,9 +931,12 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                             }
                         )
                     except ValueError as e:
-                        # Article didn't exist at cutoff_date, skip it
                         logger.debug("Skipping %s: %s", result["title"], e)
                         continue
+                if not historical_results and results:
+                    return mcp_error(
+                        f"No Wikipedia articles found for '{query}'."
+                    )
                 results = historical_results
 
             return mcp_success({"query": query, "mode": mode, "results": results})

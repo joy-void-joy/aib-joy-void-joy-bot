@@ -4,7 +4,8 @@ Wraps Claude's built-in WebSearch via a Haiku sub-agent. For search results
 whose URLs match known data sources (Yahoo Finance, arXiv, FRED, Polymarket,
 etc.), automatically fetches structured API data in parallel.
 
-In retrodict mode, validates results via Wayback Machine before augmenting.
+In retrodict mode, API-augmented results are trusted (handlers validate cutoff
+internally). Non-API results are validated via Wayback Machine.
 """
 
 import asyncio
@@ -29,7 +30,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
-from aib.tools.wayback import wayback_replace_snippets
+from aib.tools.wayback import fetch_wayback_content
 
 logger = logging.getLogger(__name__)
 
@@ -100,33 +101,45 @@ class _SearchResultsOutput(BaseModel):
     results: list[_SearchResultItem]
 
 
-async def _wayback_filter_results(
-    results: list[SearchResult],
+async def _wayback_filter_non_api_results(
+    results: list[AugmentedSearchResult],
     cutoff_date: str,
-) -> list[SearchResult]:
-    """Validate search results via Wayback Machine and replace snippets.
+) -> list[AugmentedSearchResult]:
+    """Wayback-validate only non-API-augmented search results.
 
-    Drops results without a pre-cutoff Wayback snapshot. Replaces snippets
-    with Wayback-extracted content to prevent future data leaks.
-
-    Args:
-        results: Search results to validate.
-        cutoff_date: YYYY-MM-DD cutoff date.
-
-    Returns:
-        Filtered results with Wayback-derived snippets.
+    API-augmented results are kept as-is (handlers validate cutoff internally
+    via retrodict_cutoff ContextVar). Non-API results get full Wayback
+    validation: dropped if no pre-cutoff snapshot, snippets replaced with
+    Wayback-extracted content to prevent future data leaks.
     """
     wayback_ts = cutoff_date.replace("-", "")
 
-    def _set_snippet(r: SearchResult, snippet: str) -> None:
-        r["snippet"] = snippet
+    async def _validate_one(
+        result: AugmentedSearchResult,
+    ) -> AugmentedSearchResult | None:
+        if result["api_data"] is not None:
+            return result
 
-    return await wayback_replace_snippets(
-        results,
-        wayback_ts,
-        get_url=lambda r: r["url"],
-        set_snippet=_set_snippet,
+        content = await fetch_wayback_content(result["url"], wayback_ts)
+        if content is None:
+            logger.warning(
+                "Wayback: dropping %s (no pre-cutoff snapshot)", result["url"],
+            )
+            return None
+        result["snippet"] = content[:500]
+        return result
+
+    validated_or_none = await asyncio.gather(
+        *[_validate_one(r) for r in results],
     )
+    validated = [r for r in validated_or_none if r is not None]
+
+    logger.info(
+        "[Retrodict] Wayback validated %d/%d non-API results",
+        len(validated),
+        len(results),
+    )
+    return validated
 
 
 async def _raw_web_search(
@@ -285,8 +298,9 @@ async def _augment_with_api_data(
 async def web_search(args: dict[str, Any]) -> dict[str, Any]:
     """Perform web search via SDK sub-agent with API augmentation.
 
-    In retrodict mode, validates results via Wayback Machine before augmenting.
-    In live mode, augments results directly.
+    Augments all results first, then in retrodict mode applies Wayback
+    validation only to results that lack API data (API-augmented results
+    are safe since specialized handlers manage time-appropriateness).
     """
     try:
         validated = WebSearchInput.model_validate(args)
@@ -314,10 +328,12 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
             validated.blocked_domains,
         )
 
-        if cutoff_date:
-            results = await _wayback_filter_results(results, cutoff_date)
-
         augmented = await _augment_with_api_data(results)
+
+        if cutoff_date:
+            augmented = await _wayback_filter_non_api_results(
+                augmented, cutoff_date,
+            )
 
         logger.info("[WebSearch] Returning %d results", len(augmented))
         return mcp_success({"query": validated.query, "results": augmented})
