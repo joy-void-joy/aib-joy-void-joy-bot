@@ -52,6 +52,7 @@ class NumericCP(TypedDict):
     ci_upper: float
     range_min: float
     range_span: float
+    cdf: list[float] | None
 
 
 class QuestionMeta(TypedDict):
@@ -106,6 +107,18 @@ def _crps_emoji(crps: float, range_span: float) -> str:
     return "🫠"
 
 
+def _percentile_from_cdf(
+    cdf: list[float], p: float, range_min: float, range_span: float
+) -> float:
+    """Extract the p-th percentile (0–100) from a CDF."""
+    target = p / 100
+    n = len(cdf)
+    for i in range(n):
+        if cdf[i] >= target:
+            return range_min + i * range_span / (n - 1)
+    return range_min + range_span
+
+
 def _truncate(text: str, max_len: int = 300) -> str:
     if not text or len(text) <= max_len:
         return text
@@ -126,12 +139,14 @@ def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
         range_min = scaling["range_min"]
         range_max = scaling["range_max"]
         span = range_max - range_min
+        cp_cdf: list[float] | None = latest.get("forecast_values")
         return NumericCP(
             median=range_min + latest["centers"][0] * span,
             ci_lower=range_min + latest["interval_lower_bounds"][0] * span,
             ci_upper=range_min + latest["interval_upper_bounds"][0] * span,
             range_min=range_min,
             range_span=span,
+            cdf=cp_cdf,
         )
     except (KeyError, IndexError, TypeError):
         return None
@@ -644,6 +659,18 @@ def retrodict(
                                     f"      error:         {_err_emoji(cp_pct)} "
                                     f"off by {cp_abs_err_num:,.1f}  ({cp_pct:.1f}% of range)"
                                 )
+                                cp_cdf = numeric_cp.get("cdf")
+                                if cp_cdf:
+                                    cp_crps = _compute_crps(
+                                        cp_cdf,
+                                        actual_val,
+                                        numeric_cp["range_min"],
+                                        range_span,
+                                    )
+                                    print(
+                                        f"      score:         {_crps_emoji(cp_crps, range_span)} "
+                                        f"CRPS: {cp_crps:,.2f}  ({cp_crps / range_span * 100:.1f}% of range)"
+                                    )
                         else:
                             print("\n   👥 Community:     (not available)")
 
@@ -659,17 +686,17 @@ def retrodict(
                         print(
                             f"\n   🤖 Us:            {output.median:,.1f}  [{lo:,.1f} – {hi:,.1f}]"
                         )
-                        if crps_score is not None and range_span and range_span > 0:
-                            print(
-                                f"      score:         {_crps_emoji(crps_score, range_span)} "
-                                f"CRPS: {crps_score:,.2f}  ({crps_score / range_span * 100:.1f}% of range)"
-                            )
-                        elif range_span and range_span > 0:
+                        if range_span and range_span > 0:
                             our_pct = our_abs_err / range_span * 100
                             print(
                                 f"      error:         {_err_emoji(our_pct)} "
                                 f"off by {our_abs_err:,.1f}  ({our_pct:.1f}% of range)"
                             )
+                            if crps_score is not None:
+                                print(
+                                    f"      score:         {_crps_emoji(crps_score, range_span)} "
+                                    f"CRPS: {crps_score:,.2f}  ({crps_score / range_span * 100:.1f}% of range)"
+                                )
                         else:
                             print(f"      error:         off by {our_abs_err:,.1f}")
 
@@ -678,17 +705,38 @@ def retrodict(
                                 f"\n   ⚔️  vs Community: {_vs_community(our_abs_err, cp_abs_err_num)}"
                             )
 
-                        within_ci = lo <= actual_val <= hi
-                        if within_ci:
-                            print("\n   📍 90% CI:        ✅ within range")
-                        elif actual_val < lo:
-                            print(
-                                f"\n   📍 90% CI:        🫠 below by {lo - actual_val:,.1f}"
-                            )
+                        ci_levels: list[tuple[int, float, float]] = []
+                        if output.cdf and numeric_cp and range_span and range_span > 0:
+                            rm = numeric_cp["range_min"]
+                            for level, p_lo, p_hi in [
+                                (90, 5, 95),
+                                (80, 10, 90),
+                                (50, 25, 75),
+                            ]:
+                                ci_lo = _percentile_from_cdf(
+                                    output.cdf, p_lo, rm, range_span
+                                )
+                                ci_hi = _percentile_from_cdf(
+                                    output.cdf, p_hi, rm, range_span
+                                )
+                                ci_levels.append((level, ci_lo, ci_hi))
                         else:
-                            print(
-                                f"\n   📍 90% CI:        🫠 above by {actual_val - hi:,.1f}"
+                            ci_levels.append((90, lo, hi))
+
+                        within_ci = None
+                        ci_parts: list[str] = []
+                        for level, ci_lo, ci_hi in ci_levels:
+                            gap = max(0.0, ci_lo - actual_val, actual_val - ci_hi)
+                            ref = (
+                                range_span
+                                if range_span and range_span > 0
+                                else (ci_hi - ci_lo)
                             )
+                            ok = gap == 0 or (ref > 0 and gap / ref < 0.001)
+                            if within_ci is None:
+                                within_ci = ok
+                            ci_parts.append(f"{'✅' if ok else '❌'} {level}%")
+                        print(f"\n   📍 CI:              {'  '.join(ci_parts)}")
 
                         comparison = RetrodictComparison(
                             actual_value=actual_val,
