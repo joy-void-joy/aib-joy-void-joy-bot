@@ -23,7 +23,7 @@ from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
 from aib.tools.notes import create_notes_server
 from aib.tools.fetch import create_fetch_server
-from aib.tools.retrodict_search import create_retrodict_search_server
+from aib.tools.search import create_search_server
 from aib.tools.trends import trends_server
 from aib.tools.world_bank import world_bank_server
 
@@ -164,8 +164,8 @@ FETCH_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (SDK WebSearch + Wayback validation)
-RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
+# Web search tools (Haiku sub-agent with WebSearch + API augmentation)
+SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
     }
@@ -292,11 +292,8 @@ class ToolPolicy:
             "arxiv": arxiv_server,
             "world_bank": world_bank_server,
             "fetch": create_fetch_server(),
+            "search": create_search_server(),
         }
-
-        # Add search server in retrodict mode (date-filtered web search)
-        if self.is_retrodict:
-            servers["search"] = create_retrodict_search_server()
 
         # Only add Playwright in non-retrodict mode
         if not self.is_retrodict:
@@ -366,9 +363,8 @@ class ToolPolicy:
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
-        # Retrodict search tools (date-filtered web search)
-        if self.is_retrodict:
-            tools.update(RETRODICT_SEARCH_TOOLS)
+        # Web search tools
+        tools.update(SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools

@@ -1,9 +1,13 @@
-"""Web search tool for retrodict mode.
+"""Unified web search with API augmentation.
 
-Provides web_search backed by SDK WebSearch with Wayback Machine validation.
-The fetch tool has moved to aib.tools.fetch (unified for live + retrodict).
+Wraps Claude's built-in WebSearch via a Haiku sub-agent. For search results
+whose URLs match known data sources (Yahoo Finance, arXiv, FRED, Polymarket,
+etc.), automatically fetches structured API data in parallel.
+
+In retrodict mode, validates results via Wayback Machine before augmenting.
 """
 
+import asyncio
 import json
 import logging
 from typing import Any, TypedDict
@@ -69,11 +73,21 @@ class WebSearchInput(BaseModel):
 
 
 class SearchResult(TypedDict):
-    """A search result."""
+    """A raw search result from the sub-agent."""
 
     title: str
     url: str
     snippet: str | None
+
+
+class AugmentedSearchResult(TypedDict):
+    """A search result with optional structured API data."""
+
+    title: str
+    url: str
+    snippet: str | None
+    api_data: dict[str, Any] | None
+    hint: str | None
 
 
 class _SearchResultItem(BaseModel):
@@ -117,18 +131,20 @@ async def _wayback_filter_results(
 
 async def _raw_web_search(
     search_query: str,
-    cutoff_date: str,
+    cutoff_date: str | None = None,
     allowed_domains: list[str] | None = None,
     blocked_domains: list[str] | None = None,
 ) -> list[SearchResult]:
     """One-shot web search via a minimal Haiku sub-agent with WebSearch.
 
-    Returns raw results without Wayback validation.
+    Returns raw results without Wayback validation or API augmentation.
     """
-    constraints: list[str] = [
-        f"Focus on information published before {cutoff_date}. "
-        "Include date context in your search query."
-    ]
+    constraints: list[str] = []
+    if cutoff_date:
+        constraints.append(
+            f"Focus on information published before {cutoff_date}. "
+            "Include date context in your search query."
+        )
     if allowed_domains:
         constraints.append(
             f"Pass allowed_domains={json.dumps(allowed_domains)} to WebSearch."
@@ -138,7 +154,9 @@ async def _raw_web_search(
             f"Pass blocked_domains={json.dumps(blocked_domains)} to WebSearch."
         )
 
-    constraint_text = "\n\nConstraints:\n" + "\n".join(f"- {c}" for c in constraints)
+    constraint_text = ""
+    if constraints:
+        constraint_text = "\n\nConstraints:\n" + "\n".join(f"- {c}" for c in constraints)
 
     prompt = (
         f"Search the web for: {search_query}{constraint_text}\n\n"
@@ -206,20 +224,69 @@ async def _raw_web_search(
     ]
 
 
+async def _augment_with_api_data(
+    results: list[SearchResult],
+) -> list[AugmentedSearchResult]:
+    """Augment search results with structured API data from recognized domains.
+
+    For each result URL, checks against domain routes (fetch_routes.py).
+    Matching URLs have their specialized tool handler called in parallel.
+    SUGGEST_ONLY domains get a hint string instead.
+    """
+    from aib.tools.fetch_routes import SUGGEST_ONLY, get_routes
+
+    routes = get_routes()
+
+    async def _augment_one(result: SearchResult) -> AugmentedSearchResult:
+        url = result["url"]
+        augmented = AugmentedSearchResult(
+            title=result["title"],
+            url=url,
+            snippet=result["snippet"],
+            api_data=None,
+            hint=None,
+        )
+
+        for domain, hint in SUGGEST_ONLY.items():
+            if domain in url.lower():
+                augmented["hint"] = hint
+                return augmented
+
+        for route in routes:
+            match = route.pattern.search(url)
+            if match:
+                params = route.param_builder(match)
+                try:
+                    api_result = await route.handler(params)
+                    if not api_result.get("is_error"):
+                        augmented["api_data"] = api_result
+                except Exception as e:
+                    logger.warning("API augmentation failed for %s: %s", url, e)
+                return augmented
+
+        return augmented
+
+    augmented = await asyncio.gather(*[_augment_one(r) for r in results])
+    return list(augmented)
+
+
 @tool(
     "web_search",
     (
         "Search the web for information. Returns titles, URLs, and snippets. "
-        "Supports allowed_domains/blocked_domains for domain filtering."
+        "When results match known data sources (stock quotes, arXiv, Wikipedia, "
+        "FRED, prediction markets), automatically includes structured API data. "
+        "Supports allowed_domains/blocked_domains for domain filtering. "
+        "Prefer this over WebSearch."
     ),
     WebSearchInput.model_json_schema(),
 )
 @tracked("web_search")
 async def web_search(args: dict[str, Any]) -> dict[str, Any]:
-    """Perform web search via SDK sub-agent with optional Wayback validation.
+    """Perform web search via SDK sub-agent with API augmentation.
 
-    In retrodict mode, validates results via Wayback Machine to ensure
-    only pre-cutoff content is returned.
+    In retrodict mode, validates results via Wayback Machine before augmenting.
+    In live mode, augments results directly.
     """
     try:
         validated = WebSearchInput.model_validate(args)
@@ -230,8 +297,7 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error("Cannot use both allowed_domains and blocked_domains.")
 
     cutoff = retrodict_cutoff.get()
-    assert cutoff is not None, "web_search requires retrodict mode"
-    cutoff_date = cutoff.isoformat()
+    cutoff_date = cutoff.isoformat() if cutoff else None
 
     try:
         logger.info(
@@ -247,10 +313,14 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
             validated.allowed_domains,
             validated.blocked_domains,
         )
-        results = await _wayback_filter_results(results, cutoff_date)
 
-        logger.info("[WebSearch] Returning %d results", len(results))
-        return mcp_success({"query": validated.query, "results": results})
+        if cutoff_date:
+            results = await _wayback_filter_results(results, cutoff_date)
+
+        augmented = await _augment_with_api_data(results)
+
+        logger.info("[WebSearch] Returning %d results", len(augmented))
+        return mcp_success({"query": validated.query, "results": augmented})
 
     except BaseException as e:
         cause = e
@@ -263,8 +333,8 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         )
 
 
-def create_retrodict_search_server() -> Any:
-    """Create MCP server with web search tool for retrodict mode."""
+def create_search_server() -> Any:
+    """Create MCP server with web search tool."""
     return create_mcp_server(
         "search",
         tools=[web_search],

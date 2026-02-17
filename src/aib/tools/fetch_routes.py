@@ -81,7 +81,7 @@ def _build_routes() -> list[DomainRoute]:
     ]
 
 
-def _get_routes() -> list[DomainRoute]:
+def get_routes() -> list[DomainRoute]:
     global _routes
     if _routes is None:
         _routes = _build_routes()
@@ -90,7 +90,7 @@ def _get_routes() -> list[DomainRoute]:
 
 async def domain_dispatch(url: str) -> dict[str, Any] | None:
     """Route URL to a specialized tool if possible. Returns None to fall through."""
-    for route in _get_routes():
+    for route in get_routes():
         match = route.pattern.search(url)
         if match:
             params = route.param_builder(match)

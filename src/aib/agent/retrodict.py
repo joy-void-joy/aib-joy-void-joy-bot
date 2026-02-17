@@ -9,8 +9,8 @@ propagates automatically through asyncio.gather() to sub-forecasts.
 
 Most tools read the ContextVar directly in their implementations. The hook
 denies tools that have no retrodict support (WebSearch, WebFetch, live market
-prices, Playwright, search_news) — needed because bypassPermissions ignores
-allowed_tools.
+prices, Playwright, search_news) and redirects to retrodict-safe alternatives
+— needed because bypassPermissions ignores allowed_tools.
 """
 
 import logging
@@ -52,7 +52,7 @@ _DENIED_TOOLS = frozenset(
 _DENY_HINTS: dict[str, str] = {
     "Bash": "Use mcp__sandbox__execute_code for computation.",
     "WebSearch": "Use mcp__search__web_search for web search.",
-    "WebFetch": "Use mcp__search__fetch to fetch page content.",
+    "WebFetch": "Use mcp__fetch__fetch_url to fetch page content.",
 }
 
 

@@ -290,12 +290,12 @@ class TestToolPolicyMcpServers:
         finally:
             retrodict_cutoff.reset(token)
 
-    def test_no_search_server_normally(self) -> None:
-        """Should not add search server in normal mode."""
+    def test_search_server_in_normal_mode(self) -> None:
+        """Search server should be present in normal mode too."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
         composition_server = MagicMock()
 
         policy = ToolPolicy()
         servers = policy.get_mcp_servers(sandbox, composition_server)
-        assert "search" not in servers
+        assert "search" in servers

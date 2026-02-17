@@ -146,7 +146,7 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
 
-    # --- WebFetch tests (denied, use mcp__search__fetch instead) ---
+    # --- WebFetch tests (denied, use mcp__fetch__fetch_url instead) ---
 
     @pytest.mark.asyncio
     async def test_webfetch_denied(self, hooks: HooksConfig) -> None:
@@ -158,7 +158,7 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
         assert "not available" in output["permissionDecisionReason"]
-        assert "mcp__search__fetch" in output["permissionDecisionReason"]
+        assert "mcp__fetch__fetch_url" in output["permissionDecisionReason"]
 
     # --- Passthrough tests ---
 
