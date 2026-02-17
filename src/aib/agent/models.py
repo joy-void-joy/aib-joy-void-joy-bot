@@ -511,9 +511,13 @@ class ForecastOutput(BaseModel):
         default="",
         description="The agent's full reasoning and analysis text.",
     )
+    condensed_reasoning: str | None = Field(
+        default=None,
+        description="Sonnet-condensed narrative of the agent's research and reasoning.",
+    )
     sources_consulted: list[str] = Field(
         default_factory=list,
-        description="URLs or search queries the agent consulted.",
+        description="URLs and data sources the agent consulted.",
     )
     duration_seconds: float | None = Field(
         default=None,

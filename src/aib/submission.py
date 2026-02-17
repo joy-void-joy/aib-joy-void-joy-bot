@@ -230,6 +230,9 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
                 f"- [{sign}{factor.logit:.1f}] {factor.description}{conf_note}"
             )
 
+    if output.condensed_reasoning:
+        lines.append(f"\n## Reasoning\n\n{output.condensed_reasoning}")
+
     if output.sources_consulted:
         lines.append("\n## Sources\n")
         for source in output.sources_consulted:

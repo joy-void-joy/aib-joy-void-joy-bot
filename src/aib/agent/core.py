@@ -625,25 +625,108 @@ def build_question_context(post_data: dict) -> dict:
     return context
 
 
+def _walk_urls(data: object) -> list[str]:
+    """Extract HTTP URLs from url/pdf_url/id keys in nested JSON data."""
+    urls: list[str] = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):
+                urls.append(v)
+            elif k == "id" and isinstance(v, str) and v.startswith("http"):
+                urls.append(v)
+            else:
+                urls.extend(_walk_urls(v))
+    elif isinstance(data, list):
+        for item in data:
+            urls.extend(_walk_urls(item))
+    return urls
+
+
+# Source-bearing tools: None = scan result JSON for URLs,
+# tuple = (input_key, url_template) to construct from input.
+_SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
+    "mcp__forecasting__search_arxiv": None,
+    "mcp__forecasting__wikipedia": None,
+    "mcp__markets__kalshi_price": None,
+    "mcp__markets__kalshi_event": None,
+    "mcp__markets__polymarket_price": None,
+    "mcp__markets__manifold_price": None,
+    "mcp__markets__stock_price": ("symbol", "https://finance.yahoo.com/quote/{}"),
+    "mcp__markets__stock_history": ("symbol", "https://finance.yahoo.com/quote/{}"),
+    "mcp__financial__fred_series": ("series_id", "https://fred.stlouisfed.org/series/{}"),
+    "mcp__financial__company_financials": ("ticker", "https://finance.yahoo.com/quote/{}"),
+}
+
+
 def extract_sources(messages: list[AssistantMessage]) -> list[str]:
-    """Extract deduplicated URLs that the agent actually fetched via WebFetch."""
+    """Extract deduplicated source URLs from tool calls and results."""
     seen: set[str] = set()
     sources: list[str] = []
+    pending: set[str] = set()
+
+    def _add(url: str) -> None:
+        if url not in seen:
+            seen.add(url)
+            sources.append(url)
 
     for msg in messages:
         for block in msg.content:
-            if not isinstance(block, ToolUseBlock):
-                continue
-            if block.name != "WebFetch":
-                continue
-            if not isinstance(block.input, dict):
-                continue
-            url = block.input.get("url")
-            if url and url not in seen:
-                seen.add(url)
-                sources.append(str(url))
+            if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
+                if block.name == "WebFetch" and (url := block.input.get("url")):
+                    _add(str(url))
+                elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
+                    key, tmpl = entry
+                    if val := block.input.get(key):
+                        _add(tmpl.format(val))
+                elif block.name in _SOURCE_TOOLS:
+                    pending.add(block.id)
+            elif isinstance(block, ToolResultBlock) and block.tool_use_id in pending:
+                pending.discard(block.tool_use_id)
+                text = block.content if isinstance(block.content, str) else json.dumps(block.content) if block.content else ""
+                try:
+                    for url in _walk_urls(json.loads(text)):
+                        _add(url)
+                except (json.JSONDecodeError, TypeError):
+                    pass
 
     return sources
+
+
+def build_trace(messages: list[AssistantMessage], title: str = "") -> str:
+    """Build a markdown trace from assistant messages using ReasoningLogger formatting."""
+    rl = ReasoningLogger(Path("/dev/null"), title)
+    for msg in messages:
+        for block in msg.content:
+            rl.log_block(block)
+    return "\n".join(rl.lines)
+
+
+async def condense_reasoning(trace: str, question_title: str) -> str | None:
+    """Condense a full forecast trace into a readable narrative using Sonnet."""
+    from claude_agent_sdk import ClaudeAgentOptions, query
+
+    options = ClaudeAgentOptions(
+        model="sonnet",
+        allowed_tools=[],
+        system_prompt=(
+            "Condense the forecast trace into a clear, readable narrative. "
+            "3-5 short paragraphs covering: what research was done, key evidence found, "
+            "and how the conclusion was reached. No markdown headers."
+        ),
+    )
+    result_text: str | None = None
+    try:
+        async for message in query(
+            prompt=f"Question: {question_title}\n\nTrace:\n{trace[:50000]}",
+            options=options,
+        ):
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        result_text = block.text
+    except Exception:
+        logger.exception("Reasoning condensation failed")
+    return result_text
 
 
 async def run_forecast(
@@ -911,6 +994,9 @@ async def run_forecast(
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
+        condensed_reasoning=await condense_reasoning(
+            build_trace(assistant_messages, question_title), question_title
+        ),
         sources_consulted=extract_sources(assistant_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
