@@ -8,7 +8,7 @@ Uses the arxiv Python library: https://pypi.org/project/arxiv/
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -50,10 +50,6 @@ class SearchArxivInput(BaseModel):
     query: str = Field(description="Search query (supports arXiv query syntax)")
     max_results: int = Field(
         default=10, ge=1, le=50, description="Maximum results to return"
-    )
-    # Hidden from agent - injected by retrodict hook
-    cutoff_date: str | None = Field(
-        default=None, description="Only return papers submitted before this date"
     )
 
 
@@ -102,7 +98,7 @@ async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:
     retrodict_date = retrodict_cutoff.get()
     cutoff: datetime | None = None
     if retrodict_date is not None:
-        cutoff = datetime.combine(retrodict_date, datetime.min.time())
+        cutoff = datetime.combine(retrodict_date + timedelta(days=1), datetime.min.time())
 
     try:
         # Use arxiv library - fetch more results if filtering by date
@@ -193,7 +189,7 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
-        cutoff_dt = datetime.combine(cutoff, datetime.min.time())
+        cutoff_dt = datetime.combine(cutoff + timedelta(days=1), datetime.min.time())
         try:
             search = arxiv.Search(id_list=[paper_id])
             result = next(arxiv.Client().results(search), None)
