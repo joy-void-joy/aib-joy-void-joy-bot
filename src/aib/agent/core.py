@@ -501,6 +501,52 @@ def create_permission_hooks(
     }
 
 
+_WEBFETCH_DOMAIN_REDIRECTS: dict[str, str] = {
+    "kalshi.com": "Use kalshi_price, kalshi_event, or kalshi_history instead.",
+    "polymarket.com": "Use polymarket_price or polymarket_history instead.",
+    "finance.yahoo.com": "Use stock_price or stock_history instead.",
+    "arxiv.org": "Use search_arxiv or fetch_arxiv instead.",
+    "fred.stlouisfed.org": "Use fred_search or fred_series instead.",
+    "wikipedia.org": "Use the wikipedia tool instead.",
+}
+
+
+def create_webfetch_domain_hooks() -> HooksConfig:
+    """Create PreToolUse hook that denies WebFetch for domains with dedicated API tools."""
+
+    async def domain_deny_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> dict[str, Any]:
+        if input_data.get("hook_event_name") != "PreToolUse":
+            return {}
+
+        if input_data.get("tool_name") != "WebFetch":
+            return {}
+
+        tool_input = input_data.get("tool_input", {})
+        url = (tool_input.get("url") or "").lower()
+
+        for domain, hint in _WEBFETCH_DOMAIN_REDIRECTS.items():
+            if domain in url:
+                return {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": (
+                            f"WebFetch is not available for {domain}. {hint}"
+                        ),
+                    }
+                }
+
+        return {}
+
+    return {
+        "PreToolUse": [HookMatcher(hooks=[domain_deny_hook])],  # type: ignore[list-item]
+    }
+
+
 def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfig:
     """Create PostToolUse hook for WebFetch quality detection.
 
@@ -783,6 +829,11 @@ async def run_forecast(
             retrodict_mode=cutoff is not None
         )
         hooks = merge_hooks(permission_hooks, webfetch_hooks)
+
+        # Deny WebFetch for domains with dedicated API tools (live mode only;
+        # retrodict already denies WebFetch entirely)
+        if not cutoff:
+            hooks = merge_hooks(hooks, create_webfetch_domain_hooks())
 
         # Compose with retrodict hooks if in retrodict mode
         if cutoff:
