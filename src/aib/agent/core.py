@@ -653,8 +653,14 @@ _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
     "mcp__markets__manifold_price": None,
     "mcp__markets__stock_price": ("symbol", "https://finance.yahoo.com/quote/{}"),
     "mcp__markets__stock_history": ("symbol", "https://finance.yahoo.com/quote/{}"),
-    "mcp__financial__fred_series": ("series_id", "https://fred.stlouisfed.org/series/{}"),
-    "mcp__financial__company_financials": ("ticker", "https://finance.yahoo.com/quote/{}"),
+    "mcp__financial__fred_series": (
+        "series_id",
+        "https://fred.stlouisfed.org/series/{}",
+    ),
+    "mcp__financial__company_financials": (
+        "ticker",
+        "https://finance.yahoo.com/quote/{}",
+    ),
 }
 
 
@@ -682,7 +688,13 @@ def extract_sources(messages: list[AssistantMessage]) -> list[str]:
                     pending.add(block.id)
             elif isinstance(block, ToolResultBlock) and block.tool_use_id in pending:
                 pending.discard(block.tool_use_id)
-                text = block.content if isinstance(block.content, str) else json.dumps(block.content) if block.content else ""
+                text = (
+                    block.content
+                    if isinstance(block.content, str)
+                    else json.dumps(block.content)
+                    if block.content
+                    else ""
+                )
                 try:
                     for url in _walk_urls(json.loads(text)):
                         _add(url)
