@@ -1,12 +1,11 @@
 """Metaculus Forecasting Bot - CLI Entry Point."""
 
 import asyncio
-import csv
+import json
 import logging
 import math
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated, TypedDict
 
 import httpx
@@ -137,22 +136,19 @@ def _extract_numeric_cp(q: NumericQuestion) -> NumericCP | None:
         return None
 
 
-_SCORES_PATH = Path("notes/scores.csv")
-
-
 def _lookup_cached_resolution(post_id: int) -> str | None:
-    """Look up resolution from scores.csv when the API returns null."""
-    if not _SCORES_PATH.exists():
+    """Look up resolution from the latest forecast JSON when the API returns null."""
+    from aib.paths import find_latest_forecast_file
+
+    latest = find_latest_forecast_file(post_id)
+    if latest is None:
         return None
-    with open(_SCORES_PATH) as f:
-        for row in csv.DictReader(f):
-            if (
-                row["post_id"] == str(post_id)
-                and row["resolution"]
-                and row["resolved"] == "True"
-            ):
-                return row["resolution"]
-    return None
+    try:
+        data = json.loads(latest.read_text(encoding="utf-8"))
+        resolution = data.get("resolution")
+        return str(resolution) if resolution is not None else None
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 async def get_question_meta(post_id: int) -> QuestionMeta | None:
@@ -267,17 +263,6 @@ def display_question_preview(
         if cutoff:
             print(f"   🔒 Blind mode: data restricted to before {cutoff}")
         print("─" * 60)
-
-
-def _rebuild_scores_csv() -> None:
-    """Rebuild the scores CSV after forecast/retrodict changes."""
-    try:
-        from aib.scoring import rebuild_scores_csv
-
-        count = rebuild_scores_csv()
-        print(f"Updated scores.csv ({count} rows)")
-    except OSError as e:
-        logger.debug("Could not rebuild scores.csv: %s", e)
 
 
 def wait_for_credit_reset(error: CreditExhaustedError) -> None:
@@ -804,8 +789,6 @@ def retrodict(
         for r in errors:
             print(f"  {r['post_id']}: {r['error']}")
 
-    _rebuild_scores_csv()
-
 
 @app.command()
 def submit(
@@ -838,7 +821,10 @@ def submit(
     if use_cache:
         output = load_latest_for_submission(question_id, allow_resubmit=True)
         if output is not None:
-            print(f"📂 Loaded cached forecast from notes/forecasts/{question_id}/")
+            from aib.paths import find_latest_forecast_file
+
+            cached_path = find_latest_forecast_file(question_id)
+            print(f"📂 Loaded cached forecast from {cached_path}")
             display_forecast(output)
         else:
             print("⚠️  No cached forecast found, running agent...")
@@ -889,8 +875,6 @@ def submit(
             print(f"✅ Comment posted on post {output.post_id}")
         except Exception as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
-
-    _rebuild_scores_csv()
 
 
 # Known tournament IDs
@@ -1224,25 +1208,20 @@ def backfill_comments(
 async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
     """Async implementation of backfill_comments."""
     from aib.agent.history import (
-        FORECASTS_BASE_PATH,
         get_latest_forecast,
         has_comment,
         mark_comment_posted,
     )
     from aib.agent.models import Factor, ForecastOutput
     from aib.clients.metaculus import get_client
+    from aib.paths import get_all_forecasted_post_ids
 
-    if not FORECASTS_BASE_PATH.exists():
-        print("No forecasts directory found")
+    post_ids = sorted(get_all_forecasted_post_ids())
+    if not post_ids:
+        print("No forecasts found")
         raise typer.Exit(1)
 
-    # Find all forecast directories
-    forecast_dirs = sorted(
-        [d for d in FORECASTS_BASE_PATH.iterdir() if d.is_dir() and d.name.isdigit()],
-        key=lambda d: int(d.name),
-    )
-
-    print(f"Found {len(forecast_dirs)} forecast directories")
+    print(f"Found {len(post_ids)} forecast directories")
 
     success_count = 0
     skip_count = 0
@@ -1250,9 +1229,7 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
 
     metaculus = get_client()
 
-    for d in forecast_dirs:
-        post_id = int(d.name)
-
+    for post_id in post_ids:
         # Check if already has comment (unless force)
         if not force and has_comment(post_id):
             print(f"  ⏭️  {post_id}: Already has comment")

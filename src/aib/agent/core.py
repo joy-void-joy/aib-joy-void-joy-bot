@@ -3,9 +3,8 @@
 import dataclasses
 import json
 import logging
-import shutil
 import sys
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, cast
@@ -37,7 +36,6 @@ from aib.agent.display import (
 )
 from aib.agent.history import (
     save_forecast,
-    save_retrodict,
 )
 from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.meta_hooks import create_structured_output_hooks
@@ -69,6 +67,13 @@ from aib.tools.composition import (
     composition_server,
     set_run_forecast_fn,
 )
+from aib.paths import (
+    RUNTIME_LOGS_PATH,
+    TRACES_PATH,
+    forecasts_dir,
+    sessions_dir,
+    trace_logs_dir,
+)
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
@@ -82,6 +87,7 @@ def _build_system_prompt(
     cutoff: date | None,
     tool_docs: str | None,
     sandbox_shared_dir: str,
+    session_dir: str,
 ) -> str:
     """Build full system prompt from template + forecasting prompt.
 
@@ -99,6 +105,7 @@ def _build_system_prompt(
             tool_docs=tool_docs,
             retrodict=cutoff is not None,
             sandbox_shared_dir=sandbox_shared_dir,
+            session_dir=session_dir,
         )
     )
 
@@ -278,19 +285,11 @@ def get_output_schema_for_question(
         return Forecast, Forecast.model_json_schema()
 
 
-# Notes folder base path
-NOTES_BASE_PATH = Path("./notes")
-
-# Logs folder base path
-LOGS_BASE_PATH = Path("./logs")
-
-
 @dataclasses.dataclass
 class NotesConfig:
     """Notes folder configuration with explicit RW/RO separation."""
 
     session: Path
-    research: Path
     forecasts: Path
     reasoning_log: Path  # For feedback loop (agent cannot access)
     rw: list[Path]
@@ -301,87 +300,55 @@ class NotesConfig:
         return self.rw + self.ro
 
 
-def _parse_session_id(session_id: str) -> tuple[str, str]:
-    """Parse session_id into (post_id, timestamp) components.
-
-    Session ID format: <post_id>_<timestamp> (e.g., "41906_20260202_002119")
-    or "sub_<timestamp>" for sub-forecasts.
-    """
-    if session_id.startswith("sub_"):
-        return ("0", session_id[4:])  # sub_20260202_002119 -> ("0", "20260202_002119")
-
-    # Split on first underscore only to handle timestamps with underscores
-    parts = session_id.split("_", 1)
-    if len(parts) == 2:
-        return (parts[0], parts[1])
-    return (session_id, effective_now().strftime("%Y%m%d_%H%M%S"))
-
-
 def setup_notes_folder(
-    session_id: str, post_id: int, *, retrodict: bool = False
+    post_id: int, timestamp: str, *, retrodict: bool = False
 ) -> NotesConfig:
     """Create session-specific notes folder structure.
 
     Structure (RW = this session can write, RO = read historical only):
-    - notes/sessions/<post_id>/<timestamp>/   (RW) - session work + meta
-    - notes/research/<post_id>/<timestamp>/   (RW, blocked in retrodict)
-    - notes/forecasts/<post_id>/<timestamp>/  (RW, blocked in retrodict)
-    - notes/research/                         (RO, blocked in retrodict)
-    - notes/forecasts/                        (RO, blocked in retrodict)
-    - notes/structured/                       (RO, blocked in retrodict)
-    - notes/logs/                             (NO ACCESS - for feedback loop only)
+    - notes/traces/<ver>/sessions/<post_id>/<ts>/   (RW) - session work + meta
+    - notes/traces/<ver>/forecasts/<post_id>/<ts>/  (RW, blocked in retrodict)
+    - notes/traces/                                  (RO, blocked in retrodict)
 
-    In retrodict mode, read access to forecasts/, research/, and structured/
-    is blocked to prevent "future leak" from past forecasts or research notes.
+    In retrodict mode, read access to traces/ is blocked to prevent
+    "future leak" from past forecasts.
 
     Args:
-        session_id: Unique session identifier (format: <post_id>_<timestamp>).
         post_id: Metaculus post ID (the URL identifier, e.g., 41976). Use 0 for sub-forecasts.
+        timestamp: Timestamp string (format: YYYYMMDD_HHMMSS).
         retrodict: If True, block read access to historical data directories.
 
     Returns:
         NotesConfig with RW and RO directories separated.
     """
-    # Parse session_id to get consistent path components
-    _, timestamp = _parse_session_id(session_id)
 
-    # Unified path structure: notes/<type>/<post_id>/<timestamp>/
-    session_path = NOTES_BASE_PATH / "sessions" / str(post_id) / timestamp
-    research_base = NOTES_BASE_PATH / "research"
-    research_path = research_base / str(post_id) / timestamp
-    forecasts_base = NOTES_BASE_PATH / "forecasts"
-    forecasts_path = forecasts_base / str(post_id) / timestamp
-    structured_path = NOTES_BASE_PATH / "structured"
-    logs_path = NOTES_BASE_PATH / "logs"
+    session_path = sessions_dir() / str(post_id) / timestamp
+    cur_forecasts_dir = forecasts_dir()
+    forecasts_path = cur_forecasts_dir / str(post_id) / timestamp
+    logs_path = trace_logs_dir()
 
     session_path.mkdir(parents=True, exist_ok=True)
     logs_path.mkdir(parents=True, exist_ok=True)
 
-    # Reasoning log file for this session (agent cannot access notes/logs/)
     reasoning_log = logs_path / f"{post_id}_{timestamp}.md"
 
     if retrodict:
-        # In retrodict mode: only session is writable, no RO access to historical data
         return NotesConfig(
             session=session_path,
-            research=session_path,  # Redirect to session (no separate research)
-            forecasts=session_path,  # Redirect to session (no separate forecasts)
+            forecasts=session_path,
             reasoning_log=reasoning_log,
             rw=[session_path],
-            ro=[],  # No read-only access to historical data
+            ro=[],
         )
 
-    # Normal mode: full access
-    research_path.mkdir(parents=True, exist_ok=True)
     forecasts_path.mkdir(parents=True, exist_ok=True)
 
     return NotesConfig(
         session=session_path,
-        research=research_path,
         forecasts=forecasts_path,
         reasoning_log=reasoning_log,
-        rw=[session_path, research_path, forecasts_path],
-        ro=[research_base, forecasts_base, structured_path],
+        rw=[session_path, forecasts_path],
+        ro=[TRACES_PATH],
     )
 
 
@@ -824,7 +791,7 @@ async def run_forecast(
     # Setup notes folder (using post_id for directory structure)
     # In retrodict mode, block read access to historical data
     cutoff = retrodict_cutoff.get()
-    notes = setup_notes_folder(session_id, post_id, retrodict=cutoff is not None)
+    notes = setup_notes_folder(post_id, timestamp, retrodict=cutoff is not None)
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
@@ -840,7 +807,7 @@ async def run_forecast(
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
     log_path = (
-        LOGS_BASE_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
+        RUNTIME_LOGS_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     _log_handler = logging.FileHandler(log_path)
@@ -851,7 +818,7 @@ async def run_forecast(
     logging.getLogger().addHandler(_log_handler)
 
     # Session-specific scratch directory for sandbox file exchange
-    sandbox_shared_dir = LOGS_BASE_PATH / session_id / "sandbox-shared"
+    sandbox_shared_dir = RUNTIME_LOGS_PATH / session_id / "sandbox-shared"
     sandbox_shared_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine sandbox network mode for retrodict
@@ -891,13 +858,7 @@ async def run_forecast(
         # discarded when later hooks overwrite the result).
         meta_path: Path | None = None
         if post_id > 0:
-            if cutoff and session_id:
-                _, ts = _parse_session_id(session_id)
-                meta_path = Path(
-                    f"./tmp/notes/{session_id}/sessions/{post_id}/{ts}/meta.md"
-                )
-            else:
-                meta_path = notes.session / "meta.md"
+            meta_path = notes.session / "meta.md"
         hooks = merge_hooks(hooks, create_structured_output_hooks(meta_path))
 
         # Centralized tool policy determines MCP servers and allowed tools
@@ -905,7 +866,7 @@ async def run_forecast(
 
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
-            sandbox, composition_server, session_id=session_id
+            sandbox, composition_server, session_dir=notes.session
         )
 
         options = ClaudeAgentOptions(
@@ -914,6 +875,7 @@ async def run_forecast(
                 cutoff=cutoff,
                 tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
                 sandbox_shared_dir=str(sandbox_shared_dir),
+                session_dir=str(notes.session),
             ),
             max_thinking_tokens=128_000 - 1,
             permission_mode="bypassPermissions",
@@ -1120,7 +1082,7 @@ async def run_forecast(
     output.tool_metrics = metrics
 
     # Check for meta-reflection (required for top-level forecasts)
-    # Meta is written via notes(write_meta) to notes/sessions/<post_id>/<timestamp>/meta.md
+    # Meta is written via notes(write_meta) to notes/traces/<version>/sessions/<post_id>/<timestamp>/meta.md
     if post_id > 0:
         meta_file = notes.session / "meta.md"
 
@@ -1194,25 +1156,12 @@ async def run_forecast(
                 "sources_consulted": output.sources_consulted,
             }
 
-            if cutoff:
-                save_retrodict(
-                    **save_kwargs,
-                    retrodict_date=cutoff.isoformat(),
-                )
-            else:
-                save_forecast(**save_kwargs)
+            save_forecast(
+                **save_kwargs,
+                retrodict_date=cutoff.isoformat() if cutoff else None,
+            )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
-
-    # Move tmp notes to permanent retrodict storage
-    if cutoff and session_id:
-        tmp_notes = Path(f"./tmp/notes/{session_id}")
-        if tmp_notes.exists():
-            real_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-            dest = Path(f"./notes/retrodict/{post_id}_{real_ts}")
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(tmp_notes), str(dest))
-            logger.info("Moved retrodict notes: %s -> %s", tmp_notes, dest)
 
     logging.getLogger().removeHandler(_log_handler)
     _log_handler.close()

@@ -21,7 +21,7 @@ from aib.tools.arxiv_search import arxiv_server
 from aib.tools.financial import financial_server
 from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
-from aib.tools.notes import create_notes_server
+from aib.tools.write_meta import create_write_meta_server
 from aib.tools.retrodict_search import create_retrodict_search_server
 from aib.tools.trends import trends_server
 
@@ -140,7 +140,7 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__notes__notes",
+        "mcp__notes__write_meta",
     }
 )
 
@@ -181,7 +181,7 @@ class ToolPolicy:
 
     Example:
         policy = ToolPolicy.from_settings(settings)
-        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_id="41906_20260202")
+        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_dir=Path("notes/traces/1.2.1/sessions/41906/20260202"))
         allowed_tools = policy.get_allowed_tools(allow_spawn=True)
     """
 
@@ -243,15 +243,15 @@ class ToolPolicy:
         sandbox: Sandbox,
         composition_server: McpSdkServerConfig,
         *,
-        session_id: str | None = None,
+        session_dir: Path | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
         Args:
             sandbox: The sandbox instance for code execution.
             composition_server: The composition MCP server for spawn_subquestions.
-            session_id: Session ID for the notes tool. Format: "<post_id>_<timestamp>".
-                Enables write_meta mode. If None, write_meta is disabled.
+            session_dir: Session directory path for the write_meta tool.
+                If None, write_meta is disabled.
 
         Returns:
             Dict mapping server name to server config.
@@ -262,14 +262,7 @@ class ToolPolicy:
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_notes_server(
-                session_id,
-                notes_base=(
-                    Path(f"./tmp/notes/{session_id}")
-                    if self.is_retrodict and session_id
-                    else None
-                ),
-            ),
+            "notes": create_write_meta_server(session_dir),
             "trends": trends_server,
             "arxiv": arxiv_server,
         }

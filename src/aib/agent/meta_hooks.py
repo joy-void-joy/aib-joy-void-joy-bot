@@ -59,7 +59,7 @@ def create_structured_output_hooks(meta_path: Path | None = None) -> HooksConfig
                     "permissionDecision": "deny",
                     "permissionDecisionReason": (
                         "You must write a meta-reflection using "
-                        "notes(mode='write_meta', content='...') BEFORE providing "
+                        "write_meta(content='...') BEFORE providing "
                         "your final forecast. Write your meta-reflection first, "
                         "then call StructuredOutput again."
                     ),
