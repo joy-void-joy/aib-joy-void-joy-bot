@@ -9,13 +9,14 @@ from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, cast
 
-from claude_agent_sdk.types import HookContext
+from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
 
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
     ContentBlock,
+    HookInput,
     HookMatcher,
     ResultMessage,
     SystemMessage,
@@ -42,10 +43,6 @@ from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
 from aib.agent.tool_policy import ToolPolicy
-from aib.tools.classifiers import (
-    classify_webfetch_content,
-    generate_fallback_message,
-)
 from aib.agent.models import (
     CreditExhaustedError,
     Forecast,
@@ -469,75 +466,56 @@ def create_permission_hooks(
     }
 
 
-def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfig:
-    """Create PostToolUse hook for WebFetch quality detection.
+def create_websearch_nudge_hooks() -> HooksConfig:
+    """PostToolUse hook that nudges the agent to prefer web_search over WebSearch."""
 
-    Detects when WebFetch returns JS-rendered garbage and injects
-    a system message with alternative tools to try.
-
-    Args:
-        retrodict_mode: If True, exclude Playwright from suggestions.
-    """
-
-    async def webfetch_quality_hook(
-        input_data: Any,
+    async def nudge_hook(
+        input_data: HookInput,
         _tool_use_id: str | None,
         _context: HookContext,
-    ) -> dict[str, Any]:
-        """Check WebFetch responses for JS-rendering issues."""
+    ) -> SyncHookJSONOutput:
         if input_data.get("hook_event_name") != "PostToolUse":
-            return {}
+            return SyncHookJSONOutput()
+        if input_data.get("tool_name") != "WebSearch":
+            return SyncHookJSONOutput()
 
-        tool_name = input_data.get("tool_name", "")
-        if tool_name != "WebFetch":
-            return {}
-
-        # Extract content from tool response
-        tool_response = input_data.get("tool_response", {})
-        content = ""
-
-        # Handle different response formats
-        if isinstance(tool_response, str):
-            content = tool_response
-        elif isinstance(tool_response, dict):
-            # MCP-style response
-            result = tool_response.get("result", tool_response)
-            if isinstance(result, str):
-                content = result
-            elif isinstance(result, dict):
-                content = result.get("content", result.get("text", ""))
-
-        if not content:
-            # No content to classify
-            return {}
-        # Note: Short content is itself a signal of JS rendering - the classifier
-        # handles this case, so we don't filter by length here
-
-        # Get the URL from tool input
-        tool_input = input_data.get("tool_input", {})
-        url = tool_input.get("url", "")
-
-        # Classify the content
-        try:
-            classification = await classify_webfetch_content(
-                content, url, retrodict_mode=retrodict_mode
+        return SyncHookJSONOutput(
+            systemMessage=(
+                "Tip: Prefer mcp__search__web_search over WebSearch. "
+                "It provides structured results with automatic API data "
+                "for recognized domains (stock prices, arXiv, Wikipedia, "
+                "FRED, prediction markets)."
             )
-
-            if classification.is_js_rendered and classification.confidence >= 0.6:
-                message = generate_fallback_message(url, classification)
-                logger.info(
-                    "WebFetch quality issue detected for %s (confidence=%.0f%%)",
-                    url[:50],
-                    classification.confidence * 100,
-                )
-                return {"systemMessage": message}
-        except Exception as e:
-            logger.warning("WebFetch quality check failed: %s", e)
-
-        return {}
+        )
 
     return {
-        "PostToolUse": [HookMatcher(hooks=[webfetch_quality_hook])],  # type: ignore[list-item]
+        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
+    }
+
+
+def create_webfetch_nudge_hooks() -> HooksConfig:
+    """PostToolUse hook that nudges the agent to prefer fetch_url over WebFetch."""
+
+    async def nudge_hook(
+        input_data: HookInput,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> SyncHookJSONOutput:
+        if input_data.get("hook_event_name") != "PostToolUse":
+            return SyncHookJSONOutput()
+        if input_data.get("tool_name") != "WebFetch":
+            return SyncHookJSONOutput()
+
+        return SyncHookJSONOutput(
+            systemMessage=(
+                "Tip: Prefer mcp__fetch__fetch_url over WebFetch. "
+                "It provides automatic text extraction, JavaScript rendering "
+                "via Playwright, and domain-specific API routing."
+            )
+        )
+
+    return {
+        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
     }
 
 
@@ -649,7 +627,9 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
             continue
         for block in content:
             if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
-                if block.name == "WebFetch" and (url := block.input.get("url")):
+                if block.name in ("WebFetch", "mcp__fetch__fetch_url") and (
+                    url := block.input.get("url")
+                ):
                     _add(str(url))
                 elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
                     key, tmpl = entry
@@ -842,11 +822,13 @@ async def run_forecast(
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
 
-        # Always add WebFetch quality detection
-        webfetch_hooks = create_webfetch_quality_hooks(
-            retrodict_mode=cutoff is not None
-        )
-        hooks = merge_hooks(permission_hooks, webfetch_hooks)
+        # Nudge agent toward fetch_url when it uses WebFetch
+        hooks = merge_hooks(permission_hooks, create_webfetch_nudge_hooks())
+
+        # Nudge agent toward web_search when it uses WebSearch (live mode only;
+        # in retrodict mode, WebSearch is denied entirely by retrodict hooks)
+        if not cutoff:
+            hooks = merge_hooks(hooks, create_websearch_nudge_hooks())
 
         # Compose with retrodict hooks if in retrodict mode
         if cutoff:

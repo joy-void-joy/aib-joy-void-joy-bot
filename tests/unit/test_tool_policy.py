@@ -8,12 +8,14 @@ from aib.agent.tool_policy import (
     ASKNEWS_TOOLS,
     BUILTIN_TOOLS,
     EXA_TOOLS,
+    FETCH_TOOLS,
     FRED_TOOLS,
     HISTORICAL_MARKET_TOOLS,
     LIVE_MARKET_TOOLS,
     METACULUS_TOOLS,
     PLAYWRIGHT_TOOLS,
     TRENDS_TOOLS,
+    WORLD_BANK_TOOLS,
     ToolPolicy,
 )
 
@@ -205,6 +207,27 @@ class TestToolPolicyIsToolAvailable:
         for tool in TRENDS_TOOLS:
             assert policy.is_tool_available(tool)
 
+    def test_fetch_always_available(self) -> None:
+        """Fetch tools should always be available (no API key required)."""
+        policy = ToolPolicy()
+
+        for tool in FETCH_TOOLS:
+            assert policy.is_tool_available(tool)
+
+    def test_world_bank_always_available(self) -> None:
+        """World Bank tools should always be available (no API key required)."""
+        policy = ToolPolicy()
+
+        for tool in WORLD_BANK_TOOLS:
+            assert policy.is_tool_available(tool)
+
+    def test_world_bank_in_allowed_tools(self) -> None:
+        """World Bank tools should appear in get_allowed_tools."""
+        policy = ToolPolicy()
+        allowed = policy.get_allowed_tools()
+        for tool in WORLD_BANK_TOOLS:
+            assert tool in allowed
+
 
 class TestToolPolicyMcpServers:
     """Tests for get_mcp_servers method."""
@@ -225,6 +248,8 @@ class TestToolPolicyMcpServers:
         assert "markets" in servers
         assert "notes" in servers
         assert "trends" in servers
+        assert "fetch" in servers
+        assert "world_bank" in servers
 
     def test_includes_playwright_normally(self) -> None:
         """Should include Playwright in normal mode."""
@@ -265,12 +290,12 @@ class TestToolPolicyMcpServers:
         finally:
             retrodict_cutoff.reset(token)
 
-    def test_no_search_server_normally(self) -> None:
-        """Should not add search server in normal mode."""
+    def test_search_server_in_normal_mode(self) -> None:
+        """Search server should be present in normal mode too."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
         composition_server = MagicMock()
 
         policy = ToolPolicy()
         servers = policy.get_mcp_servers(sandbox, composition_server)
-        assert "search" not in servers
+        assert "search" in servers

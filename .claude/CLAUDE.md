@@ -302,6 +302,8 @@ Why this is good: The behavior is self-evident to anyone familiar with configura
 
 **Never silently swallow errors** — either handle them meaningfully or let them propagate.
 
+**Retrodict transparency:** The forecasting agent must never know it's in retrodict mode. Everything it sees — tool results, error messages, available tools, data ranges — should be indistinguishable from a live forecast. Never mention retrodict, cutoff dates, time constraints, or historical mode in any agent-visible surface (tool responses, error messages, tool descriptions). When data is filtered or a tool is gated by `retrodict_cutoff`, present the result as if that's simply how the world is: "not found", "no data available", "currently unavailable".
+
 ### Tools
 
 - **uv**: Package manager. Use `uv add <package>` (never edit pyproject.toml directly)

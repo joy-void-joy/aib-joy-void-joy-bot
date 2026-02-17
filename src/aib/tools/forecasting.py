@@ -29,6 +29,7 @@ from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.cache import cached
 from aib.tools.exa import exa_search
+from aib.tools.extract import extract_with_prompt
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
@@ -131,6 +132,10 @@ class WikipediaInput(BaseModel):
     query: str
     mode: Literal["search", "summary", "full"] = "search"
     num_results: int = settings.search_default_limit
+    prompt: str | None = Field(
+        default=None,
+        description="Extract specific information from the article (summary/full modes only).",
+    )
 
 
 # --- Output Schemas ---
@@ -729,6 +734,12 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
+    if retrodict_cutoff.get() is not None:
+        return mcp_error(
+            "search_news is currently unavailable. "
+            "Use search_exa or web_search instead."
+        )
+
     query = validated.query
     num_results = validated.num_results
 
@@ -816,7 +827,9 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         '  wikipedia(query="European Central Bank") → search for articles\n'
         '  wikipedia(query="European Central Bank", mode="summary") → get article intro\n'
         '  wikipedia(query="List of recessions in the United States", mode="full") → full article\n'
-        "Two-step workflow: search first to find the right article title, then summary/full to read it."
+        '  wikipedia(query="European Central Bank", mode="summary", prompt="What is the current interest rate?") → extract specific info\n'
+        "Two-step workflow: search first to find the right article title, then summary/full to read it. "
+        "Optional 'prompt' extracts specific information via Haiku (summary/full modes only)."
     ),
     WikipediaInput.model_json_schema(),
 )
@@ -900,9 +913,12 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                             }
                         )
                     except ValueError as e:
-                        # Article didn't exist at cutoff_date, skip it
                         logger.debug("Skipping %s: %s", result["title"], e)
                         continue
+                if not historical_results and results:
+                    return mcp_error(
+                        f"No Wikipedia articles found for '{query}'."
+                    )
                 results = historical_results
 
             return mcp_success({"query": query, "mode": mode, "results": results})
@@ -922,6 +938,10 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 extract = historical["extract"]
                 if mode == "summary":
                     extract = _extract_intro(extract)
+                if validated.prompt:
+                    extract = await extract_with_prompt(
+                        extract, validated.prompt, historical["url"]
+                    )
                 return mcp_success(
                     {
                         "title": historical["title"],
@@ -985,6 +1005,10 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         try:
             async with wikipedia_throttle:
                 result = await _fetch()
+            if validated.prompt:
+                result["extract"] = await extract_with_prompt(
+                    result["extract"], validated.prompt, result["url"]
+                )
             return mcp_success(result)
         except Exception as e:
             logger.exception("Wikipedia article fetch failed")

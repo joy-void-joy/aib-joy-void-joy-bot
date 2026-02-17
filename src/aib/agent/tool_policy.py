@@ -22,8 +22,10 @@ from aib.tools.financial import financial_server
 from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
 from aib.tools.write_meta import create_write_meta_server
-from aib.tools.retrodict_search import create_retrodict_search_server
+from aib.tools.fetch import create_fetch_server
+from aib.tools.search import create_search_server
 from aib.tools.trends import trends_server
+from aib.tools.world_bank import world_bank_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
@@ -154,11 +156,17 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (SDK WebSearch + Wayback validation)
-RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
+# Fetch tool (unified live + retrodict URL fetching)
+FETCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__fetch__fetch_url",
+    }
+)
+
+# Web search tools (Haiku sub-agent with WebSearch + API augmentation)
+SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
-        "mcp__search__fetch",
     }
 )
 
@@ -166,6 +174,15 @@ RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
 ARXIV_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__arxiv__search_arxiv",
+        "mcp__arxiv__fetch_arxiv",
+    }
+)
+
+# World Bank tools (no API key required, international economic data)
+WORLD_BANK_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__world_bank__world_bank_indicator",
+        "mcp__world_bank__world_bank_search",
     }
 )
 
@@ -265,11 +282,10 @@ class ToolPolicy:
             "notes": create_write_meta_server(session_dir),
             "trends": trends_server,
             "arxiv": arxiv_server,
+            "world_bank": world_bank_server,
+            "fetch": create_fetch_server(),
+            "search": create_search_server(),
         }
-
-        # Add search server in retrodict mode (date-filtered web search)
-        if self.is_retrodict:
-            servers["search"] = create_retrodict_search_server()
 
         # Only add Playwright in non-retrodict mode
         if not self.is_retrodict:
@@ -330,12 +346,17 @@ class ToolPolicy:
         # arXiv tools (supports date filtering)
         tools.update(ARXIV_TOOLS)
 
+        # World Bank tools (no API key required)
+        tools.update(WORLD_BANK_TOOLS)
+
+        # Fetch tool (unified URL fetching)
+        tools.update(FETCH_TOOLS)
+
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
-        # Retrodict search tools (date-filtered web search)
-        if self.is_retrodict:
-            tools.update(RETRODICT_SEARCH_TOOLS)
+        # Web search tools
+        tools.update(SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools

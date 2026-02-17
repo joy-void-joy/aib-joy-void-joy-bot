@@ -118,10 +118,11 @@ Organize your research in phases. Don't jump to deep research before understandi
 - **get_coherence_links**: Find related questions for consistency checking.
 
 ### Phase 2: Initial Research
-- **search_exa**: Broad web search for news, opinions, announcements. Use diverse query formulations — the same topic found with different keywords produces richer results.
+- **web_search**: Primary web search. Returns results with automatic API augmentation for recognized domains (stock quotes, arXiv, Wikipedia, FRED, prediction markets). Use diverse query formulations — the same topic found with different keywords produces richer results.
+- **search_exa**: AI-powered semantic search via Exa. Best for semantic queries and date filtering. Good complement to web_search for different query angles.
 - **search_news**: When recency matters — breaking news, events in the last 48-72 hours.
 - **wikipedia**: Background facts, historical context, institutional processes. Use 'search' to find the right article, then 'summary' to read it.
-- **search_arxiv**: Academic papers for scientific, technical, or AI capability questions.
+- **search_arxiv** / **fetch_arxiv**: Academic papers for scientific, technical, or AI capability questions. Search first, then fetch full text.
 
 ### Phase 3: Domain-Specific Data
 - **company_financials**: Quarterly and annual financials — revenue, net income, EPS. For earnings questions. Does NOT include regional breakdowns or segment data — search for the earnings press release for those.

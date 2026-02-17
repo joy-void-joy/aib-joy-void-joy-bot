@@ -54,6 +54,7 @@ class MarketPrice(TypedDict):
     volume: float | None  # Trading volume if available
     url: str
     source: str  # "polymarket", "manifold", or "kalshi"
+    description: str | None  # Resolution criteria / market description
 
 
 class KalshiMarketPrice(MarketPrice):
@@ -65,6 +66,7 @@ class KalshiMarketPrice(MarketPrice):
 
     market_ticker: str
     event_ticker: str
+    rules_primary: str | None  # Kalshi resolution rules
 
 
 class KalshiEventMarket(TypedDict):
@@ -78,6 +80,7 @@ class KalshiEventMarket(TypedDict):
     floor_strike: float | None
     cap_strike: float | None
     url: str
+    rules_primary: str | None  # Resolution rules for this bracket
 
 
 class KalshiEvent(TypedDict):
@@ -87,6 +90,7 @@ class KalshiEvent(TypedDict):
     event_title: str
     markets: list[KalshiEventMarket]
     url: str
+    description: str | None  # Event description / resolution criteria
 
 
 # --- Polymarket API ---
@@ -204,6 +208,7 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
         "volume": market.get("volume"),
         "url": f"https://polymarket.com/event/{event.get('slug', '')}",
         "source": "polymarket",
+        "description": event.get("description") or market.get("description"),
     }
 
 
@@ -241,6 +246,7 @@ async def _polymarket_event_at_cutoff(
         "volume": market.get("volume"),
         "url": f"https://polymarket.com/event/{event.get('slug', '')}",
         "source": "polymarket",
+        "description": None,
     }
 
 
@@ -284,6 +290,11 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
                 parsed = parse_polymarket_event(event)
             if parsed is not None:
                 results.append(parsed)
+
+        if not results and cutoff is not None:
+            return mcp_error(
+                f"Found markets for '{query}' but no price data is available."
+            )
 
         return mcp_success({"markets": results, "query": query})
 
@@ -332,6 +343,7 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
         "volume": market.get("volume"),
         "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
         "source": "manifold",
+        "description": market.get("textDescription") or market.get("description"),
     }
 
 
@@ -365,6 +377,7 @@ async def _manifold_market_at_cutoff(
         "volume": market.get("volume"),
         "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
         "source": "manifold",
+        "description": None,
     }
 
 
@@ -1040,8 +1053,10 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
                         "volume": market.get("volume_fp"),
                         "url": f"https://kalshi.com/markets/{ticker}",
                         "source": "kalshi",
+                        "description": market.get("rules_primary"),
                         "market_ticker": ticker,
                         "event_ticker": event_tick,
+                        "rules_primary": market.get("rules_primary"),
                     }
                 )
 
@@ -1105,6 +1120,7 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
                     "floor_strike": market.get("floor_strike"),
                     "cap_strike": market.get("cap_strike"),
                     "url": f"https://kalshi.com/markets/{ticker}",
+                    "rules_primary": market.get("rules_primary"),
                 }
             )
 
@@ -1113,6 +1129,7 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
             "event_title": event.get("title", "Unknown"),
             "markets": event_markets,
             "url": f"https://kalshi.com/events/{event_ticker}",
+            "description": event.get("sub_title"),
         }
         return mcp_success(result)
 
