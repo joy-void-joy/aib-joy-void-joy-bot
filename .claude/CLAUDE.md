@@ -413,12 +413,12 @@ aib-devtools
 │   └── earnings       Check earnings dates for a ticker
 │
 ├── dev                Development tools
-│   ├── worktree       Create a new worktree with plugin refresh
-│   ├── version-bump   Bump AGENT_VERSION (patch|minor|major)
-│   ├── version-tag    Create git tag for current version
-│   ├── version-list   List all version tags
-│   ├── version-history Show version bumps from git history
-│   └── version-changelog Add changelog entry
+│   └── worktree       Create a new worktree with plugin refresh
+│
+├── version            Agent version management
+│   ├── show           Display current AGENT_VERSION
+│   ├── bump           Bump version, update changelog, and create git tag
+│   └── list           List all versions from git history
 │
 ├── git                Git operations for forecasts
 │   ├── commit-forecasts Commit uncommitted forecast files (one per question)
