@@ -30,18 +30,12 @@ _ERROR_HINTS: dict[int, str] = {
 }
 
 
-@with_retry(max_attempts=3)
-async def _http_get(url: str) -> httpx.Response:
-    """GET with retry on 429, 5xx, timeouts, and connection errors."""
-    async with httpx.AsyncClient(
-        timeout=20.0,
-        follow_redirects=True,
-        headers={"User-Agent": _USER_AGENT},
-    ) as client:
-        resp = await client.get(url)
-        if resp.status_code == 429 or resp.status_code >= 500:
-            resp.raise_for_status()
-        return resp
+async def _http_get(client: httpx.AsyncClient, url: str) -> httpx.Response:
+    """GET a URL, raising on 429/5xx so the caller's retry loop catches it."""
+    resp = await client.get(url)
+    if resp.status_code == 429 or resp.status_code >= 500:
+        resp.raise_for_status()
+    return resp
 
 
 async def _playwright_render(url: str) -> str | None:
@@ -81,10 +75,21 @@ async def _playwright_render(url: str) -> str | None:
 async def fetch_live(url: str) -> dict[str, Any] | str:
     """Fetch URL in live mode: httpx → trafilatura → Playwright fallback.
 
+    Creates a single httpx client so retries reuse the same TCP connection.
     Returns extracted text on success, or an MCP error dict on failure.
     """
     try:
-        resp = await _http_get(url)
+        async with httpx.AsyncClient(
+            timeout=20.0,
+            follow_redirects=True,
+            headers={"User-Agent": _USER_AGENT},
+        ) as client:
+
+            @with_retry(max_attempts=3)
+            async def _get() -> httpx.Response:
+                return await _http_get(client, url)
+
+            resp = await _get()
     except httpx.TimeoutException:
         return mcp_error(f"Timeout fetching {url}. Try Playwright or search_exa.")
     except httpx.ConnectError:

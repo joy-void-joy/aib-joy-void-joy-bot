@@ -51,10 +51,13 @@ class WaybackRateLimitError(Exception):
         super().__init__(f"Rate limited, retry after {retry_after}s")
 
 
-async def _make_wayback_request(url: str, timestamp: str) -> dict[str, Any] | None:
+async def _make_wayback_request(
+    client: httpx.AsyncClient, url: str, timestamp: str
+) -> dict[str, Any] | None:
     """Make a single request to Wayback Availability API.
 
     Args:
+        client: Shared httpx client (caller owns lifecycle).
         url: The URL to check.
         timestamp: Wayback timestamp format (YYYYMMDD).
 
@@ -65,19 +68,18 @@ async def _make_wayback_request(url: str, timestamp: str) -> dict[str, Any] | No
         WaybackRateLimitError: If rate limited (429).
         httpx.HTTPStatusError: For other HTTP errors.
     """
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            "https://archive.org/wayback/available",
-            params={"url": url, "timestamp": timestamp},
-        )
+    response = await client.get(
+        "https://archive.org/wayback/available",
+        params={"url": url, "timestamp": timestamp},
+    )
 
-        if response.status_code == 429:
-            retry_after = response.headers.get("Retry-After")
-            retry_seconds = int(retry_after) if retry_after else None
-            raise WaybackRateLimitError(retry_seconds)
+    if response.status_code == 429:
+        retry_after = response.headers.get("Retry-After")
+        retry_seconds = int(retry_after) if retry_after else None
+        raise WaybackRateLimitError(retry_seconds)
 
-        response.raise_for_status()
-        return response.json()
+    response.raise_for_status()
+    return response.json()
 
 
 @cached(ttl=86400)  # 24 hours - availability rarely changes
@@ -106,7 +108,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with _wayback_semaphore():
+    async with _wayback_semaphore(), httpx.AsyncClient(timeout=15.0) as client:
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -117,7 +119,7 @@ async def check_wayback_availability(
                 reraise=True,
             ):
                 with attempt:
-                    data = await _make_wayback_request(url, timestamp)
+                    data = await _make_wayback_request(client, url, timestamp)
                     if data is None:
                         return None
 
@@ -222,13 +224,12 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with _wayback_semaphore():
+    async with _wayback_semaphore(), httpx.AsyncClient(timeout=20.0) as client:
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
-                response = await client.get(wayback_url, follow_redirects=True)
-                response.raise_for_status()
-                content_type = response.headers.get("content-type", "")
-                raw_text = response.text
+            response = await client.get(wayback_url, follow_redirects=True)
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            raw_text = response.text
         except httpx.HTTPError as e:
             logger.warning("Wayback fetch failed for %s: %s", url, e)
             return None
