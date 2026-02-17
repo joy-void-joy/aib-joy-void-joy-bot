@@ -757,6 +757,12 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
+    if retrodict_cutoff.get() is not None:
+        return mcp_error(
+            "search_news is currently unavailable. "
+            "Use search_exa or web_search instead."
+        )
+
     query = validated.query
     num_results = validated.num_results
 
