@@ -98,7 +98,6 @@ class TestSuggestAlternatives:
     def test_stock_data_urls(self) -> None:
         """Stock/financial URLs should suggest stock tools."""
         for url in [
-            "https://finance.yahoo.com/quote/AAPL",
             "https://tradingview.com/chart",
             "https://marketwatch.com/stocks",
             "https://bloomberg.com/markets",
@@ -119,10 +118,10 @@ class TestSuggestAlternatives:
             assert any("search_news" in alt for alt in alternatives)
 
     def test_wikipedia_urls(self) -> None:
-        """Wikipedia URLs should suggest wikipedia tool."""
+        """Wikipedia URLs are handled by domain deny hooks, not classifier."""
         url = "https://en.wikipedia.org/wiki/Test"
         alternatives = _suggest_alternatives_for_url(url)
-        assert any("wikipedia" in alt.lower() for alt in alternatives)
+        assert not any("wikipedia" in alt.lower() for alt in alternatives)
 
     def test_social_media_urls(self) -> None:
         """Social media URLs should suggest news coverage and Playwright."""
@@ -137,10 +136,10 @@ class TestSuggestAlternatives:
             assert any("Playwright" in alt for alt in alternatives)
 
     def test_polymarket_urls(self) -> None:
-        """Polymarket URLs should suggest polymarket tool."""
+        """Polymarket URLs are handled by domain deny hooks, not classifier."""
         url = "https://polymarket.com/event/test"
         alternatives = _suggest_alternatives_for_url(url)
-        assert any("polymarket_price" in alt for alt in alternatives)
+        assert not any("polymarket" in alt.lower() for alt in alternatives)
 
     def test_manifold_urls(self) -> None:
         """Manifold URLs should suggest manifold tool."""
