@@ -22,8 +22,10 @@ from aib.tools.financial import financial_server
 from aib.tools.forecasting import create_forecasting_server
 from aib.tools.markets import create_markets_server
 from aib.tools.notes import create_notes_server
+from aib.tools.fetch import create_fetch_server
 from aib.tools.retrodict_search import create_retrodict_search_server
 from aib.tools.trends import trends_server
+from aib.tools.world_bank import world_bank_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
@@ -155,11 +157,17 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Fetch tool (unified live + retrodict URL fetching)
+FETCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__fetch__fetch_url",
+    }
+)
+
 # Search tools for retrodict mode (SDK WebSearch + Wayback validation)
 RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
-        "mcp__search__fetch",
     }
 )
 
@@ -168,6 +176,14 @@ ARXIV_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__arxiv__search_arxiv",
         "mcp__arxiv__fetch_arxiv",
+    }
+)
+
+# World Bank tools (no API key required, international economic data)
+WORLD_BANK_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__world_bank__world_bank_indicator",
+        "mcp__world_bank__world_bank_search",
     }
 )
 
@@ -274,6 +290,8 @@ class ToolPolicy:
             ),
             "trends": trends_server,
             "arxiv": arxiv_server,
+            "world_bank": world_bank_server,
+            "fetch": create_fetch_server(),
         }
 
         # Add search server in retrodict mode (date-filtered web search)
@@ -338,6 +356,12 @@ class ToolPolicy:
 
         # arXiv tools (supports date filtering)
         tools.update(ARXIV_TOOLS)
+
+        # World Bank tools (no API key required)
+        tools.update(WORLD_BANK_TOOLS)
+
+        # Fetch tool (unified URL fetching)
+        tools.update(FETCH_TOOLS)
 
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
