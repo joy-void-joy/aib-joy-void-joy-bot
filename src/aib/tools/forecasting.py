@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
+from asknews_sdk.dto.news import SearchResponseDictItem
 from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 
@@ -733,11 +734,14 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
 
     @with_retry(
         max_attempts=3,
-        min_wait=5,
+        min_wait=10,
         max_wait=30,
         extra_exceptions=(AskNewsRateLimitError,),
     )
-    async def _search() -> str:
+    async def _fetch_news(
+        strategy: Literal["latest news", "news knowledge", "default"],
+        n_articles: int,
+    ) -> list[SearchResponseDictItem]:
         from asknews_sdk import AsyncAskNewsSDK
 
         api_key = settings.asknews_api_key
@@ -756,57 +760,48 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("AskNews credentials not configured")
 
         async with ask_ctx as ask:
-            hot_response = await ask.news.search_news(
+            response = await ask.news.search_news(
                 query=query,
-                n_articles=min(num_results, 6),
+                n_articles=n_articles,
                 return_type="both",
-                strategy="latest news",
+                strategy=strategy,
             )
-
-            historical_response = await ask.news.search_news(
-                query=query,
-                n_articles=num_results,
-                return_type="both",
-                strategy="news knowledge",
-            )
-
-        # Deduplicate by article_id, preserving order
-        seen: set[str] = set()
-        all_articles = []
-        for articles in (hot_response.as_dicts, historical_response.as_dicts):
-            if not articles:
-                continue
-            for article in articles:
-                aid = str(article.article_id)
-                if aid not in seen:
-                    seen.add(aid)
-                    all_articles.append(article)
-
-        all_articles.sort(key=lambda a: a.pub_date, reverse=True)
-
-        if not all_articles:
-            return "No articles were found.\n"
-
-        formatted = "Here are the relevant news articles:\n\n"
-        for article in all_articles:
-            pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
-            formatted += (
-                f"**{article.eng_title}**\n"
-                f"{article.summary}\n"
-                f"Language: {article.language}\n"
-                f"Published: {pub_date}\n"
-                f"Source: [{article.source_id}]({article.article_url})\n\n"
-            )
-
-        return formatted
+        return response.as_dicts or []
 
     try:
         async with asknews_throttle:
-            results = await _search()
-        return mcp_success({"query": query, "results": results})
+            hot_articles = await _fetch_news("latest news", min(num_results, 6))
+        async with asknews_throttle:
+            historical_articles = await _fetch_news("news knowledge", num_results)
     except Exception as e:
         logger.exception("News search failed")
         return mcp_error(f"News search failed: {e}")
+
+    seen: set[str] = set()
+    all_articles: list[SearchResponseDictItem] = []
+    for article in hot_articles + historical_articles:
+        aid = str(article.article_id)
+        if aid not in seen:
+            seen.add(aid)
+            all_articles.append(article)
+
+    all_articles.sort(key=lambda a: a.pub_date, reverse=True)
+
+    if not all_articles:
+        return mcp_success({"query": query, "results": "No articles were found.\n"})
+
+    formatted = "Here are the relevant news articles:\n\n"
+    for article in all_articles:
+        pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
+        formatted += (
+            f"**{article.eng_title}**\n"
+            f"{article.summary}\n"
+            f"Language: {article.language}\n"
+            f"Published: {pub_date}\n"
+            f"Source: [{article.source_id}]({article.article_url})\n\n"
+        )
+
+    return mcp_success({"query": query, "results": formatted})
 
 
 @tool(
