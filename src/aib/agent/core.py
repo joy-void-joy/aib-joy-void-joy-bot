@@ -7,6 +7,7 @@ import shutil
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+from collections.abc import Sequence
 from typing import Any, cast
 
 from claude_agent_sdk.types import HookContext
@@ -25,6 +26,8 @@ from claude_agent_sdk import (
     ToolUseBlock,
     UserMessage,
 )
+
+from pydantic import BaseModel, Field
 
 from aib.agent.display import (
     normalize_content as _normalize_content,
@@ -664,7 +667,7 @@ _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
 }
 
 
-def extract_sources(messages: list[AssistantMessage]) -> list[str]:
+def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
     """Extract deduplicated source URLs from tool calls and results."""
     seen: set[str] = set()
     sources: list[str] = []
@@ -676,7 +679,10 @@ def extract_sources(messages: list[AssistantMessage]) -> list[str]:
             sources.append(url)
 
     for msg in messages:
-        for block in msg.content:
+        content = msg.content
+        if isinstance(content, str):
+            continue
+        for block in content:
             if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
                 if block.name == "WebFetch" and (url := block.input.get("url")):
                     _add(str(url))
@@ -713,10 +719,19 @@ def build_trace(messages: list[AssistantMessage], title: str = "") -> str:
     return "\n".join(rl.lines)
 
 
+class CondensedReasoning(BaseModel):
+    """Structured output for condensed forecast narratives."""
+
+    narrative: str = Field(
+        description=(
+            "3-5 short paragraphs covering: what research was done, "
+            "key evidence found, and how the conclusion was reached."
+        )
+    )
+
+
 async def condense_reasoning(trace: str, question_title: str) -> str | None:
     """Condense a full forecast trace into a readable narrative using Sonnet."""
-    from claude_agent_sdk import ClaudeAgentOptions, query
-
     options = ClaudeAgentOptions(
         model="sonnet",
         allowed_tools=[],
@@ -725,20 +740,25 @@ async def condense_reasoning(trace: str, question_title: str) -> str | None:
             "3-5 short paragraphs covering: what research was done, key evidence found, "
             "and how the conclusion was reached. No markdown headers."
         ),
+        output_format={
+            "type": "json_schema",
+            "schema": CondensedReasoning.model_json_schema(),
+        },
     )
-    result_text: str | None = None
     try:
-        async for message in query(
-            prompt=f"Question: {question_title}\n\nTrace:\n{trace[:50000]}",
-            options=options,
-        ):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        result_text = block.text
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(
+                f"Question: {question_title}\n\nTrace:\n{trace[:50000]}"
+            )
+            async for message in client.receive_response():
+                if isinstance(message, ResultMessage) and message.structured_output:
+                    result = CondensedReasoning.model_validate(
+                        message.structured_output
+                    )
+                    return result.narrative
     except Exception:
         logger.exception("Reasoning condensation failed")
-    return result_text
+    return None
 
 
 async def run_forecast(
@@ -834,6 +854,7 @@ async def run_forecast(
 
     collected_text: list[str] = []
     assistant_messages: list[AssistantMessage] = []
+    all_messages: list[AssistantMessage | UserMessage] = []
     result: ResultMessage | None = None
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
@@ -939,6 +960,7 @@ async def run_forecast(
                     match message:
                         case AssistantMessage():
                             assistant_messages.append(message)
+                            all_messages.append(message)
                             for block in message.content:
                                 print_block(block)
                                 match block:
@@ -974,6 +996,7 @@ async def run_forecast(
                                 json.dumps(message.data, indent=2),
                             )
                         case UserMessage():
+                            all_messages.append(message)
                             _stream_log.info(
                                 "USER_MESSAGE: %s",
                                 _normalize_content(message.content),
@@ -1009,7 +1032,7 @@ async def run_forecast(
         condensed_reasoning=await condense_reasoning(
             build_trace(assistant_messages, question_title), question_title
         ),
-        sources_consulted=extract_sources(assistant_messages),
+        sources_consulted=extract_sources(all_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,
