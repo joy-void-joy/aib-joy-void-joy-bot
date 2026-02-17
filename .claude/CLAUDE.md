@@ -237,6 +237,10 @@ Never use regex or string substitution to parse HTML, XML, JSON, or other struct
 - **XML**: Use `xml.etree.ElementTree` or `lxml`
 - **JSON embedded in HTML**: Parse the HTML with BeautifulSoup first, then `json.loads()`
 
+### Timestamp Comparisons
+
+Never compare timestamp strings lexicographically (`ts_a > ts_b`). Always parse to `datetime` first using `aib.paths.parse_timestamp()`. This function handles both forecast filenames (`YYYYMMDD_HHMMSS.json`) and retrodict filenames (`YYYY-MM-DD_YYYYMMDD_HHMMSS.json`).
+
 ### Use Standard Libraries
 
 When integrating with external services (APIs, data sources, etc.):
