@@ -1,10 +1,9 @@
-"""Web search and fetch tools for the search MCP server.
+"""Web search tool for retrodict mode.
 
-Provides web_search and fetch tools backed by SDK WebSearch and a page content
-extraction pipeline. Interface matches the built-in WebSearch/WebFetch tools.
+Provides web_search backed by SDK WebSearch with Wayback Machine validation.
+The fetch tool has moved to aib.tools.fetch (unified for live + retrodict).
 """
 
-import asyncio
 import json
 import logging
 from typing import Any, TypedDict
@@ -19,7 +18,6 @@ from claude_agent_sdk import (
     ResultMessage,
     tool,
 )
-from aib.tools.extract import extract_with_prompt
 from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
 
@@ -27,11 +25,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
-from aib.tools.wayback import (
-    WaybackRateLimitError,
-    check_wayback_availability,
-    fetch_wayback_content,
-)
+from aib.tools.wayback import wayback_replace_snippets
 
 logger = logging.getLogger(__name__)
 
@@ -74,16 +68,6 @@ class WebSearchInput(BaseModel):
     )
 
 
-class FetchInput(BaseModel):
-    """Input for page fetch (matches WebFetch interface)."""
-
-    url: str = Field(min_length=1, description="The URL to fetch content from")
-    prompt: str | None = Field(
-        default=None,
-        description="What information to extract from the page",
-    )
-
-
 class SearchResult(TypedDict):
     """A search result."""
 
@@ -119,27 +103,16 @@ async def _wayback_filter_results(
         Filtered results with Wayback-derived snippets.
     """
     wayback_ts = cutoff_date.replace("-", "")
-    tasks = [fetch_wayback_content(r["url"], wayback_ts) for r in results]
-    contents = await asyncio.gather(*tasks)
 
-    validated: list[SearchResult] = []
-    for result, content in zip(results, contents):
-        if content is None:
-            logger.warning(
-                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
-                result.get("url", "?"),
-            )
-            continue
-        result["snippet"] = content[:500]
-        validated.append(result)
+    def _set_snippet(r: SearchResult, snippet: str) -> None:
+        r["snippet"] = snippet
 
-    logger.info(
-        "[Retrodict] Wayback validated %d/%d search results",
-        len(validated),
-        len(results),
+    return await wayback_replace_snippets(
+        results,
+        wayback_ts,
+        get_url=lambda r: r["url"],
+        set_snippet=_set_snippet,
     )
-
-    return validated
 
 
 async def _raw_web_search(
@@ -290,95 +263,9 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         )
 
 
-@tool(
-    "fetch",
-    (
-        "Fetch and extract content from a URL. "
-        "If a prompt is provided, extracts specific information from the page."
-    ),
-    FetchInput.model_json_schema(),
-)
-@tracked("fetch")
-async def fetch(args: dict[str, Any]) -> dict[str, Any]:
-    """Fetch URL content via Wayback Machine for retrodict mode.
-
-    Handles specific failure modes:
-    - No archived snapshot: suggests alternatives
-    - Rate limiting (429): advises retry
-    - Extraction failure: returns raw content
-    """
-    try:
-        validated = FetchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    cutoff = retrodict_cutoff.get()
-    if cutoff is None:
-        return mcp_error("fetch is not available in this context.")
-
-    wayback_ts = cutoff.strftime("%Y%m%d")
-
-    # Step 1: Check availability (surfaces rate-limit vs no-snapshot)
-    try:
-        snapshot = await check_wayback_availability(
-            validated.url,
-            wayback_ts,
-            validate_before_cutoff=True,
-            raise_on_rate_limit=True,
-        )
-    except WaybackRateLimitError:
-        return mcp_error(
-            f"Unable to fetch {validated.url}. The page may be temporarily "
-            "unavailable. Try again shortly, or use web_search to find "
-            "alternative sources."
-        )
-
-    if snapshot is None:
-        return mcp_error(
-            f"Unable to access content at {validated.url}. "
-            "The page may not be available. "
-            "Try web_search to find alternative sources with the same information, "
-            "or try a different URL for this content."
-        )
-
-    # Step 2: Fetch the content
-    try:
-        content = await fetch_wayback_content(validated.url, wayback_ts)
-    except WaybackRateLimitError:
-        return mcp_error(
-            f"Unable to fetch {validated.url}. The page may be temporarily "
-            "unavailable. Try again shortly."
-        )
-
-    if content is None:
-        return mcp_error(
-            f"Content extraction failed for {validated.url}. "
-            "The page may be a PDF, image, or JavaScript-rendered content. "
-            "Try web_search to find alternative sources."
-        )
-
-    # Step 3: If prompt provided, use LLM to extract relevant information
-    if validated.prompt:
-        try:
-            extracted = await extract_with_prompt(
-                content, validated.prompt, validated.url
-            )
-            return mcp_success(
-                {
-                    "url": validated.url,
-                    "content": extracted,
-                }
-            )
-        except Exception as e:
-            logger.warning("Prompt extraction failed for %s: %s", validated.url, e)
-            # Fall through to return raw content
-
-    return mcp_success({"url": validated.url, "content": content[:10000]})
-
-
 def create_retrodict_search_server() -> Any:
-    """Create MCP server with web search and fetch tools."""
+    """Create MCP server with web search tool for retrodict mode."""
     return create_mcp_server(
         "search",
-        tools=[web_search, fetch],
+        tools=[web_search],
     )

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -251,6 +252,49 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     return extracted
 
 
+async def wayback_replace_snippets[T](
+    results: list[T],
+    wayback_ts: str,
+    *,
+    get_url: Callable[[T], str],
+    set_snippet: Callable[[T, str], None],
+) -> list[T]:
+    """Fetch Wayback content for each result, replace snippets, drop failures.
+
+    Generic helper used by both Exa validation and retrodict search filtering.
+
+    Args:
+        results: List of result objects to validate.
+        wayback_ts: Wayback timestamp (YYYYMMDD) cutoff.
+        get_url: Extract the URL from a result object.
+        set_snippet: Set the Wayback-derived snippet on a result object.
+
+    Returns:
+        Filtered results with Wayback-derived snippets.
+    """
+    tasks = [fetch_wayback_content(get_url(r), wayback_ts) for r in results]
+    contents = await asyncio.gather(*tasks)
+
+    validated: list[T] = []
+    for result, content in zip(results, contents):
+        if content is None:
+            logger.warning(
+                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
+                get_url(result),
+            )
+            continue
+        set_snippet(result, content[:500])
+        validated.append(result)
+
+    logger.info(
+        "[Retrodict] Wayback validated %d/%d search results",
+        len(validated),
+        len(results),
+    )
+
+    return validated
+
+
 async def wayback_validate_results(
     results: list[ExaResult],
     wayback_ts: str,
@@ -268,25 +312,14 @@ async def wayback_validate_results(
     Returns:
         Filtered results with Wayback-derived snippets.
     """
-    tasks = [fetch_wayback_content(r["url"] or "", wayback_ts) for r in results]
-    contents = await asyncio.gather(*tasks)
 
-    validated: list[ExaResult] = []
-    for result, content in zip(results, contents):
-        if content is None:
-            logger.warning(
-                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
-                result.get("url", "?"),
-            )
-            continue
-        result["snippet"] = content[:500]
-        result["highlights"] = None
-        validated.append(result)
+    def _set_exa_snippet(r: ExaResult, snippet: str) -> None:
+        r["snippet"] = snippet
+        r["highlights"] = None
 
-    logger.info(
-        "[Retrodict] Wayback validated %d/%d search results",
-        len(validated),
-        len(results),
+    return await wayback_replace_snippets(
+        results,
+        wayback_ts,
+        get_url=lambda r: r["url"] or "",
+        set_snippet=_set_exa_snippet,
     )
-
-    return validated
