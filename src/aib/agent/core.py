@@ -626,20 +626,23 @@ def build_question_context(post_data: dict) -> dict:
 
 
 def extract_sources(messages: list[AssistantMessage]) -> list[str]:
-    """Extract web sources from tool use blocks."""
-    sources = []
+    """Extract deduplicated URLs that the agent actually fetched via WebFetch."""
+    seen: set[str] = set()
+    sources: list[str] = []
+
     for msg in messages:
         for block in msg.content:
-            if isinstance(block, ToolUseBlock) and block.name in (
-                "WebSearch",
-                "WebFetch",
-                "mcp__forecasting__search_exa",
-                "mcp__forecasting__search_news",
-            ):
-                if isinstance(block.input, dict):
-                    source = block.input.get("url") or block.input.get("query")
-                    if source:
-                        sources.append(str(source))
+            if not isinstance(block, ToolUseBlock):
+                continue
+            if block.name != "WebFetch":
+                continue
+            if not isinstance(block.input, dict):
+                continue
+            url = block.input.get("url")
+            if url and url not in seen:
+                seen.add(url)
+                sources.append(str(url))
+
     return sources
 
 
