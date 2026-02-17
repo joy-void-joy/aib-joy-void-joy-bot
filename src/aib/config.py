@@ -122,10 +122,30 @@ class Settings(BaseSettings):
         validation_alias="AIB_METACULUS_MAX_CONCURRENT",
         description="Max concurrent Metaculus API requests",
     )
-    search_max_concurrent: int = Field(
+    exa_max_concurrent: int = Field(
         default=3,
-        validation_alias="AIB_SEARCH_MAX_CONCURRENT",
-        description="Max concurrent search requests",
+        validation_alias="AIB_EXA_MAX_CONCURRENT",
+        description="Max concurrent Exa API requests",
+    )
+    asknews_max_concurrent: int = Field(
+        default=1,
+        validation_alias="AIB_ASKNEWS_MAX_CONCURRENT",
+        description="Max concurrent AskNews API requests",
+    )
+    asknews_request_interval: float = Field(
+        default=2.0,
+        validation_alias="AIB_ASKNEWS_REQUEST_INTERVAL",
+        description="Minimum seconds between AskNews API requests",
+    )
+    wikipedia_max_concurrent: int = Field(
+        default=3,
+        validation_alias="AIB_WIKIPEDIA_MAX_CONCURRENT",
+        description="Max concurrent Wikipedia API requests",
+    )
+    wayback_max_concurrent: int = Field(
+        default=5,
+        validation_alias="AIB_WAYBACK_MAX_CONCURRENT",
+        description="Max concurrent Wayback Machine requests",
     )
 
     # === Tool Defaults ===

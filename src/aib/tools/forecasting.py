@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
+from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 
 
@@ -31,6 +32,7 @@ from aib.tools.exa import exa_search
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
+from aib.tools.throttle import asknews_throttle, exa_throttle, wikipedia_throttle
 from aib.tools.wikipedia import (
     WIKIPEDIA_API_URL,
     WIKIPEDIA_HEADERS,
@@ -39,27 +41,6 @@ from aib.tools.wikipedia import (
 )
 
 logger = logging.getLogger(__name__)
-
-# --- Rate Limiting ---
-#
-# Semaphores enforce rate limits across concurrent forecast sessions.
-# They are lazily created per-event-loop to avoid "bound to a different event loop"
-# errors when asyncio.run() creates fresh loops (e.g., tournament mode).
-
-_semaphore_store: dict[str, asyncio.Semaphore] = {}
-
-
-def _get_semaphore(name: str, limit: int) -> asyncio.Semaphore:
-    """Get or create a semaphore for the current event loop."""
-    loop = asyncio.get_running_loop()
-    key = f"{name}_{id(loop)}"
-    if key not in _semaphore_store:
-        _semaphore_store[key] = asyncio.Semaphore(limit)
-    return _semaphore_store[key]
-
-
-def _search_semaphore() -> asyncio.Semaphore:
-    return _get_semaphore("search", settings.search_max_concurrent)
 
 
 # --- Input Schemas (Pydantic models with runtime validation) ---
@@ -726,7 +707,7 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        async with _search_semaphore():
+        async with exa_throttle:
             formatted = await exa_search(
                 query, num_results, published_before, livecrawl
             )
@@ -755,7 +736,12 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     num_results = validated.num_results
 
-    @with_retry(max_attempts=3)
+    @with_retry(
+        max_attempts=3,
+        min_wait=5,
+        max_wait=30,
+        extra_exceptions=(AskNewsRateLimitError,),
+    )
     async def _search() -> str:
         from asknews_sdk import AsyncAskNewsSDK
 
@@ -820,7 +806,7 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
         return formatted
 
     try:
-        async with _search_semaphore():
+        async with asknews_throttle:
             results = await _search()
         return mcp_success({"query": query, "results": results})
     except Exception as e:
@@ -900,7 +886,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 return results
 
         try:
-            async with _search_semaphore():
+            async with wikipedia_throttle:
                 results = await _search()
 
             # In retrodict mode, replace snippets with historical content
@@ -939,7 +925,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         # In retrodict mode, use historical fetch
         if cutoff_date:
             try:
-                async with _search_semaphore():
+                async with wikipedia_throttle:
                     historical = await _fetch_wikipedia_historical_content(
                         query, cutoff_date
                     )
@@ -1007,7 +993,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 }
 
         try:
-            async with _search_semaphore():
+            async with wikipedia_throttle:
                 result = await _fetch()
             return mcp_success(result)
         except Exception as e:

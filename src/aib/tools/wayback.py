@@ -27,19 +27,9 @@ from tenacity import (
 )
 
 from aib.tools.cache import cached
+from aib.tools.throttle import wayback_throttle
 
 logger = logging.getLogger(__name__)
-
-# Lazily create semaphores per-event-loop to avoid binding issues
-_wayback_semaphore_store: dict[str, asyncio.Semaphore] = {}
-
-
-def _wayback_semaphore() -> asyncio.Semaphore:
-    loop = asyncio.get_running_loop()
-    key = f"wayback_{id(loop)}"
-    if key not in _wayback_semaphore_store:
-        _wayback_semaphore_store[key] = asyncio.Semaphore(5)
-    return _wayback_semaphore_store[key]
 
 
 # Custom exception for rate limiting
@@ -106,7 +96,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with _wayback_semaphore():
+    async with wayback_throttle:
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -222,7 +212,7 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with _wayback_semaphore():
+    async with wayback_throttle:
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.get(wayback_url, follow_redirects=True)
