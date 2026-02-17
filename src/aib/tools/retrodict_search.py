@@ -78,8 +78,8 @@ class FetchInput(BaseModel):
     """Input for page fetch (matches WebFetch interface)."""
 
     url: str = Field(min_length=1, description="The URL to fetch content from")
-    prompt: str = Field(
-        default="",
+    prompt: str | None = Field(
+        default=None,
         description="What information to extract from the page",
     )
 
