@@ -19,6 +19,7 @@ from claude_agent_sdk import (
     ResultMessage,
     tool,
 )
+from aib.tools.extract import extract_with_prompt
 from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
 
@@ -289,45 +290,6 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
         )
 
 
-async def _extract_with_prompt(content: str, prompt: str, url: str) -> str:
-    """Use a one-shot LLM call to extract information from content.
-
-    Args:
-        content: Raw text content from the page.
-        prompt: What information to extract.
-        url: Source URL (for context in the prompt).
-
-    Returns:
-        Extracted information as a string.
-    """
-    extraction_prompt = (
-        f"The following is the text content of {url}.\n\n"
-        f"---\n{content[:15000]}\n---\n\n"
-        f"Based on the above content, answer the following: {prompt}\n\n"
-        "Be concise and factual. If the content doesn't contain "
-        "relevant information, say so."
-    )
-
-    options = ClaudeAgentOptions(
-        model="haiku",
-        system_prompt="You extract information from web page content. Be concise and factual.",
-        extra_args={"no-session-persistence": None},
-    )
-
-    result_text = ""
-    async with ClaudeSDKClient(options=options) as client:
-        await client.query(extraction_prompt)
-        async for message in client.receive_response():
-            if (
-                not result_text
-                and isinstance(message, ResultMessage)
-                and message.result
-            ):
-                result_text = message.result
-
-    return result_text or content[:5000]
-
-
 @tool(
     "fetch",
     (
@@ -398,7 +360,7 @@ async def fetch(args: dict[str, Any]) -> dict[str, Any]:
     # Step 3: If prompt provided, use LLM to extract relevant information
     if validated.prompt:
         try:
-            extracted = await _extract_with_prompt(
+            extracted = await extract_with_prompt(
                 content, validated.prompt, validated.url
             )
             return mcp_success(
