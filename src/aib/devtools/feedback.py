@@ -18,11 +18,11 @@ import typer
 from pydantic import BaseModel
 
 from aib.agent.history import (
-    FORECASTS_BASE_PATH,
     SavedForecast,
     load_past_forecasts,
     load_retrodict_forecasts,
 )
+from aib.paths import get_all_forecasted_post_ids
 from aib.clients.metaculus import AsyncMetaculusClient, get_client
 from metaculus import ApiFilter, BinaryQuestion, MetaculusQuestion
 
@@ -264,14 +264,7 @@ async def fetch_cp_for_forecasts(
 ) -> list[CPComparison]:
     comparisons: list[CPComparison] = []
 
-    if not FORECASTS_BASE_PATH.exists():
-        return comparisons
-
-    post_ids = [
-        int(d.name)
-        for d in FORECASTS_BASE_PATH.iterdir()
-        if d.is_dir() and d.name.isdigit()
-    ]
+    post_ids = sorted(get_all_forecasted_post_ids())
 
     now = datetime.now()
     ttl_cutoff = now.timestamp() - CP_CACHE_TTL_HOURS * 3600

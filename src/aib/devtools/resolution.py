@@ -1,6 +1,6 @@
 """Fetch resolutions from Metaculus and update saved forecasts.
 
-Scans both live forecasts (notes/forecasts/) and retrodictions (notes/retrodict/).
+Scans both live forecasts and retrodictions under notes/traces/<version>/.
 Uses batch tournament listing to minimize API calls.
 """
 
@@ -11,11 +11,15 @@ from pathlib import Path
 import typer
 
 from aib.clients.metaculus import get_client
+from aib.agent.history import update_forecast_file
+from aib.paths import (
+    iter_forecast_dirs,
+    iter_forecast_files,
+    iter_retrodict_dirs,
+    iter_retrodict_files,
+)
 
 app = typer.Typer(no_args_is_help=True)
-
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
 
 TOURNAMENT_IDS = [
     32916,  # AIB Spring 2026
@@ -55,20 +59,6 @@ def get_resolution(question_data: dict) -> str | float | None:
         return str(resolution)
 
     return str(resolution) if resolution is not None else None
-
-
-def update_forecast_file(filepath: Path, resolution: str | float) -> bool:
-    """Update a forecast file with resolution."""
-    try:
-        data = json.loads(filepath.read_text())
-        if data.get("resolution") == resolution:
-            return False
-        data["resolution"] = resolution
-        filepath.write_text(json.dumps(data, indent=2))
-        return True
-    except (json.JSONDecodeError, OSError) as e:
-        typer.echo(f"  Error updating {filepath}: {e}")
-        return False
 
 
 def find_unresolved(base_path: Path) -> list[dict]:
@@ -137,7 +127,11 @@ def check(
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
 ) -> None:
     """Check for and apply resolution updates (live + retrodict)."""
-    unresolved = find_unresolved(FORECASTS_PATH) + find_unresolved(RETRODICT_PATH)
+    unresolved: list[dict] = []
+    for base in {d.parent for d in iter_forecast_dirs()}:
+        unresolved.extend(find_unresolved(base))
+    for base in {d.parent for d in iter_retrodict_dirs()}:
+        unresolved.extend(find_unresolved(base))
 
     if not unresolved:
         typer.echo("All forecasts already have resolutions")
@@ -210,12 +204,20 @@ def status() -> None:
     resolved_other = 0
     unresolved = 0
 
-    for base in (FORECASTS_PATH, RETRODICT_PATH):
+    seen_posts: set[str] = set()
+    for base in [
+        *(d.parent for d in iter_forecast_dirs()),
+        *(d.parent for d in iter_retrodict_dirs()),
+    ]:
         if not base.exists():
             continue
         for post_dir in base.iterdir():
             if not post_dir.is_dir():
                 continue
+            key = f"{base}:{post_dir.name}"
+            if key in seen_posts:
+                continue
+            seen_posts.add(key)
             for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
                 try:
                     data = json.loads(forecast_file.read_text())
@@ -249,12 +251,12 @@ def set_resolution(
 ) -> None:
     """Manually set resolution for a forecast."""
     updated = 0
-    for base in (FORECASTS_PATH, RETRODICT_PATH):
-        post_dir = base / str(post_id)
-        if post_dir.exists():
-            for f in post_dir.glob("*.json"):
-                if update_forecast_file(f, resolution):
-                    updated += 1
+    for f in iter_forecast_files(post_id):
+        if update_forecast_file(f, resolution):
+            updated += 1
+    for f in iter_retrodict_files(post_id):
+        if update_forecast_file(f, resolution):
+            updated += 1
 
     if updated == 0:
         typer.echo(f"No forecasts found for post {post_id}")

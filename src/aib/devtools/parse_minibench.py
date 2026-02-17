@@ -5,13 +5,14 @@ Usage:
     uv run python .claude/plugins/aib/scripts/parse_minibench.py apply <html_file> [--dry-run]
 """
 
-import csv
 import json
 import re
 from pathlib import Path
 
 import typer
 from bs4 import BeautifulSoup
+
+from aib.paths import get_all_forecasted_post_ids
 
 app = typer.Typer()
 
@@ -142,18 +143,7 @@ def apply(
 ) -> None:
     """Apply parsed resolutions to forecast files via resolution_update.py set."""
     results = extract_resolutions(html_file)
-    scores_path = Path("notes/scores.csv")
-
-    if not scores_path.exists():
-        print("ERROR: notes/scores.csv not found")
-        raise typer.Exit(1)
-
-    # Load our forecast post IDs
-    our_ids: set[int] = set()
-    with open(scores_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            our_ids.add(int(row["post_id"]))
+    our_ids = get_all_forecasted_post_ids()
 
     resolved = [
         r

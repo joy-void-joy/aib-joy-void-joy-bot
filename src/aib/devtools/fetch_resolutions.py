@@ -12,7 +12,7 @@ Usage:
     # Fetch resolutions for specific post IDs:
     uv run python .claude/plugins/aib/scripts/fetch_resolutions.py fetch --ids 41955,41960,41970
 
-    # Fetch all unresolved forecasts (auto-detect from notes/forecasts/):
+    # Fetch all unresolved forecasts (auto-detect from notes/traces/):
     uv run python .claude/plugins/aib/scripts/fetch_resolutions.py fetch
 
     # Apply cached results to forecast JSONs:
@@ -30,29 +30,35 @@ from pathlib import Path
 import httpx
 import typer
 
+from aib.paths import iter_forecast_dirs, iter_retrodict_dirs
+
 app = typer.Typer(help="Fetch resolution + CP data from Metaculus (1 req/question)")
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path("./data/api_cache")
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
 OLD_API_BASE = "https://www.metaculus.com/api2/questions"
 
 
 def get_unresolved_post_ids() -> list[int]:
     """Find post IDs of forecasts missing resolution data."""
-    unresolved = []
-    for base in (FORECASTS_PATH, RETRODICT_PATH):
-        if not base.exists():
-            continue
-        for post_dir in base.iterdir():
-            if not post_dir.is_dir() or not post_dir.name.isdigit():
-                continue
-            for f in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+    unresolved: set[int] = set()
+    for post_dir in iter_forecast_dirs():
+        for f in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+            try:
                 data = json.loads(f.read_text())
                 if data.get("resolution") is None:
-                    unresolved.append(int(post_dir.name))
-    return sorted(set(unresolved))
+                    unresolved.add(int(post_dir.name))
+            except (json.JSONDecodeError, OSError, ValueError):
+                continue
+    for post_dir in iter_retrodict_dirs():
+        for f in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+            try:
+                data = json.loads(f.read_text())
+                if data.get("resolution") is None:
+                    unresolved.add(int(post_dir.name))
+            except (json.JSONDecodeError, OSError, ValueError):
+                continue
+    return sorted(unresolved)
 
 
 def get_post_ids_from_file(filepath: str) -> list[int]:
@@ -251,10 +257,11 @@ def _apply_cached() -> None:
         if resolution is None:
             continue
 
-        for base in (FORECASTS_PATH, RETRODICT_PATH):
-            post_dir = base / post_id
-            if not post_dir.exists():
-                continue
+        pid = int(post_id) if post_id.isdigit() else None
+        dirs_to_check = list(iter_forecast_dirs(pid)) if pid else []
+        if pid is not None:
+            dirs_to_check.extend(iter_retrodict_dirs(pid))
+        for post_dir in dirs_to_check:
             for f in post_dir.glob("*.json"):
                 forecast = json.loads(f.read_text())
                 if forecast.get("resolution") != resolution:

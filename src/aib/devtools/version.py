@@ -175,7 +175,9 @@ def list_cmd() -> None:
         tagged = f"v{version}" in existing_tags
         marker = " [tagged]" if tagged else ""
         try:
-            date = str(_git("log", "-1", "--format=%ai", commit_hash, "--")).strip()[:10]
+            date = str(_git("log", "-1", "--format=%ai", commit_hash, "--")).strip()[
+                :10
+            ]
         except sh.ErrorReturnCode:
             date = "????"
         commit_msg = line.split(" ", 1)[1] if " " in line else ""

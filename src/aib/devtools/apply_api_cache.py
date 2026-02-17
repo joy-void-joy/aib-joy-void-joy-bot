@@ -25,10 +25,10 @@ from pathlib import Path
 
 import typer
 
-app = typer.Typer(help="Apply cached API data to forecast files")
+from aib.agent.history import update_forecast_file
+from aib.paths import iter_forecast_dirs, iter_retrodict_dirs
 
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
+app = typer.Typer(help="Apply cached API data to forecast files")
 
 
 def load_cache(source: str) -> list[dict]:
@@ -119,16 +119,6 @@ def extract_cp(post: dict) -> float | None:
     return None
 
 
-def update_forecast_file(filepath: Path, resolution: str | float) -> bool:
-    """Update a single forecast file with resolution data."""
-    data = json.loads(filepath.read_text())
-    if data.get("resolution") == resolution:
-        return False
-    data["resolution"] = resolution
-    filepath.write_text(json.dumps(data, indent=2))
-    return True
-
-
 @app.command()
 def apply(
     source: str = typer.Argument(..., help="Path to cached JSON file or directory"),
@@ -176,10 +166,9 @@ def apply(
 
         # Find matching forecast directories
         found_any = False
-        for base in (FORECASTS_PATH, RETRODICT_PATH):
-            post_dir = base / str(post_id)
-            if not post_dir.exists():
-                continue
+        post_dirs = list(iter_forecast_dirs(post_id))
+        post_dirs.extend(iter_retrodict_dirs(post_id))
+        for post_dir in post_dirs:
             found_any = True
 
             for f in post_dir.glob("*.json"):
@@ -245,8 +234,8 @@ def inspect(
         cp = extract_cp(post)
 
         # Check if we have a forecast for this
-        has_forecast = any(
-            (base / str(post_id)).exists() for base in (FORECASTS_PATH, RETRODICT_PATH)
+        has_forecast = any(True for _ in iter_forecast_dirs(post_id)) or any(
+            True for _ in iter_retrodict_dirs(post_id)
         )
 
         marker = "*" if has_forecast else " "

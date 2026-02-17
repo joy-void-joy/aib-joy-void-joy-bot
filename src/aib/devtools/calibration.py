@@ -16,11 +16,15 @@ from typing import Annotated
 import typer
 from pydantic import BaseModel
 
-app = typer.Typer(no_args_is_help=True)
+from aib.paths import FEEDBACK_PATH as REPORTS_PATH
+from aib.paths import (
+    iter_forecast_dirs,
+    iter_retrodict_dirs,
+    load_all_forecast_jsons,
+    load_all_retrodict_jsons,
+)
 
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
-REPORTS_PATH = Path("./notes/feedback_loop")
+app = typer.Typer(no_args_is_help=True)
 
 
 # ---------------------------------------------------------------------------
@@ -66,24 +70,15 @@ class PitCalibration(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _load_jsons(base_path: Path, version: str | None = None) -> list[dict]:
-    """Load all forecast JSON files from a directory tree."""
-    results: list[dict] = []
-    if not base_path.exists():
-        return results
-    for post_dir in base_path.iterdir():
-        if not post_dir.is_dir():
-            continue
-        for filepath in post_dir.glob("*.json"):
-            try:
-                data = json.loads(filepath.read_text())
-                if "question_type" in data and "timestamp" in data:
-                    if version and data.get("agent_version", "") != version:
-                        continue
-                    results.append(data)
-            except (json.JSONDecodeError, OSError):
-                continue
-    return results
+def _load_jsons(*, retrodict: bool = False, version: str | None = None) -> list[dict]:
+    """Load forecast JSONs via centralized paths module."""
+    if retrodict:
+        all_data = load_all_retrodict_jsons()
+    else:
+        all_data = load_all_forecast_jsons(version=version)
+    if version and retrodict:
+        all_data = [d for d in all_data if d.get("agent_version", "") == version]
+    return all_data  # type: ignore[return-value]
 
 
 def _dedup_latest(forecasts: list[dict], key_fields: tuple[str, ...]) -> list[dict]:
@@ -104,7 +99,7 @@ def load_binary_data(
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(FORECASTS_PATH, version):
+        for f in _load_jsons(version=version):
             if (
                 f.get("question_type") == "binary"
                 and f.get("resolution") in ("yes", "no")
@@ -113,7 +108,7 @@ def load_binary_data(
                 forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(RETRODICT_PATH, version)
+        retro = _load_jsons(retrodict=True, version=version)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") != "binary":
@@ -147,7 +142,7 @@ def load_numeric_data(
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(FORECASTS_PATH, version):
+        for f in _load_jsons(version=version):
             if f.get("question_type") not in ("numeric", "discrete"):
                 continue
             if f.get("percentiles") is None:
@@ -162,7 +157,7 @@ def load_numeric_data(
             forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(RETRODICT_PATH, version)
+        retro = _load_jsons(retrodict=True, version=version)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") not in ("numeric", "discrete"):
@@ -754,12 +749,8 @@ def export_cmd(
 def _load_resolved_binary() -> list[dict]:
     """Load all resolved binary forecasts (live only, latest per post)."""
     forecasts: list[dict] = []
-    if not FORECASTS_PATH.exists():
-        return forecasts
 
-    for post_dir in FORECASTS_PATH.iterdir():
-        if not post_dir.is_dir():
-            continue
+    for post_dir in iter_forecast_dirs():
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
@@ -990,8 +981,11 @@ def cdf_cmd(
     source: str | None = typer.Option(None, "--source", "-s"),
 ) -> None:
     """Analyze CDF sharpness across numeric forecasts."""
-    all_data = _load_numeric_with_cdf(RETRODICT_PATH, "retrodict")
-    all_data.extend(_load_numeric_with_cdf(FORECASTS_PATH, "live"))
+    all_data: list[dict[str, object]] = []
+    for base in {d.parent for d in iter_retrodict_dirs()}:
+        all_data.extend(_load_numeric_with_cdf(base, "retrodict"))
+    for base in {d.parent for d in iter_forecast_dirs()}:
+        all_data.extend(_load_numeric_with_cdf(base, "live"))
 
     if version:
         all_data = [d for d in all_data if d.get("version") == version]
