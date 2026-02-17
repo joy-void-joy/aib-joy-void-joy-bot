@@ -16,12 +16,6 @@ class TestSuggestOnlyInterception:
     """Tests that SUGGEST_ONLY domains return helpful errors."""
 
     @pytest.mark.asyncio
-    async def test_kalshi_intercepted(self) -> None:
-        result = await fetch_url({"url": "https://kalshi.com/markets/some-market"})
-        assert result["is_error"] is True
-        assert "kalshi" in result["content"][0]["text"].lower()
-
-    @pytest.mark.asyncio
     async def test_tradingeconomics_intercepted(self) -> None:
         result = await fetch_url({"url": "https://tradingeconomics.com/germany/gdp"})
         assert result["is_error"] is True

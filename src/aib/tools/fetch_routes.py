@@ -25,24 +25,51 @@ class DomainRoute:
 
 # Domains with dedicated tools but no simple URL → args mapping
 SUGGEST_ONLY: dict[str, str] = {
-    "kalshi.com": "Use kalshi_price, kalshi_event, or kalshi_history.",
-    "metaculus.com": "Use the Metaculus API tools (get_prediction_history, etc.).",
     "tradingeconomics.com": "Use fred_series/fred_search for US data, or world_bank_indicator for international data.",
     "bls.gov": "Use fred_series (FRED mirrors BLS data). Try UNRATE, CPIAUCSL, PAYEMS.",
     "macrotrends.net": "Use company_financials for earnings data, or fred_series for macro indicators.",
     "barchart.com": "Use stock_price or stock_history for market data.",
     "statista.com": "Use search_exa or search_news for statistics and reports.",
+    "manifold.markets": "Use manifold_price for market data, or manifold_history for historical prices.",
+    "data.worldbank.org": "Use world_bank_indicator for data, or world_bank_search to find indicator codes.",
+    "scholar.google.com": "Use search_arxiv for academic paper search.",
 }
 
 _routes: list[DomainRoute] | None = None
+
+
+def _kalshi_params(m: re.Match[str]) -> dict[str, Any]:
+    """Extract a search query from a Kalshi URL path.
+
+    URL forms:
+      /markets/<series>
+      /markets/<series>/<slug>
+      /markets/<series>/<slug>/<market-ticker>
+
+    Uses the slug (human-readable) when available, falls back to the series ticker.
+    """
+    segments = m.group(1).rstrip("/").split("/")
+    slug = segments[1] if len(segments) > 1 else segments[0]
+    return {"query": slug.replace("-", " ")}
+
+
+async def _wikipedia_handler(params: dict[str, Any]) -> dict[str, Any]:
+    from aib.tools.forecasting import wikipedia
+
+    return await wikipedia.handler(params)
+
+
+async def _metaculus_handler(params: dict[str, Any]) -> dict[str, Any]:
+    from aib.tools.forecasting import get_metaculus_questions
+
+    return await get_metaculus_questions.handler(params)
 
 
 def _build_routes() -> list[DomainRoute]:
     """Build domain routes. Lazy to avoid circular imports."""
     from aib.tools.arxiv_search import fetch_arxiv
     from aib.tools.financial import fred_series
-    from aib.tools.forecasting import wikipedia
-    from aib.tools.markets import polymarket_price, stock_price
+    from aib.tools.markets import kalshi_price, polymarket_price, stock_price
 
     return [
         DomainRoute(
@@ -60,7 +87,7 @@ def _build_routes() -> list[DomainRoute]:
         DomainRoute(
             domain="wikipedia.org",
             pattern=re.compile(r"wikipedia\.org/wiki/([^#?]+)"),
-            handler=wikipedia.handler,
+            handler=_wikipedia_handler,
             param_builder=lambda m: {
                 "topic": m.group(1).replace("_", " "),
                 "mode": "full",
@@ -77,6 +104,18 @@ def _build_routes() -> list[DomainRoute]:
             pattern=re.compile(r"polymarket\.com/event/([^/?#]+)"),
             handler=polymarket_price.handler,
             param_builder=lambda m: {"query": m.group(1).replace("-", " ")},
+        ),
+        DomainRoute(
+            domain="kalshi.com",
+            pattern=re.compile(r"kalshi\.com/markets/([^?#]+)"),
+            handler=kalshi_price.handler,
+            param_builder=_kalshi_params,
+        ),
+        DomainRoute(
+            domain="metaculus.com",
+            pattern=re.compile(r"metaculus\.com/questions/(\d+)"),
+            handler=_metaculus_handler,
+            param_builder=lambda m: {"post_id_list": [int(m.group(1))]},
         ),
     ]
 

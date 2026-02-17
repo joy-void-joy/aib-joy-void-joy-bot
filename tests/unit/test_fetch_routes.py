@@ -8,9 +8,9 @@ from aib.tools.fetch_routes import SUGGEST_ONLY, _build_routes
 class TestSuggestOnly:
     """Tests for SUGGEST_ONLY blocked domain list."""
 
-    def test_contains_original_entries(self) -> None:
-        assert "kalshi.com" in SUGGEST_ONLY
-        assert "metaculus.com" in SUGGEST_ONLY
+    def test_kalshi_and_metaculus_promoted_to_routes(self) -> None:
+        assert "kalshi.com" not in SUGGEST_ONLY
+        assert "metaculus.com" not in SUGGEST_ONLY
 
     def test_contains_new_blocked_domains(self) -> None:
         assert "tradingeconomics.com" in SUGGEST_ONLY
@@ -18,6 +18,9 @@ class TestSuggestOnly:
         assert "macrotrends.net" in SUGGEST_ONLY
         assert "barchart.com" in SUGGEST_ONLY
         assert "statista.com" in SUGGEST_ONLY
+        assert "manifold.markets" in SUGGEST_ONLY
+        assert "data.worldbank.org" in SUGGEST_ONLY
+        assert "scholar.google.com" in SUGGEST_ONLY
 
     def test_hints_are_nonempty(self) -> None:
         for domain, hint in SUGGEST_ONLY.items():
@@ -100,6 +103,53 @@ class TestRouteRegexes:
         )
         assert match is not None
         assert match.group(1) == "my-event"
+
+    def test_kalshi_captures_full_path(self) -> None:
+        pattern = self._get_route("kalshi.com")
+        url = "https://kalshi.com/markets/kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
+        match = pattern.search(url)
+        assert match is not None
+        assert match.group(1) == "kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
+
+    def test_kalshi_param_builder_uses_slug(self) -> None:
+        pattern = self._get_route("kalshi.com")
+        builder = self._get_param_builder("kalshi.com")
+        url = "https://kalshi.com/markets/kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
+        match = pattern.search(url)
+        assert match is not None
+        params = builder(match)
+        assert params == {"query": "winter olympics figure skating"}
+
+    def test_kalshi_param_builder_falls_back_to_series(self) -> None:
+        pattern = self._get_route("kalshi.com")
+        builder = self._get_param_builder("kalshi.com")
+        match = pattern.search("https://kalshi.com/markets/kxwofskate")
+        assert match is not None
+        params = builder(match)
+        assert params == {"query": "kxwofskate"}
+
+    def test_kalshi_stops_at_query_params(self) -> None:
+        pattern = self._get_route("kalshi.com")
+        match = pattern.search(
+            "https://kalshi.com/markets/kxfed/fed-rate?tab=overview"
+        )
+        assert match is not None
+        assert match.group(1) == "kxfed/fed-rate"
+
+    def test_metaculus_captures_post_id(self) -> None:
+        pattern = self._get_route("metaculus.com")
+        url = "https://www.metaculus.com/questions/41560/uk-retail-sales-jan-2026/"
+        match = pattern.search(url)
+        assert match is not None
+        assert match.group(1) == "41560"
+
+    def test_metaculus_param_builder(self) -> None:
+        pattern = self._get_route("metaculus.com")
+        builder = self._get_param_builder("metaculus.com")
+        match = pattern.search("https://www.metaculus.com/questions/41560/uk-retail-sales/")
+        assert match is not None
+        params = builder(match)
+        assert params == {"post_id_list": [41560]}
 
     def test_no_match_for_unknown_domain(self) -> None:
         routes = _build_routes()

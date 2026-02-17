@@ -155,14 +155,14 @@ class TestAugmentWithApiData:
 
     @pytest.mark.asyncio
     async def test_suggest_only_gets_hint(self) -> None:
-        results = [_make_result("https://kalshi.com/markets/test")]
+        results = [_make_result("https://tradingeconomics.com/us/gdp")]
 
         with patch("aib.tools.fetch_routes.get_routes", return_value=[]):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
         assert augmented[0]["hint"] is not None
-        assert "kalshi" in augmented[0]["hint"].lower()
+        assert "fred" in augmented[0]["hint"].lower()
         assert augmented[0]["api_data"] is None
 
     @pytest.mark.asyncio
@@ -208,7 +208,7 @@ class TestAugmentWithApiData:
     async def test_mixed_results(self) -> None:
         results = [
             _make_result("https://finance.yahoo.com/quote/AAPL"),
-            _make_result("https://kalshi.com/markets/test"),
+            _make_result("https://tradingeconomics.com/us/gdp"),
             _make_result("https://blog.example.com/post"),
         ]
         mock_stock = {"content": [{"type": "text", "text": "AAPL data"}]}
