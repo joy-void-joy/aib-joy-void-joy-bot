@@ -10,9 +10,7 @@ import typer
 
 from aib.scoring import (
     CSV_COLUMNS,
-    SCORES_CSV_PATH,
     load_all_score_rows,
-    read_scores_csv,
 )
 
 app = typer.Typer(no_args_is_help=True)
@@ -33,7 +31,7 @@ def _is_meta(title: str) -> bool:
 
 @app.command()
 def build(
-    output: Path = typer.Option(SCORES_CSV_PATH, "-o", help="Output CSV path"),
+    output: Path = typer.Option("scores.csv", "-o", help="Output CSV path"),
 ) -> None:
     """Rebuild the scores CSV from all forecast/retrodict JSONs."""
     import csv
@@ -67,9 +65,9 @@ def show(
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
 ) -> None:
     """Show the scores table (formatted)."""
-    rows = read_scores_csv()
+    rows = load_all_score_rows()
     if not rows:
-        typer.echo("No scores.csv found. Run 'build' first.")
+        typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     if post_id is not None:
@@ -109,9 +107,9 @@ def show(
 @app.command()
 def summary() -> None:
     """Aggregate statistics by type, source, and version."""
-    rows = read_scores_csv()
+    rows = load_all_score_rows()
     if not rows:
-        typer.echo("No scores.csv found. Run 'build' first.")
+        typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     typer.echo(f"\n=== Scores Summary ({len(rows)} total rows) ===\n")
@@ -161,9 +159,9 @@ def compare(
     version_b: str = typer.Argument(help="Second version to compare"),
 ) -> None:
     """Compare scores between two agent versions on overlapping questions."""
-    rows = read_scores_csv()
+    rows = load_all_score_rows()
     if not rows:
-        typer.echo("No scores.csv found. Run 'build' first.")
+        typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     a_rows = {r["post_id"]: r for r in rows if r.get("agent_version", "") == version_a}
@@ -236,7 +234,7 @@ def regression() -> None:
         raise typer.Exit(1)
 
     suite = json.loads(REGRESSION_SUITE_PATH.read_text())
-    rows = read_scores_csv()
+    rows = load_all_score_rows()
 
     typer.echo(f"\n=== Regression Suite ({len(suite)} questions) ===\n")
     typer.echo(
@@ -303,9 +301,9 @@ def extremes(
     ),
 ) -> None:
     """Show best and worst forecasts across all versions."""
-    rows = read_scores_csv()
+    rows = load_all_score_rows()
     if not rows:
-        typer.echo("No scores.csv found. Run 'build' first.")
+        typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     resolved = [r for r in rows if r["resolved"] == "True"]
