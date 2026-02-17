@@ -2,6 +2,12 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v1.2.0 (2026-02-15)
+
+Google Trends tool: add change_stats to output; MC prompt: resolution semantics for directional questions
+- google_trends now includes period-over-period change statistics (increase/decrease/no_change counts and rates)
+- MC guidance explains Doesn't change resolution semantics at low values
+
 ## v1.1.0 (2026-02-14)
 
 Remove subagent infrastructure, keep only spawn_subquestions

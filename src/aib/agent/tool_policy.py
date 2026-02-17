@@ -52,7 +52,6 @@ METACULUS_TOOLS: frozenset[str] = frozenset(
         "mcp__forecasting__list_tournament_questions",
         "mcp__forecasting__search_metaculus",
         "mcp__forecasting__get_coherence_links",
-        "mcp__forecasting__get_prediction_history",
         "mcp__forecasting__get_cp_history",
     }
 )
@@ -113,6 +112,8 @@ LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__markets__polymarket_price",
         "mcp__markets__manifold_price",
+        "mcp__markets__kalshi_price",
+        "mcp__markets__kalshi_event",
         "mcp__markets__stock_price",
     }
 )
@@ -122,6 +123,7 @@ HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__markets__polymarket_history",
         "mcp__markets__manifold_history",
+        "mcp__markets__kalshi_history",
         "mcp__markets__stock_history",
     }
 )

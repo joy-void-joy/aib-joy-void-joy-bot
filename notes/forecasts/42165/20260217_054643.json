@@ -1,0 +1,149 @@
+{
+  "question_id": 41944,
+  "post_id": 42165,
+  "question_title": "What will be the value of \"Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed\" on 2026-02-25?",
+  "question_type": "numeric",
+  "timestamp": "20260217_054643",
+  "probability": null,
+  "logit": null,
+  "probabilities": null,
+  "median": 2.48,
+  "confidence_interval": [
+    2.38,
+    2.58
+  ],
+  "percentiles": {
+    "10": 2.38,
+    "20": 2.42,
+    "40": 2.46,
+    "60": 2.5,
+    "80": 2.54,
+    "90": 2.58
+  },
+  "summary": "The 30-Year TIPS yield (DFII30) was 2.48% on Feb 12, 2026 \u2014 the last available observation. The resolution date is Feb 25, which is 8 trading days away (accounting for Presidents' Day on Feb 16). Over the prior 3.5 months, the series has fluctuated between ~2.44 and ~2.65 with daily standard deviation of ~2.7bp and essentially zero drift. A bootstrap Monte Carlo simulation using 68 empirical daily changes produces a symmetric distribution centered near 2.48%. The recent sharp 15bp decline from 2.63 suggests possible downward pressure, but over this short horizon the random walk model dominates. I use the bootstrap simulation results directly without manual adjustment.",
+  "factors": [
+    {
+      "description": "Latest observed value is 2.48% (Feb 12), serving as the anchor point for the random-walk forecast",
+      "logit": 0.0,
+      "confidence": 1.0,
+      "effective_logit": 0.0
+    },
+    {
+      "description": "Daily volatility of ~2.7bp implies ~7.5bp std over 8 trading days \u2014 modest uncertainty band",
+      "logit": 0.0,
+      "confidence": 0.9,
+      "effective_logit": 0.0
+    },
+    {
+      "description": "Full-sample drift is near zero (0.015bp/day), supporting a centered distribution at current level",
+      "logit": 0.0,
+      "confidence": 0.85,
+      "effective_logit": 0.0
+    },
+    {
+      "description": "Recent sharp decline of 15bp over 8 days (2.63 \u2192 2.48) could signal continued downward pressure",
+      "logit": -0.3,
+      "confidence": 0.4,
+      "effective_logit": -0.12
+    },
+    {
+      "description": "Series has shown mean-reverting behavior within the 2.45-2.65 range, slight upward pull possible",
+      "logit": 0.2,
+      "confidence": 0.3,
+      "effective_logit": 0.06
+    }
+  ],
+  "resolution": null,
+  "submitted_at": "20260217_064644",
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 146.35,
+    "total_tool_calls": 9,
+    "total_errors": 1,
+    "overall_error_rate": "11.1%",
+    "total_tool_time_ms": 3861.4,
+    "tools_used": 6,
+    "by_tool": {
+      "fred_series": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 1399.7,
+        "avg_duration_ms": 699.85,
+        "min_duration_ms": 467.86,
+        "max_duration_ms": 931.84
+      },
+      "get_metaculus_questions": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 0.35,
+        "avg_duration_ms": 0.35,
+        "min_duration_ms": 0.35,
+        "max_duration_ms": 0.35
+      },
+      "get_prediction_history": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 0.1,
+        "avg_duration_ms": 0.1,
+        "min_duration_ms": 0.1,
+        "max_duration_ms": 0.1
+      },
+      "execute_code": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 1652.38,
+        "avg_duration_ms": 826.19,
+        "min_duration_ms": 734.26,
+        "max_duration_ms": 918.12
+      },
+      "search_news": {
+        "call_count": 1,
+        "error_count": 1,
+        "error_rate": "100.0%",
+        "total_duration_ms": 807.74,
+        "avg_duration_ms": 807.74,
+        "min_duration_ms": 807.74,
+        "max_duration_ms": 807.74
+      },
+      "notes": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 1.14,
+        "avg_duration_ms": 0.57,
+        "min_duration_ms": 0.54,
+        "max_duration_ms": 0.6
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 25,
+    "output_tokens": 6272,
+    "cache_read_input_tokens": 322498,
+    "cache_creation_input_tokens": 50517,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 50517,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "logs/42165_20260217_054417/20260217-054417.log",
+  "question_published_at": "2026-02-17T05:35:02Z",
+  "question_close_time": "2026-02-17T07:05:02Z",
+  "question_scheduled_resolve_time": "2026-02-25T14:58:22Z",
+  "reasoning": "I'll start by fetching the FRED data and checking for any previous forecasts, then run a Monte Carlo simulation.Good, I have the data. Now let me run a Monte Carlo simulation using the empirical daily changes.Now let me also check if there's any notable recent market news that might affect TIPS yields, and check if Feb 25 data might actually be reported (it's a Wednesday, should be a normal trading day).The bootstrap uses the empirical distribution which has near-zero drift and captures the actual jump distribution well. Let me also check for any data that may have been published after Feb 12.Now let me write my meta-reflection and provide the final forecast.**Forecast Summary for DFII30 on 2026-02-25:**\n\nThe 30-Year TIPS yield was **2.48%** on Feb 12 (latest data). Resolution is 8 trading days later on Feb 25.\n\n| Percentile | Value |\n|-----------|-------|\n| 10th | 2.38% |\n| 20th | 2.42% |\n| 40th | 2.46% |\n| 60th | 2.50% |\n| 80th | 2.54% |\n| 90th | 2.58% |\n\n**Key reasoning:**\n- Daily volatility is ~2.7bp with near-zero drift over 3.5 months \u2192 random walk model applies\n- Bootstrap Monte Carlo from 68 empirical daily changes gives a symmetric distribution centered at ~2.48%\n- Recent 15bp decline (2.63\u21922.48) is notable but could revert or continue \u2014 the bootstrap captures both scenarios\n- 80% confidence interval spans roughly 12bp in each direction, consistent with \u03c3_daily \u00d7 \u221a8 \u2248 7.5bp",
+  "sources_consulted": [
+    "https://fred.stlouisfed.org/series/DFII30"
+  ],
+  "agent_version": "1.2.1",
+  "retrodict_date": null,
+  "comparison": null
+}

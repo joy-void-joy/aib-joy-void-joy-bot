@@ -14,11 +14,13 @@ from typing import Any, Self
 import httpx
 from bs4 import BeautifulSoup
 from tenacity import (
+    RetryCallState,
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
+from tenacity.wait import wait_base
 
 from metaculus.models import (
     AggregationMethod,
@@ -56,25 +58,54 @@ def _parse_html_api_response(html: str) -> dict[str, Any] | None:
         return None
 
 
-def with_retry[T](
-    max_attempts: int = 4,
-    min_wait: float = 5,
-    max_wait: float = 120,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """Decorator for retrying async functions with exponential backoff.
+def _is_retryable(exc: BaseException) -> bool:
+    """Return True for 429, 5xx, timeouts, and connection errors."""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status == 429 or status >= 500
+    return False
 
-    Tuned for Metaculus API rate limits (429s need 30-60s+ cooldown).
+
+class _wait_with_retry_after(wait_base):
+    """Use Retry-After header from 429 responses, fall back to exponential."""
+
+    def __init__(self, min_wait: float, max_wait: float, multiplier: float) -> None:
+        self._min_wait = min_wait
+        self._exponential = wait_exponential(
+            multiplier=multiplier, min=min_wait, max=max_wait
+        )
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+            retry_after = exc.response.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    return max(self._min_wait, float(retry_after))
+                except ValueError:
+                    pass
+        return self._exponential(retry_state=retry_state)
+
+
+def with_retry[T](
+    max_attempts: int = 6,
+    min_wait: float = 10,
+    max_wait: float = 120,
+    multiplier: float = 5,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator for retrying async functions on Metaculus API errors.
+
+    Respects Retry-After headers on 429 responses. Falls back to exponential
+    backoff. Only retries on 429, 5xx, timeouts, and connection errors.
     """
     return retry(
         stop=stop_after_attempt(max_attempts),
-        wait=wait_exponential(multiplier=2, min=min_wait, max=max_wait),
-        retry=retry_if_exception_type(
-            (
-                httpx.HTTPStatusError,
-                httpx.TimeoutException,
-                httpx.ConnectError,
-            )
+        wait=_wait_with_retry_after(
+            min_wait=min_wait, max_wait=max_wait, multiplier=multiplier
         ),
+        retry=retry_if_exception(_is_retryable),
         reraise=True,
         before_sleep=lambda rs: logger.warning(
             "Retry %d/%d for %s after %.1fs. Error: %s",
@@ -103,6 +134,7 @@ class AsyncMetaculusClient:
         self.min_request_interval = min_request_interval
         self._managed_client: httpx.AsyncClient | None = None
         self._last_request_time: float = 0.0
+        self._post_cache: dict[tuple[int, bool], dict[str, Any]] = {}
         if self.token is None:
             logger.warning("METACULUS_TOKEN not set")
 
@@ -124,12 +156,10 @@ class AsyncMetaculusClient:
                 yield client
 
     def _get_headers(self) -> dict[str, str]:
-        if self.token is None:
-            raise ValueError("METACULUS_TOKEN not set")
-        return {
-            "Authorization": f"Token {self.token}",
-            "Accept-Language": "en",
-        }
+        headers: dict[str, str] = {"Accept-Language": "en"}
+        if self.token is not None:
+            headers["Authorization"] = f"Token {self.token}"
+        return headers
 
     async def _throttle(self) -> None:
         """Enforce minimum delay between requests to avoid 429s."""
@@ -145,6 +175,8 @@ class AsyncMetaculusClient:
         post_json: dict[str, Any],
         client: httpx.AsyncClient,
         post_id: int,
+        *,
+        include_text: bool = True,
     ) -> dict[str, Any]:
         """Fill nulls in the JSON API response using fallback sources.
 
@@ -153,8 +185,13 @@ class AsyncMetaculusClient:
 
         1. HTML API — The DRF browsable HTML page includes description,
            resolution_criteria, and fine_print that the JSON API omits.
+           Skipped when include_text=False.
         2. Old API — The /api2/questions/ endpoint (unauthenticated) returns
            resolution and aggregation data hidden from tournament participants.
+
+        Args:
+            include_text: If False, skip HTML enrichment for description/criteria
+                fields. Use this when you only need resolution + aggregation data.
         """
         question = post_json.get("question") or {}
         has_nulls = any(v is None for v in question.values())
@@ -163,7 +200,8 @@ class AsyncMetaculusClient:
 
         # HTML enrichment for text fields (description, criteria, fine_print)
         text_fields = ("description", "resolution_criteria", "fine_print")
-        if any(question.get(f) is None for f in text_fields):
+        if include_text and any(question.get(f) is None for f in text_fields):
+            await self._throttle()
             response = await client.get(
                 f"{self.base_url}/posts/{post_id}/",
                 headers={**self._get_headers(), "Accept": "text/html"},
@@ -201,6 +239,7 @@ class AsyncMetaculusClient:
             return post_json
 
         try:
+            await self._throttle()
             response = await client.get(
                 f"https://www.metaculus.com/api2/questions/{post_id}/",
             )
@@ -253,18 +292,28 @@ class AsyncMetaculusClient:
 
     @with_retry()
     async def fetch_post_json(
-        self, post_id: int, *, with_cp: bool = False
+        self,
+        post_id: int,
+        *,
+        with_cp: bool = False,
+        include_text: bool = True,
     ) -> dict[str, Any]:
         """Fetch enriched post JSON by post ID.
 
-        Returns the raw API JSON with content fields (description,
-        resolution_criteria, fine_print) populated from the HTML
-        fallback if the JSON API returns nulls.
+        Returns the raw API JSON with null fields populated from
+        fallback sources (HTML API for text, old API for resolution).
 
         Args:
             with_cp: If True, include community prediction/aggregation data
                 via with_cp and include_conditional_cps params.
+            include_text: If False, skip HTML enrichment for description/criteria
+                fields. Reduces requests from 3 to 2 per question. Use when you
+                only need resolution + aggregation data.
         """
+        cache_key = (post_id, with_cp)
+        if cache_key in self._post_cache:
+            return self._post_cache[cache_key]
+
         await self._throttle()
         params: dict[str, str] = {}
         if with_cp:
@@ -278,14 +327,18 @@ class AsyncMetaculusClient:
             )
             response.raise_for_status()
             post_json = response.json()
-            return await self._enrich_post_json(post_json, client, post_id)
+            result = await self._enrich_post_json(
+                post_json, client, post_id, include_text=include_text
+            )
+            self._post_cache[cache_key] = result
+            return result
 
     async def get_question_by_post_id(
-        self, post_id: int
+        self, post_id: int, *, include_text: bool = True
     ) -> MetaculusQuestion | list[MetaculusQuestion]:
         """Fetch a question by post ID."""
         logger.debug("Fetching question %d", post_id)
-        post_json = await self.fetch_post_json(post_id)
+        post_json = await self.fetch_post_json(post_id, include_text=include_text)
         questions = self._parse_post_json(post_json)
         if len(questions) == 1:
             return questions[0]
@@ -768,13 +821,21 @@ class MetaculusClient:
     def _run(self, coro: Any) -> Any:
         return asyncio.run(coro)
 
-    def fetch_post_json(self, post_id: int, *, with_cp: bool = False) -> dict[str, Any]:
-        return self._run(self._async.fetch_post_json(post_id, with_cp=with_cp))
+    def fetch_post_json(
+        self, post_id: int, *, with_cp: bool = False, include_text: bool = True
+    ) -> dict[str, Any]:
+        return self._run(
+            self._async.fetch_post_json(
+                post_id, with_cp=with_cp, include_text=include_text
+            )
+        )
 
     def get_question_by_post_id(
-        self, post_id: int
+        self, post_id: int, *, include_text: bool = True
     ) -> MetaculusQuestion | list[MetaculusQuestion]:
-        return self._run(self._async.get_question_by_post_id(post_id))
+        return self._run(
+            self._async.get_question_by_post_id(post_id, include_text=include_text)
+        )
 
     def get_question_by_url(
         self, url: str

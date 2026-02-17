@@ -28,22 +28,22 @@ Run these from the project root to access trace data:
 
 ```bash
 # Filtered agent reasoning (strips Docker/HTTP noise, ~1160 lines per trace)
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id>
+uv run aib-devtools trace log <post_id>
 
 # Full untruncated trace (tool results not truncated)
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --full
+uv run aib-devtools trace log <post_id> --full
 
 # Tool calls and results only (no thinking/text)
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --tools-only
+uv run aib-devtools trace log <post_id> --tools-only
 
 # List all available traces
-uv run python .claude/plugins/aib/scripts/trace_log.py list
+uv run aib-devtools trace logs
 
 # Forecast metadata and tool metrics
-uv run python .claude/plugins/aib/scripts/trace_forecast.py show <post_id>
+uv run aib-devtools trace show <post_id>
 
 # List all forecasts with metrics
-uv run python .claude/plugins/aib/scripts/trace_forecast.py list
+uv run aib-devtools trace list
 ```
 
 Meta-reflections (agent self-summaries) are in `notes/sessions/<post_id>/*/meta.md`.
@@ -53,15 +53,21 @@ Saved forecasts are in `notes/forecasts/<post_id>/` and `notes/retrodict/<post_i
 
 1. **Understand the request**: The caller specifies which post IDs to analyze and what to look for (or asks for general pattern analysis).
 
-2. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines). Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
+2. **Verify version context**: The caller should provide the agent version being analyzed. Before reading traces, retrieve the prompt that was active for that version:
+   ```bash
+   git show v<VERSION>:src/aib/agent/prompts.py
+   ```
+   Also check each trace's `agent_version` field (in the forecast JSON at `notes/forecasts/<post_id>/` or `notes/retrodict/<post_id>/`) to confirm it matches the version being analyzed. Flag any mismatches — a trace from v0.6.0 analyzed as if it were v1.1.0 produces invalid conclusions.
 
-3. **Read full traces for ALL requested IDs**: Use `trace_log.py show <id>` to get the filtered reasoning trace for every post ID. Don't skip traces — you have the context budget, the main conversation doesn't. Use `--tools-only` as a supplement when tool patterns need closer inspection.
+3. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines) in `notes/sessions/<post_id>/*/meta.md`. Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
 
-4. **Cross-reference with metrics**: Use `trace_forecast.py show <id>` to get tool counts, errors, and timing data.
+4. **Read full traces for ALL requested IDs**: Use `uv run aib-devtools trace log <id>` to get the filtered reasoning trace for every post ID. Don't skip traces — you have the context budget, the main conversation doesn't. Use `--tools-only` as a supplement when tool patterns need closer inspection.
 
-5. **Check for retrodict traces**: For each post ID, check if `notes/retrodict/<post_id>/` exists. If it does, this is a retrodiction — run the future-leak checks described below.
+5. **Cross-reference with metrics**: Use `uv run aib-devtools trace show <id>` to get tool counts, errors, and timing data.
 
-6. **Synthesize across all traces**: Find what's common. Find what's interesting. Quote liberally — the main agent hasn't read these traces and needs the exact words to make good decisions.
+6. **Check for retrodict traces**: For each post ID, check if `notes/retrodict/<post_id>/` exists. If it does, this is a retrodiction — run the future-leak checks described below.
+
+7. **Synthesize across all traces**: Find what's common. Find what's interesting. Quote liberally — the main agent hasn't read these traces and needs the exact words to make good decisions.
 
 ## Future-Leak Detection (Retrodict Traces)
 
@@ -95,6 +101,11 @@ Return your findings in this exact structure:
 
 ```markdown
 ## Trace Analysis: [N] forecasts analyzed
+
+### Version Context
+- **Analyzing version**: [X.Y.Z]
+- **Prompt retrieved from**: `git show vX.Y.Z:src/aib/agent/prompts.py`
+- **Version mismatches**: [list any traces whose agent_version differs from the target, or "none"]
 
 ### Tool Failure Patterns
 | Tool | Failure Mode | Affected Forecasts | Frequency |
@@ -146,7 +157,14 @@ _Omit this section if no retrodict traces were analyzed._
   - Impact: [does this invalidate the forecast for calibration?]
 
 ### Per-Forecast Summary
-Brief summary of each analyzed forecast (1-2 lines each):
+Brief summary of each analyzed forecast, grouped by version (1-2 lines each):
+
+**v[X.Y.Z]** (N traces):
+| Post ID | Type | Forecast | Key Observation |
+|---------|------|----------|----------------|
+| ... | binary/numeric | 0.XX / value | [most notable thing about this trace] |
+
+**v[A.B.C]** (N traces):
 | Post ID | Type | Forecast | Key Observation |
 |---------|------|----------|----------------|
 | ... | binary/numeric | 0.XX / value | [most notable thing about this trace] |

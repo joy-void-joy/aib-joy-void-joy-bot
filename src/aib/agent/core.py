@@ -7,6 +7,7 @@ import shutil
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+from collections.abc import Sequence
 from typing import Any, cast
 
 from claude_agent_sdk.types import HookContext
@@ -26,6 +27,8 @@ from claude_agent_sdk import (
     UserMessage,
 )
 
+from pydantic import BaseModel, Field
+
 from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
@@ -33,8 +36,6 @@ from aib.agent.display import (
     truncate_content as _truncate_content,
 )
 from aib.agent.history import (
-    format_history_for_context,
-    load_past_forecasts,
     save_forecast,
     save_retrodict,
 )
@@ -573,12 +574,12 @@ def create_webfetch_quality_hooks(*, retrodict_mode: bool = False) -> HooksConfi
     }
 
 
-async def fetch_question(question_id: int, token: str | None = None) -> dict:
+async def fetch_question(question_id: int) -> dict:
     """Fetch question details from Metaculus API."""
-    from metaculus.client import AsyncMetaculusClient
+    from aib.clients.metaculus import get_client
 
-    async with AsyncMetaculusClient(token=token) as client:
-        return await client.fetch_post_json(question_id)
+    client = get_client()
+    return await client.fetch_post_json(question_id)
 
 
 def build_question_context(post_data: dict) -> dict:
@@ -625,22 +626,135 @@ def build_question_context(post_data: dict) -> dict:
     return context
 
 
-def extract_sources(messages: list[AssistantMessage]) -> list[str]:
-    """Extract web sources from tool use blocks."""
-    sources = []
+def _walk_urls(data: object) -> list[str]:
+    """Extract HTTP URLs from url/pdf_url/id keys in nested JSON data."""
+    urls: list[str] = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):
+                urls.append(v)
+            elif k == "id" and isinstance(v, str) and v.startswith("http"):
+                urls.append(v)
+            else:
+                urls.extend(_walk_urls(v))
+    elif isinstance(data, list):
+        for item in data:
+            urls.extend(_walk_urls(item))
+    return urls
+
+
+# Source-bearing tools: None = scan result JSON for URLs,
+# tuple = (input_key, url_template) to construct from input.
+_SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
+    "mcp__forecasting__search_arxiv": None,
+    "mcp__forecasting__wikipedia": None,
+    "mcp__markets__kalshi_price": None,
+    "mcp__markets__kalshi_event": None,
+    "mcp__markets__polymarket_price": None,
+    "mcp__markets__manifold_price": None,
+    "mcp__markets__stock_price": ("symbol", "https://finance.yahoo.com/quote/{}"),
+    "mcp__markets__stock_history": ("symbol", "https://finance.yahoo.com/quote/{}"),
+    "mcp__financial__fred_series": (
+        "series_id",
+        "https://fred.stlouisfed.org/series/{}",
+    ),
+    "mcp__financial__company_financials": (
+        "ticker",
+        "https://finance.yahoo.com/quote/{}",
+    ),
+}
+
+
+def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
+    """Extract deduplicated source URLs from tool calls and results."""
+    seen: set[str] = set()
+    sources: list[str] = []
+    pending: set[str] = set()
+
+    def _add(url: str) -> None:
+        if url not in seen:
+            seen.add(url)
+            sources.append(url)
+
+    for msg in messages:
+        content = msg.content
+        if isinstance(content, str):
+            continue
+        for block in content:
+            if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
+                if block.name == "WebFetch" and (url := block.input.get("url")):
+                    _add(str(url))
+                elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
+                    key, tmpl = entry
+                    if val := block.input.get(key):
+                        _add(tmpl.format(val))
+                elif block.name in _SOURCE_TOOLS:
+                    pending.add(block.id)
+            elif isinstance(block, ToolResultBlock) and block.tool_use_id in pending:
+                pending.discard(block.tool_use_id)
+                text = (
+                    block.content
+                    if isinstance(block.content, str)
+                    else json.dumps(block.content)
+                    if block.content
+                    else ""
+                )
+                try:
+                    for url in _walk_urls(json.loads(text)):
+                        _add(url)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+    return sources
+
+
+def build_trace(messages: list[AssistantMessage], title: str = "") -> str:
+    """Build a markdown trace from assistant messages using ReasoningLogger formatting."""
+    rl = ReasoningLogger(Path("/dev/null"), title)
     for msg in messages:
         for block in msg.content:
-            if isinstance(block, ToolUseBlock) and block.name in (
-                "WebSearch",
-                "WebFetch",
-                "mcp__forecasting__search_exa",
-                "mcp__forecasting__search_news",
-            ):
-                if isinstance(block.input, dict):
-                    source = block.input.get("url") or block.input.get("query")
-                    if source:
-                        sources.append(str(source))
-    return sources
+            rl.log_block(block)
+    return "\n".join(rl.lines)
+
+
+class CondensedReasoning(BaseModel):
+    """Structured output for condensed forecast narratives."""
+
+    narrative: str = Field(
+        description=(
+            "3-5 short paragraphs covering: what research was done, "
+            "key evidence found, and how the conclusion was reached."
+        )
+    )
+
+
+async def condense_reasoning(trace: str, question_title: str) -> str | None:
+    """Condense a full forecast trace into a readable narrative using Sonnet."""
+    options = ClaudeAgentOptions(
+        model="sonnet",
+        allowed_tools=[],
+        system_prompt=(
+            "Condense the forecast trace into a clear, readable narrative. "
+            "3-5 short paragraphs covering: what research was done, key evidence found, "
+            "and how the conclusion was reached. No markdown headers."
+        ),
+        output_format={
+            "type": "json_schema",
+            "schema": CondensedReasoning.model_json_schema(),
+        },
+    )
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(f"Question: {question_title}\n\nTrace:\n{trace[:50000]}")
+            async for message in client.receive_response():
+                if isinstance(message, ResultMessage) and message.structured_output:
+                    result = CondensedReasoning.model_validate(
+                        message.structured_output
+                    )
+                    return result.narrative
+    except Exception:
+        logger.exception("Reasoning condensation failed")
+    return None
 
 
 async def run_forecast(
@@ -717,25 +831,11 @@ async def run_forecast(
     model_class, output_schema = get_output_schema_for_question(question_type)
     type_guidance = get_type_specific_guidance(question_type, context)
 
-    # Load past forecasts for this question (if any)
-    # Skip in retrodict mode to prevent future leak from resolution data
-    history_context = ""
-    if post_id > 0 and cutoff is None:
-        past_forecasts = load_past_forecasts(post_id)
-        if past_forecasts:
-            history_context = format_history_for_context(past_forecasts)
-            logger.info(
-                "Loaded %d past forecasts for post %d",
-                len(past_forecasts),
-                post_id,
-            )
-
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
-    if history_context:
-        prompt += f"\n\n{history_context}"
 
     collected_text: list[str] = []
     assistant_messages: list[AssistantMessage] = []
+    all_messages: list[AssistantMessage | UserMessage] = []
     result: ResultMessage | None = None
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
@@ -841,6 +941,7 @@ async def run_forecast(
                     match message:
                         case AssistantMessage():
                             assistant_messages.append(message)
+                            all_messages.append(message)
                             for block in message.content:
                                 print_block(block)
                                 match block:
@@ -876,6 +977,7 @@ async def run_forecast(
                                 json.dumps(message.data, indent=2),
                             )
                         case UserMessage():
+                            all_messages.append(message)
                             _stream_log.info(
                                 "USER_MESSAGE: %s",
                                 _normalize_content(message.content),
@@ -908,7 +1010,10 @@ async def run_forecast(
         summary="No forecast produced",
         factors=[],
         reasoning="".join(collected_text),
-        sources_consulted=extract_sources(assistant_messages),
+        condensed_reasoning=await condense_reasoning(
+            build_trace(assistant_messages, question_title), question_title
+        ),
+        sources_consulted=extract_sources(all_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
         cost_usd=result.total_cost_usd,
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,

@@ -46,15 +46,16 @@ All project-specific commands and scripts live in `.claude/plugins/aib/`:
 plugins/aib/
 ├── plugin.json           # Plugin metadata
 ├── commands/             # Slash commands (/aib:commit, /aib:feedback, etc.)
-├── scripts/              # Python CLI tools
 ├── agents/               # Agent definitions
 └── hooks/                # Git and workflow hooks
 ```
 
+Dev tools live in `src/aib/devtools/` and are invoked via `uv run aib-devtools <command>`.
+
 ### When to Add to the Plugin
 
 - **Commands**: Reusable workflows invoked via `/aib:command-name`
-- **Scripts**: Python CLI tools run via `uv run python .claude/plugins/aib/scripts/X.py`
+- **Dev tools**: Python CLI tools in `src/aib/devtools/`, run via `uv run aib-devtools <command>`
 - **Agents**: Subagent definitions for specialized tasks
 
 ### Settings (`settings.json`)

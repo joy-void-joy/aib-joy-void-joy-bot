@@ -60,6 +60,19 @@ class TrendDataPoint(TypedDict):
     value: int  # 0-100 relative interest
 
 
+class ChangeStats(TypedDict):
+    """Period-over-period change statistics from the time series."""
+
+    increases: int
+    decreases: int
+    no_change: int
+    total: int
+    increase_rate: float
+    decrease_rate: float
+    no_change_rate: float
+    threshold: int
+
+
 class TrendsResult(TypedDict):
     """Result from Google Trends query."""
 
@@ -72,10 +85,40 @@ class TrendsResult(TypedDict):
     min_value: int
     average_value: float
     trend_direction: str  # "up", "down", "stable"
+    change_stats: ChangeStats
     history: list[TrendDataPoint]
 
 
 # --- Google Trends API ---
+
+
+def _calculate_change_stats(values: list[int], threshold: int = 3) -> ChangeStats:
+    """Compute period-over-period change statistics from a time series.
+
+    Uses ±threshold to match MiniBench resolution criteria: changes within
+    the threshold count as "no_change", not as increases or decreases.
+    """
+    increases = decreases = no_change = 0
+    for i in range(1, len(values)):
+        diff = values[i] - values[i - 1]
+        if diff > threshold:
+            increases += 1
+        elif diff < -threshold:
+            decreases += 1
+        else:
+            no_change += 1
+    total = increases + decreases + no_change
+    result: ChangeStats = {
+        "increases": increases,
+        "decreases": decreases,
+        "no_change": no_change,
+        "total": total,
+        "increase_rate": round(increases / total, 3) if total else 0.0,
+        "decrease_rate": round(decreases / total, 3) if total else 0.0,
+        "no_change_rate": round(no_change / total, 3) if total else 0.0,
+        "threshold": threshold,
+    }
+    return result
 
 
 def _calculate_trend_direction(values: list[int]) -> str:
@@ -183,6 +226,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
             "min_value": int(min(values)) if values else 0,
             "average_value": round(sum(values) / len(values), 1) if values else 0,
             "trend_direction": _calculate_trend_direction([int(v) for v in values]),
+            "change_stats": _calculate_change_stats([int(v) for v in values]),
             "history": history,
         }
 

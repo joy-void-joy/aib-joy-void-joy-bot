@@ -216,7 +216,7 @@ The `forecasting-tools` library has some type annotation limitations:
 
 2. **`community_prediction_at_access_time`**: Only exists on `BinaryQuestion`. Always check `isinstance(q, BinaryQuestion)` first.
 
-3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links. Check method names with `inspect_api.py`.
+3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links. Check method names with `uv run aib-devtools api inspect`.
 
 ### Type Safety Requirements
 
@@ -343,156 +343,95 @@ The `pyright-lsp` plugin is enabled and provides code intelligence tools. **Use 
 
 # Tooling
 
-## Helper Scripts
+## Running Python
 
-The `.claude/plugins/aib/scripts/` directory contains reusable scripts. **Always use these scripts instead of ad-hoc commands.** Never use `uv run python -c "..."` or bare `python`/`python3` — these are denied by the Bash permission hook.
+Bare `python`/`python3` and `uv run python -c "..."` are denied by the Bash permission hook. When you need to run Python:
 
-If you find yourself running the same command repeatedly, **create a script** in `.claude/plugins/aib/scripts/` and document it here.
+1. **Prefer `aib-devtools`** — Use existing commands (`uv run aib-devtools <group> <command>`), or add new functionality to `src/aib/devtools/` if a capability is missing.
+2. **Use `tmp/*.py` only as a stepping stone** — Write a throwaway script in `tmp/` and run it with `uv run python tmp/my_script.py`. **Once it works, always promote it to `aib-devtools`** — don't just copy it verbatim; generalize the functionality with proper CLI arguments, help text, and error handling so it's reusable beyond the immediate task. Extract the logic into the appropriate sub-group in `src/aib/devtools/`, register the command, and delete the tmp script. Tmp scripts are prototypes, not permanent tools.
 
-**Write scripts in Python using [typer](https://typer.tiangolo.com/)** for CLI interfaces. Use **[sh](https://sh.readthedocs.io/)** for shell commands instead of `subprocess`.
+## aib-devtools CLI
 
-### inspect_api.py
+Source: `src/aib/devtools/`
 
-Explore package APIs—never use `python -c "import ..."` or ad-hoc REPL commands.
-
-```bash
-uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class>
-uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class.method>
-uv run python .claude/plugins/aib/scripts/inspect_api.py <module.Class> --help-full
 ```
-
-### module_info.py
-
-Get paths and source code for installed Python modules.
-
-```bash
-uv run python .claude/plugins/aib/scripts/module_info.py path <module>
-uv run python .claude/plugins/aib/scripts/module_info.py source <module> [--lines N]
-```
-
-### new_worktree.py
-
-Create a new git worktree with plugin cache refresh.
-
-```bash
-uv run python .claude/plugins/aib/scripts/new_worktree.py <name> [--no-sync] [--no-copy-data] [--no-plugin-refresh]
-```
-
-Creates worktree in `tree/`, copies `.env.local` and `logs/`, runs `uv sync`, clears stale plugin cache and installs aib-workflow at project scope.
-
-### feedback_collect.py
-
-Collect calibration data from resolved forecasts.
-
-```bash
-uv run python .claude/plugins/aib/scripts/feedback_collect.py [--tournament X] [--all-time] [--since DATE] [--include-retrodict] [--new-only/--no-new-only]
-```
-
-### trace_forecast.py
-
-Link forecasts to their logs and metrics.
-
-```bash
-uv run python .claude/plugins/aib/scripts/trace_forecast.py show <id> [--verbose]
-uv run python .claude/plugins/aib/scripts/trace_forecast.py list
-uv run python .claude/plugins/aib/scripts/trace_forecast.py errors
-```
-
-### trace_log.py
-
-Extract agent reasoning from noisy forecast logs (strips Docker, HTTP, debug noise).
-
-```bash
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id>
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --full
-uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id> --tools-only
-uv run python .claude/plugins/aib/scripts/trace_log.py list
-```
-
-### debug.py
-
-Debug tools for Metaculus API parsing and MCP error propagation.
-
-```bash
-uv run python .claude/plugins/aib/scripts/debug.py metaculus [--tournament X] [--raw-only]
-uv run python .claude/plugins/aib/scripts/debug.py mcp-error
-```
-
-### aggregate_metrics.py
-
-Aggregate metrics across all forecasts.
-
-```bash
-uv run python .claude/plugins/aib/scripts/aggregate_metrics.py summary|tools|by-type|errors
-```
-
-### resolution_update.py
-
-Fetch resolutions from Metaculus and update saved forecasts.
-
-```bash
-uv run python .claude/plugins/aib/scripts/resolution_update.py check [--dry-run]
-uv run python .claude/plugins/aib/scripts/resolution_update.py status
-uv run python .claude/plugins/aib/scripts/resolution_update.py set <id> <yes|no>
-```
-
-### calibration_analysis.py
-
-Comprehensive calibration analysis: ECE/MCE, reliability diagrams, PIT histograms, overconfidence detection. Primary diagnostic tool for the feedback loop.
-
-```bash
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py summary [--version X.Y.Z]
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py binary [--source all|live|retrodict] [--buckets 10] [--version X.Y.Z]
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py numeric [--source all|live|retrodict] [--version X.Y.Z]
-uv run python .claude/plugins/aib/scripts/calibration_analysis.py export [-o FILE] [--version X.Y.Z]
-```
-
-### calibration_report.py
-
-Basic calibration reports: Brier/log scores, bucket tables.
-
-```bash
-uv run python .claude/plugins/aib/scripts/calibration_report.py summary|detail
-uv run python .claude/plugins/aib/scripts/calibration_report.py export [-o FILE]
-```
-
-### scores_table.py
-
-Unified scores CLI (wraps `aib.scoring`). Auto-rebuilt after `forecast retrodict` and `forecast submit`.
-
-```bash
-uv run python .claude/plugins/aib/scripts/scores_table.py build
-uv run python .claude/plugins/aib/scripts/scores_table.py show [--post-id ID] [--version V] [--source S] [--resolved]
-uv run python .claude/plugins/aib/scripts/scores_table.py summary
-uv run python .claude/plugins/aib/scripts/scores_table.py compare <v1> <v2>
-uv run python .claude/plugins/aib/scripts/scores_table.py regression
-uv run python .claude/plugins/aib/scripts/scores_table.py extremes [--non-meta] [--meta-only] [--version V] [--type T] [-n N]
-```
-
-### forecast_queue.py
-
-Manage forecasting queue, retrodiction candidates, and question search.
-
-```bash
-uv run python .claude/plugins/aib/scripts/forecast_queue.py status <tournament>
-uv run python .claude/plugins/aib/scripts/forecast_queue.py upcoming <tournament> [--days N] [--all]
-uv run python .claude/plugins/aib/scripts/forecast_queue.py missed <tournament> [--days N] [--all]
-uv run python .claude/plugins/aib/scripts/forecast_queue.py search <query> [--type binary] [--limit 20] [--resolved/--open]
+aib-devtools
+├── calibration        Calibration analysis and diagnostics
+│   ├── binary         Binary forecast calibration (ECE/MCE, reliability diagrams)
+│   ├── numeric        Numeric/discrete calibration via PIT analysis
+│   ├── summary        Combined calibration summary for feedback loop
+│   ├── export         Export calibration data to JSON
+│   ├── report         Basic Brier/log scores and bucket table
+│   ├── detail         Forecast-by-forecast results
+│   └── cdf            CDF sharpness analysis
+│
+├── scores             Unified scores table (wraps aib.scoring)
+│   ├── build          Rebuild scores CSV from all forecast JSONs
+│   ├── show           Show scores table (--post-id, --version, --source, --resolved)
+│   ├── summary        Aggregate statistics by type, source, version
+│   ├── compare        Compare two agent versions on overlapping questions
+│   ├── regression     Regression suite results
+│   └── extremes       Best/worst forecasts (--non-meta, --version, --type, -n)
+│
+├── queue              Forecasting queue and priorities
+│   ├── status         Tournament status overview
+│   ├── upcoming       Questions closing soon (--days N, --all)
+│   ├── missed         Recently closed without forecast (--days N)
+│   └── search         Search questions (--type, --limit, --resolved/--open)
+│
+├── resolution         Resolution updates
+│   ├── check          Fetch and apply resolutions from Metaculus (--dry-run)
+│   ├── status         Show resolution status of all forecasts
+│   └── set            Manually set resolution for a post
+│
+├── feedback           Feedback collection
+│   └── collect        Collect metrics from resolved forecasts
+│
+├── trace              Forecast tracing and log analysis
+│   ├── show           Show forecast trace for a post ID (--verbose)
+│   ├── list           List all traced forecasts
+│   ├── errors         Show forecasts with errors
+│   ├── log            Extract agent reasoning from forecast log
+│   └── logs           List available forecast logs
+│
+├── metrics            Aggregate metrics
+│   ├── summary        Overall metrics summary
+│   ├── tools          Tool usage statistics
+│   ├── by-type        Metrics by question type
+│   └── errors         Error summary
+│
+├── api                API inspection and debugging
+│   ├── inspect        Explore package APIs (replaces python -c "import ...")
+│   ├── module-path    Get filesystem path for a module
+│   ├── module-source  Get source code for a module
+│   ├── post           Inspect a Metaculus post's API data
+│   ├── cp             Check community predictions for all forecasts
+│   ├── cp-single      Check community prediction for a single post
+│   ├── debug          Debug Metaculus API parsing (--tournament, --raw-only)
+│   ├── mcp-error      Debug MCP error propagation
+│   ├── websearch      Debug web search tool
+│   └── earnings       Check earnings dates for a ticker
+│
+├── dev                Development tools
+│   ├── worktree       Create a new worktree with plugin refresh
+│   ├── version-bump   Bump AGENT_VERSION (patch|minor|major)
+│   ├── version-tag    Create git tag for current version
+│   ├── version-list   List all version tags
+│   ├── version-history Show version bumps from git history
+│   └── version-changelog Add changelog entry
+│
+├── git                Git operations for forecasts
+│   ├── commit-forecasts Commit uncommitted forecast files (one per question)
+│   ├── local          Check local submission status
+│   ├── mark           Mark forecast as submitted
+│   ├── backfill       Backfill submitted_at from API
+│   └── check          Check API forecast status
+│
+└── health             Service health checks
+    └── check          Ping Metaculus, Exa, FRED, Docker
 ```
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup), `all` (cross-tournament)
-
-### version_tag.py
-
-Bump agent version, create git tags, and maintain CHANGELOG.md.
-
-```bash
-uv run python .claude/plugins/aib/scripts/version_tag.py bump <patch|minor|major> "<summary>" [--detail "a, b, c"]
-uv run python .claude/plugins/aib/scripts/version_tag.py tag [--commit HASH] [--message MSG]
-uv run python .claude/plugins/aib/scripts/version_tag.py list
-uv run python .claude/plugins/aib/scripts/version_tag.py history
-uv run python .claude/plugins/aib/scripts/version_tag.py changelog <version> "<summary>"
-```
 
 ## Permission Hooks
 

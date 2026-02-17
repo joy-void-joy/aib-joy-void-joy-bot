@@ -9,7 +9,17 @@ import json
 import logging
 from typing import Any, TypedDict
 
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage, tool
+from claude_agent_sdk import (
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    HookCallback,
+    HookInput,
+    HookJSONOutput,
+    HookMatcher,
+    ResultMessage,
+    tool,
+)
+from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
@@ -23,6 +33,32 @@ from aib.tools.wayback import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _make_tool_filter_hook(allowed: frozenset[str]) -> HookCallback:
+    """Create a PreToolUse hook that only allows the specified tools.
+
+    Needed because bypassPermissions ignores allowed_tools.
+    """
+
+    async def hook(
+        input_data: HookInput,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> HookJSONOutput:
+        raw: dict[str, Any] = dict(input_data)
+        if raw.get("hook_event_name") != "PreToolUse":
+            return {}
+        tool_name = str(raw.get("tool_name", ""))
+        decision = "allow" if tool_name in allowed else "deny"
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": decision,
+            }
+        }
+
+    return hook
 
 
 class WebSearchInput(BaseModel):
@@ -137,8 +173,19 @@ async def _raw_web_search(
 
     options = ClaudeAgentOptions(
         model="haiku",
-        max_turns=1,
+        permission_mode="bypassPermissions",
         allowed_tools=["WebSearch"],
+        hooks={
+            "PreToolUse": [
+                HookMatcher(
+                    hooks=[
+                        _make_tool_filter_hook(
+                            frozenset({"WebSearch", "StructuredOutput"})
+                        )
+                    ]
+                )
+            ],
+        },
         system_prompt=(
             "You are a web search assistant. Use WebSearch to find information, "
             "then return the results with title, url, and snippet for each."
@@ -147,19 +194,31 @@ async def _raw_web_search(
             "type": "json_schema",
             "schema": _SearchResultsOutput.model_json_schema(),
         },
+        extra_args={"no-session-persistence": None},
     )
 
     data: dict[str, Any] | None = None
     async with ClaudeSDKClient(options=options) as client:
         await client.query(prompt)
         async for message in client.receive_response():
-            if data is None and isinstance(message, ResultMessage):
-                if message.structured_output:
-                    data = message.structured_output
-                elif message.result:
-                    data = json.loads(message.result)
+            if isinstance(message, ResultMessage):
+                logger.debug(
+                    "[WebSearch] sub-agent result: subtype=%s turns=%d is_error=%s",
+                    message.subtype,
+                    message.num_turns,
+                    message.is_error,
+                )
+                if data is None:
+                    if message.structured_output:
+                        data = message.structured_output
+                    elif message.result:
+                        data = json.loads(message.result)
 
     if not data or not isinstance(data.get("results"), list):
+        logger.warning(
+            "[WebSearch] sub-agent returned no structured results for query=%s",
+            search_query,
+        )
         return []
 
     return [
@@ -251,8 +310,8 @@ async def _extract_with_prompt(content: str, prompt: str, url: str) -> str:
 
     options = ClaudeAgentOptions(
         model="haiku",
-        max_turns=1,
         system_prompt="You extract information from web page content. Be concise and factual.",
+        extra_args={"no-session-persistence": None},
     )
 
     result_text = ""

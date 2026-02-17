@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, TypedDict
 
 import httpx
+from asknews_sdk.dto.news import SearchResponseDictItem
+from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 
 
@@ -23,7 +25,6 @@ from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.cache import cached
@@ -31,6 +32,7 @@ from aib.tools.exa import exa_search
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
+from aib.tools.throttle import asknews_throttle, exa_throttle, wikipedia_throttle
 from aib.tools.wikipedia import (
     WIKIPEDIA_API_URL,
     WIKIPEDIA_HEADERS,
@@ -39,27 +41,6 @@ from aib.tools.wikipedia import (
 )
 
 logger = logging.getLogger(__name__)
-
-# --- Rate Limiting ---
-#
-# Semaphores enforce rate limits across concurrent forecast sessions.
-# They are lazily created per-event-loop to avoid "bound to a different event loop"
-# errors when asyncio.run() creates fresh loops (e.g., tournament mode).
-
-_semaphore_store: dict[str, asyncio.Semaphore] = {}
-
-
-def _get_semaphore(name: str, limit: int) -> asyncio.Semaphore:
-    """Get or create a semaphore for the current event loop."""
-    loop = asyncio.get_running_loop()
-    key = f"{name}_{id(loop)}"
-    if key not in _semaphore_store:
-        _semaphore_store[key] = asyncio.Semaphore(limit)
-    return _semaphore_store[key]
-
-
-def _search_semaphore() -> asyncio.Semaphore:
-    return _get_semaphore("search", settings.search_max_concurrent)
 
 
 # --- Input Schemas (Pydantic models with runtime validation) ---
@@ -152,10 +133,6 @@ class WikipediaInput(BaseModel):
     num_results: int = settings.search_default_limit
 
 
-class PredictionHistoryInput(BaseModel):
-    post_id: int
-
-
 # --- Output Schemas ---
 
 
@@ -209,13 +186,13 @@ async def _redact_future_info(text: str, cutoff_date: str) -> str:
     )
     options = ClaudeAgentOptions(
         model="sonnet",
-        max_turns=1,
         allowed_tools=[],
         system_prompt=(
             "You redact temporal information from text. Remove sentences or clauses "
             "that reference events after the given date. Preserve everything else verbatim. "
             "Return only the redacted text."
         ),
+        extra_args={"no-session-persistence": None},
     )
     try:
         result_text = None
@@ -554,7 +531,7 @@ def _build_cp_history_response(
         entries.append(
             CPHistoryEntry(
                 timestamp=_format_timestamp(point.start_time),
-                community_prediction=round(cp, 4),
+                community_prediction=cp,
             )
         )
 
@@ -726,7 +703,7 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        async with _search_semaphore():
+        async with exa_throttle:
             formatted = await exa_search(
                 query, num_results, published_before, livecrawl
             )
@@ -755,8 +732,16 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
     query = validated.query
     num_results = validated.num_results
 
-    @with_retry(max_attempts=3)
-    async def _search() -> str:
+    @with_retry(
+        max_attempts=3,
+        min_wait=10,
+        max_wait=30,
+        extra_exceptions=(AskNewsRateLimitError,),
+    )
+    async def _fetch_news(
+        strategy: Literal["latest news", "news knowledge", "default"],
+        n_articles: int,
+    ) -> list[SearchResponseDictItem]:
         from asknews_sdk import AsyncAskNewsSDK
 
         api_key = settings.asknews_api_key
@@ -775,57 +760,48 @@ async def search_news(args: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("AskNews credentials not configured")
 
         async with ask_ctx as ask:
-            hot_response = await ask.news.search_news(
+            response = await ask.news.search_news(
                 query=query,
-                n_articles=min(num_results, 6),
+                n_articles=n_articles,
                 return_type="both",
-                strategy="latest news",
+                strategy=strategy,
             )
-
-            historical_response = await ask.news.search_news(
-                query=query,
-                n_articles=num_results,
-                return_type="both",
-                strategy="news knowledge",
-            )
-
-        # Deduplicate by article_id, preserving order
-        seen: set[str] = set()
-        all_articles = []
-        for articles in (hot_response.as_dicts, historical_response.as_dicts):
-            if not articles:
-                continue
-            for article in articles:
-                aid = str(article.article_id)
-                if aid not in seen:
-                    seen.add(aid)
-                    all_articles.append(article)
-
-        all_articles.sort(key=lambda a: a.pub_date, reverse=True)
-
-        if not all_articles:
-            return "No articles were found.\n"
-
-        formatted = "Here are the relevant news articles:\n\n"
-        for article in all_articles:
-            pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
-            formatted += (
-                f"**{article.eng_title}**\n"
-                f"{article.summary}\n"
-                f"Language: {article.language}\n"
-                f"Published: {pub_date}\n"
-                f"Source: [{article.source_id}]({article.article_url})\n\n"
-            )
-
-        return formatted
+        return response.as_dicts or []
 
     try:
-        async with _search_semaphore():
-            results = await _search()
-        return mcp_success({"query": query, "results": results})
+        async with asknews_throttle:
+            hot_articles = await _fetch_news("latest news", min(num_results, 6))
+        async with asknews_throttle:
+            historical_articles = await _fetch_news("news knowledge", num_results)
     except Exception as e:
         logger.exception("News search failed")
         return mcp_error(f"News search failed: {e}")
+
+    seen: set[str] = set()
+    all_articles: list[SearchResponseDictItem] = []
+    for article in hot_articles + historical_articles:
+        aid = str(article.article_id)
+        if aid not in seen:
+            seen.add(aid)
+            all_articles.append(article)
+
+    all_articles.sort(key=lambda a: a.pub_date, reverse=True)
+
+    if not all_articles:
+        return mcp_success({"query": query, "results": "No articles were found.\n"})
+
+    formatted = "Here are the relevant news articles:\n\n"
+    for article in all_articles:
+        pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
+        formatted += (
+            f"**{article.eng_title}**\n"
+            f"{article.summary}\n"
+            f"Language: {article.language}\n"
+            f"Published: {pub_date}\n"
+            f"Source: [{article.source_id}]({article.article_url})\n\n"
+        )
+
+    return mcp_success({"query": query, "results": formatted})
 
 
 @tool(
@@ -900,7 +876,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 return results
 
         try:
-            async with _search_semaphore():
+            async with wikipedia_throttle:
                 results = await _search()
 
             # In retrodict mode, replace snippets with historical content
@@ -939,7 +915,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
         # In retrodict mode, use historical fetch
         if cutoff_date:
             try:
-                async with _search_semaphore():
+                async with wikipedia_throttle:
                     historical = await _fetch_wikipedia_historical_content(
                         query, cutoff_date
                     )
@@ -1007,78 +983,12 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 }
 
         try:
-            async with _search_semaphore():
+            async with wikipedia_throttle:
                 result = await _fetch()
             return mcp_success(result)
         except Exception as e:
             logger.exception("Wikipedia article fetch failed")
             return mcp_error(f"Wikipedia article fetch failed: {e}")
-
-
-@tool(
-    "get_prediction_history",
-    (
-        "Get past forecasts made for a Metaculus question. Returns your previous "
-        "forecasts with timestamps, probabilities/medians, and summaries. "
-        "Useful for tracking how your forecasts evolved and learning from resolved questions."
-    ),
-    PredictionHistoryInput.model_json_schema(),
-)
-@tracked("get_prediction_history")
-async def get_prediction_history(args: dict[str, Any]) -> dict[str, Any]:
-    """Get past forecasts for a question from local storage."""
-    try:
-        validated = PredictionHistoryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    post_id = validated.post_id
-    cutoff = retrodict_cutoff.get()
-
-    try:
-        forecasts = load_past_forecasts(post_id)
-
-        if cutoff is not None:
-            cutoff_str = cutoff.isoformat()
-            forecasts = [f for f in forecasts if f.timestamp < cutoff_str]
-
-        if not forecasts:
-            return mcp_success({"post_id": post_id, "forecasts": [], "count": 0})
-
-        # Convert to serializable format
-        results = []
-        for f in forecasts:
-            result: dict[str, Any] = {
-                "timestamp": f.timestamp,
-                "question_type": f.question_type,
-                "summary": f.summary,
-            }
-            if cutoff is None:
-                result["resolution"] = f.resolution
-
-            if f.question_type == "binary":
-                result["probability"] = f.probability
-                result["logit"] = f.logit
-            elif f.question_type == "multiple_choice":
-                result["probabilities"] = f.probabilities
-            elif f.question_type in ("numeric", "discrete"):
-                result["median"] = f.median
-                result["confidence_interval"] = f.confidence_interval
-                result["percentiles"] = f.percentiles
-
-            results.append(result)
-
-        return mcp_success(
-            {
-                "post_id": post_id,
-                "question_title": forecasts[0].question_title,
-                "forecasts": results,
-                "count": len(results),
-            }
-        )
-    except Exception as e:
-        logger.exception("Failed to load prediction history")
-        return mcp_error(f"Failed to load history: {e}")
 
 
 # --- Create MCP Server ---
@@ -1094,7 +1004,6 @@ _BASE_FORECASTING_TOOLS = [
     search_metaculus,
     get_coherence_links,
     get_cp_history,
-    get_prediction_history,
 ]
 
 _OPTIONAL_FORECASTING_TOOLS: list[SdkMcpTool[Any]] = []

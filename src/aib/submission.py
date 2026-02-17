@@ -188,19 +188,17 @@ async def post_comment(
         ) from e
 
 
-def format_reasoning_comment(output: ForecastOutput, *, max_length: int = 15000) -> str:
+def format_reasoning_comment(output: ForecastOutput) -> str:
     """Format a ForecastOutput into a markdown comment for Metaculus.
 
     Tournament rules require bots to leave comments showing reasoning.
     This function produces a structured comment with:
     - Summary and forecast values
     - Key factors with directional weights
-    - Full reasoning trace (if available)
-    - Sources consulted
+    - Sources consulted (deduplicated URLs)
 
     Args:
         output: The forecast output to format.
-        max_length: Maximum comment length. Reasoning is truncated if needed.
 
     Returns:
         Markdown-formatted comment string.
@@ -232,43 +230,13 @@ def format_reasoning_comment(output: ForecastOutput, *, max_length: int = 15000)
                 f"- [{sign}{factor.logit:.1f}] {factor.description}{conf_note}"
             )
 
-    # Include reasoning trace if available
-    if output.reasoning:
-        lines.append("\n## Reasoning Trace\n")
-        # Reserve space for other sections
-        current_length = len("\n".join(lines))
-        sources_estimate = 500 if output.sources_consulted else 50
-        available = max_length - current_length - sources_estimate
+    if output.condensed_reasoning:
+        lines.append(f"\n## Reasoning\n\n{output.condensed_reasoning}")
 
-        if len(output.reasoning) <= available:
-            lines.append(output.reasoning)
-        else:
-            truncated = output.reasoning[: available - 50]
-            # Try to cut at a paragraph or sentence boundary
-            for sep in ["\n\n", "\n", ". "]:
-                idx = truncated.rfind(sep)
-                if idx > available * 0.7:
-                    truncated = truncated[: idx + len(sep)]
-                    break
-            lines.append(truncated.strip())
-            lines.append("\n*[Reasoning truncated for length]*")
-
-    # Include actual sources (top 10)
     if output.sources_consulted:
-        lines.append("\n## Sources Consulted\n")
-        sources_to_show = output.sources_consulted[:10]
-        for source in sources_to_show:
-            # Format as bullet, handling URLs and queries
-            if source.startswith("http"):
-                lines.append(f"- {source}")
-            else:
-                lines.append(f"- {source}")
-        if len(output.sources_consulted) > 10:
-            lines.append(
-                f"\n*...and {len(output.sources_consulted) - 10} more sources*"
-            )
-    else:
-        lines.append("\n---\n*No sources recorded*")
+        lines.append("\n## Sources\n")
+        for source in output.sources_consulted:
+            lines.append(f"- {source}")
 
     # Meta info
     from aib.version import AGENT_VERSION
