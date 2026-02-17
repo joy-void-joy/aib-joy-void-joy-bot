@@ -747,9 +747,7 @@ async def condense_reasoning(trace: str, question_title: str) -> str | None:
     )
     try:
         async with ClaudeSDKClient(options=options) as client:
-            await client.query(
-                f"Question: {question_title}\n\nTrace:\n{trace[:50000]}"
-            )
+            await client.query(f"Question: {question_title}\n\nTrace:\n{trace[:50000]}")
             async for message in client.receive_response():
                 if isinstance(message, ResultMessage) and message.structured_output:
                     result = CondensedReasoning.model_validate(
