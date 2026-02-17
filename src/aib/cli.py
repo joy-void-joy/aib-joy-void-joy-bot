@@ -993,6 +993,11 @@ def tournament(
                 print(f"  ❌ Agent failed: {e}")
                 error_count += 1
                 break
+            except Exception as e:
+                print(f"  ❌ Unexpected error: {e}")
+                logger.exception("Unexpected error forecasting %d", q.post_id)
+                error_count += 1
+                break
 
         if output is None:
             continue
@@ -1142,6 +1147,13 @@ def loop(
                             break
                         except RuntimeError as e:
                             print(f"    ❌ Agent failed: {e}")
+                            output = None
+                            break
+                        except Exception as e:
+                            print(f"    ❌ Unexpected error: {e}")
+                            logger.exception(
+                                "Unexpected error forecasting %d", q.post_id
+                            )
                             output = None
                             break
 
