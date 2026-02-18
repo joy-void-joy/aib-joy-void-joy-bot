@@ -2,6 +2,12 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v2.0.0 (2026-02-18)
+
+Unified fetch/search pipeline, versioned trace storage, World Bank tools
+- Devtools: deleted 9 obsolete one-off scripts
+- added migration commands
+
 ## v1.3.0 (2026-02-18)
 
 rewrite meta-prediction prompt to reduce 50% anchoring
