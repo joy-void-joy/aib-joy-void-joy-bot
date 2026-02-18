@@ -571,27 +571,46 @@ def build_question_context(post_data: dict) -> dict:
     return context
 
 
-def _walk_urls(data: object) -> list[str]:
-    """Extract HTTP URLs from url/pdf_url/id keys in nested JSON data."""
-    urls: list[str] = []
+def _domain_label(url: str) -> str:
+    """Generate a readable label from a URL's domain, used as fallback when no title."""
+    from urllib.parse import urlparse
+
+    try:
+        return urlparse(url).netloc.removeprefix("www.")
+    except Exception:
+        return url
+
+
+def _walk_urls(data: object) -> list[tuple[str, str]]:
+    """Extract (url, title) pairs from url/pdf_url/id keys in nested JSON data.
+
+    Looks for sibling 'title' keys at the same dict level as URL keys.
+    """
+    results: list[tuple[str, str]] = []
     if isinstance(data, dict):
+        title = str(data.get("title") or "")
+        url_found = False
         for k, v in data.items():
             if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):
-                urls.append(v)
+                results.append((v, title))
+                url_found = True
             elif k == "id" and isinstance(v, str) and v.startswith("http"):
-                urls.append(v)
-            else:
-                urls.extend(_walk_urls(v))
+                results.append((v, ""))
+                url_found = True
+        if not url_found:
+            for v in data.values():
+                results.extend(_walk_urls(v))
     elif isinstance(data, list):
         for item in data:
-            urls.extend(_walk_urls(item))
-    return urls
+            results.extend(_walk_urls(item))
+    return results
 
 
 # Source-bearing tools: None = scan result JSON for URLs,
 # tuple = (input_key, url_template) to construct from input.
 _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
-    "mcp__arxiv__search_arxiv": None,
+    "mcp__search__search_exa": None,
+    "mcp__search__search_arxiv": None,
     "mcp__search__wikipedia": None,
     "mcp__markets__kalshi_price": None,
     "mcp__markets__kalshi_event": None,
@@ -610,16 +629,22 @@ _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
 }
 
 
+def _format_source(url: str, title: str = "") -> str:
+    """Format a source URL as a markdown link."""
+    label = title.strip("[]()") if title else _domain_label(url)
+    return f"[{label}]({url})"
+
+
 def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
-    """Extract deduplicated source URLs from tool calls and results."""
+    """Extract deduplicated source URLs as markdown links from tool calls and results."""
     seen: set[str] = set()
     sources: list[str] = []
     pending: set[str] = set()
 
-    def _add(url: str) -> None:
+    def _add(url: str, title: str = "") -> None:
         if url not in seen:
             seen.add(url)
-            sources.append(url)
+            sources.append(_format_source(url, title))
 
     for msg in messages:
         content = msg.content
@@ -634,7 +659,7 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
                 elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
                     key, tmpl = entry
                     if val := block.input.get(key):
-                        _add(tmpl.format(val))
+                        _add(tmpl.format(val), str(val))
                 elif block.name in _SOURCE_TOOLS:
                     pending.add(block.id)
             elif isinstance(block, ToolResultBlock) and block.tool_use_id in pending:
@@ -647,8 +672,8 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
                     else ""
                 )
                 try:
-                    for url in _walk_urls(json.loads(text)):
-                        _add(url)
+                    for url, title in _walk_urls(json.loads(text)):
+                        _add(url, title)
                 except (json.JSONDecodeError, TypeError):
                     pass
 
