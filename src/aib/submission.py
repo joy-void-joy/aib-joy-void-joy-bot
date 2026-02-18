@@ -84,20 +84,12 @@ def create_forecast_payload(output: ForecastOutput) -> dict:
     if question_type == "binary":
         if output.probability is None:
             raise SubmissionError("Binary forecast missing probability")
-        return {
-            "probability_yes": output.probability,
-            "probability_yes_per_category": None,
-            "continuous_cdf": None,
-        }
+        return {"probability_yes": output.probability}
 
     if question_type == "multiple_choice":
         if not output.probabilities:
             raise SubmissionError("Multiple choice forecast missing probabilities")
-        return {
-            "probability_yes": None,
-            "probability_yes_per_category": output.probabilities,
-            "continuous_cdf": None,
-        }
+        return {"probability_yes_per_category": output.probabilities}
 
     if question_type in ("numeric", "discrete"):
         if not output.cdf:
@@ -111,11 +103,7 @@ def create_forecast_payload(output: ForecastOutput) -> dict:
             raise SubmissionError(
                 f"CDF must have exactly {expected_size} points, got {len(output.cdf)}"
             )
-        return {
-            "probability_yes": None,
-            "probability_yes_per_category": None,
-            "continuous_cdf": output.cdf,
-        }
+        return {"continuous_cdf": output.cdf}
 
     raise SubmissionError(f"Unsupported question type: {question_type}")
 
@@ -203,7 +191,12 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
     Returns:
         Markdown-formatted comment string.
     """
-    lines = [f"## Forecast Summary\n\n{output.summary}"]
+    lines: list[str] = []
+
+    if output.reasoning:
+        lines.append(output.reasoning)
+
+    lines.append(f"\n## Forecast Summary\n\n{output.summary}")
 
     if output.probability is not None:
         lines.append(f"\n**Probability:** {output.probability * 100:.1f}%")
