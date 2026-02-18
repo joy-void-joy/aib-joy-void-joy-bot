@@ -75,9 +75,14 @@ class FredSeriesInfo(TypedDict):
     "fred_series",
     (
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
-        "Common series: DGS10 (10-year Treasury), DGS3MO (3-month Treasury), "
-        "FEDFUNDS (Fed Funds Rate), UNRATE (Unemployment), CPIAUCSL (CPI). "
         "Returns observations and series metadata. Set observation_start/observation_end to control the date range.\n\n"
+        "Common series IDs:\n"
+        "  Treasury: DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS5, DGS10, DGS20, DGS30\n"
+        "  Rates: FEDFUNDS (Fed Funds), PRIME (Prime Rate), MORTGAGE30US (30yr Mortgage)\n"
+        "  Economy: UNRATE (Unemployment), CPIAUCSL (CPI), GDP, PAYEMS (Nonfarm Payrolls), "
+        "INDPRO (Industrial Production), HOUST (Housing Starts), RSAFS (Retail Sales)\n"
+        "  FX: DEXUSEU (USD/EUR), DEXJPUS (JPY/USD), DTWEXBGS (Trade-Weighted Dollar)\n"
+        "  Markets: SP500, NASDAQCOM, DJIA\n\n"
         "Examples:\n"
         '  fred_series(series_id="DGS10") → last 30 days of 10-year Treasury yields\n'
         '  fred_series(series_id="UNRATE", observation_start="2024-01-01") → unemployment from Jan 2024 to now\n'
@@ -151,6 +156,9 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
                 latest_value = obs["value"]
                 latest_date = obs["date"]
                 break
+
+        if cutoff is not None and latest_value is None:
+            return mcp_error(f"No observations available for {series_id}.")
 
         raw_updated = str(info.get("last_updated", ""))[:10]
         if cutoff is not None and raw_updated > cutoff.isoformat():
@@ -414,66 +422,409 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Failed to fetch financials for {validated.ticker}: {e}")
 
 
-# --- Common FRED Series Reference ---
-# This is documentation for the agent, not code
+# --- Stock Price Tools (Yahoo Finance) ---
 
-COMMON_FRED_SERIES = """
-Common FRED Series IDs:
 
-Treasury Yields:
-- DGS1MO: 1-Month Treasury
-- DGS3MO: 3-Month Treasury
-- DGS6MO: 6-Month Treasury
-- DGS1: 1-Year Treasury
-- DGS2: 2-Year Treasury
-- DGS3: 3-Year Treasury
-- DGS5: 5-Year Treasury
-- DGS7: 7-Year Treasury
-- DGS10: 10-Year Treasury
-- DGS20: 20-Year Treasury
-- DGS30: 30-Year Treasury
+class StockQueryInput(BaseModel):
+    """Input for stock price tool."""
 
-Interest Rates:
-- FEDFUNDS: Federal Funds Rate
-- PRIME: Bank Prime Loan Rate
-- MORTGAGE30US: 30-Year Mortgage Rate
+    symbol: str = Field(min_length=1, max_length=10)
+    period: str = Field(
+        default="1mo"
+    )  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    end_date: str | None = Field(default=None)
 
-Economic Indicators:
-- UNRATE: Unemployment Rate
-- CPIAUCSL: Consumer Price Index
-- GDP: Gross Domestic Product
-- PAYEMS: Total Nonfarm Payrolls
-- INDPRO: Industrial Production Index
-- HOUST: Housing Starts
-- RSAFS: Retail Sales
 
-Exchange Rates:
-- DEXUSEU: US/Euro Exchange Rate
-- DEXJPUS: Japan/US Exchange Rate
-- DTWEXBGS: Trade Weighted Dollar Index
+class StockPrice(TypedDict):
+    """Price information for a stock."""
 
-Stock Market:
-- SP500: S&P 500 Index
-- NASDAQCOM: NASDAQ Composite
-- DJIA: Dow Jones Industrial Average
-"""
+    symbol: str
+    name: str
+    current_price: float | None
+    previous_close: float | None
+    change_percent: float | None
+    currency: str
+    market_cap: float | None
+    fifty_two_week_high: float | None
+    fifty_two_week_low: float | None
+
+
+@tool(
+    "stock_price",
+    (
+        "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
+        "Returns current price, previous close, 52-week range, and market cap. "
+        "Use for stock price comparison questions.\n\n"
+        "Examples:\n"
+        "  stock_price(symbol='AAPL') → current Apple price and metrics\n"
+        "  stock_price(symbol='^VIX') → current VIX level\n"
+        "  stock_price(symbol='^GSPC') → current S&P 500 level"
+    ),
+    StockQueryInput.model_json_schema(),
+)
+@tracked("stock_price")
+async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
+    """Get stock price from Yahoo Finance."""
+    try:
+        validated = StockQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    symbol = validated.symbol.upper()
+    cutoff = retrodict_cutoff.get()
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+
+        if cutoff is not None:
+            end_str = cutoff.isoformat()
+            start_str = (cutoff - timedelta(days=5)).isoformat()
+            hist = ticker.history(start=start_str, end=end_str)
+            if hist.empty:
+                return mcp_error(f"No recent data found for {symbol}")
+            last_row = hist.iloc[-1]
+            result: StockPrice = {
+                "symbol": symbol,
+                "name": ticker.info.get("shortName", symbol),
+                "current_price": float(last_row["Close"]),
+                "previous_close": float(hist.iloc[-2]["Close"])
+                if len(hist) > 1
+                else None,
+                "change_percent": None,
+                "currency": ticker.info.get("currency", "USD"),
+                "market_cap": None,
+                "fifty_two_week_high": None,
+                "fifty_two_week_low": None,
+            }
+            return mcp_success(result)
+
+        info = ticker.info
+
+        if not info or info.get("regularMarketPrice") is None:
+            return mcp_error(f"No data found for symbol: {symbol}")
+
+        result: StockPrice = {
+            "symbol": symbol,
+            "name": info.get("shortName", info.get("longName", symbol)),
+            "current_price": info.get("regularMarketPrice"),
+            "previous_close": info.get("previousClose"),
+            "change_percent": info.get("regularMarketChangePercent"),
+            "currency": info.get("currency", "USD"),
+            "market_cap": info.get("marketCap"),
+            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+        }
+
+        return mcp_success(result)
+
+    except Exception as e:
+        logger.exception("Yahoo Finance lookup failed")
+        return mcp_error(f"Yahoo Finance lookup failed for {symbol}: {e}")
+
+
+@tool(
+    "stock_history",
+    (
+        "Get historical stock prices for a ticker symbol. "
+        "Returns OHLCV data for the specified period. "
+        "Periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max. "
+        "Optional end_date (YYYY-MM-DD) to cap data at a specific date. "
+        "Use for analyzing price trends and volatility.\n\n"
+        "Examples:\n"
+        "  stock_history(symbol='AAPL', period='3mo') → 3 months of Apple OHLCV\n"
+        "  stock_history(symbol='^GSPC', period='1y') → 1 year of S&P 500\n"
+        "  stock_history(symbol='^VIX', period='6mo') → 6 months of VIX for volatility analysis\n"
+        "  stock_history(symbol='GC=F', period='3mo') → 3 months of gold futures\n"
+        "Feed the output to execute_code for Monte Carlo simulation or rolling volatility analysis."
+    ),
+    StockQueryInput.model_json_schema(),
+)
+@tracked("stock_history")
+async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
+    """Get historical stock prices from Yahoo Finance."""
+    try:
+        validated = StockQueryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    symbol = validated.symbol.upper()
+    period = validated.period
+    cutoff = retrodict_cutoff.get()
+    end_date = cutoff.isoformat() if cutoff is not None else validated.end_date
+
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+
+        if end_date:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            period_days = {
+                "1d": 1,
+                "5d": 5,
+                "1mo": 30,
+                "3mo": 90,
+                "6mo": 180,
+                "1y": 365,
+                "2y": 730,
+                "5y": 1825,
+            }
+            days = period_days.get(period, 365)
+            start_dt = end_dt - timedelta(days=days)
+            hist = ticker.history(start=start_dt.strftime("%Y-%m-%d"), end=end_date)
+        else:
+            hist = ticker.history(period=period)
+
+        if hist.empty:
+            return mcp_error(f"No historical data found for symbol: {symbol}")
+
+        hist_reset = hist.reset_index()
+        hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
+
+        records: list[dict[str, object]] = hist_reset[
+            ["Date", "Open", "High", "Low", "Close", "Volume"]
+        ].to_dict("records")  # pyright: ignore[reportCallIssue]
+
+        formatted: list[dict[str, object]] = [
+            {
+                "date": r["Date"],
+                "open": r["Open"],
+                "high": r["High"],
+                "low": r["Low"],
+                "close": r["Close"],
+                "volume": r["Volume"],
+            }
+            for r in records[-30:]
+        ]
+
+        return mcp_success(
+            {
+                "symbol": symbol,
+                "period": period,
+                "data_points": len(records),
+                "first_date": formatted[0]["date"] if formatted else None,
+                "last_date": formatted[-1]["date"] if formatted else None,
+                "history": formatted,
+            }
+        )
+
+    except Exception as e:
+        logger.exception("Yahoo Finance history lookup failed")
+        return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
+
+
+# --- World Bank Tools ---
+
+
+class WorldBankIndicatorInput(BaseModel):
+    """Input for World Bank indicator data."""
+
+    indicator: str = Field(
+        min_length=1,
+        description=(
+            "World Bank indicator code (e.g. NY.GDP.MKTP.KD.ZG for GDP growth, "
+            "FP.CPI.TOTL.ZG for inflation). Use world_bank_search to find codes."
+        ),
+    )
+    country: str = Field(
+        min_length=2,
+        max_length=3,
+        description="ISO 3166-1 alpha-3 country code (e.g. DEU, BRA, IND, CHN, USA)",
+    )
+    start_year: int | None = Field(
+        default=None,
+        description="Start year (default: 10 years ago)",
+    )
+    end_year: int | None = Field(
+        default=None,
+        description="End year (default: current year)",
+    )
+
+
+class WorldBankSearchInput(BaseModel):
+    """Input for World Bank indicator search."""
+
+    query: str = Field(
+        min_length=1, description="Search term (e.g. 'GDP growth', 'inflation')"
+    )
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+class WBObservation(TypedDict):
+    year: int
+    value: float | None
+
+
+class WBIndicatorInfo(TypedDict):
+    id: str
+    name: str
+
+
+@tool(
+    "world_bank_indicator",
+    (
+        "Get time series data for a World Bank indicator and country. "
+        "USE THIS for international economic data that FRED doesn't cover — "
+        "GDP growth, inflation, trade, population for non-US countries.\n\n"
+        "Common indicators:\n"
+        "  NY.GDP.MKTP.KD.ZG — GDP growth (annual %)\n"
+        "  FP.CPI.TOTL.ZG — Inflation, consumer prices (annual %)\n"
+        "  SL.UEM.TOTL.ZS — Unemployment (% of labor force)\n"
+        "  NE.TRD.GNFS.ZS — Trade (% of GDP)\n"
+        "  SP.POP.TOTL — Population, total\n\n"
+        "Use world_bank_search first if you don't know the indicator code."
+    ),
+    WorldBankIndicatorInput.model_json_schema(),
+)
+@tracked("world_bank_indicator")
+async def world_bank_indicator(args: dict[str, Any]) -> dict[str, Any]:
+    """Get World Bank indicator data for a country."""
+    try:
+        validated = WorldBankIndicatorInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    import wbgapi as wb  # type: ignore[import-untyped]
+
+    cutoff = retrodict_cutoff.get()
+
+    reference_year = cutoff.year if cutoff is not None else date.today().year
+    end_year = validated.end_year or reference_year
+    start_year = validated.start_year or (end_year - 10)
+
+    if cutoff is not None and end_year > cutoff.year:
+        end_year = cutoff.year
+
+    try:
+        info = wb.series.get(validated.indicator)
+        if info is None:
+            return mcp_error(f"Indicator '{validated.indicator}' not found.")
+        indicator_info: WBIndicatorInfo = {
+            "id": str(info["id"]),
+            "name": str(info["value"]),
+        }
+    except Exception as e:
+        return mcp_error(f"Indicator '{validated.indicator}' not found: {e}")
+
+    try:
+        country = validated.country.upper()
+        time_range = f"YR{start_year}:YR{end_year}"
+        data = list(
+            wb.data.fetch(
+                validated.indicator,
+                country,
+                time=time_range,
+            )
+        )
+
+        observations: list[WBObservation] = []
+        for row in data:
+            year_str: str = row["time"]
+            year = int(year_str.replace("YR", ""))
+            observations.append(
+                {
+                    "year": year,
+                    "value": row["value"],
+                }
+            )
+
+        observations.sort(key=lambda o: o["year"])
+
+        latest_value: float | None = None
+        latest_year: int | None = None
+        for obs in reversed(observations):
+            if obs["value"] is not None:
+                latest_value = obs["value"]
+                latest_year = obs["year"]
+                break
+
+        return mcp_success(
+            {
+                "indicator": indicator_info,
+                "country": country,
+                "start_year": start_year,
+                "end_year": end_year,
+                "latest_value": latest_value,
+                "latest_year": latest_year,
+                "data_points": len(observations),
+                "observations": observations,
+            }
+        )
+
+    except Exception as e:
+        logger.exception("World Bank indicator fetch failed")
+        return mcp_error(
+            f"Failed to fetch {validated.indicator} for {validated.country}: {e}"
+        )
+
+
+@tool(
+    "world_bank_search",
+    (
+        "Search World Bank indicators by keyword. USE THIS when you need "
+        "international economic data but don't know the indicator code.\n\n"
+        "Examples:\n"
+        '  world_bank_search(query="GDP growth") → find GDP growth indicator codes\n'
+        '  world_bank_search(query="inflation consumer prices") → find CPI indicators\n'
+        "Two-step workflow: world_bank_search to find the code, then "
+        "world_bank_indicator to get data."
+    ),
+    WorldBankSearchInput.model_json_schema(),
+)
+@tracked("world_bank_search")
+async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
+    """Search for World Bank indicators by keyword."""
+    try:
+        validated = WorldBankSearchInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    try:
+        import wbgapi as wb  # type: ignore[import-untyped]
+
+        results_iter = wb.series.list(q=validated.query)
+        results: list[WBIndicatorInfo] = []
+        for item in results_iter:
+            results.append(
+                {
+                    "id": item["id"],
+                    "name": item["value"],
+                }
+            )
+            if len(results) >= validated.limit:
+                break
+
+        return mcp_success(
+            {
+                "query": validated.query,
+                "results": results,
+                "total_found": len(results),
+            }
+        )
+
+    except Exception as e:
+        logger.exception("World Bank search failed")
+        return mcp_error(f"World Bank search failed: {e}")
 
 
 # --- MCP Server ---
 
-# Build tool list conditionally based on available credentials.
-# Tools are gated at BOTH layers:
-# 1. MCP server registration (here) - so agent doesn't discover unavailable tools
-# 2. allowed_tools in core.py - defense in depth
-_financial_tools = [company_financials]
+_financial_tools = [company_financials, stock_price, stock_history]
 
 if settings.fred_api_key:
     _financial_tools.extend([fred_series, fred_search])
 else:
     logger.info("FRED tools disabled: FRED_API_KEY not configured")
 
-financial_server = create_mcp_server(
-    name="financial",
-    version="1.0.0",
-    tools=_financial_tools,
-)
+_financial_tools.extend([world_bank_indicator, world_bank_search])
+
+
+def create_financial_server():
+    """Create the financial MCP server with all economic/financial data tools."""
+    return create_mcp_server(
+        name="financial",
+        version="2.0.0",
+        tools=_financial_tools,
+    )
