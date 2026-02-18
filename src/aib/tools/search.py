@@ -35,7 +35,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
-from aib.tools.fetch_http import fetch_live
+from aib.tools.fetch_http import FetchResult, fetch_live
 from aib.tools.fetch_routes import SUGGEST_ONLY, domain_dispatch
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
@@ -770,7 +770,9 @@ class FetchUrlInput(BaseModel):
         "Automatically extracts readable text, renders JavaScript pages via Playwright, "
         "and routes known domains to specialized tools "
         "(Yahoo Finance, arXiv, Wikipedia, FRED, Polymarket). "
-        "If a prompt is provided, uses an LLM to extract specific information. "
+        "Without a prompt, returns the full extracted text. "
+        "With a prompt, uses an LLM to extract specific information "
+        "and surfaces relevant links for follow-up research. "
         "Prefer this over WebFetch for URL fetching."
     ),
     FetchUrlInput.model_json_schema(),
@@ -794,21 +796,29 @@ async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
         return dispatched
 
     if retrodict_cutoff.get() is not None:
-        content = await _fetch_retrodict(url)
+        result = await _fetch_retrodict(url)
     else:
-        content = await fetch_live(url)
+        result = await fetch_live(url)
 
-    if isinstance(content, dict):
-        return content
+    if isinstance(result, dict):
+        return result
+
+    if isinstance(result, FetchResult):
+        text, title = result.text, result.title
+    else:
+        text, title = result, ""
 
     if prompt:
         try:
-            content = await extract_with_prompt(content, prompt, url)
+            text = await extract_with_prompt(text, prompt, url)
         except Exception as e:
             logger.warning("Prompt extraction failed for %s: %s", url, e)
-            content = f"[Prompt extraction failed, returning raw content]\n\n{content}"
+            text = f"[Prompt extraction failed, returning raw content]\n\n{text}"
 
-    return mcp_success({"url": url, "content": content[:_MAX_CONTENT]})
+    response: dict[str, Any] = {"url": url, "content": text[:_MAX_CONTENT]}
+    if title:
+        response["title"] = title
+    return mcp_success(response)
 
 
 async def _fetch_retrodict(url: str) -> dict[str, Any] | str:

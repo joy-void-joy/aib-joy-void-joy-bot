@@ -28,7 +28,10 @@ async def extract_with_prompt(content: str, prompt: str, source: str = "") -> st
         f"---\n{content}\n---\n\n"
         f"Based on the above content, answer the following: {prompt}\n\n"
         "Be concise and factual. If the content doesn't contain "
-        "relevant information, say so."
+        "relevant information, say so.\n\n"
+        "After your answer, if the content contains links that could "
+        "provide deeper or more current information on this topic, "
+        "list them under a 'Relevant links:' section as markdown links."
     )
 
     options = ClaudeAgentOptions(

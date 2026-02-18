@@ -12,10 +12,18 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import TextContent
 
+from pydantic import BaseModel, ConfigDict
+
 from aib.tools.responses import mcp_error
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
+
+
+class FetchResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    text: str
+    title: str = ""
 
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -72,7 +80,7 @@ async def _playwright_render(url: str) -> str | None:
         return None
 
 
-async def fetch_live(url: str) -> dict[str, Any] | str:
+async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
     """Fetch URL in live mode: httpx → trafilatura → Playwright fallback.
 
     Creates a single httpx client so retries reuse the same TCP connection.
@@ -118,20 +126,24 @@ async def fetch_live(url: str) -> dict[str, Any] | str:
     raw = resp.text
 
     if "text/plain" in ct or "application/json" in ct:
-        return raw
+        return FetchResult(text=raw, title="")
 
-    extracted = trafilatura.extract(
-        raw, include_comments=False, include_tables=True, no_fallback=False
+    json_str = trafilatura.extract(
+        raw, include_comments=False, include_tables=True, no_fallback=False,
+        with_metadata=True, output_format="json",
+        include_images=True, include_links=True,
     )
-    if extracted:
-        return extracted
+    if json_str:
+        result = FetchResult.model_validate_json(json_str)
+        if result.text:
+            return result
 
     # JS detection: trafilatura failed but substantial HTML present
     if len(raw) > 500:
         logger.info("JS detected for %s, trying Playwright", url[:80])
         pw_content = await _playwright_render(url)
         if pw_content:
-            return pw_content
+            return FetchResult(text=pw_content, title="")
         return mcp_error(
             f"Could not extract text from {url} (JavaScript-rendered page). "
             "Playwright also failed. Try search_exa for indexed content."
