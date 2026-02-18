@@ -1,0 +1,132 @@
+{
+  "question_id": 41976,
+  "post_id": 42197,
+  "question_title": "Will the interest in “parker kingston” change between 2026-02-18 and 2026-02-23 according to Google Trends?",
+  "question_type": "multiple_choice",
+  "timestamp": "20260218_203059",
+  "probability": null,
+  "logit": null,
+  "probabilities": {
+    "Increases": 0.05,
+    "Doesn't change": 0.59,
+    "Decreases": 0.36
+  },
+  "median": null,
+  "confidence_interval": null,
+  "percentiles": null,
+  "summary": "Parker Kingston (BYU football player charged with rape) caused a massive Google Trends spike on Feb 12 (value=100), which has been rapidly decaying: 100→45→40→15→8→7→4 by Feb 18. The resolution compares Feb 18 to Feb 23 values with a ±3 threshold. The critical swing factor is whether Feb 18 = 3 or 4 in the resolution API: if 3, Decrease is mathematically impossible (|0-3|=3, not >3), making DC near-certain; if 4, a drop to 0 gives diff=-4 crossing the threshold. My model weights Feb 18 most likely at 4, with Feb 23 likely at 0-2, yielding DC ~59%, Decreases ~36%, Increases ~5%. The base rates (84-95% DC historically) favor Doesn't Change, but the post-spike decay context makes Decrease a realistic secondary outcome.",
+  "factors": [
+    {
+      "description": "Change_stats base rates: no_change rate is 84-95% historically for 'parker kingston'. Strong prior toward DC.",
+      "logit": 0.8,
+      "confidence": 0.7,
+      "effective_logit": 0.5599999999999999
+    },
+    {
+      "description": "Post-spike decay pattern: value went 100→45→40→15→8→7→4 over 6 days. By Feb 23 (day 11), value almost certainly near 0-2. Classic rapid decay to baseline.",
+      "logit": -0.3,
+      "confidence": 0.9,
+      "effective_logit": -0.27
+    },
+    {
+      "description": "Feb 18 value is currently 4 in web view. If resolution API also shows 4, then Feb23=0 gives diff=-4 crossing the ±3 threshold for Decrease.",
+      "logit": -0.5,
+      "confidence": 0.7,
+      "effective_logit": -0.35
+    },
+    {
+      "description": "If Feb18=3 (plausible due to API/timezone differences), Decrease is mathematically impossible since min value is 0 and |0-3|=3 is NOT strictly >3. DC becomes near-certain.",
+      "logit": 0.5,
+      "confidence": 0.5,
+      "effective_logit": 0.25
+    },
+    {
+      "description": "Small probability (~7%) of news re-spike from court developments in Parker Kingston rape case, which could push toward Increase.",
+      "logit": 0.1,
+      "confidence": 0.5,
+      "effective_logit": 0.05
+    }
+  ],
+  "resolution": null,
+  "submitted_at": "20260218_213100",
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 225.02,
+    "total_tool_calls": 10,
+    "total_errors": 0,
+    "overall_error_rate": "0.0%",
+    "total_tool_time_ms": 19662.86,
+    "tools_used": 5,
+    "by_tool": {
+      "get_metaculus_questions": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 0.32,
+        "avg_duration_ms": 0.32,
+        "min_duration_ms": 0.32,
+        "max_duration_ms": 0.32
+      },
+      "google_trends": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 656.01,
+        "avg_duration_ms": 328.01,
+        "min_duration_ms": 321.85,
+        "max_duration_ms": 334.16
+      },
+      "web_search": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 17184.33,
+        "avg_duration_ms": 17184.33,
+        "min_duration_ms": 17184.33,
+        "max_duration_ms": 17184.33
+      },
+      "execute_code": {
+        "call_count": 5,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 1819.54,
+        "avg_duration_ms": 363.91,
+        "min_duration_ms": 0.72,
+        "max_duration_ms": 756.99
+      },
+      "reflection": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 2.66,
+        "avg_duration_ms": 2.66,
+        "min_duration_ms": 2.66,
+        "max_duration_ms": 2.66
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 27,
+    "output_tokens": 8844,
+    "cache_read_input_tokens": 443976,
+    "cache_creation_input_tokens": 56233,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 56233,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42197_20260218_202714/20260218-202714.log",
+  "question_published_at": "2026-02-18T20:27:02Z",
+  "question_close_time": "2026-02-18T21:57:02Z",
+  "question_scheduled_resolve_time": "2026-02-23T23:14:11Z",
+  "reasoning": "**Summary:** \"Parker kingston\" spiked to 100 on Feb 12 (BYU football player charged with rape) and has been rapidly decaying since, reaching 4 on Feb 18. The outcome hinges on a knife-edge:\n\n- **If Feb 18 = 3 in the resolution API:** Decrease is mathematically impossible (|0-3| = 3, not strictly >3), so \"Doesn't change\" is near-certain (~94%)\n- **If Feb 18 = 4:** A drop to 0 by Feb 23 gives diff = -4, crossing the threshold → ~35% chance of \"Decreases\"\n- **If Feb 18 = 5:** Decrease becomes dominant (~65%)\n\nWeighting across these scenarios and accounting for a small re-spike probability from ongoing legal proceedings:\n\n| Outcome | Probability |\n|---------|------------|\n| Doesn't change | **59%** |\n| Decreases | **36%** |\n| Increases | **5%** |",
+  "sources_consulted": [],
+  "agent_version": "2.1.0",
+  "retrodict_date": null,
+  "comparison": null
+}

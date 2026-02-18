@@ -1,0 +1,125 @@
+---
+timestamp: 2026-02-18 20:30:08 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: value went 100→45→40→15→8→7→4 over 6 days.
+    By Feb 23 (day 11), value almost certainly near 0-2. Classic rapid decay to baseline.'
+  logit: -0.3
+  confidence: 0.9
+  effective_logit: -0.27
+- description: Feb 18 value is currently 4 in web view. If resolution URL also shows
+    4, then Feb23=0 would be a decrease (diff=-4 > threshold). This is the critical
+    swing factor.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Change_stats base rates: no_change rate is 84-95% historically for
+    this term. Strong prior toward DC.'
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: If Feb18=3 (plausible due to API/timezone differences), Decrease is
+    mathematically impossible since min value is 0 and |0-3|=3 which is NOT >3. DC
+    becomes near-certain.
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Small probability (~7%) of re-spike from court developments or new
+    reporting on Parker Kingston rape case, which would push toward Increase.
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+tentative_logit: 0.3
+arguments_for:
+- Historical base rates strongly favor Doesn't Change (84-95%)
+- At low absolute values (3-4), the ±3 threshold covers a wide band relative to possible
+  values
+- If Feb 18 = 3 in the API, Decrease is mathematically impossible (min is 0, |0-3|=3,
+  not >3)
+- Post-spike decay has already largely completed - value is near baseline
+arguments_against:
+- Current Feb 18 value = 4, and Feb 23 likely reaches 0, giving diff = -4 which crosses
+  the threshold for Decrease
+- The decay is still active (7→4 from yesterday), so further decline is expected
+- API with tz=0 might give Feb 18 a value of 5 if UTC aggregation captures more of
+  the spike tail
+- The base rates include many periods of flat-zero baseline, which aren't representative
+  of post-spike behavior
+calibration_notes: This is a Google Trends change magnitude question. The key tension
+  is between the high base rate for DC and the specific post-spike decay context.
+  The outcome is highly sensitive to whether Feb 18 = 3 or 4 in the resolution API,
+  which is genuinely uncertain. My model gives ~59% DC, ~36% Dec, ~5% Inc.
+key_uncertainties: The exact Feb 18 value in the SerpAPI resolution (3 vs 4 vs 5)
+  is the single biggest uncertainty. If 3, DC is ~94%. If 4, DC drops to ~60% with
+  Decrease at 35%. If 5, Decrease dominates at 65%.
+tool_audit: google_trends provided excellent data with change_stats and full history.
+  web_search confirmed the Parker Kingston rape charge story explaining the spike.
+  execute_code was essential for threshold arithmetic and Monte Carlo analysis. All
+  tools worked well.
+computed:
+  factor_count: 5
+  factor_sum: 0.23999999999999994
+  tentative_logit: 0.3
+  logit_gap: 0.06000000000000005
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: value went 100→45→40→15→8→7→4 over 6 days.
+      By Feb 23 (day 11), value almost certainly near 0-2. Classic rapid decay to
+      baseline.'
+    logit: -0.3
+    confidence: 0.9
+    effective_logit: -0.27
+  - description: Feb 18 value is currently 4 in web view. If resolution URL also shows
+      4, then Feb23=0 would be a decrease (diff=-4 > threshold). This is the critical
+      swing factor.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Change_stats base rates: no_change rate is 84-95% historically for
+      this term. Strong prior toward DC.'
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: If Feb18=3 (plausible due to API/timezone differences), Decrease
+      is mathematically impossible since min value is 0 and |0-3|=3 which is NOT >3.
+      DC becomes near-certain.
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Small probability (~7%) of re-spike from court developments or new
+      reporting on Parker Kingston rape case, which would push toward Increase.
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  dominant_factor: 'Change_stats base rates: no_change rate is 84-95% historically
+    for this term. Strong prior toward DC.'
+  dominant_effective_logit: 0.5599999999999999
+  factor_direction: positive
+  factor_strength: 0.23999999999999994
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42197
+- **Question ID**: 41976
+- **Session Duration**: 183.4s (3.1 min)
+- **Cost**: $2.3840
+- **Tokens**: 8,871 total (27 in, 8,844 out)
+  - Cache: 443,976 read, 56,233 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42197_20260218_202714/20260218-202714.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 364ms |
+| get_metaculus_questions | 1 | 0 | 0ms |
+| google_trends | 2 | 0 | 328ms |
+| reflection | 1 | 0 | 3ms |
+| web_search | 1 | 0 | 17184ms |
