@@ -607,6 +607,7 @@ async def _ensure_post_id(input_id: int) -> int | None:
     return resolved
 
 
+@with_retry()
 async def _fetch_aggregation(post_id: int) -> AggregationMethod:
     """Fetch CP history from the aggregation_explorer endpoint.
 
