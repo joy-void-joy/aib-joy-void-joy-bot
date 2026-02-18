@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="session")
 def fc() -> ModuleType:
-    """Import forecasting module (resolving circular import chain first)."""
+    """Import markets module (resolving circular import chain first)."""
     import aib.agent.core  # noqa: F401 — resolves circular import
-    from aib.tools import forecasting
+    from aib.tools import markets
 
-    return forecasting
+    return markets
 
 
 SAMPLE_AGGREGATION = AggregationMethod(

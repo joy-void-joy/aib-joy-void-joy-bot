@@ -79,7 +79,7 @@ From the extremes output, select the top 3-5 best and bottom 3-5 worst forecasts
 uv run python .claude/plugins/aib/scripts/trace_log.py show <post_id>
 
 # Meta-reflections (compact self-summaries)
-cat notes/sessions/<post_id>/*/meta.md
+cat notes/traces/*/sessions/<post_id>/*/meta.md
 ```
 
 For each trace, note:
@@ -93,7 +93,7 @@ For each trace, note:
 If the version has retrodictions, check them too:
 
 ```bash
-ls notes/retrodict/*/
+ls notes/traces/*/retrodict/*/
 # Read the JSON to confirm agent_version matches
 ```
 

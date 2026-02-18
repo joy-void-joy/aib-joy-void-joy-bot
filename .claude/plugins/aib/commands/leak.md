@@ -28,7 +28,7 @@ You need the **cutoff date** to determine if something is actually a leak. Try t
 1. **Extract from the excerpt** — look for dates, `retrodict_cutoff`, `cutoff_date`, `forecast_date` mentions
 2. **Find the post ID** — look for `[41987]`, `post_id`, question IDs in URLs, or question titles. If found:
    ```
-   Glob(pattern="notes/retrodict/<post_id>*/*.json")
+   Glob(pattern="notes/traces/**/retrodict/<post_id>*/*.json")
    ```
    Read the JSON — the cutoff is in the filename (`YYYY-MM-DD_*.json`).
 3. **Search recent retrodict logs** — grep for a distinctive phrase from the excerpt across `logs/`

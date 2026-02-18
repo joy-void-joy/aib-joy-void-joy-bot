@@ -91,7 +91,7 @@ Use `/debug <error message>` to trace an error through the logs automatically.
 **When a forecast fails:**
 
 1. Search `logs/<question_id>/` for the error text and grep for ERROR/exception — read the full traceback, don't stop at the catch-all error message
-2. Check `notes/sessions/<session_id>/` for the agent's intermediate reasoning and meta-reflection
+2. Check `notes/traces/<version>/sessions/<session_id>/` for the agent's intermediate reasoning and meta-reflection
 3. Check API key configuration: missing keys log warnings at startup
 
 **Common issues:**
@@ -180,8 +180,8 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 
 **What goes in a forecast commit:**
 
-- Forecast markdown files (`notes/forecasts/<question_id>/`)
-- Session notes (`notes/sessions/`) — commit alongside the forecasts they relate to, not separately
+- Forecast markdown files (`notes/traces/<version>/forecasts/<question_id>/`)
+- Session notes (`notes/traces/<version>/sessions/`) — commit alongside the forecasts they relate to, not separately
 - Resolution updates when questions resolve
 
 **What does NOT go in a forecast commit:**
@@ -236,6 +236,10 @@ Never use regex or string substitution to parse HTML, XML, JSON, or other struct
 - **HTML DOM manipulation**: Use `beautifulsoup4` when you need to navigate/query the DOM tree
 - **XML**: Use `xml.etree.ElementTree` or `lxml`
 - **JSON embedded in HTML**: Parse the HTML with BeautifulSoup first, then `json.loads()`
+
+### Timestamp Comparisons
+
+Never compare timestamp strings lexicographically (`ts_a > ts_b`). Always parse to `datetime` first using `aib.paths.parse_timestamp()`. This function handles both forecast filenames (`YYYYMMDD_HHMMSS.json`) and retrodict filenames (`YYYY-MM-DD_YYYYMMDD_HHMMSS.json`).
 
 ### Use Standard Libraries
 
@@ -297,6 +301,8 @@ Why this is good: The behavior is self-evident to anyone familiar with configura
 - Validate inputs early with Pydantic models
 
 **Never silently swallow errors** — either handle them meaningfully or let them propagate.
+
+**Retrodict transparency:** The forecasting agent must never know it's in retrodict mode. Everything it sees — tool results, error messages, available tools, data ranges — should be indistinguishable from a live forecast. Never mention retrodict, cutoff dates, time constraints, or historical mode in any agent-visible surface (tool responses, error messages, tool descriptions). When data is filtered or a tool is gated by `retrodict_cutoff`, present the result as if that's simply how the world is: "not found", "no data available", "currently unavailable".
 
 ### Tools
 
@@ -426,6 +432,10 @@ aib-devtools
 │   ├── mark           Mark forecast as submitted
 │   ├── backfill       Backfill submitted_at from API
 │   └── check          Check API forecast status
+│
+├── migration          One-time data migrations
+│   ├── traces         Migrate flat notes/ to notes/traces/<version>/
+│   └── retrodict      Migrate notes/retrodict/ to versioned layout
 │
 └── health             Service health checks
     └── check          Ping Metaculus, Exa, FRED, Docker

@@ -104,13 +104,6 @@ class Settings(BaseSettings):
         description="Memory limit for sandbox container",
     )
 
-    # === Paths ===
-    notes_path: str = Field(
-        default="./notes",
-        validation_alias="AIB_NOTES_PATH",
-        description="Base path for notes folders",
-    )
-
     # === Rate Limits ===
     metaculus_request_interval: float = Field(
         default=3.0,

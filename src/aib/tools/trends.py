@@ -415,12 +415,15 @@ async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-trends_server = create_mcp_server(
-    name="trends",
-    version="1.0.0",
-    tools=[
-        google_trends,
-        google_trends_compare,
-        google_trends_related,
-    ],
-)
+
+def create_trends_server():
+    """Create MCP server with Google Trends tools."""
+    return create_mcp_server(
+        name="trends",
+        version="1.0.0",
+        tools=[
+            google_trends,
+            google_trends_compare,
+            google_trends_related,
+        ],
+    )

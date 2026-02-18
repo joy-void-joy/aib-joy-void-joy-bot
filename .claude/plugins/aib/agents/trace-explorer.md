@@ -46,8 +46,8 @@ uv run aib-devtools trace show <post_id>
 uv run aib-devtools trace list
 ```
 
-Meta-reflections (agent self-summaries) are in `notes/sessions/<post_id>/*/meta.md`.
-Saved forecasts are in `notes/forecasts/<post_id>/` and `notes/retrodict/<post_id>/`.
+Meta-reflections (agent self-summaries) are in `notes/traces/<version>/sessions/<post_id>/*/meta.md`.
+Saved forecasts are in `notes/traces/<version>/forecasts/<post_id>/` and `notes/traces/<version>/retrodict/<post_id>/`.
 
 ## Process
 
@@ -57,21 +57,21 @@ Saved forecasts are in `notes/forecasts/<post_id>/` and `notes/retrodict/<post_i
    ```bash
    git show v<VERSION>:src/aib/agent/prompts.py
    ```
-   Also check each trace's `agent_version` field (in the forecast JSON at `notes/forecasts/<post_id>/` or `notes/retrodict/<post_id>/`) to confirm it matches the version being analyzed. Flag any mismatches — a trace from v0.6.0 analyzed as if it were v1.1.0 produces invalid conclusions.
+   Also check each trace's `agent_version` field (in the forecast JSON at `notes/traces/<version>/forecasts/<post_id>/` or `notes/traces/<version>/retrodict/<post_id>/`) to confirm it matches the version being analyzed. Flag any mismatches — a trace from v0.6.0 analyzed as if it were v1.1.0 produces invalid conclusions.
 
-3. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines) in `notes/sessions/<post_id>/*/meta.md`. Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
+3. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines) in `notes/traces/<version>/sessions/<post_id>/*/meta.md`. Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
 
 4. **Read full traces for ALL requested IDs**: Use `uv run aib-devtools trace log <id>` to get the filtered reasoning trace for every post ID. Don't skip traces — you have the context budget, the main conversation doesn't. Use `--tools-only` as a supplement when tool patterns need closer inspection.
 
 5. **Cross-reference with metrics**: Use `uv run aib-devtools trace show <id>` to get tool counts, errors, and timing data.
 
-6. **Check for retrodict traces**: For each post ID, check if `notes/retrodict/<post_id>/` exists. If it does, this is a retrodiction — run the future-leak checks described below.
+6. **Check for retrodict traces**: For each post ID, check if `notes/traces/*/retrodict/<post_id>/` exists. If it does, this is a retrodiction — run the future-leak checks described below.
 
 7. **Synthesize across all traces**: Find what's common. Find what's interesting. Quote liberally — the main agent hasn't read these traces and needs the exact words to make good decisions.
 
 ## Future-Leak Detection (Retrodict Traces)
 
-When a trace is a retrodiction (has files in `notes/retrodict/`), check it for signs that the agent accessed post-resolution information. Read the retrodict JSON to find the `retrodict_date` (the cutoff date).
+When a trace is a retrodiction (has files in `notes/traces/*/retrodict/`), check it for signs that the agent accessed post-resolution information. Read the retrodict JSON to find the `retrodict_date` (the cutoff date).
 
 **Red flags to scan for in agent reasoning:**
 - References to events after the `retrodict_date`

@@ -1,25 +1,31 @@
-"""Prediction market tools for price signals.
+"""Prediction market and Metaculus platform tools.
 
-These tools fetch current prices from prediction markets to provide
-additional signal for forecasting. Market prices reflect aggregated
-wisdom of traders with financial incentives.
+Prediction market tools fetch current prices from Polymarket, Manifold, and
+Kalshi to provide additional signal for forecasting.
+
+Metaculus tools provide direct API access to the Metaculus forecasting platform:
+question details, tournament listings, search, coherence links, and CP history.
 """
 
 import ast
+import asyncio
 import logging
-from datetime import date, datetime, time, timedelta
-from typing import Any, TypedDict
+from datetime import date, datetime, time, timezone
+from typing import Annotated, Any, TypedDict
 
 import httpx
-from claude_agent_sdk import tool
-from pydantic import BaseModel, Field
-
+from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
 from claude_agent_sdk.types import McpSdkServerConfig
+from pydantic import BaseModel, Field, field_validator
 
-from aib.tools.mcp_server import create_mcp_server
+from metaculus import ApiFilter, BinaryQuestion
+from metaculus.models import AggregationMethod
 
-from aib.retrodict_context import retrodict_cutoff
+from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
+from aib.retrodict_context import retrodict_cutoff
+from aib.tools.cache import cached
+from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
@@ -54,6 +60,7 @@ class MarketPrice(TypedDict):
     volume: float | None  # Trading volume if available
     url: str
     source: str  # "polymarket", "manifold", or "kalshi"
+    description: str | None  # Resolution criteria / market description
 
 
 class KalshiMarketPrice(MarketPrice):
@@ -65,6 +72,7 @@ class KalshiMarketPrice(MarketPrice):
 
     market_ticker: str
     event_ticker: str
+    rules_primary: str | None  # Kalshi resolution rules
 
 
 class KalshiEventMarket(TypedDict):
@@ -78,6 +86,7 @@ class KalshiEventMarket(TypedDict):
     floor_strike: float | None
     cap_strike: float | None
     url: str
+    rules_primary: str | None  # Resolution rules for this bracket
 
 
 class KalshiEvent(TypedDict):
@@ -87,6 +96,7 @@ class KalshiEvent(TypedDict):
     event_title: str
     markets: list[KalshiEventMarket]
     url: str
+    description: str | None  # Event description / resolution criteria
 
 
 # --- Polymarket API ---
@@ -204,6 +214,7 @@ def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
         "volume": market.get("volume"),
         "url": f"https://polymarket.com/event/{event.get('slug', '')}",
         "source": "polymarket",
+        "description": event.get("description") or market.get("description"),
     }
 
 
@@ -241,6 +252,7 @@ async def _polymarket_event_at_cutoff(
         "volume": market.get("volume"),
         "url": f"https://polymarket.com/event/{event.get('slug', '')}",
         "source": "polymarket",
+        "description": None,
     }
 
 
@@ -284,6 +296,11 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
                 parsed = parse_polymarket_event(event)
             if parsed is not None:
                 results.append(parsed)
+
+        if not results and cutoff is not None:
+            return mcp_error(
+                f"Found markets for '{query}' but no price data is available."
+            )
 
         return mcp_success({"markets": results, "query": query})
 
@@ -332,6 +349,7 @@ def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
         "volume": market.get("volume"),
         "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
         "source": "manifold",
+        "description": market.get("textDescription") or market.get("description"),
     }
 
 
@@ -365,6 +383,7 @@ async def _manifold_market_at_cutoff(
         "volume": market.get("volume"),
         "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
         "source": "manifold",
+        "description": None,
     }
 
 
@@ -607,215 +626,6 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Manifold history lookup failed: {e}")
 
 
-# --- Yahoo Finance API ---
-
-
-class StockQueryInput(BaseModel):
-    """Input for stock price tool."""
-
-    symbol: str = Field(min_length=1, max_length=10)
-    period: str = Field(
-        default="1mo"
-    )  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-    end_date: str | None = Field(default=None)
-
-
-class StockHistoryEntry(TypedDict):
-    """Single OHLCV data point for stock history."""
-
-    date: str
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
-
-
-class StockPrice(TypedDict):
-    """Price information for a stock."""
-
-    symbol: str
-    name: str
-    current_price: float | None
-    previous_close: float | None
-    change_percent: float | None
-    currency: str
-    market_cap: float | None
-    fifty_two_week_high: float | None
-    fifty_two_week_low: float | None
-
-
-@tool(
-    "stock_price",
-    (
-        "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
-        "Returns current price, previous close, 52-week range, and market cap. "
-        "Use for stock price comparison questions.\n\n"
-        "Examples:\n"
-        "  stock_price(symbol='AAPL') → current Apple price and metrics\n"
-        "  stock_price(symbol='^VIX') → current VIX level\n"
-        "  stock_price(symbol='^GSPC') → current S&P 500 level"
-    ),
-    StockQueryInput.model_json_schema(),
-)
-@tracked("stock_price")
-async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
-    """Get stock price from Yahoo Finance."""
-    try:
-        validated = StockQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    symbol = validated.symbol.upper()
-    cutoff = retrodict_cutoff.get()
-
-    try:
-        import yfinance as yf
-
-        ticker = yf.Ticker(symbol)
-
-        if cutoff is not None:
-            end_str = cutoff.isoformat()
-            start_str = (cutoff - timedelta(days=5)).isoformat()
-            hist = ticker.history(start=start_str, end=end_str)
-            if hist.empty:
-                return mcp_error(f"No recent data found for {symbol}")
-            last_row = hist.iloc[-1]
-            result: StockPrice = {
-                "symbol": symbol,
-                "name": ticker.info.get("shortName", symbol),
-                "current_price": float(last_row["Close"]),
-                "previous_close": float(hist.iloc[-2]["Close"])
-                if len(hist) > 1
-                else None,
-                "change_percent": None,
-                "currency": ticker.info.get("currency", "USD"),
-                "market_cap": None,
-                "fifty_two_week_high": None,
-                "fifty_two_week_low": None,
-            }
-            return mcp_success(result)
-
-        info = ticker.info
-
-        if not info or info.get("regularMarketPrice") is None:
-            return mcp_error(f"No data found for symbol: {symbol}")
-
-        result = {
-            "symbol": symbol,
-            "name": info.get("shortName", info.get("longName", symbol)),
-            "current_price": info.get("regularMarketPrice"),
-            "previous_close": info.get("previousClose"),
-            "change_percent": info.get("regularMarketChangePercent"),
-            "currency": info.get("currency", "USD"),
-            "market_cap": info.get("marketCap"),
-            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
-            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
-        }
-
-        return mcp_success(result)
-
-    except Exception as e:
-        logger.exception("Yahoo Finance lookup failed")
-        return mcp_error(f"Yahoo Finance lookup failed for {symbol}: {e}")
-
-
-@tool(
-    "stock_history",
-    (
-        "Get historical stock prices for a ticker symbol. "
-        "Returns OHLCV data for the specified period. "
-        "Periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max. "
-        "Optional end_date (YYYY-MM-DD) to cap data at a specific date. "
-        "Use for analyzing price trends and volatility.\n\n"
-        "Examples:\n"
-        "  stock_history(symbol='AAPL', period='3mo') → 3 months of Apple OHLCV\n"
-        "  stock_history(symbol='^GSPC', period='1y') → 1 year of S&P 500\n"
-        "  stock_history(symbol='^VIX', period='6mo') → 6 months of VIX for volatility analysis\n"
-        "  stock_history(symbol='GC=F', period='3mo') → 3 months of gold futures\n"
-        "Feed the output to execute_code for Monte Carlo simulation or rolling volatility analysis."
-    ),
-    StockQueryInput.model_json_schema(),
-)
-@tracked("stock_history")
-async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
-    """Get historical stock prices from Yahoo Finance."""
-    try:
-        validated = StockQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    symbol = validated.symbol.upper()
-    period = validated.period
-    cutoff = retrodict_cutoff.get()
-    end_date = cutoff.isoformat() if cutoff is not None else validated.end_date
-
-    try:
-        import yfinance as yf
-
-        ticker = yf.Ticker(symbol)
-
-        # If end_date is provided, use start/end instead of period
-        if end_date:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            # Calculate start date based on period
-            period_days = {
-                "1d": 1,
-                "5d": 5,
-                "1mo": 30,
-                "3mo": 90,
-                "6mo": 180,
-                "1y": 365,
-                "2y": 730,
-                "5y": 1825,
-            }
-            days = period_days.get(period, 365)
-            start_dt = end_dt - timedelta(days=days)
-            hist = ticker.history(start=start_dt.strftime("%Y-%m-%d"), end=end_date)
-        else:
-            hist = ticker.history(period=period)
-
-        if hist.empty:
-            return mcp_error(f"No historical data found for symbol: {symbol}")
-
-        # Convert to list of dicts for JSON serialization
-        # Reset index to make date a column, then convert to records
-        hist_reset = hist.reset_index()
-        hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
-
-        records: list[dict[str, object]] = hist_reset[
-            ["Date", "Open", "High", "Low", "Close", "Volume"]
-        ].to_dict("records")  # pyright: ignore[reportCallIssue]
-
-        # Rename keys to lowercase and limit to last 30
-        formatted: list[dict[str, object]] = [
-            {
-                "date": r["Date"],
-                "open": r["Open"],
-                "high": r["High"],
-                "low": r["Low"],
-                "close": r["Close"],
-                "volume": r["Volume"],
-            }
-            for r in records[-30:]  # Limit to last 30 days
-        ]
-
-        return mcp_success(
-            {
-                "symbol": symbol,
-                "period": period,
-                "data_points": len(records),
-                "first_date": formatted[0]["date"] if formatted else None,
-                "last_date": formatted[-1]["date"] if formatted else None,
-                "history": formatted,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Yahoo Finance history lookup failed")
-        return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
-
-
 # --- Kalshi API ---
 
 KALSHI_API = "https://api.elections.kalshi.com/trade-api/v2"
@@ -1040,8 +850,10 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
                         "volume": market.get("volume_fp"),
                         "url": f"https://kalshi.com/markets/{ticker}",
                         "source": "kalshi",
+                        "description": market.get("rules_primary"),
                         "market_ticker": ticker,
                         "event_ticker": event_tick,
+                        "rules_primary": market.get("rules_primary"),
                     }
                 )
 
@@ -1105,6 +917,7 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
                     "floor_strike": market.get("floor_strike"),
                     "cap_strike": market.get("cap_strike"),
                     "url": f"https://kalshi.com/markets/{ticker}",
+                    "rules_primary": market.get("rules_primary"),
                 }
             )
 
@@ -1113,6 +926,7 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
             "event_title": event.get("title", "Unknown"),
             "markets": event_markets,
             "url": f"https://kalshi.com/events/{event_ticker}",
+            "description": event.get("sub_title"),
         }
         return mcp_success(result)
 
@@ -1190,9 +1004,592 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Kalshi history lookup failed: {e}")
 
 
+# --- Metaculus Input Schemas ---
+
+
+class GetMetaculusQuestionsInput(BaseModel):
+    """Input for fetching one or more Metaculus questions."""
+
+    post_id_list: Annotated[list[int], Field(min_length=1, max_length=20)]
+
+    @field_validator("post_id_list", mode="before")
+    @classmethod
+    def coerce_to_list(cls, v: Any) -> list[int]:
+        """Coerce various input formats to list[int].
+
+        Accepts:
+        - list[int]: [123, 456] → used as-is
+        - int: 123 → [123]
+        - str (single): "123" → [123]
+        - str (comma-separated): "123, 456" → [123, 456]
+        - str (Python list literal): "[123, 456]" → [123, 456]
+        """
+        if isinstance(v, list):
+            return [int(x) for x in v]
+        if isinstance(v, int):
+            return [v]
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                import ast as _ast
+
+                parsed = _ast.literal_eval(v)
+                if isinstance(parsed, list):
+                    return [int(x) for x in parsed]
+            if "," in v:
+                return [int(x.strip()) for x in v.split(",")]
+            return [int(v)]
+        raise ValueError(f"Cannot coerce {type(v).__name__} to list[int]")
+
+
+class ListTournamentQuestionsInput(BaseModel):
+    tournament_id: int | str
+    num_questions: int = settings.tournament_default_limit
+
+
+class SearchMetaculusInput(BaseModel):
+    query: str
+    num_results: int = settings.metaculus_default_limit
+
+
+class CoherenceLinksInput(BaseModel):
+    """Input for fetching coherence links."""
+
+    question_id: int = Field(description="Metaculus question ID (not post ID)")
+
+
+class CPHistoryInput(BaseModel):
+    """Input for fetching community prediction history."""
+
+    question_id: int = Field(
+        description="Metaculus question ID or post ID (auto-detected)"
+    )
+    days: int = Field(default=30, description="Number of days of history to fetch")
+
+
+# --- Metaculus Output Schemas ---
+
+
+class QuestionDict(TypedDict, total=False):
+    """Metaculus question data returned by _question_to_dict."""
+
+    post_id: int
+    question_id: int
+    title: str
+    type: str
+    url: str
+    background_info: str | None
+    resolution_criteria: str | None
+    fine_print: str | None
+    num_forecasters: int
+    community_prediction: float | None
+    options: list[str] | None
+    lower_bound: float | None
+    upper_bound: float | None
+
+
+class CPHistoryEntry(BaseModel):
+    """A single CP data point in the history."""
+
+    timestamp: str
+    community_prediction: float
+
+
+class CPHistoryResponse(BaseModel):
+    """Response from the get_cp_history tool."""
+
+    question_id: int
+    days_requested: int
+    data_points: int
+    history: list[CPHistoryEntry]
+    note: str | None = None
+
+
+# --- Metaculus Helpers ---
+
+
+async def _redact_future_info(text: str, cutoff_date: str) -> str:
+    """Use haiku to remove references to events after the cutoff date."""
+    if not text or len(text) < 20:
+        return text
+
+    prompt = (
+        f"Remove any references to events, dates, or outcomes that occur after {cutoff_date}. "
+        f"Keep all other content unchanged. Return ONLY the redacted text, nothing else.\n\n"
+        f"Text:\n{text}"
+    )
+    options = ClaudeAgentOptions(
+        model="sonnet",
+        allowed_tools=[],
+        system_prompt=(
+            "You redact temporal information from text. Remove sentences or clauses "
+            "that reference events after the given date. Preserve everything else verbatim. "
+            "Return only the redacted text."
+        ),
+        extra_args={"no-session-persistence": None},
+    )
+    try:
+        result_text = None
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, ResultMessage) and message.result:
+                result_text = message.result
+        return result_text or text
+    except Exception:
+        logger.warning("Fine-print redaction failed, returning original")
+        return text
+
+
+def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, object]:
+    """Convert a MetaculusQuestion to a serializable dict.
+
+    Note: Returns both post_id and question_id. These are different:
+    - post_id: Used for URLs and local storage (e.g., metaculus.com/questions/{post_id})
+    - question_id: Used for certain API endpoints (get_coherence_links, get_cp_history)
+
+    Args:
+        question: MetaculusQuestion object.
+        hide_cp: If True, exclude community_prediction (for retrodict mode).
+    """
+    result: dict[str, object] = {
+        "post_id": question.id_of_post,
+        "question_id": question.id_of_question,
+        "title": question.question_text,
+        "type": question.get_question_type(),
+        "url": question.page_url,
+        "background_info": question.background_info,
+        "resolution_criteria": question.resolution_criteria,
+        "fine_print": question.fine_print,
+        "num_forecasters": question.num_forecasters,
+    }
+
+    if hide_cp:
+        result["community_prediction"] = None
+    elif isinstance(question, BinaryQuestion):
+        result["community_prediction"] = question.community_prediction_at_access_time
+    else:
+        result["community_prediction"] = None
+
+    if hasattr(question, "options"):
+        result["options"] = getattr(question, "options", None)
+    if hasattr(question, "lower_bound"):
+        result["lower_bound"] = getattr(question, "lower_bound", None)
+    if hasattr(question, "upper_bound"):
+        result["upper_bound"] = getattr(question, "upper_bound", None)
+
+    return result
+
+
+@cached(ttl=300)
+async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
+    """Fetch a single Metaculus question (cached, native async)."""
+    client = get_metaculus_client()
+    question = await client.get_question_by_post_id(post_id)
+    if isinstance(question, list):
+        question = question[0]
+    return _question_to_dict(question)
+
+
+def _format_timestamp(raw_ts: object) -> str:
+    """Convert a Unix timestamp (float) or ISO string to ISO 8601."""
+    if isinstance(raw_ts, (int, float)):
+        return datetime.fromtimestamp(raw_ts, tz=timezone.utc).isoformat()
+    return str(raw_ts)
+
+
+def _build_cp_history_response(
+    aggregation: AggregationMethod,
+    question_id: int,
+    days: int,
+    cutoff_dt: datetime | None,
+) -> CPHistoryResponse:
+    """Build a typed CP history response from aggregation data."""
+    entries: list[CPHistoryEntry] = []
+    filtered_count = 0
+
+    for point in aggregation.history:
+        if not point.centers:
+            continue
+        cp = point.centers[0]
+
+        if cutoff_dt is not None:
+            ts_dt = datetime.fromtimestamp(point.start_time, tz=timezone.utc)
+            if ts_dt > cutoff_dt:
+                filtered_count += 1
+                continue
+
+        entries.append(
+            CPHistoryEntry(
+                timestamp=_format_timestamp(point.start_time),
+                community_prediction=cp,
+            )
+        )
+
+    if filtered_count > 0:
+        cutoff_date = retrodict_cutoff.get()
+        logger.info(
+            "[Retrodict] CP history: filtered %d points after %s",
+            filtered_count,
+            cutoff_date,
+        )
+
+    note = None
+    if filtered_count > 0 and len(entries) == 0:
+        note = (
+            "No historical CP data is available yet. "
+            "This is expected when the question was recently published."
+        )
+
+    return CPHistoryResponse(
+        question_id=question_id,
+        days_requested=days,
+        data_points=len(entries),
+        history=entries,
+        note=note,
+    )
+
+
+_post_id_cache: dict[int, int] = {}
+
+
+async def _resolve_question_to_post_id(question_id: int) -> int | None:
+    """Resolve a Metaculus question_id to its post_id."""
+    try:
+        client = get_metaculus_client()
+        data = await client.fetch_question_json(question_id)
+        post_id = data.get("post_id") or data.get("post", {}).get("id")
+        if post_id:
+            logger.info("Resolved question %d → post %d", question_id, post_id)
+        return post_id
+    except Exception:
+        logger.exception("Failed to resolve question_id %d to post_id", question_id)
+        return None
+
+
+async def _ensure_post_id(input_id: int) -> int | None:
+    """Resolve any Metaculus ID to a post_id.
+
+    Successful results are cached. Failures are NOT cached so transient
+    errors (429 rate limits) don't permanently break CP history lookups.
+    Uses MetaculusClient.fetch_post_json which has built-in retry logic.
+    """
+    if input_id in _post_id_cache:
+        return _post_id_cache[input_id]
+
+    client = get_metaculus_client()
+
+    try:
+        post_json = await client.fetch_post_json(input_id)
+        q = post_json.get("question", {})
+        question_id = q.get("id")
+        if question_id is None or question_id == input_id:
+            _post_id_cache[input_id] = input_id
+            return input_id
+    except Exception:
+        pass
+
+    resolved = await _resolve_question_to_post_id(input_id)
+    if resolved is not None:
+        _post_id_cache[input_id] = resolved
+    return resolved
+
+
+async def _fetch_aggregation(post_id: int) -> AggregationMethod:
+    """Fetch CP history from the aggregation_explorer endpoint."""
+    client = get_metaculus_client()
+    return await client.fetch_aggregation_history(post_id)
+
+
+# --- Metaculus Tools ---
+
+
+@tool(
+    "get_metaculus_questions",
+    (
+        "Fetch details for one or more Metaculus questions by their POST ID. "
+        "Pass post_id_list as a list of integer post IDs (e.g., [12345] or [12345, 67890]). "
+        "IMPORTANT: These are QUESTION post IDs, not tournament IDs. "
+        "To find question IDs, use list_tournament_questions first. "
+        "Returns question details including title, description, resolution criteria, "
+        "fine print, and community prediction (if available). "
+        "Note: Community predictions are NOT available in the AIB tournament. "
+        "Maximum 20 questions per request."
+    ),
+    GetMetaculusQuestionsInput.model_json_schema(),
+)
+@tracked("get_metaculus_questions")
+async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
+    """Fetch one or more Metaculus questions (cached for 5 minutes)."""
+    try:
+        validated = GetMetaculusQuestionsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    post_ids = validated.post_id_list
+    cutoff = retrodict_cutoff.get()
+
+    async def _apply_retrodict_filters(result: dict[str, Any]) -> dict[str, Any]:
+        """Apply CP hiding and fine_print redaction for retrodict mode."""
+        if cutoff is None:
+            return result
+        result = dict(result)
+        if "community_prediction" in result:
+            result["community_prediction"] = None
+        fine_print = result.get("fine_print")
+        if isinstance(fine_print, str) and len(fine_print) > 20:
+            result["fine_print"] = await _redact_future_info(fine_print, str(cutoff))
+        return result
+
+    async def fetch_one(post_id: int) -> dict[str, Any]:
+        """Fetch a single question, auto-detecting if a question_id was passed."""
+        try:
+            result = await _fetch_metaculus_question(post_id)
+            return await _apply_retrodict_filters(result)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                resolved = await _resolve_question_to_post_id(post_id)
+                if resolved:
+                    try:
+                        result = await _fetch_metaculus_question(resolved)
+                        return await _apply_retrodict_filters(result)
+                    except Exception as retry_err:
+                        return {
+                            "post_id": post_id,
+                            "error": f"Resolved question {post_id} → post {resolved}, but fetch failed: {retry_err}",
+                        }
+                return {
+                    "post_id": post_id,
+                    "error": f"ID {post_id} not found. You may have passed a question_id instead of a post_id. Use list_tournament_questions to find correct post IDs.",
+                }
+            return {"post_id": post_id, "error": f"HTTP {e.response.status_code}: {e}"}
+        except Exception as e:
+            return {"post_id": post_id, "error": str(e)}
+
+    try:
+        results = await asyncio.gather(*[fetch_one(pid) for pid in post_ids])
+        if len(results) == 1:
+            result = results[0]
+            if "error" in result:
+                return mcp_error(
+                    f"Failed to fetch question {result['post_id']}: {result['error']}"
+                )
+            return mcp_success(result)
+        return mcp_success({"questions": list(results)})
+    except Exception as e:
+        logger.exception("Failed to fetch Metaculus questions")
+        return mcp_error(f"Failed to fetch questions: {e}")
+
+
+@tool(
+    "list_tournament_questions",
+    (
+        "List open questions from a specific Metaculus tournament. "
+        "Common TOURNAMENT IDs (not question IDs): "
+        "32916 (AIB Spring 2026), 'minibench' (MiniBench), 32921 (Metaculus Cup). "
+        "Returns question post IDs that can be used with get_metaculus_questions. "
+        f"Optional num_questions (default: {settings.tournament_default_limit})."
+    ),
+    ListTournamentQuestionsInput.model_json_schema(),
+)
+@tracked("list_tournament_questions")
+async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
+    """List questions from a tournament (native async)."""
+    try:
+        validated = ListTournamentQuestionsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    tournament_id = validated.tournament_id
+    num_questions = validated.num_questions
+
+    try:
+        client = get_metaculus_client()
+        questions = await client.get_all_open_questions_from_tournament(tournament_id)
+
+        cutoff = retrodict_cutoff.get()
+        if cutoff is not None:
+            cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                tzinfo=timezone.utc
+            )
+            questions = [
+                q
+                for q in questions
+                if q.published_time is None or q.published_time <= cutoff_dt
+            ]
+
+        questions = questions[:num_questions]
+
+        results = [
+            {
+                "post_id": q.id_of_post,
+                "question_id": q.id_of_question,
+                "title": q.question_text,
+                "type": q.get_question_type(),
+                "url": q.page_url,
+            }
+            for q in questions
+        ]
+
+        return mcp_success(results)
+    except Exception as e:
+        logger.exception("Failed to list tournament questions")
+        return mcp_error(f"Failed to list questions: {e}")
+
+
+@tool(
+    "search_metaculus",
+    (
+        "Search Metaculus questions by text query. Returns matching questions with IDs, titles, and types. "
+        f"Optional num_results (default: {settings.metaculus_default_limit})."
+    ),
+    SearchMetaculusInput.model_json_schema(),
+)
+@tracked("search_metaculus")
+async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
+    """Search Metaculus questions by text (native async)."""
+    try:
+        validated = SearchMetaculusInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    search_query = validated.query
+    num_results = validated.num_results
+
+    try:
+        client = get_metaculus_client()
+        api_filter = ApiFilter(other_url_parameters={"search": search_query})
+        questions = await client.get_questions_matching_filter(
+            api_filter=api_filter,
+            num_questions=num_results,
+        )
+
+        cutoff = retrodict_cutoff.get()
+
+        if cutoff is not None:
+            cutoff_dt = datetime.combine(cutoff, datetime.min.time()).replace(
+                tzinfo=timezone.utc
+            )
+            questions = [
+                q
+                for q in questions
+                if q.published_time is None or q.published_time <= cutoff_dt
+            ]
+
+        results = [
+            {
+                "post_id": q.id_of_post,
+                "question_id": q.id_of_question,
+                "title": q.question_text,
+                "type": q.get_question_type(),
+                "url": q.page_url,
+                "community_prediction": (
+                    None
+                    if cutoff is not None
+                    else (
+                        q.community_prediction_at_access_time
+                        if isinstance(q, BinaryQuestion)
+                        else None
+                    )
+                ),
+            }
+            for q in questions
+        ]
+
+        return mcp_success(results)
+    except Exception as e:
+        logger.exception("Metaculus search failed")
+        return mcp_error(f"Search failed: {e}")
+
+
+@tool(
+    "get_coherence_links",
+    (
+        "Get Metaculus questions that are logically related to this one. "
+        "USE THIS to check if your forecast is consistent with related questions — "
+        "e.g., if you forecast 80% on 'Will X happen by 2027?', your forecast on "
+        "'Will X happen by 2026?' should be ≤80%. "
+        "Requires question_id (not post_id) — get this from get_metaculus_questions."
+    ),
+    CoherenceLinksInput.model_json_schema(),
+)
+@tracked("get_coherence_links")
+async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
+    """Fetch coherence links for a question (native async)."""
+    try:
+        validated = CoherenceLinksInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    question_id = validated.question_id
+    try:
+        client = get_metaculus_client()
+        links = await client.get_links_for_question(question_id)
+        results = [
+            {
+                "question1_id": link.question1_id,
+                "question2_id": link.question2_id,
+                "direction": link.direction,
+                "strength": link.strength,
+                "type": link.type,
+            }
+            for link in links
+        ]
+        return mcp_success(results)
+    except Exception as e:
+        logger.exception("Failed to fetch coherence links")
+        return mcp_error(f"Failed to fetch links: {e}")
+
+
+@tool(
+    "get_cp_history",
+    (
+        "Fetch historical community prediction (CP) data for a question. "
+        "ESSENTIAL for meta-prediction questions ('Will CP be above X%?') — "
+        "shows CP trajectory over time to predict future movements. "
+        "Also useful for checking consensus shifts on any question. "
+        "Pass any Metaculus ID (question_id or post_id) — auto-detected. "
+        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP.\n\n"
+        "Examples:\n"
+        "  get_cp_history(question_id=41906) → last 30 days of CP\n"
+        "  get_cp_history(question_id=41906, days=90) → last 90 days\n"
+        "For meta-predictions: pass the UNDERLYING question's ID (from the meta-question's description), "
+        "not the meta-question's own ID."
+    ),
+    CPHistoryInput.model_json_schema(),
+)
+@tracked("get_cp_history")
+async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
+    """Fetch community prediction history for a question."""
+    try:
+        validated = CPHistoryInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    input_id = validated.question_id
+    days = min(validated.days, 365)
+
+    cutoff_dt = None
+    cutoff_date = retrodict_cutoff.get()
+    if cutoff_date is not None:
+        cutoff_dt = datetime.combine(cutoff_date, datetime.min.time()).replace(
+            tzinfo=timezone.utc
+        )
+
+    post_id = await _ensure_post_id(input_id)
+    if post_id is None:
+        return mcp_error(f"Could not resolve ID {input_id} to a valid post.")
+
+    try:
+        aggregation = await _fetch_aggregation(post_id)
+        response = _build_cp_history_response(aggregation, input_id, days, cutoff_dt)
+        return mcp_success(response.model_dump())
+    except Exception as e:
+        logger.exception("Failed to fetch CP history for post %d", post_id)
+        return mcp_error(f"Failed to fetch CP history: {e}")
+
+
 # --- MCP Server ---
 
-_ALL_MARKET_TOOLS = [
+_PREDICTION_MARKET_TOOLS = [
     polymarket_price,
     manifold_price,
     kalshi_price,
@@ -1200,18 +1597,21 @@ _ALL_MARKET_TOOLS = [
     manifold_history,
     kalshi_history,
     kalshi_event,
-    stock_price,
-    stock_history,
+]
+
+_METACULUS_TOOLS = [
+    get_metaculus_questions,
+    list_tournament_questions,
+    search_metaculus,
+    get_coherence_links,
+    get_cp_history,
 ]
 
 
 def create_markets_server() -> McpSdkServerConfig:
-    """Create the markets MCP server."""
+    """Create the markets MCP server with prediction market and Metaculus tools."""
     return create_mcp_server(
         name="markets",
-        version="1.0.0",
-        tools=_ALL_MARKET_TOOLS,
+        version="2.0.0",
+        tools=_PREDICTION_MARKET_TOOLS + _METACULUS_TOOLS,
     )
-
-
-markets_server = create_markets_server()

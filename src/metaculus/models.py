@@ -11,7 +11,7 @@ Metaculus has two different ID systems:
   A post is a container that can hold one or more questions. Used for:
   - Fetching questions: GET /api/posts/{post_id}/
   - Building URLs: metaculus.com/questions/{post_id}
-  - Local forecast storage: notes/forecasts/{post_id}/
+  - Local forecast storage: notes/traces/<version>/forecasts/{post_id}/
 
 - **question_id** (id_of_question): The internal ID of the actual question.
   Used for:

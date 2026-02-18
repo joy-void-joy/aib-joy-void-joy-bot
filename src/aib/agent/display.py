@@ -97,7 +97,7 @@ def print_block(block: ContentBlock, prefix: str = "") -> None:
             print(f"{prefix}📋 Result ", end="")
             _console.print(f"[{block.tool_use_id}]", style=color, end="")
             print(": ", end="")
-            print(truncate_content(block.content, max_len=500))
+            print(_normalize_content(block.content))
             stream_log.info(
                 "%sTOOL_RESULT [%s]: %s",
                 prefix,

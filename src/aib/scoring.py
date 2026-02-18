@@ -6,14 +6,9 @@ forecast JSONs, and CSV row building for the unified scores table.
 Convention: both Brier and log loss are positive, lower-is-better, 0 = perfect.
 """
 
-import csv
-import json
 import math
-from pathlib import Path
 
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
-SCORES_CSV_PATH = Path("./notes/scores.csv")
+from aib.paths import load_all_forecast_jsons, load_all_retrodict_jsons
 
 CSV_COLUMNS = [
     "post_id",
@@ -105,24 +100,6 @@ def resolve_mc(data: dict[str, object]) -> str | None:
     return None
 
 
-def load_forecast_jsons(base_path: Path) -> list[dict[str, object]]:
-    """Load all forecast JSON files from a directory tree."""
-    results: list[dict[str, object]] = []
-    if not base_path.exists():
-        return results
-    for post_dir in base_path.iterdir():
-        if not post_dir.is_dir():
-            continue
-        for filepath in post_dir.glob("*.json"):
-            try:
-                data = json.loads(filepath.read_text())
-                if "question_type" in data and "timestamp" in data:
-                    results.append(data)
-            except (json.JSONDecodeError, OSError):
-                continue
-    return results
-
-
 def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
     """Build a CSV row dict from a forecast JSON."""
     qtype = str(data.get("question_type", ""))
@@ -211,51 +188,11 @@ def load_all_score_rows() -> list[dict[str, str]]:
     """Load all forecasts and retrodictions, compute scores, return as row dicts."""
     rows: list[dict[str, str]] = []
 
-    for data in load_forecast_jsons(FORECASTS_PATH):
+    for data in load_all_forecast_jsons():
         rows.append(build_score_row(data, "live"))
 
-    for data in load_forecast_jsons(RETRODICT_PATH):
+    for data in load_all_retrodict_jsons():
         rows.append(build_score_row(data, "retrodict"))
 
     rows.sort(key=lambda r: (r["post_id"], r["source"], r["timestamp"]))
     return rows
-
-
-def rebuild_scores_csv() -> int:
-    """Rebuild the scores CSV from all forecast/retrodict JSONs.
-
-    Returns the number of rows written.
-    """
-    rows = load_all_score_rows()
-    SCORES_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with SCORES_CSV_PATH.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-    return len(rows)
-
-
-def read_scores_csv() -> list[dict[str, str]]:
-    """Read the scores CSV, returning empty list if missing."""
-    if not SCORES_CSV_PATH.exists():
-        return []
-    with SCORES_CSV_PATH.open(encoding="utf-8") as f:
-        return list(csv.DictReader(f))
-
-
-def read_scores_for_post(post_id: int) -> list[dict[str, str]]:
-    """Read scores for a specific post_id."""
-    return [r for r in read_scores_csv() if r.get("post_id") == str(post_id)]
-
-
-def append_score_row(data: dict[str, object], source: str) -> None:
-    """Append a single score row to the CSV. Creates file with header if missing."""
-    row = build_score_row(data, source)
-    file_exists = SCORES_CSV_PATH.exists()
-
-    SCORES_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with SCORES_CSV_PATH.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(row)

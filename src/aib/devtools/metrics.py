@@ -2,32 +2,25 @@
 
 import json
 from collections import defaultdict
-from pathlib import Path
 
 import typer
 
-app = typer.Typer(no_args_is_help=True)
+from aib.paths import iter_forecast_files
 
-FORECASTS_PATH = Path("./notes/forecasts")
+app = typer.Typer(no_args_is_help=True)
 
 
 def load_all_forecasts() -> list[dict]:
     """Load all forecast files."""
     forecasts: list[dict] = []
-    if not FORECASTS_PATH.exists():
-        return forecasts
-
-    for post_dir in FORECASTS_PATH.iterdir():
-        if not post_dir.is_dir():
+    for forecast_file in iter_forecast_files():
+        try:
+            data = json.loads(forecast_file.read_text())
+            data["_file"] = str(forecast_file)
+            data["_post_id"] = forecast_file.parent.name
+            forecasts.append(data)
+        except (json.JSONDecodeError, OSError):
             continue
-        for forecast_file in post_dir.glob("*.json"):
-            try:
-                data = json.loads(forecast_file.read_text())
-                data["_file"] = str(forecast_file)
-                data["_post_id"] = post_dir.name
-                forecasts.append(data)
-            except (json.JSONDecodeError, OSError):
-                continue
     return forecasts
 
 

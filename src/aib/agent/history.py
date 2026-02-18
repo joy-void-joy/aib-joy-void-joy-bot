@@ -15,6 +15,18 @@ import sh
 from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
+from aib.paths import (
+    forecasts_dir,
+    find_latest_forecast_file,
+    iter_forecast_dirs,
+    iter_forecast_files,
+    iter_retrodict_dirs,
+    iter_retrodict_files,
+    iter_session_dirs,
+    iter_trace_log_files,
+    parse_timestamp,
+    retrodict_dir,
+)
 from aib.retrodict_context import effective_now
 from aib.version import AGENT_VERSION
 
@@ -22,12 +34,6 @@ if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
 
 logger = logging.getLogger(__name__)
-
-# Base path for forecast storage
-FORECASTS_BASE_PATH = Path("./notes/forecasts")
-RETRODICT_BASE_PATH = Path("./notes/retrodict")
-SESSIONS_PATH = Path("./notes/sessions")
-LOGS_BASE_PATH = Path("./notes/logs")
 
 
 class RetrodictComparison(BaseModel):
@@ -54,17 +60,17 @@ def commit_forecast(post_id: int, question_title: str) -> bool:
     """
     paths_to_stage: list[str] = []
 
-    forecast_dir = FORECASTS_BASE_PATH / str(post_id)
-    if forecast_dir.exists():
-        paths_to_stage.append(str(forecast_dir))
+    for d in iter_forecast_dirs(post_id):
+        paths_to_stage.append(str(d))
 
-    sessions_dir = SESSIONS_PATH / str(post_id)
-    if sessions_dir.exists():
-        paths_to_stage.append(str(sessions_dir))
+    for d in iter_retrodict_dirs(post_id):
+        paths_to_stage.append(str(d))
 
-    if LOGS_BASE_PATH.exists():
-        for log_file in LOGS_BASE_PATH.glob(f"{post_id}_*"):
-            paths_to_stage.append(str(log_file))
+    for d in iter_session_dirs(post_id):
+        paths_to_stage.append(str(d))
+
+    for f in iter_trace_log_files(post_id):
+        paths_to_stage.append(str(f))
 
     if not paths_to_stage:
         logger.warning("No forecast files found to commit for post %d", post_id)
@@ -112,7 +118,7 @@ class SavedForecast(BaseModel):
     percentiles: dict[int, float] | None = None
     summary: str
     factors: list[dict[str, Any]]
-    resolution: str | None = None  # "yes", "no", "ambiguous", or None if unresolved
+    resolution: str | float | None = None
     submitted_at: str | None = None  # ISO timestamp when submitted to Metaculus
     comment_posted_at: str | None = None  # ISO timestamp when comment was posted
     # Programmatic tracking fields
@@ -158,136 +164,26 @@ def save_forecast(
     question_scheduled_resolve_time: str | None = None,
     reasoning: str = "",
     sources_consulted: list[str] | None = None,
+    retrodict_date: str | None = None,
 ) -> Path:
-    """Save a forecast to the history storage.
+    """Save a forecast to disk.
 
-    Args:
-        question_id: Metaculus question ID (for submission API).
-        post_id: Metaculus post ID (for URLs, directory structure).
-        question_title: Title of the question.
-        question_type: Type of question (binary, numeric, multiple_choice).
-        summary: Forecast summary/reasoning.
-        factors: List of evidence factors.
-        probability: For binary questions, the final probability.
-        logit: For binary questions, the logit value.
-        probabilities: For multiple choice, mapping of option to probability.
-        median: For numeric, the median estimate.
-        confidence_interval: For numeric, the (low, high) 90% CI.
-        percentiles: For numeric, percentile estimates.
-        tool_metrics: Programmatic tracking of tool calls, durations, errors.
-        token_usage: Token usage stats (input, output, cache tokens).
-        log_path: Path to the reasoning log file in logs/.
-        question_published_at: ISO timestamp when question was published on Metaculus.
-        question_close_time: ISO timestamp when question closes for forecasting.
-        question_scheduled_resolve_time: ISO timestamp when question is expected to resolve.
-        reasoning: Full agent reasoning trace.
-        sources_consulted: URLs or search queries the agent consulted.
+    When retrodict_date is set, saves to the retrodict directory with the
+    cutoff date in the filename. Otherwise saves to the versioned traces
+    directory.
 
     Returns:
         Path to the saved forecast file.
     """
-    timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
+    if retrodict_date:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        question_dir = retrodict_dir() / str(post_id)
+    else:
+        timestamp = effective_now().strftime("%Y%m%d_%H%M%S")
+        question_dir = forecasts_dir() / str(post_id)
 
-    # Create directory by post_id (what users see in URLs)
-    question_dir = FORECASTS_BASE_PATH / str(post_id)
     question_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build forecast data
-    forecast = SavedForecast(
-        question_id=question_id,
-        post_id=post_id,
-        question_title=question_title,
-        question_type=question_type,
-        timestamp=timestamp,
-        probability=probability,
-        logit=logit,
-        probabilities=probabilities,
-        median=median,
-        confidence_interval=confidence_interval,
-        percentiles=percentiles,
-        summary=summary,
-        factors=[f if isinstance(f, dict) else f.model_dump() for f in factors],
-        tool_metrics=tool_metrics,
-        token_usage=token_usage,
-        log_path=log_path,
-        question_published_at=question_published_at,
-        question_close_time=question_close_time,
-        question_scheduled_resolve_time=question_scheduled_resolve_time,
-        reasoning=reasoning,
-        sources_consulted=sources_consulted or [],
-        agent_version=AGENT_VERSION,
-    )
-
-    # Save to file
-    filepath = question_dir / f"{timestamp}.json"
-    filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")
-
-    logger.info("Saved forecast for question %d to %s", question_id, filepath)
-    return filepath
-
-
-def save_retrodict(
-    question_id: int,
-    post_id: int,
-    question_title: str,
-    question_type: str,
-    summary: str,
-    factors: list[dict[str, Any]],
-    retrodict_date: str,
-    *,
-    probability: float | None = None,
-    logit: float | None = None,
-    probabilities: dict[str, float] | None = None,
-    median: float | None = None,
-    confidence_interval: tuple[float, float] | None = None,
-    percentiles: dict[int, float] | None = None,
-    tool_metrics: dict[str, Any] | None = None,
-    token_usage: TokenUsage | None = None,
-    log_path: str | None = None,
-    question_published_at: str | None = None,
-    question_close_time: str | None = None,
-    question_scheduled_resolve_time: str | None = None,
-    reasoning: str = "",
-    sources_consulted: list[str] | None = None,
-) -> Path:
-    """Save a retrodicted forecast to the retrodict storage.
-
-    Retrodicted forecasts are stored separately from live forecasts to:
-    1. Prevent mixing calibration data with real forecasts
-    2. Make the cutoff date explicit in the filename
-    3. Allow different access controls during retrodict mode
-
-    Args:
-        question_id: Metaculus question ID (for submission API).
-        post_id: Metaculus post ID (for URLs, directory structure).
-        question_title: Title of the question.
-        question_type: Type of question (binary, numeric, multiple_choice).
-        summary: Forecast summary/reasoning.
-        factors: List of evidence factors.
-        retrodict_date: YYYY-MM-DD cutoff date for data access.
-        probability: For binary questions, the final probability.
-        logit: For binary questions, the logit value.
-        probabilities: For multiple choice, mapping of option to probability.
-        median: For numeric, the median estimate.
-        confidence_interval: For numeric, the (low, high) 90% CI.
-        percentiles: For numeric, percentile estimates.
-        tool_metrics: Programmatic tracking of tool calls, durations, errors.
-        token_usage: Token usage stats (input, output, cache tokens).
-        log_path: Path to the reasoning log file in logs/.
-        question_published_at: ISO timestamp when question was published.
-        question_close_time: ISO timestamp when question closes.
-        question_scheduled_resolve_time: ISO timestamp when resolution expected.
-
-    Returns:
-        Path to the saved retrodict file.
-    """
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-    # Create directory by post_id
-    question_dir = RETRODICT_BASE_PATH / str(post_id)
-    question_dir.mkdir(parents=True, exist_ok=True)
-
-    # Build forecast data with retrodict_date
     forecast = SavedForecast(
         question_id=question_id,
         post_id=post_id,
@@ -314,17 +210,36 @@ def save_retrodict(
         agent_version=AGENT_VERSION,
     )
 
-    # Include retrodict_date in filename for easy identification
-    filepath = question_dir / f"{retrodict_date}_{timestamp}.json"
+    filename = (
+        f"{retrodict_date}_{timestamp}.json" if retrodict_date else f"{timestamp}.json"
+    )
+    filepath = question_dir / filename
     filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")
 
-    logger.info(
-        "Saved retrodict forecast for question %d (cutoff %s) to %s",
-        question_id,
-        retrodict_date,
-        filepath,
-    )
+    logger.info("Saved forecast for question %d to %s", question_id, filepath)
     return filepath
+
+
+def _update_forecast_json(
+    filepath: Path, **updates: str | float | object | None
+) -> bool:
+    """Update a forecast JSON file through Pydantic validation.
+
+    Reads the file, validates through SavedForecast, applies updates via
+    model_copy, and writes back. Returns True if the file was modified.
+    """
+    data = json.loads(filepath.read_text(encoding="utf-8"))
+    forecast = SavedForecast.model_validate(data)
+    updated = forecast.model_copy(update=updates)
+    if updated == forecast:
+        return False
+    filepath.write_text(updated.model_dump_json(indent=2), encoding="utf-8")
+    return True
+
+
+def update_forecast_file(filepath: Path, resolution: str | float) -> bool:
+    """Update a single forecast file with resolution data."""
+    return _update_forecast_json(filepath, resolution=resolution)
 
 
 def update_retrodict_comparison(
@@ -342,30 +257,30 @@ def update_retrodict_comparison(
     Returns:
         True if successfully updated, False otherwise.
     """
-    question_dir = RETRODICT_BASE_PATH / str(post_id)
+    latest_file: Path | None = None
+    latest_ts: datetime | None = None
+    for f in sorted(iter_retrodict_files(post_id)):
+        try:
+            ts = parse_timestamp(f.name)
+        except ValueError:
+            continue
+        if latest_ts is None or ts > latest_ts:
+            latest_file = f
+            latest_ts = ts
 
-    if not question_dir.exists():
+    if latest_file is None:
         logger.warning("No retrodict forecasts found for post %d", post_id)
         return False
 
-    forecast_files = sorted(question_dir.glob("*.json"))
-    if not forecast_files:
-        return False
-
-    latest_file = forecast_files[-1]
+    updates: dict[str, RetrodictComparison | str | None] = {"comparison": comparison}
+    if resolution is not None:
+        updates["resolution"] = resolution
 
     try:
-        data = json.loads(latest_file.read_text(encoding="utf-8"))
-        data["comparison"] = comparison.model_dump()
-        if resolution is not None:
-            data["resolution"] = resolution
-        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        logger.info(
-            "Updated retrodict comparison for post %d: %s",
-            post_id,
-            comparison.model_dump(),
-        )
-        return True
+        result = _update_forecast_json(latest_file, **updates)
+        if result:
+            logger.info("Updated retrodict comparison for post %d", post_id)
+        return result
     except Exception as e:
         logger.warning(
             "Failed to update retrodict comparison for post %d: %s", post_id, e
@@ -382,13 +297,8 @@ def load_past_forecasts(post_id: int) -> list[SavedForecast]:
     Returns:
         List of SavedForecast objects, sorted by timestamp (oldest first).
     """
-    question_dir = FORECASTS_BASE_PATH / str(post_id)
-
-    if not question_dir.exists():
-        return []
-
     forecasts = []
-    for filepath in sorted(question_dir.glob("*.json")):
+    for filepath in sorted(iter_forecast_files(post_id)):
         try:
             data = json.loads(filepath.read_text(encoding="utf-8"))
             forecasts.append(SavedForecast.model_validate(data))
@@ -408,27 +318,15 @@ def load_retrodict_forecasts(post_id: int | None = None) -> list[SavedForecast]:
     Returns:
         List of SavedForecast objects with retrodict_date set, sorted by timestamp.
     """
-    if not RETRODICT_BASE_PATH.exists():
-        return []
-
-    dirs = (
-        [RETRODICT_BASE_PATH / str(post_id)]
-        if post_id
-        else [d for d in RETRODICT_BASE_PATH.iterdir() if d.is_dir()]
-    )
-
     forecasts = []
-    for question_dir in dirs:
-        if not question_dir.exists():
-            continue
-        for filepath in sorted(question_dir.glob("*.json")):
-            try:
-                data = json.loads(filepath.read_text(encoding="utf-8"))
-                forecasts.append(SavedForecast.model_validate(data))
-            except Exception as e:
-                logger.warning("Failed to load retrodict from %s: %s", filepath, e)
+    for filepath in sorted(iter_retrodict_files(post_id)):
+        try:
+            data = json.loads(filepath.read_text(encoding="utf-8"))
+            forecasts.append(SavedForecast.model_validate(data))
+        except Exception as e:
+            logger.warning("Failed to load retrodict from %s: %s", filepath, e)
 
-    return sorted(forecasts, key=lambda f: f.timestamp)
+    return sorted(forecasts, key=lambda f: parse_timestamp(f.timestamp))
 
 
 def get_latest_forecast(post_id: int) -> SavedForecast | None:
@@ -454,32 +352,19 @@ def mark_submitted(post_id: int, timestamp: str | None = None) -> bool:
     Returns:
         True if a forecast was marked, False if no forecast exists.
     """
-    question_dir = FORECASTS_BASE_PATH / str(post_id)
-
-    if not question_dir.exists():
+    latest_file = find_latest_forecast_file(post_id)
+    if latest_file is None:
         logger.warning("No forecasts found for post %d", post_id)
         return False
 
-    # Find the latest forecast file
-    forecast_files = sorted(question_dir.glob("*.json"))
-    if not forecast_files:
-        return False
-
-    latest_file = forecast_files[-1]
-
-    try:
-        data = json.loads(latest_file.read_text(encoding="utf-8"))
-        if timestamp is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        data["submitted_at"] = timestamp
-        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    result = _update_forecast_json(latest_file, submitted_at=timestamp)
+    if result:
         logger.info(
             "Marked forecast for post %d as submitted at %s", post_id, timestamp
         )
-        return True
-    except Exception as e:
-        logger.warning("Failed to mark submission for post %d: %s", post_id, e)
-        return False
+    return result
 
 
 def is_submitted(post_id: int) -> bool:
@@ -518,29 +403,17 @@ def mark_comment_posted(post_id: int, timestamp: str | None = None) -> bool:
     Returns:
         True if a forecast was marked, False if no forecast exists.
     """
-    question_dir = FORECASTS_BASE_PATH / str(post_id)
-
-    if not question_dir.exists():
+    latest_file = find_latest_forecast_file(post_id)
+    if latest_file is None:
         logger.warning("No forecasts found for post %d", post_id)
         return False
 
-    forecast_files = sorted(question_dir.glob("*.json"))
-    if not forecast_files:
-        return False
-
-    latest_file = forecast_files[-1]
-
-    try:
-        data = json.loads(latest_file.read_text(encoding="utf-8"))
-        if timestamp is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        data["comment_posted_at"] = timestamp
-        latest_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    result = _update_forecast_json(latest_file, comment_posted_at=timestamp)
+    if result:
         logger.info("Marked comment posted for post %d at %s", post_id, timestamp)
-        return True
-    except Exception as e:
-        logger.warning("Failed to mark comment for post %d: %s", post_id, e)
-        return False
+    return result
 
 
 def update_resolution(post_id: int, resolution: str) -> None:
@@ -550,19 +423,13 @@ def update_resolution(post_id: int, resolution: str) -> None:
         post_id: Metaculus post ID.
         resolution: Resolution status ("yes", "no", "ambiguous").
     """
-    question_dir = FORECASTS_BASE_PATH / str(post_id)
-
-    if not question_dir.exists():
+    files = list(iter_forecast_files(post_id))
+    if not files:
         logger.warning("No forecasts found for post %d", post_id)
         return
 
-    for filepath in question_dir.glob("*.json"):
-        try:
-            data = json.loads(filepath.read_text(encoding="utf-8"))
-            data["resolution"] = resolution
-            filepath.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except Exception as e:
-            logger.warning("Failed to update resolution in %s: %s", filepath, e)
+    for filepath in files:
+        _update_forecast_json(filepath, resolution=resolution)
 
     logger.info(
         "Updated resolution to '%s' for all forecasts of post %d",
@@ -719,7 +586,8 @@ def format_history_for_context(forecasts: list[SavedForecast]) -> str:
     lines = ["## Past Forecasts for This Question\n"]
 
     for f in forecasts:
-        lines.append(f"### {f.timestamp}")
+        version_tag = f" (v{f.agent_version})" if f.agent_version else ""
+        lines.append(f"### {f.timestamp}{version_tag}")
 
         if f.question_type == "binary" and f.probability is not None:
             lines.append(f"**Probability**: {f.probability:.1%}")

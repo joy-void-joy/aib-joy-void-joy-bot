@@ -222,13 +222,3 @@ def cached(
             ...
     """
     return api_cache.cached(ttl=ttl)
-
-
-def get_cache_stats() -> dict[str, int | float]:
-    """Get statistics from the global API cache."""
-    return api_cache.stats
-
-
-async def clear_cache() -> None:
-    """Clear the global API cache."""
-    await api_cache.clear()

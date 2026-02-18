@@ -13,7 +13,7 @@ The feedback loop operates at three levels. Be clear about which level you're wo
 
 **Clarification**:
 - Object level = "How can the agent forecast better?" (tools, APIs, reasoning)
-- Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/sessions/)
+- Meta level = "How can the agent track its own performance better?" (meta-reflection prompts, metrics formats, what the agent writes to notes/traces/<version>/sessions/)
 - Meta-meta level = "How can this feedback loop command work better?" (aib-devtools feedback, this document, analysis workflows)
 
 **Examples**:
@@ -175,7 +175,7 @@ The agent forecasts as if it were making the prediction at the original question
 **Data scarcity in blind mode**: Retrodict systematically has less data than live forecasting. Wayback Machine coverage is spotty (many pages uncached), date-restricted web searches return far fewer results, live-only tools (prediction markets, real-time APIs) are blocked entirely, and sandbox network access is PyPI-only. This means retrodict scores are expected to be worse than live scores for the same agent version — the gap reflects data availability, not reasoning quality. When comparing new retrodicts against old live forecasts, account for this baseline disadvantage before attributing score differences to agent changes.
 
 **What retrodict outputs:**
-- Saves forecasts to `notes/retrodict/<post_id>/<forecast_date>_<timestamp>.json`
+- Saves forecasts to `notes/traces/<version>/retrodict/<post_id>/<forecast_date>_<timestamp>.json`
 - The `retrodict_date` field in the JSON records the cutoff date used
 - Filename includes the cutoff date for easy identification
 - Shows actual resolution and final CP for comparison
@@ -190,8 +190,8 @@ The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12,
 - Run `uv run aib-devtools scores build` after setting resolutions to rebuild calibration data
 
 **Retrodict vs Live forecasts:**
-- Live forecasts go to `notes/forecasts/`
-- Retrodicted forecasts go to `notes/retrodict/` (separate folder)
+- Live forecasts go to `notes/traces/<version>/forecasts/`
+- Retrodicted forecasts go to `notes/traces/<version>/retrodict/` (separate folder)
 - This prevents mixing calibration data with real predictions
 
 #### Future-Leak Detection
@@ -230,7 +230,7 @@ Retrodictions are our **best** calibration signal — they have known resolution
 **Collect retrodiction data:**
 ```bash
 # List all retrodictions
-ls notes/retrodict/*/
+ls notes/traces/*/retrodict/*/
 
 # Summarize retrodiction accuracy (uses known resolutions embedded in the JSON)
 uv run aib-devtools feedback collect --include-retrodict
@@ -247,7 +247,7 @@ uv run aib-devtools feedback collect --include-retrodict
 
 **If a retrodiction fails airtightness**: Exclude it from calibration data and file a bug against the retrodict hooks.
 
-**Note**: `uv run aib-devtools feedback collect --include-retrodict` processes both `notes/forecasts/` and `notes/retrodict/`.
+**Note**: `uv run aib-devtools feedback collect --include-retrodict` processes both `notes/traces/<version>/forecasts/` and `notes/traces/<version>/retrodict/`.
 
 ### 1d. About Community Prediction
 

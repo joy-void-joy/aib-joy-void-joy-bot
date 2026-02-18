@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -41,10 +42,13 @@ class WaybackRateLimitError(Exception):
         super().__init__(f"Rate limited, retry after {retry_after}s")
 
 
-async def _make_wayback_request(url: str, timestamp: str) -> dict[str, Any] | None:
+async def _make_wayback_request(
+    client: httpx.AsyncClient, url: str, timestamp: str
+) -> dict[str, Any] | None:
     """Make a single request to Wayback Availability API.
 
     Args:
+        client: Shared httpx client (caller owns lifecycle).
         url: The URL to check.
         timestamp: Wayback timestamp format (YYYYMMDD).
 
@@ -55,19 +59,18 @@ async def _make_wayback_request(url: str, timestamp: str) -> dict[str, Any] | No
         WaybackRateLimitError: If rate limited (429).
         httpx.HTTPStatusError: For other HTTP errors.
     """
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            "https://archive.org/wayback/available",
-            params={"url": url, "timestamp": timestamp},
-        )
+    response = await client.get(
+        "https://archive.org/wayback/available",
+        params={"url": url, "timestamp": timestamp},
+    )
 
-        if response.status_code == 429:
-            retry_after = response.headers.get("Retry-After")
-            retry_seconds = int(retry_after) if retry_after else None
-            raise WaybackRateLimitError(retry_seconds)
+    if response.status_code == 429:
+        retry_after = response.headers.get("Retry-After")
+        retry_seconds = int(retry_after) if retry_after else None
+        raise WaybackRateLimitError(retry_seconds)
 
-        response.raise_for_status()
-        return response.json()
+    response.raise_for_status()
+    return response.json()
 
 
 @cached(ttl=86400)  # 24 hours - availability rarely changes
@@ -96,7 +99,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with wayback_throttle:
+    async with wayback_throttle, httpx.AsyncClient(timeout=15.0) as client:
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -107,7 +110,7 @@ async def check_wayback_availability(
                 reraise=True,
             ):
                 with attempt:
-                    data = await _make_wayback_request(url, timestamp)
+                    data = await _make_wayback_request(client, url, timestamp)
                     if data is None:
                         return None
 
@@ -212,13 +215,12 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with wayback_throttle:
+    async with wayback_throttle, httpx.AsyncClient(timeout=20.0) as client:
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
-                response = await client.get(wayback_url, follow_redirects=True)
-                response.raise_for_status()
-                content_type = response.headers.get("content-type", "")
-                raw_text = response.text
+            response = await client.get(wayback_url, follow_redirects=True)
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            raw_text = response.text
         except httpx.HTTPError as e:
             logger.warning("Wayback fetch failed for %s: %s", url, e)
             return None
@@ -240,6 +242,49 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     return extracted
 
 
+async def wayback_replace_snippets[T](
+    results: list[T],
+    wayback_ts: str,
+    *,
+    get_url: Callable[[T], str],
+    set_snippet: Callable[[T, str], None],
+) -> list[T]:
+    """Fetch Wayback content for each result, replace snippets, drop failures.
+
+    Generic helper used by both Exa validation and retrodict search filtering.
+
+    Args:
+        results: List of result objects to validate.
+        wayback_ts: Wayback timestamp (YYYYMMDD) cutoff.
+        get_url: Extract the URL from a result object.
+        set_snippet: Set the Wayback-derived snippet on a result object.
+
+    Returns:
+        Filtered results with Wayback-derived snippets.
+    """
+    tasks = [fetch_wayback_content(get_url(r), wayback_ts) for r in results]
+    contents = await asyncio.gather(*tasks)
+
+    validated: list[T] = []
+    for result, content in zip(results, contents):
+        if content is None:
+            logger.warning(
+                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
+                get_url(result),
+            )
+            continue
+        set_snippet(result, content[:500])
+        validated.append(result)
+
+    logger.info(
+        "[Retrodict] Wayback validated %d/%d search results",
+        len(validated),
+        len(results),
+    )
+
+    return validated
+
+
 async def wayback_validate_results(
     results: list[ExaResult],
     wayback_ts: str,
@@ -257,25 +302,14 @@ async def wayback_validate_results(
     Returns:
         Filtered results with Wayback-derived snippets.
     """
-    tasks = [fetch_wayback_content(r["url"] or "", wayback_ts) for r in results]
-    contents = await asyncio.gather(*tasks)
 
-    validated: list[ExaResult] = []
-    for result, content in zip(results, contents):
-        if content is None:
-            logger.warning(
-                "Wayback validate: dropping %s (no pre-cutoff snapshot)",
-                result.get("url", "?"),
-            )
-            continue
-        result["snippet"] = content[:500]
-        result["highlights"] = None
-        validated.append(result)
+    def _set_exa_snippet(r: ExaResult, snippet: str) -> None:
+        r["snippet"] = snippet
+        r["highlights"] = None
 
-    logger.info(
-        "[Retrodict] Wayback validated %d/%d search results",
-        len(validated),
-        len(results),
+    return await wayback_replace_snippets(
+        results,
+        wayback_ts,
+        get_url=lambda r: r["url"] or "",
+        set_snippet=_set_exa_snippet,
     )
-
-    return validated
