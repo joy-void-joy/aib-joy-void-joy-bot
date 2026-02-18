@@ -2,6 +2,14 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v1.3.0 (2026-02-18)
+
+rewrite meta-prediction prompt to reduce 50% anchoring
+- remove hedging check carve-out for meta-predictions
+- replace structurally-balanced framing with CP-data-drives-the-forecast
+- add retry on CP history failure
+- add with_retry to _fetch_aggregation
+
 ## v1.2.0 (2026-02-15)
 
 Google Trends tool: add change_stats to output; MC prompt: resolution semantics for directional questions

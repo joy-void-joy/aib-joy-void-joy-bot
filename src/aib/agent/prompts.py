@@ -188,8 +188,6 @@ Precedent IS strong when the mechanism is structural and well-understood, multip
 
 If you're near 50%, pause and ask: Is this genuine uncertainty, or am I splitting the difference because I don't want to commit? A well-reasoned 40% or 58% based on evidence is better than a lazy 50% that avoids commitment. Use your data to take a position.
 
-However, 50% is sometimes the right answer. For meta-predictions where the community prediction is near the threshold, structural uncertainty around the crossing point makes 50% a well-calibrated forecast. The question is not whether 50% looks lazy, but whether you have directional evidence strong enough to justify moving away from it.
-
 ---
 
 ## Definitional Questions
@@ -216,39 +214,42 @@ You're forecasting **forecaster behavior**, not the underlying event. This requi
 
 Your job is to model where the Metaculus community prediction will be, not what you think the true probability of the event is. "The event is likely, so the CP must be above the threshold" is wrong — forecasters may have already priced in the event, may discount the risk, or may have stale predictions. You cannot know any of this without seeing the actual CP data.
 
-### Why Thresholds Are Structurally Balanced
+### CP Data Drives the Forecast
 
-Meta-prediction thresholds are auto-generated near the current CP level at question creation time. This means the question is *designed* so that the CP is already close to the threshold — crossing is plausible in either direction. The auto-generation mechanism itself is your strongest prior: the base rate for YES vs NO is roughly balanced by construction.
+**get_cp_history is the most important tool for meta-predictions.** The current CP position and its trajectory are far more informative than reasoning about the underlying event.
 
-This has a concrete implication: the burden of proof for a directional call is on the evidence, not on the event. You need specific evidence about *forecaster behavior* (CP position, trajectory, forecaster count, upcoming catalysts) to justify moving away from the balanced prior. General reasoning about the underlying event's likelihood does not meet this bar.
+Use the CP data to take a directional position:
+- **CP clearly above threshold and stable/rising**: Forecast YES confidently (0.70+)
+- **CP clearly below threshold and stable/falling**: Forecast NO confidently (≤0.30)
+- **CP at or very near threshold**: Use trajectory, buffer, catalysts to pick a direction — don't default to 50%
+- **CP trending persistently in one direction**: This is real signal. A multi-week decline that has already absorbed known catalysts is likely to continue.
+
+Note: thresholds are auto-generated near the CP at question creation time, so the CP often starts near the threshold. But by the time you forecast, days or weeks of movement have occurred — that movement IS your evidence.
 
 ### Two Lenses — Always Use Both
 
-**1. Fundamentals:** Given all the evidence about the underlying event, what SHOULD a rational forecaster believe? If fundamentals strongly favor one direction (strong polling lead, confirmed event, definitive data), then CP should move toward that fundamental value. This lens is most powerful when the CP-to-threshold gap is small, because modest movements driven by fundamentals can easily cross the threshold.
+**1. Trajectory:** Where IS the CP now and where is it trending? Use get_cp_history. The current CP position relative to the threshold is the single most informative data point. A CP that is already well above the threshold is likely to still be above it at resolution. A persistent trend (especially one that survived a catalyst) is strong evidence.
 
-**2. Trajectory:** Where IS the CP now and where is it trending? Use get_cp_history. The current CP position relative to the threshold is the single most informative data point. A CP that is already well above the threshold is likely to still be above it at resolution; a CP sitting right at the threshold could easily go either way.
+**2. Fundamentals:** Given all the evidence about the underlying event, what SHOULD a rational forecaster believe? If fundamentals strongly favor one direction (strong polling lead, confirmed event, definitive data), then CP should move toward that fundamental value. This lens is most powerful when the CP-to-threshold gap is small, because modest movements driven by fundamentals can easily cross the threshold.
 
-**Trajectory skepticism:** Short-term CP trends (days to a few weeks) are noisy. A CP that drifted down over 8 days may reverse just as easily — a single forecaster updating, a news event, or a few new participants can shift it. Don't read too much directional signal into recent movements. The *level* (how far CP is from threshold) matters more than the *slope* (which direction it moved recently).
-
-**Critical warning:** Do not build sophisticated quantitative models (Markov chains, transition matrices, logistic regressions) from CP history data. These models look rigorous but create false precision from small samples — typical CP history has dozens of data points, not thousands. Treat trajectory as qualitative context, not the input to a quantitative model.
+**Critical warning:** Do not build sophisticated quantitative models (Markov chains, transition matrices, logistic regressions) from CP history data. These models look rigorous but create false precision from small samples. Treat trajectory as qualitative context.
 
 ### When CP History Is Unavailable
 
-If get_cp_history returns empty or fails, you are missing your most important input. **This is a hard stop.** You cannot compensate for missing CP data by reasoning harder about the underlying event.
+If get_cp_history returns empty or fails, retry after ~120 seconds — transient API errors are common. If it still fails, you are missing your most important input. Acknowledge this honestly — your confidence should be lower. But do not freeze at 50%.
 
-The danger: when CP data is missing, the agent naturally fills the void with event-level reasoning. "The evidence for the event is overwhelming, so surely forecasters must have the CP above the threshold." This reasoning feels compelling — but it is systematically wrong, because it ignores the entire question of where the CP actually sits. Forecasters may have already priced the event in at a level below the threshold, or the question may have few forecasters with stale predictions, or the CP may have moved in the opposite direction from what event fundamentals would predict.
+Instead: reason about what CP level is likely given the fundamentals and the forecaster population on Metaculus. If the event is extremely unlikely (e.g., US gains sovereignty over Greenland), the CP is probably low and near the threshold from below. If the event is widely expected, the CP is probably above the threshold. This is weaker evidence than actual CP data, but it's better than refusing to take a position.
 
-**Concrete example:** "Will CP be above 33% for a government shutdown question?" Without CP data, the agent reasoned: "CR expires soon, recent shutdown precedent, partisan conflict — shutdown risk is high — so CP must be above 33%." This produced a confident YES forecast that was catastrophically wrong. The CP was actually near the threshold and drifted below it, because forecasters assessed the shutdown risk differently than the event fundamentals suggested.
-
-Without CP data, you are essentially blind to the most important variable. Treat your forecast as reflecting that blindness: your prior is that the threshold was set near the CP, so crossing could go either way. Only evidence about *forecaster behavior itself* (e.g., you found the question page and can see the forecaster count is tiny, or you know a major news event occurred that would force forecasters to update) justifies departing from this prior. Evidence about the underlying event alone — no matter how strong — does not.
+The specific danger to avoid: "The event is likely, so the CP MUST be above the threshold." This ignores that forecasters may have priced the event in at a level below the threshold. When you use event-level reasoning without CP data, widen your uncertainty but still take the best position you can.
 
 ### Key Variables
 
-- **Buffer size**: How far is current CP from the threshold? This is the most predictive variable. A CP that needs to move many percentage points to cross is much more likely to stay on its current side than one right at the boundary.
-- **Forecaster count**: Small forecaster bases are volatile — a few new forecasters with strong priors can move the CP significantly. Large bases are more stable but also harder to move when fundamentals shift.
-- **Time remaining**: More time until the resolution date means more opportunity for drift in either direction. Short windows favor the current state persisting.
-- **Live catalysts**: Are there specific events in the resolution window that could move the CP? An upcoming election, earnings report, policy announcement, or court ruling can force forecaster updates. Identifying a live catalyst that would clearly push forecasters in one direction is the best justification for a directional call.
-- **Stale predictions**: On questions with few forecasters, early predictions may not get updated. This can keep the CP artificially anchored at a historical level even as the underlying reality has changed. Check the forecaster count and when the last predictions were made.
+- **Buffer size**: How far is current CP from the threshold? This is the most predictive variable. A CP that needs to move many percentage points to cross is much more likely to stay on its current side.
+- **Forecaster count**: Small forecaster bases are volatile. Large bases are more stable but also harder to move.
+- **Time remaining**: More time = more opportunity for drift. Short windows favor the status quo.
+- **Live catalysts**: Upcoming events that could force forecaster updates (elections, earnings, policy announcements). A live catalyst pushing in one direction is the best justification for a directional call.
+- **Stale predictions**: On questions with few forecasters, early predictions may not get updated. This can keep the CP anchored at a historical level.
+- **Status quo effect**: When CP is at exactly the threshold with strict inequality (strictly > X), the status quo resolves NO. Factor this in — it takes active upward movement to cross.
 
 **Cross-platform caution**: Manifold and Polymarket prices reflect the UNDERLYING EVENT, not Metaculus CP movement. Use them as directional evidence for where fundamentals should push CP, not as direct estimates of the CP level.
 
