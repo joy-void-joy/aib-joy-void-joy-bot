@@ -17,13 +17,11 @@ from claude_agent_sdk.types import (
 )
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.arxiv_search import arxiv_server
-from aib.tools.financial import financial_server
-from aib.tools.forecasting import create_forecasting_server
+from aib.tools.financial import create_financial_server
 from aib.tools.markets import create_markets_server
-from aib.tools.notes import create_notes_server
-from aib.tools.retrodict_search import create_retrodict_search_server
-from aib.tools.trends import trends_server
+from aib.tools.search import create_search_server
+from aib.tools.trends import create_trends_server
+from aib.tools.write_meta import create_write_meta_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
@@ -48,32 +46,32 @@ BUILTIN_TOOLS: frozenset[str] = frozenset(
 # Metaculus tools (require METACULUS_TOKEN)
 METACULUS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__forecasting__get_metaculus_questions",
-        "mcp__forecasting__list_tournament_questions",
-        "mcp__forecasting__search_metaculus",
-        "mcp__forecasting__get_coherence_links",
-        "mcp__forecasting__get_cp_history",
+        "mcp__markets__get_metaculus_questions",
+        "mcp__markets__list_tournament_questions",
+        "mcp__markets__search_metaculus",
+        "mcp__markets__get_coherence_links",
+        "mcp__markets__get_cp_history",
     }
 )
 
 # Wikipedia tool (no API key required)
 WIKIPEDIA_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__forecasting__wikipedia",
+        "mcp__search__wikipedia",
     }
 )
 
 # Exa search tools (require EXA_API_KEY)
 EXA_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__forecasting__search_exa",
+        "mcp__search__search_exa",
     }
 )
 
 # AskNews tools (require ASKNEWS_CLIENT_ID and ASKNEWS_SECRET)
 ASKNEWS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__forecasting__search_news",
+        "mcp__search__search_news",
     }
 )
 
@@ -114,7 +112,6 @@ LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
         "mcp__markets__manifold_price",
         "mcp__markets__kalshi_price",
         "mcp__markets__kalshi_event",
-        "mcp__markets__stock_price",
     }
 )
 
@@ -124,7 +121,14 @@ HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset(
         "mcp__markets__polymarket_history",
         "mcp__markets__manifold_history",
         "mcp__markets__kalshi_history",
-        "mcp__markets__stock_history",
+    }
+)
+
+# Stock tools (now in financial server)
+STOCK_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__financial__stock_price",
+        "mcp__financial__stock_history",
     }
 )
 
@@ -140,7 +144,7 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__notes__notes",
+        "mcp__notes__write_meta",
     }
 )
 
@@ -154,18 +158,33 @@ PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Search tools for retrodict mode (SDK WebSearch + Wayback validation)
-RETRODICT_SEARCH_TOOLS: frozenset[str] = frozenset(
+# Fetch tool (now in search server)
+FETCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__search__fetch_url",
+    }
+)
+
+# Web search tools (Haiku sub-agent with WebSearch + API augmentation)
+SEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__search__web_search",
-        "mcp__search__fetch",
     }
 )
 
 # arXiv tools (no API key required, supports date filtering)
 ARXIV_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__arxiv__search_arxiv",
+        "mcp__search__search_arxiv",
+        "mcp__search__fetch_arxiv",
+    }
+)
+
+# World Bank tools (now in financial server)
+WORLD_BANK_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__financial__world_bank_indicator",
+        "mcp__financial__world_bank_search",
     }
 )
 
@@ -181,7 +200,7 @@ class ToolPolicy:
 
     Example:
         policy = ToolPolicy.from_settings(settings)
-        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_id="41906_20260202")
+        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_dir=Path("notes/traces/1.2.1/sessions/41906/20260202"))
         allowed_tools = policy.get_allowed_tools(allow_spawn=True)
     """
 
@@ -243,40 +262,28 @@ class ToolPolicy:
         sandbox: Sandbox,
         composition_server: McpSdkServerConfig,
         *,
-        session_id: str | None = None,
+        session_dir: Path | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
         Args:
             sandbox: The sandbox instance for code execution.
             composition_server: The composition MCP server for spawn_subquestions.
-            session_id: Session ID for the notes tool. Format: "<post_id>_<timestamp>".
-                Enables write_meta mode. If None, write_meta is disabled.
+            session_dir: Session directory path for the write_meta tool.
+                If None, write_meta is disabled.
 
         Returns:
             Dict mapping server name to server config.
         """
         servers: dict[str, McpServerConfig] = {
-            "forecasting": create_forecasting_server(),
-            "financial": financial_server,
+            "financial": create_financial_server(),
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_notes_server(
-                session_id,
-                notes_base=(
-                    Path(f"./tmp/notes/{session_id}")
-                    if self.is_retrodict and session_id
-                    else None
-                ),
-            ),
-            "trends": trends_server,
-            "arxiv": arxiv_server,
+            "notes": create_write_meta_server(session_dir),
+            "trends": create_trends_server(),
+            "search": create_search_server(),
         }
-
-        # Add search server in retrodict mode (date-filtered web search)
-        if self.is_retrodict:
-            servers["search"] = create_retrodict_search_server()
 
         # Only add Playwright in non-retrodict mode
         if not self.is_retrodict:
@@ -328,6 +335,9 @@ class ToolPolicy:
         tools.update(LIVE_MARKET_TOOLS)
         tools.update(HISTORICAL_MARKET_TOOLS)
 
+        # Stock tools (in financial server)
+        tools.update(STOCK_TOOLS)
+
         # Trends tools
         tools.update(TRENDS_TOOLS)
 
@@ -337,12 +347,17 @@ class ToolPolicy:
         # arXiv tools (supports date filtering)
         tools.update(ARXIV_TOOLS)
 
+        # World Bank tools (no API key required)
+        tools.update(WORLD_BANK_TOOLS)
+
+        # Fetch tool (unified URL fetching)
+        tools.update(FETCH_TOOLS)
+
         # Playwright tools
         tools.update(PLAYWRIGHT_TOOLS)
 
-        # Retrodict search tools (date-filtered web search)
-        if self.is_retrodict:
-            tools.update(RETRODICT_SEARCH_TOOLS)
+        # Web search tools
+        tools.update(SEARCH_TOOLS)
 
         # Remove excluded tools
         tools -= self._excluded_tools
