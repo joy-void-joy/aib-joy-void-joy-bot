@@ -132,7 +132,7 @@ class TestRetrodictHooks:
     async def test_search_news_denied(self, hooks: HooksConfig) -> None:
         """search_news should be denied in retrodict mode."""
         result = await self._invoke_hook(
-            hooks, "mcp__forecasting__search_news", {"query": "test"}
+            hooks, "mcp__search__search_news", {"query": "test"}
         )
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
@@ -146,7 +146,7 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
 
-    # --- WebFetch tests (denied, use mcp__search__fetch instead) ---
+    # --- WebFetch tests (denied, use mcp__search__fetch_url instead) ---
 
     @pytest.mark.asyncio
     async def test_webfetch_denied(self, hooks: HooksConfig) -> None:
@@ -158,7 +158,7 @@ class TestRetrodictHooks:
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
         assert "not available" in output["permissionDecisionReason"]
-        assert "mcp__search__fetch" in output["permissionDecisionReason"]
+        assert "mcp__search__fetch_url" in output["permissionDecisionReason"]
 
     # --- Passthrough tests ---
 
@@ -193,7 +193,7 @@ class TestRetrodictToolSchemas:
 
     def test_search_exa_schema_includes_retrodict_params(self) -> None:
         """search_exa tool schema must include published_before and livecrawl."""
-        from aib.tools.forecasting import search_exa
+        from aib.tools.search import search_exa
 
         schema = search_exa.input_schema
         assert isinstance(schema, dict), "input_schema must be a dict"
