@@ -695,7 +695,9 @@ class CondensedReasoning(BaseModel):
     narrative: str = Field(
         description=(
             "3-5 short paragraphs covering: what research was done, "
-            "key evidence found, and how the conclusion was reached."
+            "key evidence found, and how the conclusion was reached. "
+            "Third-person impersonal voice (e.g., 'Research indicates...', "
+            "'The analysis found...'); never first person."
         )
     )
 
@@ -708,7 +710,10 @@ async def condense_reasoning(trace: str, question_title: str) -> str | None:
         system_prompt=(
             "Condense the forecast trace into a clear, readable narrative. "
             "3-5 short paragraphs covering: what research was done, key evidence found, "
-            "and how the conclusion was reached. No markdown headers."
+            "and how the conclusion was reached. No markdown headers. "
+            "Write in third-person impersonal voice throughout — use constructions like "
+            "'Research indicates...', 'The analysis found...', 'Key evidence suggests...'. "
+            "Never use first person ('I') or name the forecaster as a subject."
         ),
         output_format={
             "type": "json_schema",
