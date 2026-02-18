@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(git:*), Bash(gh:*), Bash(uv run pyright), Bash(uv run ruff:*), Bash(uv run pytest:*), Read, Grep, Glob, AskUserQuestion
-argument-hint: [base-branch]
+argument-hint: [target-branch]
 description: Clean up commit history on the feature branch and open/update a PR
 ---
 
@@ -8,11 +8,19 @@ description: Clean up commit history on the feature branch and open/update a PR
 
 Clean up the commit history on the current feature branch, push it, and open (or update) a PR.
 
-## Determine Base Branch
+## Determine Branches
 
-If a base branch was provided as an argument, use it. Otherwise, use `AskUserQuestion` to ask which branch to rebase onto, offering `main` as the default and the option to specify a different branch.
+### Base branch (`<base>`)
 
-Store the result as `<base>` — all references below use this value.
+Auto-detect the base branch — the branch this feature branch diverged from. Use `main` as the default. Verify with:
+```bash
+git merge-base --is-ancestor main HEAD && echo "main is ancestor"
+```
+If `main` is not an ancestor (e.g., branch was created from another feature branch), use `AskUserQuestion` to ask which branch to use as base.
+
+### PR target (`<target>`)
+
+If a target branch was provided as an argument, use it as the PR target. Otherwise, `<target>` defaults to `<base>`.
 
 **Scope:** Only rebase changes since the branch diverged from `<base>`. Do not touch commits that already exist on `<base>`.
 
@@ -77,12 +85,12 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
    Check if a PR already exists:
    ```bash
-   gh pr list --head "<branch>" --state open --json number,url
+   gh pr list --head "<branch>" --base "<target>" --state open --json number,url
    ```
 
    **If no PR exists** (first run):
    ```bash
-   gh pr create --title "<conventional commit style title>" --body "$(cat <<'EOF'
+   gh pr create --base "<target>" --title "<conventional commit style title>" --body "$(cat <<'EOF'
    ## Summary
    <1-3 bullet points describing the changes>
    EOF

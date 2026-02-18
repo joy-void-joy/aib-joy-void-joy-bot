@@ -41,15 +41,16 @@ src/
         └── markets.py            # In-process MCP: Polymarket, Manifold
 
 notes/
-├── sessions/<session_id>/        # RW - current session working notes
-├── research/                     # RO - all historical research
-│   └── <timestamp>/              # RW - this session's research
-├── forecasts/                    # RO - all historical forecasts
-│   └── <question_id>/            # RW - forecasts for this question
-└── feedback_loop/                # Calibration metrics and analysis
-    ├── <timestamp>_metrics.json  # Output from feedback_collect.py
-    ├── <timestamp>_analysis.md   # Analysis notes from /feedback-loop
-    └── last_run.json             # Tracks last collection timestamp
+├── traces/<version>/
+│   ├── forecasts/<post_id>/      # Forecast JSONs
+│   ├── sessions/<post_id>/<ts>/  # Session working notes + meta.md
+│   ├── retrodict/<post_id>/      # Retrodict forecast JSONs + structured/
+│   └── logs/<post_id>_<ts>.md    # Agent reasoning logs
+├── feedback_loop/                # Calibration metrics and analysis
+│   ├── <timestamp>_metrics.json  # Output from feedback_collect.py
+│   ├── <timestamp>_analysis.md   # Analysis notes from /feedback-loop
+│   └── last_run.json             # Tracks last collection timestamp
+└── regression_suite.json         # Regression test question set
 ```
 
 ---
