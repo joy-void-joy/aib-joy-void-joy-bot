@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v2.1.0 (2026-02-18)
+
+fetch pipeline returns page titles and relevant links; source extraction handles augmented web search; first-person condensed reasoning
+- fetch_url extracts titles via trafilatura metadata and surfaces follow-up links
+- source extraction distinguishes augmented vs plain tool results
+- condensed reasoning uses first-person voice with variable length
+- reasoning comment includes last agent text block
+- loop interval reduced to 10min
+
 ## v2.0.0 (2026-02-18)
 
 Unified fetch/search pipeline, versioned trace storage, World Bank tools
