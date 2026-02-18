@@ -1,0 +1,262 @@
+"""Tests for the reflection tool."""
+
+import math
+from pathlib import Path
+
+import pytest
+
+from aib.agent.models import Factor
+from aib.tools.reflection import (
+    ReflectionInput,
+    ReflectionOutput,
+    compute_reflection,
+    _append_reflection,
+)
+
+
+def _make_input(
+    factors: list[Factor] | None = None,
+    tentative_logit: float = 0.0,
+    arguments_for: list[str] | None = None,
+    arguments_against: list[str] | None = None,
+) -> ReflectionInput:
+    """Helper to create a ReflectionInput with sensible defaults."""
+    return ReflectionInput(
+        factors=factors or [],
+        tentative_logit=tentative_logit,
+        arguments_for=arguments_for or ["argument for"],
+        arguments_against=arguments_against or ["argument against"],
+    )
+
+
+class TestComputeReflectionBinary:
+    """Tests for binary question reflection computation."""
+
+    def test_aligned_factors_no_gap(self) -> None:
+        """When factor_sum ≈ tentative_logit, gap should be near zero."""
+        factors = [
+            Factor(description="Evidence A", logit=1.0, confidence=0.8),
+            Factor(description="Evidence B", logit=-0.5, confidence=0.6),
+        ]
+        factor_sum = 1.0 * 0.8 + (-0.5) * 0.6  # 0.5
+        inp = _make_input(factors=factors, tentative_logit=factor_sum)
+
+        result = compute_reflection(inp, "binary")
+
+        assert isinstance(result, ReflectionOutput)
+        assert abs(result.gap_pp) < 0.1  # type: ignore[operator]
+        assert abs(result.logit_gap) < 0.01
+
+    def test_large_gap(self) -> None:
+        """Factor sum of +2.0 with tentative logit of +1.0 should show a gap."""
+        factors = [
+            Factor(description="Strong evidence", logit=2.0, confidence=1.0),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=1.0)
+
+        result = compute_reflection(inp, "binary")
+
+        assert result.factor_sum == pytest.approx(2.0)
+        assert result.tentative_logit == 1.0
+        assert result.logit_gap == pytest.approx(-1.0)
+        # sigmoid(2.0) ≈ 0.881, sigmoid(1.0) ≈ 0.731 → gap ≈ -15pp
+        assert result.gap_pp is not None
+        assert result.gap_pp < -10
+
+    def test_factor_implied_probability(self) -> None:
+        """Factor implied probability should be sigmoid(factor_sum)."""
+        factors = [
+            Factor(description="Moderate positive", logit=1.0, confidence=1.0),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=1.0)
+
+        result = compute_reflection(inp, "binary")
+
+        expected = 1 / (1 + math.exp(-1.0))
+        assert result.factor_implied_probability == pytest.approx(expected)
+        assert result.tentative_probability == pytest.approx(expected)
+
+    def test_contradictory_direction(self) -> None:
+        """All positive factors with negative tentative logit."""
+        factors = [
+            Factor(description="Positive A", logit=1.0, confidence=0.8),
+            Factor(description="Positive B", logit=0.5, confidence=1.0),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=-1.0)
+
+        result = compute_reflection(inp, "binary")
+
+        assert result.factor_sum > 0
+        assert result.tentative_logit < 0
+        assert result.logit_gap < -1.0
+
+    def test_empty_factors(self) -> None:
+        """Empty factor list should give factor_sum = 0."""
+        inp = _make_input(factors=[], tentative_logit=0.5)
+
+        result = compute_reflection(inp, "binary")
+
+        assert result.factor_count == 0
+        assert result.factor_sum == 0.0
+        assert result.factor_implied_probability == pytest.approx(0.5)
+
+
+class TestComputeReflectionNumeric:
+    """Tests for non-binary question reflection computation."""
+
+    def test_returns_direction_not_probability(self) -> None:
+        """Numeric questions should get direction/strength, not probability."""
+        factors = [
+            Factor(description="Upward pressure", logit=1.5, confidence=0.9),
+            Factor(description="Some drag", logit=-0.3, confidence=0.7),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=1.0)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.factor_direction == "positive"
+        assert result.factor_strength is not None
+        assert result.factor_strength > 0
+        # Should NOT have binary-specific fields
+        assert result.factor_implied_probability is None
+        assert result.gap_pp is None
+
+    def test_negative_direction(self) -> None:
+        """Negative factor sum should give negative direction."""
+        factors = [
+            Factor(description="Downward", logit=-2.0, confidence=1.0),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=-1.0)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.factor_direction == "negative"
+
+    def test_neutral_direction(self) -> None:
+        """Zero factor sum should give neutral direction."""
+        inp = _make_input(factors=[], tentative_logit=0.0)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.factor_direction == "neutral"
+        assert result.factor_strength == 0.0
+
+
+class TestNeutralAndDominant:
+    """Tests for neutral factor detection and dominant factor."""
+
+    def test_neutral_count_threshold(self) -> None:
+        """Factors with |logit| < 0.1 should be counted as neutral."""
+        factors = [
+            Factor(description="Neutral", logit=0.05, confidence=1.0),
+            Factor(description="Also neutral", logit=-0.03, confidence=1.0),
+            Factor(description="Not neutral", logit=0.5, confidence=1.0),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=0.5)
+
+        result = compute_reflection(inp, "binary")
+
+        assert result.neutral_factor_count == 2
+
+    def test_dominant_factor(self) -> None:
+        """Should identify the factor with the largest effective logit."""
+        factors = [
+            Factor(description="Weak", logit=0.3, confidence=1.0),
+            Factor(description="Strong", logit=2.0, confidence=0.9),
+            Factor(description="Medium", logit=-1.0, confidence=0.8),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=1.0)
+
+        result = compute_reflection(inp, "binary")
+
+        assert result.dominant_factor == "Strong"
+        assert result.dominant_effective_logit == pytest.approx(1.8)
+
+
+class TestFactorBreakdown:
+    """Tests for the per-factor breakdown."""
+
+    def test_effective_logit_calculation(self) -> None:
+        """Each factor's effective_logit should be logit * confidence."""
+        factors = [
+            Factor(description="Test", logit=2.0, confidence=0.7),
+        ]
+        inp = _make_input(factors=factors, tentative_logit=1.0)
+
+        result = compute_reflection(inp, "binary")
+
+        assert len(result.factor_breakdown) == 1
+        assert result.factor_breakdown[0].effective_logit == pytest.approx(1.4)
+
+
+class TestFileWriting:
+    """Tests for reflection file I/O."""
+
+    @pytest.mark.asyncio
+    async def test_creates_reflection_yaml(self, tmp_path: Path) -> None:
+        """reflection() should create reflection.yaml."""
+        inp = _make_input(
+            factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
+            tentative_logit=0.8,
+        )
+        computed = compute_reflection(inp, "binary")
+
+        filepath = await _append_reflection(tmp_path, inp, computed, "binary")
+
+        assert filepath.exists()
+        assert filepath.name == "reflection.yaml"
+        content = filepath.read_text()
+        assert "factor_sum" in content
+        assert "Evidence" in content
+
+    @pytest.mark.asyncio
+    async def test_appends_multiple_entries(self, tmp_path: Path) -> None:
+        """Multiple calls should append to the same file."""
+        inp1 = _make_input(
+            factors=[Factor(description="First", logit=1.0, confidence=1.0)],
+            tentative_logit=1.0,
+        )
+        inp2 = _make_input(
+            factors=[Factor(description="Second", logit=2.0, confidence=0.5)],
+            tentative_logit=1.5,
+        )
+
+        await _append_reflection(tmp_path, inp1, compute_reflection(inp1, "binary"), "binary")
+        await _append_reflection(tmp_path, inp2, compute_reflection(inp2, "binary"), "binary")
+
+        content = (tmp_path / "reflection.yaml").read_text()
+        assert content.count("---") == 2
+        assert "First" in content
+        assert "Second" in content
+
+    @pytest.mark.asyncio
+    async def test_optional_fields_excluded(self, tmp_path: Path) -> None:
+        """Optional fields that are None should not appear in YAML."""
+        inp = _make_input(tentative_logit=0.0)
+        computed = compute_reflection(inp, "binary")
+
+        await _append_reflection(tmp_path, inp, computed, "binary")
+
+        content = (tmp_path / "reflection.yaml").read_text()
+        assert "tool_audit" not in content
+        assert "process_reflection" not in content
+
+    @pytest.mark.asyncio
+    async def test_optional_fields_included_when_set(self, tmp_path: Path) -> None:
+        """Optional fields should appear when provided."""
+        inp = ReflectionInput(
+            factors=[],
+            tentative_logit=0.0,
+            arguments_for=["arg for"],
+            arguments_against=["arg against"],
+            tool_audit="web_search worked well, fred_series returned empty",
+            process_reflection="Missing a tool for satellite imagery analysis",
+        )
+        computed = compute_reflection(inp, "binary")
+
+        await _append_reflection(tmp_path, inp, computed, "binary")
+
+        content = (tmp_path / "reflection.yaml").read_text()
+        assert "tool_audit" in content
+        assert "process_reflection" in content
+        assert "satellite imagery" in content
