@@ -2,17 +2,23 @@
 
 import asyncio
 import json
-from pathlib import Path
+import re
 
 import sh
 import typer
 
-from aib.agent.history import FORECASTS_BASE_PATH, get_latest_forecast, is_submitted
+from aib.agent.history import get_latest_forecast, is_submitted
+from aib.paths import (
+    find_latest_forecast_file,
+    iter_forecast_dirs,
+    iter_session_dirs,
+    iter_trace_log_files,
+)
 
 app = typer.Typer(no_args_is_help=True)
 
-SESSIONS_PATH = Path("./notes/sessions")
-LOGS_PATH = Path("./notes/logs")
+_TRACE_POST_RE = re.compile(r"notes/traces/[^/]+/(?:forecasts|sessions)/(\d+)/")
+_TRACE_LOG_RE = re.compile(r"notes/traces/[^/]+/logs/(\d+)_")
 
 
 def _get_uncommitted_post_ids() -> set[int]:
@@ -26,40 +32,21 @@ def _get_uncommitted_post_ids() -> set[int]:
 
     for line in status.splitlines():
         file_path = line[3:].split(" -> ")[0].strip()
-        parts = Path(file_path).parts
 
-        if (
-            len(parts) >= 3
-            and parts[0] == "notes"
-            and parts[1] in ("forecasts", "sessions")
-        ):
-            try:
-                post_ids.add(int(parts[2]))
-            except ValueError:
-                pass
-
-        if len(parts) >= 3 and parts[0] == "notes" and parts[1] == "logs":
-            filename = parts[2]
-            try:
-                post_ids.add(int(filename.split("_")[0]))
-            except ValueError:
-                pass
+        m = _TRACE_POST_RE.search(file_path) or _TRACE_LOG_RE.search(file_path)
+        if m:
+            post_ids.add(int(m.group(1)))
 
     return post_ids
 
 
 def _get_question_title(post_id: int) -> str:
     """Read question title from the latest forecast JSON."""
-    forecast_dir = FORECASTS_BASE_PATH / str(post_id)
-    if not forecast_dir.exists():
+    latest = find_latest_forecast_file(post_id)
+    if latest is None:
         return f"question {post_id}"
-
-    json_files = sorted(forecast_dir.glob("*.json"))
-    if not json_files:
-        return f"question {post_id}"
-
     try:
-        data = json.loads(json_files[-1].read_text(encoding="utf-8"))
+        data = json.loads(latest.read_text(encoding="utf-8"))
         return data.get("question_title", f"question {post_id}")
     except (json.JSONDecodeError, OSError):
         return f"question {post_id}"
@@ -70,17 +57,14 @@ def _commit_post(post_id: int, *, dry_run: bool = False) -> bool:
     git = sh.Command("git")
     paths: list[str] = []
 
-    forecast_dir = FORECASTS_BASE_PATH / str(post_id)
-    if forecast_dir.exists():
-        paths.append(str(forecast_dir))
+    for d in iter_forecast_dirs(post_id):
+        paths.append(str(d))
 
-    sessions_dir = SESSIONS_PATH / str(post_id)
-    if sessions_dir.exists():
-        paths.append(str(sessions_dir))
+    for d in iter_session_dirs(post_id):
+        paths.append(str(d))
 
-    if LOGS_PATH.exists():
-        for log_file in LOGS_PATH.glob(f"{post_id}_*"):
-            paths.append(str(log_file))
+    for f in iter_trace_log_files(post_id):
+        paths.append(str(f))
 
     if not paths:
         return False
@@ -206,15 +190,12 @@ def backfill(
     async def _backfill() -> None:
         client = get_client()
 
-        if not FORECASTS_BASE_PATH.exists():
-            typer.echo("No forecasts directory found")
-            return
+        from aib.paths import get_all_forecasted_post_ids
 
-        post_ids = [
-            int(d.name)
-            for d in FORECASTS_BASE_PATH.iterdir()
-            if d.is_dir() and d.name.isdigit()
-        ]
+        post_ids = sorted(get_all_forecasted_post_ids())
+        if not post_ids:
+            typer.echo("No forecasts found")
+            return
 
         typer.echo(f"Found {len(post_ids)} questions with local forecasts")
 

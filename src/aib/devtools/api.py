@@ -426,7 +426,7 @@ def websearch_cmd(
     logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
 
     async def _search() -> None:
-        from aib.tools.retrodict_search import web_search
+        from aib.tools.search import web_search
 
         print(f"\nQuery: {query}")
         print(f"Cutoff: {cutoff}")

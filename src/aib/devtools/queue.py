@@ -5,13 +5,19 @@ Helps prevent missing questions before they close.
 """
 
 import asyncio
-import csv
+import json
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import TypeVar
 
 import typer
+
+from aib.paths import (
+    find_latest_forecast_file,
+    get_all_forecasted_post_ids,
+    iter_retrodict_dirs,
+)
+from aib.scoring import build_score_row
 
 T = TypeVar("T")
 
@@ -30,9 +36,6 @@ def run_async(coro: Coroutine[object, object, T]) -> T:
 
 app = typer.Typer(no_args_is_help=True)
 
-FORECASTS_PATH = Path("./notes/forecasts")
-RETRODICT_PATH = Path("./notes/retrodict")
-SCORES_CSV_PATH = Path("./notes/scores.csv")
 TOURNAMENTS = {
     "aib": 32916,
     "minibench": 32715,
@@ -42,32 +45,17 @@ TOURNAMENTS = {
 
 def get_forecasted_post_ids() -> set[int]:
     """Get post IDs that have already been forecast."""
-    forecasted: set[int] = set()
-    if not FORECASTS_PATH.exists():
-        return forecasted
-
-    for post_dir in FORECASTS_PATH.iterdir():
-        if post_dir.is_dir():
-            try:
-                forecasted.add(int(post_dir.name))
-            except ValueError:
-                continue
-    return forecasted
+    return get_all_forecasted_post_ids()
 
 
 def get_retrodicted_post_ids() -> set[int]:
     """Get post IDs that have already been retrodicted."""
     retrodicted: set[int] = set()
-    if not RETRODICT_PATH.exists():
-        return retrodicted
-
-    for post_dir in RETRODICT_PATH.iterdir():
-        if post_dir.is_dir():
-            name = post_dir.name.split("_")[0]
-            try:
-                retrodicted.add(int(name))
-            except ValueError:
-                continue
+    for post_dir in iter_retrodict_dirs():
+        try:
+            retrodicted.add(int(post_dir.name))
+        except ValueError:
+            continue
     return retrodicted
 
 
@@ -93,18 +81,17 @@ def _extract_resolution_and_cp(q: dict) -> tuple[str | None, bool, str]:
 
 
 def _load_scores_for_posts(post_ids: set[int]) -> dict[int, dict[str, str]]:
-    """Load the latest score row for each post_id from scores.csv."""
+    """Load the latest score row for each post_id from forecast JSONs."""
     scores: dict[int, dict[str, str]] = {}
-    if not SCORES_CSV_PATH.exists():
-        return scores
-    with SCORES_CSV_PATH.open(encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            try:
-                pid = int(row["post_id"])
-            except (ValueError, KeyError):
-                continue
-            if pid in post_ids:
-                scores[pid] = row
+    for pid in post_ids:
+        latest = find_latest_forecast_file(pid)
+        if latest is None:
+            continue
+        try:
+            data = json.loads(latest.read_text(encoding="utf-8"))
+            scores[pid] = build_score_row(data, "live")
+        except (json.JSONDecodeError, OSError):
+            continue
     return scores
 
 

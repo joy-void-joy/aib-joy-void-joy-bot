@@ -10,10 +10,9 @@ from pathlib import Path
 
 import typer
 
-app = typer.Typer(no_args_is_help=True)
+from aib.paths import RUNTIME_LOGS_PATH, find_latest_forecast_file, iter_forecast_dirs
 
-FORECASTS_PATH = Path("./notes/forecasts")
-LOGS_PATH = Path("./logs")
+app = typer.Typer(no_args_is_help=True)
 
 
 # ---------------------------------------------------------------------------
@@ -23,21 +22,15 @@ LOGS_PATH = Path("./logs")
 
 def find_forecast(post_id: int) -> dict | None:
     """Find the latest forecast for a post ID."""
-    question_dir = FORECASTS_PATH / str(post_id)
-    if not question_dir.exists():
+    latest = find_latest_forecast_file(post_id)
+    if latest is None:
         return None
-
-    forecast_files = sorted(question_dir.glob("*.json"))
-    if not forecast_files:
-        return None
-
-    latest = forecast_files[-1]
     return json.loads(latest.read_text())
 
 
 def find_log(post_id: int) -> Path | None:
     """Find the log directory for a post ID."""
-    log_dir = LOGS_PATH / str(post_id)
+    log_dir = RUNTIME_LOGS_PATH / str(post_id)
     if log_dir.exists():
         return log_dir
     return None
@@ -110,14 +103,8 @@ def list_forecasts(
     limit: int = typer.Option(20, "-n", "--limit", help="Number of forecasts to show"),
 ) -> None:
     """List recent forecasts with their metrics summary."""
-    if not FORECASTS_PATH.exists():
-        typer.echo("No forecasts directory found")
-        raise typer.Exit(1)
-
     forecasts: list[dict] = []
-    for post_dir in FORECASTS_PATH.iterdir():
-        if not post_dir.is_dir():
-            continue
+    for post_dir in iter_forecast_dirs():
         for forecast_file in post_dir.glob("*.json"):
             try:
                 data = json.loads(forecast_file.read_text())
@@ -166,14 +153,8 @@ def show_errors(
     limit: int = typer.Option(10, "-n", "--limit", help="Number of forecasts to check"),
 ) -> None:
     """Show forecasts with tool errors."""
-    if not FORECASTS_PATH.exists():
-        typer.echo("No forecasts directory found")
-        raise typer.Exit(1)
-
     errors_found: list[dict] = []
-    for post_dir in FORECASTS_PATH.iterdir():
-        if not post_dir.is_dir():
-            continue
+    for post_dir in iter_forecast_dirs():
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
@@ -234,7 +215,7 @@ MAX_RESULT_LEN = 500
 
 def _find_log_file(post_id: int) -> Path | None:
     """Find the log file for a given post ID."""
-    candidates = sorted(LOGS_PATH.glob(f"{post_id}_*/*.log"), reverse=True)
+    candidates = sorted(RUNTIME_LOGS_PATH.glob(f"{post_id}_*/*.log"), reverse=True)
     return candidates[0] if candidates else None
 
 
@@ -361,11 +342,11 @@ def show_log(
 @app.command("logs")
 def list_logs() -> None:
     """List all available log directories."""
-    if not LOGS_PATH.exists():
+    if not RUNTIME_LOGS_PATH.exists():
         typer.echo("No logs directory found")
         raise typer.Exit(1)
 
-    dirs = sorted(LOGS_PATH.iterdir())
+    dirs = sorted(RUNTIME_LOGS_PATH.iterdir())
     for d in dirs:
         if d.is_dir():
             logs = list(d.glob("*.log"))

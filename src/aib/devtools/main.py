@@ -8,6 +8,7 @@ from aib.devtools.dev import app as dev_app
 from aib.devtools.feedback import app as feedback_app
 from aib.devtools.git import app as git_app
 from aib.devtools.health import app as health_app
+from aib.devtools.migration import app as migration_app
 from aib.devtools.metrics import app as metrics_app
 from aib.devtools.queue import app as queue_app
 from aib.devtools.resolution import app as resolution_app
@@ -34,6 +35,7 @@ app.add_typer(api_app, name="api", help="API inspection and debugging")
 app.add_typer(dev_app, name="dev", help="Development tools")
 app.add_typer(git_app, name="git", help="Git operations for forecasts")
 app.add_typer(health_app, name="health", help="Service health checks")
+app.add_typer(migration_app, name="migration", help="One-time data migrations")
 app.add_typer(version_app, name="version", help="Agent version management")
 
 if __name__ == "__main__":
