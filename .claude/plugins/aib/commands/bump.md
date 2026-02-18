@@ -20,19 +20,16 @@ If no level is provided, determine the appropriate level from the changes.
 
 Run these in parallel:
 
-- Read `src/aib/version.py` to get the current version
-- Run `git tag --list 'v*' --sort=-version:sort` to find the latest version tag
+- Run `uv run aib-devtools version show` to get the current version
+- Run `uv run aib-devtools version list` to find version history and latest tag
 - Run `git log --oneline` (limited to last 50 commits) to see recent history
 
 ### 2. Find changes since last bump
 
-Using the latest version tag (e.g., `v1.1.0`):
+Using the latest version tag from `aib-devtools version list` (e.g., `v1.1.0`):
 
 - Run `git log --oneline <tag>..HEAD` to see all commits since the last bump
 - Run `git diff --stat <tag>..HEAD` to see which files changed
-
-If no version tag exists, use the commit that last modified `src/aib/version.py`:
-- `git log -1 --format=%H -- src/aib/version.py`
 
 ### 3. Classify changes
 
@@ -68,7 +65,7 @@ uv run aib-devtools version bump <level> "<summary>" [--detail "<a>, <b>, <c>"]
 
 ### 7. Verify and report
 
-- Read the updated `src/aib/version.py` to confirm the new version
+- Run `uv run aib-devtools version show` to confirm the new version
 - Read the updated `CHANGELOG.md` to confirm the entry
 - Show the user what was bumped and the changelog entry
 

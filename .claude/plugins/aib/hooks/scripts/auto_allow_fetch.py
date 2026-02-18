@@ -24,8 +24,8 @@ ALLOW_PATTERNS: list[str] = [
     # Metaculus
     r"https?://(www\.)?metaculus\.com/",
     # Forecasting tools source
-    r"https?://raw\.githubusercontent\.com/Metaculus/forecasting-tools",
-    r"https?://github\.com/Metaculus/forecasting-tools",
+    r"https?://raw\.githubusercontent\.com/Metaculus/"
+    r"https?://github\.com/Metaculus/",
     # Prediction markets docs
     r"https?://docs\.polymarket\.com/",
     r"https?://docs\.manifold\.markets/",

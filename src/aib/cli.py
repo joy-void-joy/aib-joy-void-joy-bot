@@ -1079,7 +1079,7 @@ def loop(
     interval: Annotated[
         int,
         typer.Option("--interval", "-i", help="Minutes between runs"),
-    ] = 20,
+    ] = 10,
     comment: Annotated[
         bool,
         typer.Option(
