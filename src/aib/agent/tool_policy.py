@@ -21,7 +21,7 @@ from aib.tools.financial import create_financial_server
 from aib.tools.markets import create_markets_server
 from aib.tools.search import create_search_server
 from aib.tools.trends import create_trends_server
-from aib.tools.write_meta import create_write_meta_server
+from aib.tools.reflection import create_reflection_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
@@ -144,7 +144,7 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__notes__write_meta",
+        "mcp__notes__reflection",
     }
 )
 
@@ -263,14 +263,16 @@ class ToolPolicy:
         composition_server: McpSdkServerConfig,
         *,
         session_dir: Path | None = None,
+        question_type: str = "binary",
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
         Args:
             sandbox: The sandbox instance for code execution.
             composition_server: The composition MCP server for spawn_subquestions.
-            session_dir: Session directory path for the write_meta tool.
-                If None, write_meta is disabled.
+            session_dir: Session directory path for the reflection tool.
+                If None, reflection is disabled.
+            question_type: Question type for the reflection tool.
 
         Returns:
             Dict mapping server name to server config.
@@ -280,7 +282,7 @@ class ToolPolicy:
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_write_meta_server(session_dir),
+            "notes": create_reflection_server(session_dir, question_type),
             "trends": create_trends_server(),
             "search": create_search_server(),
         }

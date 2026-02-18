@@ -19,15 +19,15 @@ from aib.agent.hooks import HooksConfig
 logger = logging.getLogger(__name__)
 
 
-def create_structured_output_hooks(meta_path: Path | None = None) -> HooksConfig:
-    """Combined StructuredOutput hook: unwrap + optional meta-gate.
+def create_structured_output_hooks(reflection_path: Path | None = None) -> HooksConfig:
+    """Combined StructuredOutput hook: unwrap + optional reflection gate.
 
     Must be the LAST PreToolUse hook registered to ensure updatedInput
     is not overwritten by subsequent hooks (CLI bug #15897).
 
     Args:
-        meta_path: Path to meta.md. If set, StructuredOutput is denied
-            until this file exists. If None, meta-gate is skipped.
+        reflection_path: Path to reflection.yaml. If set, StructuredOutput
+            is denied until this file exists. If None, gate is skipped.
 
     Returns:
         HooksConfig with a single PreToolUse hook.
@@ -47,21 +47,21 @@ def create_structured_output_hooks(meta_path: Path | None = None) -> HooksConfig
         hook_event = input_data["hook_event_name"]
         tool_input = input_data.get("tool_input", {})
 
-        # --- Meta-gate: deny until meta-reflection exists ---
-        if meta_path is not None and not meta_path.exists():
+        # --- Reflection gate: deny until reflection has been called ---
+        if reflection_path is not None and not reflection_path.exists():
             logger.warning(
-                "Denying StructuredOutput — meta-reflection not yet written at %s",
-                meta_path,
+                "Denying StructuredOutput — reflection not yet written at %s",
+                reflection_path,
             )
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
                     "permissionDecision": "deny",
                     "permissionDecisionReason": (
-                        "You must write a meta-reflection using "
-                        "write_meta(content='...') BEFORE providing "
-                        "your final forecast. Write your meta-reflection first, "
-                        "then call StructuredOutput again."
+                        "You must call reflection(...) with your factors "
+                        "and tentative logit BEFORE providing your final "
+                        "forecast. Run your reflection first, then call "
+                        "StructuredOutput again."
                     ),
                 }
             }

@@ -157,7 +157,7 @@ class ReasoningLogger:
         logger.info("Saved reasoning log to %s", self.log_path)
 
 
-def append_metrics_to_meta_reflection(
+def append_metrics_to_reflection(
     meta_file: Path,
     *,
     metrics: dict[str, Any] | None,
@@ -588,7 +588,7 @@ def _walk_urls(data: object) -> list[tuple[str, str]]:
     """
     results: list[tuple[str, str]] = []
     if isinstance(data, dict):
-        title = str(data.get("title") or "")
+        title = str(data.get("title") or data.get("market_title") or data.get("event_title") or "")
         url_found = False
         for k, v in data.items():
             if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):
@@ -609,8 +609,7 @@ def _walk_urls(data: object) -> list[tuple[str, str]]:
 # Source-bearing tools: None = scan result JSON for URLs,
 # tuple = (input_key, url_template) to construct from input.
 _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
-    "mcp__search__search_exa": None,
-    "mcp__search__search_arxiv": None,
+    "mcp__search__fetch_arxiv": ("paper_id", "https://arxiv.org/abs/{}"),
     "mcp__search__wikipedia": None,
     "mcp__markets__kalshi_price": None,
     "mcp__markets__kalshi_event": None,
@@ -628,6 +627,9 @@ _SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
     ),
 }
 
+# Tools whose results contain API-augmented URLs (only augmented entries are sources).
+_AUGMENTED_RESULT_TOOLS: frozenset[str] = frozenset({"mcp__search__web_search"})
+
 
 def _format_source(url: str, title: str = "") -> str:
     """Format a source URL as a markdown link."""
@@ -635,11 +637,40 @@ def _format_source(url: str, title: str = "") -> str:
     return f"[{label}]({url})"
 
 
+def _extract_result_texts(block: ToolResultBlock) -> list[str]:
+    """Extract text strings from a ToolResultBlock's content."""
+    texts: list[str] = []
+    if isinstance(block.content, str):
+        texts.append(block.content)
+    elif isinstance(block.content, list):
+        for item in block.content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                texts.append(item["text"])
+    return texts
+
+
+def _extract_augmented_urls(data: object) -> list[tuple[str, str]]:
+    """Extract (url, title) pairs from results that have api_data set."""
+    results: list[tuple[str, str]] = []
+    if not isinstance(data, dict):
+        return results
+    for item in data.get("results", []):
+        if not isinstance(item, dict):
+            continue
+        if item.get("api_data") is None:
+            continue
+        url = item.get("url", "")
+        if isinstance(url, str) and url.startswith("http"):
+            results.append((url, str(item.get("title") or "")))
+    return results
+
+
 def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
     """Extract deduplicated source URLs as markdown links from tool calls and results."""
     seen: set[str] = set()
     sources: list[str] = []
     pending: set[str] = set()
+    pending_augmented: set[str] = set()
 
     def _add(url: str, title: str = "") -> None:
         if url not in seen:
@@ -656,26 +687,31 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
                     url := block.input.get("url")
                 ):
                     _add(str(url))
+                elif block.name in _AUGMENTED_RESULT_TOOLS:
+                    pending_augmented.add(block.id)
                 elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
                     key, tmpl = entry
                     if val := block.input.get(key):
                         _add(tmpl.format(val), str(val))
                 elif block.name in _SOURCE_TOOLS:
                     pending.add(block.id)
-            elif isinstance(block, ToolResultBlock) and block.tool_use_id in pending:
-                pending.discard(block.tool_use_id)
-                text = (
-                    block.content
-                    if isinstance(block.content, str)
-                    else json.dumps(block.content)
-                    if block.content
-                    else ""
-                )
-                try:
-                    for url, title in _walk_urls(json.loads(text)):
-                        _add(url, title)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+            elif isinstance(block, ToolResultBlock):
+                if block.tool_use_id in pending_augmented:
+                    pending_augmented.discard(block.tool_use_id)
+                    for text in _extract_result_texts(block):
+                        try:
+                            for url, title in _extract_augmented_urls(json.loads(text)):
+                                _add(url, title)
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                elif block.tool_use_id in pending:
+                    pending.discard(block.tool_use_id)
+                    for text in _extract_result_texts(block):
+                        try:
+                            for url, title in _walk_urls(json.loads(text)):
+                                _add(url, title)
+                        except (json.JSONDecodeError, TypeError):
+                            pass
 
     return sources
 
@@ -694,10 +730,10 @@ class CondensedReasoning(BaseModel):
 
     narrative: str = Field(
         description=(
-            "3-5 short paragraphs covering: what research was done, "
+            "Cover everything: what research was done, "
             "key evidence found, and how the conclusion was reached. "
-            "Third-person impersonal voice (e.g., 'Research indicates...', "
-            "'The analysis found...'); never first person."
+            "First-person voice (e.g., 'I researched...', "
+            "'I found...', 'I concluded...')."
         )
     )
 
@@ -709,11 +745,10 @@ async def condense_reasoning(trace: str, question_title: str) -> str | None:
         allowed_tools=[],
         system_prompt=(
             "Condense the forecast trace into a clear, readable narrative. "
-            "3-5 short paragraphs covering: what research was done, key evidence found, "
+            "Cover everything: what research was done, key evidence found, "
             "and how the conclusion was reached. No markdown headers. "
-            "Write in third-person impersonal voice throughout — use constructions like "
-            "'Research indicates...', 'The analysis found...', 'Key evidence suggests...'. "
-            "Never use first person ('I') or name the forecaster as a subject."
+            "Write in first-person voice throughout — use constructions like "
+            "'I researched...', 'I found...', 'I concluded...'. "
         ),
         output_format={
             "type": "json_schema",
@@ -865,20 +900,22 @@ async def run_forecast(
             retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
-        # StructuredOutput hook: unwrap {"parameter": {...}} + meta-gate.
+        # StructuredOutput hook: unwrap {"parameter": {...}} + reflection gate.
         # Must be LAST PreToolUse hook (CLI bug #15897: updatedInput is
         # discarded when later hooks overwrite the result).
-        meta_path: Path | None = None
+        reflection_path: Path | None = None
         if post_id > 0:
-            meta_path = notes.session / "meta.md"
-        hooks = merge_hooks(hooks, create_structured_output_hooks(meta_path))
+            reflection_path = notes.session / "reflection.yaml"
+        hooks = merge_hooks(hooks, create_structured_output_hooks(reflection_path))
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
 
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
-            sandbox, composition_server, session_dir=notes.session
+            sandbox, composition_server,
+            session_dir=notes.session,
+            question_type=question_type,
         )
 
         options = ClaudeAgentOptions(
@@ -983,7 +1020,15 @@ async def run_forecast(
         ),
         summary="No forecast produced",
         factors=[],
-        reasoning="".join(collected_text),
+        reasoning=next(
+            (
+                block.text
+                for msg in reversed(assistant_messages)
+                for block in reversed(msg.content)
+                if isinstance(block, TextBlock)
+            ),
+            "",
+        ),
         condensed_reasoning=await condense_reasoning(
             build_trace(assistant_messages, question_title), question_title
         ),
@@ -1093,10 +1138,9 @@ async def run_forecast(
     metrics = get_metrics_summary()
     output.tool_metrics = metrics
 
-    # Check for meta-reflection (required for top-level forecasts)
-    # Meta is written via notes(write_meta) to notes/traces/<version>/sessions/<post_id>/<timestamp>/meta.md
+    # Check for reflection (required for top-level forecasts)
     if post_id > 0:
-        meta_file = notes.session / "meta.md"
+        reflection_file = notes.session / "reflection.yaml"
 
         # Extract subagents from tool metrics
         subagents_used = []
@@ -1105,17 +1149,16 @@ async def run_forecast(
                 if tool_name == "spawn_subquestions":
                     subagents_used.append("(via spawn_subquestions)")
 
-        if meta_file.exists():
+        if reflection_file.exists():
             output.meta = ForecastMeta(
-                meta_file_path=str(meta_file),
+                meta_file_path=str(reflection_file),
                 tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
                 subagents_used=subagents_used,
             )
-            logger.info("Found meta-reflection at %s", meta_file)
+            logger.info("Found reflection at %s", reflection_file)
 
-            # Inject programmatic metrics into the meta-reflection
-            append_metrics_to_meta_reflection(
-                meta_file,
+            append_metrics_to_reflection(
+                reflection_file,
                 metrics=metrics,
                 duration_seconds=output.duration_seconds,
                 cost_usd=output.cost_usd,
@@ -1126,13 +1169,12 @@ async def run_forecast(
                 sources=output.sources_consulted,
             )
         else:
-            # Meta-reflection is required - log error but don't fail the forecast
             logger.error(
-                "MISSING META-REFLECTION for post %d. "
-                "Agent failed to call notes(write_meta) before final output. "
+                "MISSING REFLECTION for post %d. "
+                "Agent failed to call notes(reflection) before final output. "
                 "Expected at: %s",
                 post_id,
-                meta_file,
+                reflection_file,
             )
             output.meta = ForecastMeta(
                 meta_file_path=None,
