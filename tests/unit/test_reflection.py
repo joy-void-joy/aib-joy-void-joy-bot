@@ -11,21 +11,21 @@ from aib.tools.reflection import (
     ReflectionOutput,
     compute_reflection,
     _append_reflection,
+    _build_reviewer_prompt,
 )
 
 
 def _make_input(
     factors: list[Factor] | None = None,
     tentative_logit: float = 0.0,
-    arguments_for: list[str] | None = None,
-    arguments_against: list[str] | None = None,
 ) -> ReflectionInput:
     """Helper to create a ReflectionInput with sensible defaults."""
     return ReflectionInput(
         factors=factors or [],
         tentative_logit=tentative_logit,
-        arguments_for=arguments_for or ["argument for"],
-        arguments_against=arguments_against or ["argument against"],
+        assessment="Test assessment.",
+        tool_audit="No tools used.",
+        process_reflection="Test reflection.",
     )
 
 
@@ -238,8 +238,8 @@ class TestFileWriting:
         await _append_reflection(tmp_path, inp, computed, "binary")
 
         content = (tmp_path / "reflection.yaml").read_text()
-        assert "tool_audit" not in content
-        assert "process_reflection" not in content
+        assert "calibration_notes" not in content
+        assert "update_triggers" not in content
 
     @pytest.mark.asyncio
     async def test_optional_fields_included_when_set(self, tmp_path: Path) -> None:
@@ -247,10 +247,11 @@ class TestFileWriting:
         inp = ReflectionInput(
             factors=[],
             tentative_logit=0.0,
-            arguments_for=["arg for"],
-            arguments_against=["arg against"],
+            assessment="Strong positive evidence outweighs base rate concerns.",
             tool_audit="web_search worked well, fred_series returned empty",
             process_reflection="Missing a tool for satellite imagery analysis",
+            calibration_notes="Base rate is 30% for similar events",
+            key_uncertainties="Whether the trend persists past Q1",
         )
         computed = compute_reflection(inp, "binary")
 
@@ -260,3 +261,101 @@ class TestFileWriting:
         assert "tool_audit" in content
         assert "process_reflection" in content
         assert "satellite imagery" in content
+        assert "calibration_notes" in content
+
+
+class TestSourcesInOutput:
+    """Tests for sources populated in reflection output."""
+
+    def test_sources_default_empty(self) -> None:
+        """Output should have empty sources by default."""
+        inp = _make_input(tentative_logit=0.5)
+        result = compute_reflection(inp, "binary")
+        assert result.sources == []
+
+    def test_sources_populated_externally(self) -> None:
+        """Sources can be injected after computation."""
+        inp = _make_input(tentative_logit=0.5)
+        result = compute_reflection(inp, "binary")
+        result.sources = ["https://example.com", "https://other.org"]
+        dumped = result.model_dump(exclude_none=True)
+        assert dumped["sources"] == ["https://example.com", "https://other.org"]
+
+
+class TestReviewerCritique:
+    """Tests for the reviewer critique field."""
+
+    def test_reviewer_critique_default_none(self) -> None:
+        """Output should have None reviewer_critique by default."""
+        inp = _make_input(tentative_logit=0.5)
+        result = compute_reflection(inp, "binary")
+        assert result.reviewer_critique is None
+
+    def test_reviewer_critique_excluded_when_none(self) -> None:
+        """reviewer_critique should not appear in dump when None."""
+        inp = _make_input(tentative_logit=0.5)
+        result = compute_reflection(inp, "binary")
+        dumped = result.model_dump(exclude_none=True)
+        assert "reviewer_critique" not in dumped
+
+    def test_reviewer_critique_included_when_set(self) -> None:
+        """reviewer_critique should appear in dump when populated."""
+        inp = _make_input(tentative_logit=0.5)
+        result = compute_reflection(inp, "binary")
+        result.reviewer_critique = "The factors seem one-sided."
+        dumped = result.model_dump(exclude_none=True)
+        assert dumped["reviewer_critique"] == "The factors seem one-sided."
+
+
+class TestBuildReviewerPrompt:
+    """Tests for reviewer prompt construction."""
+
+    def test_includes_question_context(self) -> None:
+        """Prompt should include question title and type."""
+        inp = _make_input(
+            factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
+            tentative_logit=0.8,
+        )
+        computed = compute_reflection(inp, "binary")
+        context = {"title": "Will X happen?", "type": "binary"}
+
+        prompt = _build_reviewer_prompt(inp, computed, context, "")
+
+        assert "Will X happen?" in prompt
+        assert "binary" in prompt
+
+    def test_includes_factors(self) -> None:
+        """Prompt should list all factors."""
+        inp = _make_input(
+            factors=[
+                Factor(description="Strong signal", logit=2.0, confidence=0.9),
+                Factor(description="Weak counter", logit=-0.5, confidence=0.7),
+            ],
+            tentative_logit=1.0,
+        )
+        computed = compute_reflection(inp, "binary")
+
+        prompt = _build_reviewer_prompt(inp, computed, None, "")
+
+        assert "Strong signal" in prompt
+        assert "Weak counter" in prompt
+
+    def test_includes_trace(self) -> None:
+        """Prompt should include the reasoning trace."""
+        inp = _make_input(tentative_logit=0.5)
+        computed = compute_reflection(inp, "binary")
+        trace = "## Thinking\n\nI searched for evidence..."
+
+        prompt = _build_reviewer_prompt(inp, computed, None, trace)
+
+        assert "I searched for evidence" in prompt
+
+    def test_truncates_long_trace(self) -> None:
+        """Trace should be truncated at _MAX_TRACE_LEN."""
+        inp = _make_input(tentative_logit=0.5)
+        computed = compute_reflection(inp, "binary")
+        trace = "x" * 200_000
+
+        prompt = _build_reviewer_prompt(inp, computed, None, trace)
+
+        assert len(prompt) < 200_000

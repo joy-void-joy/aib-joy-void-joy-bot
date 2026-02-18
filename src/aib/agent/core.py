@@ -6,7 +6,6 @@ import logging
 import sys
 from datetime import date
 from pathlib import Path
-from collections.abc import Sequence
 from typing import Any, cast
 
 from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
@@ -38,6 +37,7 @@ from aib.agent.display import (
 from aib.agent.history import (
     save_forecast,
 )
+from aib.agent.sources import extract_sources
 from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
@@ -571,149 +571,6 @@ def build_question_context(post_data: dict) -> dict:
     return context
 
 
-def _domain_label(url: str) -> str:
-    """Generate a readable label from a URL's domain, used as fallback when no title."""
-    from urllib.parse import urlparse
-
-    try:
-        return urlparse(url).netloc.removeprefix("www.")
-    except Exception:
-        return url
-
-
-def _walk_urls(data: object) -> list[tuple[str, str]]:
-    """Extract (url, title) pairs from url/pdf_url/id keys in nested JSON data.
-
-    Looks for sibling 'title' keys at the same dict level as URL keys.
-    """
-    results: list[tuple[str, str]] = []
-    if isinstance(data, dict):
-        title = str(data.get("title") or data.get("market_title") or data.get("event_title") or "")
-        url_found = False
-        for k, v in data.items():
-            if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):
-                results.append((v, title))
-                url_found = True
-            elif k == "id" and isinstance(v, str) and v.startswith("http"):
-                results.append((v, ""))
-                url_found = True
-        if not url_found:
-            for v in data.values():
-                results.extend(_walk_urls(v))
-    elif isinstance(data, list):
-        for item in data:
-            results.extend(_walk_urls(item))
-    return results
-
-
-# Source-bearing tools: None = scan result JSON for URLs,
-# tuple = (input_key, url_template) to construct from input.
-_SOURCE_TOOLS: dict[str, tuple[str, str] | None] = {
-    "mcp__search__fetch_arxiv": ("paper_id", "https://arxiv.org/abs/{}"),
-    "mcp__search__wikipedia": None,
-    "mcp__markets__kalshi_price": None,
-    "mcp__markets__kalshi_event": None,
-    "mcp__markets__polymarket_price": None,
-    "mcp__markets__manifold_price": None,
-    "mcp__financial__stock_price": ("symbol", "https://finance.yahoo.com/quote/{}"),
-    "mcp__financial__stock_history": ("symbol", "https://finance.yahoo.com/quote/{}"),
-    "mcp__financial__fred_series": (
-        "series_id",
-        "https://fred.stlouisfed.org/series/{}",
-    ),
-    "mcp__financial__company_financials": (
-        "ticker",
-        "https://finance.yahoo.com/quote/{}",
-    ),
-}
-
-# Tools whose results contain API-augmented URLs (only augmented entries are sources).
-_AUGMENTED_RESULT_TOOLS: frozenset[str] = frozenset({"mcp__search__web_search"})
-
-
-def _format_source(url: str, title: str = "") -> str:
-    """Format a source URL as a markdown link."""
-    label = title.strip("[]()") if title else _domain_label(url)
-    return f"[{label}]({url})"
-
-
-def _extract_result_texts(block: ToolResultBlock) -> list[str]:
-    """Extract text strings from a ToolResultBlock's content."""
-    texts: list[str] = []
-    if isinstance(block.content, str):
-        texts.append(block.content)
-    elif isinstance(block.content, list):
-        for item in block.content:
-            if isinstance(item, dict) and item.get("type") == "text":
-                texts.append(item["text"])
-    return texts
-
-
-def _extract_augmented_urls(data: object) -> list[tuple[str, str]]:
-    """Extract (url, title) pairs from results that have api_data set."""
-    results: list[tuple[str, str]] = []
-    if not isinstance(data, dict):
-        return results
-    for item in data.get("results", []):
-        if not isinstance(item, dict):
-            continue
-        if item.get("api_data") is None:
-            continue
-        url = item.get("url", "")
-        if isinstance(url, str) and url.startswith("http"):
-            results.append((url, str(item.get("title") or "")))
-    return results
-
-
-def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
-    """Extract deduplicated source URLs as markdown links from tool calls and results."""
-    seen: set[str] = set()
-    sources: list[str] = []
-    pending: set[str] = set()
-    pending_augmented: set[str] = set()
-
-    def _add(url: str, title: str = "") -> None:
-        if url not in seen:
-            seen.add(url)
-            sources.append(_format_source(url, title))
-
-    for msg in messages:
-        content = msg.content
-        if isinstance(content, str):
-            continue
-        for block in content:
-            if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
-                if block.name in ("WebFetch", "mcp__search__fetch_url") and (
-                    url := block.input.get("url")
-                ):
-                    _add(str(url))
-                elif block.name in _AUGMENTED_RESULT_TOOLS:
-                    pending_augmented.add(block.id)
-                elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
-                    key, tmpl = entry
-                    if val := block.input.get(key):
-                        _add(tmpl.format(val), str(val))
-                elif block.name in _SOURCE_TOOLS:
-                    pending.add(block.id)
-            elif isinstance(block, ToolResultBlock):
-                if block.tool_use_id in pending_augmented:
-                    pending_augmented.discard(block.tool_use_id)
-                    for text in _extract_result_texts(block):
-                        try:
-                            for url, title in _extract_augmented_urls(json.loads(text)):
-                                _add(url, title)
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-                elif block.tool_use_id in pending:
-                    pending.discard(block.tool_use_id)
-                    for text in _extract_result_texts(block):
-                        try:
-                            for url, title in _walk_urls(json.loads(text)):
-                                _add(url, title)
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-
-    return sources
 
 
 def build_trace(messages: list[AssistantMessage], title: str = "") -> str:
@@ -916,6 +773,10 @@ async def run_forecast(
             sandbox, composition_server,
             session_dir=notes.session,
             question_type=question_type,
+            get_sources=lambda: extract_sources(all_messages),
+            get_trace=lambda: build_trace(assistant_messages, question_title),
+            question_context=context,
+            traces_dir=forecasts_dir().parent if cutoff is None else None,
         )
 
         options = ClaudeAgentOptions(

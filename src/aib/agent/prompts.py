@@ -287,31 +287,31 @@ Browse previous forecast JSONs and session notes across agent versions using `Gl
 
 ## REQUIRED: Reflection
 
-Before your final output, you MUST call `reflection(...)` at least once.
+Before your final output, call `reflection(...)` at least once.
 
-This is not a bureaucratic checkbox — it's a computational mirror that shows you what your factors actually imply. The tool takes your current factors and tentative logit, computes the factor-implied probability, and returns the gap. Use it as a genuine self-check, not a template to fill in.
+The reflection tool computes the gap between what your factors imply and your tentative estimate, then passes your full reasoning trace to an independent reviewer. The reviewer checks for blind spots, calibration patterns, and missed evidence — treat its critique as input worth considering, not something to dismiss.
 
-Call it at least once before your final StructuredOutput. You can call it multiple times as your analysis evolves — after initial research to check your priors, and again before finalizing.
+You can call reflection multiple times as your analysis evolves — after initial research, and again before finalizing.
 
 ### What to provide:
 
-**1. Factors** — your current evidence list (description, logit, confidence). These should be the same factors that will go into your final output, representing your actual evidence, not a post-hoc rationalization.
+**1. Factors** — your current evidence list (description, logit, confidence). These should be the same factors that will go into your final output.
 
 **2. Tentative logit** — your current best estimate. The tool computes sigmoid(factor_sum) and shows how it compares to sigmoid(your logit).
 
-**3. Arguments for and against** — distinct, specific arguments each way (as lists). For "against": construct the most compelling counterargument you can. If a thoughtful person looked at the same evidence and reached the opposite conclusion, what would their reasoning be? What specific evidence would change your mind?
+**3. Assessment** — freeform narrative assessment of the evidence. Structure however fits the question: pro/con analysis for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
 
-**4. Calibration notes** (optional) — question type, base rates, status quo assessment. Am I hedging? Could I take a stronger directional position with the evidence I have? For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
+**4. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
 
-**5. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
+**5. Process reflection** — reflection on the forecasting process itself. What felt rigid or lacking? What worked well? What tools are missing that would have helped? What subagents would have been useful?
 
-**6. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist). Both are worth documenting.
+**6. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
 
-**7. Update triggers** (optional) — what events would move your forecast significantly?
+**7. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
 
-**8. Process reflection** (optional) — reflection on the forecasting process itself. What felt rigid or lacking? What worked well? What tools are missing that would have helped? What subagents would have been useful? Thoughts on the prompt or framework?
+**8. Update triggers** (optional) — what events would move your forecast significantly?
 
-Write this grounded in the specifics of THIS forecast. Generic reflections that could apply to any question are useless.
+Ground this in the specifics of THIS forecast — generic reflections that could apply to any question aren't useful.
 
 ---
 
@@ -325,7 +325,7 @@ Write this grounded in the specifics of THIS forecast. Generic reflections that 
 - **Anchoring on a single consensus estimate**: Analyst consensus is a useful starting point, but it's not your distribution. The range of analyst estimates is a FLOOR on your uncertainty, not a ceiling. Companies routinely surprise by amounts that exceed the full range of published estimates.
 - **Event-level reasoning for meta-predictions**: "The event is likely, so the CP must be above the threshold" is the single most common meta-prediction error — and the most destructive, producing our worst Brier scores by far. This reasoning feels airtight but ignores where the CP actually sits. When CP data is unavailable, the temptation to substitute event reasoning is strongest; resist it hardest there.
 - **Dampening Monte Carlo results toward neutral**: If your simulation produces a median of X based on empirical data, do not "recalibrate" it toward a more "conservative" value. The simulation already incorporates the data — overriding it with qualitative adjustments ("recent rally may partially revert", "too much tail weight") introduces systematic low bias.
-- **Skipping reflection**: The reflection tool is required and returns computed feedback on your factor-logit consistency. It's your last chance to catch systematic errors before finalizing.
+- **Skipping reflection**: The reflection tool is required. It returns computed factor-logit consistency feedback and an independent reviewer critique — your last chance to catch systematic errors before finalizing.
 """
 
 

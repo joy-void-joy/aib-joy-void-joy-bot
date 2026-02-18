@@ -6,9 +6,10 @@ and other context. This replaces scattered conditional logic throughout core.py.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from claude_agent_sdk.types import (
     McpSdkServerConfig,
@@ -264,6 +265,10 @@ class ToolPolicy:
         *,
         session_dir: Path | None = None,
         question_type: str = "binary",
+        get_sources: Callable[[], list[str]] | None = None,
+        get_trace: Callable[[], str] | None = None,
+        question_context: dict[str, Any] | None = None,
+        traces_dir: Path | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
@@ -273,6 +278,14 @@ class ToolPolicy:
             session_dir: Session directory path for the reflection tool.
                 If None, reflection is disabled.
             question_type: Question type for the reflection tool.
+            get_sources: Callback returning sources consulted so far.
+                Passed to the reflection tool for mid-session source output.
+            get_trace: Callback returning the full reasoning trace as markdown.
+                Passed to the reviewer sub-agent for context.
+            question_context: Question details (title, type, resolution criteria).
+                Passed to the reviewer for informed critique.
+            traces_dir: Directory with past forecast data for the reviewer.
+                The reviewer gets read access to browse historical performance.
 
         Returns:
             Dict mapping server name to server config.
@@ -282,7 +295,12 @@ class ToolPolicy:
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
-            "notes": create_reflection_server(session_dir, question_type),
+            "notes": create_reflection_server(
+                session_dir, question_type, get_sources,
+                get_trace=get_trace,
+                question_context=question_context,
+                traces_dir=traces_dir,
+            ),
             "trends": create_trends_server(),
             "search": create_search_server(),
         }
