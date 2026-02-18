@@ -2,6 +2,16 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.0.0 (2026-02-19)
+
+reflection tool with reviewer sub-agent; source tracking extraction; fetch pipeline returns titles and links
+- new reflection tool replaces write_meta with structured review
+- reviewer sub-agent evaluates forecast quality
+- source tracking extracted to dedicated module
+- google_trends gains tz and custom date ranges
+- fetch pipeline returns page titles and relevant links
+- submission prepends reasoning to comments
+
 ## v2.1.0 (2026-02-18)
 
 fetch pipeline returns page titles and relevant links; source extraction handles augmented web search; first-person condensed reasoning
