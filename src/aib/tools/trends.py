@@ -28,13 +28,22 @@ class TrendsQueryInput(BaseModel):
     timeframe: str = Field(
         default="today 3-m",
         description=(
-            "Time range. Options: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', "
-            "'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', 'all'"
+            "Time range. Presets: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', "
+            "'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', 'all'. "
+            "Custom date range: 'YYYY-MM-DD YYYY-MM-DD' (e.g. '2026-01-24 2026-02-23'). "
+            "Use custom ranges to match resolution URLs exactly."
         ),
     )
     geo: str = Field(
         default="",
         description="Geographic region (ISO 3166-1 alpha-2). Empty for worldwide.",
+    )
+    tz: int = Field(
+        default=360,
+        description=(
+            "Timezone offset in minutes from UTC. Default 360 (CST/UTC-6). "
+            "Use 0 for UTC — required when matching SerpAPI resolution scripts that specify tz=0."
+        ),
     )
 
 
@@ -48,6 +57,7 @@ class TrendsCompareInput(BaseModel):
     )
     timeframe: str = Field(default="today 3-m")
     geo: str = Field(default="")
+    tz: int = Field(default=360)
 
 
 # --- Output Schemas ---
@@ -151,8 +161,9 @@ def _calculate_trend_direction(values: list[int]) -> str:
         "Returns relative search interest (0-100) over the specified timeframe. "
         "Useful for questions about search trends, popularity, and public interest. "
         "Timeframes: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m', "
-        "'today 3-m', 'today 12-m', 'today 5-y', 'all'. "
-        "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide."
+        "'today 3-m', 'today 12-m', 'today 5-y', 'all', or 'YYYY-MM-DD YYYY-MM-DD' for exact ranges. "
+        "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide. "
+        "Tz: timezone offset in minutes (default 360=CST). Use tz=0 to match SerpAPI resolution scripts."
     ),
     TrendsQueryInput.model_json_schema(),
 )
@@ -167,6 +178,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
     keyword = validated.keyword
     timeframe = validated.timeframe
     geo = validated.geo
+    tz = validated.tz
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -177,8 +189,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
     try:
         from pytrends.request import TrendReq
 
-        # Initialize pytrends
-        pytrends = TrendReq(hl="en-US", tz=360)
+        pytrends = TrendReq(hl="en-US", tz=tz)
 
         # Build payload
         pytrends.build_payload([keyword], timeframe=timeframe, geo=geo)
@@ -258,6 +269,7 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
     keywords = validated.keywords
     timeframe = validated.timeframe
     geo = validated.geo
+    tz = validated.tz
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -268,8 +280,7 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
     try:
         from pytrends.request import TrendReq
 
-        # Initialize pytrends
-        pytrends = TrendReq(hl="en-US", tz=360)
+        pytrends = TrendReq(hl="en-US", tz=tz)
 
         # Build payload with all keywords
         pytrends.build_payload(keywords, timeframe=timeframe, geo=geo)
@@ -348,6 +359,7 @@ async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
     keyword = validated.keyword
     timeframe = validated.timeframe
     geo = validated.geo
+    tz = validated.tz
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -358,8 +370,7 @@ async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
     try:
         from pytrends.request import TrendReq
 
-        # Initialize pytrends
-        pytrends = TrendReq(hl="en-US", tz=360)
+        pytrends = TrendReq(hl="en-US", tz=tz)
 
         # Build payload
         pytrends.build_payload([keyword], timeframe=timeframe, geo=geo)
