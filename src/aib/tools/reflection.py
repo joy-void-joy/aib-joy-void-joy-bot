@@ -56,8 +56,7 @@ class ReflectionInput(BaseModel):
         default=None,
         description="What you're most uncertain about and what would change your mind.",
     )
-    tool_audit: str | None = Field(
-        default=None,
+    tool_audit: str = Field(
         description=(
             "Which tools provided useful information, which returned "
             "empty results, and which had actual failures."
@@ -67,8 +66,7 @@ class ReflectionInput(BaseModel):
         default=None,
         description="Events that would move your forecast significantly.",
     )
-    process_reflection: str | None = Field(
-        default=None,
+    process_reflection: str = Field(
         description=(
             "Reflection on the forecasting process itself: what felt "
             "rigid, what was lacking, what worked well, thoughts on "
