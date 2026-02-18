@@ -78,10 +78,13 @@ class ReflectionInput(BaseModel):
     )
     process_reflection: str = Field(
         description=(
-            "Reflection on the forecasting process itself: what felt "
-            "rigid, what was lacking, what worked well, thoughts on "
-            "the prompt or framework. What tools are missing that "
-            "would have helped? What subagents would have been useful?"
+            "How did the forecasting system feel to use — not what you "
+            "did, but how the scaffolding supported you. What felt rigid "
+            "or lacking, what felt smooth? What tools are missing that "
+            "would have helped? What subagents would have been useful? "
+            "Did the prompt guide you well or lead you astray for this "
+            "question type? Where did you hit friction — a tool returning "
+            "junk, a forced workaround, a missing capability?"
         ),
     )
 
@@ -482,7 +485,7 @@ Example:
     tentative_logit=0.8,
     assessment="Data shows consistent upward trend across 3 sources, but the historical base rate for this type of change is only 30%. The trend is recent (last 6 months) so may not persist.",
     tool_audit="search_exa provided good results for recent data. fetch_url failed on the government stats page (403). FRED had no relevant series.",
-    process_reflection="Spent too long trying to fetch the primary source directly. Should have pivoted to cached/indexed content sooner."
+    process_reflection="Felt well-supported on the research phase — web search and FRED covered what I needed. But the numeric CDF step felt like guessing; I had point estimates but no good way to translate them into a distribution shape. A tool that fits distributions from historical forecast errors would remove a lot of friction there."
   )
 """
 

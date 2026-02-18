@@ -303,7 +303,7 @@ You can call reflection multiple times as your analysis evolves — after initia
 
 **4. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
 
-**5. Process reflection** — reflection on the forecasting process itself. What felt rigid or lacking? What worked well? What tools are missing that would have helped? What subagents would have been useful?
+**5. Process reflection** — how did the system feel to use? Not what you did, but how the scaffolding supported you. What felt rigid or lacking, what felt smooth? What tools are missing that would have helped? What subagents would have been useful? Did the prompt guide you well or lead you astray for this question type? Where did you hit friction — a tool returning unhelpful output, a forced workaround, a missing capability? Be specific; this feedback shapes how the system evolves.
 
 **6. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
 
