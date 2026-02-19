@@ -6,6 +6,7 @@ import logging
 import sys
 from datetime import date
 from pathlib import Path
+from collections.abc import Sequence
 from typing import Any, cast
 
 from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
@@ -51,6 +52,7 @@ from aib.agent.models import (
     MultipleChoiceForecast,
     NumericForecast,
     TokenUsage,
+    create_forecast_model,
 )
 from aib.agent.numeric import (
     DistributionComponent,
@@ -262,24 +264,6 @@ def append_metrics_to_reflection(
     except Exception as e:
         logger.warning("Failed to append metrics to %s: %s", meta_file, e)
 
-
-def get_output_schema_for_question(
-    question_type: str,
-) -> tuple[type[Forecast | NumericForecast | MultipleChoiceForecast], dict]:
-    """Return (model_class, json_schema) for question type.
-
-    Args:
-        question_type: Type of question (binary, numeric, discrete, multiple_choice)
-
-    Returns:
-        Tuple of (model class, JSON schema dict) for the appropriate forecast type.
-    """
-    if question_type == "multiple_choice":
-        return MultipleChoiceForecast, MultipleChoiceForecast.model_json_schema()
-    elif question_type in ("numeric", "discrete"):
-        return NumericForecast, NumericForecast.model_json_schema()
-    else:  # binary is default
-        return Forecast, Forecast.model_json_schema()
 
 
 @dataclasses.dataclass
@@ -573,11 +557,36 @@ def build_question_context(post_data: dict) -> dict:
 
 
 
-def build_trace(messages: list[AssistantMessage], title: str = "") -> str:
-    """Build a markdown trace from assistant messages using ReasoningLogger formatting."""
+def build_trace(
+    messages: Sequence[AssistantMessage | UserMessage],
+    title: str = "",
+    exclude_tools: frozenset[str] = frozenset(),
+) -> str:
+    """Build a markdown trace from conversation messages.
+
+    Args:
+        messages: Conversation messages (assistant and user) to format.
+            ToolUseBlock arrives in AssistantMessage, ToolResultBlock
+            arrives in UserMessage — both are needed for a complete trace.
+        title: Question title for the log header.
+        exclude_tools: Tool names whose ToolUseBlock/ToolResultBlock pairs
+            should be omitted from the trace. Uses the same id-tracking
+            pattern as extract_sources: when a ToolUseBlock.name matches,
+            its id is recorded and the corresponding ToolResultBlock is
+            also skipped.
+    """
+    excluded_ids: set[str] = set()
     rl = ReasoningLogger(Path("/dev/null"), title)
     for msg in messages:
-        for block in msg.content:
+        content = msg.content
+        if isinstance(content, str):
+            continue
+        for block in content:
+            if isinstance(block, ToolUseBlock) and block.name in exclude_tools:
+                excluded_ids.add(block.id)
+                continue
+            if isinstance(block, ToolResultBlock) and block.tool_use_id in excluded_ids:
+                continue
             rl.log_block(block)
     return "\n".join(rl.lines)
 
@@ -697,7 +706,9 @@ async def run_forecast(
     logger.info("Notes folder: %s", notes.session)
 
     # Get type-specific output schema and guidance
-    model_class, output_schema = get_output_schema_for_question(question_type)
+    mc_options = context.get("options") if question_type == "multiple_choice" else None
+    model_class = create_forecast_model(question_type, mc_options)
+    output_schema = model_class.model_json_schema()
     type_guidance = get_type_specific_guidance(question_type, context)
 
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
@@ -774,7 +785,11 @@ async def run_forecast(
             session_dir=notes.session,
             question_type=question_type,
             get_sources=lambda: extract_sources(all_messages),
-            get_trace=lambda: build_trace(assistant_messages, question_title),
+            get_trace=lambda: build_trace(
+                all_messages,
+                question_title,
+                exclude_tools=frozenset({"mcp__notes__reflection"}),
+            ),
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
         )
@@ -891,7 +906,7 @@ async def run_forecast(
             "",
         ),
         condensed_reasoning=await condense_reasoning(
-            build_trace(assistant_messages, question_title), question_title
+            build_trace(all_messages, question_title), question_title
         ),
         sources_consulted=extract_sources(all_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
@@ -902,10 +917,10 @@ async def run_forecast(
 
     if result.structured_output:
         forecast = model_class.model_validate(result.structured_output)
-        output.summary = forecast.summary
-        output.factors = forecast.factors
 
         if isinstance(forecast, Forecast):
+            output.summary = forecast.summary
+            output.factors = forecast.factors
             output.logit = forecast.logit
             output.probability = forecast.probability
             output.probability_from_logit = forecast.probability_from_logit
@@ -915,6 +930,8 @@ async def run_forecast(
             for warning in consistency_warnings:
                 logger.warning("Consistency check: %s", warning)
         elif isinstance(forecast, NumericForecast):
+            output.summary = forecast.summary
+            output.factors = forecast.factors
             output.median = forecast.median
             output.confidence_interval = forecast.confidence_interval
             output.percentiles = forecast.get_percentile_dict()
@@ -982,6 +999,8 @@ async def run_forecast(
                     print(f"CDF generation failed: {e}", file=sys.stderr)
                     output.cdf = None
         elif isinstance(forecast, MultipleChoiceForecast):
+            output.summary = forecast.summary
+            output.factors = forecast.factors
             output.probabilities = forecast.probabilities
     else:
         logger.warning("No structured output; using default forecast")
