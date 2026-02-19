@@ -1,0 +1,378 @@
+---
+timestamp: 2026-02-19 07:41:18 UTC
+question_type: binary
+factors:
+- description: CDU leads all polls at 29%, 6-9 pp ahead of nearest competitor (Grüne
+    at 21-23%, AfD at 20%). Consistent across all pollsters.
+  logit: 3.0
+  confidence: 0.9
+  effective_logit: 2.7
+- description: Seat projections show CDU at 38-39 seats vs Grüne at 24-28 and AfD
+    at 26 - a 10+ seat lead
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+- description: Greens gaining momentum (+3pp in recent poll), Özdemir more popular
+    than Hagel personally. Could narrow gap further.
+  logit: -0.7
+  confidence: 0.6
+  effective_logit: -0.42
+- description: New electoral system (MMP with 2 votes) introduces some uncertainty
+    vs historical patterns, but CDU is strong in both constituency and proportional
+    vote
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Only 2.5 weeks until election - limited time for massive swings. CDU
+    lead has been stable for months.
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Monte Carlo simulation with generous uncertainty (3.2pp per party +
+    Grüne momentum) gives CDU ~97% probability of winning most seats
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+tentative_logit: 3.2
+assessment: 'CDU has maintained a stable and significant polling lead (29%) in Baden-Württemberg
+  for the 2026 Landtag election, scheduled March 8. The nearest competitors are the
+  Greens (21-23%) and AfD (20%). This 6-9 percentage point lead translates to a projected
+  10+ seat advantage (38-39 vs 24-28 for Greens).
+
+
+  The main risk factor is Green momentum - Cem Özdemir is personally more popular
+  than CDU candidate Manuel Hagel, and the Greens gained 3pp in the most recent poll
+  shift. However, even accounting for continued Green momentum of +1pp and total per-party
+  uncertainty of ~3.2pp, Monte Carlo simulations show CDU winning most seats ~97%
+  of the time.
+
+
+  For CDU to NOT win the most seats, we''d need either: (1) a massive polling error
+  of 6+ pp swing, (2) a major CDU scandal in the final weeks, or (3) an unprecedented
+  late surge for the Greens far beyond the observed momentum. All of these are low-probability
+  scenarios.
+
+
+  The new MMP electoral system adds modest uncertainty, but since CDU is strong in
+  both direct constituency races and proportional vote share, the system change is
+  unlikely to disadvantage them specifically.'
+calibration_notes: 'Base rate: In German state elections, when a party leads by 6+
+  pp in final polls with stable support, they almost always win the most seats. The
+  CDU''s lead has been stable at ~29% for months. The main calibration concern is
+  whether I''m properly accounting for the Greens'' late momentum and the new electoral
+  system. The simulation already incorporates generous uncertainty (+1pp Grüne drift
+  + 3.2pp total SD), so the ~97% result should be well-calibrated. I should avoid
+  pushing this higher than ~95% given the 2.5 weeks remaining and the novel electoral
+  system.'
+key_uncertainties: 1. Whether Greens momentum continues and accelerates beyond what
+  polls currently show. 2. Impact of the Feb 24 TV triell (CDU vs Greens vs AfD) on
+  vote intentions. 3. Any late-breaking scandal or event. 4. How the new two-vote
+  system interacts with voter behavior in practice (first election under new rules).
+tool_audit: 'web_search: Very useful, returned comprehensive results about polling
+  and election context. search_exa: Good complement, returned German-language articles
+  with polling details. search_news: Excellent - provided rich recent coverage from
+  Feb 2026 including latest campaign events. dawum.de fetch: Successfully returned
+  detailed poll averages and individual polls. politpro.eu fetch: Returned seat projections.
+  Wikipedia fetch: Failed (article not found via API), but search snippets provided
+  key info. Polymarket: Returned irrelevant results (no Baden-Württemberg market found).
+  Manifold: No markets found. execute_code: Worked well for Monte Carlo simulation.'
+update_triggers: 1. New poll showing CDU lead narrowing to <4pp would significantly
+  reduce probability. 2. Major CDU scandal would reduce probability. 3. Successful
+  Özdemir performance in Feb 24 triell could narrow gap further.
+process_reflection: 'The research phase went smoothly - German state election polling
+  is well-covered by multiple aggregation sites. The lack of prediction market data
+  for this specific question was a gap, but the polling data is comprehensive enough
+  to work with. The Monte Carlo simulation was straightforward given the clear polling
+  lead. One friction point: the Wikipedia API failed to fetch the English article,
+  which would have had useful structured data on the electoral system details. The
+  news search was particularly valuable for getting Feb 2026 campaign context.'
+computed:
+  factor_count: 6
+  factor_sum: 7.180000000000001
+  tentative_logit: 3.2
+  logit_gap: -3.9800000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: CDU leads all polls at 29%, 6-9 pp ahead of nearest competitor (Grüne
+      at 21-23%, AfD at 20%). Consistent across all pollsters.
+    logit: 3.0
+    confidence: 0.9
+    effective_logit: 2.7
+  - description: Seat projections show CDU at 38-39 seats vs Grüne at 24-28 and AfD
+      at 26 - a 10+ seat lead
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  - description: Greens gaining momentum (+3pp in recent poll), Özdemir more popular
+      than Hagel personally. Could narrow gap further.
+    logit: -0.7
+    confidence: 0.6
+    effective_logit: -0.42
+  - description: New electoral system (MMP with 2 votes) introduces some uncertainty
+      vs historical patterns, but CDU is strong in both constituency and proportional
+      vote
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Only 2.5 weeks until election - limited time for massive swings.
+      CDU lead has been stable for months.
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Monte Carlo simulation with generous uncertainty (3.2pp per party
+      + Grüne momentum) gives CDU ~97% probability of winning most seats
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  dominant_factor: CDU leads all polls at 29%, 6-9 pp ahead of nearest competitor
+    (Grüne at 21-23%, AfD at 20%). Consistent across all pollsters.
+  dominant_effective_logit: 2.7
+  factor_implied_probability: 0.9992389118542148
+  tentative_probability: 0.9608342772032357
+  gap_pp: -3.8404634650979097
+  sources:
+  - '[(Metaculus) Will CDU win the most seats in the Baden-Württemberg Landtag election?](https://www.metaculus.com/questions/42116)'
+  - '[Who will win the most seats in the 2026 Baden-Württemberg parliamentary elections](https://pam.polymarket.com/event/who-will-win-the-most-seats-in-the-2026-baden-wrttemberg-parliamentary-elections/will-cdu-win-the-most-seats-in-the-2026-baden-wrttemberg-parliamentary-elections)'
+  - '[en.wikipedia.org](https://en.wikipedia.org/wiki/2026_Baden-W%C3%BCrttemberg_state_election)'
+  - '[politpro.eu](https://politpro.eu/en/baden-wuerttemberg)'
+  - '[(Polymarket) NBA: Will the Mavericks beat the Grizzlies by more than 5.5 points
+    in their December 4 matchup?](https://polymarket.com/event/nba-will-the-mavericks-beat-the-grizzlies-by-more-than-5pt5-points-in-their-december-4-matchup)'
+  - '[(Polymarket) NFL: Will the Falcons beat the Panthers by more than 3.5 points
+    in their October 31st matchup?](https://polymarket.com/event/nfl-will-the-falcons-beat-the-panthers-by-more-than-3pt5-points-in-their-october-31st-matchup)'
+  - '[(Polymarket) In-Game Trading) Will the 49ers beat the Packers by more than 3.5
+    points in their week three matchup?](https://polymarket.com/event/in-game-trading-will-the-49ers-beat-the-packers-by-more-than-3pt5-points-in-their-week-three-matchup)'
+  - '[(Polymarket) 2022 Norway Chess: Will Magnus Carlsen lose any game?](https://polymarket.com/event/2022-norway-chess-will-magnus-carlsen-lose-any-game)'
+  - '[(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in
+    their November 18th matchup?](https://polymarket.com/event/nba-will-the-heat-beat-the-wizards-by-more-than-7pt5-points-in-their-november-18th-matchup)'
+  - '[(Wikipedia) 2026 Baden-Württemberg state election](https://en.wikipedia.org/wiki/2026_Baden-Württemberg_state_election)'
+  - '[(Wikipedia) Landtag of Baden-Württemberg](https://en.wikipedia.org/wiki/Landtag_of_Baden-Württemberg)'
+  - '[(Wikipedia) List of elections in 2026](https://en.wikipedia.org/wiki/List_of_elections_in_2026)'
+  - '[(Wikipedia) Alliance 90/The Greens Baden-Württemberg](https://en.wikipedia.org/wiki/Alliance_90/The_Greens_Baden-Württemberg)'
+  - '[(Wikipedia) 2026 elections in the European Union](https://en.wikipedia.org/wiki/2026_elections_in_the_European_Union)'
+  - '[(Wikipedia) Next elections in Germany](https://en.wikipedia.org/wiki/Next_elections_in_Germany)'
+  - '[(Wikipedia) 2021 Baden-Württemberg state election](https://en.wikipedia.org/wiki/2021_Baden-Württemberg_state_election)'
+  - '[(Wikipedia) 2026 in Germany](https://en.wikipedia.org/wiki/2026_in_Germany)'
+  - '[(Wikipedia) Elections in Germany](https://en.wikipedia.org/wiki/Elections_in_Germany)'
+  - '[(Wikipedia) State Parliament (Germany](https://en.wikipedia.org/wiki/State_Parliament_(Germany))'
+  - '[wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/baden-wuerttemberg.htm)'
+  - '[dawum.de](https://dawum.de/Baden-Wuerttemberg/)'
+  reviewer_critique: "Good — I now have context on the agent's past work. All three\
+    \ previous forecasts are unresolved (resolution: null), so I can't check calibration\
+    \ against outcomes yet. But I can analyze the patterns in reasoning and probability\
+    \ selection. Let me now conduct the review of the Baden-Württemberg forecast.\n\
+    \n## Review: Will CDU win the most seats in the Baden-Württemberg Landtag election?\n\
+    \n### General Impression\n\nThe reasoning is **strong overall**. The agent executed\
+    \ a well-directed research strategy, gathering polling data from multiple sources,\
+    \ understanding the electoral system, and running sophisticated Monte Carlo simulations.\
+    \ The research was thorough and appropriate for the question type—a near-term\
+    \ electoral forecast with ample polling data.\n\nThe 96.1% probability appears\
+    \ well-justified given the evidence: CDU has a consistent 6-9 percentage point\
+    \ polling lead with only 2.5 weeks until election day, and simulation results\
+    \ (accounting for polling error, late momentum for Greens, and system uncertainty)\
+    \ consistently show ~97% CDU win probability.\n\n### Strengths\n\n1. **Comprehensive\
+    \ polling synthesis**: The agent gathered polls from multiple sources (dawum.de\
+    \ showing CDU 29%, Greens 21-23%, AfD 20%) and cross-referenced with seat projections\
+    \ (politpro.eu: CDU 38-39 seats vs Greens 24-28).\n\n2. **Appropriate quantitative\
+    \ modeling**: The Monte Carlo simulations were well-designed:\n   - Accounted\
+    \ for polling error (~2.5pp per party)\n   - Modeled Green momentum explicitly\
+    \ (+1pp drift)\n   - Used correlated errors across parties (appropriate for electoral\
+    \ forecasting)\n   - Tested sensitivity by increasing total uncertainty to 3.2pp\n\
+    \   - Even the conservative simulation gave 96.9% CDU win probability\n\n3. **Contextual\
+    \ understanding**: The agent recognized the new MMP electoral system but correctly\
+    \ identified that CDU is strong in both constituency races and proportional vote,\
+    \ so the system change doesn't disadvantage them.\n\n4. **Appropriate base rate\
+    \ consideration**: The agent noted that parties with 6+ point leads in final polls\
+    \ almost always win the most seats in German state elections.\n\n5. **Clear scenario\
+    \ analysis**: The assessment explicitly named the paths to NO (major scandal,\
+    \ massive polling error, unprecedented late surge) and correctly identified them\
+    \ as low-probability.\n\n### Research Gaps\n\n1. **No direct fetch of official\
+    \ statistics**: The agent attempted to fetch the Wikipedia article but failed\
+    \ due to an API issue (\"Article not found\"). While search snippets and politpro.eu\
+    \ provided sufficient data, the agent could have tried fetching the official election\
+    \ page (statistik-bw.de or im.baden-wuerttemberg.de) to get authoritative seat\
+    \ projection methodology.\n\n2. **Limited exploration of the \"Greens gaining\
+    \ momentum\" narrative**: \n   - Factor 3 mentions \"Greens gaining momentum (+3pp\
+    \ in recent poll)\" and that \"Özdemir more popular than Hagel personally\"\n\
+    \   - However, the research didn't deeply investigate:\n     - **When** the Greens\
+    \ gained 3pp (was it a single poll or a trend?)\n     - **Whether** the momentum\
+    \ is accelerating or leveling off\n     - **How** Özdemir's personal popularity\
+    \ compares quantitatively to Hagel's (approval ratings, favorability spreads)\n\
+    \   \n   The agent did model Green momentum in the simulation (+1pp drift), but\
+    \ this appears chosen somewhat arbitrarily rather than derived from trend analysis.\
+    \ A time-series analysis of the polls would have strengthened this.\n\n3. **No\
+    \ historical calibration of final-weeks swings**: While the agent correctly noted\
+    \ that German elections rarely see 6+ point swings in the final weeks, it didn't\
+    \ cite specific examples or quantify the base rate. For instance:\n   - How often\
+    \ have leads of 6-9pp been overturned in German state elections in the final 2.5\
+    \ weeks?\n   - What was the largest late swing in a German state election in recent\
+    \ history?\n   \n   This would have provided empirical grounding for the \"limited\
+    \ time for massive swings\" factor.\n\n4. **Constituency-level analysis**: Under\
+    \ the new MMP system, 70 seats are allocated via FPTP in constituencies. The agent\
+    \ noted CDU is \"strong in both constituency and proportional vote\" but didn't\
+    \ research:\n   - How many constituencies CDU is projected to win directly\n \
+    \  - Whether there are any districts where AfD or Greens could win more constituencies\
+    \ than CDU (which could create overhang seats)\n   \n   This is a minor gap since\
+    \ the proportional component dominates in MMP, but it's relevant to the seat calculation.\n\
+    \n5. **No search for recent campaign events**: The agent didn't check for:\n \
+    \  - Recent debates or gaffes\n   - Policy announcements that might shift momentum\n\
+    \   - News coverage of the campaign in the final weeks\n   \n   The search_news\
+    \ tool was used (and returned some context), but the agent could have done more\
+    \ targeted searches for \"Baden-Württemberg 2026 debate\" or \"Manuel Hagel Cem\
+    \ Özdemir\" to understand the late-campaign dynamics.\n\n### Logical Consistency\n\
+    \n**Strong overall, with one minor issue:**\n\n1. **Factor direction mismatch**:\
+    \ \n   - Factor 4 (new electoral system) has logit=-0.3 (against YES), with the\
+    \ reasoning \"introduces some uncertainty vs historical patterns\"\n   - But the\
+    \ narrative says \"CDU is strong in both constituency and proportional vote, so\
+    \ the system change is unlikely to disadvantage them **specifically**\"\n   \n\
+    \   This reasoning suggests the factor should be **neutral** (logit ≈ 0), not\
+    \ negative. If the system doesn't disadvantage CDU specifically, it shouldn't\
+    \ count against YES. The uncertainty argument makes sense, but uncertainty about\
+    \ the **mechanism** (how seats get allocated) is different from uncertainty about\
+    \ the **outcome** (CDU's chances). The agent seems to be double-counting general\
+    \ forecast uncertainty.\n\n2. **Factor-implied probability vs tentative probability**:\n\
+    \   - Factor-implied: 99.9%\n   - Tentative: 96.1%\n   - Gap: -3.8pp\n   \n  \
+    \ The gap is justified in the assessment: the agent is being cautious about the\
+    \ simulation assumptions and wants to account for \"unknown unknowns.\" This is\
+    \ reasonable given the new electoral system and the Greens' momentum. However,\
+    \ the gap explanation could be more explicit in the factors themselves. The agent\
+    \ might have added a factor like:\n   - \"Residual uncertainty from new electoral\
+    \ system and potential unknown campaign dynamics not captured in polls\" (logit=-0.5,\
+    \ confidence=0.7)\n\n3. **Assessment narrative matches factors**: The assessment\
+    \ correctly summarizes the polling lead, the Green momentum risk, the simulation\
+    \ results, and the rare scenarios that would produce a NO outcome. No contradictions\
+    \ detected.\n\n### Calibration Patterns\n\nI cannot assess calibration against\
+    \ outcomes (all three prior forecasts are unresolved). However, I can compare\
+    \ the **reasoning style** across forecasts:\n\n1. **Use of Monte Carlo simulations**:\
+    \ The agent used MC in all four forecasts:\n   - 42115 (Netherlands municipal):\
+    \ MC gave 21%, agent chose 28%\n   - 42201 (MCHP stock): MC gave 50-56%, agent\
+    \ chose 53%\n   - 42202 (Google Trends): MC decay modeling gave 75% Decreases,\
+    \ agent chose 75%\n   - 42116 (Baden-Württemberg): MC gave 97%, agent chose 96.1%\n\
+    \n   Pattern: The agent tends to trust MC results when they're in the moderate\
+    \ range (50-75%) but sometimes moderates them when they're extreme (21%→28%, 97%→96%).\
+    \ This shows **good calibration instincts** — the agent is wary of overconfidence\
+    \ at the tails.\n\n2. **Probability range distribution**:\n   - 28% (Netherlands\
+    \ municipal)\n   - 53% (MCHP stock)\n   - 75% (Google Trends Decreases)\n   -\
+    \ 96.1% (Baden-Württemberg CDU)\n\n   The agent is willing to forecast across\
+    \ the full probability spectrum, which is good. However, 3 out of 4 forecasts\
+    \ are resolved by quantitative simulation, suggesting the agent may be **over-relying\
+    \ on MC** relative to qualitative judgment. In this case (Baden-Württemberg),\
+    \ the MC is appropriate and well-designed, so this is not a flaw here.\n\n3. **Evidence\
+    \ depth**: The Baden-Württemberg forecast used 13 tool calls (web_search, search_exa,\
+    \ search_news, fetch_url, execute_code) across ~20 minutes before reaching the\
+    \ probability. This is **more thorough** than the MCHP stock forecast (6 tool\
+    \ calls, ~3 minutes) but **less exhaustive** than the Netherlands municipal forecast\
+    \ (54 tool calls, ~40 minutes). This seems well-calibrated to the question difficulty\
+    \ — the Baden-Württemberg forecast is more straightforward than the Netherlands\
+    \ (which required deep research into reporting conventions) but more complex than\
+    \ a stock price movement.\n\n### Blind Spots\n\n1. **Coalition dynamics**: The\
+    \ question asks only whether CDU wins the **most seats**, not whether they form\
+    \ a government. The agent correctly focused on seat totals. However, there's a\
+    \ political dynamic not explored: if CDU wins but Greens surge enough to make\
+    \ a Greens-SPD-Linke-FDP coalition viable, could that influence late-campaign\
+    \ strategic voting? Probably not relevant here (the question is mechanical), but\
+    \ worth noting.\n\n2. **Turnout effects**: The new electoral system lowers the\
+    \ voting age to 16. The agent didn't research:\n   - How many 16-17 year olds\
+    \ are newly eligible?\n   - How do they lean politically? (Likely toward Greens)\n\
+    \   - Could high youth turnout narrow the gap?\n   \n   This is a real blind spot,\
+    \ though probably not decisive (16-17 year olds are a small fraction of the electorate).\n\
+    \n3. **Scenario: AfD outperforms polls**: The simulation shows AfD beating CDU\
+    \ in 0.0% of trials. But AfD is at 20% in polls — what if they surge to 25% in\
+    \ the final weeks (e.g., due to a migration-related news event)? The agent didn't\
+    \ model this scenario, likely because:\n   - AfD surge would need to be ~9-10pp\
+    \ to overtake CDU\n   - AfD has been stable at ~20% for months\n   - No obvious\
+    \ catalyst for a surge\n   \n   Still, given AfD's volatility in German politics,\
+    \ a sentence acknowledging this scenario would strengthen the analysis.\n\n4.\
+    \ **Overhang seats**: Under MMP, if a party wins more constituency seats than\
+    \ its proportional entitlement, it keeps the \"overhang\" and the Landtag expands\
+    \ with compensatory seats for other parties. The agent noted the minimum is 120\
+    \ seats but didn't investigate:\n   - Could CDU win so many constituencies that\
+    \ overhang effects distort the seat distribution?\n   - Could AfD or Greens benefit\
+    \ from overhang mechanics in a way that reduces CDU's seat lead?\n   \n   This\
+    \ is very unlikely to flip the outcome (CDU's lead is too large), but it's a structural\
+    \ feature of the system worth mentioning.\n\n### Summary of Specific Recommendations\n\
+    \nIf I were advising the agent on how to improve this forecast:\n\n1. **Fetch\
+    \ official sources directly**: Try fetching statistik-bw.de or im.baden-wuerttemberg.de\
+    \ for authoritative seat projections and electoral system documentation.\n\n2.\
+    \ **Quantify Green momentum more rigorously**: Do a time-series regression on\
+    \ the polls to estimate whether Greens are gaining at +0.5pp/week, +1pp/week,\
+    \ etc. Use this to project Feb 25 and March 8 vote shares.\n\n3. **Research Özdemir\
+    \ vs Hagel favorability**: Find polling data on personal approval ratings to quantify\
+    \ the \"Özdemir more popular\" claim.\n\n4. **Historical swing analysis**: Search\
+    \ for \"German state election final weeks polling error\" or similar to quantify\
+    \ how often 6-9pp leads have been overturned.\n\n5. **Reconsider Factor 4 direction**:\
+    \ The new electoral system factor should probably be neutral (logit ≈ 0) rather\
+    \ than negative, since the narrative says it doesn't disadvantage CDU specifically.\n\
+    \n6. **Add a turnout factor**: Research the 16-17 year old electorate size and\
+    \ voting patterns to assess whether the lowered voting age could help Greens narrow\
+    \ the gap.\n\n7. **Model AfD surge scenario**: Even if unlikely, explicitly consider\
+    \ the probability and impact of AfD jumping to 25-30% in the final weeks.\n\n\
+    ---\n\n## Final Assessment\n\n**Overall quality: Very Good (8.5/10)**\n\nThe forecast\
+    \ is well-researched, logically sound, and arrives at a probability (96.1%) that\
+    \ is well-supported by the evidence. The Monte Carlo modeling is sophisticated\
+    \ and appropriate. The main weaknesses are:\n- Underexploration of the \"Greens\
+    \ gaining momentum\" narrative (needs quantification)\n- Missing research on candidate\
+    \ favorability, turnout effects, and historical late-campaign swings\n- Minor\
+    \ logical inconsistency in Factor 4 (new electoral system coded as negative when\
+    \ reasoning suggests neutral)\n\nThe probability seems **well-calibrated**: with\
+    \ a stable 6-9pp lead and only 2.5 weeks remaining, 96% is reasonable. The agent\
+    \ is appropriately cautious (not going to 99%+) while still reflecting the strength\
+    \ of CDU's position.\n\n**Calibration concern**: None of the prior forecasts are\
+    \ resolved yet, so I cannot assess whether the agent is systematically over- or\
+    \ under-confident. The willingness to forecast across the full probability range\
+    \ (28%, 53%, 75%, 96%) is encouraging."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42116
+- **Question ID**: 41879
+- **Session Duration**: 358.1s (6.0 min)
+- **Cost**: $2.9932
+- **Tokens**: 6,848 total (37 in, 6,811 out)
+  - Cache: 626,526 read, 82,244 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42116_20260219_073533/20260219-073533.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 8 (30.8%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 955ms |
+| fetch_url | 5 | 2 ⚠️ | 5476ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| manifold_price | 1 | 0 | 154ms |
+| polymarket_price | 2 | 0 | 92ms |
+| reflection | 1 | 0 | 95863ms |
+| search_exa | 2 | 0 | 1192ms |
+| search_news | 1 | 0 | 15956ms |
+| web_search | 4 | 0 | 20146ms |
+| wikipedia | 7 | 6 ⚠️ | 206ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will CDU win the most seats in the Baden-Württemberg Landtag ele...
+- [Who will win the most seats in the 2026 Baden-Württemberg parliamentary elec...
+- [en.wikipedia.org](https://en.wikipedia.org/wiki/2026_Baden-W%C3%BCrttemberg_...
+- [politpro.eu](https://politpro.eu/en/baden-wuerttemberg)
+- [(Polymarket) NBA: Will the Mavericks beat the Grizzlies by more than 5.5 poi...
+- [(Polymarket) NFL: Will the Falcons beat the Panthers by more than 3.5 points...
+- [(Polymarket) In-Game Trading) Will the 49ers beat the Packers by more than 3...
+- [(Polymarket) 2022 Norway Chess: Will Magnus Carlsen lose any game?](https://...
+- [(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in ...
+- [(Wikipedia) 2026 Baden-Württemberg state election](https://en.wikipedia.org/...
+- [(Wikipedia) Landtag of Baden-Württemberg](https://en.wikipedia.org/wiki/Land...
+- [(Wikipedia) List of elections in 2026](https://en.wikipedia.org/wiki/List_of...
+- [(Wikipedia) Alliance 90/The Greens Baden-Württemberg](https://en.wikipedia.o...
+- [(Wikipedia) 2026 elections in the European Union](https://en.wikipedia.org/w...
+- [(Wikipedia) Next elections in Germany](https://en.wikipedia.org/wiki/Next_el...
+- [(Wikipedia) 2021 Baden-Württemberg state election](https://en.wikipedia.org/...
+- [(Wikipedia) 2026 in Germany](https://en.wikipedia.org/wiki/2026_in_Germany)
+- [(Wikipedia) Elections in Germany](https://en.wikipedia.org/wiki/Elections_in...
+- [(Wikipedia) State Parliament (Germany](https://en.wikipedia.org/wiki/State_P...
+- [wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/baden-wuerttemberg....
+- ... and 1 more
