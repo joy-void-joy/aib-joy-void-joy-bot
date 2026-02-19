@@ -228,14 +228,19 @@ The `forecasting-tools` library has some type annotation limitations:
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
-### No Regex/String Parsing for Structured Data
+### No String Manipulation on Structured Data
 
-Never use regex or string substitution to parse HTML, XML, JSON, or other structured formats. Use proper parsing libraries:
+If you're reaching for `re`, `.replace()`, `.split()`, string slicing, or any string operation to extract, transform, or filter structured data, something is wrong. Operate on the structure directly.
 
-- **Web page text extraction**: Use `trafilatura` — it handles boilerplate removal, content extraction, and metadata
-- **HTML DOM manipulation**: Use `beautifulsoup4` when you need to navigate/query the DOM tree
+- **Web pages**: Use `trafilatura` for text extraction, `beautifulsoup4` for DOM queries
 - **XML**: Use `xml.etree.ElementTree` or `lxml`
-- **JSON embedded in HTML**: Parse the HTML with BeautifulSoup first, then `json.loads()`
+- **JSON**: `json.loads()`, not regex
+- **SDK objects**: Filter `ContentBlock` lists by type and attribute (e.g. `ToolUseBlock.name`, `ToolResultBlock.tool_use_id`) — see `sources.py` for the pattern
+- **Dates/timestamps**: Parse to `datetime`, don't compare strings — see `aib.paths.parse_timestamp()`
+- **URLs**: Use `urllib.parse`, not string splitting
+- **File paths**: Use `pathlib.Path`, not string concatenation
+
+String operations are for formatting output. If you're using them to understand or transform data, you're working at the wrong abstraction level. `import re` in particular is a code smell — if you find yourself writing a regex, stop and look for the structured API.
 
 ### Timestamp Comparisons
 
