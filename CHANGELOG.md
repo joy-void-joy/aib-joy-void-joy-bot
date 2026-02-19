@@ -4,13 +4,15 @@ Agent version history. Each version tracks a behavioral change in the forecastin
 
 ## v3.0.0 (2026-02-19)
 
-reflection tool with reviewer sub-agent; source tracking extraction; fetch pipeline returns titles and links
-- new reflection tool replaces write_meta with structured review
-- reviewer sub-agent evaluates forecast quality
+structured reflection with reviewer sub-agent; type-specific forecast models; enhanced trace output
+- reflection tool: per-outcome breakdown, trace-as-file, focused reviewer sub-agent
+- type-specific forecast model factories with supports/conditional fields on Factor
+- enhanced build_trace and create_forecast_model wiring in core agent
+- pretty-print JSON tool results with field truncation
 - source tracking extracted to dedicated module
 - google_trends gains tz and custom date ranges
 - fetch pipeline returns page titles and relevant links
-- submission prepends reasoning to comments
+- submission formats supports field and prepends reasoning to comments
 
 ## v2.1.0 (2026-02-18)
 
