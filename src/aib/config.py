@@ -80,6 +80,13 @@ class Settings(BaseSettings):
         description="FRED (Federal Reserve Economic Data) API key",
     )
 
+    # === OpenRouter (optional) ===
+    openrouter_api_key: str | None = Field(
+        default=None,
+        validation_alias="OPENROUTER_API_KEY",
+        description="OpenRouter API key (enables routing through OpenRouter when set)",
+    )
+
     # === Model ===
     model: str = Field(
         default="claude-opus-4-6",
@@ -218,3 +225,9 @@ _ENV_EXPORTS = [
 for env_name, value in _ENV_EXPORTS:
     if value and env_name not in os.environ:
         os.environ[env_name] = value
+
+if settings.openrouter_api_key:
+    os.environ.setdefault("ANTHROPIC_BASE_URL", "https://openrouter.ai/api")
+    os.environ.setdefault("ANTHROPIC_AUTH_TOKEN", settings.openrouter_api_key)
+    os.environ.setdefault("ANTHROPIC_API_KEY", "")
+    logger.info("OpenRouter enabled — routing API calls through openrouter.ai")
