@@ -51,6 +51,38 @@ def _normalize_content(content: str | list | None) -> str:
     return content
 
 
+def _truncate_str(value: str, max_len: int = 500) -> str:
+    if len(value) > max_len:
+        return value[:max_len] + "..."
+    return value
+
+
+def _truncate_str_fields(obj: object, max_len: int = 500) -> object:
+    """Recursively truncate string values in a JSON-like structure."""
+    if isinstance(obj, dict):
+        return {k: _truncate_str_fields(v, max_len) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_truncate_str_fields(item, max_len) for item in obj]
+    if isinstance(obj, str):
+        return _truncate_str(obj, max_len)
+    return obj
+
+
+def _format_tool_result(content: str | list | None, max_len: int = 500) -> str:
+    """Format tool result content for display.
+
+    If the content parses as a JSON dict, pretty-print it with string fields
+    truncated. Otherwise fall back to plain truncation.
+    """
+    text = _normalize_content(content)
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return _truncate_str(text, max_len)
+    truncated = _truncate_str_fields(parsed, max_len)
+    return json.dumps(truncated, indent=2)
+
+
 def truncate_content(content: str | list | None, max_len: int = 500) -> str:
     """Normalize and truncate content for display."""
     text = _normalize_content(content)
@@ -94,15 +126,15 @@ def print_block(block: ContentBlock, prefix: str = "") -> None:
             )
         case ToolResultBlock():
             color = _id_to_color.pop(block.tool_use_id, "default")
+            formatted = _format_tool_result(block.content)
             print(f"{prefix}📋 Result ", end="")
-            _console.print(f"[{block.tool_use_id}]", style=color, end="")
-            print(": ", end="")
-            print(_normalize_content(block.content))
+            _console.print(f"[{block.tool_use_id}]", style=color)
+            print(formatted)
             stream_log.info(
                 "%sTOOL_RESULT [%s]: %s",
                 prefix,
                 block.tool_use_id,
-                _normalize_content(block.content),
+                formatted,
             )
         case _:
             print(f"{prefix}❓ {type(block).__name__}: {block}")
