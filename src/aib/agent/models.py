@@ -3,9 +3,10 @@
 import math
 import re
 from datetime import date, datetime, timedelta
-from typing import Self, TypedDict
+from enum import StrEnum
+from typing import Self, TypedDict, cast
 
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, Field, computed_field, create_model, model_validator
 import zoneinfo
 
 
@@ -108,11 +109,16 @@ class Factor(BaseModel):
     """A piece of evidence that influences the forecast."""
 
     description: str = Field(description="What this evidence is and why it matters.")
+    supports: str | float | None = Field(
+        default=None,
+        description="Which outcome this evidence supports (for MC/numeric questions).",
+    )
     logit: float = Field(
         description=(
             "Strength and direction of this evidence. "
-            "Positive = toward Yes, negative = toward No. "
-            "Scale: ±0.5 mild, ±1.0 moderate, ±2.0 strong, ±3.0 very strong."
+            "For binary: positive = Yes, negative = No. "
+            "For MC/numeric: positive = toward supported outcome, negative = against. "
+            "Scale: +/-0.5 mild, +/-1.0 moderate, +/-2.0 strong, +/-3.0 very strong."
         )
     )
     confidence: float = Field(
@@ -125,12 +131,77 @@ class Factor(BaseModel):
             "Effective logit = logit × confidence."
         ),
     )
+    conditional: str | None = Field(
+        default=None,
+        description="Optional condition under which this factor applies.",
+    )
 
     @computed_field
     @property
     def effective_logit(self) -> float:
         """The logit value adjusted for confidence."""
         return self.logit * self.confidence
+
+
+def create_factor_model(
+    question_type: str,
+    options: list[str] | None = None,
+) -> type[Factor]:
+    """Create a Factor model with question-type-specific supports constraint.
+
+    Binary: supports excluded (sign encodes direction).
+    MC: StrEnum of option labels. Numeric/discrete: float.
+    """
+    supports_type: type
+    match question_type:
+        case "binary":
+            return create_model(
+                "Factor",
+                __base__=Factor,
+                supports=(None, Field(default=None, exclude=True)),
+            )
+        case "multiple_choice" if options:
+            supports_type = cast(type, StrEnum("Supports", {o: o for o in options}))
+        case "numeric" | "discrete":
+            supports_type = float
+        case _:
+            return Factor
+
+    return create_model(
+        "Factor",
+        __base__=Factor,
+        supports=(supports_type, Field(description="Which outcome this evidence supports.")),
+    )
+
+
+def create_forecast_model(
+    question_type: str,
+    options: list[str] | None = None,
+) -> type[BaseModel]:
+    """Create a forecast model with question-type-specific Factor constraints."""
+    factor_model = create_factor_model(question_type, options)
+    if factor_model is Factor:
+        match question_type:
+            case "multiple_choice":
+                return MultipleChoiceForecast
+            case "numeric" | "discrete":
+                return NumericForecast
+            case _:
+                return Forecast
+
+    match question_type:
+        case "multiple_choice":
+            base: type[BaseModel] = MultipleChoiceForecast
+        case "numeric" | "discrete":
+            base = NumericForecast
+        case _:
+            base = Forecast
+
+    return create_model(
+        base.__name__,
+        __base__=base,
+        factors=(list[factor_model], base.model_fields["factors"]),
+    )
 
 
 # --- Forecast Output Models ---
