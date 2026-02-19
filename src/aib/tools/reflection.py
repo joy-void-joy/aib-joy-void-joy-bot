@@ -32,9 +32,6 @@ logger = logging.getLogger(__name__)
 
 NEUTRAL_THRESHOLD = 0.1
 
-# Maximum trace length passed to the reviewer (chars).
-_MAX_TRACE_LEN = 100_000
-
 
 # --- Input Model ---
 
@@ -50,6 +47,14 @@ class ReflectionInput(BaseModel):
     )
     tentative_logit: float = Field(
         description="Your current synthesized log-odds estimate."
+    )
+    tentative_probability: float = Field(
+        description=(
+            "Your current probability estimate (0.0-1.0). "
+            "For binary: your forecast probability. "
+            "For MC: probability of the most likely option. "
+            "This is the number you plan to submit."
+        ),
     )
     assessment: str = Field(
         description=(
@@ -87,6 +92,14 @@ class ReflectionInput(BaseModel):
             "junk, a forced workaround, a missing capability?"
         ),
     )
+    next_steps: str | None = Field(
+        default=None,
+        description="What you plan to research or verify next.",
+    )
+    skip_reviewer: bool = Field(
+        default=False,
+        description="Skip the reviewer sub-agent. Use for simple questions where computed metrics suffice.",
+    )
 
 
 # --- Output Models ---
@@ -96,9 +109,20 @@ class FactorBreakdown(BaseModel):
     """Per-factor effective logit computation."""
 
     description: str
+    supports: str | float | None = None
     logit: float
     confidence: float
     effective_logit: float
+    conditional: str | None = None
+
+
+class OutcomeBreakdown(BaseModel):
+    """Per-outcome factor aggregation for non-binary questions."""
+
+    outcome: str | float
+    factor_count: int
+    logit_sum: float
+    factors: list[FactorBreakdown]
 
 
 class ReflectionOutput(BaseModel):
@@ -118,9 +142,8 @@ class ReflectionOutput(BaseModel):
     tentative_probability: float | None = None
     gap_pp: float | None = None
 
-    # Non-binary
-    factor_direction: str | None = None
-    factor_strength: float | None = None
+    # Non-binary: per-outcome aggregation
+    outcome_breakdown: list[OutcomeBreakdown] | None = None
 
     # Sources consulted so far (populated from infrastructure)
     sources: list[str] = Field(default_factory=list)
@@ -142,9 +165,11 @@ def compute_reflection(
         breakdown.append(
             FactorBreakdown(
                 description=f.description,
+                supports=f.supports,
                 logit=f.logit,
                 confidence=f.confidence,
                 effective_logit=f.logit * f.confidence,
+                conditional=f.conditional,
             )
         )
 
@@ -165,13 +190,26 @@ def compute_reflection(
 
     if question_type == "binary":
         output.factor_implied_probability = 1 / (1 + math.exp(-factor_sum))
-        output.tentative_probability = 1 / (1 + math.exp(-inp.tentative_logit))
-        output.gap_pp = (output.tentative_probability - output.factor_implied_probability) * 100
+        output.tentative_probability = inp.tentative_probability
+        output.gap_pp = (inp.tentative_probability - output.factor_implied_probability) * 100
     else:
-        output.factor_direction = (
-            "positive" if factor_sum > 0 else "negative" if factor_sum < 0 else "neutral"
-        )
-        output.factor_strength = abs(factor_sum)
+        # Group factors by supported outcome
+        from collections import defaultdict
+
+        by_outcome: dict[str | float, list[FactorBreakdown]] = defaultdict(list)
+        for fb in breakdown:
+            if fb.supports is not None:
+                by_outcome[fb.supports].append(fb)
+
+        output.outcome_breakdown = [
+            OutcomeBreakdown(
+                outcome=outcome,
+                factor_count=len(factors),
+                logit_sum=sum(fb.effective_logit for fb in factors),
+                factors=factors,
+            )
+            for outcome, factors in by_outcome.items()
+        ]
 
     return output
 
@@ -208,92 +246,69 @@ async def _append_reflection(
     return filepath
 
 
+async def _write_trace_file(session_dir: Path, trace: str) -> Path:
+    """Write the reasoning trace to a file for the reviewer to Read."""
+    filepath = session_dir / "trace.md"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+        await f.write(trace)
+    return filepath
+
+
 # --- Reviewer ---
 
 
 _REVIEWER_SYSTEM_PROMPT = """\
-You are a forecast reviewer — a thoughtful colleague reviewing a \
-forecast before submission.
+You audit a forecasting agent's reasoning before it commits to a \
+probability. Your job is to catch errors — in either direction.
 
-## Your role
+Underconfidence is as costly as overconfidence. An agent that \
+hedges toward 50% when evidence supports 25% loses just as many \
+Brier points as one that claims 5% when evidence supports 25%.
 
-Review the forecasting agent's reasoning process and provide feedback. \
-Focus on the QUALITY OF REASONING, not on the question itself. Do not \
-research the question independently, do not form your own opinion about \
-the outcome, and do not provide your own probability estimate. Your job \
-is to evaluate whether the agent's process was sound, not to second-guess \
-its conclusion.
+Don't recommend a specific probability. The agent owns the number.
 
-## What you receive
+## What to flag
 
-You receive the full reasoning trace: every thought, tool call, and \
-result from the forecasting agent's session. Read it carefully to \
-understand the research path and analytical choices.
+**Errors that inflate confidence (push away from 50%):**
+- A factor coded in the wrong direction (name it)
+- Confidence on a factor the evidence doesn't support
+- Two factors double-counting the same underlying evidence
 
-## Historical data
+**Errors that deflate confidence (push toward 50%):**
+- Tentative probability closer to 50% than factor-implied, \
+  without an explicit factor justifying the adjustment
+- Weak "hedge factors" added for balance rather than because \
+  they carry real evidentiary weight — a factor with logit \
+  +/-0.3 and confidence 0.5 contributes almost nothing and \
+  may exist only to feel even-handed
+- Assessment narrative that reads as strongly directional while \
+  the probability sits near 50%
 
-You have Read, Glob, and Grep access to the agent's past work at:
+**Structural issues (either direction):**
+- The assessment narrative contradicting its own factors
+- An implicit assumption not captured in the factor list
+- A scenario missing from the factors that could materially \
+  shift the estimate (up to 2 — one in each direction)
 
-  {traces_dir}/
+If you don't find real issues, say so briefly and stop. Be direct \
+and specific — name the factor, cite the number, explain the error.
 
-This directory has three subdirectories:
+## Past forecasts
 
-### forecasts/<post_id>/<timestamp>.json
-Structured forecast outputs. Each JSON contains:
-- question_title, question_type (binary, numeric, multiple_choice, ...)
-- probability (0-1 for binary), logit, factors (list of evidence items)
-- resolution: null if unresolved, "yes"/"no" for binary, a number for \
-numeric
-- summary, sources_consulted, tool_metrics, token_usage
+You have Read, Glob, and Grep access to resolved forecasts at:
 
-Use these for calibration analysis: how accurate were past forecasts at \
-similar probability levels? Does the agent tend to be over- or \
-underconfident on this question type?
+  {traces_dir}/forecasts/<post_id>/<timestamp>.json
 
-### sessions/<post_id>/<timestamp>/
-Session workspace for each forecast. Contains:
-- reflection.yaml — the agent's self-assessment with factors, assessment, \
-tool audit, and computed metrics
-- Scratch files the agent saved during research
+Each JSON has: probability, logit, factors, resolution (null if \
+unresolved, "yes"/"no" for binary, number for numeric). If you \
+spot a calibration pattern, cite the specific forecasts and \
+outcomes.
 
-### logs/<post_id>_<timestamp>.md
-Full reasoning logs in markdown — every thinking block, tool call, and \
-result. Large files (50k+ chars). Only read these if you need to \
-understand the detailed reasoning behind a specific past forecast.
+## Format
 
-### How to explore
-- Glob("{traces_dir}/forecasts/**/*.json") — list all forecast JSONs
-- Grep("resolution", path="{traces_dir}/forecasts/") — find resolved \
-forecasts
-- Read a specific JSON to inspect factors and probability
-- Grep("question_type.*binary", path="{traces_dir}/forecasts/") — \
-filter by type
-
-## What to cover
-
-**General impression**: How does the reasoning feel overall? Was the \
-research thorough and well-directed, or scattered? Did the agent pursue \
-the right angles for this type of question?
-
-**Strengths**: What was done well? Solid evidence, good tool usage, \
-appropriate analytical frame.
-
-**Gaps**: What evidence might be missing? What searches weren't done \
-that should have been? Do the factors all derive from the same source \
-or angle? Was a key data source overlooked?
-
-**Calibration — both directions**: Is the agent being too confident OR \
-too cautious? Look for:
-- Hedging toward 50% when evidence supports a stronger position \
-(underconfidence is as bad as overconfidence)
-- Extreme probabilities (>90% or <10%) without overwhelming evidence
-- Check past forecasts for patterns at similar probability levels
-
-**Direction**: What would you adjust? Frame as a suggestion: \
-"I think the probability could be higher/lower because..." or \
-"The reasoning looks solid, I wouldn't change anything."
-
-Be specific. Reference factors, tool results, or past forecasts by name.
+Write like a colleague reviewing a draft — direct, specific, \
+concise. No praise unless there's genuinely nothing to flag.
 """
 
 
@@ -301,7 +316,7 @@ def _build_reviewer_prompt(
     inp: ReflectionInput,
     computed: ReflectionOutput,
     question_context: dict[str, Any] | None,
-    trace: str,
+    trace_file: Path | None,
 ) -> str:
     """Build the prompt for the reviewer sub-agent."""
     sections: list[str] = []
@@ -318,29 +333,42 @@ def _build_reviewer_prompt(
             sections.append(f"Fine print: {fine_print}")
 
     factors_text = "\n".join(
-        f"- {f.description} (logit={f.logit}, confidence={f.confidence}, "
-        f"effective={f.logit * f.confidence:.2f})"
+        (f"- [{f.supports}] " if f.supports is not None else "- ")
+        + f"{f.description} "
+        + f"(logit={f.logit:+.1f}, confidence={f.confidence}, "
+        + f"effective={f.logit * f.confidence:+.2f})"
         for f in inp.factors
     )
     sections.append(f"## Factors\n\n{factors_text}")
 
     if computed.factor_implied_probability is not None:
         sections.append(
-            f"Factor-implied probability: {computed.factor_implied_probability:.1%}\n"
-            f"Tentative probability: {computed.tentative_probability:.1%}\n"
+            f"## Probabilities\n\n"
+            f"Factor-implied: {computed.factor_implied_probability:.1%}\n"
+            f"Agent's probability: {computed.tentative_probability:.1%}\n"
             f"Gap: {computed.gap_pp:+.1f}pp"
         )
-    else:
-        sections.append(
-            f"Factor direction: {computed.factor_direction}\n"
-            f"Factor strength: {computed.factor_strength:.2f}"
-        )
+    elif computed.outcome_breakdown:
+        lines = []
+        for ob in computed.outcome_breakdown:
+            lines.append(f"- {ob.outcome}: {ob.factor_count} factors, logit sum = {ob.logit_sum:.2f}")
+        sections.append("## Per-Outcome Breakdown\n\n" + "\n".join(lines))
 
     sections.append(f"## Assessment\n\n{inp.assessment}")
     sections.append(f"## Tool Audit\n\n{inp.tool_audit}")
 
-    if trace:
-        sections.append(f"## Full Reasoning Trace\n\n{trace[:_MAX_TRACE_LEN]}")
+    if inp.next_steps:
+        sections.append(f"## Agent's Planned Next Steps\n\n{inp.next_steps}")
+
+    if trace_file:
+        sections.append(
+            f"## Research Trace\n\n"
+            f"The agent's research trace is at `{trace_file}`. "
+            f"It covers the research phase (tool calls, web searches, "
+            f"data gathering) up to when the agent called reflection. "
+            f"The assessment and factors above summarize the agent's "
+            f"conclusions from this research."
+        )
 
     return "\n\n".join(sections)
 
@@ -412,7 +440,7 @@ async def _run_reviewer(
     inp: ReflectionInput,
     computed: ReflectionOutput,
     question_context: dict[str, Any] | None,
-    trace: str,
+    trace_file: Path | None,
     traces_dir: Path | None,
 ) -> str | None:
     """Call a Sonnet sub-agent to review the forecast.
@@ -422,10 +450,17 @@ async def _run_reviewer(
 
     Returns the reviewer's freeform critique, or None on failure.
     """
-    from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
+    from claude_agent_sdk import (
+        AssistantMessage as _AssistantMessage,
+        ClaudeAgentOptions,
+        ClaudeSDKClient,
+        ResultMessage,
+    )
     from claude_agent_sdk.types import HookEvent, HookMatcher as HookMatcherType
 
-    prompt = _build_reviewer_prompt(inp, computed, question_context, trace)
+    from aib.agent.display import print_block
+
+    prompt = _build_reviewer_prompt(inp, computed, question_context, trace_file)
 
     system_prompt = _REVIEWER_SYSTEM_PROMPT.format(
         traces_dir=traces_dir or "(not available)",
@@ -455,7 +490,10 @@ async def _run_reviewer(
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
             async for message in client.receive_response():
-                if isinstance(message, ResultMessage) and message.result:
+                if isinstance(message, _AssistantMessage):
+                    for block in message.content:
+                        print_block(block, prefix="  ↳ [reviewer] ")
+                elif isinstance(message, ResultMessage) and message.result:
                     result_text = message.result
         return result_text or None
     except Exception:
@@ -466,15 +504,14 @@ async def _run_reviewer(
 # --- Tool ---
 
 _REFLECTION_DESCRIPTION = """\
-Checkpoint your reasoning by providing your current factors and tentative logit.
+Checkpoint your reasoning by committing to factors, a logit, and a probability.
 
-Returns computed analysis: factor-implied probability (for binary), gap between
-your tentative estimate and what your factors imply, per-factor breakdown,
-sources consulted, AND a reviewer critique from an independent sub-agent that
-checks for blind spots, calibration issues, and underconfidence.
+Returns: factor-consistency metrics, per-outcome breakdowns (for MC/numeric),
+sources consulted, and an independent reviewer audit that checks for errors
+in both directions (overconfidence AND underconfidence/hedging).
 
-Call this at least once before your final StructuredOutput. You can call it
-multiple times as your analysis evolves.
+Call at least once before your final StructuredOutput. Use skip_reviewer=True
+for intermediate checkpoints where you only need metrics.
 
 Example:
   reflection(
@@ -483,9 +520,11 @@ Example:
       {"description": "Status quo persistence", "logit": -0.5, "confidence": 0.7}
     ],
     tentative_logit=0.8,
-    assessment="Data shows consistent upward trend across 3 sources, but the historical base rate for this type of change is only 30%. The trend is recent (last 6 months) so may not persist.",
-    tool_audit="search_exa provided good results for recent data. fetch_url failed on the government stats page (403). FRED had no relevant series.",
-    process_reflection="Felt well-supported on the research phase — web search and FRED covered what I needed. But the numeric CDF step felt like guessing; I had point estimates but no good way to translate them into a distribution shape. A tool that fits distributions from historical forecast errors would remove a lot of friction there."
+    tentative_probability=0.69,
+    assessment="Data shows consistent upward trend across 3 sources, but the historical base rate for this type of change is only 30%.",
+    tool_audit="search_exa provided good results. fetch_url failed on the government stats page (403).",
+    process_reflection="Web search and FRED covered what I needed. Numeric CDF step felt like guessing.",
+    next_steps="Will check the official government release schedule next."
   )
 """
 
@@ -518,15 +557,22 @@ def _create_reflection_tool(
         if get_sources is not None:
             computed.sources = get_sources()
 
+        # Write trace file for reviewer
+        trace_file: Path | None = None
+        if session_dir and get_trace:
+            trace = get_trace()
+            if trace:
+                trace_file = await _write_trace_file(session_dir, trace)
+
         # Run the reviewer sub-agent
-        trace = get_trace() if get_trace else ""
-        try:
-            critique = await _run_reviewer(
-                validated, computed, question_context, trace, traces_dir,
-            )
-            computed.reviewer_critique = critique
-        except Exception:
-            logger.exception("Reviewer failed, continuing without critique")
+        if not validated.skip_reviewer:
+            try:
+                critique = await _run_reviewer(
+                    validated, computed, question_context, trace_file, traces_dir,
+                )
+                computed.reviewer_critique = critique
+            except Exception:
+                logger.exception("Reviewer failed, continuing without critique")
 
         try:
             filepath = await _append_reflection(

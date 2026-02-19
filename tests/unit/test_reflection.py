@@ -18,11 +18,15 @@ from aib.tools.reflection import (
 def _make_input(
     factors: list[Factor] | None = None,
     tentative_logit: float = 0.0,
+    tentative_probability: float | None = None,
 ) -> ReflectionInput:
     """Helper to create a ReflectionInput with sensible defaults."""
+    if tentative_probability is None:
+        tentative_probability = 1 / (1 + math.exp(-tentative_logit))
     return ReflectionInput(
         factors=factors or [],
         tentative_logit=tentative_logit,
+        tentative_probability=tentative_probability,
         assessment="Test assessment.",
         tool_audit="No tools used.",
         process_reflection="Test reflection.",
@@ -68,13 +72,13 @@ class TestComputeReflectionBinary:
         factors = [
             Factor(description="Moderate positive", logit=1.0, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_input(factors=factors, tentative_logit=1.0, tentative_probability=0.73)
 
         result = compute_reflection(inp, "binary")
 
         expected = 1 / (1 + math.exp(-1.0))
         assert result.factor_implied_probability == pytest.approx(expected)
-        assert result.tentative_probability == pytest.approx(expected)
+        assert result.tentative_probability == pytest.approx(0.73)
 
     def test_contradictory_direction(self) -> None:
         """All positive factors with negative tentative logit."""
@@ -104,42 +108,46 @@ class TestComputeReflectionBinary:
 class TestComputeReflectionNumeric:
     """Tests for non-binary question reflection computation."""
 
-    def test_returns_direction_not_probability(self) -> None:
-        """Numeric questions should get direction/strength, not probability."""
+    def test_returns_outcome_breakdown(self) -> None:
+        """Numeric questions should get per-outcome breakdown, not probability."""
         factors = [
-            Factor(description="Upward pressure", logit=1.5, confidence=0.9),
-            Factor(description="Some drag", logit=-0.3, confidence=0.7),
+            Factor(description="Upward pressure", supports="Higher", logit=1.5, confidence=0.9),
+            Factor(description="Some drag", supports="Lower", logit=0.3, confidence=0.7),
         ]
         inp = _make_input(factors=factors, tentative_logit=1.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.factor_direction == "positive"
-        assert result.factor_strength is not None
-        assert result.factor_strength > 0
-        # Should NOT have binary-specific fields
+        assert result.outcome_breakdown is not None
+        assert len(result.outcome_breakdown) == 2
         assert result.factor_implied_probability is None
         assert result.gap_pp is None
 
-    def test_negative_direction(self) -> None:
-        """Negative factor sum should give negative direction."""
+    def test_groups_by_outcome(self) -> None:
+        """Factors with the same supports value should be grouped."""
         factors = [
-            Factor(description="Downward", logit=-2.0, confidence=1.0),
+            Factor(description="Evidence A", supports="Higher", logit=1.0, confidence=1.0),
+            Factor(description="Evidence B", supports="Higher", logit=0.5, confidence=1.0),
+            Factor(description="Evidence C", supports="Lower", logit=2.0, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=-1.0)
+        inp = _make_input(factors=factors, tentative_logit=1.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.factor_direction == "negative"
+        assert result.outcome_breakdown is not None
+        by_outcome = {ob.outcome: ob for ob in result.outcome_breakdown}
+        assert by_outcome["Higher"].factor_count == 2
+        assert by_outcome["Higher"].logit_sum == pytest.approx(1.5)
+        assert by_outcome["Lower"].factor_count == 1
 
-    def test_neutral_direction(self) -> None:
-        """Zero factor sum should give neutral direction."""
+    def test_empty_factors_no_breakdown(self) -> None:
+        """Empty factor list should give empty outcome breakdown."""
         inp = _make_input(factors=[], tentative_logit=0.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.factor_direction == "neutral"
-        assert result.factor_strength == 0.0
+        assert result.outcome_breakdown is not None
+        assert len(result.outcome_breakdown) == 0
 
 
 class TestNeutralAndDominant:
@@ -217,7 +225,7 @@ class TestFileWriting:
             tentative_logit=1.0,
         )
         inp2 = _make_input(
-            factors=[Factor(description="Second", logit=2.0, confidence=0.5)],
+            factors=[Factor(description="Second", logit=-2.0, confidence=0.5)],
             tentative_logit=1.5,
         )
 
@@ -247,6 +255,7 @@ class TestFileWriting:
         inp = ReflectionInput(
             factors=[],
             tentative_logit=0.0,
+            tentative_probability=0.5,
             assessment="Strong positive evidence outweighs base rate concerns.",
             tool_audit="web_search worked well, fred_series returned empty",
             process_reflection="Missing a tool for satellite imagery analysis",
@@ -319,7 +328,7 @@ class TestBuildReviewerPrompt:
         computed = compute_reflection(inp, "binary")
         context = {"title": "Will X happen?", "type": "binary"}
 
-        prompt = _build_reviewer_prompt(inp, computed, context, "")
+        prompt = _build_reviewer_prompt(inp, computed, context, None)
 
         assert "Will X happen?" in prompt
         assert "binary" in prompt
@@ -335,27 +344,27 @@ class TestBuildReviewerPrompt:
         )
         computed = compute_reflection(inp, "binary")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, "")
+        prompt = _build_reviewer_prompt(inp, computed, None, None)
 
         assert "Strong signal" in prompt
         assert "Weak counter" in prompt
 
     def test_includes_trace(self) -> None:
-        """Prompt should include the reasoning trace."""
+        """Prompt should reference the trace file."""
         inp = _make_input(tentative_logit=0.5)
         computed = compute_reflection(inp, "binary")
-        trace = "## Thinking\n\nI searched for evidence..."
+        trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace)
+        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
 
-        assert "I searched for evidence" in prompt
+        assert "trace.md" in prompt
 
-    def test_truncates_long_trace(self) -> None:
-        """Trace should be truncated at _MAX_TRACE_LEN."""
+    def test_trace_file_path_included(self) -> None:
+        """Prompt should reference the trace file path."""
         inp = _make_input(tentative_logit=0.5)
         computed = compute_reflection(inp, "binary")
-        trace = "x" * 200_000
+        trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace)
+        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
 
-        assert len(prompt) < 200_000
+        assert "/tmp/session/trace.md" in prompt
