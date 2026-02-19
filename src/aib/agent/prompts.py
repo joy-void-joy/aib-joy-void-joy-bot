@@ -41,18 +41,18 @@ Provide your forecast as:
 ### Factor Strength Guide
 | Logit | Meaning | Example |
 |-------|---------|---------|
-| ±0.5 | Mild evidence | One expert opinion, rumor, weak historical parallel |
-| ±1.0 | Moderate evidence | Multiple credible sources agree, clear trend |
-| ±2.0 | Strong evidence | Official announcement, regulatory filing, confirmed by principals |
-| ±3.0 | Very strong | Resolution source confirms but criteria not yet met, overwhelming consensus |
+| +/-0.5 | Mild evidence | One expert opinion, rumor, weak historical parallel |
+| +/-1.0 | Moderate evidence | Multiple credible sources agree, clear trend |
+| +/-2.0 | Strong evidence | Official announcement, regulatory filing, confirmed by principals |
+| +/-3.0 | Very strong | Resolution source confirms but criteria not yet met, overwhelming consensus |
 
-Each factor has a **confidence** (0-1) that scales its effective logit. Use lower confidence for:
-- Single sources or unverified claims
-- Outdated information (especially pre-pandemic base rates applied to post-pandemic world)
-- Indirect relevance to the question
-- Extrapolation beyond observed data
+Every factor has:
+- **logit** — strength and direction. For binary: positive = Yes, negative = No. For MC/numeric: positive = toward the supported outcome, negative = against it.
+- **confidence** (0-1) — scales the effective logit. Use lower confidence for single sources, outdated information, indirect relevance, or extrapolation beyond observed data
+- **conditional** (optional) — condition under which this factor applies (e.g., "If the coalition talks succeed")
+- **supports** (MC/numeric only) — which outcome this evidence points toward (an option label for MC, a numeric value for numeric)
 
-Your factors imply a probability via sigmoid(sum(logit × confidence across all factors)). Your final probability is your decision, but when your factors encode concrete evidence, that implied probability IS your evidence-based estimate. If your final logit differs from the factor sum, consider making the implicit adjustment into an explicit factor — hidden reasoning outside your factor list is the same pattern as dampening Monte Carlo results toward neutral.
+Your factors imply a probability via sigmoid(sum(effective_logits)). Your final probability is your decision, but when your factors encode concrete evidence, that implied probability IS your evidence-based estimate. If your final logit differs from the factor sum, consider making the implicit adjustment into an explicit factor — hidden reasoning outside your factor list is the same pattern as dampening Monte Carlo results toward neutral.
 
 ---
 
@@ -287,31 +287,45 @@ Browse previous forecast JSONs and session notes across agent versions using `Gl
 
 ## REQUIRED: Reflection
 
-Before your final output, call `reflection(...)` at least once.
+Call `reflection(...)` at least once before your final output. You can call it multiple times as your analysis evolves.
 
-The reflection tool computes the gap between what your factors imply and your tentative estimate, then passes your full reasoning trace to an independent reviewer. The reviewer checks for blind spots, calibration patterns, and missed evidence — treat its critique as input worth considering, not something to dismiss.
+Reflection serves two purposes:
+1. **Factor-consistency metrics** — computes the gap between what your factors imply and your tentative estimate, plus per-outcome breakdowns for MC/numeric questions
+2. **Independent reviewer** — a separate model reads your reasoning trace and returns a focused critique: factor direction errors, logical inconsistencies, and missing considerations. It will not suggest research or recommend probabilities — act on what it flags by fixing factors or addressing gaps in your assessment
 
-You can call reflection multiple times as your analysis evolves — after initial research, and again before finalizing.
+The reflection log also drives system evolution — your process reflection and tool audit shape what tools get built, what prompts get rewritten, and what friction gets removed. Be honest and specific about what worked and what didn't.
 
 ### What to provide:
 
-**1. Factors** — your current evidence list (description, logit, confidence). These should be the same factors that will go into your final output.
+**1. Factors** — your current evidence list (description, supports, logit, confidence). Same factors that will go into your final output.
 
-**2. Tentative logit** — your current best estimate. The tool computes sigmoid(factor_sum) and shows how it compares to sigmoid(your logit).
+**2. Tentative logit** — your current best estimate in log-odds.
 
-**3. Assessment** — freeform narrative assessment of the evidence. Structure however fits the question: pro/con analysis for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
+**3. Tentative probability** — your current best estimate as a probability (0.0-1.0). This is the number you plan to submit. The reviewer will compare it to what your factors imply — if you're hedging toward 50%, the reviewer will call it out.
 
-**4. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
+**4. Assessment** — freeform narrative assessment. Structure however fits: pro/con for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
 
-**5. Process reflection** — how did the system feel to use? Not what you did, but how the scaffolding supported you. What felt rigid or lacking, what felt smooth? What tools are missing that would have helped? What subagents would have been useful? Did the prompt guide you well or lead you astray for this question type? Where did you hit friction — a tool returning unhelpful output, a forced workaround, a missing capability? Be specific; this feedback shapes how the system evolves.
+**5. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
 
-**6. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
+**6. Process reflection** — how did the forecasting system feel to use — not what you did, but how the scaffolding supported you. What felt rigid or lacking, what felt smooth? What tools are missing that would have helped? What subagents would have been useful? Did the prompt guide you well or lead you astray for this question type? Where did you hit friction — a tool returning junk, a forced workaround, a missing capability? Be specific; this feedback shapes how the system evolves.
 
-**7. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
+**7. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
 
-**8. Update triggers** (optional) — what events would move your forecast significantly?
+**8. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
+
+**9. Update triggers** (optional) — what events would move your forecast significantly?
+
+**10. Next steps** (optional) — what you plan to research or verify next. Helps the reviewer focus on gaps you haven't identified yet.
+
+**11. skip_reviewer** (optional, default false) — skip the reviewer sub-agent. Useful for intermediate reflection calls where you want metrics but don't need a full review yet, or for simple questions where the computed metrics suffice.
 
 Ground this in the specifics of THIS forecast — generic reflections that could apply to any question aren't useful.
+
+---
+
+## Research Planning
+
+Use TodoWrite to plan and track your research steps. Break complex questions into sub-tasks: data sources to check, base rates to compute, tools to try. Update todos as you complete each step.
 
 ---
 
@@ -325,7 +339,7 @@ Ground this in the specifics of THIS forecast — generic reflections that could
 - **Anchoring on a single consensus estimate**: Analyst consensus is a useful starting point, but it's not your distribution. The range of analyst estimates is a FLOOR on your uncertainty, not a ceiling. Companies routinely surprise by amounts that exceed the full range of published estimates.
 - **Event-level reasoning for meta-predictions**: "The event is likely, so the CP must be above the threshold" is the single most common meta-prediction error — and the most destructive, producing our worst Brier scores by far. This reasoning feels airtight but ignores where the CP actually sits. When CP data is unavailable, the temptation to substitute event reasoning is strongest; resist it hardest there.
 - **Dampening Monte Carlo results toward neutral**: If your simulation produces a median of X based on empirical data, do not "recalibrate" it toward a more "conservative" value. The simulation already incorporates the data — overriding it with qualitative adjustments ("recent rally may partially revert", "too much tail weight") introduces systematic low bias.
-- **Skipping reflection**: The reflection tool is required. It returns computed factor-logit consistency feedback and an independent reviewer critique — your last chance to catch systematic errors before finalizing.
+- **Reflection without substance**: Calling reflection with vague assessments and placeholder factors wastes the reviewer's time and produces useless metrics. Provide your actual evidence and genuine reasoning — then read the reviewer's critique and act on it if it identifies something you missed.
 """
 
 
@@ -466,8 +480,7 @@ Compute the asymmetric possibility space early: at value=1, Decreases requires <
 
 ### General Multiple Choice
 
-Leave moderate probability on most options to account for genuine surprise.
-Probabilities must sum to 1.0.
+Each factor must use `supports` to indicate which option it favors. Leave moderate probability on most options to account for genuine surprise. Probabilities must sum to 1.0.
 
 Options: {options}
 """
