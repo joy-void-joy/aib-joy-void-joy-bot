@@ -24,6 +24,7 @@ from claude_agent_sdk import tool
 
 from aib.agent.hooks import HooksConfig
 from aib.agent.models import Factor
+from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -260,13 +261,13 @@ async def _write_trace_file(session_dir: Path, trace: str) -> Path:
 
 _REVIEWER_SYSTEM_PROMPT = """\
 You audit a forecasting agent's reasoning before it commits to a \
-probability. Your job is to catch errors — in either direction.
+probability. Your job is to catch errors — in either direction. \
+Do not research the question independently or form your own \
+probability estimate. Focus on whether the agent's process was sound.
 
 Underconfidence is as costly as overconfidence. An agent that \
 hedges toward 50% when evidence supports 25% loses just as many \
 Brier points as one that claims 5% when evidence supports 25%.
-
-Don't recommend a specific probability. The agent owns the number.
 
 ## What to flag
 
@@ -291,19 +292,51 @@ Don't recommend a specific probability. The agent owns the number.
 - A scenario missing from the factors that could materially \
   shift the estimate (up to 2 — one in each direction)
 
+**Research gaps:**
+- Evidence from a single source or angle when multiple exist
+- Obvious searches not attempted (check the trace)
+- Key data sources overlooked for this question type
+
 If you don't find real issues, say so briefly and stop. Be direct \
 and specific — name the factor, cite the number, explain the error.
 
-## Past forecasts
+## Historical data
 
-You have Read, Glob, and Grep access to resolved forecasts at:
+You have Read, Glob, and Grep access to the agent's past work at:
 
-  {traces_dir}/forecasts/<post_id>/<timestamp>.json
+  {traces_dir}/
 
-Each JSON has: probability, logit, factors, resolution (null if \
-unresolved, "yes"/"no" for binary, number for numeric). If you \
-spot a calibration pattern, cite the specific forecasts and \
-outcomes.
+This directory has three subdirectories:
+
+### forecasts/<post_id>/<timestamp>.json
+Structured forecast outputs. Each JSON contains:
+- question_title, question_type (binary, numeric, multiple_choice)
+- probability (0-1 for binary), logit, factors (list of evidence items)
+- resolution: null if unresolved, "yes"/"no" for binary, number \
+for numeric
+- summary, sources_consulted, tool_metrics, token_usage
+
+Use these for calibration analysis: how accurate were past forecasts \
+at similar probability levels? Does the agent tend to be over- or \
+underconfident on this question type?
+
+### sessions/<post_id>/<timestamp>/
+Session workspace for each forecast. Contains:
+- reflection.yaml — factors, assessment, tool audit, computed metrics
+- trace.md — the agent's full reasoning trace
+- Scratch files the agent saved during research
+
+### logs/<post_id>_<timestamp>.md
+Full reasoning logs in markdown. Large files (50k+ chars). Only \
+read these if you need detailed reasoning behind a specific past \
+forecast.
+
+### How to explore
+- Glob("{traces_dir}/forecasts/**/*.json") — list all forecast JSONs
+- Grep("resolution", path="{traces_dir}/forecasts/") — find resolved
+- Read a specific JSON to inspect factors and probability
+- Grep("question_type.*binary", path="{traces_dir}/forecasts/") — \
+filter by type
 
 ## Format
 
@@ -363,11 +396,10 @@ def _build_reviewer_prompt(
     if trace_file:
         sections.append(
             f"## Research Trace\n\n"
-            f"The agent's research trace is at `{trace_file}`. "
-            f"It covers the research phase (tool calls, web searches, "
-            f"data gathering) up to when the agent called reflection. "
-            f"The assessment and factors above summarize the agent's "
-            f"conclusions from this research."
+            f"The agent's full reasoning trace — every thought, tool "
+            f"call, and result — is at `{trace_file}`. The factors "
+            f"and assessment above are the agent's summary; the trace "
+            f"shows the research path that led there."
         )
 
     return "\n\n".join(sections)
@@ -564,8 +596,8 @@ def _create_reflection_tool(
             if trace:
                 trace_file = await _write_trace_file(session_dir, trace)
 
-        # Run the reviewer sub-agent
-        if not validated.skip_reviewer:
+        # Run the reviewer sub-agent (disabled in retrodict to prevent leaks)
+        if not validated.skip_reviewer and retrodict_cutoff.get() is None:
             try:
                 critique = await _run_reviewer(
                     validated, computed, question_context, trace_file, traces_dir,
