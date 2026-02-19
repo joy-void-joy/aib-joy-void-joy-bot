@@ -1,0 +1,194 @@
+---
+timestamp: 2026-02-19 15:46:49 UTC
+question_type: numeric
+factors:
+- description: 2 of 7 days already known (Mon=2.39M, Tue=1.85M, total=4.24M), reducing
+    uncertainty to 5 unknown days
+  supports: 16310000.0
+  logit: 1.0
+  confidence: 0.95
+  effective_logit: 0.95
+- description: 2025 comparable week (Feb 10-16, Presidents' Day weekend) totaled 15.81M;
+    all 4 estimation methods for 2026 converge on 16.2-16.5M
+  supports: 16300000.0
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: 'YoY growth across recent weeks is variable: -0.8%, +2.4%, +4.0% (partial
+    target week), suggesting ~2-3% central growth rate'
+  supports: 16300000.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Presidents' Day weekend (Feb 14-15) should show elevated travel, mirroring
+    2025 pattern where Thu-Sun before Presidents' Day was strong
+  supports: 16400000.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Tail risk: weather disruptions or unusual events could reduce volume
+    by 300K-1.2M (~5% probability)'
+  supports: 15500000.0
+  logit: -0.5
+  confidence: 0.3
+  effective_logit: -0.15
+tentative_logit: 1.0
+tentative_probability: 0.73
+assessment: This is a measurement question where 2 of 7 days are already known. The
+  remaining 5 days (Wed-Sun, Feb 11-15) must be estimated from 2025 comparable week
+  data and YoY growth patterns. Multiple estimation methods converge on 16.2-16.5M
+  total. The Monte Carlo simulation centers at ~16.31M with std ~320K. The main uncertainty
+  is the YoY growth rate, which has been volatile across recent weeks (-0.8% to +4.0%).
+  The Presidents' Day weekend effect should push the latter part of the week higher.
+  I used a 3.0% central growth with 2.0% std, producing P10=15.91M and P90=16.66M.
+calibration_notes: The question resolves ~24 hours from now when TSA publishes the
+  final data. By then all 7 days should be known. My distribution reflects that 5
+  of 7 days are still estimated. The 80% CI (P10-P90) of ~750K represents about 4.6%
+  of the total, which seems reasonable given that 71% of the total is uncertain and
+  each day can vary by a few percent.
+key_uncertainties: 1. The YoY growth rate for this specific week - observed rates
+  range from -0.8% to +4.0% across recent weeks. 2. Whether TSA 2025 archived data
+  (which includes Known Crewmembers) is comparable to the current 2026 data stream.
+  3. Weather or other disruptions during Feb 11-15.
+tool_audit: 'web_search and fetch_url: Successfully retrieved TSA data for 2026 (through
+  Feb 10) and 2025 (full February). Confirmed Feb 3 2026 = 1,666,150 (initial discrepancy
+  resolved). 2024 TSA archived data was unavailable via fetch_url. company_financials/fred_series:
+  Not needed. execute_code: Essential for the Monte Carlo simulation and multi-method
+  comparison.'
+process_reflection: This was a straightforward numeric estimation task. The TSA data
+  was easily accessible for 2025 and current 2026. The main friction was the 2024
+  archive being unavailable, which would have provided another year of comparison.
+  The fetch_url tool initially returned a different value for Feb 3 (1,866,150 vs
+  1,666,150) which caused confusion - the second fetch resolved this. Having the data
+  extraction be inconsistent across fetches is a minor but real issue. The Monte Carlo
+  approach worked well for propagating uncertainty from the unknown days.
+skip_reviewer: false
+computed:
+  factor_count: 5
+  factor_sum: 2.775
+  tentative_logit: 1.0
+  logit_gap: -1.775
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 2 of 7 days already known (Mon=2.39M, Tue=1.85M, total=4.24M), reducing
+      uncertainty to 5 unknown days
+    supports: 16310000.0
+    logit: 1.0
+    confidence: 0.95
+    effective_logit: 0.95
+  - description: 2025 comparable week (Feb 10-16, Presidents' Day weekend) totaled
+      15.81M; all 4 estimation methods for 2026 converge on 16.2-16.5M
+    supports: 16300000.0
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: 'YoY growth across recent weeks is variable: -0.8%, +2.4%, +4.0%
+      (partial target week), suggesting ~2-3% central growth rate'
+    supports: 16300000.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Presidents' Day weekend (Feb 14-15) should show elevated travel,
+      mirroring 2025 pattern where Thu-Sun before Presidents' Day was strong
+    supports: 16400000.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Tail risk: weather disruptions or unusual events could reduce volume
+      by 300K-1.2M (~5% probability)'
+    supports: 15500000.0
+    logit: -0.5
+    confidence: 0.3
+    effective_logit: -0.15
+  dominant_factor: 2025 comparable week (Feb 10-16, Presidents' Day weekend) totaled
+    15.81M; all 4 estimation methods for 2026 converge on 16.2-16.5M
+  dominant_effective_logit: 1.275
+  outcome_breakdown:
+  - outcome: 16310000.0
+    factor_count: 1
+    logit_sum: 0.95
+    factors:
+    - description: 2 of 7 days already known (Mon=2.39M, Tue=1.85M, total=4.24M),
+        reducing uncertainty to 5 unknown days
+      supports: 16310000.0
+      logit: 1.0
+      confidence: 0.95
+      effective_logit: 0.95
+  - outcome: 16300000.0
+    factor_count: 2
+    logit_sum: 1.625
+    factors:
+    - description: 2025 comparable week (Feb 10-16, Presidents' Day weekend) totaled
+        15.81M; all 4 estimation methods for 2026 converge on 16.2-16.5M
+      supports: 16300000.0
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: 'YoY growth across recent weeks is variable: -0.8%, +2.4%, +4.0%
+        (partial target week), suggesting ~2-3% central growth rate'
+      supports: 16300000.0
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: 16400000.0
+    factor_count: 1
+    logit_sum: 0.35
+    factors:
+    - description: Presidents' Day weekend (Feb 14-15) should show elevated travel,
+        mirroring 2025 pattern where Thu-Sun before Presidents' Day was strong
+      supports: 16400000.0
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: 15500000.0
+    factor_count: 1
+    logit_sum: -0.15
+    factors:
+    - description: 'Tail risk: weather disruptions or unusual events could reduce
+        volume by 300K-1.2M (~5% probability)'
+      supports: 15500000.0
+      logit: -0.5
+      confidence: 0.3
+      effective_logit: -0.15
+  sources:
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (February 9, 2026-February 15, 2026](https://www.metaculus.com/questions/42098)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)'
+  - '[blend.travel](https://blend.travel/tsa-checkpoint-data/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42098
+- **Question ID**: 41862
+- **Session Duration**: 647.0s (10.8 min)
+- **Cost**: $6.2737
+- **Tokens**: 17,937 total (50 in, 17,887 out)
+  - Cache: 1,880,249 read, 112,591 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42098_20260215_000000/20260215-000000.log`
+
+### Tool Calls
+
+- **Total**: 32 calls
+- **Errors**: 2 (6.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 14 | 0 | 23ms |
+| fetch_url | 7 | 2 ⚠️ | 6115ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| reflection | 1 | 0 | 19ms |
+| web_search | 9 | 0 | 27650ms |
+
+### Sources Consulted
+
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)
+- [blend.travel](https://blend.travel/tsa-checkpoint-data/)
