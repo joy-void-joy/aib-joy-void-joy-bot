@@ -1282,12 +1282,9 @@ async def _ensure_post_id(input_id: int) -> int | None:
     client = get_metaculus_client()
 
     try:
-        post_json = await client.fetch_post_json(input_id)
-        q = post_json.get("question", {})
-        question_id = q.get("id")
-        if question_id is None or question_id == input_id:
-            _post_id_cache[input_id] = input_id
-            return input_id
+        await client.fetch_post_json(input_id)
+        _post_id_cache[input_id] = input_id
+        return input_id
     except Exception:
         pass
 
