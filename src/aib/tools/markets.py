@@ -10,7 +10,7 @@ question details, tournament listings, search, coherence links, and CP history.
 import ast
 import asyncio
 import logging
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Annotated, Any, TypedDict
 
 import httpx
@@ -1205,17 +1205,21 @@ def _build_cp_history_response(
     """Build a typed CP history response from aggregation data."""
     entries: list[CPHistoryEntry] = []
     filtered_count = 0
+    now = datetime.now(tz=timezone.utc)
+    earliest_dt = now - timedelta(days=days)
 
     for point in aggregation.history:
         if not point.centers:
             continue
         cp = point.centers[0]
+        ts_dt = datetime.fromtimestamp(point.start_time, tz=timezone.utc)
 
-        if cutoff_dt is not None:
-            ts_dt = datetime.fromtimestamp(point.start_time, tz=timezone.utc)
-            if ts_dt > cutoff_dt:
-                filtered_count += 1
-                continue
+        if cutoff_dt is not None and ts_dt > cutoff_dt:
+            filtered_count += 1
+            continue
+
+        if ts_dt < earliest_dt:
+            continue
 
         entries.append(
             CPHistoryEntry(

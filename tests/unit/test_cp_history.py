@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pytest
@@ -43,6 +43,30 @@ SAMPLE_AGGREGATION = AggregationMethod(
 )
 
 
+def _recent_aggregation() -> AggregationMethod:
+    """Build an aggregation with points at 3, 15, and 45 days ago."""
+    now = datetime.now(tz=timezone.utc)
+    return AggregationMethod(
+        history=[
+            AggregationHistoryPoint(
+                start_time=(now - timedelta(days=45)).timestamp(),
+                forecaster_count=50,
+                centers=[0.35],
+            ),
+            AggregationHistoryPoint(
+                start_time=(now - timedelta(days=15)).timestamp(),
+                forecaster_count=55,
+                centers=[0.40],
+            ),
+            AggregationHistoryPoint(
+                start_time=(now - timedelta(days=3)).timestamp(),
+                forecaster_count=60,
+                centers=[0.45],
+            ),
+        ]
+    )
+
+
 class TestFormatTimestamp:
     """Tests for _format_timestamp handling both formats."""
 
@@ -63,15 +87,28 @@ class TestBuildCPHistoryResponse:
     """Tests for _build_cp_history_response with AggregationMethod input."""
 
     def test_processes_unix_timestamps(self, fc: ModuleType) -> None:
-        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, None)
+        agg = _recent_aggregation()
+        result = fc._build_cp_history_response(agg, 12345, 365, None)
         assert result.data_points == 3
         assert result.history[0].community_prediction == 0.35
         assert result.history[1].community_prediction == 0.40
         assert result.history[2].community_prediction == 0.45
 
+    def test_days_30_includes_recent(self, fc: ModuleType) -> None:
+        agg = _recent_aggregation()
+        result = fc._build_cp_history_response(agg, 12345, 30, None)
+        assert result.data_points == 2
+        assert result.history[0].community_prediction == 0.40
+        assert result.history[1].community_prediction == 0.45
+
+    def test_days_1_excludes_all(self, fc: ModuleType) -> None:
+        agg = _recent_aggregation()
+        result = fc._build_cp_history_response(agg, 12345, 1, None)
+        assert result.data_points == 0
+
     def test_retrodict_cutoff_filters(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 7, 0, 0, tzinfo=timezone.utc)
-        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, cutoff)
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 365 * 2, cutoff)
         assert result.data_points == 2
         assert result.history[0].community_prediction == 0.35
         assert result.history[1].community_prediction == 0.40
@@ -83,6 +120,6 @@ class TestBuildCPHistoryResponse:
 
     def test_all_filtered_shows_note(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 5, 0, 0, tzinfo=timezone.utc)
-        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 30, cutoff)
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 365 * 2, cutoff)
         assert result.data_points == 0
         assert result.note is not None
