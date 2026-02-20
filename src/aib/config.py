@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     exa_api_key: str | None = Field(
         default=None, validation_alias="EXA_API_KEY", description="Exa search API key"
     )
+    exa_admin_key: str | None = Field(
+        default=None,
+        validation_alias="EXA_ADMIN_KEY",
+        description="Exa Admin API key for usage tracking",
+    )
     asknews_api_key: str | None = Field(
         default=None,
         validation_alias="ASKNEWS_API_KEY",
@@ -86,6 +91,17 @@ class Settings(BaseSettings):
         validation_alias="OPENROUTER_API_KEY",
         description="OpenRouter API key (enables routing through OpenRouter when set)",
     )
+
+    @property
+    def openrouter_env(self) -> dict[str, str]:
+        """Env vars for routing Agent SDK subprocess through OpenRouter."""
+        if not self.openrouter_api_key:
+            return {}
+        return {
+            "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+            "ANTHROPIC_AUTH_TOKEN": self.openrouter_api_key,
+            "ANTHROPIC_API_KEY": "",
+        }
 
     # === Model ===
     model: str = Field(
@@ -227,7 +243,4 @@ for env_name, value in _ENV_EXPORTS:
         os.environ[env_name] = value
 
 if settings.openrouter_api_key:
-    os.environ.setdefault("ANTHROPIC_BASE_URL", "https://openrouter.ai/api")
-    os.environ.setdefault("ANTHROPIC_AUTH_TOKEN", settings.openrouter_api_key)
-    os.environ.setdefault("ANTHROPIC_API_KEY", "")
     logger.info("OpenRouter enabled — routing API calls through openrouter.ai")
