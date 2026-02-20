@@ -4,8 +4,8 @@ Provides web search (via Haiku sub-agent + API augmentation), Exa AI search,
 AskNews search, Wikipedia, and URL content fetching. All "find/retrieve
 information" tools live here.
 
-In retrodict mode, API-augmented results are trusted (handlers validate cutoff
-internally). Non-API results are validated via Wayback Machine.
+In retrodict mode, all search snippets are replaced to prevent future leaks:
+API-augmented snippets come from api_data, others from the Wayback Machine.
 """
 
 import asyncio
@@ -17,8 +17,6 @@ import httpx
 from asknews_sdk.dto.news import SearchResponseDictItem
 from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
 from claude_agent_sdk import (
-    ClaudeAgentOptions,
-    ClaudeSDKClient,
     HookCallback,
     HookInput,
     HookJSONOutput,
@@ -123,16 +121,48 @@ class _SearchResultsOutput(BaseModel):
     results: list[_SearchResultItem]
 
 
+def _snippet_from_api_data(api_data: dict[str, Any]) -> str | None:
+    """Extract a short text snippet from an MCP api_data response.
+
+    Parses the JSON payload and looks for common text fields
+    (extract, abstract, summary, description), falling back to a
+    truncated version of the raw JSON text.
+    """
+    _TEXT_FIELDS = ("extract", "abstract", "summary", "description", "content")
+
+    content_blocks = api_data.get("content", [])
+    if not content_blocks:
+        return None
+
+    raw_text = content_blocks[0].get("text", "")
+    if not raw_text:
+        return None
+
+    try:
+        payload = json.loads(raw_text)
+    except (json.JSONDecodeError, TypeError):
+        return raw_text[:500]
+
+    if isinstance(payload, dict):
+        for field in _TEXT_FIELDS:
+            value = payload.get(field)
+            if isinstance(value, str) and len(value) > 20:
+                return value[:500]
+
+    return raw_text[:500]
+
+
 async def _wayback_filter_non_api_results(
     results: list[AugmentedSearchResult],
     cutoff_date: str,
 ) -> list[AugmentedSearchResult]:
     """Wayback-validate only non-API-augmented search results.
 
-    API-augmented results are kept as-is (handlers validate cutoff internally
-    via retrodict_cutoff ContextVar). Non-API results get full Wayback
-    validation: dropped if no pre-cutoff snapshot, snippets replaced with
-    Wayback-extracted content to prevent future data leaks.
+    API-augmented results have their snippets replaced with text extracted
+    from api_data (handlers validate cutoff internally via retrodict_cutoff
+    ContextVar). Non-API results get full Wayback validation: dropped if no
+    pre-cutoff snapshot, snippets replaced with Wayback-extracted content.
+    Both paths prevent future data leaks from search engine snippets.
     """
     wayback_ts = cutoff_date.replace("-", "")
 
@@ -140,6 +170,9 @@ async def _wayback_filter_non_api_results(
         result: AugmentedSearchResult,
     ) -> AugmentedSearchResult | None:
         if result["api_data"] is not None:
+            safe_snippet = _snippet_from_api_data(result["api_data"])
+            if safe_snippet is not None:
+                result["snippet"] = safe_snippet
             return result
 
         content = await fetch_wayback_content(result["url"], wayback_ts)
@@ -201,7 +234,10 @@ async def _raw_web_search(
         "Return the search results."
     )
 
-    options = ClaudeAgentOptions(
+    from aib.agent.client import build_client
+
+    data: dict[str, Any] | None = None
+    async with build_client(
         model="haiku",
         permission_mode="bypassPermissions",
         allowed_tools=["WebSearch"],
@@ -224,11 +260,7 @@ async def _raw_web_search(
             "type": "json_schema",
             "schema": _SearchResultsOutput.model_json_schema(),
         },
-        extra_args={"no-session-persistence": None},
-    )
-
-    data: dict[str, Any] | None = None
-    async with ClaudeSDKClient(options=options) as client:
+    ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
             if isinstance(message, ResultMessage):

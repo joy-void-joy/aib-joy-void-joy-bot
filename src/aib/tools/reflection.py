@@ -192,7 +192,9 @@ def compute_reflection(
     if question_type == "binary":
         output.factor_implied_probability = 1 / (1 + math.exp(-factor_sum))
         output.tentative_probability = inp.tentative_probability
-        output.gap_pp = (inp.tentative_probability - output.factor_implied_probability) * 100
+        output.gap_pp = (
+            inp.tentative_probability - output.factor_implied_probability
+        ) * 100
     else:
         # Group factors by supported outcome
         from collections import defaultdict
@@ -384,7 +386,9 @@ def _build_reviewer_prompt(
     elif computed.outcome_breakdown:
         lines = []
         for ob in computed.outcome_breakdown:
-            lines.append(f"- {ob.outcome}: {ob.factor_count} factors, logit sum = {ob.logit_sum:.2f}")
+            lines.append(
+                f"- {ob.outcome}: {ob.factor_count} factors, logit sum = {ob.logit_sum:.2f}"
+            )
         sections.append("## Per-Outcome Breakdown\n\n" + "\n".join(lines))
 
     sections.append(f"## Assessment\n\n{inp.assessment}")
@@ -484,12 +488,11 @@ async def _run_reviewer(
     """
     from claude_agent_sdk import (
         AssistantMessage as _AssistantMessage,
-        ClaudeAgentOptions,
-        ClaudeSDKClient,
         ResultMessage,
     )
     from claude_agent_sdk.types import HookEvent, HookMatcher as HookMatcherType
 
+    from aib.agent.client import build_client
     from aib.agent.display import print_block
 
     prompt = _build_reviewer_prompt(inp, computed, question_context, trace_file)
@@ -507,19 +510,16 @@ async def _run_reviewer(
         _build_reviewer_hooks(traces_dir),
     )
 
-    options = ClaudeAgentOptions(
-        model="sonnet",
-        allowed_tools=["Read", "Glob", "Grep", "WebFetch"],
-        permission_mode="bypassPermissions",
-        system_prompt=system_prompt,
-        hooks=reviewer_hooks,
-        add_dirs=add_dirs,
-        extra_args={"no-session-persistence": None},
-    )
-
     try:
         result_text = ""
-        async with ClaudeSDKClient(options=options) as client:
+        async with build_client(
+            model="sonnet",
+            allowed_tools=["Read", "Glob", "Grep", "WebFetch"],
+            permission_mode="bypassPermissions",
+            system_prompt=system_prompt,
+            hooks=reviewer_hooks,
+            add_dirs=add_dirs,
+        ) as client:
             await client.query(prompt)
             async for message in client.receive_response():
                 if isinstance(message, _AssistantMessage):
@@ -600,7 +600,11 @@ def _create_reflection_tool(
         if not validated.skip_reviewer and retrodict_cutoff.get() is None:
             try:
                 critique = await _run_reviewer(
-                    validated, computed, question_context, trace_file, traces_dir,
+                    validated,
+                    computed,
+                    question_context,
+                    trace_file,
+                    traces_dir,
                 )
                 computed.reviewer_critique = critique
             except Exception:

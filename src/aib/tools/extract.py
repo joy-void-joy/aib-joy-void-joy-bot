@@ -4,13 +4,6 @@ Used by wikipedia, fetch_arxiv, and fetch_url tools to extract
 specific information from large text content.
 """
 
-import logging
-
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
-
-logger = logging.getLogger(__name__)
-
-
 async def extract_with_prompt(content: str, prompt: str, source: str = "") -> str:
     """Use a one-shot Sonnet call to extract information from content.
 
@@ -23,6 +16,8 @@ async def extract_with_prompt(content: str, prompt: str, source: str = "") -> st
         Extracted information as a string. Falls back to truncated
         content (5k chars) if extraction fails.
     """
+    from aib.agent.client import one_shot
+
     extraction_prompt = (
         f"The following is the text content of {source}.\n\n"
         f"---\n{content}\n---\n\n"
@@ -34,21 +29,9 @@ async def extract_with_prompt(content: str, prompt: str, source: str = "") -> st
         "list them under a 'Relevant links:' section as markdown links."
     )
 
-    options = ClaudeAgentOptions(
+    result = await one_shot(
+        extraction_prompt,
         model="sonnet",
         system_prompt="You extract information from text content. Be concise and factual.",
-        extra_args={"no-session-persistence": None},
     )
-
-    result_text = ""
-    async with ClaudeSDKClient(options=options) as client:
-        await client.query(extraction_prompt)
-        async for message in client.receive_response():
-            if (
-                not result_text
-                and isinstance(message, ResultMessage)
-                and message.result
-            ):
-                result_text = message.result
-
-    return result_text or content[:5000]
+    return result or content[:5000]

@@ -13,8 +13,6 @@ from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
 
 from claude_agent_sdk import (
     AssistantMessage,
-    ClaudeAgentOptions,
-    ClaudeSDKClient,
     ContentBlock,
     HookInput,
     HookMatcher,
@@ -29,6 +27,7 @@ from claude_agent_sdk import (
 
 from pydantic import BaseModel, Field
 
+from aib.agent.client import build_client, one_shot
 from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
@@ -263,7 +262,6 @@ def append_metrics_to_reflection(
         logger.info("Appended metrics to meta-reflection %s", meta_file)
     except Exception as e:
         logger.warning("Failed to append metrics to %s: %s", meta_file, e)
-
 
 
 @dataclasses.dataclass
@@ -555,8 +553,6 @@ def build_question_context(post_data: dict) -> dict:
     return context
 
 
-
-
 def build_trace(
     messages: Sequence[AssistantMessage | UserMessage],
     title: str = "",
@@ -606,30 +602,24 @@ class CondensedReasoning(BaseModel):
 
 async def condense_reasoning(trace: str, question_title: str) -> str | None:
     """Condense a full forecast trace into a readable narrative using Sonnet."""
-    options = ClaudeAgentOptions(
-        model="sonnet",
-        allowed_tools=[],
-        system_prompt=(
-            "Condense the forecast trace into a clear, readable narrative. "
-            "Cover everything: what research was done, key evidence found, "
-            "and how the conclusion was reached. No markdown headers. "
-            "Write in first-person voice throughout — use constructions like "
-            "'I researched...', 'I found...', 'I concluded...'. "
-        ),
-        output_format={
-            "type": "json_schema",
-            "schema": CondensedReasoning.model_json_schema(),
-        },
-    )
     try:
-        async with ClaudeSDKClient(options=options) as client:
-            await client.query(f"Question: {question_title}\n\nTrace:\n{trace[:50000]}")
-            async for message in client.receive_response():
-                if isinstance(message, ResultMessage) and message.structured_output:
-                    result = CondensedReasoning.model_validate(
-                        message.structured_output
-                    )
-                    return result.narrative
+        result = await one_shot(
+            f"Question: {question_title}\n\nTrace:\n{trace[:50000]}",
+            model="sonnet",
+            system_prompt=(
+                "Condense the forecast trace into a clear, well-structured narrative. "
+                "Cover everything: what research was done, key evidence found, "
+                "and how the conclusion was reached. "
+                "Use markdown formatting extensively: **bold** for key figures and "
+                "data points, bullet lists for evidence, `inline code` for tickers "
+                "and identifiers. Use ## subtitles to organize sections (e.g., "
+                "## Research, ## Key Evidence, ## Conclusion) but no top-level # title. "
+                "Write in first-person voice throughout — use constructions like "
+                "'I researched...', 'I found...', 'I concluded...'. "
+            ),
+            output_type=CondensedReasoning,
+        )
+        return result.narrative if result else None
     except Exception:
         logger.exception("Reasoning condensation failed")
     return None
@@ -781,7 +771,8 @@ async def run_forecast(
 
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
-            sandbox, composition_server,
+            sandbox,
+            composition_server,
             session_dir=notes.session,
             question_type=question_type,
             get_sources=lambda: extract_sources(all_messages),
@@ -794,34 +785,33 @@ async def run_forecast(
             traces_dir=forecasts_dir().parent if cutoff is None else None,
         )
 
-        options = ClaudeAgentOptions(
-            model=settings.model,
-            system_prompt=_build_system_prompt(
-                cutoff=cutoff,
-                tool_docs=policy.get_tool_docs(mcp_servers, allow_spawn=allow_spawn),
-                sandbox_shared_dir=str(sandbox_shared_dir),
-                session_dir=str(notes.session),
-            ),
-            max_thinking_tokens=128_000 - 1,
-            permission_mode="bypassPermissions",
-            hooks=hooks,  # type: ignore[arg-type]
-            sandbox={
-                "enabled": True,
-                "autoAllowBashIfSandboxed": True,
-                "allowUnsandboxedCommands": False,
-            },
-            mcp_servers=mcp_servers,
-            add_dirs=[*notes.all_dirs, sandbox_shared_dir],
-            allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
-            output_format={
-                "type": "json_schema",
-                "schema": output_schema,
-            },
-            extra_args={"no-session-persistence": None},
-        )
-
         try:
-            async with ClaudeSDKClient(options=options) as client:
+            async with build_client(
+                model=settings.model,
+                system_prompt=_build_system_prompt(
+                    cutoff=cutoff,
+                    tool_docs=policy.get_tool_docs(
+                        mcp_servers, allow_spawn=allow_spawn
+                    ),
+                    sandbox_shared_dir=str(sandbox_shared_dir),
+                    session_dir=str(notes.session),
+                ),
+                max_thinking_tokens=128_000 - 1,
+                permission_mode="bypassPermissions",
+                hooks=hooks,
+                sandbox={
+                    "enabled": True,
+                    "autoAllowBashIfSandboxed": True,
+                    "allowUnsandboxedCommands": False,
+                },
+                mcp_servers=mcp_servers,
+                add_dirs=[*notes.all_dirs, sandbox_shared_dir],
+                allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
+                output_format={
+                    "type": "json_schema",
+                    "schema": output_schema,
+                },
+            ) as client:
                 await client.query(prompt)
 
                 async for message in client.receive_response():
