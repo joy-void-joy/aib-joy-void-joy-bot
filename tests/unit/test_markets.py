@@ -4,48 +4,53 @@ import pytest
 
 from aib.tools.markets import (
     HistoricalPriceInput,
-    _parse_yes_price,
+    PolymarketEventData,
+    PolymarketMarketData,
     parse_polymarket_event,
 )
 
 
-class TestParseYesPrice:
-    """Tests for Polymarket price parsing."""
+class TestPolymarketMarketData:
+    """Tests for Polymarket market data parsing via BaseModel validation."""
+
+    def _yes_price(self, outcome_prices: object) -> float | None:
+        market = PolymarketMarketData.model_validate({"outcomePrices": outcome_prices})
+        return market.yes_price
 
     def test_list_of_floats(self) -> None:
-        """Should parse list of floats."""
-        result = _parse_yes_price([0.65, 0.35])
-        assert result == 0.65
+        assert self._yes_price([0.65, 0.35]) == 0.65
 
     def test_list_of_strings(self) -> None:
-        """Should parse list of string numbers."""
-        result = _parse_yes_price(["0.75", "0.25"])
-        assert result == 0.75
+        assert self._yes_price(["0.75", "0.25"]) == 0.75
 
     def test_string_encoded_list(self) -> None:
-        """Should parse string-encoded list."""
-        result = _parse_yes_price("[0.80, 0.20]")
-        assert result == 0.80
+        assert self._yes_price("[0.80, 0.20]") == 0.80
 
     def test_nested_structure(self) -> None:
-        """Should handle nested lists."""
-        result = _parse_yes_price("[[0.55]]")
-        assert result == 0.55
+        assert self._yes_price("[[0.55]]") == 0.55
 
     def test_none_input(self) -> None:
-        """Should return None for None input."""
-        result = _parse_yes_price(None)
-        assert result is None
+        market = PolymarketMarketData()
+        assert market.yes_price is None
 
     def test_empty_list(self) -> None:
-        """Should return None for empty list."""
-        result = _parse_yes_price([])
-        assert result is None
+        assert self._yes_price([]) is None
 
     def test_invalid_string(self) -> None:
-        """Should return None for invalid strings."""
-        result = _parse_yes_price("not a number")
-        assert result is None
+        assert self._yes_price("not a number") is None
+
+    def test_clob_token_ids_string_coercion(self) -> None:
+        """The bug that triggered this refactor: clobTokenIds as a JSON string."""
+        market = PolymarketMarketData.model_validate(
+            {"clobTokenIds": '["abc123", "def456"]'}
+        )
+        assert market.clob_token_ids == ["abc123", "def456"]
+
+    def test_clob_token_ids_native_list(self) -> None:
+        market = PolymarketMarketData.model_validate(
+            {"clobTokenIds": ["abc123", "def456"]}
+        )
+        assert market.clob_token_ids == ["abc123", "def456"]
 
 
 class TestParsePolymarketEvent:
@@ -53,16 +58,11 @@ class TestParsePolymarketEvent:
 
     def test_valid_event(self) -> None:
         """Should parse a valid event."""
-        event = {
-            "title": "Test Event",
-            "slug": "test-event",
-            "markets": [
-                {
-                    "outcomePrices": [0.65, 0.35],
-                    "volume": 1000000,
-                }
-            ],
-        }
+        event = PolymarketEventData(
+            title="Test Event",
+            slug="test-event",
+            markets=[PolymarketMarketData(outcome_prices=[0.65, 0.35], volume=1000000)],
+        )
         result = parse_polymarket_event(event)
         assert result is not None
         assert result["market_title"] == "Test Event"
@@ -72,17 +72,17 @@ class TestParsePolymarketEvent:
 
     def test_no_markets(self) -> None:
         """Should return None if no markets."""
-        event = {"title": "Test", "markets": []}
+        event = PolymarketEventData(title="Test", markets=[])
         result = parse_polymarket_event(event)
         assert result is None
 
-    def test_unparseable_prices(self) -> None:
-        """Should return None if prices can't be parsed."""
-        event = {
-            "title": "Test",
-            "slug": "test",
-            "markets": [{"outcomePrices": "invalid"}],
-        }
+    def test_no_prices(self) -> None:
+        """Should return None if market has no prices."""
+        event = PolymarketEventData(
+            title="Test",
+            slug="test",
+            markets=[PolymarketMarketData()],
+        )
         result = parse_polymarket_event(event)
         assert result is None
 

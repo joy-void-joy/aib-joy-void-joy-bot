@@ -14,15 +14,16 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Annotated, Any, TypedDict
 
 import httpx
-from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
+from claude_agent_sdk import tool
 from claude_agent_sdk.types import McpSdkServerConfig
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
+from aib.tools.redact import redact_future_info
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
 from aib.tools.mcp_server import create_mcp_server
@@ -105,7 +106,7 @@ POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
 
 
 @with_retry(max_attempts=3)
-async def _search_polymarket(query: str) -> list[dict[str, Any]]:
+async def _search_polymarket(query: str) -> list[PolymarketEventData]:
     """Search Polymarket for markets matching query."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -117,120 +118,220 @@ async def _search_polymarket(query: str) -> list[dict[str, Any]]:
             },
         )
         response.raise_for_status()
-        return response.json()
+        return [PolymarketEventData.model_validate(e) for e in response.json()]
 
 
-def _parse_yes_price(outcome_prices: Any) -> float | None:
-    """Parse YES price from various Polymarket API response formats.
+def _coerce_to_list(value: Any) -> list[Any] | None:
+    """Coerce a Polymarket API field to a list, parsing string literals if needed.
 
-    Args:
-        outcome_prices: The outcomePrices field from Polymarket API.
-                       Can be a list of floats, strings, or string-encoded lists.
-                       The API sometimes returns the entire field as a string literal.
-
-    Returns:
-        The parsed YES price (first element) as a float, or None if parsing fails.
+    The Gamma API sometimes returns list fields (outcomePrices, clobTokenIds)
+    as JSON-encoded strings instead of native lists.
     """
-    if not outcome_prices:
-        return None
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = ast.literal_eval(value)
+            if isinstance(parsed, list):
+                return parsed
+            return [parsed]
+        except (ValueError, SyntaxError):
+            return [value]
+    return None
 
-    def _coerce_to_list(value: Any) -> list[Any] | None:
-        """Coerce value to list, parsing string literals if needed."""
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
+
+def _extract_float(value: Any) -> float | None:
+    """Extract a float from potentially nested/stringified API data."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            parsed = ast.literal_eval(value)
+            return _extract_float(parsed)
+        except (ValueError, SyntaxError):
             try:
-                parsed = ast.literal_eval(value)
-                if isinstance(parsed, list):
-                    return parsed
-                # Single value parsed (e.g., "0.5" -> 0.5)
-                return [parsed]
-            except (ValueError, SyntaxError):
-                # Not a valid literal, treat as single string value
-                return [value]
+                return float(value)
+            except ValueError:
+                return None
+    if isinstance(value, list) and value:
+        return _extract_float(value[0])
+    return None
+
+
+# --- API Response Models ---
+
+
+class PolymarketMarketData(BaseModel):
+    """Parsed market data from a Polymarket Gamma API event."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    outcome_prices: list[float] = Field(validation_alias="outcomePrices", default=[])
+    clob_token_ids: list[str] = Field(validation_alias="clobTokenIds", default=[])
+    volume: float | None = None
+    description: str | None = None
+
+    @field_validator("outcome_prices", mode="before")
+    @classmethod
+    def coerce_prices(cls, v: Any) -> list[float]:
+        items = _coerce_to_list(v)
+        if not items:
+            return []
+        return [f for item in items if (f := _extract_float(item)) is not None]
+
+    @field_validator("clob_token_ids", mode="before")
+    @classmethod
+    def coerce_token_ids(cls, v: Any) -> list[str]:
+        items = _coerce_to_list(v)
+        if not items:
+            return []
+        return [str(item) for item in items]
+
+    @property
+    def yes_price(self) -> float | None:
+        return self.outcome_prices[0] if self.outcome_prices else None
+
+
+class PolymarketEventData(BaseModel):
+    """Parsed event from the Polymarket Gamma API."""
+
+    title: str = "Unknown"
+    slug: str = ""
+    description: str | None = None
+    markets: list[PolymarketMarketData] = []
+
+    @property
+    def first_market(self) -> PolymarketMarketData | None:
+        return self.markets[0] if self.markets else None
+
+
+class PolymarketPricePoint(BaseModel):
+    """A single price point from Polymarket CLOB history."""
+
+    t: int = 0
+    p: float = 0.5
+
+
+class ManifoldMarketData(BaseModel):
+    """Parsed market from the Manifold API."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = ""
+    question: str = "Unknown"
+    probability: float = 0.5
+    volume: float | None = None
+    url: str = ""
+    slug: str = ""
+    text_description: str | None = Field(
+        validation_alias="textDescription", default=None
+    )
+    description_text: str | None = Field(validation_alias="description", default=None)
+
+    @property
+    def effective_description(self) -> str | None:
+        return self.text_description or self.description_text
+
+    @property
+    def effective_url(self) -> str:
+        return self.url or f"https://manifold.markets/{self.slug}"
+
+
+class ManifoldBet(BaseModel):
+    """A single bet from the Manifold API."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    created_time: int = Field(validation_alias="createdTime", default=0)
+    prob_after: float | None = Field(validation_alias="probAfter", default=None)
+    prob_before: float | None = Field(validation_alias="probBefore", default=None)
+
+    @property
+    def probability(self) -> float:
+        if self.prob_after is not None:
+            return self.prob_after
+        if self.prob_before is not None:
+            return self.prob_before
+        return 0.5
+
+
+class KalshiMarketData(BaseModel):
+    """Parsed market from the Kalshi API."""
+
+    ticker: str = ""
+    title: str = ""
+    yes_sub_title: str = ""
+    last_price_dollars: float | None = None
+    yes_ask_dollars: float | None = None
+    yes_bid_dollars: float | None = None
+    volume_fp: float | None = None
+    created_time: str | None = None
+    strike_type: str | None = None
+    floor_strike: float | None = None
+    cap_strike: float | None = None
+    rules_primary: str | None = None
+
+    @property
+    def probability(self) -> float | None:
+        if self.last_price_dollars is not None:
+            return self.last_price_dollars
+        if self.yes_ask_dollars is not None and self.yes_bid_dollars is not None:
+            return (self.yes_ask_dollars + self.yes_bid_dollars) / 2.0
         return None
 
-    def _extract_scalar(value: Any) -> float | int | str | None:
-        """Extract a scalar value, unwrapping nested structures."""
-        if isinstance(value, (int, float)):
-            return value
-        if isinstance(value, str):
-            try:
-                parsed = ast.literal_eval(value)
-                # Recurse if we got a container
-                if isinstance(parsed, list):
-                    return _extract_scalar(parsed[0]) if parsed else None
-                return parsed if isinstance(parsed, (int, float)) else None
-            except (ValueError, SyntaxError):
-                # Not a valid literal, return as-is for float() to try
-                return value
-        if isinstance(value, list) and value:
-            return _extract_scalar(value[0])
+
+class KalshiEventData(BaseModel):
+    """Parsed event from the Kalshi API."""
+
+    event_ticker: str = ""
+    title: str = "Unknown"
+    sub_title: str | None = None
+    markets: list[KalshiMarketData] = []
+
+
+class KalshiCandlestick(BaseModel):
+    """A single candlestick from the Kalshi API."""
+
+    end_period_ts: int = 0
+    price_dollars: float | None = None
+    yes_close_dollars: float | None = None
+
+    @property
+    def close_price(self) -> float | None:
+        if self.price_dollars is not None:
+            return self.price_dollars
+        return self.yes_close_dollars
+
+
+def parse_polymarket_event(event: PolymarketEventData) -> MarketPrice | None:
+    """Parse a Polymarket event into a MarketPrice."""
+    market = event.first_market
+    if market is None:
         return None
 
-    try:
-        prices = _coerce_to_list(outcome_prices)
-        if not prices:
-            return None
-
-        scalar = _extract_scalar(prices[0])
-        if scalar is None:
-            return None
-
-        return float(scalar)
-    except (ValueError, TypeError, IndexError, KeyError):
-        return None
-
-
-def parse_polymarket_event(event: dict[str, Any]) -> MarketPrice | None:
-    """Parse a Polymarket event into a MarketPrice.
-
-    Args:
-        event: Raw event dict from Polymarket API
-
-    Returns:
-        MarketPrice if the event has valid market data, None otherwise.
-        Returns None instead of falling back to 0.5 when price parsing fails.
-    """
-    markets = event.get("markets", [])
-    if not markets:
-        return None
-
-    market = markets[0]
-    outcome_prices = market.get("outcomePrices", [])
-
-    yes_price = _parse_yes_price(outcome_prices)
-    if yes_price is None:
-        logger.warning(
-            "Could not parse outcomePrices for event %s: %s",
-            event.get("slug", "unknown"),
-            outcome_prices,
-        )
+    if market.yes_price is None:
+        logger.warning("No price for event %s", event.slug)
         return None
 
     return {
-        "market_title": event.get("title", "Unknown"),
-        "probability": yes_price,
-        "volume": market.get("volume"),
-        "url": f"https://polymarket.com/event/{event.get('slug', '')}",
+        "market_title": event.title,
+        "probability": market.yes_price,
+        "volume": market.volume,
+        "url": f"https://polymarket.com/event/{event.slug}",
         "source": "polymarket",
-        "description": event.get("description") or market.get("description"),
+        "description": event.description or market.description,
     }
 
 
 async def _polymarket_event_at_cutoff(
-    event: dict[str, Any],
+    event: PolymarketEventData,
     cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Polymarket event at the cutoff date."""
-    markets = event.get("markets", [])
-    if not markets:
+    market = event.first_market
+    if market is None or not market.clob_token_ids:
         return None
-    market = markets[0]
-    token_ids = market.get("clobTokenIds", [])
-    if not token_ids:
-        return None
-    token_id = token_ids[0]
+    token_id = market.clob_token_ids[0]
     cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
     start_ts = cutoff_unix - (30 * 24 * 60 * 60)
     try:
@@ -240,17 +341,17 @@ async def _polymarket_event_at_cutoff(
     if not history:
         return None
     closest = max(
-        (p for p in history if p.get("t", 0) <= cutoff_unix),
-        key=lambda p: p.get("t", 0),
+        (p for p in history if p.t <= cutoff_unix),
+        key=lambda p: p.t,
         default=None,
     )
     if closest is None:
         return None
     return {
-        "market_title": event.get("title", "Unknown"),
-        "probability": closest.get("p", 0.5),
-        "volume": market.get("volume"),
-        "url": f"https://polymarket.com/event/{event.get('slug', '')}",
+        "market_title": event.title,
+        "probability": closest.p,
+        "volume": market.volume,
+        "url": f"https://polymarket.com/event/{event.slug}",
         "source": "polymarket",
         "description": None,
     }
@@ -318,7 +419,7 @@ MANIFOLD_API = "https://api.manifold.markets/v0"
 
 
 @with_retry(max_attempts=3)
-async def _search_manifold(query: str) -> list[dict[str, Any]]:
+async def _search_manifold(query: str) -> list[ManifoldMarketData]:
     """Search Manifold Markets for markets matching query."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -331,57 +432,48 @@ async def _search_manifold(query: str) -> list[dict[str, Any]]:
             },
         )
         response.raise_for_status()
-        return response.json()
+        return [ManifoldMarketData.model_validate(m) for m in response.json()]
 
 
-def parse_manifold_market(market: dict[str, Any]) -> MarketPrice:
-    """Parse a Manifold market into a MarketPrice.
-
-    Args:
-        market: Raw market dict from Manifold API
-
-    Returns:
-        MarketPrice with parsed data
-    """
+def parse_manifold_market(market: ManifoldMarketData) -> MarketPrice:
+    """Parse a Manifold market into a MarketPrice."""
     return {
-        "market_title": market.get("question", "Unknown"),
-        "probability": market.get("probability", 0.5),
-        "volume": market.get("volume"),
-        "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
+        "market_title": market.question,
+        "probability": market.probability,
+        "volume": market.volume,
+        "url": market.effective_url,
         "source": "manifold",
-        "description": market.get("textDescription") or market.get("description"),
+        "description": market.effective_description,
     }
 
 
 async def _manifold_market_at_cutoff(
-    market: dict[str, Any],
+    market: ManifoldMarketData,
     cutoff: date,
 ) -> MarketPrice | None:
     """Get historical price for a Manifold market at the cutoff date."""
-    contract_id = market.get("id")
-    if not contract_id:
+    if not market.id:
         return None
     cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
     cutoff_ms = cutoff_unix * 1000
     try:
-        bets = await _fetch_manifold_bets(contract_id, cutoff_ms)
+        bets = await _fetch_manifold_bets(market.id, cutoff_ms)
     except Exception:
         return None
     if not bets:
         return None
     relevant = max(
-        (b for b in bets if b.get("createdTime", 0) <= cutoff_ms),
-        key=lambda b: b.get("createdTime", 0),
+        (b for b in bets if b.created_time <= cutoff_ms),
+        key=lambda b: b.created_time,
         default=None,
     )
     if relevant is None:
         return None
-    prob = relevant.get("probAfter", relevant.get("probBefore", 0.5))
     return {
-        "market_title": market.get("question", "Unknown"),
-        "probability": prob,
-        "volume": market.get("volume"),
-        "url": market.get("url", f"https://manifold.markets/{market.get('slug', '')}"),
+        "market_title": market.question,
+        "probability": relevant.probability,
+        "volume": market.volume,
+        "url": market.effective_url,
         "source": "manifold",
         "description": None,
     }
@@ -458,7 +550,7 @@ POLYMARKET_CLOB_API = "https://clob.polymarket.com"
 @with_retry(max_attempts=3)
 async def _fetch_polymarket_history(
     token_id: str, start_ts: int, end_ts: int
-) -> list[dict[str, Any]]:
+) -> list[PolymarketPricePoint]:
     """Fetch price history from Polymarket CLOB API."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -471,7 +563,7 @@ async def _fetch_polymarket_history(
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("history", [])
+        return [PolymarketPricePoint.model_validate(p) for p in data.get("history", [])]
 
 
 @tool(
@@ -508,13 +600,11 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
         if not history:
             return mcp_error(f"No historical data found for market {token_id}")
 
-        # Find the closest price at or before target timestamp
-        closest_point = None
-        for point in history:
-            point_ts = point.get("t", 0)
-            if point_ts <= target_ts:
-                if closest_point is None or point_ts > closest_point.get("t", 0):
-                    closest_point = point
+        closest_point = max(
+            (p for p in history if p.t <= target_ts),
+            key=lambda p: p.t,
+            default=None,
+        )
 
         if closest_point is None:
             return mcp_error(
@@ -523,8 +613,8 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
 
         result: HistoricalPrice = {
             "market_id": token_id,
-            "timestamp": closest_point.get("t", 0),
-            "probability": closest_point.get("p", 0.5),
+            "timestamp": closest_point.t,
+            "probability": closest_point.p,
             "source": "polymarket",
         }
         return mcp_success(result)
@@ -540,7 +630,7 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
 @with_retry(max_attempts=3)
 async def _fetch_manifold_bets(
     contract_id: str, before_time: int, limit: int = 1000
-) -> list[dict[str, Any]]:
+) -> list[ManifoldBet]:
     """Fetch bets from Manifold to reconstruct historical prices."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -552,7 +642,7 @@ async def _fetch_manifold_bets(
             },
         )
         response.raise_for_status()
-        return response.json()
+        return [ManifoldBet.model_validate(b) for b in response.json()]
 
 
 @tool(
@@ -589,31 +679,21 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
         if not bets:
             return mcp_error(f"No bet history found for contract {contract_id}")
 
-        # Bets are returned newest-first, so find the oldest bet
-        # that is still before our target time
-        # Each bet has probBefore and probAfter - we want probAfter
-        # of the most recent bet before our target
-        relevant_bet = None
-        for bet in bets:
-            bet_time = bet.get("createdTime", 0)
-            if bet_time <= target_ts_ms:
-                if relevant_bet is None or bet_time > relevant_bet.get(
-                    "createdTime", 0
-                ):
-                    relevant_bet = bet
+        relevant_bet = max(
+            (b for b in bets if b.created_time <= target_ts_ms),
+            key=lambda b: b.created_time,
+            default=None,
+        )
 
         if relevant_bet is None:
             return mcp_error(
                 f"No bets found before timestamp {validated.timestamp} for contract {contract_id}"
             )
 
-        # Use probAfter as the price after this bet
-        prob = relevant_bet.get("probAfter", relevant_bet.get("probBefore", 0.5))
-
         result: HistoricalPrice = {
             "market_id": contract_id,
-            "timestamp": relevant_bet.get("createdTime", 0) // 1000,
-            "probability": prob,
+            "timestamp": relevant_bet.created_time // 1000,
+            "probability": relevant_bet.probability,
             "source": "manifold",
         }
         return mcp_success(result)
@@ -636,42 +716,12 @@ def _series_ticker_from_market(ticker: str) -> str:
     return ticker.split("-")[0]
 
 
-def _parse_kalshi_probability(market: dict[str, Any]) -> float | None:
-    """Extract probability from a Kalshi market's dollar-string price fields.
-
-    Tries last_price_dollars first (most recent trade), then yes_ask/yes_bid
-    midpoint as fallback.
-    """
-    last_price = market.get("last_price_dollars")
-    if last_price is not None:
-        try:
-            return float(last_price)
-        except (ValueError, TypeError):
-            pass
-
-    yes_ask = market.get("yes_ask_dollars")
-    yes_bid = market.get("yes_bid_dollars")
-    if yes_ask is not None and yes_bid is not None:
-        try:
-            return (float(yes_ask) + float(yes_bid)) / 2.0
-        except (ValueError, TypeError):
-            pass
-
-    return None
-
-
-def _kalshi_matches_query(event: dict[str, Any], query_words: list[str]) -> bool:
-    """Check if a Kalshi event matches all query words (AND logic, case-insensitive).
-
-    Searches event title, sub_title, and all market yes_sub_title fields.
-    """
-    text_parts: list[str] = [
-        event.get("title", ""),
-        event.get("sub_title", ""),
-    ]
-    for m in event.get("markets", []):
-        text_parts.append(m.get("yes_sub_title", ""))
-        text_parts.append(m.get("title", ""))
+def _kalshi_matches_query(event: KalshiEventData, query_words: list[str]) -> bool:
+    """Check if a Kalshi event matches all query words (AND logic, case-insensitive)."""
+    text_parts = [event.title, event.sub_title or ""]
+    for m in event.markets:
+        text_parts.append(m.yes_sub_title)
+        text_parts.append(m.title)
     combined = " ".join(text_parts).lower()
     return all(w in combined for w in query_words)
 
@@ -679,7 +729,7 @@ def _kalshi_matches_query(event: dict[str, Any], query_words: list[str]) -> bool
 @with_retry(max_attempts=3)
 async def _fetch_kalshi_events(
     query: str, *, status: str | None = "open"
-) -> list[dict[str, Any]]:
+) -> list[KalshiEventData]:
     """Fetch events from Kalshi API with client-side text filtering."""
     params: dict[str, str | int] = {
         "with_nested_markets": "true",
@@ -694,14 +744,14 @@ async def _fetch_kalshi_events(
         )
         response.raise_for_status()
         data = response.json()
-        events: list[dict[str, Any]] = data.get("events", [])
+        events = [KalshiEventData.model_validate(e) for e in data.get("events", [])]
 
     query_words = query.lower().split()
     return [e for e in events if _kalshi_matches_query(e, query_words)]
 
 
 @with_retry(max_attempts=3)
-async def _fetch_kalshi_event(event_ticker: str) -> dict[str, Any]:
+async def _fetch_kalshi_event(event_ticker: str) -> KalshiEventData:
     """Fetch a single Kalshi event with all its markets."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -709,7 +759,7 @@ async def _fetch_kalshi_event(event_ticker: str) -> dict[str, Any]:
             params={"with_nested_markets": "true"},
         )
         response.raise_for_status()
-        return response.json().get("event", {})
+        return KalshiEventData.model_validate(response.json().get("event", {}))
 
 
 @with_retry(max_attempts=3)
@@ -718,7 +768,7 @@ async def _fetch_kalshi_candlestick(
     market_ticker: str,
     start_ts: int,
     end_ts: int,
-) -> list[dict[str, Any]]:
+) -> list[KalshiCandlestick]:
     """Fetch candlestick data for a Kalshi market."""
     async with httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
         response = await client.get(
@@ -730,35 +780,38 @@ async def _fetch_kalshi_candlestick(
             },
         )
         response.raise_for_status()
-        return response.json().get("candlesticks", [])
+        return [
+            KalshiCandlestick.model_validate(c)
+            for c in response.json().get("candlesticks", [])
+        ]
 
 
 async def _kalshi_market_at_cutoff(
-    market: dict[str, Any], cutoff: date
+    market: KalshiMarketData, cutoff: date
 ) -> float | None:
     """Get historical price for a Kalshi market at the retrodict cutoff.
 
     Returns None if the market was created after the cutoff or if no
     candlestick data is available.
     """
-    created_time = market.get("created_time")
-    if created_time:
+    if market.created_time:
         try:
-            created_dt = datetime.fromisoformat(created_time.replace("Z", "+00:00"))
+            created_dt = datetime.fromisoformat(
+                market.created_time.replace("Z", "+00:00")
+            )
             cutoff_dt = datetime.combine(cutoff, time())
             if created_dt.replace(tzinfo=None) > cutoff_dt:
                 return None
         except (ValueError, TypeError):
             pass
 
-    ticker = market.get("ticker", "")
-    series_ticker = _series_ticker_from_market(ticker)
+    series_ticker = _series_ticker_from_market(market.ticker)
     cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
     start_ts = cutoff_unix - (30 * 24 * 60 * 60)
 
     try:
         candles = await _fetch_kalshi_candlestick(
-            series_ticker, ticker, start_ts, cutoff_unix
+            series_ticker, market.ticker, start_ts, cutoff_unix
         )
     except Exception:
         return None
@@ -767,28 +820,14 @@ async def _kalshi_market_at_cutoff(
         return None
 
     closest = max(
-        (c for c in candles if c.get("end_period_ts", 0) <= cutoff_unix),
-        key=lambda c: c.get("end_period_ts", 0),
+        (c for c in candles if c.end_period_ts <= cutoff_unix),
+        key=lambda c: c.end_period_ts,
         default=None,
     )
     if closest is None:
         return None
 
-    close_price = closest.get("price_dollars")
-    if close_price is not None:
-        try:
-            return float(close_price)
-        except (ValueError, TypeError):
-            pass
-
-    yes_close = closest.get("yes_close_dollars")
-    if yes_close is not None:
-        try:
-            return float(yes_close)
-        except (ValueError, TypeError):
-            pass
-
-    return None
+    return closest.close_price
 
 
 @tool(
@@ -829,31 +868,27 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
 
         results: list[KalshiMarketPrice] = []
         for event in events[:limit]:
-            event_tick = event.get("event_ticker", "")
-            for market in event.get("markets", []):
+            for market in event.markets:
                 if cutoff is not None:
                     prob = await _kalshi_market_at_cutoff(market, cutoff)
                     if prob is None:
                         continue
                 else:
-                    prob = _parse_kalshi_probability(market)
+                    prob = market.probability
                     if prob is None:
                         continue
 
-                ticker = market.get("ticker", "")
                 results.append(
                     {
-                        "market_title": market.get(
-                            "title", event.get("title", "Unknown")
-                        ),
+                        "market_title": market.title or event.title,
                         "probability": prob,
-                        "volume": market.get("volume_fp"),
-                        "url": f"https://kalshi.com/markets/{ticker}",
+                        "volume": market.volume_fp,
+                        "url": f"https://kalshi.com/markets/{market.ticker}",
                         "source": "kalshi",
-                        "description": market.get("rules_primary"),
-                        "market_ticker": ticker,
-                        "event_ticker": event_tick,
-                        "rules_primary": market.get("rules_primary"),
+                        "description": market.rules_primary,
+                        "market_ticker": market.ticker,
+                        "event_ticker": event.event_ticker,
+                        "rules_primary": market.rules_primary,
                     }
                 )
 
@@ -896,37 +931,36 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
             return mcp_error(f"Event not found: {event_ticker}")
 
         event_markets: list[KalshiEventMarket] = []
-        for market in event.get("markets", []):
+        for market in event.markets:
             if cutoff is not None:
                 prob = await _kalshi_market_at_cutoff(market, cutoff)
                 if prob is None:
                     continue
             else:
-                prob = _parse_kalshi_probability(market)
+                prob = market.probability
                 if prob is None:
                     continue
 
-            ticker = market.get("ticker", "")
             event_markets.append(
                 {
-                    "ticker": ticker,
-                    "title": market.get("title", market.get("yes_sub_title", "")),
+                    "ticker": market.ticker,
+                    "title": market.title or market.yes_sub_title,
                     "probability": prob,
-                    "volume": market.get("volume_fp"),
-                    "strike_type": market.get("strike_type"),
-                    "floor_strike": market.get("floor_strike"),
-                    "cap_strike": market.get("cap_strike"),
-                    "url": f"https://kalshi.com/markets/{ticker}",
-                    "rules_primary": market.get("rules_primary"),
+                    "volume": market.volume_fp,
+                    "strike_type": market.strike_type,
+                    "floor_strike": market.floor_strike,
+                    "cap_strike": market.cap_strike,
+                    "url": f"https://kalshi.com/markets/{market.ticker}",
+                    "rules_primary": market.rules_primary,
                 }
             )
 
         result: KalshiEvent = {
             "event_ticker": event_ticker,
-            "event_title": event.get("title", "Unknown"),
+            "event_title": event.title,
             "markets": event_markets,
             "url": f"https://kalshi.com/events/{event_ticker}",
-            "description": event.get("sub_title"),
+            "description": event.sub_title,
         }
         return mcp_success(result)
 
@@ -975,8 +1009,8 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
             return mcp_error(f"No historical data found for market {market_ticker}")
 
         closest = max(
-            (c for c in candles if c.get("end_period_ts", 0) <= target_ts),
-            key=lambda c: c.get("end_period_ts", 0),
+            (c for c in candles if c.end_period_ts <= target_ts),
+            key=lambda c: c.end_period_ts,
             default=None,
         )
         if closest is None:
@@ -984,14 +1018,13 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
                 f"No price data found before timestamp {target_ts} for market {market_ticker}"
             )
 
-        price = closest.get("price_dollars") or closest.get("yes_close_dollars")
-        if price is None:
+        if closest.close_price is None:
             return mcp_error(f"No price in candlestick data for {market_ticker}")
 
         result: HistoricalPrice = {
             "market_id": market_ticker,
-            "timestamp": closest.get("end_period_ts", 0),
-            "probability": float(price),
+            "timestamp": closest.end_period_ts,
+            "probability": closest.close_price,
             "source": "kalshi",
         }
         return mcp_success(result)
@@ -1064,7 +1097,7 @@ class CPHistoryInput(BaseModel):
     question_id: int = Field(
         description="Metaculus question ID or post ID (auto-detected)"
     )
-    days: int = Field(default=30, description="Number of days of history to fetch")
+    days: int = Field(default=30, ge=1, le=365)
 
 
 # --- Metaculus Output Schemas ---
@@ -1106,37 +1139,6 @@ class CPHistoryResponse(BaseModel):
 
 
 # --- Metaculus Helpers ---
-
-
-async def _redact_future_info(text: str, cutoff_date: str) -> str:
-    """Use haiku to remove references to events after the cutoff date."""
-    if not text or len(text) < 20:
-        return text
-
-    prompt = (
-        f"Remove any references to events, dates, or outcomes that occur after {cutoff_date}. "
-        f"Keep all other content unchanged. Return ONLY the redacted text, nothing else.\n\n"
-        f"Text:\n{text}"
-    )
-    options = ClaudeAgentOptions(
-        model="sonnet",
-        allowed_tools=[],
-        system_prompt=(
-            "You redact temporal information from text. Remove sentences or clauses "
-            "that reference events after the given date. Preserve everything else verbatim. "
-            "Return only the redacted text."
-        ),
-        extra_args={"no-session-persistence": None},
-    )
-    try:
-        result_text = None
-        async for message in query(prompt=prompt, options=options):
-            if isinstance(message, ResultMessage) and message.result:
-                result_text = message.result
-        return result_text or text
-    except Exception:
-        logger.warning("Fine-print redaction failed, returning original")
-        return text
 
 
 def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, object]:
@@ -1337,7 +1339,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
             result["community_prediction"] = None
         fine_print = result.get("fine_print")
         if isinstance(fine_print, str) and len(fine_print) > 20:
-            result["fine_print"] = await _redact_future_info(fine_print, str(cutoff))
+            result["fine_print"] = await redact_future_info(fine_print, str(cutoff))
         return result
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
@@ -1566,7 +1568,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     input_id = validated.question_id
-    days = min(validated.days, 365)
+    days = validated.days
 
     cutoff_dt = None
     cutoff_date = retrodict_cutoff.get()
