@@ -1,0 +1,163 @@
+---
+timestamp: 2026-02-20 05:38:53 UTC
+question_type: numeric
+factors:
+- description: Current value is 5.25, stable for 3 consecutive business days, suggesting
+    the recent decline has stalled
+  supports: 5.25
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Underlying Treasury (DGS20) also stabilized at 4.63-4.65, confirming
+    the leveling off
+  supports: 5.25
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 5-day horizon is short - limited room for large moves. Empirical daily
+    std is only 0.032
+  supports: 5.25
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: Full sample mean daily change is essentially zero (-0.0006), so no
+    strong drift to extrapolate
+  supports: 5.25
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: Recent 10-day trend was down ~0.02/day but last 3 days show stabilization
+  supports: 5.22
+  logit: -0.3
+  confidence: 0.4
+  effective_logit: -0.12
+tentative_logit: 0.0
+tentative_probability: 0.5
+assessment: This is a measurement/numeric question with a very short 5 business day
+  horizon. The Aaa corporate bond yield has been stable at 5.25 for the last 3 business
+  days after a decline from 5.43 over the prior 2 weeks. The underlying Treasury yield
+  (DGS20) has also stabilized. The Monte Carlo simulation using bootstrapped empirical
+  daily changes gives a median of ~5.24 with a standard deviation of ~0.07. The distribution
+  is centered very close to the current value with modest uncertainty appropriate
+  for the short horizon. Both bootstrap and normal simulations agree closely.
+tool_audit: fred_series worked well for both DAAA and DGS20, providing up-to-date
+  data through Feb 18. execute_code worked smoothly for Monte Carlo simulation. All
+  tools returned useful results.
+process_reflection: Straightforward numeric FRED question. The tools worked well -
+  fred_series gave me exactly what I needed and the sandbox let me run simulations
+  easily. The question type is well-suited to the Monte Carlo approach.
+skip_reviewer: true
+computed:
+  factor_count: 5
+  factor_sum: 1.72
+  tentative_logit: 0.0
+  logit_gap: -1.72
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current value is 5.25, stable for 3 consecutive business days, suggesting
+      the recent decline has stalled
+    supports: 5.25
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Underlying Treasury (DGS20) also stabilized at 4.63-4.65, confirming
+      the leveling off
+    supports: 5.25
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 5-day horizon is short - limited room for large moves. Empirical
+      daily std is only 0.032
+    supports: 5.25
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: Full sample mean daily change is essentially zero (-0.0006), so no
+      strong drift to extrapolate
+    supports: 5.25
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: Recent 10-day trend was down ~0.02/day but last 3 days show stabilization
+    supports: 5.22
+    logit: -0.3
+    confidence: 0.4
+    effective_logit: -0.12
+  dominant_factor: Current value is 5.25, stable for 3 consecutive business days,
+    suggesting the recent decline has stalled
+  dominant_effective_logit: 0.8
+  outcome_breakdown:
+  - outcome: 5.25
+    factor_count: 4
+    logit_sum: 1.84
+    factors:
+    - description: Current value is 5.25, stable for 3 consecutive business days,
+        suggesting the recent decline has stalled
+      supports: 5.25
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: Underlying Treasury (DGS20) also stabilized at 4.63-4.65, confirming
+        the leveling off
+      supports: 5.25
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+    - description: 5-day horizon is short - limited room for large moves. Empirical
+        daily std is only 0.032
+      supports: 5.25
+      logit: 0.5
+      confidence: 0.9
+      effective_logit: 0.45
+    - description: Full sample mean daily change is essentially zero (-0.0006), so
+        no strong drift to extrapolate
+      supports: 5.25
+      logit: 0.3
+      confidence: 0.8
+      effective_logit: 0.24
+  - outcome: 5.22
+    factor_count: 1
+    logit_sum: -0.12
+    factors:
+    - description: Recent 10-day trend was down ~0.02/day but last 3 days show stabilization
+      supports: 5.22
+      logit: -0.3
+      confidence: 0.4
+      effective_logit: -0.12
+  sources:
+  - '[(FRED) DAAA](https://fred.stlouisfed.org/series/DAAA)'
+  - '[(FRED) DGS20](https://fred.stlouisfed.org/series/DGS20)'
+  - '[(Metaculus) What will be the value of "Moody''s Seasoned Aaa Corporate Bond
+    Yield" on 2026-02-25?](https://www.metaculus.com/questions/42207)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42207
+- **Question ID**: 41986
+- **Session Duration**: 78.0s (1.3 min)
+- **Cost**: $2.3544
+- **Tokens**: 4,018 total (18 in, 4,000 out)
+  - Cache: 254,443 read, 89,200 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42207_20260220_053744/20260220-053744.log`
+
+### Tool Calls
+
+- **Total**: 7 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 93ms |
+| fred_series | 2 | 0 | 382ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| reflection | 1 | 0 | 4ms |
+
+### Sources Consulted
+
+- [(FRED) DAAA](https://fred.stlouisfed.org/series/DAAA)
+- [(FRED) DGS20](https://fred.stlouisfed.org/series/DGS20)
+- [(Metaculus) What will be the value of "Moody's Seasoned Aaa Corporate Bond Y...
