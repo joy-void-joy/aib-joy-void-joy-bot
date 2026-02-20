@@ -12,10 +12,7 @@ from typing import Annotated, Any, Literal, TypedDict
 import httpx
 from asknews_sdk.dto.news import SearchResponseDictItem
 from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
-from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query, tool
-
-
-from claude_agent_sdk import SdkMcpTool
+from claude_agent_sdk import SdkMcpTool, tool
 from claude_agent_sdk.types import McpSdkServerConfig
 
 from aib.tools.mcp_server import create_mcp_server
@@ -24,12 +21,13 @@ from pydantic import BaseModel, Field, field_validator
 from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
-from aib.retrodict_context import retrodict_cutoff
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
+from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
+from aib.tools.redact import redact_future_info
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
@@ -176,40 +174,6 @@ class CPHistoryResponse(BaseModel):
     note: str | None = None
 
 
-# --- Retrodict text redaction ---
-
-
-async def _redact_future_info(text: str, cutoff_date: str) -> str:
-    """Use haiku to remove references to events after the cutoff date."""
-    if not text or len(text) < 20:
-        return text
-
-    prompt = (
-        f"Remove any references to events, dates, or outcomes that occur after {cutoff_date}. "
-        f"Keep all other content unchanged. Return ONLY the redacted text, nothing else.\n\n"
-        f"Text:\n{text}"
-    )
-    options = ClaudeAgentOptions(
-        model="sonnet",
-        allowed_tools=[],
-        system_prompt=(
-            "You redact temporal information from text. Remove sentences or clauses "
-            "that reference events after the given date. Preserve everything else verbatim. "
-            "Return only the redacted text."
-        ),
-        extra_args={"no-session-persistence": None},
-    )
-    try:
-        result_text = None
-        async for message in query(prompt=prompt, options=options):
-            if isinstance(message, ResultMessage) and message.result:
-                result_text = message.result
-        return result_text or text
-    except Exception:
-        logger.warning("Fine-print redaction failed, returning original")
-        return text
-
-
 # --- Cached API helpers ---
 
 
@@ -301,7 +265,7 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
             result["community_prediction"] = None
         fine_print = result.get("fine_print")
         if isinstance(fine_print, str) and len(fine_print) > 20:
-            result["fine_print"] = await _redact_future_info(fine_print, str(cutoff))
+            result["fine_print"] = await redact_future_info(fine_print, str(cutoff))
         return result
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
