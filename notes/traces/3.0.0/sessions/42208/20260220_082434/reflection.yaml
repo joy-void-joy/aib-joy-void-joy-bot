@@ -1,0 +1,323 @@
+---
+timestamp: 2026-02-20 08:29:04 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-Presidents'' Day decay pattern: in 2025, values dropped ~14 points
+    from PD+3 to PD+8 (86->72). 2026 shows faster decay (68 at PD+4 vs 80 in 2025).
+    Continued decline expected.'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: 'Weekday pattern: Wednesdays typically score higher than Fridays in
+    2026 data (avg +8 pts). This partly counteracts the post-PD decline from Fri Feb
+    20 to Wed Feb 25.'
+  supports: Increases
+  logit: 0.7
+  confidence: 0.6
+  effective_logit: 0.42
+- description: Washington's Birthday (Feb 22) falls on Sunday in 2026 - minimal search
+    boost. In 2025 when it fell on Saturday, only +11 pts above normal Saturday. Won't
+    significantly lift weekday values.
+  supports: Decreases
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: Feb 20 value of 68 is already close to pre-PD normal weekday baseline
+    (~60-77 range). Limited room for further decline below the ±3 threshold.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Base rates from change_stats: decrease_rate=0.40, increase_rate=0.32,
+    no_change_rate=0.28. Decreases are the modal outcome for this term.'
+  supports: Decreases
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_logit: 0.5
+tentative_probability: 0.5
+assessment: 'The question compares George Washington search interest from Feb 20 (Fri,
+  PD+4, value=68) to Feb 25 (Wed, PD+9). The post-Presidents'' Day decline is the
+  dominant signal - values have fallen from 100 (PD) to 68 in 4 days. By PD+9, values
+  should be near normal baseline. The central estimate for Feb 25 is ~63, yielding
+  a change of -5 (Decreases). However, there''s genuine uncertainty: the weekday pattern
+  (Wed>Fri) and Washington Birthday proximity add upward pressure, and the value is
+  already near baseline so further decline is less certain. Monte Carlo with central=63,
+  SD=7 gives: P(Decreases)≈0.61, P(DC)≈0.26, P(Increases)≈0.13. With center=65 (more
+  conservative): P(Dec)≈0.50, P(DC)≈0.30, P(Inc)≈0.20.'
+calibration_notes: Base rates favor Decreases slightly (0.40 vs 0.32 for Increases
+  and 0.28 for DC). The seasonal pattern strongly suggests continued post-PD decline,
+  pushing the estimate further toward Decreases. The central estimate of 63 for Feb
+  25 seems reasonable but could be too low if the weekday pattern is stronger than
+  expected or if Washington's Birthday has a residual effect.
+key_uncertainties: 1) How much residual post-PD decline remains at PD+9 vs PD+4; 2)
+  Whether Wednesday's typically higher search volume vs Friday fully compensates for
+  the continuing decline; 3) Whether Washington's Birthday on Sunday creates any meaningful
+  weekday spillover.
+tool_audit: google_trends provided excellent data for both 2026 and historical years.
+  The change_stats base rates were useful as priors. execute_code enabled Monte Carlo
+  simulation effectively. No tool failures.
+process_reflection: The Google Trends question type benefits greatly from historical
+  analog analysis. Having multiple years of data (2024, 2025, 2026) was invaluable
+  for understanding the Presidents' Day seasonal pattern. The main challenge is estimating
+  the central value for Feb 25 - there's genuine model uncertainty between methods
+  that produces a range of ~60-68. The weekday effect (Wed vs Fri) creates an interesting
+  tension with the post-PD decline. The MC simulation framework works well for translating
+  distributional uncertainty into outcome probabilities.
+skip_reviewer: false
+computed:
+  factor_count: 5
+  factor_sum: 2.02
+  tentative_logit: 0.5
+  logit_gap: -1.52
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-Presidents'' Day decay pattern: in 2025, values dropped ~14
+      points from PD+3 to PD+8 (86->72). 2026 shows faster decay (68 at PD+4 vs 80
+      in 2025). Continued decline expected.'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: 'Weekday pattern: Wednesdays typically score higher than Fridays
+      in 2026 data (avg +8 pts). This partly counteracts the post-PD decline from
+      Fri Feb 20 to Wed Feb 25.'
+    supports: Increases
+    logit: 0.7
+    confidence: 0.6
+    effective_logit: 0.42
+  - description: Washington's Birthday (Feb 22) falls on Sunday in 2026 - minimal
+      search boost. In 2025 when it fell on Saturday, only +11 pts above normal Saturday.
+      Won't significantly lift weekday values.
+    supports: Decreases
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: Feb 20 value of 68 is already close to pre-PD normal weekday baseline
+      (~60-77 range). Limited room for further decline below the ±3 threshold.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Base rates from change_stats: decrease_rate=0.40, increase_rate=0.32,
+      no_change_rate=0.28. Decreases are the modal outcome for this term.'
+    supports: Decreases
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: 'Post-Presidents'' Day decay pattern: in 2025, values dropped ~14
+    points from PD+3 to PD+8 (86->72). 2026 shows faster decay (68 at PD+4 vs 80 in
+    2025). Continued decline expected.'
+  dominant_effective_logit: 0.96
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 1.3499999999999999
+    factors:
+    - description: 'Post-Presidents'' Day decay pattern: in 2025, values dropped ~14
+        points from PD+3 to PD+8 (86->72). 2026 shows faster decay (68 at PD+4 vs
+        80 in 2025). Continued decline expected.'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.8
+      effective_logit: 0.96
+    - description: Washington's Birthday (Feb 22) falls on Sunday in 2026 - minimal
+        search boost. In 2025 when it fell on Saturday, only +11 pts above normal
+        Saturday. Won't significantly lift weekday values.
+      supports: Decreases
+      logit: 0.3
+      confidence: 0.7
+      effective_logit: 0.21
+    - description: 'Base rates from change_stats: decrease_rate=0.40, increase_rate=0.32,
+        no_change_rate=0.28. Decreases are the modal outcome for this term.'
+      supports: Decreases
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.42
+    factors:
+    - description: 'Weekday pattern: Wednesdays typically score higher than Fridays
+        in 2026 data (avg +8 pts). This partly counteracts the post-PD decline from
+        Fri Feb 20 to Wed Feb 25.'
+      supports: Increases
+      logit: 0.7
+      confidence: 0.6
+      effective_logit: 0.42
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.25
+    factors:
+    - description: Feb 20 value of 68 is already close to pre-PD normal weekday baseline
+        (~60-77 range). Limited room for further decline below the ±3 threshold.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  sources:
+  - '[(Google Trends) george washington](https://trends.google.com/trends/explore?q=george
+    washington)'
+  - '[(Metaculus) Will the interest in “george washington” change between 2026-02-20
+    and 2026-02-25 according to Google Trends?](https://www.metaculus.com/questions/42208)'
+  reviewer_critique: 'I''ll focus on auditing the forecast directly since I have access
+    to the full research trace.
+
+
+    ## Audit Findings
+
+
+    ### 1. **Factor direction error: "Weekday pattern" factor is miscoded**
+
+
+    **Factor #2 (Increases):** "Wednesdays typically score higher than Fridays in
+    2026 data (avg +8 pts). This partly counteracts the post-PD decline from Fri Feb
+    20 to Wed Feb 25."
+
+
+    **Problem:** This factor is coded as **[Increases]** but the evidence actually
+    supports **[Decreases]** being less severe, not an increase. The agent''s own
+    analysis shows:
+
+    - 2025 post-PD pattern: PD+4 (Fri) = 80 → PD+8 (Tue) = 72 (drop of -8)
+
+    - The Wed>Fri pattern doesn''t make values go UP from baseline; it just means
+    the decline won''t be as steep as a simple extrapolation would suggest
+
+
+    The factor should either be:
+
+    - Recoded as [Decreases] with a smaller logit (acknowledging Wed>Fri mitigates
+    but doesn''t reverse the decline), OR
+
+    - Reframed as [Doesn''t change] since it pushes toward the middle threshold
+
+
+    The trace shows central estimate = 63, which is a **-5 change (Decreases)**. Coding
+    the Wed>Fri pattern as "Increases" with logit +0.7 contradicts this.
+
+
+    ### 2. **Underconfidence: probability doesn''t match the assessment**
+
+
+    The assessment states:
+
+    - "The post-Presidents'' Day decline is the **dominant signal**"
+
+    - Central estimate = 63 with SD=7 yields Monte Carlo: **P(Dec)≈0.61, P(DC)≈0.26,
+    P(Inc)≈0.13**
+
+    - Agent notes "faster 2026 decline" compared to 2025
+
+
+    Yet the factor structure gives:
+
+    - Decreases: net logit ≈ +1.8 (if you correct factor #2)
+
+    - But as coded: only +1.35 for Decreases vs +0.42 Increases
+
+
+    **The probability implied by "P(Dec)≈0.61" is roughly 50% when you account for
+    the three outcomes.** This is reasonable, but the agent then hedges and says "with
+    center=65: P(Dec)≈0.50" without a clear factor justifying this adjustment toward
+    50%.
+
+
+    ### 3. **Factor #4 is a weak hedge factor**
+
+
+    **Factor #4 (Doesn''t change):** "Feb 20 value of 68 is already close to pre-PD
+    normal weekday baseline (~60-77 range). Limited room for further decline below
+    the ±3 threshold." (logit=+0.5, confidence=0.5, effective=+0.25)
+
+
+    This reads like a factor added for balance rather than genuine evidence. The agent''s
+    own analysis shows:
+
+    - Week 1 Wed = 64 (most analogous to post-PD normal)
+
+    - Expected Feb 25 = 60-65 range
+
+    - This gives -3 to -8 change, which **does** have room below the threshold
+
+
+    The factor doesn''t capture a real force—it''s just saying "maybe it won''t change
+    much" without mechanistic reasoning.
+
+
+    ### 4. **Missing scenario: Faster-than-expected stabilization**
+
+
+    The trace shows competing evidence:
+
+    - 2026 decline is **faster** than 2025 (68% of peak at PD+4 vs 80% in 2025)
+
+    - By PD+9, might have already reached floor
+
+
+    **Missing [Doesn''t change] factor:** If the sharp decline from 100→68 in 4 days
+    represents front-loaded decay, then by PD+9 the value could stabilize at 65-70
+    (minimal change from 68). The trace mentions this possibility but doesn''t capture
+    it as a factor.
+
+
+    ### 5. **Minor: Washington''s Birthday factor is correctly skeptical**
+
+
+    Factor #3 correctly identifies that Feb 22 on Sunday will have minimal impact.
+    The trace validates this (2025: Saturday=51 vs normal Sat ~40, only +11 boost).
+    No issue here.
+
+
+    ---
+
+
+    ## Summary
+
+
+    **Primary error (directional):** Factor #2 is miscoded. The Wed>Fri weekday pattern
+    doesn''t support "Increases"—it supports "Decreases by less than expected." This
+    inflates the Increases probability artificially.
+
+
+    **Secondary issue (underconfidence):** The factor structure doesn''t clearly justify
+    why the probability should be near 50% for Decreases when the assessment narrative
+    describes "dominant" decline signals and Monte Carlo gives 61%. Factor #4 appears
+    to be a hedge toward 50% without strong evidentiary basis.
+
+
+    **Recommendation:** Recode Factor #2 as [Decreases] with reduced logit (~+0.3)
+    to reflect "decline is mitigated by weekday pattern but still expected." Remove
+    or strengthen Factor #4 with clearer mechanistic reasoning.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42208
+- **Question ID**: 41987
+- **Session Duration**: 290.7s (4.8 min)
+- **Cost**: $3.0345
+- **Tokens**: 12,989 total (21 in, 12,968 out)
+  - Cache: 579,072 read, 63,624 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42208_20260220_082434/20260220-082434.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 81ms |
+| get_metaculus_questions | 1 | 0 | 0ms |
+| google_trends | 3 | 0 | 456ms |
+| reflection | 1 | 0 | 47358ms |
+
+### Sources Consulted
+
+- [(Google Trends) george washington](https://trends.google.com/trends/explore?...
+- [(Metaculus) Will the interest in “george washington” change between 2026-02-...
