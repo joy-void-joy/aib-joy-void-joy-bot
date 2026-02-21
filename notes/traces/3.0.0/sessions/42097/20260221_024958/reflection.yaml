@@ -1,0 +1,206 @@
+---
+timestamp: 2026-02-21 02:55:14 UTC
+question_type: numeric
+factors:
+- description: '2025 DOW-aligned baseline week (Feb 24-Mar 2): 16,410,407 passengers.
+    Strong reference for same relative calendar position.'
+  supports: 16900000.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'YoY growth in Feb 2026 ranges from +2.4% to +4.3% DOW-aligned. Non-holiday
+    week growth ~2.4%, holiday-adjacent ~4%. Central estimate for normal post-holiday
+    week: ~3%'
+  supports: 16900000.0
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: TSA screened record holiday volumes in Dec 2025-Jan 2026, indicating
+    continued strong air travel demand trend
+  supports: 17000000.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Late February is a stable non-holiday period with low variance. No
+    spring break yet, no major holidays. Low tail risk.
+  supports: 16900000.0
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: Possible weather disruption could reduce volumes by 2-8% for a few
+    days. Winter storms in late Feb are possible but not frequent enough to be the
+    base case.
+  supports: 16000000.0
+  logit: -0.3
+  confidence: 0.3
+  effective_logit: -0.09
+tentative_logit: 0.5
+tentative_probability: 0.62
+assessment: 'This is a measurement question about TSA passenger volume for Feb 23-Mar
+  1, 2026 (7 days, Mon-Sun). The key reference points are:
+
+
+  1. 2025 DOW-aligned comparable week: 16,410,407
+
+  2. 2024 DOW-aligned comparable week: 16,334,405
+
+  3. Observed Feb 2026 YoY growth (DOW-aligned): +2.4% to +4.3%
+
+
+  The target week is a normal post-Presidents'' Day week with no holidays. In both
+  2024 and 2025, this week showed a slight dip from the Presidents'' Day week.
+
+
+  Central projection: ~16,900,000 (3% growth over 2025 baseline)
+
+  The Monte Carlo simulation with 3% ± 1.5% growth plus 1.5% weekly noise gives a
+  well-calibrated distribution.
+
+
+  Main uncertainties: exact growth rate for this specific non-holiday week, and small
+  probability of weather disruption.'
+calibration_notes: The 2024-2025 YoY growth for this same week was only ~0.5%, while
+  2025-2026 is tracking 2.4-4.3%. The higher growth rate in 2026 reflects continued
+  post-pandemic air travel growth. The distribution should be relatively tight since
+  TSA weekly volumes for a non-holiday period are quite predictable. The bounds (12M-17M)
+  suggest the question creator expects the answer solidly within this range. My median
+  of ~16.9M is near the upper end, which makes sense given the strong growth trend.
+key_uncertainties: The exact YoY growth rate for this specific week (could be 1.5-5%),
+  and whether any weather events disrupt late-February travel.
+tool_audit: TSA website fetch provided excellent daily data for 2024-2026. Monte Carlo
+  simulation in execute_code worked well for generating calibrated intervals. No tool
+  failures.
+process_reflection: This was a straightforward numeric forecast. The TSA data is high
+  quality and available. The main analytical challenge was deciding the appropriate
+  YoY growth rate - the holiday-adjacent weeks show higher growth than the non-holiday
+  week, so there's a judgment call about which rate to apply. The simulation handles
+  this well by parameterizing the uncertainty.
+skip_reviewer: true
+computed:
+  factor_count: 5
+  factor_sum: 2.6
+  tentative_logit: 0.5
+  logit_gap: -2.1
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: '2025 DOW-aligned baseline week (Feb 24-Mar 2): 16,410,407 passengers.
+      Strong reference for same relative calendar position.'
+    supports: 16900000.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'YoY growth in Feb 2026 ranges from +2.4% to +4.3% DOW-aligned. Non-holiday
+      week growth ~2.4%, holiday-adjacent ~4%. Central estimate for normal post-holiday
+      week: ~3%'
+    supports: 16900000.0
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: TSA screened record holiday volumes in Dec 2025-Jan 2026, indicating
+      continued strong air travel demand trend
+    supports: 17000000.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Late February is a stable non-holiday period with low variance. No
+      spring break yet, no major holidays. Low tail risk.
+    supports: 16900000.0
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: Possible weather disruption could reduce volumes by 2-8% for a few
+      days. Winter storms in late Feb are possible but not frequent enough to be the
+      base case.
+    supports: 16000000.0
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+  dominant_factor: '2025 DOW-aligned baseline week (Feb 24-Mar 2): 16,410,407 passengers.
+    Strong reference for same relative calendar position.'
+  dominant_effective_logit: 1.35
+  outcome_breakdown:
+  - outcome: 16900000.0
+    factor_count: 3
+    logit_sum: 2.34
+    factors:
+    - description: '2025 DOW-aligned baseline week (Feb 24-Mar 2): 16,410,407 passengers.
+        Strong reference for same relative calendar position.'
+      supports: 16900000.0
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: 'YoY growth in Feb 2026 ranges from +2.4% to +4.3% DOW-aligned.
+        Non-holiday week growth ~2.4%, holiday-adjacent ~4%. Central estimate for
+        normal post-holiday week: ~3%'
+      supports: 16900000.0
+      logit: 1.0
+      confidence: 0.75
+      effective_logit: 0.75
+    - description: Late February is a stable non-holiday period with low variance.
+        No spring break yet, no major holidays. Low tail risk.
+      supports: 16900000.0
+      logit: 0.3
+      confidence: 0.8
+      effective_logit: 0.24
+  - outcome: 17000000.0
+    factor_count: 1
+    logit_sum: 0.35
+    factors:
+    - description: TSA screened record holiday volumes in Dec 2025-Jan 2026, indicating
+        continued strong air travel demand trend
+      supports: 17000000.0
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: 16000000.0
+    factor_count: 1
+    logit_sum: -0.09
+    factors:
+    - description: Possible weather disruption could reduce volumes by 2-8% for a
+        few days. Winter storms in late Feb are possible but not frequent enough to
+        be the base case.
+      supports: 16000000.0
+      logit: -0.3
+      confidence: 0.3
+      effective_logit: -0.09
+  sources:
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (Feb 23, 2026-Mar 1, 2026](https://www.metaculus.com/questions/42097)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42097
+- **Question ID**: 41861
+- **Session Duration**: 322.3s (5.4 min)
+- **Cost**: $3.7771
+- **Tokens**: 15,829 total (27 in, 15,802 out)
+  - Cache: 1,065,757 read, 52,957 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42097_20260221_024958/20260221-024958.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 36ms |
+| fetch_url | 3 | 0 | 11964ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| install_package | 1 | 0 | 30ms |
+| reflection | 1 | 0 | 24ms |
+| web_search | 2 | 0 | 13126ms |
+
+### Sources Consulted
+
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)

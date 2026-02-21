@@ -191,4 +191,320 @@ computed:
 - [tsa.gov](https://www.tsa.gov/travel/passenger-volumes)
 - [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)
 - [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)
-- [blend.travel](https://blend.travel/tsa-checkpoint-data/)
+- [blend.travel](https://blend.travel/tsa-checkpoint-data/)---
+timestamp: 2026-02-20 23:55:01 UTC
+question_type: numeric
+factors:
+- description: 2025 equivalent week (Mon-Sun before Presidents' Day) had 15.81M passengers,
+    providing strong baseline
+  supports: 15810000.0
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: BTS Oct 2025 total enplanements +1.7% YoY, suggesting modest growth
+    continuing
+  supports: 16000000.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'US Travel Association Nov 2025 data: domestic air trips -0.7% YoY,
+    suggesting demand weakness'
+  supports: 15700000.0
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Consumer confidence declining, travel budgets being cut ~20%, airlines
+    reducing capacity
+  supports: 15600000.0
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: No evidence of weather disruption during Feb 9-15, 2026 specifically
+  supports: 15850000.0
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: Late January 2026 massive winter storm (10k+ flights cancelled) may
+    have caused some deferred travel to February
+  supports: 16000000.0
+  logit: 0.3
+  confidence: 0.3
+  effective_logit: 0.09
+- description: Calendar alignment nearly identical to 2025 (both Mon-Sun before Presidents'
+    Day, Valentine's Day on similar day)
+  supports: 15850000.0
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+tentative_logit: 0.0
+tentative_probability: 0.5
+assessment: 'This is a numeric measurement question about TSA passenger volume for
+  a specific week (Feb 9-15, 2026). The period has essentially already occurred (today
+  is Feb 15), but the actual data isn''t publicly available yet.
+
+
+  My baseline is the 2025 equivalent week (Mon-Sun before Presidents'' Day): 15,813,431
+  passengers. The calendar alignment between 2025 and 2026 is nearly perfect for this
+  week.
+
+
+  Key tension: BTS data shows Oct 2025 was still +1.7% YoY, but the US Travel Association
+  dashboard shows Nov 2025 domestic air trips were -0.7% YoY. This suggests the growth
+  trend decelerated significantly and may have turned slightly negative by early 2026.
+
+
+  My scenario-weighted model produces a median of ~15.86M, with the distribution reflecting
+  uncertainty about the growth rate (0.5% central with scenarios for demand weakness
+  and strength).
+
+
+  The 80% confidence interval (P10-P90) spans roughly 15.54M to 16.17M.'
+calibration_notes: 'Base rate: TSA weekly volumes in February have been in the 14-16M
+  range in recent years. The question range of 12-17M is reasonable. My distribution
+  is centered near 15.85M with relatively tight uncertainty since the week has essentially
+  occurred and there''s no evidence of major disruption. The main uncertainty is the
+  YoY growth rate for Feb 2026 vs Feb 2025.'
+key_uncertainties: '1. Actual YoY growth rate for Feb 2026 (could be -2% to +3%)
+
+  2. Whether demand weakness accelerated in Q1 2026
+
+  3. Whether late January storm deferred or suppressed travel in this period
+
+  4. Possible minor weather disruptions during the week not captured in my searches'
+tool_audit: 'web_search: Useful for finding 2025 TSA data, growth trends, and news
+  articles. Multiple queries needed.
+
+  fetch_url: Successfully fetched 2025 TSA data from tsa.gov/travel/passenger-volumes/2025.
+  Failed for 2024 and 2026 pages (no archived snapshot). Failed for MacroMicro (JavaScript-rendered
+  content).
+
+  company_financials/fred_series: Not used, not relevant.
+
+  execute_code: Very useful for Monte Carlo simulation and data analysis.
+
+  get_metaculus_questions: Retrieved question details, confirmed no community prediction
+  available (AIB tournament).'
+process_reflection: The main friction point was inability to fetch the actual 2026
+  TSA data or 2024 data for comparison. The tsa.gov pages for 2026 and 2024 returned
+  'no archived snapshot' from fetch_url, and the sandbox couldn't reach tsa.gov directly.
+  This forced me to rely on the 2025 data (which was fetchable) plus growth rate estimation
+  from indirect sources. For a question this close to resolution, having the actual
+  data would collapse the distribution significantly. A tool that could reliably scrape
+  government data pages would help enormously.
+skip_reviewer: false
+computed:
+  factor_count: 7
+  factor_sum: 2.12
+  tentative_logit: 0.0
+  logit_gap: -2.12
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 2025 equivalent week (Mon-Sun before Presidents' Day) had 15.81M
+      passengers, providing strong baseline
+    supports: 15810000.0
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: BTS Oct 2025 total enplanements +1.7% YoY, suggesting modest growth
+      continuing
+    supports: 16000000.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'US Travel Association Nov 2025 data: domestic air trips -0.7% YoY,
+      suggesting demand weakness'
+    supports: 15700000.0
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Consumer confidence declining, travel budgets being cut ~20%, airlines
+      reducing capacity
+    supports: 15600000.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: No evidence of weather disruption during Feb 9-15, 2026 specifically
+    supports: 15850000.0
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: Late January 2026 massive winter storm (10k+ flights cancelled) may
+      have caused some deferred travel to February
+    supports: 16000000.0
+    logit: 0.3
+    confidence: 0.3
+    effective_logit: 0.09
+  - description: Calendar alignment nearly identical to 2025 (both Mon-Sun before
+      Presidents' Day, Valentine's Day on similar day)
+    supports: 15850000.0
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  dominant_factor: 2025 equivalent week (Mon-Sun before Presidents' Day) had 15.81M
+    passengers, providing strong baseline
+  dominant_effective_logit: 1.8
+  outcome_breakdown:
+  - outcome: 15810000.0
+    factor_count: 1
+    logit_sum: 1.8
+    factors:
+    - description: 2025 equivalent week (Mon-Sun before Presidents' Day) had 15.81M
+        passengers, providing strong baseline
+      supports: 15810000.0
+      logit: 2.0
+      confidence: 0.9
+      effective_logit: 1.8
+  - outcome: 16000000.0
+    factor_count: 2
+    logit_sum: 0.43999999999999995
+    factors:
+    - description: BTS Oct 2025 total enplanements +1.7% YoY, suggesting modest growth
+        continuing
+      supports: 16000000.0
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+    - description: Late January 2026 massive winter storm (10k+ flights cancelled)
+        may have caused some deferred travel to February
+      supports: 16000000.0
+      logit: 0.3
+      confidence: 0.3
+      effective_logit: 0.09
+  - outcome: 15700000.0
+    factor_count: 1
+    logit_sum: -0.5599999999999999
+    factors:
+    - description: 'US Travel Association Nov 2025 data: domestic air trips -0.7%
+        YoY, suggesting demand weakness'
+      supports: 15700000.0
+      logit: -0.8
+      confidence: 0.7
+      effective_logit: -0.5599999999999999
+  - outcome: 15600000.0
+    factor_count: 1
+    logit_sum: -0.25
+    factors:
+    - description: Consumer confidence declining, travel budgets being cut ~20%, airlines
+        reducing capacity
+      supports: 15600000.0
+      logit: -0.5
+      confidence: 0.5
+      effective_logit: -0.25
+  - outcome: 15850000.0
+    factor_count: 2
+    logit_sum: 0.69
+    factors:
+    - description: No evidence of weather disruption during Feb 9-15, 2026 specifically
+      supports: 15850000.0
+      logit: 0.3
+      confidence: 0.8
+      effective_logit: 0.24
+    - description: Calendar alignment nearly identical to 2025 (both Mon-Sun before
+        Presidents' Day, Valentine's Day on similar day)
+      supports: 15850000.0
+      logit: 0.5
+      confidence: 0.9
+      effective_logit: 0.45
+  sources:
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (February 9, 2026-February 15, 2026](https://www.metaculus.com/questions/42098)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2026)'
+  - '[(Metaculus) Will the TSA extend or reimpose a mask mandate on public transportation
+    before 2024?](https://www.metaculus.com/questions/10490)'
+  - '[(Metaculus) What will be the total passenger volumes reported by the TSA for
+    May 2025?](https://www.metaculus.com/questions/37042)'
+  - '[(Metaculus) What will US airline passenger volume be for Presidents'' Day Weekend
+    (February 14-17, 2025), according to the TSA?](https://www.metaculus.com/questions/31798)'
+  - '[(Metaculus) What will US airline passenger volume be for Presidents'' Day Weekend
+    (February 14-17, 2025), according to the TSA?](https://www.metaculus.com/questions/31793)'
+  - '[(Metaculus) What will US airline passenger volume be for the week of Christmas
+    through New Years Eve 2024, according to the TSA?](https://www.metaculus.com/questions/28860)'
+  - '[(Metaculus) What will US airline passenger volume be for St. Patrick''s Day
+    Weekend (March 14-March 17, 2025), according to the TSA?](https://www.metaculus.com/questions/35678)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than 17 million and less than 18 million, according
+    to the TSA?](https://www.metaculus.com/questions/31036)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than 19 million, according to the TSA?](https://www.metaculus.com/questions/31034)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be less than or equal to 17 million, according to the TSA?](https://www.metaculus.com/questions/31037)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than or equal to 18 million and less than or equal
+    to 19 million, according to the TSA?](https://www.metaculus.com/questions/31035)'
+  - '[(Metaculus) Will US airline passenger volume for the Tuesday and Wednesday before
+    Thanksgiving 2024 be up year over year, according to the TSA?](https://www.metaculus.com/questions/29593)'
+  - '[(Metaculus) Will US airline passenger volume for the week of Christmas through
+    New Years Eve 2024 be up year over year, according to the TSA?](https://www.metaculus.com/questions/30579)'
+  - '[(Metaculus) For April 2025, how many international passengers will be reported
+    by the Port Authority of NY & NJ at area airports?](https://www.metaculus.com/questions/37498)'
+  - '[(Metaculus) For April 2025, how many international passengers will be reported
+    by the Port Authority of NY & NJ at area airports?](https://www.metaculus.com/questions/37433)'
+  - '[(Metaculus) Will US airline passenger volume for the Veterans Day weekend of
+    2024 be up year over year, according to the TSA?](https://www.metaculus.com/questions/29011)'
+  - '[(Metaculus) When will US domestic passenger air travel return to 80% of pre-COVID-19
+    volumes?](https://www.metaculus.com/questions/4719)'
+  - '[(Metaculus) Which airline will have the highest passenger volume in the NY/NJ
+    metropolitan area in April 2025?](https://www.metaculus.com/questions/37448)'
+  - '[tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2023)'
+  - '[en.macromicro.me](https://en.macromicro.me/charts/26114/us-tsa-checkpoint)'
+  - '[bain.com](https://www.bain.com/insights/navigating-the-next-decade-of-air-travel/)'
+  - '[emarketer.com](https://www.emarketer.com/content/global-travel-demand-stays-strong-2026-us-outlook-diverges)'
+  - '[transtats.bts.gov](https://www.transtats.bts.gov/traffic/)'
+  - '[January 23–27, 2026 North American winter storm - Wikipedia](https://en.wikipedia.org/wiki/January_2026_North_American_winter_storm)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42098
+- **Question ID**: 41862
+- **Session Duration**: 797.1s (13.3 min)
+- **Cost**: $6.2525
+- **Tokens**: 17,866 total (87 in, 17,779 out)
+  - Cache: 2,245,951 read, 82,607 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42098_20260215_000000/20260215-000000.log`
+
+### Tool Calls
+
+- **Total**: 48 calls
+- **Errors**: 5 (10.4%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 2021ms |
+| fetch_url | 10 | 5 ⚠️ | 4570ms |
+| get_metaculus_questions | 2 | 0 | 3190ms |
+| install_package | 1 | 0 | 27ms |
+| reflection | 1 | 0 | 18ms |
+| search_metaculus | 1 | 0 | 2632ms |
+| web_search | 24 | 0 | 16407ms |
+| wikipedia | 1 | 0 | 5975ms |
+
+### Sources Consulted
+
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2025)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2024)
+- [tsa.gov](https://www.tsa.gov/travel/passenger-volumes/2026)
+- [(Metaculus) Will the TSA extend or reimpose a mask mandate on public transpo...
+- [(Metaculus) What will be the total passenger volumes reported by the TSA for...
+- [(Metaculus) What will US airline passenger volume be for Presidents' Day Wee...
+- [(Metaculus) What will US airline passenger volume be for Presidents' Day Wee...
+- [(Metaculus) What will US airline passenger volume be for the week of Christm...
+- [(Metaculus) What will US airline passenger volume be for St. Patrick's Day W...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) Will US airline passenger volume for the Tuesday and Wednesday b...
+- [(Metaculus) Will US airline passenger volume for the week of Christmas throu...
+- [(Metaculus) For April 2025, how many international passengers will be report...
+- [(Metaculus) For April 2025, how many international passengers will be report...
+- [(Metaculus) Will US airline passenger volume for the Veterans Day weekend of...
+- ... and 8 more
