@@ -501,6 +501,32 @@ def create_webfetch_nudge_hooks() -> HooksConfig:
     }
 
 
+def create_suggest_only_nudge_hooks() -> HooksConfig:
+    """PostToolUse hook that nudges the agent toward structured APIs for known domains."""
+    from aib.tools.fetch_routes import SUGGEST_ONLY
+
+    async def nudge_hook(
+        input_data: HookInput,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> SyncHookJSONOutput:
+        if input_data.get("hook_event_name") != "PostToolUse":
+            return SyncHookJSONOutput()
+        if input_data.get("tool_name") != "mcp__search__fetch_url":
+            return SyncHookJSONOutput()
+
+        tool_input = input_data.get("tool_input", {})
+        url = (tool_input.get("url") or "").lower()
+        for domain_key, hint in SUGGEST_ONLY.items():
+            if domain_key in url:
+                return SyncHookJSONOutput(systemMessage=f"Tip: {hint}")
+        return SyncHookJSONOutput()
+
+    return {
+        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
+    }
+
+
 async def fetch_question(question_id: int) -> dict:
     """Fetch question details from Metaculus API."""
     from aib.clients.metaculus import get_client
@@ -747,6 +773,9 @@ async def run_forecast(
 
         # Nudge agent toward fetch_url when it uses WebFetch
         hooks = merge_hooks(permission_hooks, create_webfetch_nudge_hooks())
+
+        # Nudge agent toward structured APIs for SUGGEST_ONLY domains
+        hooks = merge_hooks(hooks, create_suggest_only_nudge_hooks())
 
         # Nudge agent toward web_search when it uses WebSearch (live mode only;
         # in retrodict mode, WebSearch is denied entirely by retrodict hooks)
