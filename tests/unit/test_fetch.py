@@ -12,23 +12,46 @@ from aib.tools.search import fetch_url as _fetch_url_tool
 fetch_url = _fetch_url_tool.handler
 
 
-class TestSuggestOnlyInterception:
-    """Tests that SUGGEST_ONLY domains return helpful errors."""
+class TestSuggestOnlyPassthrough:
+    """Tests that SUGGEST_ONLY domains are fetched normally (nudge is via PostToolUse hook)."""
 
     @pytest.mark.asyncio
-    async def test_tradingeconomics_intercepted(self) -> None:
-        result = await fetch_url({"url": "https://tradingeconomics.com/germany/gdp"})
-        assert result["is_error"] is True
-        assert (
-            "fred_series" in result["content"][0]["text"]
-            or "world_bank" in result["content"][0]["text"]
-        )
+    async def test_tradingeconomics_fetched(self) -> None:
+        with (
+            patch(
+                "aib.tools.search.domain_dispatch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "aib.tools.search.fetch_live",
+                new_callable=AsyncMock,
+                return_value="GDP data here",
+            ),
+        ):
+            result = await fetch_url({"url": "https://tradingeconomics.com/germany/gdp"})
+        assert result.get("is_error") is not True
+        data = json.loads(result["content"][0]["text"])
+        assert data["content"] == "GDP data here"
 
     @pytest.mark.asyncio
-    async def test_statista_intercepted(self) -> None:
-        result = await fetch_url({"url": "https://www.statista.com/statistics/123"})
-        assert result["is_error"] is True
-        assert "search_exa" in result["content"][0]["text"]
+    async def test_statista_fetched(self) -> None:
+        with (
+            patch(
+                "aib.tools.search.domain_dispatch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "aib.tools.search.fetch_live",
+                new_callable=AsyncMock,
+                return_value="Stats page",
+            ),
+        ):
+            result = await fetch_url({"url": "https://www.statista.com/statistics/123"})
+        assert result.get("is_error") is not True
+        data = json.loads(result["content"][0]["text"])
+        assert data["content"] == "Stats page"
 
 
 class TestDomainDispatch:

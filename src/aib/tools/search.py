@@ -4,8 +4,9 @@ Provides web search (via Haiku sub-agent + API augmentation), Exa AI search,
 AskNews search, Wikipedia, and URL content fetching. All "find/retrieve
 information" tools live here.
 
-In retrodict mode, all search snippets are replaced to prevent future leaks:
-API-augmented snippets come from api_data, others from the Wayback Machine.
+Search snippets are always fetched from actual page content, not from the
+search engine. API-augmented results get snippets from api_data; others are
+fetched live (or from the Wayback Machine in retrodict mode).
 """
 
 import asyncio
@@ -34,7 +35,7 @@ from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
-from aib.tools.fetch_routes import SUGGEST_ONLY, domain_dispatch
+from aib.tools.fetch_routes import domain_dispatch
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -109,16 +110,6 @@ class AugmentedSearchResult(TypedDict):
     snippet: str | None
     api_data: dict[str, Any] | None
     hint: str | None
-
-
-class _SearchResultItem(BaseModel):
-    title: str
-    url: str
-    snippet: str
-
-
-class _SearchResultsOutput(BaseModel):
-    results: list[_SearchResultItem]
 
 
 def _snippet_from_api_data(api_data: dict[str, Any]) -> str | None:
@@ -198,6 +189,63 @@ async def _wayback_filter_non_api_results(
     return validated
 
 
+async def _fetch_live_snippets(
+    results: list[AugmentedSearchResult],
+) -> list[AugmentedSearchResult]:
+    """Populate snippets from actual page content for non-API results.
+
+    API-augmented results get snippets from api_data. Non-API results
+    get snippets fetched from the live page via fetch_live.
+    """
+
+    async def _fetch_one(
+        result: AugmentedSearchResult,
+    ) -> AugmentedSearchResult:
+        if result["api_data"] is not None:
+            safe_snippet = _snippet_from_api_data(result["api_data"])
+            if safe_snippet is not None:
+                result["snippet"] = safe_snippet
+            return result
+
+        fetched = await fetch_live(result["url"])
+        if isinstance(fetched, FetchResult):
+            result["snippet"] = fetched.text[:500]
+        return result
+
+    return list(await asyncio.gather(*[_fetch_one(r) for r in results]))
+
+
+def _make_websearch_capture_hook() -> tuple[HookCallback, list[dict[str, str]]]:
+    """Create a PostToolUse hook that captures WebSearch result links.
+
+    Returns (hook_callback, captured_links). After the sub-agent finishes,
+    captured_links contains {title, url} dicts from the raw tool response.
+    """
+    captured: list[dict[str, str]] = []
+
+    async def hook(
+        input_data: HookInput,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> HookJSONOutput:
+        raw: dict[str, Any] = dict(input_data)
+        if raw.get("hook_event_name") != "PostToolUse":
+            return {}
+        if raw.get("tool_name") != "WebSearch":
+            return {}
+        tool_response = raw.get("tool_response")
+        if not isinstance(tool_response, dict):
+            return {}
+        for item in tool_response.get("results", []):
+            if isinstance(item, dict):
+                for link in item.get("content", []):
+                    if isinstance(link, dict) and link.get("url"):
+                        captured.append(link)
+        return {}
+
+    return hook, captured
+
+
 async def _raw_web_search(
     search_query: str,
     cutoff_date: str | None = None,
@@ -206,7 +254,9 @@ async def _raw_web_search(
 ) -> list[SearchResult]:
     """One-shot web search via a minimal Haiku sub-agent with WebSearch.
 
-    Returns raw results without Wayback validation or API augmentation.
+    Haiku invokes the WebSearch tool; a PostToolUse hook captures the raw
+    result URLs. Snippets are populated later by _fetch_live_snippets or
+    _wayback_filter_non_api_results.
     """
     constraints: list[str] = []
     if cutoff_date:
@@ -236,7 +286,8 @@ async def _raw_web_search(
 
     from aib.agent.client import build_client
 
-    data: dict[str, Any] | None = None
+    capture_hook, captured_links = _make_websearch_capture_hook()
+
     async with build_client(
         model="haiku",
         permission_mode="bypassPermissions",
@@ -245,21 +296,15 @@ async def _raw_web_search(
             "PreToolUse": [
                 HookMatcher(
                     hooks=[
-                        _make_tool_filter_hook(
-                            frozenset({"WebSearch", "StructuredOutput"})
-                        )
+                        _make_tool_filter_hook(frozenset({"WebSearch"}))
                     ]
                 )
             ],
+            "PostToolUse": [
+                HookMatcher(hooks=[capture_hook])
+            ],
         },
-        system_prompt=(
-            "You are a web search assistant. Use WebSearch to find information, "
-            "then return the results with title, url, and snippet for each."
-        ),
-        output_format={
-            "type": "json_schema",
-            "schema": _SearchResultsOutput.model_json_schema(),
-        },
+        system_prompt="You are a web search assistant. Use WebSearch to find information.",
     ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
@@ -270,28 +315,25 @@ async def _raw_web_search(
                     message.num_turns,
                     message.is_error,
                 )
-                if data is None:
-                    if message.structured_output:
-                        data = message.structured_output
-                    elif message.result:
-                        data = json.loads(message.result)
 
-    if not data or not isinstance(data.get("results"), list):
-        logger.warning(
-            "[WebSearch] sub-agent returned no structured results for query=%s",
-            search_query,
-        )
-        return []
+    seen_urls: set[str] = set()
+    results: list[SearchResult] = []
+    for link in captured_links:
+        url = link["url"]
+        if url not in seen_urls:
+            seen_urls.add(url)
+            results.append(
+                SearchResult(
+                    title=link.get("title", ""),
+                    url=url,
+                    snippet=None,
+                )
+            )
 
-    return [
-        SearchResult(
-            title=item.get("title", ""),
-            url=item["url"],
-            snippet=item.get("snippet"),
-        )
-        for item in data["results"]
-        if isinstance(item, dict) and item.get("url")
-    ]
+    if not results:
+        logger.warning("[WebSearch] no results for query=%s", search_query)
+
+    return results
 
 
 async def _augment_with_api_data(
@@ -392,6 +434,8 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
                 augmented,
                 cutoff_date,
             )
+        else:
+            augmented = await _fetch_live_snippets(augmented)
 
         logger.info("[WebSearch] Returning %d results", len(augmented))
         return mcp_success({"query": validated.query, "results": augmented})
@@ -818,10 +862,6 @@ async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Invalid input: {e}")
 
     url, prompt = inp.url, inp.prompt
-
-    for domain_key, hint in SUGGEST_ONLY.items():
-        if domain_key in url.lower():
-            return mcp_error(f"fetch_url is not optimal for this domain. {hint}")
 
     dispatched = await domain_dispatch(url)
     if dispatched is not None:

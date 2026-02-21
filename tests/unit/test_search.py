@@ -50,6 +50,11 @@ class TestWebSearchLiveMode:
                 new_callable=AsyncMock,
                 return_value=augmented,
             ),
+            patch(
+                "aib.tools.search._fetch_live_snippets",
+                new_callable=AsyncMock,
+                return_value=augmented,
+            ),
         ):
             result = await _handler({"query": "test"})
 
@@ -59,7 +64,8 @@ class TestWebSearchLiveMode:
         assert data["results"][0]["url"] == "https://example.com"
 
     @pytest.mark.asyncio
-    async def test_no_wayback_in_live_mode(self) -> None:
+    async def test_live_snippets_called_not_wayback(self) -> None:
+        augmented: list[AugmentedSearchResult] = []
         with (
             patch(
                 "aib.tools.search._raw_web_search",
@@ -69,8 +75,13 @@ class TestWebSearchLiveMode:
             patch(
                 "aib.tools.search._augment_with_api_data",
                 new_callable=AsyncMock,
-                return_value=[],
+                return_value=augmented,
             ),
+            patch(
+                "aib.tools.search._fetch_live_snippets",
+                new_callable=AsyncMock,
+                return_value=augmented,
+            ) as mock_live,
             patch(
                 "aib.tools.search._wayback_filter_non_api_results",
                 new_callable=AsyncMock,
@@ -78,6 +89,7 @@ class TestWebSearchLiveMode:
         ):
             await _handler({"query": "test"})
 
+        mock_live.assert_called_once_with(augmented)
         mock_wb.assert_not_called()
 
     @pytest.mark.asyncio
@@ -94,6 +106,11 @@ class TestWebSearchLiveMode:
                 new_callable=AsyncMock,
                 return_value=[],
             ) as mock_aug,
+            patch(
+                "aib.tools.search._fetch_live_snippets",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
         ):
             await _handler({"query": "test"})
 
