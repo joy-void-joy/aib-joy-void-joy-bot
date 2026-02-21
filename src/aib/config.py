@@ -99,8 +99,7 @@ class Settings(BaseSettings):
             return {}
         return {
             "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-            "ANTHROPIC_AUTH_TOKEN": self.openrouter_api_key,
-            "ANTHROPIC_API_KEY": "",
+            "ANTHROPIC_API_KEY": self.openrouter_api_key,
         }
 
     # === Model ===
