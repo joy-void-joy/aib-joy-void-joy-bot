@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from aib.agent.models import Factor
+from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSupport
 from aib.tools.reflection import (
     ReflectionInput,
     ReflectionOutput,
@@ -15,18 +15,36 @@ from aib.tools.reflection import (
 )
 
 
-def _make_input(
+def _make_binary_input(
     factors: list[Factor] | None = None,
     tentative_logit: float = 0.0,
     tentative_probability: float | None = None,
 ) -> ReflectionInput:
-    """Helper to create a ReflectionInput with sensible defaults."""
+    """Helper to create a ReflectionInput for binary questions."""
     if tentative_probability is None:
         tentative_probability = 1 / (1 + math.exp(-tentative_logit))
     return ReflectionInput(
         factors=factors or [],
-        tentative_logit=tentative_logit,
-        tentative_probability=tentative_probability,
+        tentative_estimate=BinaryEstimate(
+            logit=tentative_logit,
+            probability=tentative_probability,
+        ),
+        assessment="Test assessment.",
+        tool_audit="No tools used.",
+        process_reflection="Test reflection.",
+    )
+
+
+def _make_numeric_input(
+    factors: list[Factor] | None = None,
+    center: float = 100.0,
+    low: float = 90.0,
+    high: float = 110.0,
+) -> ReflectionInput:
+    """Helper to create a ReflectionInput for numeric questions."""
+    return ReflectionInput(
+        factors=factors or [],
+        tentative_estimate=NumericEstimate(center=center, low=low, high=high),
         assessment="Test assessment.",
         tool_audit="No tools used.",
         process_reflection="Test reflection.",
@@ -43,7 +61,7 @@ class TestComputeReflectionBinary:
             Factor(description="Evidence B", logit=-0.5, confidence=0.6),
         ]
         factor_sum = 1.0 * 0.8 + (-0.5) * 0.6  # 0.5
-        inp = _make_input(factors=factors, tentative_logit=factor_sum)
+        inp = _make_binary_input(factors=factors, tentative_logit=factor_sum)
 
         result = compute_reflection(inp, "binary")
 
@@ -56,7 +74,7 @@ class TestComputeReflectionBinary:
         factors = [
             Factor(description="Strong evidence", logit=2.0, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_binary_input(factors=factors, tentative_logit=1.0)
 
         result = compute_reflection(inp, "binary")
 
@@ -72,7 +90,7 @@ class TestComputeReflectionBinary:
         factors = [
             Factor(description="Moderate positive", logit=1.0, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0, tentative_probability=0.73)
+        inp = _make_binary_input(factors=factors, tentative_logit=1.0, tentative_probability=0.73)
 
         result = compute_reflection(inp, "binary")
 
@@ -86,7 +104,7 @@ class TestComputeReflectionBinary:
             Factor(description="Positive A", logit=1.0, confidence=0.8),
             Factor(description="Positive B", logit=0.5, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=-1.0)
+        inp = _make_binary_input(factors=factors, tentative_logit=-1.0)
 
         result = compute_reflection(inp, "binary")
 
@@ -96,7 +114,7 @@ class TestComputeReflectionBinary:
 
     def test_empty_factors(self) -> None:
         """Empty factor list should give factor_sum = 0."""
-        inp = _make_input(factors=[], tentative_logit=0.5)
+        inp = _make_binary_input(factors=[], tentative_logit=0.5)
 
         result = compute_reflection(inp, "binary")
 
@@ -106,48 +124,118 @@ class TestComputeReflectionBinary:
 
 
 class TestComputeReflectionNumeric:
-    """Tests for non-binary question reflection computation."""
+    """Tests for numeric question reflection with NumericSupport factors."""
 
-    def test_returns_outcome_breakdown(self) -> None:
-        """Numeric questions should get per-outcome breakdown, not probability."""
+    def test_distribution_metrics_computed(self) -> None:
+        """Numeric factors with NumericSupport should produce distribution metrics."""
         factors = [
-            Factor(description="Upward pressure", supports="Higher", logit=1.5, confidence=0.9),
-            Factor(description="Some drag", supports="Lower", logit=0.3, confidence=0.7),
+            Factor(
+                description="Historical avg",
+                supports=NumericSupport(center=100.0, low=90.0, high=110.0),
+                logit=1.0,
+                confidence=1.0,
+            ),
+            Factor(
+                description="Recent uptick",
+                supports=NumericSupport(center=120.0, low=110.0, high=130.0),
+                logit=0.5,
+                confidence=1.0,
+            ),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_numeric_input(factors=factors, center=108.0, low=95.0, high=120.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.outcome_breakdown is not None
-        assert len(result.outcome_breakdown) == 2
+        assert result.distribution_metrics is not None
         assert result.factor_implied_probability is None
         assert result.gap_pp is None
+        # Weighted avg: (100*1.0 + 120*0.5) / 1.5 = 106.67
+        assert result.distribution_metrics.implied_median == pytest.approx(106.67, abs=0.01)
 
-    def test_groups_by_outcome(self) -> None:
-        """Factors with the same supports value should be grouped."""
+    def test_weighted_average_by_effective_logit(self) -> None:
+        """Distribution metrics should weight by abs(effective_logit)."""
         factors = [
-            Factor(description="Evidence A", supports="Higher", logit=1.0, confidence=1.0),
-            Factor(description="Evidence B", supports="Higher", logit=0.5, confidence=1.0),
-            Factor(description="Evidence C", supports="Lower", logit=2.0, confidence=1.0),
+            Factor(
+                description="Strong signal",
+                supports=NumericSupport(center=200.0, low=180.0, high=220.0),
+                logit=2.0,
+                confidence=1.0,
+            ),
+            Factor(
+                description="Weak signal",
+                supports=NumericSupport(center=100.0, low=80.0, high=120.0),
+                logit=0.5,
+                confidence=1.0,
+            ),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_numeric_input(factors=factors, center=180.0, low=160.0, high=200.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.outcome_breakdown is not None
-        by_outcome = {ob.outcome: ob for ob in result.outcome_breakdown}
-        assert by_outcome["Higher"].factor_count == 2
-        assert by_outcome["Higher"].logit_sum == pytest.approx(1.5)
-        assert by_outcome["Lower"].factor_count == 1
+        assert result.distribution_metrics is not None
+        # Weighted: (200*2.0 + 100*0.5) / 2.5 = 180.0
+        assert result.distribution_metrics.implied_median == pytest.approx(180.0)
 
-    def test_empty_factors_no_breakdown(self) -> None:
-        """Empty factor list should give empty outcome breakdown."""
-        inp = _make_input(factors=[], tentative_logit=0.0)
+    def test_spread_ratio(self) -> None:
+        """Spread ratio = agent's range / implied range."""
+        factors = [
+            Factor(
+                description="Evidence",
+                supports=NumericSupport(center=50.0, low=40.0, high=60.0),
+                logit=1.0,
+                confidence=1.0,
+            ),
+        ]
+        # Agent range = 30, implied range = 20 → ratio = 1.5
+        inp = _make_numeric_input(factors=factors, center=50.0, low=35.0, high=65.0)
 
         result = compute_reflection(inp, "numeric")
 
-        assert result.outcome_breakdown is not None
-        assert len(result.outcome_breakdown) == 0
+        assert result.distribution_metrics is not None
+        assert result.distribution_metrics.spread_ratio == pytest.approx(1.5)
+
+    def test_median_gap_as_pct(self) -> None:
+        """Median gap should be expressed as % of implied range."""
+        factors = [
+            Factor(
+                description="Evidence",
+                supports=NumericSupport(center=100.0, low=80.0, high=120.0),
+                logit=1.0,
+                confidence=1.0,
+            ),
+        ]
+        # Agent center=110, implied center=100, implied range=40 → gap=10, pct=25%
+        inp = _make_numeric_input(factors=factors, center=110.0, low=90.0, high=130.0)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.distribution_metrics is not None
+        assert result.distribution_metrics.median_gap == pytest.approx(10.0)
+        assert result.distribution_metrics.median_gap_pct == pytest.approx(25.0)
+
+    def test_empty_factors_no_metrics(self) -> None:
+        """Empty factor list should give no distribution metrics."""
+        inp = _make_numeric_input(factors=[])
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.distribution_metrics is None
+
+    def test_zero_weight_factors_no_metrics(self) -> None:
+        """Factors with zero effective logit should produce no metrics."""
+        factors = [
+            Factor(
+                description="Zero weight",
+                supports=NumericSupport(center=100.0, low=90.0, high=110.0),
+                logit=0.0,
+                confidence=1.0,
+            ),
+        ]
+        inp = _make_numeric_input(factors=factors)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.distribution_metrics is None
 
 
 class TestNeutralAndDominant:
@@ -160,7 +248,7 @@ class TestNeutralAndDominant:
             Factor(description="Also neutral", logit=-0.03, confidence=1.0),
             Factor(description="Not neutral", logit=0.5, confidence=1.0),
         ]
-        inp = _make_input(factors=factors, tentative_logit=0.5)
+        inp = _make_binary_input(factors=factors, tentative_logit=0.5)
 
         result = compute_reflection(inp, "binary")
 
@@ -173,7 +261,7 @@ class TestNeutralAndDominant:
             Factor(description="Strong", logit=2.0, confidence=0.9),
             Factor(description="Medium", logit=-1.0, confidence=0.8),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_binary_input(factors=factors, tentative_logit=1.0)
 
         result = compute_reflection(inp, "binary")
 
@@ -189,7 +277,7 @@ class TestFactorBreakdown:
         factors = [
             Factor(description="Test", logit=2.0, confidence=0.7),
         ]
-        inp = _make_input(factors=factors, tentative_logit=1.0)
+        inp = _make_binary_input(factors=factors, tentative_logit=1.0)
 
         result = compute_reflection(inp, "binary")
 
@@ -203,7 +291,7 @@ class TestFileWriting:
     @pytest.mark.asyncio
     async def test_creates_reflection_yaml(self, tmp_path: Path) -> None:
         """reflection() should create reflection.yaml."""
-        inp = _make_input(
+        inp = _make_binary_input(
             factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
             tentative_logit=0.8,
         )
@@ -220,11 +308,11 @@ class TestFileWriting:
     @pytest.mark.asyncio
     async def test_appends_multiple_entries(self, tmp_path: Path) -> None:
         """Multiple calls should append to the same file."""
-        inp1 = _make_input(
+        inp1 = _make_binary_input(
             factors=[Factor(description="First", logit=1.0, confidence=1.0)],
             tentative_logit=1.0,
         )
-        inp2 = _make_input(
+        inp2 = _make_binary_input(
             factors=[Factor(description="Second", logit=-2.0, confidence=0.5)],
             tentative_logit=1.5,
         )
@@ -240,7 +328,7 @@ class TestFileWriting:
     @pytest.mark.asyncio
     async def test_optional_fields_excluded(self, tmp_path: Path) -> None:
         """Optional fields that are None should not appear in YAML."""
-        inp = _make_input(tentative_logit=0.0)
+        inp = _make_binary_input(tentative_logit=0.0)
         computed = compute_reflection(inp, "binary")
 
         await _append_reflection(tmp_path, inp, computed, "binary")
@@ -254,8 +342,7 @@ class TestFileWriting:
         """Optional fields should appear when provided."""
         inp = ReflectionInput(
             factors=[],
-            tentative_logit=0.0,
-            tentative_probability=0.5,
+            tentative_estimate=BinaryEstimate(logit=0.0, probability=0.5),
             assessment="Strong positive evidence outweighs base rate concerns.",
             tool_audit="web_search worked well, fred_series returned empty",
             process_reflection="Missing a tool for satellite imagery analysis",
@@ -278,13 +365,13 @@ class TestSourcesInOutput:
 
     def test_sources_default_empty(self) -> None:
         """Output should have empty sources by default."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         result = compute_reflection(inp, "binary")
         assert result.sources == []
 
     def test_sources_populated_externally(self) -> None:
         """Sources can be injected after computation."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         result = compute_reflection(inp, "binary")
         result.sources = ["https://example.com", "https://other.org"]
         dumped = result.model_dump(exclude_none=True)
@@ -296,20 +383,20 @@ class TestReviewerCritique:
 
     def test_reviewer_critique_default_none(self) -> None:
         """Output should have None reviewer_critique by default."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         result = compute_reflection(inp, "binary")
         assert result.reviewer_critique is None
 
     def test_reviewer_critique_excluded_when_none(self) -> None:
         """reviewer_critique should not appear in dump when None."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         result = compute_reflection(inp, "binary")
         dumped = result.model_dump(exclude_none=True)
         assert "reviewer_critique" not in dumped
 
     def test_reviewer_critique_included_when_set(self) -> None:
         """reviewer_critique should appear in dump when populated."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         result = compute_reflection(inp, "binary")
         result.reviewer_critique = "The factors seem one-sided."
         dumped = result.model_dump(exclude_none=True)
@@ -321,7 +408,7 @@ class TestBuildReviewerPrompt:
 
     def test_includes_question_context(self) -> None:
         """Prompt should include question title and type."""
-        inp = _make_input(
+        inp = _make_binary_input(
             factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
             tentative_logit=0.8,
         )
@@ -335,7 +422,7 @@ class TestBuildReviewerPrompt:
 
     def test_includes_factors(self) -> None:
         """Prompt should list all factors."""
-        inp = _make_input(
+        inp = _make_binary_input(
             factors=[
                 Factor(description="Strong signal", logit=2.0, confidence=0.9),
                 Factor(description="Weak counter", logit=-0.5, confidence=0.7),
@@ -351,7 +438,7 @@ class TestBuildReviewerPrompt:
 
     def test_includes_trace(self) -> None:
         """Prompt should reference the trace file."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 
@@ -361,7 +448,7 @@ class TestBuildReviewerPrompt:
 
     def test_trace_file_path_included(self) -> None:
         """Prompt should reference the trace file path."""
-        inp = _make_input(tentative_logit=0.5)
+        inp = _make_binary_input(tentative_logit=0.5)
         computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 

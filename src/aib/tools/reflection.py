@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from claude_agent_sdk import tool
 
 from aib.agent.hooks import HooksConfig
-from aib.agent.models import Factor
+from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSupport
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
@@ -46,15 +46,11 @@ class ReflectionInput(BaseModel):
             "Same format as your final forecast factors."
         )
     )
-    tentative_logit: float = Field(
-        description="Your current synthesized log-odds estimate."
-    )
-    tentative_probability: float = Field(
+    tentative_estimate: BinaryEstimate | NumericEstimate = Field(
         description=(
-            "Your current probability estimate (0.0-1.0). "
-            "For binary: your forecast probability. "
-            "For MC: probability of the most likely option. "
-            "This is the number you plan to submit."
+            "Your synthesized estimate. "
+            "Binary: {logit, probability}. "
+            "Numeric/discrete: {center, low, high}."
         ),
     )
     assessment: str = Field(
@@ -110,7 +106,7 @@ class FactorBreakdown(BaseModel):
     """Per-factor effective logit computation."""
 
     description: str
-    supports: str | float | None = None
+    supports: str | float | NumericSupport | None = None
     logit: float
     confidence: float
     effective_logit: float
@@ -118,12 +114,23 @@ class FactorBreakdown(BaseModel):
 
 
 class OutcomeBreakdown(BaseModel):
-    """Per-outcome factor aggregation for non-binary questions."""
+    """Per-outcome factor aggregation for MC questions."""
 
-    outcome: str | float
+    outcome: str
     factor_count: int
     logit_sum: float
     factors: list[FactorBreakdown]
+
+
+class NumericDistributionMetrics(BaseModel):
+    """Distribution-level consistency metrics for numeric/discrete questions."""
+
+    implied_median: float
+    implied_p10: float
+    implied_p90: float
+    median_gap: float
+    median_gap_pct: float
+    spread_ratio: float
 
 
 class ReflectionOutput(BaseModel):
@@ -143,8 +150,11 @@ class ReflectionOutput(BaseModel):
     tentative_probability: float | None = None
     gap_pp: float | None = None
 
-    # Non-binary: per-outcome aggregation
+    # MC: per-outcome aggregation
     outcome_breakdown: list[OutcomeBreakdown] | None = None
+
+    # Numeric/discrete: distribution-level metrics
+    distribution_metrics: NumericDistributionMetrics | None = None
 
     # Sources consulted so far (populated from infrastructure)
     sources: list[str] = Field(default_factory=list)
@@ -154,6 +164,46 @@ class ReflectionOutput(BaseModel):
 
 
 # --- Computation ---
+
+
+def _compute_distribution_metrics(
+    breakdown: list[FactorBreakdown],
+    tentative: NumericEstimate,
+) -> NumericDistributionMetrics | None:
+    """Compute distribution-level consistency for numeric/discrete factors.
+
+    Uses abs(effective_logit) as the weight for each factor's center/range.
+    """
+    pairs: list[tuple[NumericSupport, float]] = [
+        (fb.supports, abs(fb.effective_logit))
+        for fb in breakdown
+        if isinstance(fb.supports, NumericSupport)
+    ]
+    if not pairs:
+        return None
+
+    total_weight = sum(w for _, w in pairs)
+    if total_weight == 0:
+        return None
+
+    implied_median = sum(s.center * w for s, w in pairs) / total_weight
+    implied_p10 = sum(s.low * w for s, w in pairs) / total_weight
+    implied_p90 = sum(s.high * w for s, w in pairs) / total_weight
+
+    implied_range = implied_p90 - implied_p10
+    tentative_range = tentative.high - tentative.low
+    median_gap = tentative.center - implied_median
+    median_gap_pct = (median_gap / implied_range * 100) if implied_range > 0 else 0.0
+    spread_ratio = (tentative_range / implied_range) if implied_range > 0 else 0.0
+
+    return NumericDistributionMetrics(
+        implied_median=implied_median,
+        implied_p10=implied_p10,
+        implied_p90=implied_p90,
+        median_gap=median_gap,
+        median_gap_pct=median_gap_pct,
+        spread_ratio=spread_ratio,
+    )
 
 
 def compute_reflection(
@@ -178,30 +228,40 @@ def compute_reflection(
     neutral_count = sum(1 for f in inp.factors if abs(f.logit) < NEUTRAL_THRESHOLD)
     dominant = max(breakdown, key=lambda fb: abs(fb.effective_logit), default=None)
 
+    estimate = inp.tentative_estimate
+    if isinstance(estimate, BinaryEstimate):
+        tentative_logit = estimate.logit
+    else:
+        tentative_logit = 0.0
+
     output = ReflectionOutput(
         factor_count=len(inp.factors),
         factor_sum=factor_sum,
-        tentative_logit=inp.tentative_logit,
-        logit_gap=inp.tentative_logit - factor_sum,
+        tentative_logit=tentative_logit,
+        logit_gap=tentative_logit - factor_sum,
         neutral_factor_count=neutral_count,
         factor_breakdown=breakdown,
         dominant_factor=dominant.description if dominant else None,
         dominant_effective_logit=dominant.effective_logit if dominant else None,
     )
 
-    if question_type == "binary":
+    if question_type == "binary" and isinstance(estimate, BinaryEstimate):
         output.factor_implied_probability = 1 / (1 + math.exp(-factor_sum))
-        output.tentative_probability = inp.tentative_probability
+        output.tentative_probability = estimate.probability
         output.gap_pp = (
-            inp.tentative_probability - output.factor_implied_probability
+            estimate.probability - output.factor_implied_probability
         ) * 100
-    else:
-        # Group factors by supported outcome
+    elif question_type in ("numeric", "discrete"):
+        assert isinstance(estimate, NumericEstimate)
+        output.distribution_metrics = _compute_distribution_metrics(
+            breakdown, estimate
+        )
+    elif question_type == "multiple_choice":
         from collections import defaultdict
 
-        by_outcome: dict[str | float, list[FactorBreakdown]] = defaultdict(list)
+        by_outcome: dict[str, list[FactorBreakdown]] = defaultdict(list)
         for fb in breakdown:
-            if fb.supports is not None:
+            if isinstance(fb.supports, str):
                 by_outcome[fb.supports].append(fb)
 
         output.outcome_breakdown = [
@@ -367,14 +427,20 @@ def _build_reviewer_prompt(
         if fine_print:
             sections.append(f"Fine print: {fine_print}")
 
-    factors_text = "\n".join(
-        (f"- [{f.supports}] " if f.supports is not None else "- ")
-        + f"{f.description} "
-        + f"(logit={f.logit:+.1f}, confidence={f.confidence}, "
-        + f"effective={f.logit * f.confidence:+.2f})"
-        for f in inp.factors
-    )
-    sections.append(f"## Factors\n\n{factors_text}")
+    factor_lines: list[str] = []
+    for f in inp.factors:
+        if isinstance(f.supports, NumericSupport):
+            prefix = f"- [{f.supports.center} ({f.supports.low}–{f.supports.high})] "
+        elif f.supports is not None:
+            prefix = f"- [{f.supports}] "
+        else:
+            prefix = "- "
+        factor_lines.append(
+            f"{prefix}{f.description} "
+            f"(logit={f.logit:+.1f}, confidence={f.confidence}, "
+            f"effective={f.logit * f.confidence:+.2f})"
+        )
+    sections.append("## Factors\n\n" + "\n".join(factor_lines))
 
     if computed.factor_implied_probability is not None:
         sections.append(
@@ -382,6 +448,15 @@ def _build_reviewer_prompt(
             f"Factor-implied: {computed.factor_implied_probability:.1%}\n"
             f"Agent's probability: {computed.tentative_probability:.1%}\n"
             f"Gap: {computed.gap_pp:+.1f}pp"
+        )
+    elif computed.distribution_metrics:
+        dm = computed.distribution_metrics
+        sections.append(
+            f"## Distribution Metrics\n\n"
+            f"Implied median: {dm.implied_median:.4g}\n"
+            f"Implied range: [{dm.implied_p10:.4g}, {dm.implied_p90:.4g}]\n"
+            f"Median gap: {dm.median_gap:+.4g} ({dm.median_gap_pct:+.1f}% of range)\n"
+            f"Spread ratio: {dm.spread_ratio:.2f}"
         )
     elif computed.outcome_breakdown:
         lines = []
@@ -536,27 +611,35 @@ async def _run_reviewer(
 # --- Tool ---
 
 _REFLECTION_DESCRIPTION = """\
-Checkpoint your reasoning by committing to factors, a logit, and a probability.
+Checkpoint your reasoning by committing to factors and a tentative estimate.
 
-Returns: factor-consistency metrics, per-outcome breakdowns (for MC/numeric),
-sources consulted, and an independent reviewer audit that checks for errors
-in both directions (overconfidence AND underconfidence/hedging).
+Returns: factor-consistency metrics, distribution metrics (for numeric/discrete),
+per-outcome breakdowns (for MC), sources consulted, and an independent reviewer
+audit that checks for errors in both directions.
 
 Call at least once before your final StructuredOutput. Use skip_reviewer=True
 for intermediate checkpoints where you only need metrics.
 
-Example:
+Binary example:
   reflection(
     factors=[
       {"description": "Strong trend in data", "logit": 1.5, "confidence": 0.8},
       {"description": "Status quo persistence", "logit": -0.5, "confidence": 0.7}
     ],
-    tentative_logit=0.8,
-    tentative_probability=0.69,
-    assessment="Data shows consistent upward trend across 3 sources, but the historical base rate for this type of change is only 30%.",
-    tool_audit="search_exa provided good results. fetch_url failed on the government stats page (403).",
-    process_reflection="Web search and FRED covered what I needed. Numeric CDF step felt like guessing.",
-    next_steps="Will check the official government release schedule next."
+    tentative_estimate={"logit": 0.8, "probability": 0.69},
+    assessment="Data shows consistent upward trend, but base rate is only 30%.",
+    ...
+  )
+
+Numeric example:
+  reflection(
+    factors=[
+      {"description": "Historical avg is 145", "supports": {"center": 145, "low": 140, "high": 150}, "logit": 1.0, "confidence": 0.9},
+      {"description": "Recent uptick suggests higher", "supports": {"center": 152, "low": 148, "high": 158}, "logit": 0.8, "confidence": 0.7}
+    ],
+    tentative_estimate={"center": 148, "low": 142, "high": 155},
+    assessment="Historical data centers around 145 but recent trend pushes higher.",
+    ...
   )
 """
 

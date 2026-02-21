@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from aib.agent.models import ForecastOutput
+from aib.agent.models import ForecastOutput, NumericSupport
 from aib.clients.metaculus import get_client
 
 logger = logging.getLogger(__name__)
@@ -218,7 +218,12 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
             conf_note = (
                 f" (conf: {factor.confidence:.0%})" if factor.confidence < 1 else ""
             )
-            if factor.supports is not None:
+            if isinstance(factor.supports, NumericSupport):
+                lines.append(
+                    f"- [{factor.supports.center} ({factor.supports.low}–{factor.supports.high}), "
+                    f"{factor.logit:+.1f}] {factor.description}{conf_note}"
+                )
+            elif factor.supports is not None:
                 lines.append(
                     f"- [{factor.supports}, {factor.logit:+.1f}] {factor.description}{conf_note}"
                 )

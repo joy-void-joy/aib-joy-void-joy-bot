@@ -59,7 +59,7 @@ def create_structured_output_hooks(reflection_path: Path | None = None) -> Hooks
                     "permissionDecision": "deny",
                     "permissionDecisionReason": (
                         "You must call reflection(...) with your factors "
-                        "and tentative logit BEFORE providing your final "
+                        "and tentative estimate BEFORE providing your final "
                         "forecast. Run your reflection first, then call "
                         "StructuredOutput again."
                     ),

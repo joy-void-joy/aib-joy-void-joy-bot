@@ -1260,7 +1260,7 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
         has_comment,
         mark_comment_posted,
     )
-    from aib.agent.models import Factor, ForecastOutput
+    from aib.agent.models import ForecastOutput, validate_factor
     from aib.clients.metaculus import get_client
     from aib.paths import get_all_forecasted_post_ids
 
@@ -1304,7 +1304,7 @@ async def _backfill_comments_async(dry_run: bool, force: bool) -> None:
             question_title=saved.question_title,
             question_type=saved.question_type,
             summary=saved.summary,
-            factors=[Factor.model_validate(f) for f in saved.factors],
+            factors=[validate_factor(f) for f in saved.factors],
             probability=saved.probability,
             logit=saved.logit,
             probabilities=saved.probabilities,

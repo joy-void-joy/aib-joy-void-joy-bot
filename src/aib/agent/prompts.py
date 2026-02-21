@@ -50,7 +50,7 @@ Every factor has:
 - **logit** — strength and direction. For binary: positive = Yes, negative = No. For MC/numeric: positive = toward the supported outcome, negative = against it.
 - **confidence** (0-1) — scales the effective logit. Use lower confidence for single sources, outdated information, indirect relevance, or extrapolation beyond observed data
 - **conditional** (optional) — condition under which this factor applies (e.g., "If the coalition talks succeed")
-- **supports** (MC/numeric only) — which outcome this evidence points toward (an option label for MC, a numeric value for numeric)
+- **supports** (MC/numeric only) — which outcome this evidence points toward. For MC: an option label. For numeric/discrete: `{"center": best_guess, "low": p10, "high": p90}` — each factor is a mini-distribution, not a point estimate
 
 Your factors imply a probability via sigmoid(sum(effective_logits)). Your final probability is your decision, but when your factors encode concrete evidence, that implied probability IS your evidence-based estimate. If your final logit differs from the factor sum, consider making the implicit adjustment into an explicit factor — hidden reasoning outside your factor list is the same pattern as dampening Monte Carlo results toward neutral.
 
@@ -297,27 +297,30 @@ The reflection log also drives system evolution — your process reflection and 
 
 ### What to provide:
 
-**1. Factors** — your current evidence list (description, supports, logit, confidence). Same factors that will go into your final output.
+**1. Factors** — your current evidence list (description, supports, logit, confidence). Same factors that will go into your final output. For numeric/discrete, each factor's `supports` is `{center, low, high}` — the distribution this evidence implies.
 
-**2. Tentative logit** — your current best estimate in log-odds.
+**2. Tentative estimate** — your synthesized estimate. For binary: `{logit, probability}`. For numeric/discrete: `{center, low, high}`. The reviewer compares this to what your factors imply — if you're hedging, the reviewer will call it out.
 
-**3. Tentative probability** — your current best estimate as a probability (0.0-1.0). This is the number you plan to submit. The reviewer will compare it to what your factors imply — if you're hedging toward 50%, the reviewer will call it out.
+**3. Assessment** — freeform narrative assessment. Structure however fits: pro/con for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
 
-**4. Assessment** — freeform narrative assessment. Structure however fits: pro/con for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
+**4. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
 
-**5. Tool audit** — which tools provided useful information, which returned empty results (and why that's informative), and which had actual failures. Distinguish between tool failures (HTTP errors, timeouts, crashes) and empty results (tool worked correctly, information doesn't exist).
+**5. Process reflection** — how did the forecasting system feel to use — not what you did, but how the scaffolding supported you. What felt rigid or lacking, what felt smooth? What tools are missing that would have helped? What subagents would have been useful? Did the prompt guide you well or lead you astray for this question type? Where did you hit friction — a tool returning junk, a forced workaround, a missing capability? Be specific; this feedback shapes how the system evolves.
 
-**6. Process reflection** — how did the forecasting system feel to use — not what you did, but how the scaffolding supported you. What felt rigid or lacking, what felt smooth? What tools are missing that would have helped? What subagents would have been useful? Did the prompt guide you well or lead you astray for this question type? Where did you hit friction — a tool returning junk, a forced workaround, a missing capability? Be specific; this feedback shapes how the system evolves.
+**6. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
 
-**7. Calibration notes** (optional) — base rates, status quo assessment, hedging check. For numeric questions: are my intervals derived from quantitative data, or am I guessing at widths?
+**7. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
 
-**8. Key uncertainties** (optional) — what you're most uncertain about and what would change your mind.
+**8. Update triggers** (optional) — what events would move your forecast significantly?
 
-**9. Update triggers** (optional) — what events would move your forecast significantly?
+**9. Next steps** (optional) — what you plan to research or verify next. Helps the reviewer focus on gaps you haven't identified yet.
 
-**10. Next steps** (optional) — what you plan to research or verify next. Helps the reviewer focus on gaps you haven't identified yet.
+**10. skip_reviewer** (optional, default false) — skip the reviewer sub-agent. Useful for intermediate reflection calls where you want metrics but don't need a full review yet, or for simple questions where the computed metrics suffice.
 
-**11. skip_reviewer** (optional, default false) — skip the reviewer sub-agent. Useful for intermediate reflection calls where you want metrics but don't need a full review yet, or for simple questions where the computed metrics suffice.
+For numeric/discrete questions, the distribution metrics tell you:
+- **Implied median/range** — weighted average of your factors' center/low/high values (weighted by abs(effective_logit))
+- **Median gap** — how far your tentative center is from the factor-implied median (as % of implied range)
+- **Spread ratio** — your range divided by the factor-implied range (>1 means you're wider, <1 means narrower)
 
 Ground this in the specifics of THIS forecast — generic reflections that could apply to any question aren't useful.
 

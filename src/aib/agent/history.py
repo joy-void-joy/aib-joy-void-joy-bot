@@ -527,7 +527,7 @@ def load_latest_for_submission(
         question_title=latest.question_title,
         question_type=latest.question_type,
         summary=latest.summary,
-        factors=[models.Factor.model_validate(f) for f in latest.factors],
+        factors=[models.validate_factor(f) for f in latest.factors],
         probability=latest.probability,
         logit=latest.logit,
         probabilities=latest.probabilities,

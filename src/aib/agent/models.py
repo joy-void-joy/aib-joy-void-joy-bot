@@ -105,11 +105,39 @@ class CreditExhaustedError(Exception):
         return cls(message, reset_time)
 
 
+class BinaryEstimate(BaseModel):
+    """Tentative estimate for binary questions."""
+
+    logit: float = Field(description="Synthesized log-odds estimate.")
+    probability: float = Field(description="Probability estimate (0.0-1.0).")
+
+
+class NumericEstimate(BaseModel):
+    """Tentative estimate for numeric/discrete questions."""
+
+    center: float = Field(description="Best-guess median value.")
+    low: float = Field(description="10th percentile estimate.")
+    high: float = Field(description="90th percentile estimate.")
+
+
+class NumericSupport(BaseModel):
+    """Distributional evidence for numeric/discrete questions.
+
+    Each factor contributes a mini-distribution rather than a point estimate,
+    preventing point-estimate anchoring and enabling distribution-level
+    consistency checks in reflection.
+    """
+
+    center: float = Field(description="Best guess from this evidence alone.")
+    low: float = Field(description="10th percentile from this evidence alone.")
+    high: float = Field(description="90th percentile from this evidence alone.")
+
+
 class Factor(BaseModel):
     """A piece of evidence that influences the forecast."""
 
     description: str = Field(description="What this evidence is and why it matters.")
-    supports: str | float | None = Field(
+    supports: str | float | NumericSupport | None = Field(
         default=None,
         description="Which outcome this evidence supports (for MC/numeric questions).",
     )
@@ -163,7 +191,7 @@ def create_factor_model(
         case "multiple_choice" if options:
             supports_type = cast(type, StrEnum("Supports", {o: o for o in options}))
         case "numeric" | "discrete":
-            supports_type = float
+            supports_type = NumericSupport
         case _:
             return Factor
 
@@ -172,6 +200,26 @@ def create_factor_model(
         __base__=Factor,
         supports=(supports_type, Field(description="Which outcome this evidence supports.")),
     )
+
+
+def validate_factor(data: dict) -> Factor:
+    """Validate a factor dict with backward-compatible deserialization.
+
+    Old JSON forecasts store numeric supports as a bare float. This wraps
+    bare floats into NumericSupport(center=x, low=x, high=x) so that
+    downstream code can always expect NumericSupport for numeric factors.
+    """
+    supports = data.get("supports")
+    if isinstance(supports, (int, float)):
+        data = {
+            **data,
+            "supports": NumericSupport(
+                center=float(supports),
+                low=float(supports),
+                high=float(supports),
+            ).model_dump(),
+        }
+    return Factor.model_validate(data)
 
 
 def create_forecast_model(
