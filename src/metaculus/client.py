@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import httpx
-from bs4 import BeautifulSoup
+
 from tenacity import (
     RetryCallState,
     retry,
@@ -33,29 +33,6 @@ logger = logging.getLogger(__name__)
 
 API_BASE_URL = os.getenv("METACULUS_API_BASE_URL", "https://www.metaculus.com/api")
 
-
-def _parse_html_api_response(html: str) -> dict[str, Any] | None:
-    """Parse JSON from the DRF browsable API HTML response.
-
-    The Metaculus API serves a Django REST Framework browsable page when
-    Accept: text/html is sent. The page embeds the full JSON response
-    (including description fields that the JSON API now omits) inside a
-    <div class="response-info"> element.
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    response_div = soup.find("div", class_="response-info")
-    if response_div is None:
-        return None
-
-    raw = response_div.get_text()
-    json_start = raw.find("{")
-    if json_start == -1:
-        return None
-
-    try:
-        return json.loads(raw[json_start:])
-    except json.JSONDecodeError:
-        return None
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -183,38 +160,47 @@ class AsyncMetaculusClient:
         The Metaculus /api/posts/ endpoint may return null for various question
         fields. Two fallback sources are tried in order:
 
-        1. HTML API — The DRF browsable HTML page includes description,
-           resolution_criteria, and fine_print that the JSON API omits.
-           Skipped when include_text=False.
+        1. Title search — Find a duplicate question (same title, different post)
+           with non-null text fields and copy them. Skipped when include_text=False.
         2. Old API — The /api2/questions/ endpoint (unauthenticated) returns
            resolution and aggregation data hidden from tournament participants.
 
         Args:
-            include_text: If False, skip HTML enrichment for description/criteria
-                fields. Use this when you only need resolution + aggregation data.
+            include_text: If False, skip title-search enrichment for text fields.
+                Use this when you only need resolution + aggregation data.
         """
         question = post_json.get("question") or {}
         has_nulls = any(v is None for v in question.values())
         if not has_nulls:
             return post_json
 
-        # HTML enrichment for text fields (description, criteria, fine_print)
         text_fields = ("description", "resolution_criteria", "fine_print")
         if include_text and any(question.get(f) is None for f in text_fields):
-            await self._throttle()
-            response = await client.get(
-                f"{self.base_url}/posts/{post_id}/",
-                headers={**self._get_headers(), "Accept": "text/html"},
-            )
-            if response.status_code == 200:
-                html_data = _parse_html_api_response(response.text)
-                if html_data is not None:
-                    html_question = html_data.get("question") or {}
-                    question = {
-                        **html_question,
-                        **{k: v for k, v in question.items() if v is not None},
-                    }
-                    post_json = {**post_json, "question": question}
+            title = question.get("title") or ""
+            if title:
+                try:
+                    candidates = await self.fetch_posts_list(
+                        {"search": title, "limit": 5}
+                    )
+                except httpx.HTTPError:
+                    candidates = []
+                for candidate in candidates:
+                    if candidate.get("id") == post_id:
+                        continue
+                    cq = candidate.get("question") or {}
+                    if cq.get("title") == title and any(
+                        cq.get(f) is not None for f in text_fields
+                    ):
+                        for f in text_fields:
+                            if question.get(f) is None and cq.get(f) is not None:
+                                question[f] = cq[f]
+                        post_json = {**post_json, "question": question}
+                        logger.debug(
+                            "Enriched post %d text fields from post %d",
+                            post_id,
+                            candidate["id"],
+                        )
+                        break
 
         return await self._enrich_from_old_api(post_json, client, post_id)
 

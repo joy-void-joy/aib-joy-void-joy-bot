@@ -112,14 +112,16 @@ class SearchMetaculusInput(BaseModel):
 class CoherenceLinksInput(BaseModel):
     """Input for fetching coherence links."""
 
-    question_id: int = Field(description="Metaculus question ID (not post ID)")
+    post_id: int = Field(
+        description="Metaculus post ID (the number in the URL, e.g. metaculus.com/questions/{post_id})"
+    )
 
 
 class CPHistoryInput(BaseModel):
     """Input for fetching community prediction history."""
 
-    question_id: int = Field(
-        description="Metaculus question ID or post ID (auto-detected)"
+    post_id: int = Field(
+        description="Metaculus post ID (the number in the URL, e.g. metaculus.com/questions/{post_id})"
     )
     days: int = Field(default=30, description="Number of days of history to fetch")
 
@@ -143,7 +145,6 @@ class QuestionDict(TypedDict, total=False):
     """Metaculus question data returned by _question_to_dict."""
 
     post_id: int
-    question_id: int
     title: str
     type: str
     url: str
@@ -167,7 +168,9 @@ class CPHistoryEntry(BaseModel):
 class CPHistoryResponse(BaseModel):
     """Response from the get_cp_history tool."""
 
-    question_id: int
+    post_id: int
+    title: str
+    url: str
     days_requested: int
     data_points: int
     history: list[CPHistoryEntry]
@@ -180,17 +183,12 @@ class CPHistoryResponse(BaseModel):
 def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, object]:
     """Convert a MetaculusQuestion to a serializable dict.
 
-    Note: Returns both post_id and question_id. These are different:
-    - post_id: Used for URLs and local storage (e.g., metaculus.com/questions/{post_id})
-    - question_id: Used for certain API endpoints (get_coherence_links, get_cp_history)
-
     Args:
         question: MetaculusQuestion object.
         hide_cp: If True, exclude community_prediction (for retrodict mode).
     """
     result: dict[str, object] = {
         "post_id": question.id_of_post,
-        "question_id": question.id_of_question,  # Needed for get_coherence_links, get_cp_history
         "title": question.question_text,
         "type": question.get_question_type(),
         "url": question.page_url,
@@ -269,25 +267,15 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         return result
 
     async def fetch_one(post_id: int) -> dict[str, Any]:
-        """Fetch a single question, auto-detecting if a question_id was passed."""
+        """Fetch a single question by post_id."""
         try:
             result = await _fetch_metaculus_question(post_id)
             return await _apply_retrodict_filters(result)
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                resolved = await _resolve_question_to_post_id(post_id)
-                if resolved:
-                    try:
-                        result = await _fetch_metaculus_question(resolved)
-                        return await _apply_retrodict_filters(result)
-                    except Exception as retry_err:
-                        return {
-                            "post_id": post_id,
-                            "error": f"Resolved question {post_id} → post {resolved}, but fetch failed: {retry_err}",
-                        }
                 return {
                     "post_id": post_id,
-                    "error": f"ID {post_id} not found. You may have passed a question_id instead of a post_id. Use list_tournament_questions to find correct post IDs.",
+                    "error": f"Post {post_id} not found. Use list_tournament_questions to find correct post IDs.",
                 }
             return {"post_id": post_id, "error": f"HTTP {e.response.status_code}: {e}"}
         except Exception as e:
@@ -351,7 +339,6 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
         results = [
             {
                 "post_id": q.id_of_post,
-                "question_id": q.id_of_question,
                 "title": q.question_text,
                 "type": q.get_question_type(),
                 "url": q.page_url,
@@ -407,7 +394,6 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
         results = [
             {
                 "post_id": q.id_of_post,
-                "question_id": q.id_of_question,
                 "title": q.question_text,
                 "type": q.get_question_type(),
                 "url": q.page_url,
@@ -437,7 +423,9 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
         "USE THIS to check if your forecast is consistent with related questions — "
         "e.g., if you forecast 80% on 'Will X happen by 2027?', your forecast on "
         "'Will X happen by 2026?' should be ≤80%. "
-        "Requires question_id (not post_id) — get this from get_metaculus_questions."
+        "Pass the post_id (the number in the Metaculus URL).\n\n"
+        "Examples:\n"
+        "  get_coherence_links(post_id=42135) → find related questions"
     ),
     CoherenceLinksInput.model_json_schema(),
 )
@@ -449,14 +437,19 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    question_id = validated.question_id
+    post_id = validated.post_id
     try:
         client = get_metaculus_client()
-        links = await client.get_links_for_question(question_id)
+        question = await client.get_question_by_post_id(post_id)
+        if isinstance(question, list):
+            question = question[0]
+        links = await client.get_links_for_question(question.id_of_question)
         results = [
             {
-                "question1_id": link.question1_id,
-                "question2_id": link.question2_id,
+                "post_id_1": link.question1.id_of_post,
+                "title_1": link.question1.question_text,
+                "post_id_2": link.question2.id_of_post,
+                "title_2": link.question2.question_text,
                 "direction": link.direction,
                 "strength": link.strength,
                 "type": link.type,
@@ -478,7 +471,9 @@ def _format_timestamp(raw_ts: object) -> str:
 
 def _build_cp_history_response(
     aggregation: AggregationMethod,
-    question_id: int,
+    post_id: int,
+    title: str,
+    url: str,
     days: int,
     cutoff_dt: datetime | None,
 ) -> CPHistoryResponse:
@@ -520,60 +515,14 @@ def _build_cp_history_response(
         )
 
     return CPHistoryResponse(
-        question_id=question_id,
+        post_id=post_id,
+        title=title,
+        url=url,
         days_requested=days,
         data_points=len(entries),
         history=entries,
         note=note,
     )
-
-
-_post_id_cache: dict[int, int] = {}
-
-
-async def _resolve_question_to_post_id(question_id: int) -> int | None:
-    """Resolve a Metaculus question_id to its post_id."""
-    try:
-        client = get_metaculus_client()
-        data = await client.fetch_question_json(question_id)
-        post_id = data.get("post_id") or data.get("post", {}).get("id")
-        if post_id:
-            logger.info("Resolved question %d → post %d", question_id, post_id)
-        return post_id
-    except Exception:
-        logger.exception("Failed to resolve question_id %d to post_id", question_id)
-        return None
-
-
-async def _ensure_post_id(input_id: int) -> int | None:
-    """Resolve any Metaculus ID to a post_id.
-
-    Successful results are cached. Failures are NOT cached so transient
-    errors (429 rate limits) don't permanently break CP history lookups.
-    Uses MetaculusClient.fetch_post_json which has built-in retry logic.
-    """
-    if input_id in _post_id_cache:
-        return _post_id_cache[input_id]
-
-    client = get_metaculus_client()
-
-    # Try as post_id first (most common case) — uses retry
-    try:
-        post_json = await client.fetch_post_json(input_id)
-        q = post_json.get("question", {})
-        question_id = q.get("id")
-        if question_id is None or question_id == input_id:
-            _post_id_cache[input_id] = input_id
-            return input_id
-        # input_id collided with a different post — fall through
-    except Exception:
-        pass
-
-    # Try resolving as question_id
-    resolved = await _resolve_question_to_post_id(input_id)
-    if resolved is not None:
-        _post_id_cache[input_id] = resolved
-    return resolved
 
 
 @with_retry()
@@ -593,13 +542,13 @@ async def _fetch_aggregation(post_id: int) -> AggregationMethod:
         "ESSENTIAL for meta-prediction questions ('Will CP be above X%?') — "
         "shows CP trajectory over time to predict future movements. "
         "Also useful for checking consensus shifts on any question. "
-        "Pass any Metaculus ID (question_id or post_id) — auto-detected. "
+        "Pass the post_id (the number in the Metaculus URL). "
         "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP.\n\n"
         "Examples:\n"
-        "  get_cp_history(question_id=41906) → last 30 days of CP\n"
-        "  get_cp_history(question_id=41906, days=90) → last 90 days\n"
-        "For meta-predictions: pass the UNDERLYING question's ID (from the meta-question's description), "
-        "not the meta-question's own ID."
+        "  get_cp_history(post_id=42135) → last 30 days of CP\n"
+        "  get_cp_history(post_id=42135, days=90) → last 90 days\n"
+        "For meta-predictions: pass the UNDERLYING question's post_id "
+        "(from the meta-question's description), not the meta-question's own post_id."
     ),
     CPHistoryInput.model_json_schema(),
 )
@@ -611,7 +560,7 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    input_id = validated.question_id
+    post_id = validated.post_id
     days = min(validated.days, 365)
 
     cutoff_dt = None
@@ -621,13 +570,14 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
             tzinfo=timezone.utc
         )
 
-    post_id = await _ensure_post_id(input_id)
-    if post_id is None:
-        return mcp_error(f"Could not resolve ID {input_id} to a valid post.")
-
     try:
+        question_data = await _fetch_metaculus_question(post_id)
+        title = str(question_data.get("title", ""))
+        url = str(question_data.get("url", ""))
         aggregation = await _fetch_aggregation(post_id)
-        response = _build_cp_history_response(aggregation, input_id, days, cutoff_dt)
+        response = _build_cp_history_response(
+            aggregation, post_id, title, url, days, cutoff_dt
+        )
         return mcp_success(response.model_dump())
     except Exception as e:
         logger.exception("Failed to fetch CP history for post %d", post_id)

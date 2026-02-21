@@ -88,7 +88,7 @@ class TestBuildCPHistoryResponse:
 
     def test_processes_unix_timestamps(self, fc: ModuleType) -> None:
         agg = _recent_aggregation()
-        result = fc._build_cp_history_response(agg, 12345, 365, None)
+        result = fc._build_cp_history_response(agg, 12345, "Test Q", "https://metaculus.com/questions/12345", 365, None)
         assert result.data_points == 3
         assert result.history[0].community_prediction == 0.35
         assert result.history[1].community_prediction == 0.40
@@ -96,30 +96,30 @@ class TestBuildCPHistoryResponse:
 
     def test_days_30_includes_recent(self, fc: ModuleType) -> None:
         agg = _recent_aggregation()
-        result = fc._build_cp_history_response(agg, 12345, 30, None)
+        result = fc._build_cp_history_response(agg, 12345, "Test Q", "https://metaculus.com/questions/12345", 30, None)
         assert result.data_points == 2
         assert result.history[0].community_prediction == 0.40
         assert result.history[1].community_prediction == 0.45
 
     def test_days_1_excludes_all(self, fc: ModuleType) -> None:
         agg = _recent_aggregation()
-        result = fc._build_cp_history_response(agg, 12345, 1, None)
+        result = fc._build_cp_history_response(agg, 12345, "Test Q", "https://metaculus.com/questions/12345", 1, None)
         assert result.data_points == 0
 
     def test_retrodict_cutoff_filters(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 7, 0, 0, tzinfo=timezone.utc)
-        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 365 * 2, cutoff)
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, "Test Q", "https://metaculus.com/questions/12345", 365 * 2, cutoff)
         assert result.data_points == 2
         assert result.history[0].community_prediction == 0.35
         assert result.history[1].community_prediction == 0.40
 
     def test_empty_history(self, fc: ModuleType) -> None:
         empty = AggregationMethod(history=[])
-        result = fc._build_cp_history_response(empty, 12345, 30, None)
+        result = fc._build_cp_history_response(empty, 12345, "Test Q", "https://metaculus.com/questions/12345", 30, None)
         assert result.data_points == 0
 
     def test_all_filtered_shows_note(self, fc: ModuleType) -> None:
         cutoff = datetime(2025, 2, 5, 0, 0, tzinfo=timezone.utc)
-        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, 365 * 2, cutoff)
+        result = fc._build_cp_history_response(SAMPLE_AGGREGATION, 12345, "Test Q", "https://metaculus.com/questions/12345", 365 * 2, cutoff)
         assert result.data_points == 0
         assert result.note is not None
