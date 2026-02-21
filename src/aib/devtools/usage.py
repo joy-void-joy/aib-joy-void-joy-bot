@@ -392,10 +392,12 @@ def _render_openrouter(
     out: Text, usage: OpenRouterUsage, bar_width: int
 ) -> None:
     limit = usage["limit"]
-    if limit is not None and limit > 0:
-        pct = usage["usage"] / limit * 100
+    remaining = usage["limit_remaining"]
+    if limit is not None and limit > 0 and remaining is not None:
+        used = limit - remaining
+        pct = used / limit * 100
         linear = _tournament_linear_pct()
-        _render_budget_bar(out, "OpenRouter", f"${usage['usage']:.2f}", f"${limit:.2f}", pct, linear, bar_width)
+        _render_budget_bar(out, "OpenRouter", f"${used:.2f}", f"${limit:.2f}", pct, linear, bar_width)
     else:
         out.append("  OpenRouter", style="bold bright_white")
         out.append(f"  ${usage['usage']:.2f} used", style="bold")
