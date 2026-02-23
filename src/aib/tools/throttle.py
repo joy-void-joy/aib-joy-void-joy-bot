@@ -77,9 +77,5 @@ class Throttle:
 
 # Per-API throttle singletons
 exa_throttle = Throttle(max_concurrent=settings.exa_max_concurrent)
-asknews_throttle = Throttle(
-    max_concurrent=settings.asknews_max_concurrent,
-    min_interval=settings.asknews_request_interval,
-)
 wayback_throttle = Throttle(max_concurrent=settings.wayback_max_concurrent)
 wikipedia_throttle = Throttle(max_concurrent=settings.wikipedia_max_concurrent)

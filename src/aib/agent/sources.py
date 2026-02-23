@@ -118,7 +118,12 @@ def _walk_urls(data: object) -> list[tuple[str, str]]:
     """
     results: list[tuple[str, str]] = []
     if isinstance(data, dict):
-        title = str(data.get("title") or data.get("market_title") or data.get("event_title") or "")
+        title = str(
+            data.get("title")
+            or data.get("market_title")
+            or data.get("event_title")
+            or ""
+        )
         url_found = False
         for k, v in data.items():
             if k in ("url", "pdf_url") and isinstance(v, str) and v.startswith("http"):

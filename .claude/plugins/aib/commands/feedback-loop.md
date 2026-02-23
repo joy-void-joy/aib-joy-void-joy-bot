@@ -270,39 +270,32 @@ CP is just another forecaster. Diverging from CP is not inherently bad - we WANT
 
 **This is the most important phase.** Do not skip to aggregate patterns.
 
-### CRITICAL: Filter by AGENT_VERSION
+### Version Scoping
 
-**Every analysis must be version-aware.** Different agent versions have different prompts,
-tools, and subagent configurations. Mixing data across versions produces meaningless
-aggregate statistics.
+All devtools commands **default to the current AGENT_VERSION** with progressive semver
+fallback (exact → X.Y.* → X.* → all) when the current version has insufficient data.
+You do NOT need to manually pass `--version` — commands auto-scope.
 
-1. Check the current version: `grep AGENT_VERSION src/aib/version.py`
-2. **Pass `--version` to all commands** that support it:
-   - `uv run aib-devtools calibration summary --version 0.7.2`
-   - `uv run aib-devtools calibration binary --version 0.7.2`
-   - `uv run aib-devtools scores show --version 0.7.2`
-3. When comparing to previous versions, always report metrics PER VERSION
-4. If the `agent_version` field is missing or inconsistent, note this as a data quality
-   issue — do not silently include unversioned data in current-version metrics
-
-**Use `scores compare` for version-to-version comparisons:**
+**For learning phases** that need resolved outcomes from older versions, use `--all-versions`:
 ```bash
-uv run aib-devtools scores compare 0.6.0 0.7.2
+uv run aib-devtools calibration summary --all-versions
+uv run aib-devtools scores extremes --all-versions
 ```
 
-**Use `scores extremes` to find best/worst forecasts for deep trace reading:**
+**For version-to-version comparisons:**
 ```bash
-# All forecasts — best and worst by Brier (binary) and abs error (numeric)
-uv run aib-devtools scores extremes
+uv run aib-devtools scores compare 2.0.0 3.0.0
+```
 
-# Non-meta only (exclude CP questions) — for event-level analysis
+**Scoping examples:**
+```bash
+# Current version (default) — for diagnostics and current performance
 uv run aib-devtools scores extremes --non-meta
+uv run aib-devtools trace errors
 
-# Meta-predictions only
-uv run aib-devtools scores extremes --meta-only
-
-# Filter by version, source, or type
-uv run aib-devtools scores extremes --version 0.11.0 --type numeric
+# All versions — for learning from resolved outcomes
+uv run aib-devtools scores extremes --all-versions
+uv run aib-devtools calibration binary --all-versions
 ```
 
 ### 2a. Launch Trace Explorer (Subagent)

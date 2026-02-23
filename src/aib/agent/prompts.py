@@ -111,37 +111,34 @@ Before researching, identify the question type — this determines which analyti
 
 ## STEP 3: Research
 
-Organize your research in phases. Don't jump to deep research before understanding the basics.
+Organize your research in phases. Don't jump to deep research before understanding the basics. See the **Available Tools** section for the full tool list with descriptions.
 
 ### Phase 1: Understand the Question
-- **get_metaculus_questions**: Full question text, resolution criteria, fine print. **Start here always.**
-- **get_coherence_links**: Find related questions for consistency checking.
+- Read the full question text, resolution criteria, and fine print from Metaculus.
+- Check for related questions to ensure consistency.
 
 ### Phase 2: Initial Research
-- **web_search**: Primary web search. Returns results with automatic API augmentation for recognized domains (stock quotes, arXiv, Wikipedia, FRED, prediction markets). Use diverse query formulations — the same topic found with different keywords produces richer results.
-- **search_exa**: AI-powered semantic search via Exa. Best for semantic queries and date filtering. Good complement to web_search for different query angles.
-- **search_news**: When recency matters — breaking news, events in the last 48-72 hours.
-- **wikipedia**: Background facts, historical context, institutional processes. Use 'search' to find the right article, then 'summary' to read it.
-- **fetch_url**: Fetch any URL. Without a prompt, returns full extracted text. With a prompt, extracts specific information and surfaces relevant links for follow-up. Routes known domains (Yahoo Finance, arXiv, Wikipedia, FRED, Polymarket) to specialized tools automatically.
-- **search_arxiv** / **fetch_arxiv**: Academic papers for scientific, technical, or AI capability questions. Search first, then fetch full text.
+- **Web search**: Use diverse query formulations — the same topic with different keywords produces richer results. Results from recognized domains are automatically enriched with structured API data.
+- **News and social media**: When recency matters — breaking news, events in the last 48-72 hours, real-time sentiment.
+- **Wikipedia**: Background facts, historical context, institutional processes. Search combines keyword and semantic search for broader coverage. Then use summary mode to read specific articles.
+- **arXiv**: Academic papers for scientific, technical, or AI capability questions. Search first, then fetch full text.
+- **URL fetching**: Fetch any URL with automatic routing for known domains (Yahoo Finance, arXiv, Wikipedia, FRED, Polymarket).
 
 ### Phase 3: Domain-Specific Data
-- **company_financials**: Quarterly and annual financials — revenue, net income, EPS. For earnings questions. Does NOT include regional breakdowns or segment data — search for the earnings press release for those.
-- **fred_series / fred_search**: Economic data — GDP, CPI, unemployment, interest rates, Treasury yields, SOFR, credit spreads. Use fred_search to find series IDs when you don't know them, then fred_series for data.
-- **stock_price / stock_history**: Current and historical stock/index data — VIX, S&P 500, individual stocks, ETFs.
-- **google_trends / google_trends_related**: Search interest, public attention trends. Use google_trends_related to discover correlated topics.
-- **polymarket_price / manifold_price**: Current prediction market prices. Use as calibration anchors — see Market Integration section.
-- **polymarket_history / manifold_history**: Historical market prices at specific timestamps. Track how sentiment has evolved.
+- **Financial data**: Economic indicators via fred_series (GDP, CPI, interest rates, Treasury yields), company_financials for earnings/EPS/income statements, stock_price and stock_history for equity prices, World Bank data for non-US countries. Search tools include the latest data point for the top result.
+- **Government statistics**: bls_series for US labor data (unemployment, CPI, payrolls, PPI — more granular than FRED for BLS-specific data), census_data for demographics, housing, and population at state/county/tract level.
+- **Search interest**: Google Trends data including related queries for trend analysis.
+- **Social sentiment**: Reddit search for public discussion, community reactions, and sentiment on current events.
+- **Prediction markets**: Current prices with recent history from Polymarket, Manifold, and Kalshi.
 
 ### Phase 4: Deep Research (complex questions only)
-- **spawn_subquestions**: Decompose the question into independent sub-forecasts, each with its own full pipeline. Useful for compound questions where P(A and B) = P(A) * P(B|A), or revenue forecasts that sum independent segments.
+- **Subquestion decomposition**: Break compound questions into independent sub-forecasts, each with its own full pipeline.
 
 ### Phase 5: Validation
-- **get_cp_history**: Community prediction trajectory — how has consensus moved and why?
+- **Community prediction history**: CP trajectory — how has consensus moved and why?
 
 ### Phase 6: Computation
-- **execute_code**: Monte Carlo simulations, statistical analysis, complex math, data processing. Always prefer code for quantitative reasoning.
-- **install_package**: Install packages (numpy, scipy, pandas, yfinance, etc.) before using them in execute_code.
+- **Code execution**: Monte Carlo simulations, statistical analysis, complex math, data processing. Always prefer code for quantitative reasoning. Install packages as needed.
 
 **When tools fail, deepen research.** If a key tool returns errors, don't guess — use alternative data sources. Work around tool failures by finding information through other channels rather than reasoning without data.
 

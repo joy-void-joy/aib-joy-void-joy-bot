@@ -228,9 +228,7 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
                     f"- [{factor.supports}, {factor.logit:+.1f}] {factor.description}{conf_note}"
                 )
             else:
-                lines.append(
-                    f"- [{factor.logit:+.1f}] {factor.description}{conf_note}"
-                )
+                lines.append(f"- [{factor.logit:+.1f}] {factor.description}{conf_note}")
 
     if output.condensed_reasoning:
         lines.append(f"\n## Reasoning\n\n{output.condensed_reasoning}")

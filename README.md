@@ -105,9 +105,52 @@ cp .env .env.local
 # Add your API keys to .env.local
 ```
 
-Required: `METACULUS_TOKEN`, `ANTHROPIC_API_KEY`
+### API Keys
 
-Optional (enable additional tools): `EXA_API_KEY`, `ASKNEWS_CLIENT_ID`/`ASKNEWS_SECRET`, `FRED_API_KEY`
+Copy `.env` to `.env.local` and fill in your keys there. `.env.local` is gitignored and overrides `.env`.
+
+**Required:**
+
+| Variable | Where to get it |
+|---|---|
+| `METACULUS_TOKEN` | [metaculus.com/accounts/settings](https://www.metaculus.com/accounts/settings/) — under "API Access" |
+
+**Search (recommended — enables web research):**
+
+| Variable | Where to get it |
+|---|---|
+| `EXA_API_KEY` | [dashboard.exa.ai](https://dashboard.exa.ai/) |
+| `ASKNEWS_API_KEY` | [my.asknews.app](https://my.asknews.app/) |
+| `PERPLEXITY_API_KEY` | [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) |
+
+**Economic & government data (optional):**
+
+| Variable | Where to get it |
+|---|---|
+| `FRED_API_KEY` | [fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html) |
+| `BLS_API_KEY` | [registrationapps.bls.gov/bls_registration/registration.aspx](https://registrationapps.bls.gov/bls_registration/registration.aspx) |
+| `CENSUS_API_KEY` | [api.census.gov/data/key_signup.html](https://api.census.gov/data/key_signup.html) |
+
+**Social media (optional):**
+
+| Variable | Where to get it |
+|---|---|
+| `REDDIT_CLIENT_ID` | [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) — click "create another app", choose "script", set redirect URI to `http://localhost:8080`. The ID is shown under the app name. **Note:** Reddit now requires API approval via their Data API Terms; creating the app alone isn't enough. Expect a few days wait for personal projects. |
+| `REDDIT_CLIENT_SECRET` | Shown as "secret" on the same app page |
+
+**LLM routing (optional):**
+
+| Variable | Where to get it |
+|---|---|
+| `OPENROUTER_API_KEY` | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) |
+
+You can also override agent settings in `.env.local`:
+
+```bash
+AIB_MODEL=claude-opus-4-5-20251101  # Model to use
+AIB_MAX_BUDGET_USD=5.0              # Per-forecast budget cap
+AIB_MAX_TURNS=50                    # Max agent turns per forecast
+```
 
 ## Usage
 

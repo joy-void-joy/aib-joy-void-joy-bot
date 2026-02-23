@@ -8,10 +8,12 @@ from pathlib import Path
 
 import typer
 
+from aib.paths import resolve_version
 from aib.scoring import (
     CSV_COLUMNS,
     load_all_score_rows,
 )
+from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -57,7 +59,10 @@ def show(
         None, "--post-id", "-p", help="Filter by post ID"
     ),
     version: str | None = typer.Option(
-        None, "--version", "-v", help="Filter by agent version"
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
     ),
     source: str | None = typer.Option(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
@@ -65,15 +70,16 @@ def show(
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
 ) -> None:
     """Show the scores table (formatted)."""
-    rows = load_all_score_rows()
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    rows = load_all_score_rows(versions=effective)
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     if post_id is not None:
         rows = [r for r in rows if r["post_id"] == str(post_id)]
-    if version:
-        rows = [r for r in rows if r.get("agent_version", "") == version]
     if source:
         rows = [r for r in rows if r["source"] == source]
     if resolved_only:
@@ -105,9 +111,19 @@ def show(
 
 
 @app.command()
-def summary() -> None:
+def summary(
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
+) -> None:
     """Aggregate statistics by type, source, and version."""
-    rows = load_all_score_rows()
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    rows = load_all_score_rows(versions=effective)
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
@@ -227,14 +243,24 @@ def compare(
 
 
 @app.command()
-def regression() -> None:
+def regression(
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
+) -> None:
     """Show latest scores for curated regression suite questions."""
     if not REGRESSION_SUITE_PATH.exists():
         typer.echo("No regression suite found at notes/regression_suite.json")
         raise typer.Exit(1)
 
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
     suite = json.loads(REGRESSION_SUITE_PATH.read_text())
-    rows = load_all_score_rows()
+    rows = load_all_score_rows(versions=effective)
 
     typer.echo(f"\n=== Regression Suite ({len(suite)} questions) ===\n")
     typer.echo(
@@ -289,7 +315,10 @@ def regression() -> None:
 def extremes(
     top_n: int = typer.Option(10, "-n", help="Number of best/worst to show"),
     version: str | None = typer.Option(
-        None, "--version", "-v", help="Filter by agent version"
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
     ),
     source: str | None = typer.Option(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
@@ -300,16 +329,16 @@ def extremes(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
 ) -> None:
-    """Show best and worst forecasts across all versions."""
-    rows = load_all_score_rows()
+    """Show best and worst forecasts."""
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    rows = load_all_score_rows(versions=effective)
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
     resolved = [r for r in rows if r["resolved"] == "True"]
-
-    if version:
-        resolved = [r for r in resolved if r.get("agent_version", "") == version]
     if source:
         resolved = [r for r in resolved if r["source"] == source]
     if non_meta:

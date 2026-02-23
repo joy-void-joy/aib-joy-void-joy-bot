@@ -45,6 +45,10 @@ class TrendsQueryInput(BaseModel):
             "Use 0 for UTC — required when matching SerpAPI resolution scripts that specify tz=0."
         ),
     )
+    include_related: bool = Field(
+        default=True,
+        description="Include top and rising related queries. Default: True.",
+    )
 
 
 class TrendsCompareInput(BaseModel):
@@ -83,6 +87,13 @@ class ChangeStats(TypedDict):
     threshold: int
 
 
+class RelatedQueries(TypedDict):
+    """Related queries from Google Trends."""
+
+    top_queries: list[dict[str, Any]]
+    rising_queries: list[dict[str, Any]]
+
+
 class TrendsResult(TypedDict):
     """Result from Google Trends query."""
 
@@ -97,6 +108,7 @@ class TrendsResult(TypedDict):
     trend_direction: str  # "up", "down", "stable"
     change_stats: ChangeStats
     history: list[TrendDataPoint]
+    related: RelatedQueries | None
 
 
 # --- Google Trends API ---
@@ -154,11 +166,43 @@ def _calculate_trend_direction(values: list[int]) -> str:
         return "stable"
 
 
+def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
+    """Fetch related queries using an existing pytrends session."""
+    try:
+        related = pytrends.related_queries()
+        if not related or keyword not in related:
+            return None
+
+        kw_data = related[keyword]
+        top_queries: list[dict[str, Any]] = []
+        if kw_data.get("top") is not None and not kw_data["top"].empty:
+            top_queries = [
+                {"query": row["query"], "value": int(row["value"])}
+                for _, row in kw_data["top"].head(10).iterrows()
+            ]
+
+        rising_queries: list[dict[str, Any]] = []
+        if kw_data.get("rising") is not None and not kw_data["rising"].empty:
+            rising_queries = [
+                {"query": row["query"], "value": str(row["value"])}
+                for _, row in kw_data["rising"].head(10).iterrows()
+            ]
+
+        if not top_queries and not rising_queries:
+            return None
+
+        return {"top_queries": top_queries, "rising_queries": rising_queries}
+    except Exception:
+        logger.warning("Related queries failed for '%s'", keyword, exc_info=True)
+        return None
+
+
 @tool(
     "google_trends",
     (
         "Get Google Trends interest over time for a search term. "
-        "Returns relative search interest (0-100) over the specified timeframe. "
+        "Returns relative search interest (0-100) over the specified timeframe, "
+        "plus top and rising related queries (included by default). "
         "Useful for questions about search trends, popularity, and public interest. "
         "Timeframes: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m', "
         "'today 3-m', 'today 12-m', 'today 5-y', 'all', or 'YYYY-MM-DD YYYY-MM-DD' for exact ranges. "
@@ -227,6 +271,11 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
         if len(history) > 50:
             history = history[-50:]
 
+        # Fetch related queries on the same session (no extra payload needed)
+        related: RelatedQueries | None = None
+        if validated.include_related:
+            related = _fetch_related_queries(pytrends, keyword)
+
         result: TrendsResult = {
             "keyword": keyword,
             "timeframe": timeframe,
@@ -239,6 +288,7 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
             "trend_direction": _calculate_trend_direction([int(v) for v in values]),
             "change_stats": _calculate_change_stats([int(v) for v in values]),
             "history": history,
+            "related": related,
         }
 
         return mcp_success(result)
@@ -339,91 +389,6 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Google Trends comparison failed: {e}")
 
 
-@tool(
-    "google_trends_related",
-    (
-        "Get related queries and topics for a search term from Google Trends. "
-        "Returns 'top' (most searched) and 'rising' (fastest growing) related queries. "
-        "Useful for understanding what people search alongside a topic."
-    ),
-    TrendsQueryInput.model_json_schema(),
-)
-@tracked("google_trends_related")
-async def google_trends_related(args: dict[str, Any]) -> dict[str, Any]:
-    """Get related queries for a keyword from Google Trends."""
-    try:
-        validated = TrendsQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    keyword = validated.keyword
-    timeframe = validated.timeframe
-    geo = validated.geo
-    tz = validated.tz
-
-    cutoff = retrodict_cutoff.get()
-    if cutoff is not None:
-        from aib.agent.retrodict import _cap_trends_timeframe
-
-        timeframe = _cap_trends_timeframe(timeframe, cutoff)
-
-    try:
-        from pytrends.request import TrendReq
-
-        pytrends = TrendReq(hl="en-US", tz=tz)
-
-        # Build payload
-        pytrends.build_payload([keyword], timeframe=timeframe, geo=geo)
-
-        # Get related queries
-        related = pytrends.related_queries()
-
-        if not related or keyword not in related:
-            return mcp_success(
-                {
-                    "keyword": keyword,
-                    "timeframe": timeframe,
-                    "geo": geo or "worldwide",
-                    "top_queries": [],
-                    "rising_queries": [],
-                }
-            )
-
-        kw_data = related[keyword]
-
-        # Parse top queries
-        top_queries: list[dict[str, Any]] = []
-        if kw_data.get("top") is not None and not kw_data["top"].empty:
-            top_df = kw_data["top"].head(10)
-            top_queries = [
-                {"query": row["query"], "value": int(row["value"])}
-                for _, row in top_df.iterrows()
-            ]
-
-        # Parse rising queries
-        rising_queries: list[dict[str, Any]] = []
-        if kw_data.get("rising") is not None and not kw_data["rising"].empty:
-            rising_df = kw_data["rising"].head(10)
-            rising_queries = [
-                {"query": row["query"], "value": str(row["value"])}  # Can be "Breakout"
-                for _, row in rising_df.iterrows()
-            ]
-
-        return mcp_success(
-            {
-                "keyword": keyword,
-                "timeframe": timeframe,
-                "geo": geo or "worldwide",
-                "top_queries": top_queries,
-                "rising_queries": rising_queries,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Google Trends related queries failed")
-        return mcp_error(f"Google Trends related queries failed for '{keyword}': {e}")
-
-
 # --- MCP Server ---
 
 
@@ -435,6 +400,5 @@ def create_trends_server():
         tools=[
             google_trends,
             google_trends_compare,
-            google_trends_related,
         ],
     )

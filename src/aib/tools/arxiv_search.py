@@ -59,7 +59,7 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
     return {
         "id": result.entry_id,
         "title": result.title,
-        "summary": result.summary[:500] if result.summary else None,
+        "summary": result.summary if result.summary else None,
         "authors": [str(a) for a in result.authors],
         "published": published.strftime("%Y-%m-%d"),
         "updated": result.updated.strftime("%Y-%m-%d") if result.updated else None,
@@ -75,7 +75,7 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
         "Search arXiv for academic papers. USE THIS for questions about AI benchmarks, "
         "scientific discoveries, medical research, climate science, or any topic where "
         "peer-reviewed research provides base rates or expert analysis. "
-        "Returns titles, abstracts, authors, dates. "
+        "Returns titles, full abstracts, authors, dates. "
         "Supports arXiv query syntax: au:lastname, ti:word, cat:cs.AI. Max 50 results.\n\n"
         "Examples:\n"
         "  search_arxiv(query='GPT-5 benchmark performance') → find AI capability papers\n"

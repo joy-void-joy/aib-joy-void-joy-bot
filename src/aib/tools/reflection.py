@@ -248,14 +248,10 @@ def compute_reflection(
     if question_type == "binary" and isinstance(estimate, BinaryEstimate):
         output.factor_implied_probability = 1 / (1 + math.exp(-factor_sum))
         output.tentative_probability = estimate.probability
-        output.gap_pp = (
-            estimate.probability - output.factor_implied_probability
-        ) * 100
+        output.gap_pp = (estimate.probability - output.factor_implied_probability) * 100
     elif question_type in ("numeric", "discrete"):
         assert isinstance(estimate, NumericEstimate)
-        output.distribution_metrics = _compute_distribution_metrics(
-            breakdown, estimate
-        )
+        output.distribution_metrics = _compute_distribution_metrics(breakdown, estimate)
     elif question_type == "multiple_choice":
         from collections import defaultdict
 

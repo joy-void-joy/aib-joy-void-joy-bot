@@ -4,6 +4,7 @@ Used by wikipedia, fetch_arxiv, and fetch_url tools to extract
 specific information from large text content.
 """
 
+
 async def extract_with_prompt(content: str, prompt: str, source: str = "") -> str:
     """Use a one-shot Sonnet call to extract information from content.
 

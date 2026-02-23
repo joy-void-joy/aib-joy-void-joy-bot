@@ -184,14 +184,19 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
     }
 
 
-def load_all_score_rows() -> list[dict[str, str]]:
-    """Load all forecasts and retrodictions, compute scores, return as row dicts."""
+def load_all_score_rows(
+    versions: list[str] | None = None,
+) -> list[dict[str, str]]:
+    """Load forecasts and retrodictions, compute scores, return as row dicts.
+
+    Pass versions from resolve_version(). None means all versions.
+    """
     rows: list[dict[str, str]] = []
 
-    for data in load_all_forecast_jsons():
+    for data in load_all_forecast_jsons(versions=versions):
         rows.append(build_score_row(data, "live"))
 
-    for data in load_all_retrodict_jsons():
+    for data in load_all_retrodict_jsons(versions=versions):
         rows.append(build_score_row(data, "retrodict"))
 
     rows.sort(key=lambda r: (r["post_id"], r["source"], r["timestamp"]))
