@@ -22,7 +22,9 @@ from aib.paths import (
     iter_retrodict_dirs,
     load_all_forecast_jsons,
     load_all_retrodict_jsons,
+    resolve_version,
 )
+from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -70,15 +72,15 @@ class PitCalibration(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _load_jsons(*, retrodict: bool = False, version: str | None = None) -> list[dict]:
+def _load_jsons(
+    *,
+    retrodict: bool = False,
+    versions: list[str] | None = None,
+) -> list[dict]:
     """Load forecast JSONs via centralized paths module."""
     if retrodict:
-        all_data = load_all_retrodict_jsons()
-    else:
-        all_data = load_all_forecast_jsons(version=version)
-    if version and retrodict:
-        all_data = [d for d in all_data if d.get("agent_version", "") == version]
-    return all_data  # type: ignore[return-value]
+        return load_all_retrodict_jsons(versions=versions)  # type: ignore[return-value]
+    return load_all_forecast_jsons(versions=versions)  # type: ignore[return-value]
 
 
 def _dedup_latest(forecasts: list[dict], key_fields: tuple[str, ...]) -> list[dict]:
@@ -93,13 +95,14 @@ def _dedup_latest(forecasts: list[dict], key_fields: tuple[str, ...]) -> list[di
 
 
 def load_binary_data(
-    source: str = "all", version: str | None = None
+    source: str = "all",
+    versions: list[str] | None = None,
 ) -> list[tuple[float, bool]]:
     """Load resolved binary forecasts as (probability, outcome) pairs."""
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(version=version):
+        for f in _load_jsons(versions=versions):
             if (
                 f.get("question_type") == "binary"
                 and f.get("resolution") in ("yes", "no")
@@ -108,7 +111,7 @@ def load_binary_data(
                 forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(retrodict=True, version=version)
+        retro = _load_jsons(retrodict=True, versions=versions)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") != "binary":
@@ -136,13 +139,13 @@ def load_binary_data(
 
 def load_numeric_data(
     source: str = "all",
-    version: str | None = None,
+    versions: list[str] | None = None,
 ) -> list[tuple[dict[int, float], float, tuple[float, float] | None]]:
     """Load resolved numeric/discrete forecasts."""
     forecasts: list[dict] = []
 
     if source in ("all", "live"):
-        for f in _load_jsons(version=version):
+        for f in _load_jsons(versions=versions):
             if f.get("question_type") not in ("numeric", "discrete"):
                 continue
             if f.get("percentiles") is None:
@@ -157,7 +160,7 @@ def load_numeric_data(
             forecasts.append(f)
 
     if source in ("all", "retrodict"):
-        retro = _load_jsons(retrodict=True, version=version)
+        retro = _load_jsons(retrodict=True, versions=versions)
         retro = _dedup_latest(retro, ("post_id", "retrodict_date"))
         for f in retro:
             if f.get("question_type") not in ("numeric", "discrete"):
@@ -511,11 +514,18 @@ def binary_cmd(
         int, typer.Option("--buckets", "-b", help="Number of calibration buckets")
     ] = 10,
     version: Annotated[
-        str | None, typer.Option("--version", "-v", help="Filter by agent version")
-    ] = None,
+        str | None,
+        typer.Option("--version", "-v", help="Agent version (default: current)"),
+    ] = AGENT_VERSION,
+    all_versions: Annotated[
+        bool, typer.Option("--all-versions", help="Include all versions")
+    ] = False,
 ) -> None:
     """Binary forecast calibration analysis."""
-    data = load_binary_data(source, version)
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    data = load_binary_data(source, versions=effective)
     if not data:
         typer.echo("No resolved binary forecasts found.")
         typer.echo(
@@ -525,7 +535,7 @@ def binary_cmd(
 
     cal = compute_binary_calibration(data, n_buckets=buckets, source=source)
 
-    ver_label = f", version: {version}" if version else ""
+    ver_label = f", versions: {effective}" if effective else ", all versions"
     typer.echo(
         f"\n=== Binary Calibration ({cal.n_forecasts} forecasts, source: {source}{ver_label}) ===\n"
     )
@@ -581,11 +591,18 @@ def numeric_cmd(
         str, typer.Option("--source", "-s", help="all, live, or retrodict")
     ] = "all",
     version: Annotated[
-        str | None, typer.Option("--version", "-v", help="Filter by agent version")
-    ] = None,
+        str | None,
+        typer.Option("--version", "-v", help="Agent version (default: current)"),
+    ] = AGENT_VERSION,
+    all_versions: Annotated[
+        bool, typer.Option("--all-versions", help="Include all versions")
+    ] = False,
 ) -> None:
     """Numeric/discrete forecast calibration via PIT analysis."""
-    data = load_numeric_data(source, version)
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    data = load_numeric_data(source, versions=effective)
     if not data:
         typer.echo("No resolved numeric/discrete forecasts found.")
         typer.echo("Run retrodictions on numeric questions first.")
@@ -593,7 +610,7 @@ def numeric_cmd(
 
     pit = compute_pit_calibration(data, source=source)
 
-    ver_label = f", version: {version}" if version else ""
+    ver_label = f", versions: {effective}" if effective else ", all versions"
     typer.echo(
         f"\n=== Numeric Calibration ({pit.n_forecasts} forecasts, source: {source}{ver_label}) ===\n"
     )
@@ -642,15 +659,22 @@ def summary_cmd(
         str, typer.Option("--source", "-s", help="all, live, or retrodict")
     ] = "all",
     version: Annotated[
-        str | None, typer.Option("--version", "-v", help="Filter by agent version")
-    ] = None,
+        str | None,
+        typer.Option("--version", "-v", help="Agent version (default: current)"),
+    ] = AGENT_VERSION,
+    all_versions: Annotated[
+        bool, typer.Option("--all-versions", help="Include all versions")
+    ] = False,
 ) -> None:
     """Combined calibration summary for feedback loop sessions."""
-    ver_label = f" (version: {version})" if version else ""
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    ver_label = f" (versions: {effective})" if effective else " (all versions)"
     typer.echo(f"\n=== Calibration Summary{ver_label} ===\n")
 
-    binary_data = load_binary_data(source, version)
-    numeric_data = load_numeric_data(source, version)
+    binary_data = load_binary_data(source, versions=effective)
+    numeric_data = load_numeric_data(source, versions=effective)
 
     if not binary_data and not numeric_data:
         typer.echo("  No resolved forecasts found (binary or numeric).")
@@ -711,17 +735,24 @@ def export_cmd(
     ] = None,
     source: Annotated[str, typer.Option("--source", "-s")] = "all",
     version: Annotated[
-        str | None, typer.Option("--version", "-v", help="Filter by agent version")
-    ] = None,
+        str | None,
+        typer.Option("--version", "-v", help="Agent version (default: current)"),
+    ] = AGENT_VERSION,
+    all_versions: Annotated[
+        bool, typer.Option("--all-versions", help="Include all versions")
+    ] = False,
 ) -> None:
     """Export calibration data to JSON."""
-    binary_data = load_binary_data(source, version)
-    numeric_data = load_numeric_data(source, version)
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    binary_data = load_binary_data(source, versions=effective)
+    numeric_data = load_numeric_data(source, versions=effective)
 
     result: dict = {
         "generated_at": datetime.now().isoformat(),
         "source": source,
-        "version": version,
+        "versions": effective,
     }
 
     if binary_data:
@@ -746,11 +777,16 @@ def export_cmd(
 # ---------------------------------------------------------------------------
 
 
-def _load_resolved_binary() -> list[dict]:
-    """Load all resolved binary forecasts (live only, latest per post)."""
+def _load_resolved_binary(versions: list[str] | None = None) -> list[dict]:
+    """Load resolved binary forecasts (live only, latest per post)."""
     forecasts: list[dict] = []
 
-    for post_dir in iter_forecast_dirs():
+    if versions:
+        dirs = (d for v in versions for d in iter_forecast_dirs(version=v))
+    else:
+        dirs = iter_forecast_dirs()
+
+    for post_dir in dirs:
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
@@ -789,9 +825,19 @@ def _get_calibration_bucket(probability: float) -> str:
 
 
 @app.command("report")
-def report_cmd() -> None:
+def report_cmd(
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
+) -> None:
     """Basic calibration report: Brier/log scores and bucket table."""
-    forecasts = _load_resolved_binary()
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    forecasts = _load_resolved_binary(versions=effective)
     if not forecasts:
         typer.echo("No resolved binary forecasts found")
         raise typer.Exit(1)
@@ -862,9 +908,18 @@ def report_cmd() -> None:
 @app.command("detail")
 def detail_cmd(
     limit: int = typer.Option(20, "-n", "--limit", help="Max forecasts to show"),
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
 ) -> None:
     """Show detailed forecast-by-forecast results."""
-    forecasts = _load_resolved_binary()
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+    forecasts = _load_resolved_binary(versions=effective)
     if not forecasts:
         typer.echo("No resolved binary forecasts found")
         raise typer.Exit(1)
@@ -977,18 +1032,29 @@ def _compute_pit(data: dict[str, object]) -> float | None:
 
 @app.command("cdf")
 def cdf_cmd(
-    version: str | None = typer.Option(None, "--version", "-v"),
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_ver: bool = typer.Option(False, "--all-versions", help="Include all versions"),
     source: str | None = typer.Option(None, "--source", "-s"),
 ) -> None:
     """Analyze CDF sharpness across numeric forecasts."""
-    all_data: list[dict[str, object]] = []
-    for base in {d.parent for d in iter_retrodict_dirs()}:
-        all_data.extend(_load_numeric_with_cdf(base, "retrodict"))
-    for base in {d.parent for d in iter_forecast_dirs()}:
-        all_data.extend(_load_numeric_with_cdf(base, "live"))
+    effective, warning = resolve_version(version, all_ver)
+    if warning:
+        typer.echo(warning)
 
-    if version:
-        all_data = [d for d in all_data if d.get("version") == version]
+    all_data: list[dict[str, object]] = []
+    if effective:
+        for v in effective:
+            for base in {d.parent for d in iter_retrodict_dirs(version=v)}:
+                all_data.extend(_load_numeric_with_cdf(base, "retrodict"))
+            for base in {d.parent for d in iter_forecast_dirs(version=v)}:
+                all_data.extend(_load_numeric_with_cdf(base, "live"))
+    else:
+        for base in {d.parent for d in iter_retrodict_dirs()}:
+            all_data.extend(_load_numeric_with_cdf(base, "retrodict"))
+        for base in {d.parent for d in iter_forecast_dirs()}:
+            all_data.extend(_load_numeric_with_cdf(base, "live"))
     if source:
         all_data = [d for d in all_data if d.get("source") == source]
 
