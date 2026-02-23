@@ -34,10 +34,8 @@ class Settings(BaseSettings):
         missing = []
         if not self.exa_api_key:
             missing.append("EXA_API_KEY")
-        if not self.asknews_api_key and (
-            not self.asknews_client_id or not self.asknews_client_secret
-        ):
-            missing.append("ASKNEWS_API_KEY (or ASKNEWS_CLIENT_ID/ASKNEWS_SECRET)")
+        if not self.asknews_api_key:
+            missing.append("ASKNEWS_API_KEY")
         if not self.fred_api_key:
             missing.append("FRED_API_KEY")
 
@@ -69,20 +67,30 @@ class Settings(BaseSettings):
         validation_alias="ASKNEWS_API_KEY",
         description="AskNews API key (alternative to client_id/secret)",
     )
-    asknews_client_id: str | None = Field(
-        default=None,
-        validation_alias="ASKNEWS_CLIENT_ID",
-        description="AskNews client ID",
-    )
-    asknews_client_secret: str | None = Field(
-        default=None,
-        validation_alias="ASKNEWS_SECRET",
-        description="AskNews client secret",
-    )
     fred_api_key: str | None = Field(
         default=None,
         validation_alias="FRED_API_KEY",
         description="FRED (Federal Reserve Economic Data) API key",
+    )
+    reddit_client_id: str | None = Field(
+        default=None,
+        validation_alias="REDDIT_CLIENT_ID",
+        description="Reddit OAuth client ID",
+    )
+    reddit_client_secret: str | None = Field(
+        default=None,
+        validation_alias="REDDIT_CLIENT_SECRET",
+        description="Reddit OAuth client secret",
+    )
+    bls_api_key: str | None = Field(
+        default=None,
+        validation_alias="BLS_API_KEY",
+        description="Bureau of Labor Statistics API key",
+    )
+    census_api_key: str | None = Field(
+        default=None,
+        validation_alias="CENSUS_API_KEY",
+        description="US Census Bureau API key",
     )
 
     # === OpenRouter (optional) ===
@@ -141,16 +149,6 @@ class Settings(BaseSettings):
         default=3,
         validation_alias="AIB_EXA_MAX_CONCURRENT",
         description="Max concurrent Exa API requests",
-    )
-    asknews_max_concurrent: int = Field(
-        default=1,
-        validation_alias="AIB_ASKNEWS_MAX_CONCURRENT",
-        description="Max concurrent AskNews API requests",
-    )
-    asknews_request_interval: float = Field(
-        default=2.0,
-        validation_alias="AIB_ASKNEWS_REQUEST_INTERVAL",
-        description="Minimum seconds between AskNews API requests",
     )
     wikipedia_max_concurrent: int = Field(
         default=3,
@@ -232,9 +230,9 @@ _ENV_EXPORTS = [
     ("METACULUS_TOKEN", settings.metaculus_token),
     ("EXA_API_KEY", settings.exa_api_key),
     ("ASKNEWS_API_KEY", settings.asknews_api_key),
-    ("ASKNEWS_CLIENT_ID", settings.asknews_client_id),
-    ("ASKNEWS_SECRET", settings.asknews_client_secret),
     ("FRED_API_KEY", settings.fred_api_key),
+    ("BLS_API_KEY", settings.bls_api_key),
+    ("CENSUS_API_KEY", settings.census_api_key),
 ]
 
 for env_name, value in _ENV_EXPORTS:
