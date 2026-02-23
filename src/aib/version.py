@@ -10,4 +10,4 @@ Bump rules:
 - Major (x.0.0): architecture changes (new LLM, new framework)
 """
 
-AGENT_VERSION = "3.0.0"
+AGENT_VERSION = "3.1.0"
