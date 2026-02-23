@@ -312,7 +312,7 @@ class ToolPolicy:
             servers["playwright"] = McpStdioServerConfig(
                 type="stdio",
                 command="bun",
-                args=["x", "@anthropic-ai/mcp-server-playwright"],
+                args=["x", "@playwright/mcp@latest", "--headless"],
             )
 
         return cast(dict[str, McpServerConfig], servers)
