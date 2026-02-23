@@ -3,7 +3,9 @@
 Pipeline: httpx GET (with_retry on 429/5xx) → trafilatura → Playwright
 """
 
+import hashlib
 import logging
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -14,7 +16,7 @@ from mcp.types import TextContent
 
 from pydantic import BaseModel, ConfigDict
 
-from aib.tools.responses import mcp_error
+from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ class FetchResult(BaseModel):
     model_config = ConfigDict(extra="ignore")
     text: str
     title: str = ""
+
 
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -54,30 +57,84 @@ async def _playwright_render(url: str) -> str | None:
     """
     params = StdioServerParameters(
         command="bun",
-        args=["x", "@anthropic-ai/mcp-server-playwright"],
+        args=["x", "@playwright/mcp@latest", "--headless"],
     )
 
     try:
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                result = await session.call_tool("browser_navigate", {"url": url})
+                nav = await session.call_tool("browser_navigate", {"url": url})
 
-                if result.isError:
+                if nav.isError:
                     logger.warning("Playwright navigate error for %s", url)
+                    return None
+
+                # Get the fully rendered HTML and re-extract with trafilatura.
+                # The nav response is just an accessibility tree skeleton.
+                html_result = await session.call_tool(
+                    "browser_evaluate",
+                    {"function": "() => document.documentElement.outerHTML"},
+                )
+
+                if not html_result.isError:
+                    html_parts = [
+                        block.text
+                        for block in html_result.content
+                        if isinstance(block, TextContent)
+                    ]
+                    rendered_html = "\n".join(html_parts)
+                    extracted = trafilatura.extract(rendered_html)
+                    if extracted and len(extracted) > 100:
+                        return extracted
+
+                # Fallback: innerText if trafilatura still can't parse
+                text_result = await session.call_tool(
+                    "browser_evaluate",
+                    {"function": "() => document.body.innerText"},
+                )
+
+                if text_result.isError:
+                    logger.warning("Playwright evaluate error for %s", url)
                     return None
 
                 parts = [
                     block.text
-                    for block in result.content
+                    for block in text_result.content
                     if isinstance(block, TextContent)
                 ]
                 text = "\n".join(parts).strip()
                 return text if len(text) > 100 else None
 
-    except Exception as e:
-        logger.warning("Playwright fallback failed for %s: %s", url, e)
+    except BaseException as e:
+        if isinstance(e, ExceptionGroup):
+            for exc in e.exceptions:
+                logger.warning("Playwright sub-exception for %s: %s", url, exc)
+        else:
+            logger.warning("Playwright fallback failed for %s: %s", url, e)
         return None
+
+
+_PDF_DIR = Path("tmp/pdf")
+
+
+def _save_pdf(url: str, content: bytes) -> dict[str, Any]:
+    """Save PDF content to disk and return a path hint for the agent."""
+    _PDF_DIR.mkdir(parents=True, exist_ok=True)
+    slug = hashlib.sha256(url.encode()).hexdigest()[:12]
+    pdf_path = _PDF_DIR / f"{slug}.pdf"
+    pdf_path.write_bytes(content)
+    return mcp_success(
+        {
+            "format": "pdf",
+            "url": url,
+            "pdf_path": str(pdf_path.resolve()),
+            "hint": (
+                f"PDF downloaded to {pdf_path.resolve()}. "
+                "Use the Read tool to read the PDF content."
+            ),
+        }
+    )
 
 
 async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
@@ -125,13 +182,21 @@ async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
     ct = resp.headers.get("content-type", "")
     raw = resp.text
 
+    if "application/pdf" in ct:
+        return _save_pdf(url, resp.content)
+
     if "text/plain" in ct or "application/json" in ct:
         return FetchResult(text=raw, title="")
 
     json_str = trafilatura.extract(
-        raw, include_comments=False, include_tables=True, no_fallback=False,
-        with_metadata=True, output_format="json",
-        include_images=True, include_links=True,
+        raw,
+        include_comments=False,
+        include_tables=True,
+        no_fallback=False,
+        with_metadata=True,
+        output_format="json",
+        include_images=True,
+        include_links=True,
     )
     if json_str:
         result = FetchResult.model_validate_json(json_str)
