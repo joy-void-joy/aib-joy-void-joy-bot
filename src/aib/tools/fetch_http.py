@@ -27,6 +27,7 @@ class FetchResult(BaseModel):
     text: str
     title: str = ""
 
+
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -188,9 +189,14 @@ async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
         return FetchResult(text=raw, title="")
 
     json_str = trafilatura.extract(
-        raw, include_comments=False, include_tables=True, no_fallback=False,
-        with_metadata=True, output_format="json",
-        include_images=True, include_links=True,
+        raw,
+        include_comments=False,
+        include_tables=True,
+        no_fallback=False,
+        with_metadata=True,
+        output_format="json",
+        include_images=True,
+        include_links=True,
     )
     if json_str:
         result = FetchResult.model_validate_json(json_str)

@@ -192,15 +192,34 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"FRED series lookup failed for {series_id}: {e}")
 
 
+def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
+    """Fetch latest observation for the top search result (best-effort)."""
+    try:
+        series_id = str(top.get("id", ""))
+        if not series_id:
+            return
+        obs = fred.get_series(series_id)  # type: ignore[union-attr]
+        if obs is None or obs.empty:
+            return
+        obs = obs.dropna()
+        if obs.empty:
+            return
+        top["latest_value"] = float(obs.iloc[-1])
+        top["latest_date"] = str(obs.index[-1])[:10]
+    except Exception:
+        pass
+
+
 @tool(
     "fred_search",
     (
         "Search FRED for economic data series by keyword. USE THIS when you don't know "
         "the series ID for an economic indicator — search for 'inflation', 'GDP', "
         "'unemployment', 'interest rate', 'CPI', etc. to find the right series ID, "
-        "then use fred_series to get the actual data.\n\n"
+        "then use fred_series to get the actual data. "
+        "Automatically includes the latest observation for the top result.\n\n"
         "Examples:\n"
-        '  fred_search(query="SOFR rate") → find the series ID for SOFR\n'
+        '  fred_search(query="SOFR rate") → find the series ID for SOFR + latest value\n'
         '  fred_search(query="housing starts seasonally adjusted") → find HOUST or similar\n'
         "Two-step workflow: fred_search to find the ID, then fred_series to get data."
     ),
@@ -249,6 +268,9 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
                     "popularity": int(row.get("popularity") or 0),
                 }
             )
+
+        if series_list:
+            _enrich_fred_top_result(fred, series_list[0])
 
         return mcp_success(
             {
@@ -425,8 +447,23 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
 # --- Stock Price Tools (Yahoo Finance) ---
 
 
+class StockPriceInput(BaseModel):
+    """Input for stock price with optional history."""
+
+    symbol: str = Field(min_length=1, max_length=10)
+    history_days: int | None = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description=(
+            "Include daily closing prices for this many days. "
+            "Default 30. Set to null to skip."
+        ),
+    )
+
+
 class StockQueryInput(BaseModel):
-    """Input for stock price tool."""
+    """Input for stock history tool."""
 
     symbol: str = Field(min_length=1, max_length=10)
     period: str = Field(
@@ -447,26 +484,54 @@ class StockPrice(TypedDict):
     market_cap: float | None
     fifty_two_week_high: float | None
     fifty_two_week_low: float | None
+    recent_history: list[dict[str, object]] | None
+
+
+def _augment_stock_history(ticker: object, result: StockPrice, days: int) -> None:
+    """Add recent daily closing prices to a stock price result (best-effort)."""
+    try:
+        if days <= 5:
+            period = "5d"
+        elif days <= 30:
+            period = "1mo"
+        elif days <= 90:
+            period = "3mo"
+        elif days <= 180:
+            period = "6mo"
+        else:
+            period = "1y"
+        hist = ticker.history(period=period)  # type: ignore[union-attr]
+        if hist is not None and not hist.empty:
+            result["recent_history"] = [
+                {
+                    "date": idx.strftime("%Y-%m-%d"),
+                    "close": round(float(row["Close"]), 2),
+                }
+                for idx, row in hist.tail(days).iterrows()
+            ]
+    except Exception:
+        pass
 
 
 @tool(
     "stock_price",
     (
         "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
-        "Returns current price, previous close, 52-week range, and market cap. "
+        "Returns current price, previous close, 52-week range, market cap, and recent "
+        "daily closing prices (last 30 days by default). "
         "Use for stock price comparison questions.\n\n"
         "Examples:\n"
-        "  stock_price(symbol='AAPL') → current Apple price and metrics\n"
-        "  stock_price(symbol='^VIX') → current VIX level\n"
-        "  stock_price(symbol='^GSPC') → current S&P 500 level"
+        "  stock_price(symbol='AAPL') → current Apple price, metrics, and 30-day history\n"
+        "  stock_price(symbol='^VIX') → current VIX level with recent history\n"
+        "  stock_price(symbol='^GSPC') → current S&P 500 level with recent history"
     ),
-    StockQueryInput.model_json_schema(),
+    StockPriceInput.model_json_schema(),
 )
 @tracked("stock_price")
 async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
     """Get stock price from Yahoo Finance."""
     try:
-        validated = StockQueryInput.model_validate(args)
+        validated = StockPriceInput.model_validate(args)
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
@@ -497,6 +562,7 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
                 "market_cap": None,
                 "fifty_two_week_high": None,
                 "fifty_two_week_low": None,
+                "recent_history": None,
             }
             return mcp_success(result)
 
@@ -515,7 +581,11 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             "market_cap": info.get("marketCap"),
             "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
             "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+            "recent_history": None,
         }
+
+        if cutoff is None and validated.history_days:
+            _augment_stock_history(ticker, result, validated.history_days)
 
         return mcp_success(result)
 
@@ -666,8 +736,9 @@ class WBIndicatorInfo(TypedDict):
     "world_bank_indicator",
     (
         "Get time series data for a World Bank indicator and country. "
-        "USE THIS for international economic data that FRED doesn't cover — "
-        "GDP growth, inflation, trade, population for non-US countries.\n\n"
+        "USE THIS for non-US economic data — FRED only covers US data, so questions "
+        "about other countries need World Bank. Covers GDP growth, inflation, trade, "
+        "population, and 16,000+ indicators for 200+ countries.\n\n"
         "Common indicators:\n"
         "  NY.GDP.MKTP.KD.ZG — GDP growth (annual %)\n"
         "  FP.CPI.TOTL.ZG — Inflation, consumer prices (annual %)\n"
@@ -760,13 +831,30 @@ async def world_bank_indicator(args: dict[str, Any]) -> dict[str, Any]:
         )
 
 
+def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
+    """Fetch latest global (WLD) value for the top search result (best-effort)."""
+    try:
+        indicator_id = str(top.get("id", ""))
+        if not indicator_id:
+            return
+        data = list(wb.data.fetch(indicator_id, "WLD", mrnev=1))  # type: ignore[union-attr]
+        if data and data[0].get("value") is not None:
+            top["latest_value"] = data[0]["value"]
+            year_str: str = data[0].get("time", "")
+            if year_str:
+                top["latest_year"] = int(year_str.replace("YR", ""))
+    except Exception:
+        pass
+
+
 @tool(
     "world_bank_search",
     (
-        "Search World Bank indicators by keyword. USE THIS when you need "
-        "international economic data but don't know the indicator code.\n\n"
+        "Search World Bank indicators by keyword. USE THIS when forecasting "
+        "non-US economic questions — FRED only covers US data, World Bank covers "
+        "200+ countries. Automatically includes the latest global value for the top result.\n\n"
         "Examples:\n"
-        '  world_bank_search(query="GDP growth") → find GDP growth indicator codes\n'
+        '  world_bank_search(query="GDP growth") → find indicator codes + latest global value\n'
         '  world_bank_search(query="inflation consumer prices") → find CPI indicators\n'
         "Two-step workflow: world_bank_search to find the code, then "
         "world_bank_indicator to get data."
@@ -785,7 +873,7 @@ async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
         import wbgapi as wb  # type: ignore[import-untyped]
 
         results_iter = wb.series.list(q=validated.query)
-        results: list[WBIndicatorInfo] = []
+        results: list[dict[str, object]] = []
         for item in results_iter:
             results.append(
                 {
@@ -795,6 +883,9 @@ async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
             )
             if len(results) >= validated.limit:
                 break
+
+        if results:
+            _enrich_wb_top_result(wb, results[0])
 
         return mcp_success(
             {
