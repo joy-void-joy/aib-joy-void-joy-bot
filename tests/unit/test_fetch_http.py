@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from aib.tools.fetch_http import _ERROR_HINTS, fetch_live
+from aib.tools.fetch_http import FetchResult, _ERROR_HINTS, fetch_live
 
 
 def _make_response(
@@ -28,11 +28,12 @@ class TestFetchLiveSuccess:
 
     @pytest.mark.asyncio
     async def test_returns_extracted_text(self) -> None:
+        trafilatura_json = '{"text": "Extracted text", "title": "Example"}'
         with (
             patch("aib.tools.fetch_http.httpx.AsyncClient") as mock_cls,
             patch(
                 "aib.tools.fetch_http.trafilatura.extract",
-                return_value="Extracted text",
+                return_value=trafilatura_json,
             ),
         ):
             mock_client = AsyncMock()
@@ -42,7 +43,9 @@ class TestFetchLiveSuccess:
 
             result = await fetch_live("https://example.com")
 
-        assert result == "Extracted text"
+        assert isinstance(result, FetchResult)
+        assert result.text == "Extracted text"
+        assert result.title == "Example"
 
     @pytest.mark.asyncio
     async def test_plaintext_passthrough(self) -> None:
@@ -56,7 +59,8 @@ class TestFetchLiveSuccess:
 
             result = await fetch_live("https://example.com/data.txt")
 
-        assert result == "Plain text content"
+        assert isinstance(result, FetchResult)
+        assert result.text == "Plain text content"
 
     @pytest.mark.asyncio
     async def test_json_passthrough(self) -> None:
@@ -70,7 +74,8 @@ class TestFetchLiveSuccess:
 
             result = await fetch_live("https://api.example.com/data")
 
-        assert result == '{"key": "value"}'
+        assert isinstance(result, FetchResult)
+        assert result.text == '{"key": "value"}'
 
 
 class TestFetchLiveErrors:

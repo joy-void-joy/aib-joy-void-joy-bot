@@ -35,6 +35,12 @@ class TestToolPolicyToolSets:
         for tool in METACULUS_TOOLS:
             assert tool.startswith("mcp__markets__")
 
+    def test_asknews_tools_use_asknews_prefix(self) -> None:
+        """AskNews tools should all have mcp__asknews__ prefix."""
+        assert len(ASKNEWS_TOOLS) == 4
+        for tool_name in ASKNEWS_TOOLS:
+            assert tool_name.startswith("mcp__asknews__")
+
     def test_live_market_tools_separate_from_historical(self) -> None:
         """Live and historical market tools should be disjoint."""
         assert LIVE_MARKET_TOOLS.isdisjoint(HISTORICAL_MARKET_TOOLS)
@@ -49,8 +55,6 @@ class TestToolPolicyConstruction:
         settings.metaculus_token = "token"
         settings.exa_api_key = "exa"
         settings.asknews_api_key = "asknews_key"
-        settings.asknews_client_id = "asknews_id"
-        settings.asknews_client_secret = "asknews_secret"
         settings.fred_api_key = "fred"
 
         policy = ToolPolicy.from_settings(settings)
@@ -58,8 +62,6 @@ class TestToolPolicyConstruction:
         assert policy.metaculus_token == "token"
         assert policy.exa_api_key == "exa"
         assert policy.asknews_api_key == "asknews_key"
-        assert policy.asknews_client_id == "asknews_id"
-        assert policy.asknews_client_secret == "asknews_secret"
         assert policy.fred_api_key == "fred"
         assert not policy.is_retrodict
 
@@ -110,17 +112,9 @@ class TestToolPolicyExclusions:
         for tool in ASKNEWS_TOOLS:
             assert tool not in allowed
 
-    def test_includes_asknews_with_api_key_only(self) -> None:
-        """Should include AskNews tools with just api_key."""
+    def test_includes_asknews_with_api_key(self) -> None:
+        """Should include AskNews tools with api_key."""
         policy = ToolPolicy(asknews_api_key="key")
-
-        allowed = policy.get_allowed_tools()
-        for tool in ASKNEWS_TOOLS:
-            assert tool in allowed
-
-    def test_includes_asknews_with_client_credentials(self) -> None:
-        """Should include AskNews tools with client_id + client_secret."""
-        policy = ToolPolicy(asknews_client_id="id", asknews_client_secret="secret")
 
         allowed = policy.get_allowed_tools()
         for tool in ASKNEWS_TOOLS:
@@ -298,3 +292,43 @@ class TestToolPolicyMcpServers:
         policy = ToolPolicy()
         servers = policy.get_mcp_servers(sandbox, composition_server)
         assert "search" in servers
+
+    def test_includes_asknews_server_with_api_key(self) -> None:
+        """Should register AskNews HTTP server when api_key is set."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        composition_server = MagicMock()
+
+        policy = ToolPolicy(asknews_api_key="test-key")
+        servers = policy.get_mcp_servers(sandbox, composition_server)
+
+        assert "asknews" in servers
+        asknews = servers["asknews"]
+        assert isinstance(asknews, dict)
+        assert asknews.get("type") == "http"
+        assert asknews.get("url") == "https://mcp.asknews.app"
+
+    def test_excludes_asknews_server_without_api_key(self) -> None:
+        """Should not register AskNews server without api_key."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        composition_server = MagicMock()
+
+        policy = ToolPolicy()
+        servers = policy.get_mcp_servers(sandbox, composition_server)
+
+        assert "asknews" not in servers
+
+    def test_excludes_asknews_server_in_retrodict(self) -> None:
+        """Should not register AskNews server in retrodict mode."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        composition_server = MagicMock()
+
+        token = retrodict_cutoff.set(date(2026, 1, 15))
+        try:
+            policy = ToolPolicy(asknews_api_key="test-key")
+            servers = policy.get_mcp_servers(sandbox, composition_server)
+            assert "asknews" not in servers
+        finally:
+            retrodict_cutoff.reset(token)
