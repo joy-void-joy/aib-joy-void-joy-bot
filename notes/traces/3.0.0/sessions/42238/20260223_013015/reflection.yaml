@@ -1,0 +1,271 @@
+---
+timestamp: 2026-02-23 01:37:10 UTC
+question_type: binary
+factors:
+- description: Recent 114-day net growth rate is only 394/day, well below the 505/day
+    needed. This is the strongest empirical signal.
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: Aug 2025 AI speedy deletion policy (G15) is a structural factor reducing
+    net article growth. Explains part of the decline.
+  logit: -0.7
+  confidence: 0.7
+  effective_logit: -0.48999999999999994
+- description: Month-to-month variance is high (std ~75/day). Some months hit 600+/day.
+    A single lucky month could bridge the gap.
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: The gap is small (18,678 articles / 4,089 shortfall at recent rate).
+    This is marginal, not impossible.
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: Long-term declining trend in article creation (372k/yr in 2010 → 169k/yr
+    in 2023). Structural headwind.
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Wikipedia:Statistics page claims '~500 new articles per day' as of
+    Feb 2026. If this is an accurate current figure (gross or net), rate might be
+    higher than the 394 measured from monthly tab data.
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+tentative_estimate:
+  logit: -1.2
+  probability: 0.23
+assessment: The question is whether English Wikipedia reaches 7,160,000 articles by
+  April 1, 2026. Currently at 7,141,322, needing 18,678 more in 37 days (505/day).
+  The recent 114-day measurement shows only 394/day net growth, a significant decline
+  from the 2025 average of ~534/day. At the recent rate, Wikipedia falls ~4,000 articles
+  short. However, month-to-month variance is very high, and individual months have
+  exceeded 600/day. The AI deletion policy from Aug 2025 provides a structural explanation
+  for the decline. The mixture model suggests ~20-30% probability depending on regime
+  weights.
+calibration_notes: 'Base rate: In 2025, 6 out of 10 months had rates above 505/day.
+  But the most recent data (last ~4 months) shows a sustained decline to ~394/day.
+  The question is right at the knife-edge - if recent rates persist, NO; if they revert
+  to 2025 averages, barely YES. Status quo (recent rate continuing) resolves NO.'
+key_uncertainties: '1. Is the recent 394/day rate a genuine structural decline or
+  temporary? The 114-day period is long enough to be significant but includes holiday
+  season.
+
+  2. Does the Wikipedia:Statistics claim of ''~500/day'' reflect a more accurate current
+  rate than the monthly tab data suggests?
+
+  3. Will the AI deletion campaign intensify or stabilize?'
+tool_audit: '- fetch_url on Wikipedia:Statistics and Size of Wikipedia: provided current
+  article count and stated growth rate. Very useful.
+
+  - web_search: found current counts from multiple sources, confirming 7,141,322.
+  Good.
+
+  - fetch_url on Wikimedia Commons tab data: provided detailed monthly counts through
+  Nov 2025. Critical data.
+
+  - web_search for AI deletion policy: confirmed structural change in Aug 2025. Important
+  context.
+
+  - execute_code: Monte Carlo simulations with various models. Essential for quantifying
+  uncertainty.'
+update_triggers: '- If daily article creation visibly accelerates in late Feb/March
+  (e.g., back to 500+/day), probability increases sharply.
+
+  - If another deletion campaign or policy change occurs, probability decreases.
+
+  - Mid-March article count check: if above ~7,150,000 by March 15, strongly favors
+  YES.'
+process_reflection: The data pipeline worked well for this question. The main challenge
+  was reconciling the stated "~500/day" figure on Wikipedia:Statistics with the empirical
+  394/day computed from the monthly data tab. This discrepancy could reflect gross
+  vs net counting, stale text on the Statistics page, or different measurement windows.
+  Having direct API access to the Wikipedia Special:Statistics endpoint would have
+  been ideal but the fetch_url tool couldn't parse it. The monthly tab data from Wikimedia
+  Commons was the most reliable source. The Bayesian Monte Carlo approach felt appropriate
+  for this marginal question.
+skip_reviewer: false
+computed:
+  factor_count: 6
+  factor_sum: -1.27
+  tentative_logit: -1.2
+  logit_gap: 0.07000000000000006
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Recent 114-day net growth rate is only 394/day, well below the 505/day
+      needed. This is the strongest empirical signal.
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: Aug 2025 AI speedy deletion policy (G15) is a structural factor reducing
+      net article growth. Explains part of the decline.
+    logit: -0.7
+    confidence: 0.7
+    effective_logit: -0.48999999999999994
+  - description: Month-to-month variance is high (std ~75/day). Some months hit 600+/day.
+      A single lucky month could bridge the gap.
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: The gap is small (18,678 articles / 4,089 shortfall at recent rate).
+      This is marginal, not impossible.
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: Long-term declining trend in article creation (372k/yr in 2010 →
+      169k/yr in 2023). Structural headwind.
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Wikipedia:Statistics page claims '~500 new articles per day' as of
+      Feb 2026. If this is an accurate current figure (gross or net), rate might be
+      higher than the 394 measured from monthly tab data.
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  dominant_factor: Recent 114-day net growth rate is only 394/day, well below the
+    505/day needed. This is the strongest empirical signal.
+  dominant_effective_logit: -1.35
+  factor_implied_probability: 0.2192572520878717
+  tentative_probability: 0.23
+  gap_pp: 1.0742747912128314
+  sources:
+  - '[(Metaculus) Will the English Wikipedia have at least 7,160,000 articles before
+    April 1, 2026?](https://www.metaculus.com/questions/42238)'
+  - '[en.wikipedia.org](https://en.wikipedia.org/wiki/Special:Statistics)'
+  - '[Wikipedia:Size of Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Size_of_Wikipedia)'
+  - '[Wikipedia:Statistics - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Statistics)'
+  - '[English Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/English_Wikipedia)'
+  - '[Wikipedia:Modelling Wikipedia''s growth - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Modelling_Wikipedia''s_growth)'
+  - '[List of Wikipedias - Wikipedia](https://en.wikipedia.org/wiki/List_of_Wikipedias)'
+  - '[Wikipedia:Multilingual statistics - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Multilingual_statistics)'
+  - '[Wikipedia:List of Wikipedians by article count - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:List_of_Wikipedians_by_article_count)'
+  - '[Wikipedia:List of Wikipedias - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:List_of_Wikipedias)'
+  - '[Wikipedia:Modelling Wikipedia extended growth - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Modelling_Wikipedia_extended_growth)'
+  - '[Wikipedia:Good article statistics - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Good_article_statistics)'
+  - '[Wikipedia:Top 25 Report - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Top_25_Report)'
+  - '[commons.wikimedia.org](https://commons.wikimedia.org/wiki/Data:Number_of_English_Wikipedia_articles.tab)'
+  - '[en.wikipedia.org](https://en.wikipedia.org/wiki/Wikipedia:Modelling_Wikipedia%27s_growth)'
+  - '[Wikipedia:Time Between Edits - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Time_Between_Edits)'
+  - '[Wikipedia:WikiProject AI Cleanup - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup)'
+  - '[Deletion of articles on Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/Deletion_of_articles_on_Wikipedia)'
+  - '[Artificial intelligence in Wikimedia projects - Wikipedia](https://en.wikipedia.org/wiki/Artificial_intelligence_in_Wikimedia_projects)'
+  - '[Predictions of the end of Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/Predictions_of_the_end_of_Wikipedia)'
+  reviewer_critique: "I see - this is a current forecast being reviewed. Let me analyze\
+    \ the factors and reasoning based on what was provided:\n\n## Audit Findings\n\
+    \n### 1. **Underconfidence - unjustified pull toward 50%**\n\nThe agent's probability\
+    \ (23.0%) is only 1.1pp above the factor-implied probability (21.9%). This seems\
+    \ appropriate at first, but the factor list contains a **weak hedge factor** that\
+    \ appears designed for balance rather than evidentiary weight:\n\n**Factor 6**:\
+    \ \"Wikipedia:Statistics page claims '~500 new articles per day'... If this is\
+    \ an accurate current figure... rate might be higher than the 394 measured\"\n\
+    - logit: +0.4\n- confidence: 0.4  \n- effective: +0.16\n\nThis factor has extremely\
+    \ low confidence (0.4) and the trace shows the agent found this claim but **never\
+    \ verified whether it reflects current reality or is stale**. The trace shows:\n\
+    \n- The 114-day empirical measurement (Nov 1 → Feb 23) is unambiguous: **394/day**\n\
+    - The trace explicitly notes: \"This might be a longer-term average that's stale,\
+    \ OR it might reflect gross creations while our count captures net\"\n- The agent\
+    \ never resolved this uncertainty but still coded it as a +0.4 logit factor\n\n\
+    This is a hedge factor. The agent measured 394/day over 114 days with high precision,\
+    \ found a contradictory \"~500/day\" claim, couldn't reconcile it, and added it\
+    \ as a weak upward adjustment to avoid seeming one-sided. The factor carries almost\
+    \ no real evidentiary weight (effective +0.16) but exists to balance the strong\
+    \ negative factors.\n\n**Without this hedge factor**, the factor-implied probability\
+    \ would be ~**18-19%**, making the agent's 23% represent a ~4-5pp unexplained\
+    \ adjustment toward 50%.\n\n---\n\n### 2. **Possible structural issue: Missing\
+    \ downside factor**\n\nThe trace shows extensive analysis of **why** the rate\
+    \ declined (August 2025 AI deletion policy G15), but Factor 2 only gets:\n- logit:\
+    \ -0.7\n- confidence: 0.7\n\nThe trace shows the agent computed that the recent\
+    \ rate (394/day) is **3.6 sigma below the 2025 average** — \"very unlikely to\
+    \ be just noise\" — indicating a genuine structural shift. Yet the AI policy factor\
+    \ is coded relatively weakly.\n\nThe trace also shows the agent ran multiple Monte\
+    \ Carlo simulations with different assumptions:\n- Bayesian update model: **2.6%\
+    \ probability**\n- Mixture model (35% old regime / 65% new): **19-23%**\n\nThe\
+    \ final 23% probability appears to weight the \"old regime\" scenario (where rates\
+    \ revert toward 520/day) more heavily than the empirical evidence supports. The\
+    \ 114-day measurement is treated as one data source among many, rather than the\
+    \ **most recent and reliable** signal.\n\n---\n\n### 3. **Factor 4 may be double-counting**\n\
+    \n**Factor 4**: \"The gap is small (18,678 articles / 4,089 shortfall)... marginal,\
+    \ not impossible\" (logit +0.3)\n\n**Factor 3**: \"Month-to-month variance is\
+    \ high... A single lucky month could bridge the gap\" (logit +0.5)\n\nThese factors\
+    \ describe the same underlying reality: the gap is small enough that variance\
+    \ could close it. Factor 4 adds little information beyond Factor 3 but contributes\
+    \ +0.24 effective logit. This inflates the probability slightly.\n\n---\n\n###\
+    \ 4. **Assessment narrative vs. probability mismatch**\n\nThe assessment says:\n\
+    - \"Recent 114-day measurement shows only 394/day net growth, **a significant\
+    \ decline**\"\n- \"At the recent rate, Wikipedia **falls ~4,000 articles short**\"\
+    \n- \"The AI deletion policy from Aug 2025 provides a **structural explanation**\
+    \ for the decline\"\n\nThis reads as strongly bearish. Yet 23% implies roughly\
+    \ 1-in-4.5 odds of success — not far from a coin flip. The narrative emphasizes\
+    \ structural decline and persistent shortfall, while the probability suggests\
+    \ meaningful uncertainty about whether the trend continues.\n\n---\n\n### 5. **Research\
+    \ quality: Good**\n\nThe agent:\n- Found precise monthly data going back to 2024\n\
+    - Computed daily rates for each month (394-614/day range)\n- Identified the AI\
+    \ deletion policy as a structural factor\n- Ran multiple Monte Carlo models with\
+    \ different regime assumptions\n- Correctly identified that 394/day over 114 days\
+    \ is a 3.6-sigma deviation\n\nNo major research gaps.\n\n---\n\n## Summary\n\n\
+    **Primary issue**: The agent hedged toward uncertainty with Factor 6 (the unexplained\
+    \ \"~500/day\" claim) despite strong empirical evidence of 394/day over 114 days.\
+    \ This is **underconfidence** — adding a balancing factor that carries minimal\
+    \ evidentiary weight.\n\n**Secondary issue**: Factors 3 and 4 likely double-count\
+    \ the \"small gap\" reality, adding ~0.3-0.4 effective logit that inflates confidence\
+    \ slightly in the opposite direction.\n\n**Net effect**: The hedge factor pulls\
+    \ down, the double-counting pulls up, and they roughly cancel out. But the agent's\
+    \ 23% probability still seems to give too much weight to a regime change back\
+    \ toward 520/day when the 114-day trend at 394/day is a very strong signal.\n\n\
+    **Recommendation**: Either justify the +0.4 logit for the \"~500/day\" claim with\
+    \ actual evidence that it's current (not stale), or remove it. The probability\
+    \ might belong closer to **18-20%** based on the factors that have real evidentiary\
+    \ support."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42238
+- **Question ID**: 42019
+- **Session Duration**: 422.3s (7.0 min)
+- **Cost**: $3.9228
+- **Tokens**: 15,226 total (41 in, 15,185 out)
+  - Cache: 854,486 read, 80,083 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42238_20260223_013015/20260223-013015.log`
+
+### Tool Calls
+
+- **Total**: 44 calls
+- **Errors**: 4 (9.1%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 1474ms |
+| fetch_url | 4 | 2 ⚠️ | 2058ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| reflection | 1 | 0 | 60365ms |
+| web_search | 4 | 0 | 18056ms |
+| wikipedia | 26 | 2 ⚠️ | 676ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will the English Wikipedia have at least 7,160,000 articles befo...
+- [en.wikipedia.org](https://en.wikipedia.org/wiki/Special:Statistics)
+- [Wikipedia:Size of Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/Wikip...
+- [Wikipedia:Statistics - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:St...
+- [English Wikipedia - Wikipedia](https://en.wikipedia.org/wiki/English_Wikipedia)
+- [Wikipedia:Modelling Wikipedia's growth - Wikipedia](https://en.wikipedia.org...
+- [List of Wikipedias - Wikipedia](https://en.wikipedia.org/wiki/List_of_Wikipe...
+- [Wikipedia:Multilingual statistics - Wikipedia](https://en.wikipedia.org/wiki...
+- [Wikipedia:List of Wikipedians by article count - Wikipedia](https://en.wikip...
+- [Wikipedia:List of Wikipedias - Wikipedia](https://en.wikipedia.org/wiki/Wiki...
+- [Wikipedia:Modelling Wikipedia extended growth - Wikipedia](https://en.wikipe...
+- [Wikipedia:Good article statistics - Wikipedia](https://en.wikipedia.org/wiki...
+- [Wikipedia:Top 25 Report - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia...
+- [commons.wikimedia.org](https://commons.wikimedia.org/wiki/Data:Number_of_Eng...
+- [en.wikipedia.org](https://en.wikipedia.org/wiki/Wikipedia:Modelling_Wikipedi...
+- [Wikipedia:Time Between Edits - Wikipedia](https://en.wikipedia.org/wiki/Wiki...
+- [Wikipedia:WikiProject AI Cleanup - Wikipedia](https://en.wikipedia.org/wiki/...
+- [Deletion of articles on Wikipedia - Wikipedia](https://en.wikipedia.org/wiki...
+- [Artificial intelligence in Wikimedia projects - Wikipedia](https://en.wikipe...
+- [Predictions of the end of Wikipedia - Wikipedia](https://en.wikipedia.org/wi...
