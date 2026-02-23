@@ -10,10 +10,10 @@ from aib.paths import iter_forecast_files
 app = typer.Typer(no_args_is_help=True)
 
 
-def load_all_forecasts() -> list[dict]:
-    """Load all forecast files."""
+def load_all_forecasts(version: str | None = None) -> list[dict]:
+    """Load all forecast files, optionally filtered by agent version."""
     forecasts: list[dict] = []
-    for forecast_file in iter_forecast_files():
+    for forecast_file in iter_forecast_files(version=version):
         try:
             data = json.loads(forecast_file.read_text())
             data["_file"] = str(forecast_file)
@@ -25,9 +25,13 @@ def load_all_forecasts() -> list[dict]:
 
 
 @app.command("summary")
-def summary() -> None:
+def summary(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+) -> None:
     """Show aggregate summary of all forecasts."""
-    forecasts = load_all_forecasts()
+    forecasts = load_all_forecasts(version=version)
     if not forecasts:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
@@ -74,9 +78,13 @@ def summary() -> None:
 
 
 @app.command("tools")
-def tools() -> None:
+def tools(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+) -> None:
     """Show tool usage aggregates."""
-    forecasts = load_all_forecasts()
+    forecasts = load_all_forecasts(version=version)
     if not forecasts:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
@@ -116,9 +124,13 @@ def tools() -> None:
 
 
 @app.command("by-type")
-def by_type() -> None:
+def by_type(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+) -> None:
     """Show metrics grouped by question type."""
-    forecasts = load_all_forecasts()
+    forecasts = load_all_forecasts(version=version)
     if not forecasts:
         typer.echo("No forecasts found")
         raise typer.Exit(1)
@@ -147,9 +159,13 @@ def by_type() -> None:
 
 
 @app.command("errors")
-def errors() -> None:
+def errors(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+) -> None:
     """Show forecasts with high error rates."""
-    forecasts = load_all_forecasts()
+    forecasts = load_all_forecasts(version=version)
     if not forecasts:
         typer.echo("No forecasts found")
         raise typer.Exit(1)

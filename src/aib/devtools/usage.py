@@ -211,7 +211,17 @@ def fetch_asknews_usage() -> AskNewsUsage | None:
         except (json.JSONDecodeError, OSError):
             continue
         by_tool = data.get("tool_metrics", {}).get("by_tool", {})
-        calls = by_tool.get("search_news", {}).get("call_count", 0)
+        asknews_tool_names = (
+            "search_news",
+            "mcp__asknews__search_news",
+            "mcp__asknews__search_wikipedia",
+            "mcp__asknews__search_google",
+            "mcp__asknews__search_x_twitter",
+            "mcp__asknews__do_news_research",
+        )
+        calls = sum(
+            by_tool.get(name, {}).get("call_count", 0) for name in asknews_tool_names
+        )
         tournament_calls += calls
         if ts >= month_start:
             monthly_calls += calls
@@ -388,16 +398,16 @@ def _render_budget_bar(
     out.append("\n")
 
 
-def _render_openrouter(
-    out: Text, usage: OpenRouterUsage, bar_width: int
-) -> None:
+def _render_openrouter(out: Text, usage: OpenRouterUsage, bar_width: int) -> None:
     limit = usage["limit"]
     remaining = usage["limit_remaining"]
     if limit is not None and limit > 0 and remaining is not None:
         used = limit - remaining
         pct = used / limit * 100
         linear = _tournament_linear_pct()
-        _render_budget_bar(out, "OpenRouter", f"${used:.2f}", f"${limit:.2f}", pct, linear, bar_width)
+        _render_budget_bar(
+            out, "OpenRouter", f"${used:.2f}", f"${limit:.2f}", pct, linear, bar_width
+        )
     else:
         out.append("  OpenRouter", style="bold bright_white")
         out.append(f"  ${usage['usage']:.2f} used", style="bold")
@@ -410,7 +420,9 @@ def _render_exa(out: Text, usage: ExaUsage, bar_width: int) -> None:
     limit = EXA_TOURNAMENT_BUDGET
     pct = (used / limit * 100) if limit > 0 else 0
     linear = _tournament_linear_pct()
-    _render_budget_bar(out, "Exa", f"${used:.2f}", f"${limit:.2f}", pct, linear, bar_width)
+    _render_budget_bar(
+        out, "Exa", f"${used:.2f}", f"${limit:.2f}", pct, linear, bar_width
+    )
 
 
 def _render_asknews(out: Text, usage: AskNewsUsage, bar_width: int) -> None:
@@ -418,7 +430,15 @@ def _render_asknews(out: Text, usage: AskNewsUsage, bar_width: int) -> None:
     mlimit = usage["monthly_limit"]
     mpct = (monthly / mlimit * 100) if mlimit > 0 else 0
     mlinear = _monthly_linear_pct()
-    _render_budget_bar(out, "AskNews monthly", f"{monthly:,}", f"{mlimit:,} calls", mpct, mlinear, bar_width)
+    _render_budget_bar(
+        out,
+        "AskNews monthly",
+        f"{monthly:,}",
+        f"{mlimit:,} calls",
+        mpct,
+        mlinear,
+        bar_width,
+    )
 
     out.append("\n")
 
@@ -426,7 +446,15 @@ def _render_asknews(out: Text, usage: AskNewsUsage, bar_width: int) -> None:
     tlimit = usage["tournament_limit"]
     tpct = (total / tlimit * 100) if tlimit > 0 else 0
     tlinear = _tournament_linear_pct()
-    _render_budget_bar(out, "AskNews tournament", f"{total:,}", f"{tlimit:,} calls", tpct, tlinear, bar_width)
+    _render_budget_bar(
+        out,
+        "AskNews tournament",
+        f"{total:,}",
+        f"{tlimit:,} calls",
+        tpct,
+        tlinear,
+        bar_width,
+    )
 
 
 # ── display assembly ───────────────────────────────────────
@@ -493,7 +521,12 @@ def _fetch_and_build(bar_width: int) -> Panel:
     if CREDS_PATH.exists():
         try:
             usage = fetch_claude_code_usage()
-        except (httpx.HTTPStatusError, httpx.ConnectError, KeyError, json.JSONDecodeError):
+        except (
+            httpx.HTTPStatusError,
+            httpx.ConnectError,
+            KeyError,
+            json.JSONDecodeError,
+        ):
             pass
 
     try:
