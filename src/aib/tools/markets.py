@@ -42,6 +42,12 @@ class MarketQueryInput(BaseModel):
 
     query: str = Field(min_length=1)
     limit: int = Field(default=settings.market_default_limit, ge=1, le=50)
+    history_days: int | None = Field(
+        default=7,
+        ge=0,
+        le=90,
+        description="Days of price history to include (default 7). Set to 0 or null to disable.",
+    )
 
 
 class KalshiEventInput(BaseModel):
@@ -53,6 +59,13 @@ class KalshiEventInput(BaseModel):
 # --- Output Schemas ---
 
 
+class HistoryPoint(TypedDict):
+    """A single daily price point in market history."""
+
+    date: str
+    probability: float
+
+
 class MarketPrice(TypedDict):
     """Price information from a prediction market."""
 
@@ -62,6 +75,8 @@ class MarketPrice(TypedDict):
     url: str
     source: str  # "polymarket", "manifold", or "kalshi"
     description: str | None  # Resolution criteria / market description
+    market_id: str | None  # Platform-specific ID for drill-down/history
+    recent_history: list[HistoryPoint] | None  # Daily prices over recent days
 
 
 class KalshiMarketPrice(MarketPrice):
@@ -320,6 +335,8 @@ def parse_polymarket_event(event: PolymarketEventData) -> MarketPrice | None:
         "url": f"https://polymarket.com/event/{event.slug}",
         "source": "polymarket",
         "description": event.description or market.description,
+        "market_id": market.clob_token_ids[0] if market.clob_token_ids else None,
+        "recent_history": None,
     }
 
 
@@ -354,14 +371,104 @@ async def _polymarket_event_at_cutoff(
         "url": f"https://polymarket.com/event/{event.slug}",
         "source": "polymarket",
         "description": None,
+        "market_id": token_id,
+        "recent_history": None,
     }
+
+
+async def _augment_polymarket_history(results: list[MarketPrice], days: int) -> None:
+    """Augment Polymarket results with recent price history in-place."""
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    start_ts = now_ts - (days * 86400)
+
+    async def _add_one(result: MarketPrice) -> None:
+        token_id = result.get("market_id")
+        if not token_id:
+            return
+        try:
+            history = await _fetch_polymarket_history(token_id, start_ts, now_ts)
+            if not history:
+                return
+            by_day: dict[str, float] = {}
+            for p in history:
+                day = datetime.fromtimestamp(p.t, tz=timezone.utc).strftime("%Y-%m-%d")
+                by_day[day] = round(p.p, 3)
+            result["recent_history"] = [
+                {"date": d, "probability": p} for d, p in sorted(by_day.items())
+            ]
+        except Exception:
+            pass
+
+    await asyncio.gather(*[_add_one(r) for r in results])
+
+
+async def _augment_manifold_history(results: list[MarketPrice], days: int) -> None:
+    """Augment Manifold results with recent price history in-place."""
+    now_ms = int(datetime.now(tz=timezone.utc).timestamp()) * 1000
+
+    async def _add_one(result: MarketPrice) -> None:
+        contract_id = result.get("market_id")
+        if not contract_id:
+            return
+        try:
+            bets = await _fetch_manifold_bets(contract_id, now_ms, limit=500)
+            if not bets:
+                return
+            cutoff_ms = now_ms - (days * 86400 * 1000)
+            by_day: dict[str, float] = {}
+            for b in bets:
+                if b.created_time < cutoff_ms:
+                    continue
+                day = datetime.fromtimestamp(
+                    b.created_time / 1000, tz=timezone.utc
+                ).strftime("%Y-%m-%d")
+                by_day[day] = round(b.probability, 3)
+            if by_day:
+                result["recent_history"] = [
+                    {"date": d, "probability": p} for d, p in sorted(by_day.items())
+                ]
+        except Exception:
+            pass
+
+    await asyncio.gather(*[_add_one(r) for r in results])
+
+
+async def _augment_kalshi_history(results: list[KalshiMarketPrice], days: int) -> None:
+    """Augment Kalshi results with recent price history in-place."""
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    start_ts = now_ts - (days * 86400)
+
+    async def _add_one(result: KalshiMarketPrice) -> None:
+        ticker = result.get("market_ticker")
+        if not ticker:
+            return
+        series = _series_ticker_from_market(ticker)
+        try:
+            candles = await _fetch_kalshi_candlestick(series, ticker, start_ts, now_ts)
+            if not candles:
+                return
+            result["recent_history"] = [
+                {
+                    "date": datetime.fromtimestamp(
+                        c.end_period_ts, tz=timezone.utc
+                    ).strftime("%Y-%m-%d"),
+                    "probability": round(c.close_price, 3),
+                }
+                for c in candles
+                if c.close_price is not None
+            ]
+        except Exception:
+            pass
+
+    await asyncio.gather(*[_add_one(r) for r in results])
 
 
 @tool(
     "polymarket_price",
     (
-        "Search Polymarket for prediction markets and return current prices. "
-        "Returns YES price as probability, trading volume, and URL. "
+        "Search Polymarket for prediction markets and return current prices "
+        "with recent price history (default 7 days). "
+        "Returns YES price as probability, trading volume, URL, and daily price trend. "
         f"Optional limit (default: {settings.market_default_limit}).\n\n"
         "Examples:\n"
         "  polymarket_price(query='US election 2026') → find election markets\n"
@@ -395,13 +502,16 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
                 parsed = await _polymarket_event_at_cutoff(event, cutoff)
             else:
                 parsed = parse_polymarket_event(event)
-            if parsed is not None:
+            if parsed is not None and parsed["probability"] > 0.001:
                 results.append(parsed)
 
         if not results and cutoff is not None:
             return mcp_error(
                 f"Found markets for '{query}' but no price data is available."
             )
+
+        if cutoff is None and validated.history_days:
+            await _augment_polymarket_history(results, validated.history_days)
 
         return mcp_success({"markets": results, "query": query})
 
@@ -444,6 +554,8 @@ def parse_manifold_market(market: ManifoldMarketData) -> MarketPrice:
         "url": market.effective_url,
         "source": "manifold",
         "description": market.effective_description,
+        "market_id": market.id or None,
+        "recent_history": None,
     }
 
 
@@ -476,14 +588,17 @@ async def _manifold_market_at_cutoff(
         "url": market.effective_url,
         "source": "manifold",
         "description": None,
+        "market_id": market.id or None,
+        "recent_history": None,
     }
 
 
 @tool(
     "manifold_price",
     (
-        "Search Manifold Markets for prediction markets and return current prices. "
-        "Returns probability, trading volume (in mana), and URL. "
+        "Search Manifold Markets for prediction markets and return current prices "
+        "with recent price history (default 7 days). "
+        "Returns probability, trading volume (in mana), URL, and daily price trend. "
         f"Optional limit (default: {settings.market_default_limit})."
     ),
     MarketQueryInput.model_json_schema(),
@@ -514,6 +629,9 @@ async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
                 parsed = parse_manifold_market(m)
             if parsed is not None:
                 results.append(parsed)
+
+        if cutoff is None and validated.history_days:
+            await _augment_manifold_history(results, validated.history_days)
 
         return mcp_success({"markets": results, "query": query})
 
@@ -833,9 +951,10 @@ async def _kalshi_market_at_cutoff(
 @tool(
     "kalshi_price",
     (
-        "Search Kalshi (CFTC-regulated event contracts exchange) for prediction markets. "
+        "Search Kalshi (CFTC-regulated event contracts exchange) for prediction markets "
+        "with recent price history (default 7 days). "
         "Strong coverage of economic/policy events: Fed rate decisions, CPI, GDP, jobs reports. "
-        "Returns YES price as probability, trading volume, and URL. "
+        "Returns YES price as probability, trading volume, URL, and daily price trend. "
         f"Optional limit (default: {settings.market_default_limit}).\n\n"
         "Examples:\n"
         "  kalshi_price(query='Fed rate') → find Fed funds rate markets\n"
@@ -886,13 +1005,20 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
                         "url": f"https://kalshi.com/markets/{market.ticker}",
                         "source": "kalshi",
                         "description": market.rules_primary,
+                        "market_id": market.ticker,
+                        "recent_history": None,
                         "market_ticker": market.ticker,
                         "event_ticker": event.event_ticker,
                         "rules_primary": market.rules_primary,
                     }
                 )
 
-        return mcp_success({"markets": results[:limit], "query": query})
+        limited = results[:limit]
+
+        if cutoff is None and validated.history_days:
+            await _augment_kalshi_history(limited, validated.history_days)
+
+        return mcp_success({"markets": limited, "query": query})
 
     except httpx.HTTPStatusError as e:
         logger.exception("Kalshi API error")
