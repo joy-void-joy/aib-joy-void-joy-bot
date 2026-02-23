@@ -9,6 +9,7 @@ import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
 
@@ -87,10 +88,10 @@ def _build_routes() -> list[DomainRoute]:
         ),
         DomainRoute(
             domain="wikipedia.org",
-            pattern=re.compile(r"wikipedia\.org/wiki/([^#?]+)"),
+            pattern=re.compile(r"wikipedia\.org/wiki/(?!Special:|Wikipedia:)([^#?]+)"),
             handler=_wikipedia_handler,
             param_builder=lambda m: {
-                "query": m.group(1).replace("_", " "),
+                "query": unquote(m.group(1)).replace("_", " "),
                 "mode": "full",
             },
         ),
