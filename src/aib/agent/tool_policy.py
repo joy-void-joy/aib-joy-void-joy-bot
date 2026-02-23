@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from claude_agent_sdk.types import (
+    McpHttpServerConfig,
     McpSdkServerConfig,
     McpServerConfig,
     McpStdioServerConfig,
@@ -71,10 +72,13 @@ EXA_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# AskNews tools (require ASKNEWS_CLIENT_ID and ASKNEWS_SECRET)
+# AskNews tools (require ASKNEWS_API_KEY, served by remote MCP server)
 ASKNEWS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__search__search_news",
+        "mcp__asknews__search_news",
+        "mcp__asknews__search_google",
+        "mcp__asknews__search_x_twitter",
+        "mcp__asknews__do_news_research",
     }
 )
 
@@ -192,6 +196,29 @@ WORLD_BANK_TOOLS: frozenset[str] = frozenset(
 )
 
 
+_STATIC_TOOL_DOCS: dict[str, str] = {
+    "mcp__asknews__search_news": (
+        "Search 50k+ global news sources for breaking and recent news. "
+        "Covers the last 48-72 hours. Use when recency matters."
+    ),
+    "mcp__asknews__search_google": (
+        "Google search via AskNews. Complement to web_search for different result coverage."
+    ),
+    "mcp__asknews__search_x_twitter": (
+        "Search X/Twitter for real-time public sentiment, expert opinions, "
+        "and breaking developments."
+    ),
+    "mcp__asknews__do_news_research": (
+        "Deep, multi-step news research on a topic. Synthesizes across many "
+        "sources for complex questions requiring extensive news coverage."
+    ),
+    "mcp__playwright__browser_navigate": "Navigate to a URL in a headless browser.",
+    "mcp__playwright__browser_snapshot": "Take an accessibility snapshot of the current page.",
+    "mcp__playwright__browser_click": "Click on a page element by reference.",
+    "mcp__playwright__browser_type": "Type text into a page input element.",
+}
+
+
 @dataclass
 class ToolPolicy:
     """Centralized policy for tool availability.
@@ -211,8 +238,6 @@ class ToolPolicy:
     metaculus_token: str | None = None
     exa_api_key: str | None = None
     asknews_api_key: str | None = None
-    asknews_client_id: str | None = None
-    asknews_client_secret: str | None = None
     fred_api_key: str | None = None
 
     # Computed sets (populated by __post_init__)
@@ -227,12 +252,15 @@ class ToolPolicy:
             excluded.update(METACULUS_TOOLS)
         if not self.exa_api_key:
             excluded.update(EXA_TOOLS)
-        if not self.asknews_api_key and (
-            not self.asknews_client_id or not self.asknews_client_secret
-        ):
+        if not self.asknews_api_key:
             excluded.update(ASKNEWS_TOOLS)
         if not self.fred_api_key:
             excluded.update(FRED_TOOLS)
+
+        # Retrodict exclusions (tools with no date filtering)
+        if self.is_retrodict:
+            excluded.update(PLAYWRIGHT_TOOLS)
+            excluded.update(ASKNEWS_TOOLS)
 
         self._excluded_tools = frozenset(excluded)
 
@@ -250,8 +278,6 @@ class ToolPolicy:
             metaculus_token=settings.metaculus_token,
             exa_api_key=settings.exa_api_key,
             asknews_api_key=settings.asknews_api_key,
-            asknews_client_id=settings.asknews_client_id,
-            asknews_client_secret=settings.asknews_client_secret,
             fred_api_key=settings.fred_api_key,
         )
 
@@ -298,7 +324,9 @@ class ToolPolicy:
             "composition": composition_server,
             "markets": create_markets_server(),
             "notes": create_reflection_server(
-                session_dir, question_type, get_sources,
+                session_dir,
+                question_type,
+                get_sources,
                 get_trace=get_trace,
                 question_context=question_context,
                 traces_dir=traces_dir,
@@ -313,6 +341,14 @@ class ToolPolicy:
                 type="stdio",
                 command="bun",
                 args=["x", "@playwright/mcp@latest", "--headless"],
+            )
+
+        # AskNews remote MCP server (excluded in retrodict — no date filtering)
+        if self.asknews_api_key and not self.is_retrodict:
+            servers["asknews"] = McpHttpServerConfig(
+                type="http",
+                url="https://mcp.asknews.app",
+                headers={"Authorization": f"Bearer {self.asknews_api_key}"},
             )
 
         return cast(dict[str, McpServerConfig], servers)
@@ -446,6 +482,13 @@ class ToolPolicy:
                 full_name = f"mcp__{server_name}__{tool.name}"
                 if full_name in allowed:
                     descriptions[full_name] = tool.description
+
+        server_names = set(mcp_servers.keys())
+        for full_name, desc in _STATIC_TOOL_DOCS.items():
+            if full_name in allowed:
+                parts = full_name.split("__")
+                if len(parts) >= 3 and parts[1] in server_names:
+                    descriptions[full_name] = desc
 
         return self._format_tool_docs(descriptions)
 
