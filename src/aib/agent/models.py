@@ -198,7 +198,10 @@ def create_factor_model(
     return create_model(
         "Factor",
         __base__=Factor,
-        supports=(supports_type, Field(description="Which outcome this evidence supports.")),
+        supports=(
+            supports_type,
+            Field(description="Which outcome this evidence supports."),
+        ),
     )
 
 

@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 API_BASE_URL = os.getenv("METACULUS_API_BASE_URL", "https://www.metaculus.com/api")
 
 
-
 def _is_retryable(exc: BaseException) -> bool:
     """Return True for 429, 5xx, timeouts, and connection errors."""
     if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):

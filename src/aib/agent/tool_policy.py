@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from claude_agent_sdk.types import (
+    McpHttpServerConfig,
     McpSdkServerConfig,
     McpServerConfig,
     McpStdioServerConfig,
@@ -19,7 +20,9 @@ from claude_agent_sdk.types import (
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.financial import create_financial_server
+from aib.tools.government import create_government_server
 from aib.tools.markets import create_markets_server
+from aib.tools.reddit import create_reddit_server
 from aib.tools.search import create_search_server
 from aib.tools.trends import create_trends_server
 from aib.tools.reflection import create_reflection_server
@@ -71,10 +74,13 @@ EXA_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# AskNews tools (require ASKNEWS_CLIENT_ID and ASKNEWS_SECRET)
+# AskNews tools (require ASKNEWS_API_KEY, served by remote MCP server)
 ASKNEWS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__search__search_news",
+        "mcp__asknews__search_news",
+        "mcp__asknews__search_google",
+        "mcp__asknews__search_x_twitter",
+        "mcp__asknews__do_news_research",
     }
 )
 
@@ -140,7 +146,6 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__trends__google_trends",
         "mcp__trends__google_trends_compare",
-        "mcp__trends__google_trends_related",
     }
 )
 
@@ -191,6 +196,51 @@ WORLD_BANK_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Reddit tools (require REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET)
+REDDIT_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__reddit__reddit_search",
+        "mcp__reddit__reddit_hot",
+    }
+)
+
+# BLS tools (optional BLS_API_KEY, always registered)
+BLS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__government__bls_series",
+    }
+)
+
+# Census tools (require CENSUS_API_KEY)
+CENSUS_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__government__census_data",
+    }
+)
+
+
+_STATIC_TOOL_DOCS: dict[str, str] = {
+    "mcp__asknews__search_news": (
+        "Search 50k+ global news sources for breaking and recent news. "
+        "Covers the last 48-72 hours. Use when recency matters."
+    ),
+    "mcp__asknews__search_google": (
+        "Google search via AskNews. Complement to web_search for different result coverage."
+    ),
+    "mcp__asknews__search_x_twitter": (
+        "Search X/Twitter for real-time public sentiment, expert opinions, "
+        "and breaking developments."
+    ),
+    "mcp__asknews__do_news_research": (
+        "Deep, multi-step news research on a topic. Synthesizes across many "
+        "sources for complex questions requiring extensive news coverage."
+    ),
+    "mcp__playwright__browser_navigate": "Navigate to a URL in a headless browser.",
+    "mcp__playwright__browser_snapshot": "Take an accessibility snapshot of the current page.",
+    "mcp__playwright__browser_click": "Click on a page element by reference.",
+    "mcp__playwright__browser_type": "Type text into a page input element.",
+}
+
 
 @dataclass
 class ToolPolicy:
@@ -211,9 +261,10 @@ class ToolPolicy:
     metaculus_token: str | None = None
     exa_api_key: str | None = None
     asknews_api_key: str | None = None
-    asknews_client_id: str | None = None
-    asknews_client_secret: str | None = None
     fred_api_key: str | None = None
+    reddit_client_id: str | None = None
+    reddit_client_secret: str | None = None
+    census_api_key: str | None = None
 
     # Computed sets (populated by __post_init__)
     _excluded_tools: frozenset[str] = field(default_factory=frozenset, init=False)
@@ -227,12 +278,20 @@ class ToolPolicy:
             excluded.update(METACULUS_TOOLS)
         if not self.exa_api_key:
             excluded.update(EXA_TOOLS)
-        if not self.asknews_api_key and (
-            not self.asknews_client_id or not self.asknews_client_secret
-        ):
+        if not self.asknews_api_key:
             excluded.update(ASKNEWS_TOOLS)
         if not self.fred_api_key:
             excluded.update(FRED_TOOLS)
+        if not self.reddit_client_id or not self.reddit_client_secret:
+            excluded.update(REDDIT_TOOLS)
+        if not self.census_api_key:
+            excluded.update(CENSUS_TOOLS)
+
+        # Retrodict exclusions (tools with no date filtering)
+        if self.is_retrodict:
+            excluded.update(PLAYWRIGHT_TOOLS)
+            excluded.update(ASKNEWS_TOOLS)
+            excluded.update(REDDIT_TOOLS)
 
         self._excluded_tools = frozenset(excluded)
 
@@ -250,9 +309,10 @@ class ToolPolicy:
             metaculus_token=settings.metaculus_token,
             exa_api_key=settings.exa_api_key,
             asknews_api_key=settings.asknews_api_key,
-            asknews_client_id=settings.asknews_client_id,
-            asknews_client_secret=settings.asknews_client_secret,
             fred_api_key=settings.fred_api_key,
+            reddit_client_id=settings.reddit_client_id,
+            reddit_client_secret=settings.reddit_client_secret,
+            census_api_key=settings.census_api_key,
         )
 
     @property
@@ -294,11 +354,14 @@ class ToolPolicy:
         """
         servers: dict[str, McpServerConfig] = {
             "financial": create_financial_server(),
+            "government": create_government_server(),
             "sandbox": sandbox.create_mcp_server(),
             "composition": composition_server,
             "markets": create_markets_server(),
             "notes": create_reflection_server(
-                session_dir, question_type, get_sources,
+                session_dir,
+                question_type,
+                get_sources,
                 get_trace=get_trace,
                 question_context=question_context,
                 traces_dir=traces_dir,
@@ -312,7 +375,23 @@ class ToolPolicy:
             servers["playwright"] = McpStdioServerConfig(
                 type="stdio",
                 command="bun",
-                args=["x", "@anthropic-ai/mcp-server-playwright"],
+                args=["x", "@playwright/mcp@latest", "--headless"],
+            )
+
+        # Reddit MCP server (excluded in retrodict — no exact date cutoff)
+        if (
+            self.reddit_client_id
+            and self.reddit_client_secret
+            and not self.is_retrodict
+        ):
+            servers["reddit"] = create_reddit_server()
+
+        # AskNews remote MCP server (excluded in retrodict — no date filtering)
+        if self.asknews_api_key and not self.is_retrodict:
+            servers["asknews"] = McpHttpServerConfig(
+                type="http",
+                url="https://mcp.asknews.app",
+                headers={"Authorization": f"Bearer {self.asknews_api_key}"},
             )
 
         return cast(dict[str, McpServerConfig], servers)
@@ -371,6 +450,13 @@ class ToolPolicy:
 
         # World Bank tools (no API key required)
         tools.update(WORLD_BANK_TOOLS)
+
+        # Reddit tools (conditional on API keys)
+        tools.update(REDDIT_TOOLS)
+
+        # Government data tools
+        tools.update(BLS_TOOLS)
+        tools.update(CENSUS_TOOLS)
 
         # Fetch tool (unified URL fetching)
         tools.update(FETCH_TOOLS)
@@ -446,6 +532,13 @@ class ToolPolicy:
                 full_name = f"mcp__{server_name}__{tool.name}"
                 if full_name in allowed:
                     descriptions[full_name] = tool.description
+
+        server_names = set(mcp_servers.keys())
+        for full_name, desc in _STATIC_TOOL_DOCS.items():
+            if full_name in allowed:
+                parts = full_name.split("__")
+                if len(parts) >= 3 and parts[1] in server_names:
+                    descriptions[full_name] = desc
 
         return self._format_tool_docs(descriptions)
 
