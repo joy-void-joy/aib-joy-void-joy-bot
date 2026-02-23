@@ -31,7 +31,8 @@ class TestForecastingSystemPrompt:
         prompt = get_forecasting_system_prompt()
         assert "## Available Tools" not in prompt
 
-    def test_spawn_subquestions_in_prompt(self) -> None:
-        """spawn_subquestions tool is mentioned in research phases."""
+    def test_research_phases_in_prompt(self) -> None:
+        """Research step includes category-based workflow phases."""
         prompt = get_forecasting_system_prompt()
-        assert "spawn_subquestions" in prompt
+        assert "Subquestion decomposition" in prompt
+        assert "Community prediction history" in prompt

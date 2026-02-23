@@ -29,7 +29,9 @@ class TestSuggestOnlyPassthrough:
                 return_value="GDP data here",
             ),
         ):
-            result = await fetch_url({"url": "https://tradingeconomics.com/germany/gdp"})
+            result = await fetch_url(
+                {"url": "https://tradingeconomics.com/germany/gdp"}
+            )
         assert result.get("is_error") is not True
         data = json.loads(result["content"][0]["text"])
         assert data["content"] == "GDP data here"

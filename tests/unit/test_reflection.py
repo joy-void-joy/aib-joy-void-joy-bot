@@ -90,7 +90,9 @@ class TestComputeReflectionBinary:
         factors = [
             Factor(description="Moderate positive", logit=1.0, confidence=1.0),
         ]
-        inp = _make_binary_input(factors=factors, tentative_logit=1.0, tentative_probability=0.73)
+        inp = _make_binary_input(
+            factors=factors, tentative_logit=1.0, tentative_probability=0.73
+        )
 
         result = compute_reflection(inp, "binary")
 
@@ -150,7 +152,9 @@ class TestComputeReflectionNumeric:
         assert result.factor_implied_probability is None
         assert result.gap_pp is None
         # Weighted avg: (100*1.0 + 120*0.5) / 1.5 = 106.67
-        assert result.distribution_metrics.implied_median == pytest.approx(106.67, abs=0.01)
+        assert result.distribution_metrics.implied_median == pytest.approx(
+            106.67, abs=0.01
+        )
 
     def test_weighted_average_by_effective_logit(self) -> None:
         """Distribution metrics should weight by abs(effective_logit)."""
@@ -317,8 +321,12 @@ class TestFileWriting:
             tentative_logit=1.5,
         )
 
-        await _append_reflection(tmp_path, inp1, compute_reflection(inp1, "binary"), "binary")
-        await _append_reflection(tmp_path, inp2, compute_reflection(inp2, "binary"), "binary")
+        await _append_reflection(
+            tmp_path, inp1, compute_reflection(inp1, "binary"), "binary"
+        )
+        await _append_reflection(
+            tmp_path, inp2, compute_reflection(inp2, "binary"), "binary"
+        )
 
         content = (tmp_path / "reflection.yaml").read_text()
         assert content.count("---") == 2

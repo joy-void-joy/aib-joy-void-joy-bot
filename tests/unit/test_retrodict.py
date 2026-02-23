@@ -129,13 +129,21 @@ class TestRetrodictHooks:
         assert "retrodict" not in output["permissionDecisionReason"].lower()
 
     @pytest.mark.asyncio
-    async def test_search_news_denied(self, hooks: HooksConfig) -> None:
-        """search_news should be denied in retrodict mode."""
-        result = await self._invoke_hook(
-            hooks, "mcp__search__search_news", {"query": "test"}
-        )
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
+    async def test_asknews_tools_denied(self, hooks: HooksConfig) -> None:
+        """All AskNews tools should be denied in retrodict mode."""
+        asknews_tools = [
+            "mcp__asknews__search_news",
+            "mcp__asknews__search_wikipedia",
+            "mcp__asknews__search_google",
+            "mcp__asknews__search_x_twitter",
+            "mcp__asknews__do_news_research",
+        ]
+        for tool_name in asknews_tools:
+            result = await self._invoke_hook(hooks, tool_name, {"query": "test"})
+            output = result["hookSpecificOutput"]
+            assert output["permissionDecision"] == "deny", (
+                f"{tool_name} should be denied"
+            )
 
     @pytest.mark.asyncio
     async def test_playwright_denied(self, hooks: HooksConfig) -> None:
