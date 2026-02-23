@@ -53,11 +53,7 @@ Saved forecasts are in `notes/traces/<version>/forecasts/<post_id>/` and `notes/
 
 1. **Understand the request**: The caller specifies which post IDs to analyze and what to look for (or asks for general pattern analysis).
 
-2. **Verify version context**: The caller should provide the agent version being analyzed. Before reading traces, retrieve the prompt that was active for that version:
-   ```bash
-   git show v<VERSION>:src/aib/agent/prompts.py
-   ```
-   Also check each trace's `agent_version` field (in the forecast JSON at `notes/traces/<version>/forecasts/<post_id>/` or `notes/traces/<version>/retrodict/<post_id>/`) to confirm it matches the version being analyzed. Flag any mismatches — a trace from v0.6.0 analyzed as if it were v1.1.0 produces invalid conclusions.
+2. **Verify version context**: Devtools commands default to the current AGENT_VERSION with progressive semver fallback. Check `grep AGENT_VERSION src/aib/version.py` to know the current version. When analyzing traces, check each trace's `agent_version` field (in the forecast JSON) and note which version produced it. Use `git show v<VERSION>:src/aib/agent/prompts.py` to retrieve the prompt that was active for that version.
 
 3. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines) in `notes/traces/<version>/sessions/<post_id>/*/meta.md`. Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
 

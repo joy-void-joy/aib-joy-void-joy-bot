@@ -10,7 +10,13 @@ from pathlib import Path
 
 import typer
 
-from aib.paths import RUNTIME_LOGS_PATH, find_latest_forecast_file, iter_forecast_dirs
+from aib.paths import (
+    RUNTIME_LOGS_PATH,
+    find_latest_forecast_file,
+    iter_forecast_dirs,
+    resolve_version,
+)
+from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -101,10 +107,25 @@ def show(
 @app.command("list")
 def list_forecasts(
     limit: int = typer.Option(20, "-n", "--limit", help="Number of forecasts to show"),
+    version: str | None = typer.Option(
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
 ) -> None:
     """List recent forecasts with their metrics summary."""
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+
     forecasts: list[dict] = []
-    for post_dir in iter_forecast_dirs():
+    dirs = (
+        (d for v in effective for d in iter_forecast_dirs(version=v))
+        if effective
+        else iter_forecast_dirs()
+    )
+    for post_dir in dirs:
         for forecast_file in post_dir.glob("*.json"):
             try:
                 data = json.loads(forecast_file.read_text())
@@ -152,12 +173,24 @@ def list_forecasts(
 def show_errors(
     limit: int = typer.Option(10, "-n", "--limit", help="Number of forecasts to check"),
     version: str | None = typer.Option(
-        None, "--version", "-v", help="Filter by agent version"
+        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
     ),
 ) -> None:
     """Show forecasts with tool errors."""
+    effective, warning = resolve_version(version, all_versions)
+    if warning:
+        typer.echo(warning)
+
+    dirs = (
+        (d for v in effective for d in iter_forecast_dirs(version=v))
+        if effective
+        else iter_forecast_dirs()
+    )
     errors_found: list[dict] = []
-    for post_dir in iter_forecast_dirs(version=version):
+    for post_dir in dirs:
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
@@ -181,7 +214,7 @@ def show_errors(
     errors_found.sort(key=lambda x: x["total_errors"], reverse=True)
     errors_found = errors_found[:limit]
 
-    ver_label = f" (version: {version})" if version else ""
+    ver_label = f" (versions: {effective})" if effective else " (all versions)"
     typer.echo(f"\n{'Post':<8} {'Errors':<8} Title{ver_label}")
     typer.echo("-" * 60)
     for e in errors_found:

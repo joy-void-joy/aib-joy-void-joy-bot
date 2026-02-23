@@ -1,7 +1,8 @@
 """Centralized path constants and helpers for forecast data.
 
 All forecast-related paths are routed through this module. Writers use
-version-specific directories; readers iterate across all versions.
+version-specific directories; readers default to the current AGENT_VERSION
+with progressive semver fallback when data is insufficient.
 
 Layout:
     notes/traces/<version>/forecasts/<post_id>/<timestamp>.json
@@ -213,14 +214,30 @@ def _load_jsons_from_files(files: Iterator[Path]) -> list[dict[str, object]]:
     return results
 
 
-def load_all_forecast_jsons(version: str | None = None) -> list[dict[str, object]]:
-    """Load all forecast JSONs across versions."""
+def load_all_forecast_jsons(
+    version: str | None = None,
+    versions: list[str] | None = None,
+) -> list[dict[str, object]]:
+    """Load forecast JSONs. versions overrides version if provided."""
+    if versions is not None:
+        results: list[dict[str, object]] = []
+        for v in versions:
+            results.extend(_load_jsons_from_files(iter_forecast_files(version=v)))
+        return results
     return _load_jsons_from_files(iter_forecast_files(version=version))
 
 
-def load_all_retrodict_jsons() -> list[dict[str, object]]:
-    """Load all retrodict forecast JSONs."""
-    return _load_jsons_from_files(iter_retrodict_files())
+def load_all_retrodict_jsons(
+    version: str | None = None,
+    versions: list[str] | None = None,
+) -> list[dict[str, object]]:
+    """Load retrodict JSONs. versions overrides version if provided."""
+    if versions is not None:
+        results: list[dict[str, object]] = []
+        for v in versions:
+            results.extend(_load_jsons_from_files(iter_retrodict_files(version=v)))
+        return results
+    return _load_jsons_from_files(iter_retrodict_files(version=version))
 
 
 # ── Session/log cross-version helpers ───────────────────────────────
@@ -252,3 +269,87 @@ def iter_trace_log_files(post_id: int | None = None) -> Iterator[Path]:
             yield from logs_base.glob(f"{post_id}_*.md")
         else:
             yield from logs_base.glob("*.md")
+
+
+# ── Version scope resolution ────────────────────────────────────────
+
+MIN_VERSION_DATAPOINTS = 10
+
+_SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+
+def _parse_semver(version: str) -> tuple[int, int, int] | None:
+    """Parse 'X.Y.Z' into (major, minor, patch), or None if invalid."""
+    m = _SEMVER_RE.match(version)
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
+def _count_forecasts_for_versions(versions: list[str]) -> int:
+    """Count total forecast files across a set of version directories."""
+    return sum(sum(1 for _ in iter_forecast_files(version=v)) for v in versions)
+
+
+def resolve_version(
+    version: str | None,
+    all_versions: bool = False,
+    min_datapoints: int = MIN_VERSION_DATAPOINTS,
+) -> tuple[list[str] | None, str | None]:
+    """Resolve effective version scope with progressive semver fallback.
+
+    Fallback chain: exact version → X.Y.* → X.* → all versions.
+
+    Returns (version_list, warning_message).
+    version_list is None when all versions should be included.
+    """
+    if all_versions:
+        return None, None
+
+    effective = version if version is not None else AGENT_VERSION
+    semver = _parse_semver(effective)
+    available = [d.name for d in _version_dirs()]
+
+    # Level 1: exact version
+    exact = [effective] if effective in available else []
+    exact_count = _count_forecasts_for_versions(exact)
+    if exact_count >= min_datapoints:
+        return exact, None
+
+    if semver is None:
+        return None, (
+            f"v{effective} has only {exact_count} forecasts "
+            f"(need {min_datapoints}) — including all versions"
+        )
+
+    major, minor, _patch = semver
+
+    # Level 2: same minor (X.Y.*)
+    minor_matches = [
+        v
+        for v in available
+        if (sv := _parse_semver(v)) is not None and sv[0] == major and sv[1] == minor
+    ]
+    minor_count = _count_forecasts_for_versions(minor_matches)
+    if minor_count >= min_datapoints:
+        return minor_matches, (
+            f"v{effective} has only {exact_count} forecasts "
+            f"— widening to v{major}.{minor}.* ({minor_count} forecasts)"
+        )
+
+    # Level 3: same major (X.*)
+    major_matches = [
+        v for v in available if (sv := _parse_semver(v)) is not None and sv[0] == major
+    ]
+    major_count = _count_forecasts_for_versions(major_matches)
+    if major_count >= min_datapoints:
+        return major_matches, (
+            f"v{major}.{minor}.* has only {minor_count} forecasts "
+            f"— widening to v{major}.* ({major_count} forecasts)"
+        )
+
+    # Level 4: all versions
+    return None, (
+        f"v{major}.* has only {major_count} forecasts "
+        f"(need {min_datapoints}) — including all versions"
+    )
