@@ -151,10 +151,13 @@ def list_forecasts(
 @app.command("errors")
 def show_errors(
     limit: int = typer.Option(10, "-n", "--limit", help="Number of forecasts to check"),
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
 ) -> None:
     """Show forecasts with tool errors."""
     errors_found: list[dict] = []
-    for post_dir in iter_forecast_dirs():
+    for post_dir in iter_forecast_dirs(version=version):
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
@@ -178,7 +181,8 @@ def show_errors(
     errors_found.sort(key=lambda x: x["total_errors"], reverse=True)
     errors_found = errors_found[:limit]
 
-    typer.echo(f"\n{'Post':<8} {'Errors':<8} Title")
+    ver_label = f" (version: {version})" if version else ""
+    typer.echo(f"\n{'Post':<8} {'Errors':<8} Title{ver_label}")
     typer.echo("-" * 60)
     for e in errors_found:
         typer.echo(f"{e['post_id']:<8} {e['total_errors']:<8} {e['title']}")
