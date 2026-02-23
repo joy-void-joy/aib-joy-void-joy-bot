@@ -1,8 +1,8 @@
 """Unified search and content retrieval tools.
 
 Provides web search (via Haiku sub-agent + API augmentation), Exa AI search,
-AskNews search, Wikipedia, and URL content fetching. All "find/retrieve
-information" tools live here.
+Wikipedia, arXiv, and URL content fetching. All "find/retrieve information"
+tools live here. AskNews is served by a separate remote MCP server.
 
 Search snippets are always fetched from actual page content, not from the
 search engine. API-augmented results get snippets from api_data; others are
@@ -15,8 +15,6 @@ import logging
 from typing import Any, Literal, TypedDict
 
 import httpx
-from asknews_sdk.dto.news import SearchResponseDictItem
-from asknews_sdk.errors import RateLimitExceededError as AskNewsRateLimitError
 from claude_agent_sdk import (
     HookCallback,
     HookInput,
@@ -40,7 +38,7 @@ from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
-from aib.tools.throttle import asknews_throttle, exa_throttle, wikipedia_throttle
+from aib.tools.throttle import exa_throttle, wikipedia_throttle
 from aib.tools.wayback import (
     WaybackRateLimitError,
     check_wayback_availability,
@@ -294,15 +292,9 @@ async def _raw_web_search(
         allowed_tools=["WebSearch"],
         hooks={
             "PreToolUse": [
-                HookMatcher(
-                    hooks=[
-                        _make_tool_filter_hook(frozenset({"WebSearch"}))
-                    ]
-                )
+                HookMatcher(hooks=[_make_tool_filter_hook(frozenset({"WebSearch"}))])
             ],
-            "PostToolUse": [
-                HookMatcher(hooks=[capture_hook])
-            ],
+            "PostToolUse": [HookMatcher(hooks=[capture_hook])],
         },
         system_prompt="You are a web search assistant. Use WebSearch to find information.",
     ) as client:
@@ -513,111 +505,6 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
         return mcp_error(f"Search failed: {e}")
 
 
-# --- News Search Tool ---
-
-
-class SearchNewsInput(BaseModel):
-    query: str
-    num_results: int = settings.search_default_limit
-
-
-@tool(
-    "search_news",
-    (
-        "Search for recent news using AskNews API. Returns raw news results with headlines, sources, and summaries. "
-        f"Optional num_results (default: {settings.news_default_limit})."
-    ),
-    SearchNewsInput.model_json_schema(),
-)
-@tracked("search_news")
-async def search_news(args: dict[str, Any]) -> dict[str, Any]:
-    """Search news using AskNews SDK and return formatted results."""
-    try:
-        validated = SearchNewsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    if retrodict_cutoff.get() is not None:
-        return mcp_error(
-            "search_news is currently unavailable. "
-            "Use search_exa or web_search instead."
-        )
-
-    query = validated.query
-    num_results = validated.num_results
-
-    @with_retry(
-        max_attempts=3,
-        min_wait=10,
-        max_wait=30,
-        extra_exceptions=(AskNewsRateLimitError,),
-    )
-    async def _fetch_news(
-        strategy: Literal["latest news", "news knowledge", "default"],
-        n_articles: int,
-    ) -> list[SearchResponseDictItem]:
-        from asknews_sdk import AsyncAskNewsSDK
-
-        api_key = settings.asknews_api_key
-        client_id = settings.asknews_client_id
-        client_secret = settings.asknews_client_secret
-
-        if api_key:
-            ask_ctx = AsyncAskNewsSDK(api_key=api_key, scopes={"news"})
-        elif client_id and client_secret:
-            ask_ctx = AsyncAskNewsSDK(
-                client_id=client_id,
-                client_secret=client_secret,
-                scopes={"news"},
-            )
-        else:
-            raise ValueError("AskNews credentials not configured")
-
-        async with ask_ctx as ask:
-            response = await ask.news.search_news(
-                query=query,
-                n_articles=n_articles,
-                return_type="both",
-                strategy=strategy,
-            )
-        return response.as_dicts or []
-
-    try:
-        async with asknews_throttle:
-            hot_articles = await _fetch_news("latest news", min(num_results, 6))
-        async with asknews_throttle:
-            historical_articles = await _fetch_news("news knowledge", num_results)
-    except Exception as e:
-        logger.exception("News search failed")
-        return mcp_error(f"News search failed: {e}")
-
-    seen: set[str] = set()
-    all_articles: list[SearchResponseDictItem] = []
-    for article in hot_articles + historical_articles:
-        aid = str(article.article_id)
-        if aid not in seen:
-            seen.add(aid)
-            all_articles.append(article)
-
-    all_articles.sort(key=lambda a: a.pub_date, reverse=True)
-
-    if not all_articles:
-        return mcp_success({"query": query, "results": "No articles were found.\n"})
-
-    formatted = "Here are the relevant news articles:\n\n"
-    for article in all_articles:
-        pub_date = article.pub_date.strftime("%B %d, %Y %I:%M %p")
-        formatted += (
-            f"**{article.eng_title}**\n"
-            f"{article.summary}\n"
-            f"Language: {article.language}\n"
-            f"Published: {pub_date}\n"
-            f"Source: [{article.source_id}]({article.article_url})\n\n"
-        )
-
-    return mcp_success({"query": query, "results": formatted})
-
-
 # --- Wikipedia Tool ---
 
 
@@ -633,10 +520,96 @@ class WikipediaInput(BaseModel):
     )
 
 
+def _parse_asknews_articles(
+    result: object,
+) -> list[dict[str, str]]:
+    """Parse article data from an AskNews CallToolResult."""
+    articles: list[dict[str, str]] = []
+
+    content_blocks = getattr(result, "content", [])
+    for block in content_blocks:
+        text = getattr(block, "text", None)
+        if not text:
+            continue
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        items: list[dict[str, str]] = []
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            for key in ("results", "articles", "data"):
+                candidate = data.get(key)
+                if isinstance(candidate, list):
+                    items = candidate
+                    break
+
+        for item in items:
+            if isinstance(item, dict) and item.get("title"):
+                title = str(item["title"])
+                articles.append(
+                    {
+                        "title": title,
+                        "snippet": str(
+                            item.get(
+                                "snippet",
+                                item.get("summary", item.get("extract", "")),
+                            )
+                        ),
+                        "url": str(
+                            item.get(
+                                "url",
+                                f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                            )
+                        ),
+                    }
+                )
+
+    return articles
+
+
+async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
+    """Search Wikipedia via AskNews semantic/vector search (best-effort).
+
+    Calls the AskNews remote MCP server's search_wikipedia tool directly.
+    Returns a list of {title, snippet, url} dicts, or empty list on failure.
+    """
+    api_key = settings.asknews_api_key
+    if not api_key:
+        return []
+
+    try:
+        from mcp import ClientSession
+        from mcp.client.streamable_http import streamable_http_client
+
+        http_client = httpx.AsyncClient(
+            timeout=15,
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        async with streamable_http_client(
+            url="https://mcp.asknews.app",
+            http_client=http_client,
+        ) as (read, write, _):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                result = await session.call_tool("search_wikipedia", {"query": query})
+
+                if result.isError:
+                    return []
+
+                return _parse_asknews_articles(result)
+    except Exception:
+        logger.debug("AskNews Wikipedia search failed", exc_info=True)
+        return []
+
+
 @tool(
     "wikipedia",
     (
         "Search Wikipedia or fetch article content. "
+        "Search mode combines keyword and semantic search for broader coverage. "
         "Modes: 'search' (default) finds articles matching query; "
         "'summary' fetches article intro by exact title; "
         "'full' fetches entire article by exact title. "
@@ -706,8 +679,29 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                 return results
 
         try:
-            async with wikipedia_throttle:
-                results = await _search()
+            if not cutoff_date and settings.asknews_api_key:
+                async with wikipedia_throttle:
+                    wiki_results, asknews_results = await asyncio.gather(
+                        _search(),
+                        _asknews_wikipedia_search(query),
+                    )
+                seen_titles = {r["title"].lower().strip() for r in wiki_results}
+                for ar in asknews_results:
+                    if ar["title"].lower().strip() not in seen_titles:
+                        seen_titles.add(ar["title"].lower().strip())
+                        wiki_results.append(
+                            {
+                                "title": ar["title"],
+                                "snippet": ar.get("snippet", ""),
+                                "url": ar["url"],
+                                "word_count": 0,
+                                "source": "semantic",
+                            }
+                        )
+                results = wiki_results
+            else:
+                async with wikipedia_throttle:
+                    results = await _search()
 
             if cutoff_date and results:
                 historical_results = []
@@ -946,22 +940,15 @@ if settings.exa_api_key:
 else:
     logger.info("search_exa tool disabled: EXA_API_KEY not configured")
 
-if settings.asknews_api_key or (
-    settings.asknews_client_id and settings.asknews_client_secret
-):
-    _OPTIONAL_SEARCH_TOOLS.append(search_news)
-else:
-    logger.info("search_news tool disabled: ASKNEWS credentials not configured")
-
 
 def create_search_server() -> Any:
     """Create MCP server with all search and content retrieval tools.
 
-    In retrodict mode, excludes search_exa and search_news.
+    In retrodict mode, excludes search_exa.
     """
     tools = list(_BASE_SEARCH_TOOLS)
     is_retrodict = retrodict_cutoff.get() is not None
-    excluded_in_retrodict = (search_exa, search_news)
+    excluded_in_retrodict = (search_exa,)
     for t in _OPTIONAL_SEARCH_TOOLS:
         if is_retrodict and t in excluded_in_retrodict:
             logger.info("%s excluded in retrodict mode", t.name)
