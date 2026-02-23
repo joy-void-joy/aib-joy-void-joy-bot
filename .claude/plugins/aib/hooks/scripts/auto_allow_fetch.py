@@ -29,6 +29,9 @@ ALLOW_PATTERNS: list[str] = [
     # Prediction markets docs
     r"https?://docs\.polymarket\.com/",
     r"https?://docs\.manifold\.markets/",
+    # AskNews
+    r"https?://docs\.asknews\.app/",
+    r"https?://mcp\.asknews\.app/",
 ]
 
 DENY_PATTERNS: list[tuple[str, str]] = [
