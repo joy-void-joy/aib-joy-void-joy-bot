@@ -884,6 +884,8 @@ async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
     response: dict[str, Any] = {"url": url, "content": text[:_MAX_CONTENT]}
     if title:
         response["title"] = title
+    if isinstance(result, FetchResult) and result.data:
+        response["structured_data"] = result.data
     return mcp_success(response)
 
 
