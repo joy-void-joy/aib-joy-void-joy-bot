@@ -420,10 +420,9 @@ class TestBuildReviewerPrompt:
             factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
             tentative_logit=0.8,
         )
-        computed = compute_reflection(inp, "binary")
         context = {"title": "Will X happen?", "type": "binary"}
 
-        prompt = _build_reviewer_prompt(inp, computed, context, None)
+        prompt = _build_reviewer_prompt(inp, context, None)
 
         assert "Will X happen?" in prompt
         assert "binary" in prompt
@@ -437,9 +436,8 @@ class TestBuildReviewerPrompt:
             ],
             tentative_logit=1.0,
         )
-        computed = compute_reflection(inp, "binary")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, None)
+        prompt = _build_reviewer_prompt(inp, None, None)
 
         assert "Strong signal" in prompt
         assert "Weak counter" in prompt
@@ -447,19 +445,17 @@ class TestBuildReviewerPrompt:
     def test_includes_trace(self) -> None:
         """Prompt should reference the trace file."""
         inp = _make_binary_input(tentative_logit=0.5)
-        computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
+        prompt = _build_reviewer_prompt(inp, None, trace_path)
 
         assert "trace.md" in prompt
 
     def test_trace_file_path_included(self) -> None:
         """Prompt should reference the trace file path."""
         inp = _make_binary_input(tentative_logit=0.5)
-        computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
+        prompt = _build_reviewer_prompt(inp, None, trace_path)
 
         assert "/tmp/session/trace.md" in prompt

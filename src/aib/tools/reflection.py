@@ -14,6 +14,7 @@ import logging
 import math
 from collections.abc import Callable
 from datetime import datetime, timezone
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
@@ -89,14 +90,6 @@ class ReflectionInput(BaseModel):
             "junk, a forced workaround, a missing capability?"
         ),
     )
-    next_steps: str | None = Field(
-        default=None,
-        description="What you plan to research or verify next.",
-    )
-    skip_reviewer: bool = Field(
-        default=False,
-        description="Skip the reviewer sub-agent. Use for simple questions where computed metrics suffice.",
-    )
 
 
 # --- Output Models ---
@@ -159,8 +152,54 @@ class ReflectionOutput(BaseModel):
     # Sources consulted so far (populated from infrastructure)
     sources: list[str] = Field(default_factory=list)
 
-    # Reviewer critique (populated by Sonnet sub-agent)
+    # Reviewer (populated by Sonnet sub-agent)
     reviewer_critique: str | None = None
+
+
+# --- Reviewer Models ---
+
+
+class ReviewVerdict(StrEnum):
+    approve = "approve"
+    warn = "warn"
+    fail = "fail"
+
+
+class ReviewResult(BaseModel):
+    """Structured output from the reviewer sub-agent."""
+
+    verdict: ReviewVerdict
+    assessment: str = Field(
+        description="Your full analysis. Explain what you checked, what you "
+        "found, and why you reached your verdict. Be thorough — this is "
+        "the agent's primary feedback for improving its forecast.",
+    )
+
+
+class ReviewState(BaseModel):
+    """Shared state between reflection tool and StructuredOutput hook."""
+
+    model_config = {"frozen": False}
+
+    consecutive_fails: int = 0
+    last_verdict: ReviewVerdict | None = None
+    last_review: ReviewResult | None = None
+
+    @property
+    def passed(self) -> bool:
+        if self.last_verdict is None:
+            return False
+        if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
+            return True
+        return self.consecutive_fails >= 3
+
+    def record(self, result: ReviewResult) -> None:
+        self.last_verdict = result.verdict
+        self.last_review = result
+        if result.verdict == ReviewVerdict.fail:
+            self.consecutive_fails += 1
+        else:
+            self.consecutive_fails = 0
 
 
 # --- Computation ---
@@ -320,98 +359,75 @@ async def _write_trace_file(session_dir: Path, trace: str) -> Path:
 
 
 _REVIEWER_SYSTEM_PROMPT = """\
-You audit a forecasting agent's reasoning before it commits to a \
-probability. Your job is to catch errors — in either direction. \
-Do not research the question independently or form your own \
-probability estimate. Focus on whether the agent's process was sound.
+You verify a forecasting agent's evidence chain before it commits \
+to a probability. Your job is to catch concrete errors that would \
+make the forecast wrong. You do not research the question \
+independently or form your own probability estimate.
 
-Underconfidence is as costly as overconfidence. An agent that \
-hedges toward 50% when evidence supports 25% loses just as many \
-Brier points as one that claims 5% when evidence supports 25%.
+## What to check
 
-## What to flag
+- **Hallucinated evidence** — A factor cites a specific fact \
+  (quote, statistic, date, event) that is NOT supported by any \
+  source in the research trace. Read the trace carefully. If the \
+  claim isn't grounded in a tool result, flag it.
 
-**Errors that inflate confidence (push away from 50%):**
-- A factor coded in the wrong direction (name it)
-- Confidence on a factor the evidence doesn't support
-- Two factors double-counting the same underlying evidence
+- **Double-counting** — Two or more factors that draw on the same \
+  underlying evidence. Name both factors and the shared source.
 
-**Errors that deflate confidence (push toward 50%):**
-- Tentative probability closer to 50% than factor-implied, \
-  without an explicit factor justifying the adjustment
-- Weak "hedge factors" added for balance rather than because \
-  they carry real evidentiary weight — a factor with logit \
-  +/-0.3 and confidence 0.5 contributes almost nothing and \
-  may exist only to feel even-handed
-- Assessment narrative that reads as strongly directional while \
-  the probability sits near 50%
+- **Wrong-direction factor** — A factor's logit sign contradicts \
+  its own description. Do NOT flag factors where you simply \
+  disagree with the magnitude.
 
-**Structural issues (either direction):**
-- The assessment narrative contradicting its own factors
-- An implicit assumption not captured in the factor list
-- A scenario missing from the factors that could materially \
-  shift the estimate (up to 2 — one in each direction)
+- **Contradictory assessment** — The narrative assessment reaches \
+  a conclusion that contradicts what the factors collectively say.
 
-**Research gaps:**
-- Evidence from a single source or angle when multiple exist
-- Obvious searches not attempted (check the trace)
-- Key data sources overlooked for this question type
+## What NOT to check
 
-If you don't find real issues, say so briefly and stop. Be direct \
-and specific — name the factor, cite the number, explain the error.
+- The probability value or factor-probability gap
+- Whether the agent did enough research
+- Whether factor magnitudes are appropriate
+- Missing scenarios or considerations
+- Calibration or base rates
+
+## Verdicts
+
+- **fail** — You found a concrete error above that could \
+  materially affect the forecast.
+- **warn** — Something looks off but you're not certain it's wrong.
+- **approve** — No errors found.
+
+If you find no errors, approve and stop. Do not manufacture \
+concerns. Be specific: name the factor, quote the claim, explain \
+what you checked in the trace.
+
+## Research trace
+
+The agent's full reasoning trace is at `{trace_file}`. Read it to \
+verify that factual claims in factors are grounded in actual tool \
+results.
 
 ## Historical data
 
-You have Read, Glob, and Grep access to the agent's past work at:
+You have Read, Glob, and Grep access to past forecasts at:
 
   {traces_dir}/
 
-This directory has three subdirectories:
-
-### forecasts/<post_id>/<timestamp>.json
-Structured forecast outputs. Each JSON contains:
-- question_title, question_type (binary, numeric, multiple_choice)
-- probability (0-1 for binary), logit, factors (list of evidence items)
-- resolution: null if unresolved, "yes"/"no" for binary, number \
-for numeric
-- summary, sources_consulted, tool_metrics, token_usage
-
-Use these for calibration analysis: how accurate were past forecasts \
-at similar probability levels? Does the agent tend to be over- or \
-underconfident on this question type?
-
-### sessions/<post_id>/<timestamp>/
-Session workspace for each forecast. Contains:
-- reflection.yaml — factors, assessment, tool audit, computed metrics
-- trace.md — the agent's full reasoning trace
-- Scratch files the agent saved during research
-
-### logs/<post_id>_<timestamp>.md
-Full reasoning logs in markdown. Large files (50k+ chars). Only \
-read these if you need detailed reasoning behind a specific past \
-forecast.
-
-### How to explore
-- Glob("{traces_dir}/forecasts/**/*.json") — list all forecast JSONs
-- Grep("resolution", path="{traces_dir}/forecasts/") — find resolved
-- Read a specific JSON to inspect factors and probability
-- Grep("question_type.*binary", path="{traces_dir}/forecasts/") — \
-filter by type
-
-## Format
-
-Write like a colleague reviewing a draft — direct, specific, \
-concise. No praise unless there's genuinely nothing to flag.
+Use `Glob("{traces_dir}/forecasts/**/*.json")` to list them. Each \
+JSON has question_title, probability, factors, and resolution. \
+Use these to check for patterns — repeated errors, systematic \
+biases on this question type, or similar past forecasts.
 """
 
 
 def _build_reviewer_prompt(
     inp: ReflectionInput,
-    computed: ReflectionOutput,
     question_context: dict[str, Any] | None,
     trace_file: Path | None,
 ) -> str:
-    """Build the prompt for the reviewer sub-agent."""
+    """Build the prompt for the reviewer sub-agent.
+
+    Deliberately excludes probability metrics to prevent gap commentary.
+    """
     sections: list[str] = []
 
     if question_context:
@@ -426,64 +442,33 @@ def _build_reviewer_prompt(
             sections.append(f"Fine print: {fine_print}")
 
     factor_lines: list[str] = []
-    for f in inp.factors:
+    for i, f in enumerate(inp.factors, 1):
         if isinstance(f.supports, NumericSupport):
-            prefix = f"- [{f.supports.center} ({f.supports.low}–{f.supports.high})] "
+            prefix = f"{i}. [{f.supports.center} ({f.supports.low}–{f.supports.high})] "
         elif f.supports is not None:
-            prefix = f"- [{f.supports}] "
+            prefix = f"{i}. [{f.supports}] "
         else:
-            prefix = "- "
+            prefix = f"{i}. "
         factor_lines.append(
             f"{prefix}{f.description} "
-            f"(logit={f.logit:+.1f}, confidence={f.confidence}, "
-            f"effective={f.logit * f.confidence:+.2f})"
+            f"(logit={f.logit:+.1f}, confidence={f.confidence})"
         )
     sections.append("## Factors\n\n" + "\n".join(factor_lines))
 
-    if computed.factor_implied_probability is not None:
-        sections.append(
-            f"## Probabilities\n\n"
-            f"Factor-implied: {computed.factor_implied_probability:.1%}\n"
-            f"Agent's probability: {computed.tentative_probability:.1%}\n"
-            f"Gap: {computed.gap_pp:+.1f}pp"
-        )
-    elif computed.distribution_metrics:
-        dm = computed.distribution_metrics
-        sections.append(
-            f"## Distribution Metrics\n\n"
-            f"Implied median: {dm.implied_median:.4g}\n"
-            f"Implied range: [{dm.implied_p10:.4g}, {dm.implied_p90:.4g}]\n"
-            f"Median gap: {dm.median_gap:+.4g} ({dm.median_gap_pct:+.1f}% of range)\n"
-            f"Spread ratio: {dm.spread_ratio:.2f}"
-        )
-    elif computed.outcome_breakdown:
-        lines = []
-        for ob in computed.outcome_breakdown:
-            lines.append(
-                f"- {ob.outcome}: {ob.factor_count} factors, logit sum = {ob.logit_sum:.2f}"
-            )
-        sections.append("## Per-Outcome Breakdown\n\n" + "\n".join(lines))
-
     sections.append(f"## Assessment\n\n{inp.assessment}")
-    sections.append(f"## Tool Audit\n\n{inp.tool_audit}")
-
-    if inp.next_steps:
-        sections.append(f"## Agent's Planned Next Steps\n\n{inp.next_steps}")
 
     if trace_file:
         sections.append(
             f"## Research Trace\n\n"
-            f"The agent's full reasoning trace — every thought, tool "
-            f"call, and result — is at `{trace_file}`. The factors "
-            f"and assessment above are the agent's summary; the trace "
-            f"shows the research path that led there."
+            f"The agent's full reasoning trace is at `{trace_file}`. "
+            f"Read it to verify factual claims in the factors above."
         )
 
     return "\n\n".join(sections)
 
 
-def _build_reviewer_hooks(traces_dir: Path | None) -> HooksConfig:
-    """Build permission hooks restricting the reviewer to past forecasts."""
+def _build_reviewer_hooks(session_dir: Path | None) -> HooksConfig:
+    """Build permission hooks restricting the reviewer to the session directory."""
     from claude_agent_sdk import HookMatcher
     from claude_agent_sdk.types import (
         HookContext,
@@ -498,10 +483,10 @@ def _build_reviewer_hooks(traces_dir: Path | None) -> HooksConfig:
     allowed = ["Read", "Glob", "Grep", "WebFetch", "StructuredOutput"]
     hooks = create_allowed_tools_hook(allowed)
 
-    if traces_dir is None:
+    if session_dir is None:
         return hooks
 
-    resolved_dir = traces_dir.resolve()
+    resolved_dir = session_dir.resolve()
 
     def _deny(reason: str) -> HookJSONOutput:
         return SyncHookJSONOutput(
@@ -526,16 +511,12 @@ def _build_reviewer_hooks(traces_dir: Path | None) -> HooksConfig:
         if tool_name in ("Read", "Glob", "Grep"):
             file_path = tool_input.get("file_path") or tool_input.get("path", "")
             if not file_path:
-                return _deny(
-                    f"Path required. Browse past forecasts at: {traces_dir}",
-                )
+                return _deny(f"Path required. Session dir: {session_dir}")
             try:
                 resolved = Path(file_path).resolve()
                 resolved.relative_to(resolved_dir)
             except (ValueError, OSError):
-                return _deny(
-                    f"Access restricted to: {traces_dir}",
-                )
+                return _deny(f"Access restricted to: {session_dir}")
 
         return SyncHookJSONOutput()
 
@@ -547,17 +528,13 @@ def _build_reviewer_hooks(traces_dir: Path | None) -> HooksConfig:
 
 async def _run_reviewer(
     inp: ReflectionInput,
-    computed: ReflectionOutput,
     question_context: dict[str, Any] | None,
     trace_file: Path | None,
     traces_dir: Path | None,
-) -> str | None:
+) -> ReviewResult | None:
     """Call a Sonnet sub-agent to review the forecast.
 
-    The reviewer has Read/Glob/Grep access to past forecasts and
-    WebFetch for additional research.
-
-    Returns the reviewer's freeform critique, or None on failure.
+    Returns structured ReviewResult, or None on failure.
     """
     from claude_agent_sdk import (
         AssistantMessage as _AssistantMessage,
@@ -568,9 +545,10 @@ async def _run_reviewer(
     from aib.agent.client import build_client
     from aib.agent.display import print_block
 
-    prompt = _build_reviewer_prompt(inp, computed, question_context, trace_file)
+    prompt = _build_reviewer_prompt(inp, question_context, trace_file)
 
     system_prompt = _REVIEWER_SYSTEM_PROMPT.format(
+        trace_file=trace_file or "(not available)",
         traces_dir=traces_dir or "(not available)",
     )
 
@@ -584,7 +562,7 @@ async def _run_reviewer(
     )
 
     try:
-        result_text = ""
+        structured_output: dict[str, Any] | None = None
         async with build_client(
             model="sonnet",
             allowed_tools=["Read", "Glob", "Grep", "WebFetch"],
@@ -592,15 +570,22 @@ async def _run_reviewer(
             system_prompt=system_prompt,
             hooks=reviewer_hooks,
             add_dirs=add_dirs,
+            output_format={
+                "type": "json_schema",
+                "schema": ReviewResult.model_json_schema(),
+            },
         ) as client:
             await client.query(prompt)
             async for message in client.receive_response():
                 if isinstance(message, _AssistantMessage):
                     for block in message.content:
                         print_block(block, prefix="  ↳ [reviewer] ")
-                elif isinstance(message, ResultMessage) and message.result:
-                    result_text = message.result
-        return result_text or None
+                elif isinstance(message, ResultMessage):
+                    structured_output = message.structured_output
+
+        if structured_output:
+            return ReviewResult.model_validate(structured_output)
+        return None
     except Exception:
         logger.exception("Reviewer sub-agent failed")
         return None
@@ -613,10 +598,12 @@ Checkpoint your reasoning by committing to factors and a tentative estimate.
 
 Returns: factor-consistency metrics, distribution metrics (for numeric/discrete),
 per-outcome breakdowns (for MC), sources consulted, and an independent reviewer
-audit that checks for errors in both directions.
+verdict.
 
-Call at least once before your final StructuredOutput. Use skip_reviewer=True
-for intermediate checkpoints where you only need metrics.
+**Gate behavior:** An independent reviewer checks your evidence chain and
+returns approve, warn, or fail. On fail, this tool returns an error — fix the
+issues and call reflection() again. StructuredOutput is blocked until the
+reviewer approves. After 3 consecutive fails, the gate auto-approves.
 
 Binary example:
   reflection(
@@ -649,6 +636,7 @@ def _create_reflection_tool(
     get_trace: Callable[[], str] | None = None,
     question_context: dict[str, Any] | None = None,
     traces_dir: Path | None = None,
+    review_state: ReviewState | None = None,
 ):
     """Create the reflection tool with session context."""
 
@@ -678,19 +666,38 @@ def _create_reflection_tool(
                 trace_file = await _write_trace_file(session_dir, trace)
 
         # Run the reviewer sub-agent (disabled in retrodict to prevent leaks)
-        if not validated.skip_reviewer and retrodict_cutoff.get() is None:
+        review_result: ReviewResult | None = None
+        if retrodict_cutoff.get() is None:
             try:
-                critique = await _run_reviewer(
+                review_result = await _run_reviewer(
                     validated,
-                    computed,
                     question_context,
                     trace_file,
                     traces_dir,
                 )
-                computed.reviewer_critique = critique
+                if review_result:
+                    computed.reviewer_critique = review_result.assessment
             except Exception:
                 logger.exception("Reviewer failed, continuing without critique")
+        elif review_state is not None:
+            # Auto-approve in retrodict mode (reviewer disabled)
+            review_state.record(ReviewResult(
+                verdict=ReviewVerdict.approve,
+                assessment="Auto-approved (retrodict mode).",
+            ))
 
+        # Record verdict for StructuredOutput gate
+        if review_result and review_state is not None:
+            review_state.record(review_result)
+
+        # On reviewer crash, auto-approve so the agent isn't stuck
+        if review_result is None and review_state is not None and retrodict_cutoff.get() is None:
+            review_state.record(ReviewResult(
+                verdict=ReviewVerdict.approve,
+                assessment="Reviewer unavailable; auto-approved.",
+            ))
+
+        # Always write reflection.yaml (even on fail) for logging
         try:
             filepath = await _append_reflection(
                 session_dir, validated, computed, question_type
@@ -700,7 +707,23 @@ def _create_reflection_tool(
             logger.exception("Failed to write reflection")
             return mcp_error(f"Failed to write reflection: {e}")
 
-        return mcp_success(computed.model_dump(exclude_none=True))
+        result_data = computed.model_dump(exclude_none=True)
+
+        # Gate: fail verdict → tool error (unless escape hatch)
+        if review_result and review_result.verdict == ReviewVerdict.fail:
+            if review_state and review_state.passed:
+                result_data["reviewer_note"] = (
+                    f"Force-approved after {review_state.consecutive_fails} "
+                    f"consecutive reviewer failures."
+                )
+                return mcp_success(result_data)
+
+            return mcp_error(
+                f"REVIEWER FAILED: {review_result.assessment}\n\n"
+                f"Fix the issues above, then call reflection() again."
+            )
+
+        return mcp_success(result_data)
 
     return reflection_tool
 
@@ -712,6 +735,7 @@ def create_reflection_server(
     get_trace: Callable[[], str] | None = None,
     question_context: dict[str, Any] | None = None,
     traces_dir: Path | None = None,
+    review_state: ReviewState | None = None,
 ):
     """Create the reflection MCP server with session context.
 
@@ -727,13 +751,12 @@ def create_reflection_server(
             Passed to the reviewer for informed critique.
         traces_dir: Directory with past forecast JSONs.
             The reviewer gets read access to browse historical performance.
-
-    Returns:
-        MCP server configured with the reflection tool.
+        review_state: Shared state for reviewer gate coordination
+            with the StructuredOutput hook.
     """
     return create_mcp_server(
         name="notes",
-        version="5.0.0",
+        version="6.0.0",
         tools=[
             _create_reflection_tool(
                 session_dir,
@@ -742,6 +765,7 @@ def create_reflection_server(
                 get_trace,
                 question_context,
                 traces_dir,
+                review_state,
             )
         ],
     )

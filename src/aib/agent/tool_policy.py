@@ -29,6 +29,7 @@ from aib.tools.reflection import create_reflection_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
+    from aib.tools.reflection import ReviewState
     from aib.tools.sandbox import Sandbox
 
 # --- Tool Sets ---
@@ -331,6 +332,7 @@ class ToolPolicy:
         get_trace: Callable[[], str] | None = None,
         question_context: dict[str, Any] | None = None,
         traces_dir: Path | None = None,
+        review_state: ReviewState | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
@@ -348,6 +350,8 @@ class ToolPolicy:
                 Passed to the reviewer for informed critique.
             traces_dir: Directory with past forecast data for the reviewer.
                 The reviewer gets read access to browse historical performance.
+            review_state: Shared reviewer state for gate coordination
+                with the StructuredOutput hook.
 
         Returns:
             Dict mapping server name to server config.
@@ -365,6 +369,7 @@ class ToolPolicy:
                 get_trace=get_trace,
                 question_context=question_context,
                 traces_dir=traces_dir,
+                review_state=review_state,
             ),
             "trends": create_trends_server(),
             "search": create_search_server(),

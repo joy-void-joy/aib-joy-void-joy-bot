@@ -40,6 +40,7 @@ from aib.agent.history import (
 from aib.agent.sources import extract_sources
 from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.meta_hooks import create_structured_output_hooks
+from aib.tools.reflection import ReviewState
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
 from aib.agent.tool_policy import ToolPolicy
@@ -787,13 +788,13 @@ async def run_forecast(
             retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
-        # StructuredOutput hook: unwrap {"parameter": {...}} + reflection gate.
+        # StructuredOutput hook: unwrap {"parameter": {...}} + reviewer gate.
         # Must be LAST PreToolUse hook (CLI bug #15897: updatedInput is
         # discarded when later hooks overwrite the result).
-        reflection_path: Path | None = None
+        review_state: ReviewState | None = None
         if post_id > 0:
-            reflection_path = notes.session / "reflection.yaml"
-        hooks = merge_hooks(hooks, create_structured_output_hooks(reflection_path))
+            review_state = ReviewState()
+        hooks = merge_hooks(hooks, create_structured_output_hooks(review_state))
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
@@ -812,6 +813,7 @@ async def run_forecast(
             ),
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
+            review_state=review_state,
         )
 
         try:

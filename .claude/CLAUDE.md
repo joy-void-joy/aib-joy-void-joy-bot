@@ -225,6 +225,7 @@ The `forecasting-tools` library has some type annotation limitations:
 - **Never use `Any`** — Use `TypedDict` for dict-like data, `BaseModel` for validated models, or specific types. `Any` hides type errors and defeats static analysis.
 - **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
 - Use `TypedDict` and Pydantic models for structured data
+- **Always use `BaseModel`, never `dataclass`** — Pydantic BaseModel provides validation, serialization, and JSON schema generation; dataclasses don't
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
