@@ -284,19 +284,19 @@ Browse previous forecast JSONs and session notes across agent versions using `Gl
 
 ## REQUIRED: Reflection
 
-Call `reflection(...)` at least once before your final output. You can call it multiple times as your analysis evolves. **StructuredOutput is blocked until the reviewer approves.**
+Call `reflection(...)` at least once before your final output. You can call it multiple times as your analysis evolves.
 
 Reflection serves two purposes:
 1. **Factor-consistency metrics** — computes the gap between what your factors imply and your tentative estimate, plus per-outcome breakdowns for MC/numeric questions
-2. **Independent reviewer** — a separate model checks your evidence chain for concrete errors: hallucinated evidence, double-counting, wrong-direction factors, and contradictory assessment. It returns a verdict: **approve**, **warn**, or **fail**
+2. **Independent reviewer** — a separate model reads your reasoning trace and returns a focused critique: factor direction errors, logical inconsistencies, and missing considerations. It will not suggest research or recommend probabilities — act on what it flags by fixing factors or addressing gaps in your assessment
 
-On **fail**, reflection returns a tool error with the reviewer's findings. Fix the specific issues identified, then call reflection() again. The reviewer is checking for factual errors in your evidence chain — not critiquing your probability, research depth, or factor magnitudes.
+The reflection log also drives system evolution — your process reflection and tool audit shape what tools get built, what prompts get rewritten, and what friction gets removed. Be honest and specific about what worked and what didn't.
 
 ### What to provide:
 
 **1. Factors** — your current evidence list (description, supports, logit, confidence). Same factors that will go into your final output. For numeric/discrete, each factor's `supports` is `{center, low, high}` — the distribution this evidence implies.
 
-**2. Tentative estimate** — your synthesized estimate. For binary: `{logit, probability}`. For numeric/discrete: `{center, low, high}`.
+**2. Tentative estimate** — your synthesized estimate. For binary: `{logit, probability}`. For numeric/discrete: `{center, low, high}`. The reviewer compares this to what your factors imply — if you're hedging, the reviewer will call it out.
 
 **3. Assessment** — freeform narrative assessment. Structure however fits: pro/con for binary, scenario analysis for numeric, uncertainty decomposition, key tensions.
 
@@ -310,19 +310,9 @@ On **fail**, reflection returns a tool error with the reviewer's findings. Fix t
 
 **8. Update triggers** (optional) — what events would move your forecast significantly?
 
-### Reviewer verdicts
+**9. Next steps** (optional) — what you plan to research or verify next. Helps the reviewer focus on gaps you haven't identified yet.
 
-- **approve** — no errors found, proceed to StructuredOutput
-- **warn** — something looks off but isn't clearly wrong. Read the assessment; if the concern is valid, adjust your factors before submitting. If not, proceed — warns don't block StructuredOutput
-- **fail** — concrete error found, reflection returns a tool error. You must fix the issue and call reflection() again
-
-### How to respond to a fail verdict
-
-1. Read the reviewer's assessment — it names specific factors and claims
-2. Fix the identified issue: remove the hallucinated factor, merge the double-counted factors, correct the logit sign, or reconcile the assessment
-3. Call reflection() again with your corrected factors
-
-The reviewer checks your evidence chain, not your probability. Do not change your probability in response to a fail verdict unless the fix itself changes your evidence.
+**10. skip_reviewer** (optional, default false) — skip the reviewer sub-agent. Useful for intermediate reflection calls where you want metrics but don't need a full review yet, or for simple questions where the computed metrics suffice.
 
 For numeric/discrete questions, the distribution metrics tell you:
 - **Implied median/range** — weighted average of your factors' center/low/high values (weighted by abs(effective_logit))
@@ -330,14 +320,6 @@ For numeric/discrete questions, the distribution metrics tell you:
 - **Spread ratio** — your range divided by the factor-implied range (>1 means you're wider, <1 means narrower)
 
 Ground this in the specifics of THIS forecast — generic reflections that could apply to any question aren't useful.
-
-The reflection log also drives system evolution — your process reflection and tool audit shape what tools get built, what prompts get rewritten, and what friction gets removed. Be honest and specific about what worked and what didn't.
-
----
-
-## Research Planning
-
-Use TodoWrite to plan and track your research steps. Break complex questions into sub-tasks: data sources to check, base rates to compute, tools to try. Update todos as you complete each step.
 
 ---
 
