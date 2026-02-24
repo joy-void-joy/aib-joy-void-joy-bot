@@ -225,7 +225,6 @@ The `forecasting-tools` library has some type annotation limitations:
 - **Never use `Any`** — Use `TypedDict` for dict-like data, `BaseModel` for validated models, or specific types. `Any` hides type errors and defeats static analysis.
 - **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
 - Use `TypedDict` and Pydantic models for structured data
-- **Always use `BaseModel`, never `dataclass`** — Pydantic BaseModel provides validation, serialization, and JSON schema generation; dataclasses don't
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
@@ -254,6 +253,14 @@ When integrating with external services (APIs, data sources, etc.):
 - **Use existing Python libraries first** — Check PyPI for official or well-maintained client libraries before writing raw HTTP requests
 - **Examples**: Use `arxiv` for arXiv search, `yfinance` for stock data, `fredapi` for FRED economic data
 - **Don't rebuild the wheel** — If a library exists with good documentation and maintenance, use it
+
+### Tool Design: Data Over Interaction
+
+When a tool fails or isn't delivering value, don't just remove it — ask what the agent actually needed. The right abstraction is usually "get the data", not "here's a browser/API/interface, figure it out."
+
+- **Design tools around what the agent needs**, not what the underlying technology exposes
+- **Automate data extraction** rather than giving the agent interactive tools to fish for it
+- **Follow the data augmentation pattern**: `web_search` doesn't just return raw search results — it automatically enriches them with structured API data from recognized domains. `fetch_url` doesn't just return page text — it extracts embedded data (Next.js state, JSON script tags, global state) from JS-rendered pages. New tools should follow this pattern: do the enrichment inside the tool, not in the agent's reasoning loop
 
 ### Code as Documentation
 
