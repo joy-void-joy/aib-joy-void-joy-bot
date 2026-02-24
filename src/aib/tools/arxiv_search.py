@@ -9,7 +9,6 @@ Uses the arxiv Python library: https://pypi.org/project/arxiv/
 import logging
 import re
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, TypedDict
 
 import arxiv
@@ -19,6 +18,7 @@ from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
+from aib.tools.fetch_http import downloads_dir
 
 from aib.tools.extract import extract_with_prompt
 from aib.tools.metrics import tracked
@@ -149,7 +149,6 @@ _ARXIV_ID_PATTERN = re.compile(
     r"(?:https?://arxiv\.org/(?:abs|html|pdf)/)?(\d{4}\.\d{4,5}(?:v\d+)?)"
 )
 _ARXIV_TIMEOUT = 30.0
-_PDF_DIR = Path("tmp/arxiv")
 
 
 def _parse_arxiv_id(raw: str) -> str | None:
@@ -233,8 +232,9 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
         except httpx.HTTPError as e:
             return mcp_error(f"Failed to fetch paper {paper_id}: {e}")
 
-    _PDF_DIR.mkdir(parents=True, exist_ok=True)
-    pdf_path = _PDF_DIR / f"{paper_id.replace('/', '_')}.pdf"
+    target = downloads_dir.get() / "arxiv"
+    target.mkdir(parents=True, exist_ok=True)
+    pdf_path = target / f"{paper_id.replace('/', '_')}.pdf"
     pdf_path.write_bytes(resp.content)
 
     return mcp_success(

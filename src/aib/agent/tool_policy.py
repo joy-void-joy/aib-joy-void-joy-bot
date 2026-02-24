@@ -15,7 +15,6 @@ from claude_agent_sdk.types import (
     McpHttpServerConfig,
     McpSdkServerConfig,
     McpServerConfig,
-    McpStdioServerConfig,
 )
 
 from aib.retrodict_context import retrodict_cutoff
@@ -29,7 +28,6 @@ from aib.tools.reflection import create_reflection_server
 
 if TYPE_CHECKING:
     from aib.config import Settings
-    from aib.tools.reflection import ReviewState
     from aib.tools.sandbox import Sandbox
 
 # --- Tool Sets ---
@@ -45,8 +43,6 @@ BUILTIN_TOOLS: frozenset[str] = frozenset(
         "Grep",
         "Bash",
         "Task",
-        "TodoRead",
-        "TodoWrite",
     }
 )
 
@@ -157,16 +153,6 @@ NOTES_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Playwright browser tools (excluded in retrodict mode)
-PLAYWRIGHT_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__playwright__browser_navigate",
-        "mcp__playwright__browser_snapshot",
-        "mcp__playwright__browser_click",
-        "mcp__playwright__browser_type",
-    }
-)
-
 # Fetch tool (now in search server)
 FETCH_TOOLS: frozenset[str] = frozenset(
     {
@@ -236,10 +222,6 @@ _STATIC_TOOL_DOCS: dict[str, str] = {
         "Deep, multi-step news research on a topic. Synthesizes across many "
         "sources for complex questions requiring extensive news coverage."
     ),
-    "mcp__playwright__browser_navigate": "Navigate to a URL in a headless browser.",
-    "mcp__playwright__browser_snapshot": "Take an accessibility snapshot of the current page.",
-    "mcp__playwright__browser_click": "Click on a page element by reference.",
-    "mcp__playwright__browser_type": "Type text into a page input element.",
 }
 
 
@@ -290,7 +272,6 @@ class ToolPolicy:
 
         # Retrodict exclusions (tools with no date filtering)
         if self.is_retrodict:
-            excluded.update(PLAYWRIGHT_TOOLS)
             excluded.update(ASKNEWS_TOOLS)
             excluded.update(REDDIT_TOOLS)
 
@@ -332,7 +313,6 @@ class ToolPolicy:
         get_trace: Callable[[], str] | None = None,
         question_context: dict[str, Any] | None = None,
         traces_dir: Path | None = None,
-        review_state: ReviewState | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP server configuration based on policy.
 
@@ -350,8 +330,6 @@ class ToolPolicy:
                 Passed to the reviewer for informed critique.
             traces_dir: Directory with past forecast data for the reviewer.
                 The reviewer gets read access to browse historical performance.
-            review_state: Shared reviewer state for gate coordination
-                with the StructuredOutput hook.
 
         Returns:
             Dict mapping server name to server config.
@@ -369,20 +347,10 @@ class ToolPolicy:
                 get_trace=get_trace,
                 question_context=question_context,
                 traces_dir=traces_dir,
-                review_state=review_state,
             ),
             "trends": create_trends_server(),
             "search": create_search_server(),
         }
-
-        # Only add Playwright in non-retrodict mode
-        if not self.is_retrodict:
-            servers["playwright"] = McpStdioServerConfig(
-                type="stdio",
-                command="bun",
-                args=["x", "@playwright/mcp@latest", "--headless"],
-                env={"PLAYWRIGHT_MCP_HEADLESS": "true"},
-            )
 
         # Reddit MCP server (excluded in retrodict — no exact date cutoff)
         if (
@@ -466,9 +434,6 @@ class ToolPolicy:
 
         # Fetch tool (unified URL fetching)
         tools.update(FETCH_TOOLS)
-
-        # Playwright tools
-        tools.update(PLAYWRIGHT_TOOLS)
 
         # Web search tools
         tools.update(SEARCH_TOOLS)
