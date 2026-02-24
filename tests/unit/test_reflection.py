@@ -9,6 +9,9 @@ from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSup
 from aib.tools.reflection import (
     ReflectionInput,
     ReflectionOutput,
+    ReviewResult,
+    ReviewState,
+    ReviewVerdict,
     compute_reflection,
     _append_reflection,
     _build_reviewer_prompt,
@@ -66,7 +69,9 @@ class TestComputeReflectionBinary:
         result = compute_reflection(inp, "binary")
 
         assert isinstance(result, ReflectionOutput)
-        assert abs(result.gap_pp) < 0.1  # type: ignore[operator]
+        assert result.gap_pp is not None
+        assert abs(result.gap_pp) < 0.1
+        assert result.logit_gap is not None
         assert abs(result.logit_gap) < 0.01
 
     def test_large_gap(self) -> None:
@@ -111,7 +116,9 @@ class TestComputeReflectionBinary:
         result = compute_reflection(inp, "binary")
 
         assert result.factor_sum > 0
+        assert result.tentative_logit is not None
         assert result.tentative_logit < 0
+        assert result.logit_gap is not None
         assert result.logit_gap < -1.0
 
     def test_empty_factors(self) -> None:
@@ -420,10 +427,9 @@ class TestBuildReviewerPrompt:
             factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
             tentative_logit=0.8,
         )
-        computed = compute_reflection(inp, "binary")
         context = {"title": "Will X happen?", "type": "binary"}
 
-        prompt = _build_reviewer_prompt(inp, computed, context, None)
+        prompt = _build_reviewer_prompt(inp, context, None)
 
         assert "Will X happen?" in prompt
         assert "binary" in prompt
@@ -437,9 +443,8 @@ class TestBuildReviewerPrompt:
             ],
             tentative_logit=1.0,
         )
-        computed = compute_reflection(inp, "binary")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, None)
+        prompt = _build_reviewer_prompt(inp, None, None)
 
         assert "Strong signal" in prompt
         assert "Weak counter" in prompt
@@ -447,19 +452,69 @@ class TestBuildReviewerPrompt:
     def test_includes_trace(self) -> None:
         """Prompt should reference the trace file."""
         inp = _make_binary_input(tentative_logit=0.5)
-        computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
+        prompt = _build_reviewer_prompt(inp, None, trace_path)
 
         assert "trace.md" in prompt
 
     def test_trace_file_path_included(self) -> None:
         """Prompt should reference the trace file path."""
         inp = _make_binary_input(tentative_logit=0.5)
-        computed = compute_reflection(inp, "binary")
         trace_path = Path("/tmp/session/trace.md")
 
-        prompt = _build_reviewer_prompt(inp, computed, None, trace_path)
+        prompt = _build_reviewer_prompt(inp, None, trace_path)
 
         assert "/tmp/session/trace.md" in prompt
+
+
+class TestReviewState:
+    """Tests for ReviewState verdict tracking and gate logic."""
+
+    def test_initial_state_not_passed(self) -> None:
+        state = ReviewState()
+        assert state.passed is False
+        assert state.last_verdict is None
+        assert state.consecutive_fails == 0
+
+    def test_approve_passes(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.passed is True
+        assert state.last_verdict == ReviewVerdict.approve
+
+    def test_warn_passes(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.warn, assessment="Minor"))
+        assert state.passed is True
+        assert state.last_verdict == ReviewVerdict.warn
+
+    def test_single_fail_does_not_pass(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.passed is False
+        assert state.consecutive_fails == 1
+
+    def test_three_consecutive_fails_auto_approves(self) -> None:
+        state = ReviewState()
+        for _ in range(3):
+            state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.consecutive_fails == 3
+        assert state.passed is True
+
+    def test_approve_resets_consecutive_fails(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.consecutive_fails == 2
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.consecutive_fails == 0
+        assert state.passed is True
+
+    def test_fail_after_approve_resets_pass(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.passed is True
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.passed is False
+        assert state.consecutive_fails == 1
