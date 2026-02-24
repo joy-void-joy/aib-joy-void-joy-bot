@@ -13,7 +13,6 @@ from aib.agent.tool_policy import (
     HISTORICAL_MARKET_TOOLS,
     LIVE_MARKET_TOOLS,
     METACULUS_TOOLS,
-    PLAYWRIGHT_TOOLS,
     TRENDS_TOOLS,
     WORLD_BANK_TOOLS,
     ToolPolicy,
@@ -56,6 +55,9 @@ class TestToolPolicyConstruction:
         settings.exa_api_key = "exa"
         settings.asknews_api_key = "asknews_key"
         settings.fred_api_key = "fred"
+        settings.reddit_client_id = None
+        settings.reddit_client_secret = None
+        settings.census_api_key = None
 
         policy = ToolPolicy.from_settings(settings)
 
@@ -153,13 +155,6 @@ class TestToolPolicyExclusions:
         finally:
             retrodict_cutoff.reset(token)
 
-    def test_includes_playwright_normally(self) -> None:
-        """Should include Playwright tools in normal mode."""
-        policy = ToolPolicy()
-
-        allowed = policy.get_allowed_tools()
-        for tool in PLAYWRIGHT_TOOLS:
-            assert tool in allowed
 
 
 class TestToolPolicySpawn:
@@ -243,31 +238,6 @@ class TestToolPolicyMcpServers:
         assert "trends" in servers
         assert "search" in servers
         assert "arxiv" not in servers
-
-    def test_includes_playwright_normally(self) -> None:
-        """Should include Playwright in normal mode."""
-        sandbox = MagicMock()
-        sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
-
-        policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox, composition_server)
-
-        assert "playwright" in servers
-
-    def test_excludes_playwright_in_retrodict(self) -> None:
-        """Should exclude Playwright server in retrodict mode."""
-        sandbox = MagicMock()
-        sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
-
-        token = retrodict_cutoff.set(date(2026, 1, 15))
-        try:
-            policy = ToolPolicy()
-            servers = policy.get_mcp_servers(sandbox, composition_server)
-            assert "playwright" not in servers
-        finally:
-            retrodict_cutoff.reset(token)
 
     def test_adds_search_server_in_retrodict(self) -> None:
         """Should add date-filtered search server in retrodict mode."""

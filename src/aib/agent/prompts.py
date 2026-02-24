@@ -323,12 +323,6 @@ Ground this in the specifics of THIS forecast — generic reflections that could
 
 ---
 
-## Research Planning
-
-Use TodoWrite to plan and track your research steps. Break complex questions into sub-tasks: data sources to check, base rates to compute, tools to try. Update todos as you complete each step.
-
----
-
 ## Common Mistakes
 
 - **No base rate**: Always start from a prior, even if crude. "How often does this type of thing happen?" is the first question.

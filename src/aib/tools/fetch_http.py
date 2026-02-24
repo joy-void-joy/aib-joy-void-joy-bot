@@ -5,6 +5,7 @@ Pipeline: httpx GET (with_retry on 429/5xx) → trafilatura → Playwright
 
 import hashlib
 import logging
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ class FetchResult(BaseModel):
     model_config = ConfigDict(extra="ignore")
     text: str
     title: str = ""
+    data: list[str] = []
 
 
 _USER_AGENT = (
@@ -49,11 +51,13 @@ async def _http_get(client: httpx.AsyncClient, url: str) -> httpx.Response:
     return resp
 
 
-async def _playwright_render(url: str) -> str | None:
-    """Render a JS page via the Playwright MCP server.
+async def _playwright_render(url: str) -> FetchResult | None:
+    """Render a JS page via Playwright, extracting text and structured data.
 
-    Starts a Playwright stdio server, navigates to the URL, and returns
-    the accessibility snapshot as text.
+    Pipeline:
+    1. Navigate and render the page
+    2. Extract embedded data (Next.js __NEXT_DATA__, JSON script tags, global state)
+    3. Extract text via trafilatura on rendered HTML, fallback to innerText
     """
     params = StdioServerParameters(
         command="bun",
@@ -71,13 +75,23 @@ async def _playwright_render(url: str) -> str | None:
                     logger.warning("Playwright navigate error for %s", url)
                     return None
 
-                # Get the fully rendered HTML and re-extract with trafilatura.
-                # The nav response is just an accessibility tree skeleton.
+                # --- Extract structured data from the page ---
+                data_snippets: list[str] = []
+                data_result = await session.call_tool(
+                    "browser_evaluate",
+                    {"function": _EXTRACT_PAGE_DATA_JS},
+                )
+                if not data_result.isError:
+                    for block in data_result.content:
+                        if isinstance(block, TextContent) and block.text.strip():
+                            data_snippets.append(block.text)
+
+                # --- Extract text content ---
+                text = ""
                 html_result = await session.call_tool(
                     "browser_evaluate",
                     {"function": "() => document.documentElement.outerHTML"},
                 )
-
                 if not html_result.isError:
                     html_parts = [
                         block.text
@@ -87,25 +101,27 @@ async def _playwright_render(url: str) -> str | None:
                     rendered_html = "\n".join(html_parts)
                     extracted = trafilatura.extract(rendered_html)
                     if extracted and len(extracted) > 100:
-                        return extracted
+                        text = extracted
 
-                # Fallback: innerText if trafilatura still can't parse
-                text_result = await session.call_tool(
-                    "browser_evaluate",
-                    {"function": "() => document.body.innerText"},
-                )
+                if not text:
+                    text_result = await session.call_tool(
+                        "browser_evaluate",
+                        {"function": "() => document.body.innerText"},
+                    )
+                    if not text_result.isError:
+                        parts = [
+                            block.text
+                            for block in text_result.content
+                            if isinstance(block, TextContent)
+                        ]
+                        text = "\n".join(parts).strip()
 
-                if text_result.isError:
-                    logger.warning("Playwright evaluate error for %s", url)
-                    return None
-
-                parts = [
-                    block.text
-                    for block in text_result.content
-                    if isinstance(block, TextContent)
-                ]
-                text = "\n".join(parts).strip()
-                return text if len(text) > 100 else None
+                if text or data_snippets:
+                    return FetchResult(
+                        text=text or "(no text content)",
+                        data=data_snippets,
+                    )
+                return None
 
     except BaseException as e:
         if isinstance(e, ExceptionGroup):
@@ -116,14 +132,49 @@ async def _playwright_render(url: str) -> str | None:
         return None
 
 
-_PDF_DIR = Path("tmp/pdf")
+_EXTRACT_PAGE_DATA_JS = """() => {
+    const results = [];
+
+    // Next.js embedded data
+    if (window.__NEXT_DATA__) {
+        try {
+            const s = JSON.stringify(window.__NEXT_DATA__);
+            if (s.length < 500000) results.push(s);
+        } catch {}
+    }
+
+    // JSON script tags (common in SSR frameworks)
+    for (const el of document.querySelectorAll('script[type="application/json"]')) {
+        const t = el.textContent;
+        if (t && t.length > 10 && t.length < 500000) results.push(t);
+    }
+
+    // Common global state patterns
+    for (const key of [
+        '__INITIAL_STATE__', '__PRELOADED_STATE__', '__APP_DATA__',
+        '__NUXT__', '__APOLLO_STATE__',
+    ]) {
+        if (window[key]) {
+            try {
+                const s = JSON.stringify(window[key]);
+                if (s.length < 500000) results.push(s);
+            } catch {}
+        }
+    }
+
+    return JSON.stringify(results);
+}"""
+
+
+downloads_dir: ContextVar[Path] = ContextVar("downloads_dir", default=Path("tmp"))
 
 
 def _save_pdf(url: str, content: bytes) -> dict[str, Any]:
     """Save PDF content to disk and return a path hint for the agent."""
-    _PDF_DIR.mkdir(parents=True, exist_ok=True)
+    target = downloads_dir.get() / "pdf"
+    target.mkdir(parents=True, exist_ok=True)
     slug = hashlib.sha256(url.encode()).hexdigest()[:12]
-    pdf_path = _PDF_DIR / f"{slug}.pdf"
+    pdf_path = target / f"{slug}.pdf"
     pdf_path.write_bytes(content)
     return mcp_success(
         {
@@ -207,9 +258,9 @@ async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
     # JS detection: trafilatura failed but substantial HTML present
     if len(raw) > 500:
         logger.info("JS detected for %s, trying Playwright", url[:80])
-        pw_content = await _playwright_render(url)
-        if pw_content:
-            return FetchResult(text=pw_content, title="")
+        pw_result = await _playwright_render(url)
+        if pw_result:
+            return pw_result
         return mcp_error(
             f"Could not extract text from {url} (JavaScript-rendered page). "
             "Playwright also failed. Try search_exa for indexed content."
