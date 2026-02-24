@@ -138,8 +138,8 @@ class ReflectionOutput(BaseModel):
 
     factor_count: int
     factor_sum: float
-    tentative_logit: float
-    logit_gap: float
+    tentative_logit: float | None = None
+    logit_gap: float | None = None
     neutral_factor_count: int
     factor_breakdown: list[FactorBreakdown]
     dominant_factor: str | None = None
@@ -230,15 +230,17 @@ def compute_reflection(
 
     estimate = inp.tentative_estimate
     if isinstance(estimate, BinaryEstimate):
-        tentative_logit = estimate.logit
+        tentative_logit: float | None = estimate.logit
+        logit_gap: float | None = tentative_logit - factor_sum
     else:
-        tentative_logit = 0.0
+        tentative_logit = None
+        logit_gap = None
 
     output = ReflectionOutput(
         factor_count=len(inp.factors),
         factor_sum=factor_sum,
         tentative_logit=tentative_logit,
-        logit_gap=tentative_logit - factor_sum,
+        logit_gap=logit_gap,
         neutral_factor_count=neutral_count,
         factor_breakdown=breakdown,
         dominant_factor=dominant.description if dominant else None,
