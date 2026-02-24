@@ -23,7 +23,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def create_structured_output_hooks(review_state: ReviewState | None = None) -> HooksConfig:
+def create_structured_output_hooks(
+    review_state: ReviewState | None = None,
+) -> HooksConfig:
     """Combined StructuredOutput hook: unwrap + optional reviewer gate.
 
     Must be the LAST PreToolUse hook registered to ensure updatedInput

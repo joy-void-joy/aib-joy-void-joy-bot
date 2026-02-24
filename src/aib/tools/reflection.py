@@ -182,16 +182,15 @@ class ReviewState(BaseModel):
     model_config = {"frozen": False}
 
     consecutive_fails: int = 0
-    ever_passed: bool = False
     last_verdict: ReviewVerdict | None = None
     last_review: ReviewResult | None = None
 
     @property
     def passed(self) -> bool:
-        if self.ever_passed:
-            return True
         if self.last_verdict is None:
             return False
+        if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
+            return True
         return self.consecutive_fails >= 3
 
     def record(self, result: ReviewResult) -> None:
@@ -201,7 +200,6 @@ class ReviewState(BaseModel):
             self.consecutive_fails += 1
         else:
             self.consecutive_fails = 0
-            self.ever_passed = True
 
 
 # --- Computation ---
@@ -452,8 +450,7 @@ def _build_reviewer_prompt(
         else:
             prefix = f"{i}. "
         factor_lines.append(
-            f"{prefix}{f.description} "
-            f"(logit={f.logit:+.1f}, confidence={f.confidence})"
+            f"{prefix}{f.description} (logit={f.logit:+.1f}, confidence={f.confidence})"
         )
     sections.append("## Factors\n\n" + "\n".join(factor_lines))
 
@@ -501,10 +498,7 @@ def _build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
 
     def _is_under_allowed(path: Path) -> bool:
         resolved = path.resolve()
-        return any(
-            resolved == d or resolved.is_relative_to(d)
-            for d in resolved_dirs
-        )
+        return any(resolved == d or resolved.is_relative_to(d) for d in resolved_dirs)
 
     async def path_hook(
         input_data: HookInput,
@@ -694,21 +688,29 @@ def _create_reflection_tool(
                 logger.exception("Reviewer failed, continuing without critique")
         elif review_state is not None:
             # Auto-approve in retrodict mode (reviewer disabled)
-            review_state.record(ReviewResult(
-                verdict=ReviewVerdict.approve,
-                assessment="Auto-approved (retrodict mode).",
-            ))
+            review_state.record(
+                ReviewResult(
+                    verdict=ReviewVerdict.approve,
+                    assessment="Auto-approved (retrodict mode).",
+                )
+            )
 
         # Record verdict for StructuredOutput gate
         if review_result and review_state is not None:
             review_state.record(review_result)
 
         # On reviewer crash, auto-approve so the agent isn't stuck
-        if review_result is None and review_state is not None and retrodict_cutoff.get() is None:
-            review_state.record(ReviewResult(
-                verdict=ReviewVerdict.approve,
-                assessment="Reviewer unavailable; auto-approved.",
-            ))
+        if (
+            review_result is None
+            and review_state is not None
+            and retrodict_cutoff.get() is None
+        ):
+            review_state.record(
+                ReviewResult(
+                    verdict=ReviewVerdict.approve,
+                    assessment="Reviewer unavailable; auto-approved.",
+                )
+            )
 
         # Always write reflection.yaml (even on fail) for logging
         try:

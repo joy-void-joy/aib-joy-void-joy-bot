@@ -69,7 +69,9 @@ class TestComputeReflectionBinary:
         result = compute_reflection(inp, "binary")
 
         assert isinstance(result, ReflectionOutput)
-        assert abs(result.gap_pp) < 0.1  # type: ignore[operator]
+        assert result.gap_pp is not None
+        assert abs(result.gap_pp) < 0.1
+        assert result.logit_gap is not None
         assert abs(result.logit_gap) < 0.01
 
     def test_large_gap(self) -> None:
@@ -114,7 +116,9 @@ class TestComputeReflectionBinary:
         result = compute_reflection(inp, "binary")
 
         assert result.factor_sum > 0
+        assert result.tentative_logit is not None
         assert result.tentative_logit < 0
+        assert result.logit_gap is not None
         assert result.logit_gap < -1.0
 
     def test_empty_factors(self) -> None:
@@ -507,10 +511,10 @@ class TestReviewState:
         assert state.consecutive_fails == 0
         assert state.passed is True
 
-    def test_fail_after_approve_stays_passed(self) -> None:
+    def test_fail_after_approve_resets_pass(self) -> None:
         state = ReviewState()
         state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
         assert state.passed is True
         state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.passed is True
+        assert state.passed is False
         assert state.consecutive_fails == 1
