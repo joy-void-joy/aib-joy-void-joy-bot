@@ -1,6 +1,7 @@
 """Source URL extraction from agent tool calls and results."""
 
 import json
+import logging
 from collections.abc import Sequence
 from typing import Literal
 from urllib.parse import urlparse
@@ -103,6 +104,24 @@ _AUGMENTED_RESULT_TOOLS: frozenset[str] = frozenset({"mcp__search__web_search"})
 # ---------------------------------------------------------------------------
 
 
+logger = logging.getLogger(__name__)
+
+
+def _fetch_title(url: str) -> str:
+    """Fetch page title via trafilatura metadata extraction."""
+    import trafilatura
+
+    try:
+        html = trafilatura.fetch_url(url)
+        if html:
+            meta = trafilatura.extract_metadata(html, default_url=url)
+            if meta and meta.title:
+                return meta.title
+    except Exception:
+        logger.debug("Title fetch failed for %s", url, exc_info=True)
+    return ""
+
+
 def _domain_label(url: str) -> str:
     """Generate a readable label from a URL's domain, used as fallback when no title."""
     try:
@@ -191,6 +210,7 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
     sources: list[str] = []
     pending_augmented: set[str] = set()
     pending_result: dict[str, str] = {}  # tool_use_id → label
+    pending_fetch: dict[str, str] = {}  # tool_use_id → input URL
 
     def _add(url: str, title: str = "", label: str = "") -> None:
         if url not in seen:
@@ -206,7 +226,7 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
                 if block.name in ("WebFetch", "mcp__search__fetch_url") and (
                     url := block.input.get("url")
                 ):
-                    _add(str(url))
+                    pending_fetch[block.id] = str(url)
                 elif block.name in _AUGMENTED_RESULT_TOOLS:
                     pending_augmented.add(block.id)
                 elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
@@ -224,6 +244,19 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
                                 _add(url, title)
                         except (json.JSONDecodeError, TypeError):
                             pass
+                elif block.tool_use_id in pending_fetch:
+                    url = pending_fetch.pop(block.tool_use_id)
+                    title = ""
+                    for text in _extract_result_texts(block):
+                        try:
+                            data = json.loads(text)
+                            if isinstance(data, dict):
+                                title = str(data.get("title") or "")
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                    if not title:
+                        title = _fetch_title(url)
+                    _add(url, title)
                 elif block.tool_use_id in pending_result:
                     label = pending_result.pop(block.tool_use_id)
                     for text in _extract_result_texts(block):
