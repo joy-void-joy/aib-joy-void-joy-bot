@@ -136,6 +136,7 @@ STOCK_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__financial__stock_price",
         "mcp__financial__stock_history",
+        "mcp__financial__stock_conditional_returns",
     }
 )
 
