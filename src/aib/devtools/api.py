@@ -527,3 +527,66 @@ def earnings_cmd(
                     break
             if not matched:
                 print(f"  Q ending {quarter_end} -> NO MATCH in earnings_dates")
+
+
+# ---------------------------------------------------------------------------
+# trends: Check Google Trends data for a keyword
+# ---------------------------------------------------------------------------
+
+
+@app.command("trends")
+def trends_cmd(
+    keyword: str = typer.Argument(..., help="Google Trends keyword"),
+    timeframe: str = typer.Option(
+        "today 1-m", help="Timeframe (e.g. '2026-01-25 2026-02-24', 'today 1-m')"
+    ),
+    geo: str = typer.Option("US", help="Geographic region"),
+    compare_dates: str = typer.Option(
+        None,
+        "--compare",
+        help="Compare two dates (e.g. '2026-02-18,2026-02-24'). Shows values and delta.",
+    ),
+) -> None:
+    """Fetch Google Trends data for a keyword and optionally compare two dates."""
+    from pytrends.request import TrendReq
+
+    pytrends = TrendReq(hl="en-US", tz=0)
+    pytrends.build_payload([keyword], timeframe=timeframe, geo=geo)
+    df = pytrends.interest_over_time()
+
+    if df.empty:
+        typer.echo("No data returned from Google Trends.")
+        raise typer.Exit(1)
+
+    import pandas as pd
+
+    col = df[[keyword]]
+    assert isinstance(col, pd.DataFrame)
+    typer.echo(col.to_string())
+
+    if compare_dates:
+        dates = [d.strip() for d in compare_dates.split(",")]
+        if len(dates) != 2:
+            typer.echo("\n--compare expects exactly two comma-separated dates.")
+            raise typer.Exit(1)
+
+        typer.echo(f"\n=== Comparison: {dates[0]} vs {dates[1]} ===")
+        vals: list[int | None] = []
+        for d in dates:
+            try:
+                val = int(df.loc[d, keyword])
+                typer.echo(f"  {d}: {val}")
+                vals.append(val)
+            except KeyError:
+                typer.echo(f"  {d}: not found in data")
+                vals.append(None)
+
+        if vals[0] is not None and vals[1] is not None:
+            delta = vals[1] - vals[0]
+            typer.echo(f"  delta: {delta:+d}")
+            if abs(delta) <= 3:
+                typer.echo("  verdict: Doesn't change (within ±3)")
+            elif delta > 3:
+                typer.echo("  verdict: Increases (>+3)")
+            else:
+                typer.echo("  verdict: Decreases (<-3)")
