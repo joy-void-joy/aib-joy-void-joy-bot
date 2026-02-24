@@ -834,7 +834,7 @@ async def run_forecast(
                     "allowUnsandboxedCommands": False,
                 },
                 mcp_servers=mcp_servers,
-                add_dirs=[*notes.all_dirs, sandbox_shared_dir],
+                add_dirs=[*notes.all_dirs, sandbox_shared_dir, Path.home() / ".claude" / "projects"],
                 allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
                 output_format={
                     "type": "json_schema",
