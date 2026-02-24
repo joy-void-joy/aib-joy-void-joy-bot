@@ -362,7 +362,11 @@ def display_forecast(output: ForecastOutput) -> None:
 
     print("\n" + "=" * 60)
     if output.duration_seconds:
-        print(f"Duration: {output.duration_seconds:.1f}s")
+        minutes, seconds = divmod(output.duration_seconds, 60)
+        if minutes >= 1:
+            print(f"Duration: {int(minutes)}m {seconds:.0f}s")
+        else:
+            print(f"Duration: {seconds:.1f}s")
     if output.cost_usd:
         print(f"Cost: ${output.cost_usd:.4f}")
     if output.tool_metrics:
