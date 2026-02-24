@@ -9,6 +9,9 @@ from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSup
 from aib.tools.reflection import (
     ReflectionInput,
     ReflectionOutput,
+    ReviewResult,
+    ReviewState,
+    ReviewVerdict,
     compute_reflection,
     _append_reflection,
     _build_reviewer_prompt,
@@ -459,3 +462,55 @@ class TestBuildReviewerPrompt:
         prompt = _build_reviewer_prompt(inp, None, trace_path)
 
         assert "/tmp/session/trace.md" in prompt
+
+
+class TestReviewState:
+    """Tests for ReviewState verdict tracking and gate logic."""
+
+    def test_initial_state_not_passed(self) -> None:
+        state = ReviewState()
+        assert state.passed is False
+        assert state.last_verdict is None
+        assert state.consecutive_fails == 0
+
+    def test_approve_passes(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.passed is True
+        assert state.last_verdict == ReviewVerdict.approve
+
+    def test_warn_passes(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.warn, assessment="Minor"))
+        assert state.passed is True
+        assert state.last_verdict == ReviewVerdict.warn
+
+    def test_single_fail_does_not_pass(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.passed is False
+        assert state.consecutive_fails == 1
+
+    def test_three_consecutive_fails_auto_approves(self) -> None:
+        state = ReviewState()
+        for _ in range(3):
+            state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.consecutive_fails == 3
+        assert state.passed is True
+
+    def test_approve_resets_consecutive_fails(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.consecutive_fails == 2
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.consecutive_fails == 0
+        assert state.passed is True
+
+    def test_fail_after_approve_resets_pass(self) -> None:
+        state = ReviewState()
+        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
+        assert state.passed is True
+        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
+        assert state.passed is False
+        assert state.consecutive_fails == 1
