@@ -136,7 +136,7 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
    ```
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
-4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump.
+4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run aib-devtools version bump` or manually add an entry following the existing format.
 5. **`/rebase`** — Pushes the branch, opens a PR, then cleans up the commit history with `git reset --soft main` and force-pushes.
 6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run `/rebase` (it rebuilds the history and force-pushes, updating the PR).
 7. **`/close`** — Once the PR is approved, merges it and cleans up the branch.
@@ -253,6 +253,14 @@ When integrating with external services (APIs, data sources, etc.):
 - **Use existing Python libraries first** — Check PyPI for official or well-maintained client libraries before writing raw HTTP requests
 - **Examples**: Use `arxiv` for arXiv search, `yfinance` for stock data, `fredapi` for FRED economic data
 - **Don't rebuild the wheel** — If a library exists with good documentation and maintenance, use it
+
+### Tool Design: Data Over Interaction
+
+When a tool fails or isn't delivering value, don't just remove it — ask what the agent actually needed. The right abstraction is usually "get the data", not "here's a browser/API/interface, figure it out."
+
+- **Design tools around what the agent needs**, not what the underlying technology exposes
+- **Automate data extraction** rather than giving the agent interactive tools to fish for it
+- **Follow the data augmentation pattern**: `web_search` doesn't just return raw search results — it automatically enriches them with structured API data from recognized domains. `fetch_url` doesn't just return page text — it extracts embedded data (Next.js state, JSON script tags, global state) from JS-rendered pages. New tools should follow this pattern: do the enrichment inside the tool, not in the agent's reasoning loop
 
 ### Code as Documentation
 

@@ -156,7 +156,6 @@ class TestToolPolicyExclusions:
             retrodict_cutoff.reset(token)
 
 
-
 class TestToolPolicySpawn:
     """Tests for spawn_subquestions availability."""
 
