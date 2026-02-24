@@ -376,6 +376,7 @@ class ToolPolicy:
                 type="stdio",
                 command="bun",
                 args=["x", "@playwright/mcp@latest", "--headless"],
+                env={"PLAYWRIGHT_MCP_HEADLESS": "true"},
             )
 
         # Reddit MCP server (excluded in retrodict — no exact date cutoff)

@@ -58,6 +58,7 @@ async def _playwright_render(url: str) -> str | None:
     params = StdioServerParameters(
         command="bun",
         args=["x", "@playwright/mcp@latest", "--headless"],
+        env={"PLAYWRIGHT_MCP_HEADLESS": "true"},
     )
 
     try:
