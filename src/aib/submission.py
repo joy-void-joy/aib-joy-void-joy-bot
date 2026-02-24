@@ -196,8 +196,6 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
     if output.reasoning:
         lines.append(output.reasoning)
 
-    lines.append(f"\n## Forecast Summary\n\n{output.summary}")
-
     if output.probability is not None:
         lines.append(f"\n**Probability:** {output.probability * 100:.1f}%")
 
@@ -211,6 +209,9 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
         if output.confidence_interval:
             lo, hi = output.confidence_interval
             lines.append(f"**90% CI:** [{lo}, {hi}]")
+
+    if output.condensed_reasoning:
+        lines.append(f"\n## Reasoning\n\n{output.condensed_reasoning}")
 
     if output.factors:
         lines.append("\n## Key Factors\n")
@@ -229,9 +230,6 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
                 )
             else:
                 lines.append(f"- [{factor.logit:+.1f}] {factor.description}{conf_note}")
-
-    if output.condensed_reasoning:
-        lines.append(f"\n## Reasoning\n\n{output.condensed_reasoning}")
 
     if output.sources_consulted:
         lines.append("\n## Sources\n")
