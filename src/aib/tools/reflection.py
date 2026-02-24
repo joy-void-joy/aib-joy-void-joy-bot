@@ -467,8 +467,8 @@ def _build_reviewer_prompt(
     return "\n\n".join(sections)
 
 
-def _build_reviewer_hooks(session_dir: Path | None) -> HooksConfig:
-    """Build permission hooks restricting the reviewer to the session directory."""
+def _build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
+    """Build permission hooks restricting the reviewer to specific directories."""
     from claude_agent_sdk import HookMatcher
     from claude_agent_sdk.types import (
         HookContext,
@@ -483,10 +483,10 @@ def _build_reviewer_hooks(session_dir: Path | None) -> HooksConfig:
     allowed = ["Read", "Glob", "Grep", "WebFetch", "StructuredOutput"]
     hooks = create_allowed_tools_hook(allowed)
 
-    if session_dir is None:
+    if not allowed_dirs:
         return hooks
 
-    resolved_dir = session_dir.resolve()
+    resolved_dirs = [d.resolve() for d in allowed_dirs]
 
     def _deny(reason: str) -> HookJSONOutput:
         return SyncHookJSONOutput(
@@ -495,6 +495,13 @@ def _build_reviewer_hooks(session_dir: Path | None) -> HooksConfig:
                 permissionDecision="deny",
                 permissionDecisionReason=reason,
             ),
+        )
+
+    def _is_under_allowed(path: Path) -> bool:
+        resolved = path.resolve()
+        return any(
+            resolved == d or resolved.is_relative_to(d)
+            for d in resolved_dirs
         )
 
     async def path_hook(
@@ -511,12 +518,11 @@ def _build_reviewer_hooks(session_dir: Path | None) -> HooksConfig:
         if tool_name in ("Read", "Glob", "Grep"):
             file_path = tool_input.get("file_path") or tool_input.get("path", "")
             if not file_path:
-                return _deny(f"Path required. Session dir: {session_dir}")
-            try:
-                resolved = Path(file_path).resolve()
-                resolved.relative_to(resolved_dir)
-            except (ValueError, OSError):
-                return _deny(f"Access restricted to: {session_dir}")
+                dirs = ", ".join(str(d) for d in allowed_dirs)
+                return _deny(f"Path required. Allowed directories: {dirs}")
+            if not _is_under_allowed(Path(file_path)):
+                dirs = ", ".join(str(d) for d in allowed_dirs)
+                return _deny(f"Access restricted to: {dirs}")
 
         return SyncHookJSONOutput()
 
@@ -553,12 +559,17 @@ async def _run_reviewer(
     )
 
     add_dirs: list[str | Path] = []
+    hook_dirs: list[Path] = []
     if traces_dir and traces_dir.exists():
         add_dirs.append(traces_dir)
+        hook_dirs.append(traces_dir)
+    if trace_file:
+        add_dirs.append(trace_file.parent)
+        hook_dirs.append(trace_file.parent)
 
     reviewer_hooks: dict[HookEvent, list[HookMatcherType]] = cast(
         dict[HookEvent, list[HookMatcherType]],
-        _build_reviewer_hooks(traces_dir),
+        _build_reviewer_hooks(hook_dirs),
     )
 
     try:
