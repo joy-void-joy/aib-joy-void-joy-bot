@@ -2,6 +2,16 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.2.0 (2026-02-24)
+
+structured reviewer gate; enhanced fetch_url with data extraction; stock and Trends analysis tools
+- reviewer: structured verdicts (approve/warn/fail) with gate that blocks StructuredOutput until approved
+- fetch_url: extracts embedded page data (Next.js state, JSON script tags, global state) from JS pages
+- stock_price: adds summary_stats (drawdown, trailing returns, volatility, recent low/high)
+- stock_conditional_returns: empirical forward return distributions conditioned on drawdown magnitude
+- google_trends: adds tail_stats for regime detection (stable tail, peak/trough, trailing volatility)
+- removes standalone Playwright browser tools and TodoWrite in favor of data-focused tooling
+
 ## v3.0.0 (2026-02-19)
 
 structured reflection with reviewer sub-agent; type-specific forecast models; enhanced trace output

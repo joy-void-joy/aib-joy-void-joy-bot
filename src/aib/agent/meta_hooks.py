@@ -3,31 +3,37 @@
 Combines two concerns into a single hook to work around CLI bug #15897
 (updatedInput is discarded when multiple PreToolUse hooks execute):
 
-- Meta-gate: Denies StructuredOutput until meta.md exists on disk.
+- Reviewer gate: Denies StructuredOutput until the reviewer passes.
 - Unwrap: Fixes model hallucination where output is wrapped in {"parameter": {...}}.
 """
 
+from __future__ import annotations
+
 import logging
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from claude_agent_sdk import HookMatcher
 from claude_agent_sdk.types import HookContext
 
 from aib.agent.hooks import HooksConfig
 
+if TYPE_CHECKING:
+    from aib.tools.reflection import ReviewState
+
 logger = logging.getLogger(__name__)
 
 
-def create_structured_output_hooks(reflection_path: Path | None = None) -> HooksConfig:
-    """Combined StructuredOutput hook: unwrap + optional reflection gate.
+def create_structured_output_hooks(
+    review_state: ReviewState | None = None,
+) -> HooksConfig:
+    """Combined StructuredOutput hook: unwrap + optional reviewer gate.
 
     Must be the LAST PreToolUse hook registered to ensure updatedInput
     is not overwritten by subsequent hooks (CLI bug #15897).
 
     Args:
-        reflection_path: Path to reflection.yaml. If set, StructuredOutput
-            is denied until this file exists. If None, gate is skipped.
+        review_state: Shared reviewer state. If set, StructuredOutput
+            is denied until the reviewer passes. If None, gate is skipped.
 
     Returns:
         HooksConfig with a single PreToolUse hook.
@@ -47,22 +53,32 @@ def create_structured_output_hooks(reflection_path: Path | None = None) -> Hooks
         hook_event = input_data["hook_event_name"]
         tool_input = input_data.get("tool_input", {})
 
-        # --- Reflection gate: deny until reflection has been called ---
-        if reflection_path is not None and not reflection_path.exists():
+        # --- Reviewer gate: deny until the reviewer has approved ---
+        if review_state is not None and not review_state.passed:
+            if review_state.last_verdict is None:
+                reason = (
+                    "You must call reflection(...) with your factors "
+                    "and tentative estimate BEFORE providing your final "
+                    "forecast. The reviewer must approve before you can "
+                    "submit. Run reflection first, then call "
+                    "StructuredOutput again."
+                )
+            else:
+                reason = (
+                    "The reviewer found errors in your forecast. "
+                    "Address the findings from the last reflection() call, "
+                    "then call reflection() again to get reviewer approval."
+                )
             logger.warning(
-                "Denying StructuredOutput — reflection not yet written at %s",
-                reflection_path,
+                "Denying StructuredOutput — reviewer state: verdict=%s, passed=%s",
+                review_state.last_verdict,
+                review_state.passed,
             )
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
                     "permissionDecision": "deny",
-                    "permissionDecisionReason": (
-                        "You must call reflection(...) with your factors "
-                        "and tentative estimate BEFORE providing your final "
-                        "forecast. Run your reflection first, then call "
-                        "StructuredOutput again."
-                    ),
+                    "permissionDecisionReason": reason,
                 }
             }
 

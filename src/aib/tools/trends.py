@@ -5,6 +5,7 @@ about search interest, trending topics, and relative popularity.
 """
 
 import logging
+import statistics
 from typing import Any, TypedDict
 
 from claude_agent_sdk import tool
@@ -94,7 +95,38 @@ class RelatedQueries(TypedDict):
     rising_queries: list[dict[str, Any]]
 
 
-class TrendsResult(TypedDict):
+class ValuePoint(TypedDict):
+    """A notable value point in the trends time series."""
+
+    value: int
+    date: str
+    days_ago: int
+
+
+class StableTailRange(TypedDict):
+    """Min/max values within the stable tail."""
+
+    low: int
+    high: int
+
+
+class TailStats(TypedDict, total=False):
+    """Trailing-window statistics for regime detection."""
+
+    stable_tail_days: int
+    stable_tail_range: StableTailRange
+    peak: ValuePoint
+    trough: ValuePoint
+    drawdown_from_peak_pct: float
+    trailing_change_stats: ChangeStats
+    trailing_volatility: float
+
+
+class _TrendsResultOptional(TypedDict, total=False):
+    tail_stats: TailStats
+
+
+class TrendsResult(_TrendsResultOptional):
     """Result from Google Trends query."""
 
     keyword: str
@@ -164,6 +196,84 @@ def _calculate_trend_direction(values: list[int]) -> str:
         return "down"
     else:
         return "stable"
+
+
+def _compute_tail_stats(
+    history: list[TrendDataPoint], threshold: int = 3
+) -> TailStats | None:
+    """Compute trailing-window statistics for regime detection.
+
+    Returns None if history has fewer than 3 points.
+    """
+    if len(history) < 3:
+        return None
+
+    values = [p["value"] for p in history]
+    dates = [p["date"] for p in history]
+    n = len(values)
+
+    stats = TailStats()
+
+    # --- Stable tail: consecutive days at end where |day-over-day| <= threshold ---
+    stable_count = 0
+    for i in range(n - 1, 0, -1):
+        if abs(values[i] - values[i - 1]) <= threshold:
+            stable_count += 1
+        else:
+            break
+
+    if stable_count > 0:
+        tail_values = values[n - stable_count - 1 :]
+        stats["stable_tail_days"] = stable_count
+        stats["stable_tail_range"] = StableTailRange(
+            low=min(tail_values), high=max(tail_values)
+        )
+
+    # --- Peak and trough ---
+    max_val = max(values)
+    max_idx = values.index(max_val)
+    stats["peak"] = ValuePoint(
+        value=max_val, date=dates[max_idx], days_ago=n - 1 - max_idx
+    )
+
+    # Trough: lowest value excluding leading zeros
+    first_nonzero = 0
+    for i, v in enumerate(values):
+        if v > 0:
+            first_nonzero = i
+            break
+    nonzero_values = values[first_nonzero:]
+    nonzero_dates = dates[first_nonzero:]
+    if nonzero_values:
+        min_val = min(nonzero_values)
+        min_idx_in_nonzero = nonzero_values.index(min_val)
+        abs_idx = first_nonzero + min_idx_in_nonzero
+        stats["trough"] = ValuePoint(
+            value=min_val,
+            date=nonzero_dates[min_idx_in_nonzero],
+            days_ago=n - 1 - abs_idx,
+        )
+
+    # --- Drawdown from peak ---
+    latest = values[-1]
+    if max_val > 0:
+        stats["drawdown_from_peak_pct"] = round((latest - max_val) / max_val * 100, 1)
+
+    # --- Trailing change stats and volatility (last 7 days) ---
+    trailing_window = min(7, n)
+    if trailing_window >= 2:
+        trailing_values = values[-trailing_window:]
+        stats["trailing_change_stats"] = _calculate_change_stats(
+            trailing_values, threshold
+        )
+        if trailing_window >= 3:
+            diffs = [
+                trailing_values[i] - trailing_values[i - 1]
+                for i in range(1, len(trailing_values))
+            ]
+            stats["trailing_volatility"] = round(statistics.stdev(diffs), 2)
+
+    return stats
 
 
 def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
@@ -290,6 +400,10 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
             "history": history,
             "related": related,
         }
+
+        tail_stats = _compute_tail_stats(history)
+        if tail_stats is not None:
+            result["tail_stats"] = tail_stats
 
         return mcp_success(result)
 

@@ -42,6 +42,8 @@ from aib.agent.hooks import HooksConfig, merge_hooks
 from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
+from aib.tools.fetch_http import downloads_dir
+from aib.tools.reflection import ReviewState
 from aib.agent.tool_policy import ToolPolicy
 from aib.agent.models import (
     CreditExhaustedError,
@@ -750,6 +752,11 @@ async def run_forecast(
     sandbox_shared_dir = RUNTIME_LOGS_PATH / session_id / "sandbox-shared"
     sandbox_shared_dir.mkdir(parents=True, exist_ok=True)
 
+    # Per-session downloads directory (PDFs, arXiv papers, etc.)
+    session_downloads = RUNTIME_LOGS_PATH / session_id / "downloads"
+    session_downloads.mkdir(parents=True, exist_ok=True)
+    downloads_token = downloads_dir.set(session_downloads)
+
     # Determine sandbox network mode for retrodict
     sandbox_network_mode = "pypi_only" if cutoff else "bridge"
     if cutoff:
@@ -765,7 +772,7 @@ async def run_forecast(
         fake_date=cutoff,
     ) as sandbox:
         # Sandbox shared dir for scratch work + session-specific notes directories
-        rw_dirs = [sandbox_shared_dir] + notes.rw
+        rw_dirs = [sandbox_shared_dir, session_downloads] + notes.rw
         ro_dirs = notes.ro
 
         # Create base permission hooks
@@ -787,13 +794,14 @@ async def run_forecast(
             retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
-        # StructuredOutput hook: unwrap {"parameter": {...}} + reflection gate.
+        # Shared reviewer state: reflection tool records verdicts,
+        # StructuredOutput hook checks them.
+        review_state = ReviewState() if post_id > 0 else None
+
+        # StructuredOutput hook: unwrap {"parameter": {...}} + reviewer gate.
         # Must be LAST PreToolUse hook (CLI bug #15897: updatedInput is
         # discarded when later hooks overwrite the result).
-        reflection_path: Path | None = None
-        if post_id > 0:
-            reflection_path = notes.session / "reflection.yaml"
-        hooks = merge_hooks(hooks, create_structured_output_hooks(reflection_path))
+        hooks = merge_hooks(hooks, create_structured_output_hooks(review_state))
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
@@ -812,6 +820,7 @@ async def run_forecast(
             ),
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
+            review_state=review_state,
         )
 
         try:
@@ -834,7 +843,12 @@ async def run_forecast(
                     "allowUnsandboxedCommands": False,
                 },
                 mcp_servers=mcp_servers,
-                add_dirs=[*notes.all_dirs, sandbox_shared_dir, Path.home() / ".claude" / "projects"],
+                add_dirs=[
+                    *notes.all_dirs,
+                    sandbox_shared_dir,
+                    session_downloads,
+                    Path.home() / ".claude" / "projects",
+                ],
                 allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
                 output_format={
                     "type": "json_schema",
@@ -900,6 +914,8 @@ async def run_forecast(
             logging.getLogger().removeHandler(_log_handler)
             _log_handler.close()
             raise
+        finally:
+            downloads_dir.reset(downloads_token)
 
     if result is None:
         raise RuntimeError("No result received from agent")

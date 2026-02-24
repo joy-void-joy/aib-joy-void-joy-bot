@@ -104,8 +104,8 @@ Before researching, identify the question type — this determines which analyti
 | **Definitional** | "Has X happened? Does Y qualify?" | Parse criteria literally. Resolution happens in someone else's mind. |
 | **Meta-prediction** | "Will CP be above X%?" | Model forecaster behavior, not the event. See Meta-Predictions section. |
 | **Measurement** | "What will value of X be?" | Current value + drift + volatility. Anchor on quantitative data. |
-| **Stock direction** | "Will price be higher on date Y vs date X?" | Near coin-flip over short horizons. Monte Carlo from empirical volatility. |
-| **Google Trends MC** | "Will search interest increase/decrease/stay same?" | Threshold arithmetic + change_stats base rates. Compute possibility space before researching. |
+| **Stock direction** | "Will price be higher on date Y vs date X?" | stock_price provides summary_stats (drawdown, trailing returns, volatility, recent low/high). Use stock_conditional_returns for the right base rate given current drawdown — not the unconditional 52%. Monte Carlo from empirical volatility for the point estimate. |
+| **Google Trends MC** | "Will search interest increase/decrease/stay same?" | Threshold arithmetic + change_stats base rates. tail_stats.stable_tail_days shows if interest has plateaued — a stable tail with days > 3 strongly favors "Doesn't change." Compare trailing_change_stats to full-series change_stats to detect regime shifts. Compute possibility space before researching. |
 
 ---
 
@@ -323,18 +323,12 @@ Ground this in the specifics of THIS forecast — generic reflections that could
 
 ---
 
-## Research Planning
-
-Use TodoWrite to plan and track your research steps. Break complex questions into sub-tasks: data sources to check, base rates to compute, tools to try. Update todos as you complete each step.
-
----
-
 ## Common Mistakes
 
 - **No base rate**: Always start from a prior, even if crude. "How often does this type of thing happen?" is the first question.
 - **Trusting low-volume markets**: Check volume before weighting prediction market prices. A $500 Polymarket pool is nearly meaningless.
 - **Ignoring status quo**: The default outcome is usually "nothing changes." If you're predicting change, you need concrete evidence for it.
-- **Narrative reasoning on random-walk questions**: Stock prices over short horizons are dominated by noise. Don't tell stories about "momentum" or "sector rotation" — run a Monte Carlo simulation from empirical volatility and accept that it's close to a coin flip.
+- **Qualitative adjustment without data**: If you find yourself adjusting a Monte Carlo result for "oversold conditions" or "mean reversion potential," that adjustment needs a number behind it. stock_price returns summary_stats with trailing returns, volatility, and drawdown. stock_conditional_returns gives the empirical base rate for the current market state. Use those instead of qualitative nudges toward or away from 50%.
 - **Building quantitative models from small CP samples**: Computing transition rates or fitting regression models to 20-40 CP data points creates false precision. One or two observations changing would completely alter the model's output.
 - **Anchoring on a single consensus estimate**: Analyst consensus is a useful starting point, but it's not your distribution. The range of analyst estimates is a FLOOR on your uncertainty, not a ceiling. Companies routinely surprise by amounts that exceed the full range of published estimates.
 - **Event-level reasoning for meta-predictions**: "The event is likely, so the CP must be above the threshold" is the single most common meta-prediction error — and the most destructive, producing our worst Brier scores by far. This reasoning feels airtight but ignores where the CP actually sits. When CP data is unavailable, the temptation to substitute event reasoning is strongest; resist it hardest there.
