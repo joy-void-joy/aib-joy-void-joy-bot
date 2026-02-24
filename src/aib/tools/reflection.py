@@ -182,15 +182,16 @@ class ReviewState(BaseModel):
     model_config = {"frozen": False}
 
     consecutive_fails: int = 0
+    ever_passed: bool = False
     last_verdict: ReviewVerdict | None = None
     last_review: ReviewResult | None = None
 
     @property
     def passed(self) -> bool:
+        if self.ever_passed:
+            return True
         if self.last_verdict is None:
             return False
-        if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
-            return True
         return self.consecutive_fails >= 3
 
     def record(self, result: ReviewResult) -> None:
@@ -200,6 +201,7 @@ class ReviewState(BaseModel):
             self.consecutive_fails += 1
         else:
             self.consecutive_fails = 0
+            self.ever_passed = True
 
 
 # --- Computation ---

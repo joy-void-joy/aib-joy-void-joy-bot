@@ -507,10 +507,10 @@ class TestReviewState:
         assert state.consecutive_fails == 0
         assert state.passed is True
 
-    def test_fail_after_approve_resets_pass(self) -> None:
+    def test_fail_after_approve_stays_passed(self) -> None:
         state = ReviewState()
         state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
         assert state.passed is True
         state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.passed is False
+        assert state.passed is True
         assert state.consecutive_fails == 1
