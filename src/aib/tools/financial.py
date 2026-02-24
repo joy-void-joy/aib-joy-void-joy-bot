@@ -6,13 +6,17 @@ avoiding the need for web scraping which often fails on JS-heavy sites.
 
 import logging
 from datetime import date, datetime, timedelta
+import math
 from typing import Any, TypedDict
 
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
+import numpy as np
+
 from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
+from aib.tools.cache import cached
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -472,7 +476,47 @@ class StockQueryInput(BaseModel):
     end_date: str | None = Field(default=None)
 
 
-class StockPrice(TypedDict):
+class DailyClose(TypedDict):
+    """A single day's closing price."""
+
+    date: str
+    close: float
+
+
+class PricePoint(TypedDict):
+    """A notable price point in recent history."""
+
+    date: str
+    close: float
+    days_ago: int
+
+
+class TrailingReturns(TypedDict, total=False):
+    """Percentage returns over trailing windows."""
+
+    five_day: float
+    ten_day: float
+    twenty_day: float
+
+
+class SummaryStats(TypedDict, total=False):
+    """Derived statistics computed from recent price history."""
+
+    drawdown_from_52w_high_pct: float
+    distance_from_52w_low_pct: float
+    trailing_returns: TrailingReturns
+    trailing_volatility_20d: float
+    trailing_mean_return_20d: float
+    recent_low: PricePoint
+    recent_high: PricePoint
+    max_bounce_from_recent_low_pct: float
+
+
+class _StockPriceOptional(TypedDict, total=False):
+    summary_stats: SummaryStats
+
+
+class StockPrice(_StockPriceOptional):
     """Price information for a stock."""
 
     symbol: str
@@ -484,7 +528,52 @@ class StockPrice(TypedDict):
     market_cap: float | None
     fifty_two_week_high: float | None
     fifty_two_week_low: float | None
-    recent_history: list[dict[str, object]] | None
+    recent_history: list[DailyClose] | None
+
+
+class ReturnDistribution(TypedDict):
+    """Percentile distribution of returns."""
+
+    mean: float
+    median: float
+    std: float
+    p10: float
+    p25: float
+    p75: float
+    p90: float
+    min: float
+    max: float
+
+
+class StockConditionalReturnsInput(BaseModel):
+    """Input for conditional return analysis."""
+
+    drawdown_pct: float = Field(
+        ge=5.0,
+        le=80.0,
+        description="Drawdown threshold from 52-week high (%). E.g. 15 means 'down >=15%'.",
+    )
+    horizon_days: int = Field(
+        ge=1,
+        le=60,
+        description="Forward horizon in trading days to measure returns.",
+    )
+    reference_index: str = Field(
+        default="^GSPC",
+        description="Index to analyze. Default: S&P 500. Others: ^DJI, ^IXIC, ^RUT.",
+    )
+
+
+class ConditionalReturnStats(TypedDict):
+    """Historical return distribution conditioned on drawdown magnitude."""
+
+    reference_index: str
+    condition: str
+    horizon_days: int
+    total_events: int
+    pct_positive: float
+    return_distribution: ReturnDistribution
+    data_period: str
 
 
 def _augment_stock_history(ticker: object, result: StockPrice, days: int) -> None:
@@ -503,14 +592,87 @@ def _augment_stock_history(ticker: object, result: StockPrice, days: int) -> Non
         hist = ticker.history(period=period)  # type: ignore[union-attr]
         if hist is not None and not hist.empty:
             result["recent_history"] = [
-                {
-                    "date": idx.strftime("%Y-%m-%d"),
-                    "close": round(float(row["Close"]), 2),
-                }
+                DailyClose(
+                    date=idx.strftime("%Y-%m-%d"),
+                    close=round(float(row["Close"]), 2),
+                )
                 for idx, row in hist.tail(days).iterrows()
             ]
     except Exception:
         pass
+
+
+def _compute_summary_stats(result: StockPrice) -> SummaryStats | None:
+    """Compute derived statistics from a stock price result.
+
+    Returns None if recent_history is missing or too short.
+    """
+    history = result.get("recent_history")
+    if not history or len(history) < 2:
+        return None
+
+    closes = [entry["close"] for entry in history]
+    current = closes[-1]
+    n = len(closes)
+
+    stats = SummaryStats()
+
+    # Drawdown from 52w high and distance from 52w low
+    high = result.get("fifty_two_week_high")
+    low = result.get("fifty_two_week_low")
+    if high and high > 0:
+        stats["drawdown_from_52w_high_pct"] = (current - high) / high * 100
+    if low and low > 0:
+        stats["distance_from_52w_low_pct"] = (current - low) / low * 100
+
+    # Trailing returns over standard windows
+    returns = TrailingReturns()
+    if n > 5:
+        returns["five_day"] = (closes[-1] - closes[-6]) / closes[-6] * 100
+    if n > 10:
+        returns["ten_day"] = (closes[-1] - closes[-11]) / closes[-11] * 100
+    if n > 20:
+        returns["twenty_day"] = (closes[-1] - closes[-21]) / closes[-21] * 100
+    if returns:
+        stats["trailing_returns"] = returns
+
+    # Daily log returns for volatility / mean
+    log_returns = [
+        math.log(closes[i] / closes[i - 1])
+        for i in range(max(1, n - 20), n)
+        if closes[i - 1] > 0
+    ]
+    if len(log_returns) >= 5:
+        mean_ret = sum(log_returns) / len(log_returns)
+        variance = sum((r - mean_ret) ** 2 for r in log_returns) / len(log_returns)
+        stats["trailing_volatility_20d"] = math.sqrt(variance) * 100
+        stats["trailing_mean_return_20d"] = mean_ret * 100
+
+    # Recent low and high within the history window
+    min_close = min(closes)
+    min_idx = closes.index(min_close)
+    stats["recent_low"] = PricePoint(
+        date=history[min_idx]["date"],
+        close=min_close,
+        days_ago=n - 1 - min_idx,
+    )
+
+    max_close = max(closes)
+    max_idx = closes.index(max_close)
+    stats["recent_high"] = PricePoint(
+        date=history[max_idx]["date"],
+        close=max_close,
+        days_ago=n - 1 - max_idx,
+    )
+
+    # Max bounce from recent low (max close after the low vs the low)
+    if min_idx < n - 1 and min_close > 0:
+        post_low_max = max(closes[min_idx + 1 :])
+        stats["max_bounce_from_recent_low_pct"] = (
+            (post_low_max - min_close) / min_close * 100
+        )
+
+    return stats
 
 
 @tool(
@@ -545,25 +707,36 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
 
         if cutoff is not None:
             end_str = cutoff.isoformat()
-            start_str = (cutoff - timedelta(days=5)).isoformat()
-            hist = ticker.history(start=start_str, end=end_str)
-            if hist.empty:
+            start_52w = (cutoff - timedelta(days=365)).isoformat()
+            hist_52w = ticker.history(start=start_52w, end=end_str)
+            if hist_52w.empty:
                 return mcp_error(f"No recent data found for {symbol}")
-            last_row = hist.iloc[-1]
+
+            all_closes: list[float] = hist_52w["Close"].tolist()
+            all_dates: list[str] = [str(d.date()) for d in hist_52w.index.tolist()]
+            history_days = validated.history_days or 30
+            recent = [
+                DailyClose(date=d, close=c)
+                for d, c in zip(all_dates[-history_days:], all_closes[-history_days:])
+            ]
+
             result: StockPrice = {
                 "symbol": symbol,
                 "name": ticker.info.get("shortName", symbol),
-                "current_price": float(last_row["Close"]),
-                "previous_close": float(hist.iloc[-2]["Close"])
-                if len(hist) > 1
-                else None,
+                "current_price": all_closes[-1],
+                "previous_close": all_closes[-2] if len(all_closes) > 1 else None,
                 "change_percent": None,
                 "currency": ticker.info.get("currency", "USD"),
                 "market_cap": None,
-                "fifty_two_week_high": None,
-                "fifty_two_week_low": None,
-                "recent_history": None,
+                "fifty_two_week_high": max(all_closes),
+                "fifty_two_week_low": min(all_closes),
+                "recent_history": recent if recent else None,
             }
+
+            summary = _compute_summary_stats(result)
+            if summary is not None:
+                result["summary_stats"] = summary
+
             return mcp_success(result)
 
         info = ticker.info
@@ -586,6 +759,10 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
 
         if cutoff is None and validated.history_days:
             _augment_stock_history(ticker, result, validated.history_days)
+
+        summary = _compute_summary_stats(result)
+        if summary is not None:
+            result["summary_stats"] = summary
 
         return mcp_success(result)
 
@@ -683,6 +860,130 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         logger.exception("Yahoo Finance history lookup failed")
         return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
+
+
+# --- Conditional Returns ---
+
+
+@cached(ttl=3600)
+async def _fetch_index_closes(symbol: str, end_date: str | None) -> list[DailyClose]:
+    """Fetch max daily close history for an index.
+
+    Returns a list of DailyClose sorted by date. Cached for 1 hour.
+    """
+    import yfinance as yf
+
+    ticker = yf.Ticker(symbol)
+    kwargs: dict[str, str] = {"period": "max"}
+    if end_date is not None:
+        kwargs = {"start": "1960-01-01", "end": end_date}
+    hist = ticker.history(**kwargs)
+    if hist is None or hist.empty:
+        return []
+    closes: list[float] = hist["Close"].tolist()
+    dates: list[str] = [str(d.date()) for d in hist.index.tolist()]
+    return [DailyClose(date=d, close=c) for d, c in zip(dates, closes)]
+
+
+def _compute_conditional_return_stats(
+    closes: list[DailyClose],
+    drawdown_pct: float,
+    horizon_days: int,
+) -> ConditionalReturnStats | str:
+    """Compute forward return distribution conditioned on drawdown magnitude.
+
+    Returns ConditionalReturnStats on success, or an error message string.
+    """
+    if len(closes) < 252 + horizon_days:
+        return "Insufficient data: need at least 252 + horizon_days data points"
+
+    close_arr = np.array([e["close"] for e in closes])
+    date_arr = [e["date"] for e in closes]
+
+    rolling_high = np.maximum.accumulate(close_arr)
+    for i in range(252, len(close_arr)):
+        rolling_high[i] = close_arr[i - 252 : i + 1].max()
+
+    drawdown = (close_arr - rolling_high) / rolling_high * 100
+
+    threshold = -drawdown_pct
+    events: list[int] = []
+    for i in range(252, len(close_arr) - horizon_days):
+        if drawdown[i] <= threshold:
+            if not events or (i - events[-1]) > horizon_days:
+                events.append(i)
+
+    if not events:
+        return f"No events found where drawdown >= {drawdown_pct}%"
+
+    forward_returns: list[float] = []
+    for idx in events:
+        future_idx = idx + horizon_days
+        ret = (close_arr[future_idx] - close_arr[idx]) / close_arr[idx] * 100
+        forward_returns.append(float(ret))
+
+    returns_arr = np.array(forward_returns)
+    positive_count = int(np.sum(returns_arr > 0))
+
+    return ConditionalReturnStats(
+        reference_index="",
+        condition=f"52-week drawdown >= {drawdown_pct}%",
+        horizon_days=horizon_days,
+        total_events=len(forward_returns),
+        pct_positive=positive_count / len(forward_returns) * 100,
+        return_distribution=ReturnDistribution(
+            mean=float(np.mean(returns_arr)),
+            median=float(np.median(returns_arr)),
+            std=float(np.std(returns_arr, ddof=1)) if len(returns_arr) > 1 else 0.0,
+            p10=float(np.percentile(returns_arr, 10)),
+            p25=float(np.percentile(returns_arr, 25)),
+            p75=float(np.percentile(returns_arr, 75)),
+            p90=float(np.percentile(returns_arr, 90)),
+            min=float(np.min(returns_arr)),
+            max=float(np.max(returns_arr)),
+        ),
+        data_period=f"{date_arr[0]} to {date_arr[-1]}",
+    )
+
+
+@tool(
+    "stock_conditional_returns",
+    (
+        "Get the empirical distribution of forward returns conditioned on drawdown "
+        "magnitude from a reference index's full history. "
+        "Use this to find the right base rate for stocks in a given drawdown regime — "
+        "e.g. 'when the S&P 500 is down >=25% from its 52-week high, what does the "
+        "next 4 trading days' return distribution look like?'"
+    ),
+    StockConditionalReturnsInput.model_json_schema(),
+)
+@tracked("stock_conditional_returns")
+async def stock_conditional_returns(args: dict[str, Any]) -> dict[str, Any]:
+    try:
+        validated = StockConditionalReturnsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    cutoff = retrodict_cutoff.get()
+    end_date = cutoff.isoformat() if cutoff is not None else None
+
+    try:
+        closes = await _fetch_index_closes(validated.reference_index, end_date)
+        if not closes:
+            return mcp_error(f"No data found for index: {validated.reference_index}")
+
+        result = _compute_conditional_return_stats(
+            closes, validated.drawdown_pct, validated.horizon_days
+        )
+        if isinstance(result, str):
+            return mcp_error(result)
+
+        result["reference_index"] = validated.reference_index
+        return mcp_success(result)
+
+    except Exception as e:
+        logger.exception("Conditional return analysis failed")
+        return mcp_error(f"Conditional return analysis failed: {e}")
 
 
 # --- World Bank Tools ---
@@ -902,7 +1203,12 @@ async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- MCP Server ---
 
-_financial_tools = [company_financials, stock_price, stock_history]
+_financial_tools = [
+    company_financials,
+    stock_price,
+    stock_history,
+    stock_conditional_returns,
+]
 
 if settings.fred_api_key:
     _financial_tools.extend([fred_series, fred_search])
