@@ -911,8 +911,8 @@ async def run_forecast(
             logging.getLogger().removeHandler(_log_handler)
             _log_handler.close()
             raise
-
-    downloads_dir.reset(downloads_token)
+        finally:
+            downloads_dir.reset(downloads_token)
 
     if result is None:
         raise RuntimeError("No result received from agent")
