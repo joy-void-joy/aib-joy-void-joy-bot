@@ -734,6 +734,10 @@ async def run_forecast(
 
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
 
+    print(f"\n{'─' * 60}")
+    print(prompt)
+    print(f"{'─' * 60}\n")
+
     collected_text: list[str] = []
     assistant_messages: list[AssistantMessage] = []
     all_messages: list[AssistantMessage | UserMessage] = []
