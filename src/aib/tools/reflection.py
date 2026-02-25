@@ -366,10 +366,11 @@ independently or form your own probability estimate.
 
 ## What to check
 
-- **Hallucinated evidence** — A factor cites a specific fact \
-  (quote, statistic, date, event) that is NOT supported by any \
-  source in the research trace. Read the trace carefully. If the \
-  claim isn't grounded in a tool result, flag it.
+- **Hallucinated evidence** — A factor's core claim has NO support \
+  in the research trace. Read the trace carefully. Focus on whether \
+  the *conclusion* is grounded, not whether every specific detail \
+  matches verbatim. Only flag as hallucination when the core claim \
+  itself — the thing that moves the forecast — has no trace support.
 
 - **Double-counting** — Two or more factors that draw on the same \
   underlying evidence. Name both factors and the shared source.
@@ -381,20 +382,52 @@ independently or form your own probability estimate.
 - **Contradictory assessment** — The narrative assessment reaches \
   a conclusion that contradicts what the factors collectively say.
 
+- **Missing resolution criteria** — If the question section shows \
+  resolution criteria as MISSING, check whether the trace shows \
+  an attempt to recover them (e.g., a fetch_url call for the \
+  Metaculus question page). If the agent did not attempt recovery, \
+  this is always at least a **warn** — the agent's prompt \
+  explicitly requires fetching the page. Question titles can be \
+  misleading; resolution criteria define what actually counts as \
+  YES/NO, what source is authoritative, and what edge cases apply.
+
+- **Resolution misalignment** — When resolution criteria ARE \
+  provided, check whether the factors and assessment engage with \
+  the specific terms. Examples: criteria cite a specific source \
+  but the agent used a different one; criteria define a threshold \
+  the agent didn't evaluate; criteria specify a timeframe the \
+  factors ignore.
+
+- **Pre-publication event** — If a factor claims an event already \
+  satisfies the resolution criteria AND the question's Published \
+  date is AFTER that event, check whether the agent applied the \
+  "already happened" rule correctly. The forward-looking \
+  interpretation (event doesn't count, question asks about a new \
+  occurrence) should dominate. If the agent instead treats the \
+  pre-publication event as the dominant factor, this is a **fail** \
+  — the forecast is built on a misreading of the question's intent \
+  unless the resolution criteria explicitly include a lookback \
+  window.
+
 ## What NOT to check
 
 - The probability value or factor-probability gap
-- Whether the agent did enough research
+- Whether the agent did enough research (but resolution criteria \
+  recovery IS your concern)
 - Whether factor magnitudes are appropriate
-- Missing scenarios or considerations
+- Scenarios the agent could have researched but didn't
 - Calibration or base rates
 
 ## Verdicts
 
-- **fail** — You found a concrete error above that could \
-  materially affect the forecast.
-- **warn** — Something looks off but you're not certain it's wrong.
-- **approve** — No errors found.
+- **fail** — A core claim is fabricated (no trace support) AND \
+  correcting it would change the forecast.
+- **warn** — An error that doesn't affect the forecast direction \
+  or probability. Includes: unsupported details when the underlying \
+  conclusion is well-grounded, missing resolution criteria with no \
+  recovery attempt, or factors that don't clearly map to the \
+  resolution criteria's specific terms.
+- **approve** — No errors found, or only trivial issues.
 
 If you find no errors, approve and stop. Do not manufacture \
 concerns. Be specific: name the factor, quote the claim, explain \
@@ -435,10 +468,22 @@ def _build_reviewer_prompt(
         qtype = question_context.get("type", "unknown")
         resolution = question_context.get("resolution_criteria", "")
         fine_print = question_context.get("fine_print", "")
-        sections.append(f"## Question\n\nTitle: {title}\nType: {qtype}")
-        if resolution:
+        published_at = question_context.get("published_at", "")
+        close_time = question_context.get("scheduled_close_time", "")
+        resolve_time = question_context.get("scheduled_resolve_time", "")
+        header = f"## Question\n\nTitle: {title}\nType: {qtype}"
+        if published_at:
+            header += f"\nPublished: {published_at}"
+        if close_time:
+            header += f"\nCloses: {close_time}"
+        if resolve_time:
+            header += f"\nResolves: {resolve_time}"
+        sections.append(header)
+        if resolution and not resolution.startswith("MISSING"):
             sections.append(f"Resolution criteria: {resolution}")
-        if fine_print:
+        else:
+            sections.append("Resolution criteria: MISSING (agent should have fetched the question page)")
+        if fine_print and not fine_print.startswith("MISSING"):
             sections.append(f"Fine print: {fine_print}")
 
     factor_lines: list[str] = []
