@@ -32,7 +32,6 @@ from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
     stream_log as _stream_log,
-    truncate_content as _truncate_content,
 )
 from aib.agent.history import (
     save_forecast,
@@ -144,7 +143,7 @@ class ReasoningLogger:
                 if actual_input:
                     input_str = json.dumps(actual_input, indent=2)
                     parts.append(f"```json\n{input_str}\n```\n")
-                content_str = _truncate_content(block.content, max_len=2000)
+                content_str = _normalize_content(block.content)
                 parts.append(f"### 📋 Result\n\n```\n{content_str}\n```\n")
                 return "\n".join(parts)
             case _:
