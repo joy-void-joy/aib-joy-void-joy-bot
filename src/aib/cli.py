@@ -210,9 +210,12 @@ async def get_question_meta(post_id: int) -> QuestionMeta | None:
             published_at=q.published_time,
             title=q.question_text,
             question_type=qtype,
-            description=q.background_info or "",
-            resolution_criteria=q.resolution_criteria or "",
-            fine_print=q.fine_print or "",
+            description=q.background_info
+            or "MISSING — fetch the Metaculus question page for background info.",
+            resolution_criteria=q.resolution_criteria
+            or "MISSING — fetch the Metaculus question page to recover. Titles can be misleading; resolution criteria define what actually counts.",
+            fine_print=q.fine_print
+            or "MISSING — fetch the Metaculus question page to recover.",
             close_time=q.close_time,
             scheduled_resolution_time=q.scheduled_resolution_time,
             num_forecasters=q.num_forecasters or 0,

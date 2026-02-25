@@ -545,9 +545,13 @@ def build_question_context(post_data: dict) -> dict:
     context = {
         "title": question.get("title", "Unknown"),
         "type": question_type,
-        "description": post_data.get("description") or question.get("description", ""),
-        "resolution_criteria": question.get("resolution_criteria", ""),
-        "fine_print": question.get("fine_print", ""),
+        "description": post_data.get("description")
+        or question.get("description")
+        or "MISSING — fetch the Metaculus question page for background info.",
+        "resolution_criteria": question.get("resolution_criteria")
+        or "MISSING — fetch the Metaculus question page to recover. Titles can be misleading; resolution criteria define what actually counts.",
+        "fine_print": question.get("fine_print")
+        or "MISSING — fetch the Metaculus question page to recover.",
         "scheduled_close_time": question.get("scheduled_close_time"),
         # Cadence tracking fields
         "published_at": post_data.get("published_at"),
