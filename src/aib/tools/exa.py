@@ -33,6 +33,7 @@ async def exa_search(
     query: str,
     num_results: int,
     published_before: str | None = None,
+    published_after: str | None = None,
     livecrawl: str = "always",
     include_domains: list[str] | None = None,
     exclude_domains: list[str] | None = None,
@@ -46,7 +47,8 @@ async def exa_search(
     Args:
         query: Search query string.
         num_results: Number of results to return.
-        published_before: Optional ISO date (YYYY-MM-DD) to filter results.
+        published_before: Optional ISO date (YYYY-MM-DD) upper bound for results.
+        published_after: Optional ISO date (YYYY-MM-DD) lower bound for results.
         livecrawl: Livecrawl mode ('always', 'fallback', 'never').
         include_domains: Only include results from these domains.
         exclude_domains: Exclude results from these domains.
@@ -86,6 +88,8 @@ async def exa_search(
 
     if published_before:
         payload["publishedBefore"] = f"{published_before}T23:59:59.999Z"
+    if published_after:
+        payload["startPublishedDate"] = f"{published_after}T00:00:00.000Z"
     if include_domains:
         payload["includeDomains"] = include_domains
     if exclude_domains:
