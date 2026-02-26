@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
+from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.redact import redact_future_info
@@ -1305,6 +1306,43 @@ def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, obje
     return result
 
 
+def _build_prediction_history(
+    post_id: int, cutoff: date | None
+) -> list[dict[str, Any]]:
+    """Build prediction history for a question from local storage.
+
+    In retrodict mode, filters out forecasts after the cutoff and hides
+    resolution data to prevent future leak.
+    """
+    from aib.agent.history import SavedForecast
+
+    forecasts = load_past_forecasts(post_id)
+    if cutoff is not None:
+        cutoff_str = cutoff.isoformat()
+        forecasts = [f for f in forecasts if f.timestamp < cutoff_str]
+    if not forecasts:
+        return []
+
+    def _serialize(f: SavedForecast) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "timestamp": f.timestamp,
+            "question_type": f.question_type,
+            "summary": f.summary,
+        }
+        if cutoff is None:
+            entry["resolution"] = f.resolution
+        if f.question_type == "binary":
+            entry["probability"] = f.probability
+        elif f.question_type == "multiple_choice":
+            entry["probabilities"] = f.probabilities
+        elif f.question_type in ("numeric", "discrete"):
+            entry["median"] = f.median
+            entry["confidence_interval"] = f.confidence_interval
+        return entry
+
+    return [_serialize(f) for f in forecasts]
+
+
 @cached(ttl=300)
 async def _fetch_metaculus_question(post_id: int) -> dict[str, object]:
     """Fetch a single Metaculus question (cached, native async)."""
@@ -1399,7 +1437,8 @@ async def _fetch_aggregation(post_id: int) -> AggregationMethod:
         "IMPORTANT: These are QUESTION post IDs, not tournament IDs. "
         "To find question IDs, use list_tournament_questions first. "
         "Returns question details including title, description, resolution criteria, "
-        "fine print, and community prediction (if available). "
+        "fine print, community prediction (if available), and your prediction history "
+        "(past forecasts with timestamps, probabilities, and summaries). "
         "Note: Community predictions are NOT available in the AIB tournament. "
         "Maximum 20 questions per request."
     ),
@@ -1432,7 +1471,11 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         """Fetch a single question by post_id."""
         try:
             result = await _fetch_metaculus_question(post_id)
-            return await _apply_retrodict_filters(result)
+            result = await _apply_retrodict_filters(result)
+            history = _build_prediction_history(post_id, cutoff)
+            if history:
+                result["prediction_history"] = history
+            return result
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 return {
