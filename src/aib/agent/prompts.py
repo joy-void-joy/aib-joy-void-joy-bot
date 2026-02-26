@@ -533,7 +533,23 @@ Compute the asymmetric possibility space early: at value=1, Decreases requires <
 
 **Resolution semantics for "Doesn't change":** At low absolute values (0-5), Google Trends reports coarse integers. A value fluctuating between 0, 1, and 2 due to noise is functionally at baseline — this resolves as "Doesn't change." The resolution criterion is ±3, not exact integer equality.
 
-**Post-spike decay:** After a news spike, values rapidly return to baseline (often 0-2). Once at baseline, they stay at baseline. A value that was at 100 a week ago and is now at 2 is not "trending down" — it has already returned to its equilibrium. The most likely next-period outcome is staying at baseline, not continuing to decline below it.
+**Post-spike dynamics:** After a news spike, distinguish two regimes:
+
+1. **Returned to baseline** (value 0-5): Interest has already decayed to equilibrium.
+   The most likely next-period outcome is staying at baseline, not continuing to decline.
+   Strongly favors "Doesn't change."
+
+2. **Still elevated** (value well above baseline): The story is still active. Check
+   whether interest is decaying monotonically or showing upticks/reversals. An uptick
+   during decay (e.g., 18→25) signals renewed engagement — treat it as a leading
+   indicator, not an "artificially elevated" starting point. When the google_trends tool
+   returns recent_news, use the headlines to assess whether the story is winding down
+   or escalating with new developments.
+
+When a scheduled event (hearing, deposition, trial date, product launch, earnings report)
+falls within the forecast window and the topic is still elevated, default to expecting
+sustained or increased interest — not decay. Scheduled events in active stories generate
+multi-day follow-on coverage (reactions, analysis, new revelations).
 
 ### General Multiple Choice
 

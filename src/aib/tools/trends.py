@@ -122,8 +122,17 @@ class TailStats(TypedDict, total=False):
     trailing_volatility: float
 
 
+class NewsItem(TypedDict):
+    """A recent news headline related to a trends topic."""
+
+    title: str
+    url: str
+    published_date: str | None
+
+
 class _TrendsResultOptional(TypedDict, total=False):
     tail_stats: TailStats
+    recent_news: list[NewsItem]
 
 
 class TrendsResult(_TrendsResultOptional):
@@ -307,6 +316,41 @@ def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None
         return None
 
 
+async def _fetch_recent_news(keyword: str, max_results: int = 5) -> list[NewsItem] | None:
+    """Fetch recent news headlines for an elevated trends topic via Exa."""
+    from datetime import datetime, timedelta, timezone
+
+    from aib.tools.exa import exa_search
+
+    try:
+        cutoff = retrodict_cutoff.get()
+        if cutoff is not None:
+            reference = datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc)
+        else:
+            reference = datetime.now(timezone.utc)
+        after_date = (reference - timedelta(hours=48)).strftime("%Y-%m-%d")
+
+        results = await exa_search(
+            query=f"{keyword} news",
+            num_results=max_results,
+            published_after=after_date,
+            livecrawl="always",
+        )
+        items = [
+            NewsItem(
+                title=r["title"] or "",
+                url=r["url"] or "",
+                published_date=r["published_date"],
+            )
+            for r in results
+            if r.get("title")
+        ]
+        return items or None
+    except Exception:
+        logger.debug("News augmentation failed for '%s'", keyword, exc_info=True)
+        return None
+
+
 @tool(
     "google_trends",
     (
@@ -404,6 +448,11 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
         tail_stats = _compute_tail_stats(history)
         if tail_stats is not None:
             result["tail_stats"] = tail_stats
+
+        if result["latest_value"] is not None and result["latest_value"] >= 10:
+            recent_news = await _fetch_recent_news(keyword)
+            if recent_news:
+                result["recent_news"] = recent_news
 
         return mcp_success(result)
 
