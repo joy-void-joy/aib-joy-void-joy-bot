@@ -1,0 +1,337 @@
+---
+timestamp: 2026-02-27 06:07:55 UTC
+question_type: multiple_choice
+factors:
+- description: France leads with 15 pts after 3/5 rounds, 4-point lead over Scotland
+    (11 pts)
+  supports: France
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: France has +89 point differential (next best Scotland +11), indicating
+    massive dominance
+  supports: France
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Betting odds (Betfair/Ladbrokes) imply 93-96% for France after R3
+  supports: France
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: France only needs to win 1 of 2 remaining games; P(win at least 1)
+    ≈ 92%
+  supports: France
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Even if France loses both, they'd still have 15 pts - rivals must gain
+    ~16+ which is very hard
+  supports: France
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Scotland have Murrayfield home advantage vs France in R4 - their best
+    chance to close the gap
+  supports: Scotland
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Scotland would also need to beat Ireland away in R5 AND France to lose
+    to England - compound probability
+  supports: Scotland
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+- description: Ireland need France to lose both games and must win both their own
+    - extremely unlikely chain
+  supports: Ireland
+  logit: -0.8
+  confidence: 0.85
+  effective_logit: -0.68
+- description: England, Italy, Wales mathematically cannot realistically win given
+    points gaps and remaining fixtures
+  supports: France
+  logit: 0.3
+  confidence: 0.95
+  effective_logit: 0.285
+tentative_estimate:
+  center: 0.9
+  low: 0.85
+  high: 0.96
+assessment: France dominates the 2026 Six Nations after 3 rounds with a perfect 15-point
+  record and +89 point differential. They face Scotland (away) in R4 and England (home)
+  in R5. My Monte Carlo simulation across 100k iterations gives France ~90% championship
+  probability, closely matching but slightly below the 93-96% implied by major bookmakers.
+  Scotland at ~6% is the only realistic challenger, requiring them to beat France
+  at Murrayfield AND win their remaining matches while France also loses to England.
+  Ireland's path is even more improbable. England, Italy, and Wales are effectively
+  eliminated.
+calibration_notes: 'Betting odds anchor: Betfair 1/14 (~93%), Ladbrokes 1/25 (~96%).
+  My simulation gives ~90%. The difference may be because my match probabilities are
+  slightly more generous to Scotland at home. I''ll anchor closer to simulation results
+  since they incorporate match-level uncertainty. The 90% figure is well-supported
+  by both the quantitative model and external odds.'
+key_uncertainties: The Scotland vs France match at Murrayfield is the single biggest
+  swing factor. If Scotland wins that, France drops to ~75-80% and Scotland rises
+  to ~15%. If France wins, championship is essentially locked.
+tool_audit: '- web_search: Effective for finding standings, results, and betting odds
+  articles
+
+  - fetch_url: Mixed - some pages rendered well (Yahoo Sports, Ruck, Ladbrokes), ESPN
+  tables didn''t render (JavaScript-heavy)
+
+  - Wikipedia: Only returned introductory text, not the full standings table
+
+  - execute_code: Essential for Monte Carlo simulation and scenario analysis
+
+  - Metaculus question fetch: Worked, confirmed no community prediction available'
+update_triggers: Scotland beating France at Murrayfield would be the main event that
+  shifts probabilities significantly.
+process_reflection: The tools worked reasonably well for this sports forecasting question.
+  The main friction was with ESPN and Wikipedia not rendering full standings tables
+  - JavaScript-heavy sports sites are difficult for the fetch tool. The Yahoo Sports
+  article and the six-nations-guide.co.uk site were the most useful for structured
+  data. Monte Carlo simulation was essential for properly accounting for compound
+  probabilities across remaining fixtures. The betting odds from Ruck and Ladbrokes
+  provided excellent calibration anchors.
+computed:
+  factor_count: 9
+  factor_sum: 6.0649999999999995
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: France leads with 15 pts after 3/5 rounds, 4-point lead over Scotland
+      (11 pts)
+    supports: France
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: France has +89 point differential (next best Scotland +11), indicating
+      massive dominance
+    supports: France
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Betting odds (Betfair/Ladbrokes) imply 93-96% for France after R3
+    supports: France
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: France only needs to win 1 of 2 remaining games; P(win at least 1)
+      ≈ 92%
+    supports: France
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Even if France loses both, they'd still have 15 pts - rivals must
+      gain ~16+ which is very hard
+    supports: France
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Scotland have Murrayfield home advantage vs France in R4 - their
+      best chance to close the gap
+    supports: Scotland
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Scotland would also need to beat Ireland away in R5 AND France to
+      lose to England - compound probability
+    supports: Scotland
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  - description: Ireland need France to lose both games and must win both their own
+      - extremely unlikely chain
+    supports: Ireland
+    logit: -0.8
+    confidence: 0.85
+    effective_logit: -0.68
+  - description: England, Italy, Wales mathematically cannot realistically win given
+      points gaps and remaining fixtures
+    supports: France
+    logit: 0.3
+    confidence: 0.95
+    effective_logit: 0.285
+  dominant_factor: France leads with 15 pts after 3/5 rounds, 4-point lead over Scotland
+    (11 pts)
+  dominant_effective_logit: 2.375
+  outcome_breakdown:
+  - outcome: France
+    factor_count: 6
+    logit_sum: 6.585
+    factors:
+    - description: France leads with 15 pts after 3/5 rounds, 4-point lead over Scotland
+        (11 pts)
+      supports: France
+      logit: 2.5
+      confidence: 0.95
+      effective_logit: 2.375
+    - description: France has +89 point differential (next best Scotland +11), indicating
+        massive dominance
+      supports: France
+      logit: 1.0
+      confidence: 0.9
+      effective_logit: 0.9
+    - description: Betting odds (Betfair/Ladbrokes) imply 93-96% for France after
+        R3
+      supports: France
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: France only needs to win 1 of 2 remaining games; P(win at least
+        1) ≈ 92%
+      supports: France
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: Even if France loses both, they'd still have 15 pts - rivals must
+        gain ~16+ which is very hard
+      supports: France
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+    - description: England, Italy, Wales mathematically cannot realistically win given
+        points gaps and remaining fixtures
+      supports: France
+      logit: 0.3
+      confidence: 0.95
+      effective_logit: 0.285
+  - outcome: Scotland
+    factor_count: 2
+    logit_sum: 0.15999999999999992
+    factors:
+    - description: Scotland have Murrayfield home advantage vs France in R4 - their
+        best chance to close the gap
+      supports: Scotland
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+    - description: Scotland would also need to beat Ireland away in R5 AND France
+        to lose to England - compound probability
+      supports: Scotland
+      logit: -0.5
+      confidence: 0.8
+      effective_logit: -0.4
+  - outcome: Ireland
+    factor_count: 1
+    logit_sum: -0.68
+    factors:
+    - description: Ireland need France to lose both games and must win both their
+        own - extremely unlikely chain
+      supports: Ireland
+      logit: -0.8
+      confidence: 0.85
+      effective_logit: -0.68
+  sources:
+  - '[2026 Six Nations Championship - Wikipedia](https://en.wikipedia.org/wiki/2026_Six_Nations_Championship)'
+  - '[(Metaculus) Which team will win the 2026 Six Nations Championship?](https://www.metaculus.com/questions/42247)'
+  - '[Six Nations Tables - 2026 season - ESPN (UK](https://www.espn.co.uk/rugby/table/_/league/180659)'
+  - '[Six Nations 2026: Schedule, results, table, squads, news, TV info, more](https://www.espn.com/rugby/story/_/id/47658767/six-nations-2026-schedule-results-squads-news-tv-how-watch-start)'
+  - '[Six Nations 2026 table, fixtures, schedule and results after round three](https://ca.sports.yahoo.com/news/six-nations-2026-table-fixtures-070005348.html)'
+  - '[Six Nations 2026](https://www.six-nations-guide.co.uk/2026/)'
+  - '[6 Nations fixtures 2026](https://all.rugby/tournament/6-nations/fixtures-results)'
+  - '["England 500/1" - Updated Betting Odds Revealed for 2026 Six Nations Winner
+    - Ruck](https://www.ruck.co.uk/england-500-1-updated-betting-odds-revealed-for-2026-six-nations-winner/)'
+  - '[Six Nations 2026: Odds, favourites, predictions, fixtures and results](https://www.ladbrokes.com/en/news/six-nations-2026-preview-favourites-predictions-fixtures-results/)'
+  reviewer_critique: 'I verified all factor claims against the research trace and
+    found them well-grounded:
+
+
+    **Factor 1** (France leads 15 pts, 4-point lead over Scotland at 11 pts): Verified
+    in trace lines 143, 156 showing standings from Yahoo Sports and six-nations-guide.co.uk.
+
+
+    **Factor 2** (France +89 PD, Scotland +11): Verified in same sources (lines 143,
+    156).
+
+
+    **Factor 3** (Betting odds 93-96%): Verified from two sources - Betfair at 1/14
+    (≈93.3%, line 259) and Ladbrokes at 1/25 (≈96%, line 272). The factor correctly
+    cites both bookmakers.
+
+
+    **Factor 4** (France needs 1 of 2 wins, P≈92%): Verified by simulation at line
+    357 showing "P(France wins at least 1): 92.4%". The factor accurately reports
+    this.
+
+
+    **Factor 5** (Even if France loses both, they''d have 15 pts): Verified by simulation
+    showing France would retain 15 base points (plus potential losing bonus points),
+    and that Scotland would need to gain ~16+ points, which is mathematically sound.
+
+
+    **Factor 6** (Scotland home advantage at Murrayfield in R4): Verified in simulation
+    code at line 320 showing "(''Scotland'', ''France'', 0.35, 0.58, 0.07)" for Round
+    4. Edinburgh = Murrayfield.
+
+
+    **Factor 7** (Scotland needs to beat Ireland away + France loses both): Correct
+    compound probability logic. Fixtures verified at line 320 showing Ireland vs Scotland
+    in Dublin (R5).
+
+
+    **Factor 8** (Ireland needs France to lose both + win both own): Mathematically
+    correct given Ireland is at 9 pts vs France''s 15 pts.
+
+
+    **Factor 9** (England/Italy/Wales mathematically eliminated): Verified - standings
+    show England/Italy at 5 pts, Wales at 1 pt, with only 2 rounds remaining (max
+    10 pts gain).
+
+
+    **Assessment alignment**: The narrative correctly summarizes that France dominates
+    with ~90% probability, matching the Monte Carlo result (90.0% at line 327) and
+    falling within the bookmaker range (93-96%). The agent appropriately notes its
+    simulation is "slightly below" the bookmaker consensus.
+
+
+    **Resolution criteria alignment**: All factors focus on who will be ranked first
+    in the final table, which correctly addresses the resolution criteria. No pre-publication
+    event issues - the question was published Feb 27 after Round 3 completed (Feb
+    21-22), so this is a forward-looking forecast.
+
+
+    **No errors found**: No hallucinations, no double-counting (each factor draws
+    on distinct evidence), no wrong-direction factors, and no contradictions between
+    factors and assessment.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42247
+- **Question ID**: 42028
+- **Session Duration**: 419.3s (7.0 min)
+- **Cost**: $3.3054
+- **Tokens**: 9,398 total (33 in, 9,365 out)
+  - Cache: 846,996 read, 71,041 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42247_20260227_060108/20260227-060108.log`
+
+### Tool Calls
+
+- **Total**: 21 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 1626ms |
+| fetch_url | 7 | 0 | 9309ms |
+| get_metaculus_questions | 1 | 0 | 1ms |
+| reflection | 1 | 0 | 107941ms |
+| web_search | 5 | 0 | 13409ms |
+| wikipedia | 3 | 0 | 3169ms |
+
+### Sources Consulted
+
+- [2026 Six Nations Championship - Wikipedia](https://en.wikipedia.org/wiki/202...
+- [(Metaculus) Which team will win the 2026 Six Nations Championship?](https://...
+- [Six Nations Tables - 2026 season - ESPN (UK](https://www.espn.co.uk/rugby/ta...
+- [Six Nations 2026: Schedule, results, table, squads, news, TV info, more](htt...
+- [Six Nations 2026 table, fixtures, schedule and results after round three](ht...
+- [Six Nations 2026](https://www.six-nations-guide.co.uk/2026/)
+- [6 Nations fixtures 2026](https://all.rugby/tournament/6-nations/fixtures-res...
+- ["England 500/1" - Updated Betting Odds Revealed for 2026 Six Nations Winner ...
+- [Six Nations 2026: Odds, favourites, predictions, fixtures and results](https...
