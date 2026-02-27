@@ -154,7 +154,6 @@ Organize your research in phases. Don't jump to deep research before understandi
 ### Phase 3: Domain-Specific Data
 - **Financial data**: Economic indicators (GDP, CPI, interest rates, Treasury yields), company fundamentals (earnings, EPS, income statements), equity prices and history. Non-US country data available via World Bank.
 - **Government statistics**: US labor data (unemployment, CPI, payrolls, PPI), census data for demographics, housing, and population at various geographic levels.
-- **Search interest**: Google Trends data including related queries for trend analysis.
 - **Social sentiment**: Reddit search for public discussion, community reactions, and sentiment on current events.
 - **Prediction markets**: Current prices with recent history from Polymarket, Manifold, and Kalshi.
 - **Community prediction history**: CP trajectory — how has consensus moved and why?
@@ -522,15 +521,19 @@ Values must be non-decreasing (10th <= 20th <= 40th <= 60th <= 80th <= 90th).
 {bounds_info}\
 """
 
-_MULTIPLE_CHOICE_GUIDANCE_TEMPLATE = """\
+_MC_PREAMBLE = """\
 ## Multiple Choice Question Guidance
 
 Before forecasting, consider:
 (a) Time left until resolution
 (b) Status quo outcome if nothing changes
-(c) An unexpected scenario that could shift the outcome
+(c) An unexpected scenario that could shift the outcome\
+"""
 
+_DIRECTIONAL_CHANGE_GUIDANCE = """\
 ### Directional Change Questions ("Increases / Decreases / Doesn't change")
+
+**Google Trends tool usage:** Query with `tz=0` and the exact resolution date range to match the resolution data source. Use `change_stats` and `tail_stats` for quantitative priors before forming a narrative. Use `recent_news` for context on whether the story is active or fading. Check `related_queries` for emerging catalysts the headline search term might miss.
 
 **Threshold arithmetic:** The resolution uses a ±3 absolute threshold. Given current value X:
 - "Increases" requires end value > X+3
@@ -539,13 +542,15 @@ Before forecasting, consider:
 
 Compute the asymmetric possibility space early: at value=1, Decreases requires <-2 (impossible), Increases requires >4 (needs a catalyst), and DC covers [0, 4] — a wide range that encompasses all baseline noise. At value=50, all three outcomes are plausible. The current value relative to the threshold determines which outcomes are even possible.
 
-**Base rates from change_stats:** The google_trends tool returns change_stats with empirical base rates (computed with the ±3 threshold). These rates are your starting prior — they show how often this specific term historically increased, decreased, or stayed the same. Start from these rates and adjust based on context.
+**Base rates from change_stats:** The google_trends tool returns change_stats with empirical base rates (computed with the ±3 threshold). These rates are your starting prior — they show how often this specific term historically increased, decreased, or stayed the same. Start from these rates and adjust based on context. With small sample sizes, a 0% empirical rate doesn't mean the true rate is zero — the absence of observations in a short window is weak evidence. Use longer timeframes for more reliable base rates.
 
 **Trend detection:** Compare trailing_change_stats (recent window) to full-series change_stats to detect regime shifts. tail_stats.stable_tail_days shows whether interest has plateaued — a stable tail with days > 3 strongly favors "Doesn't change."
 
 **Proportional research:** When threshold arithmetic clearly identifies one dominant outcome (e.g., value at baseline floor, DC near-certain), additional news research tends to introduce narrative bias — speculative catalysts that inflate P(Increase) at the expense of the quantitatively dominant outcome. Match research depth to genuine uncertainty.
 
 **Resolution semantics for "Doesn't change":** At low absolute values (0-5), Google Trends reports coarse integers. A value fluctuating between 0, 1, and 2 due to noise is functionally at baseline — this resolves as "Doesn't change." The resolution criterion is ±3, not exact integer equality.
+
+**Resolution mechanism uncertainty:** These questions resolve via SerpAPI, not the Google Trends web interface. The fine print often warns of differences between API and browser results. Values from the google_trends tool (pytrends) may differ from SerpAPI by 1-3 points. At low absolute values (5-15), this can flip the outcome across the ±3 threshold. Always query with tz=0 and the exact resolution date range, and leave meaningful probability on outcomes that a ±2 measurement shift would produce.
 
 **Post-spike dynamics:** After a news spike, distinguish two regimes:
 
@@ -558,13 +563,20 @@ Compute the asymmetric possibility space early: at value=1, Decreases requires <
    during decay (e.g., 18→25) signals renewed engagement — treat it as a leading
    indicator, not an "artificially elevated" starting point. When the google_trends tool
    returns recent_news, use the headlines to assess whether the story is winding down
-   or escalating with new developments.
+   or escalating with new developments. For topics with ongoing real-world developments
+   (active investigations, legal proceedings, evolving crises), exponential decay models
+   overpredict the decline. Each new development resets the decay clock. The decay floor
+   is the sustained-coverage interest level, not zero. When recent_news shows active
+   coverage with developments every few days, model the end value as the recent tail
+   average, not the exponential projection.
 
 When a scheduled event (hearing, deposition, trial date, product launch, earnings report)
 falls within the forecast window and the topic is still elevated, default to expecting
 sustained or increased interest — not decay. Scheduled events in active stories generate
-multi-day follow-on coverage (reactions, analysis, new revelations).
+multi-day follow-on coverage (reactions, analysis, new revelations).\
+"""
 
+_MC_GENERAL_GUIDANCE = """\
 ### General Multiple Choice
 
 Each factor must use `supports` to indicate which option it favors. Leave moderate probability on most options to account for genuine surprise. Probabilities must sum to 1.0.
@@ -602,6 +614,9 @@ def get_forecasting_system_prompt(
     return prompt
 
 
+_DIRECTIONAL_CHANGE_OPTIONS = {"Increases", "Decreases", "Doesn't change"}
+
+
 def get_type_specific_guidance(
     question_type: str,
     context: Mapping[str, object],
@@ -627,6 +642,10 @@ def get_type_specific_guidance(
 
     if question_type == "multiple_choice":
         options: Sequence[str] = context.get("options", [])  # type: ignore[assignment]
-        return _MULTIPLE_CHOICE_GUIDANCE_TEMPLATE.format(options=options)
+        parts = [_MC_PREAMBLE]
+        if _DIRECTIONAL_CHANGE_OPTIONS.issubset(set(options)):
+            parts.append(_DIRECTIONAL_CHANGE_GUIDANCE)
+        parts.append(_MC_GENERAL_GUIDANCE.format(options=options))
+        return "\n\n".join(parts)
 
     return ""
