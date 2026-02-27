@@ -1236,6 +1236,7 @@ class QuestionDict(TypedDict, total=False):
     """Metaculus question data returned by _question_to_dict."""
 
     post_id: int
+    question_id: int
     title: str
     type: str
     url: str
@@ -1247,6 +1248,7 @@ class QuestionDict(TypedDict, total=False):
     options: list[str] | None
     lower_bound: float | None
     upper_bound: float | None
+    coherence_links: list[dict[str, Any]] | None
 
 
 class CPHistoryEntry(BaseModel):
@@ -1280,6 +1282,7 @@ def _question_to_dict(question: Any, *, hide_cp: bool = False) -> dict[str, obje
     """
     result: dict[str, object] = {
         "post_id": question.id_of_post,
+        "question_id": question.id_of_question,
         "title": question.question_text,
         "type": question.get_question_type(),
         "url": question.page_url,
@@ -1341,6 +1344,34 @@ def _build_prediction_history(
         return entry
 
     return [_serialize(f) for f in forecasts]
+
+
+async def _fetch_coherence_links(question_id: int) -> list[dict[str, Any]]:
+    """Fetch coherence links for a question. Returns [] on failure."""
+    try:
+        client = get_metaculus_client()
+        links = await client.get_links_for_question(question_id)
+        return [
+            {
+                "related_post_id": (
+                    link.question2.id_of_post
+                    if link.question1.id_of_question == question_id
+                    else link.question1.id_of_post
+                ),
+                "related_title": (
+                    link.question2.question_text
+                    if link.question1.id_of_question == question_id
+                    else link.question1.question_text
+                ),
+                "direction": link.direction,
+                "strength": link.strength,
+                "type": link.type,
+            }
+            for link in links
+        ]
+    except Exception:
+        logger.exception("Failed to fetch coherence links for question %d", question_id)
+        return []
 
 
 @cached(ttl=300)
@@ -1437,8 +1468,9 @@ async def _fetch_aggregation(post_id: int) -> AggregationMethod:
         "IMPORTANT: These are QUESTION post IDs, not tournament IDs. "
         "To find question IDs, use list_tournament_questions first. "
         "Returns question details including title, description, resolution criteria, "
-        "fine print, community prediction (if available), and your prediction history "
-        "(past forecasts with timestamps, probabilities, and summaries). "
+        "fine print, community prediction (if available), your prediction history "
+        "(past forecasts with timestamps, probabilities, and summaries), "
+        "and coherence links to related questions (for consistency checking). "
         "Note: Community predictions are NOT available in the AIB tournament. "
         "Maximum 20 questions per request."
     ),
@@ -1475,6 +1507,11 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
             history = _build_prediction_history(post_id, cutoff)
             if history:
                 result["prediction_history"] = history
+            question_id = result.pop("question_id", None)
+            if isinstance(question_id, int):
+                links = await _fetch_coherence_links(question_id)
+                if links:
+                    result["coherence_links"] = links
             return result
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
