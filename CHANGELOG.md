@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.4.0 (2026-02-27)
+
+conditional MC guidance with directional-change-specific Google Trends instructions and resolution mechanism uncertainty
+- directional-change guidance only injected when MC options match
+- Google Trends tz=0 and date-range matching instructions
+- SerpAPI vs pytrends measurement uncertainty guidance
+- improved post-spike decay model for active topics
+- small-sample-size base-rate caveat
+
 ## v3.3.0 (2026-02-27)
 
 regime detection, rate futures enrichment, and reviewer distribution checks
