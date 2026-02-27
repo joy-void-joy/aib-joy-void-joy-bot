@@ -1,14 +1,17 @@
 """Tests for financial tool helpers: summary stats and conditional returns."""
 
 import math
+from collections.abc import Sequence
 
 import pytest
 
 from aib.tools.financial import (
     DailyClose,
+    FredObservation,
     StockPrice,
     _compute_conditional_return_stats,
     _compute_summary_stats,
+    _detect_regime,
 )
 
 
@@ -212,3 +215,58 @@ class TestConditionalReturns:
         )
         assert dist["min"] <= dist["p10"]
         assert dist["p90"] <= dist["max"]
+
+
+def _make_obs(
+    dates_values: Sequence[tuple[str, float | None]],
+) -> list[FredObservation]:
+    """Build a list of FredObservation from (date, value) pairs."""
+    return [FredObservation(date=d, value=v) for d, v in dates_values]
+
+
+class TestRegimeDetection:
+    def test_returns_none_for_few_observations(self) -> None:
+        obs = _make_obs([(f"2026-01-{i:02d}", 3.63) for i in range(1, 5)])
+        assert _detect_regime(obs) is None
+
+    def test_stable_series_no_break(self) -> None:
+        obs = _make_obs([(f"2026-01-{i:02d}", 3.63) for i in range(1, 21)])
+        result = _detect_regime(obs)
+        assert result is not None
+        assert result["observations_in_regime"] == 20
+        assert result["stable_since"] == "2026-01-01"
+        assert result["prior_regime_mean"] is None
+        assert result["shift_direction"] is None
+
+    def test_detects_regime_shift(self) -> None:
+        prior = [(f"2026-01-{i:02d}", 3.55) for i in range(1, 11)]
+        transition = [
+            (f"2026-01-{i:02d}", 3.55 + (i - 10) * 0.01) for i in range(11, 18)
+        ]
+        stable = [(f"2026-01-{i:02d}", 3.63) for i in range(18, 31)]
+        obs = _make_obs(prior + transition + stable)
+        result = _detect_regime(obs)
+        assert result is not None
+        assert result["observations_in_regime"] < 30
+        assert result["stable_mean"] == pytest.approx(3.63, abs=0.01)
+        assert result["prior_regime_mean"] is not None
+        assert result["shift_direction"] == "up"
+        assert result["shift_magnitude"] is not None
+        assert result["shift_magnitude"] > 0
+
+    def test_handles_null_values(self) -> None:
+        pairs: list[tuple[str, float | None]] = [
+            (f"2026-01-{i:02d}", 3.63 if i % 2 == 0 else None) for i in range(1, 21)
+        ]
+        result = _detect_regime(_make_obs(pairs))
+        assert result is not None
+        assert result["stable_mean"] == pytest.approx(3.63)
+
+    def test_sensitivity_floor_prevents_false_breaks(self) -> None:
+        pairs: list[tuple[str, float | None]] = [
+            (f"2026-01-{i:02d}", 3.63 + (i % 2) * 0.001) for i in range(1, 21)
+        ]
+        obs = _make_obs(pairs)
+        result = _detect_regime(obs)
+        assert result is not None
+        assert result["observations_in_regime"] == 20

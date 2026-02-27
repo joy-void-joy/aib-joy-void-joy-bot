@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.3.0 (2026-02-27)
+
+regime detection, rate futures enrichment, and reviewer distribution checks
+- fred_series: adds `regime_stats` via backward-expansion regime detection on all series
+- fred_series: adds `rate_futures` with market-implied rate path from Fed Funds futures for known interest rate series (DTB4WK, FEDFUNDS, SOFR, etc.)
+- reflection: adds `precision` metric (range/|center|) to NumericDistributionMetrics
+- reviewer: adds regime-spanning data window check for numeric/discrete forecasts
+- prompts: adds regime-aware data window guidance and rate futures centering for short-horizon interest rate questions
+
 ## v3.2.0 (2026-02-24)
 
 structured reviewer gate; enhanced fetch_url with data extraction; stock and Trends analysis tools

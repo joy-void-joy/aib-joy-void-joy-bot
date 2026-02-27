@@ -476,9 +476,19 @@ Before forecasting, consider:
 
 **Momentum vs mean reversion.** Over short horizons (days to weeks), trends persist — a rising asset continues rising, a drifting metric keeps drifting. Mean reversion is a months-to-years phenomenon. If your data shows a clear short-term drift, use it as-is. Do not dampen a measured drift toward zero because "it might revert" — that applies long-horizon intuition to a short-horizon problem. If the empirical drift is +0.13%/day and the forecast horizon is 2 weeks, your simulation should use +0.13%/day, not a "conservative" +0.08%/day.
 
+**Regime-aware data windows.** When using historical data for Monte Carlo \
+simulation or drift estimation, check `regime_stats` in the `fred_series` \
+response. If it shows a structural break, use only the stable regime for \
+simulation parameters (drift and volatility). Including transition-period \
+data introduces artificial drift that biases the distribution center.
+
 **Short-horizon financial forecasts (<30 days).** For commodity, stock, or index price questions resolving within a month:
 - The **futures curve** is the market-implied expected value — use it as your distribution center when available. Annual-average analyst forecasts (EIA outlooks, bank year-end targets) are irrelevant to the next few weeks. Use them for tail-risk context only, not as distribution-shifting factors.
 - **After a single-day shock**, check shock recovery base rates before treating the post-shock price as the new equilibrium. Single-day commodity shocks within broader trends typically mean-revert.
+- For **interest rate** questions, `fred_series` includes `rate_futures` \
+(market-implied rate path from Fed Funds futures) for known rate series. \
+Use the nearest-month implied rate as your distribution center rather \
+than extrapolating from recent observations.
 
 **Skewness matters.** Match the shape of your distribution to the quantity:
 - Costs, timelines, populations → right-skewed (can go much higher, can't go below zero)

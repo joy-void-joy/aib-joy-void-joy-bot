@@ -224,6 +224,41 @@ class TestComputeReflectionNumeric:
         assert result.distribution_metrics.median_gap == pytest.approx(10.0)
         assert result.distribution_metrics.median_gap_pct == pytest.approx(25.0)
 
+    def test_precision_metric(self) -> None:
+        """Precision = range / |center| for non-zero center."""
+        factors = [
+            Factor(
+                description="Evidence",
+                supports=NumericSupport(center=3.63, low=3.60, high=3.66),
+                logit=1.0,
+                confidence=1.0,
+            ),
+        ]
+        inp = _make_numeric_input(factors=factors, center=3.63, low=3.61, high=3.65)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.distribution_metrics is not None
+        expected = (3.65 - 3.61) / 3.63
+        assert result.distribution_metrics.precision == pytest.approx(expected)
+
+    def test_precision_none_for_zero_center(self) -> None:
+        """Precision should be None when center is zero."""
+        factors = [
+            Factor(
+                description="Evidence",
+                supports=NumericSupport(center=0.0, low=-1.0, high=1.0),
+                logit=1.0,
+                confidence=1.0,
+            ),
+        ]
+        inp = _make_numeric_input(factors=factors, center=0.0, low=-0.5, high=0.5)
+
+        result = compute_reflection(inp, "numeric")
+
+        assert result.distribution_metrics is not None
+        assert result.distribution_metrics.precision is None
+
     def test_empty_factors_no_metrics(self) -> None:
         """Empty factor list should give no distribution metrics."""
         inp = _make_numeric_input(factors=[])

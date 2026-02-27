@@ -72,7 +72,163 @@ class FredSeriesInfo(TypedDict):
     last_updated: str
 
 
+class RegimeStats(TypedDict):
+    """Regime detection output for a FRED time series."""
+
+    stable_since: str
+    stable_mean: float
+    stable_std: float
+    observations_in_regime: int
+    prior_regime_mean: float | None
+    shift_magnitude: float | None
+    shift_direction: str | None
+
+
 # --- FRED API Tools ---
+
+
+class RateFuture(TypedDict):
+    """A single rate futures contract."""
+
+    symbol: str
+    month: str
+    implied_rate: float
+
+
+class RateFuturesCurve(TypedDict):
+    """Rate futures curve for interest rate series."""
+
+    contracts: list[RateFuture]
+    current_rate: float
+    months_ahead: int
+
+
+_RATE_SERIES_TO_FUTURES: dict[str, str] = {
+    "DTB4WK": "ZQ",
+    "DTB3": "ZQ",
+    "DTB6": "ZQ",
+    "DGS1MO": "ZQ",
+    "DGS3MO": "ZQ",
+    "DGS6MO": "ZQ",
+    "DGS1": "ZQ",
+    "DGS2": "ZQ",
+    "FEDFUNDS": "ZQ",
+    "EFFR": "ZQ",
+    "SOFR": "ZQ",
+    "PRIME": "ZQ",
+}
+
+
+_REGIME_SENSITIVITY_FLOOR = 0.02
+
+
+def _detect_regime(observations: list[FredObservation]) -> RegimeStats | None:
+    """Detect the current stable regime via backward expansion.
+
+    Starting from the last 3 non-null observations, grows backward as long as
+    each new observation is within max(3 * window_std, sensitivity_floor) of
+    the window mean. Returns None if fewer than 5 non-null observations.
+    """
+    values: list[tuple[str, float]] = [
+        (obs["date"], obs["value"]) for obs in observations if obs["value"] is not None
+    ]
+    if len(values) < 5:
+        return None
+
+    # Start from the last 3 observations
+    window: list[float] = [v for _, v in values[-3:]]
+    stable_start_idx = len(values) - 3
+
+    # Expand backward
+    for i in range(len(values) - 4, -1, -1):
+        _, val = values[i]
+        window_mean = sum(window) / len(window)
+        window_std = (sum((x - window_mean) ** 2 for x in window) / len(window)) ** 0.5
+        threshold = max(3 * window_std, _REGIME_SENSITIVITY_FLOOR)
+        if abs(val - window_mean) > threshold:
+            break
+        window.append(val)
+        stable_start_idx = i
+
+    stable_values = [v for _, v in values[stable_start_idx:]]
+    stable_mean = sum(stable_values) / len(stable_values)
+    stable_std = (
+        sum((x - stable_mean) ** 2 for x in stable_values) / len(stable_values)
+    ) ** 0.5
+
+    prior_mean: float | None = None
+    shift_mag: float | None = None
+    shift_dir: str | None = None
+
+    if stable_start_idx > 0:
+        prior_values = [v for _, v in values[:stable_start_idx]]
+        if prior_values:
+            prior_mean = sum(prior_values) / len(prior_values)
+            shift_mag = abs(stable_mean - prior_mean)
+            shift_dir = "up" if stable_mean > prior_mean else "down"
+
+    return RegimeStats(
+        stable_since=values[stable_start_idx][0],
+        stable_mean=round(stable_mean, 6),
+        stable_std=round(stable_std, 6),
+        observations_in_regime=len(stable_values),
+        prior_regime_mean=round(prior_mean, 6) if prior_mean is not None else None,
+        shift_magnitude=round(shift_mag, 6) if shift_mag is not None else None,
+        shift_direction=shift_dir,
+    )
+
+
+def _fetch_rate_futures(
+    series_id: str,
+    current_value: float,
+    cutoff: date | None,
+) -> RateFuturesCurve | None:
+    """Fetch Fed Funds futures curve and convert to implied rates.
+
+    Uses the ZQ=F continuous contract to discover the front month via
+    _fetch_futures_curve, then derives implied_rate = 100 - price for
+    each contract.
+    """
+    futures_root = _RATE_SERIES_TO_FUTURES.get(series_id)
+    if futures_root is None:
+        return None
+
+    import yfinance as yf
+
+    try:
+        ticker = yf.Ticker(f"{futures_root}=F")
+        info = ticker.info
+        if not info:
+            return None
+
+        curve = _fetch_futures_curve(info, cutoff)
+        if curve is None:
+            return None
+
+        curve_contracts = curve.get("contracts")
+        if not curve_contracts:
+            return None
+
+        contracts: list[RateFuture] = [
+            RateFuture(
+                symbol=c["symbol"],
+                month=c["month"],
+                implied_rate=round(100.0 - c["price"], 4),
+            )
+            for c in curve_contracts
+        ]
+
+        if len(contracts) < 2:
+            return None
+
+        return RateFuturesCurve(
+            contracts=contracts,
+            current_rate=current_value,
+            months_ahead=len(contracts),
+        )
+    except Exception:
+        logger.debug("Rate futures fetch failed for %s", series_id)
+        return None
 
 
 @tool(
@@ -80,6 +236,8 @@ class FredSeriesInfo(TypedDict):
     (
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
         "Returns observations and series metadata. Set observation_start/observation_end to control the date range.\n\n"
+        "For known interest rate series (FEDFUNDS, DTB4WK, SOFR, etc.), automatically "
+        "includes rate_futures with market-implied rate path from Fed Funds futures.\n\n"
         "Common series IDs:\n"
         "  Treasury: DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS5, DGS10, DGS20, DGS30\n"
         "  Rates: FEDFUNDS (Fed Funds), PRIME (Prime Rate), MORTGAGE30US (30yr Mortgage)\n"
@@ -177,19 +335,28 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
             "last_updated": raw_updated,
         }
 
-        return mcp_success(
-            {
-                "series": series_info,
-                "latest_value": latest_value,
-                "latest_date": latest_date,
-                "observation_start": start_date,
-                "observation_end": end_date,
-                "data_points": len(obs_list),
-                "observations": obs_list[-validated.limit :]
-                if validated.limit
-                else obs_list,
-            }
-        )
+        result_data: dict[str, Any] = {
+            "series": series_info,
+            "latest_value": latest_value,
+            "latest_date": latest_date,
+            "observation_start": start_date,
+            "observation_end": end_date,
+            "data_points": len(obs_list),
+            "observations": obs_list[-validated.limit :]
+            if validated.limit
+            else obs_list,
+        }
+
+        regime = _detect_regime(obs_list)
+        if regime is not None:
+            result_data["regime_stats"] = regime
+
+        if latest_value is not None:
+            rate_futures = _fetch_rate_futures(series_id, latest_value, cutoff)
+            if rate_futures is not None:
+                result_data["rate_futures"] = rate_futures
+
+        return mcp_success(result_data)
 
     except Exception as e:
         logger.exception("FRED series lookup failed")
@@ -822,7 +989,9 @@ def _detect_shock(
             daily_return_pct=round(shock_return, 2),
             comparable_events=len(forward_returns),
             median_forward_return_pct=round(float(np.median(returns_arr)), 2),
-            pct_positive=round(float(np.sum(returns_arr > 0)) / len(returns_arr) * 100, 1),
+            pct_positive=round(
+                float(np.sum(returns_arr > 0)) / len(returns_arr) * 100, 1
+            ),
             horizon_days=_SHOCK_HORIZON_DAYS,
         )
 
@@ -839,13 +1008,33 @@ def _detect_shock(
 
 
 _FUTURES_MONTH_CODES = {
-    1: "F", 2: "G", 3: "H", 4: "J", 5: "K", 6: "M",
-    7: "N", 8: "Q", 9: "U", 10: "V", 11: "X", 12: "Z",
+    1: "F",
+    2: "G",
+    3: "H",
+    4: "J",
+    5: "K",
+    6: "M",
+    7: "N",
+    8: "Q",
+    9: "U",
+    10: "V",
+    11: "X",
+    12: "Z",
 }
 
 _FUTURES_MONTH_NAMES = {
-    1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
-    7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec",
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "May",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Oct",
+    11: "Nov",
+    12: "Dec",
 }
 
 

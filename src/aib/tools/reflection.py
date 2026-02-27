@@ -125,6 +125,7 @@ class NumericDistributionMetrics(BaseModel):
     median_gap: float
     median_gap_pct: float
     spread_ratio: float
+    precision: float | None = None
 
 
 class ReflectionOutput(BaseModel):
@@ -235,6 +236,10 @@ def _compute_distribution_metrics(
     median_gap_pct = (median_gap / implied_range * 100) if implied_range > 0 else 0.0
     spread_ratio = (tentative_range / implied_range) if implied_range > 0 else 0.0
 
+    precision: float | None = None
+    if tentative.center != 0:
+        precision = tentative_range / abs(tentative.center)
+
     return NumericDistributionMetrics(
         implied_median=implied_median,
         implied_p10=implied_p10,
@@ -242,6 +247,7 @@ def _compute_distribution_metrics(
         median_gap=median_gap,
         median_gap_pct=median_gap_pct,
         spread_ratio=spread_ratio,
+        precision=precision,
     )
 
 
@@ -409,6 +415,15 @@ independently or form your own probability estimate.
   unless the resolution criteria explicitly include a lookback \
   window.
 
+- **Regime-spanning data window** (numeric/discrete only) — If the \
+  agent ran a Monte Carlo simulation or computed drift/volatility from \
+  historical data, check whether the data window includes a structural \
+  break (e.g., a rate level change after a policy decision, a price \
+  regime shift after a major event). If the trace shows the agent \
+  used data spanning two clearly different regimes to estimate drift, \
+  this is a **warn** — the drift estimate is contaminated by the \
+  regime transition, not representative of current dynamics.
+
 ## What NOT to check
 
 - The probability value or factor-probability gap
@@ -482,7 +497,9 @@ def _build_reviewer_prompt(
         if resolution and not resolution.startswith("MISSING"):
             sections.append(f"Resolution criteria: {resolution}")
         else:
-            sections.append("Resolution criteria: MISSING (agent should have fetched the question page)")
+            sections.append(
+                "Resolution criteria: MISSING (agent should have fetched the question page)"
+            )
         if fine_print and not fine_print.startswith("MISSING"):
             sections.append(f"Fine print: {fine_print}")
 
