@@ -8,12 +8,12 @@ Rather than carefully engineering a forecasting system, this project uses Claude
 
 This bot is built on the [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk), which lets us give Claude access to tools (web search, code execution, prediction markets, economic data) and let it figure out how to use them.
 
-The core idea comes from Richard Sutton's [Bitter Lesson](http://www.incompleteideas.net/IncsIdeas/BitterLesson.html): general methods that scale with computation beat hand-crafted solutions. Applied here, that means:
+We're applying the [Bitter Lesson](http://www.incompleteideas.net/IncsIdeas/BitterLesson.html) in the sense that we:
 
 - **Don't decompose the problem** — Give the agent all the tools and let it decide what's relevant
 - **Don't engineer the pipeline** — Let search, reasoning, and synthesis happen in one connected system
-- **Don't patch observed failures** — When something goes wrong, add capability rather than rules
-
+- **Build tools over system-prompt patches** — Adding more capabilities trump patching the system prompt
+ 
 The agent has access to web search, news APIs, prediction markets (Polymarket, Manifold), economic data (FRED), Google Trends, Wikipedia, sandboxed Python execution, and the ability to spawn sub-forecasts. It uses whatever combination makes sense for each question.
 
 ### Available Tools
@@ -27,71 +27,15 @@ The forecasting agent can use:
 - **Computation**: Sandboxed Python execution in Docker for Monte Carlo simulations, statistical analysis
 - **Decomposition**: Spawn parallel sub-forecasts for complex questions
 
-It has three subagents: researcher (information gathering), analyst (quantitative computation), and premortem (devil's advocate that stress-tests the forecast). Each runs with its own tool access for parallel work.
+In addition, its reasoning trace is reviewed by another agent before submitting to ensure no hallucination/over-hedging has been produced.
 
 ## The Feedback Loop
 
-The interesting part isn't the forecasting agent itself — it's the process of improving it.
-
-After running forecasts, we analyze the reasoning traces at three levels:
-
-**Object level**: What tools failed? What data was missing? What did the agent explicitly ask for? This drives new tool development.
-
-**Meta level**: Is the agent's self-assessment useful? Can we trace from forecast to reasoning to outcome? This improves observability.
-
-**Meta-meta level**: Is this feedback process itself working? What would make it easier? This improves the loop.
-
-The `/feedback-loop` command in Claude Code runs this analysis. Over time, the agent accumulates capabilities based on what it actually needs, not what we guessed it would need.
+We're continuously updating the bot through the /feedback-loop command and /audit command, that review past forecasts after resolution, review the reasoning, and see what tools failed or would have been helpful and what guidance to tweak.
 
 ## Everything is Documented
-
-This repo commits things you wouldn't normally commit: the `.claude/` directory with its settings, commands, and helper scripts; the `notes/` directory with research, forecasts, and meta-reflections from every run.
-
-The idea is that the development process itself is the product. By tracking:
-
-- **`.claude/CLAUDE.md`** — Instructions for Claude Code when working on this repo
-- **`.claude/commands/`** — Slash commands like `/feedback-loop` that encode workflows
-- **`.claude/scripts/`** — Helper scripts for analysis, built as the feedback loop identified needs
-- **`notes/forecasts/`** — Every forecast with its reasoning, factors, and confidence
-- **`notes/sessions/`** — Agent self-reflections and session data organized by post ID
-- **`notes/research/`** — Research notes organized by question
-
-...we create a record of how the system evolved. When Claude Code runs the feedback loop, it can read its own past reasoning and identify patterns. The meta-reflections explicitly ask: what tools helped? what was missing? what would I do differently?
-
-This is the "vibecoding" part: instead of designing upfront, we let the system tell us what it needs through its own documentation.
-
-## Project Structure
-
-```
-src/aib/
-├── agent/
-│   ├── core.py         # Main forecasting orchestration
-│   ├── subagents.py    # Specialized sub-agent definitions
-│   ├── numeric.py      # CDF generation for numeric questions
-│   └── prompts.py      # System prompts
-└── tools/
-    ├── forecasting.py  # Metaculus API + web search
-    ├── markets.py      # Prediction market data
-    ├── financial.py    # FRED economic data
-    ├── trends.py       # Google Trends
-    ├── sandbox.py      # Docker code execution
-    └── composition.py  # Sub-forecast spawning
-
-.claude/
-├── CLAUDE.md           # Instructions for Claude Code
-├── commands/
-│   └── feedback-loop.md  # The improvement workflow
-└── scripts/
-    ├── feedback_collect.py   # Gather resolution data
-    ├── trace_forecast.py     # Link forecasts to logs
-    └── calibration_report.py # Analyze accuracy
-
-notes/
-├── forecasts/    # Saved forecasts with full reasoning
-├── meta/         # Agent self-reflections
-├── research/     # Research notes by question
-└── feedback_loop/# Analysis results
-```
+We're also comiting .claude as part of the project itself, since it is the very scaffolding that helps me build the tool and improve on itself.
+The forecast reasoning trace and submissions are comitted as well for reviewing purpose.
 
 ## Setup
 
@@ -177,5 +121,4 @@ uv run pytest          # Test
 Run `/feedback-loop` in Claude Code to analyze recent forecasts and identify improvements.
 
 ## License
-
-[Add license information]
+MIT
