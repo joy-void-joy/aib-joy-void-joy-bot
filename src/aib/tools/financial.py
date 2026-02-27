@@ -512,8 +512,37 @@ class SummaryStats(TypedDict, total=False):
     max_bounce_from_recent_low_pct: float
 
 
+class FuturesContract(TypedDict):
+    """A single futures contract month."""
+
+    symbol: str
+    month: str
+    price: float
+
+
+class FuturesCurve(TypedDict, total=False):
+    """Term structure for futures symbols."""
+
+    contracts: list[FuturesContract]
+    structure: str
+    front_month_symbol: str
+
+
+class ShockAlert(TypedDict):
+    """Alert when a large single-day move is detected in recent history."""
+
+    event: str
+    daily_return_pct: float
+    comparable_events: int
+    median_forward_return_pct: float
+    pct_positive: float
+    horizon_days: int
+
+
 class _StockPriceOptional(TypedDict, total=False):
     summary_stats: SummaryStats
+    futures_curve: FuturesCurve
+    shock_alert: ShockAlert
 
 
 class StockPrice(_StockPriceOptional):
@@ -548,10 +577,23 @@ class ReturnDistribution(TypedDict):
 class StockConditionalReturnsInput(BaseModel):
     """Input for conditional return analysis."""
 
+    trigger_type: str = Field(
+        default="drawdown",
+        description=(
+            "'drawdown' (default): forward returns when price is down >= threshold "
+            "from 52-week high. 'single_day': forward returns after a single-day "
+            "move exceeding threshold."
+        ),
+    )
     drawdown_pct: float = Field(
-        ge=5.0,
+        default=15.0,
+        ge=3.0,
         le=80.0,
-        description="Drawdown threshold from 52-week high (%). E.g. 15 means 'down >=15%'.",
+        description=(
+            "For drawdown: threshold from 52-week high (%). "
+            "For single_day: minimum absolute daily return (%). "
+            "E.g. 5 means 'down >=5% in one day' or 'down >=5% from 52w high'."
+        ),
     )
     horizon_days: int = Field(
         ge=1,
@@ -560,7 +602,7 @@ class StockConditionalReturnsInput(BaseModel):
     )
     reference_index: str = Field(
         default="^GSPC",
-        description="Index to analyze. Default: S&P 500. Others: ^DJI, ^IXIC, ^RUT.",
+        description="Index or ticker to analyze. Default: S&P 500. Also: ^DJI, ^IXIC, ^RUT, BZ=F, CL=F.",
     )
 
 
@@ -675,16 +717,232 @@ def _compute_summary_stats(result: StockPrice) -> SummaryStats | None:
     return stats
 
 
+_SHOCK_THRESHOLD_PCT = 4.0
+_SHOCK_HORIZON_DAYS = 10
+
+
+def _detect_shock(
+    symbol: str, recent_history: list[DailyClose], cutoff: date | None
+) -> ShockAlert | None:
+    """Detect large single-day moves and compute recovery stats from history.
+
+    Scans the last 5 days of recent_history for moves > _SHOCK_THRESHOLD_PCT.
+    If found, fetches 5 years of history for the same symbol and computes
+    forward return statistics after comparable single-day shocks.
+    """
+    if not recent_history or len(recent_history) < 2:
+        return None
+
+    # Scan last 5 days for a shock
+    shock_idx: int | None = None
+    shock_return: float = 0.0
+    lookback = min(5, len(recent_history) - 1)
+    for i in range(len(recent_history) - 1, len(recent_history) - 1 - lookback, -1):
+        prev_close = recent_history[i - 1]["close"]
+        if prev_close <= 0:
+            continue
+        daily_ret = (recent_history[i]["close"] - prev_close) / prev_close * 100
+        if abs(daily_ret) >= _SHOCK_THRESHOLD_PCT:
+            shock_idx = i
+            shock_return = daily_ret
+            break
+
+    if shock_idx is None:
+        return None
+
+    shock_date = recent_history[shock_idx]["date"]
+    direction = "drop" if shock_return < 0 else "spike"
+    event = f"{shock_date} {direction}: {shock_return:+.1f}%"
+
+    # Fetch longer history to find comparable events
+    try:
+        import yfinance as yf
+
+        ticker = yf.Ticker(symbol)
+        if cutoff is not None:
+            hist = ticker.history(
+                start=(cutoff - timedelta(days=5 * 365)).isoformat(),
+                end=cutoff.isoformat(),
+            )
+        else:
+            hist = ticker.history(period="5y")
+
+        if hist is None or len(hist) < 252 + _SHOCK_HORIZON_DAYS:
+            return ShockAlert(
+                event=event,
+                daily_return_pct=round(shock_return, 2),
+                comparable_events=0,
+                median_forward_return_pct=0.0,
+                pct_positive=0.0,
+                horizon_days=_SHOCK_HORIZON_DAYS,
+            )
+
+        closes: np.ndarray[Any, np.dtype[np.floating[Any]]] = np.asarray(
+            hist["Close"].values, dtype=float
+        )
+        daily_returns = np.diff(closes) / closes[:-1] * 100
+
+        # Find comparable shocks (same direction, similar magnitude)
+        threshold = abs(shock_return)
+        if shock_return < 0:
+            event_indices = np.where(daily_returns <= -threshold)[0]
+        else:
+            event_indices = np.where(daily_returns >= threshold)[0]
+
+        # Compute forward returns with minimum spacing
+        forward_returns: list[float] = []
+        last_event = -_SHOCK_HORIZON_DAYS
+        for idx in event_indices:
+            close_idx = idx + 1  # daily_returns[idx] is the return from idx to idx+1
+            if close_idx + _SHOCK_HORIZON_DAYS >= len(closes):
+                continue
+            if idx - last_event < _SHOCK_HORIZON_DAYS:
+                continue
+            last_event = idx
+            fwd = (
+                (closes[close_idx + _SHOCK_HORIZON_DAYS] - closes[close_idx])
+                / closes[close_idx]
+                * 100
+            )
+            forward_returns.append(float(fwd))
+
+        if not forward_returns:
+            return ShockAlert(
+                event=event,
+                daily_return_pct=round(shock_return, 2),
+                comparable_events=0,
+                median_forward_return_pct=0.0,
+                pct_positive=0.0,
+                horizon_days=_SHOCK_HORIZON_DAYS,
+            )
+
+        returns_arr = np.array(forward_returns)
+        return ShockAlert(
+            event=event,
+            daily_return_pct=round(shock_return, 2),
+            comparable_events=len(forward_returns),
+            median_forward_return_pct=round(float(np.median(returns_arr)), 2),
+            pct_positive=round(float(np.sum(returns_arr > 0)) / len(returns_arr) * 100, 1),
+            horizon_days=_SHOCK_HORIZON_DAYS,
+        )
+
+    except Exception:
+        logger.debug("Shock detection history fetch failed for %s", symbol)
+        return ShockAlert(
+            event=event,
+            daily_return_pct=round(shock_return, 2),
+            comparable_events=0,
+            median_forward_return_pct=0.0,
+            pct_positive=0.0,
+            horizon_days=_SHOCK_HORIZON_DAYS,
+        )
+
+
+_FUTURES_MONTH_CODES = {
+    1: "F", 2: "G", 3: "H", 4: "J", 5: "K", 6: "M",
+    7: "N", 8: "Q", 9: "U", 10: "V", 11: "X", 12: "Z",
+}
+
+_FUTURES_MONTH_NAMES = {
+    1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+    7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec",
+}
+
+
+def _fetch_futures_curve(
+    info: dict[str, Any], cutoff: date | None
+) -> FuturesCurve | None:
+    """Fetch nearby futures contracts to build a term structure.
+
+    Uses the underlyingSymbol from a =F ticker to determine the root,
+    exchange, and current front month, then fetches the next 3 contracts.
+    """
+    import yfinance as yf
+
+    underlying = info.get("underlyingSymbol", "")
+    if not underlying or "." not in underlying:
+        return None
+
+    # Parse: e.g. "BZK26.NYM" → root="BZ", month_code="K", year=26, exchange="NYM"
+    base, exchange = underlying.rsplit(".", 1)
+    if len(base) < 3:
+        return None
+
+    root = base[:-3]
+    front_month_code = base[-3]
+    try:
+        front_year = int(base[-2:])
+    except ValueError:
+        return None
+
+    # Map month code back to month number
+    code_to_month = {v: k for k, v in _FUTURES_MONTH_CODES.items()}
+    front_month = code_to_month.get(front_month_code)
+    if front_month is None:
+        return None
+
+    contracts: list[FuturesContract] = []
+
+    # Fetch front month + next 3 contracts
+    for offset in range(4):
+        m = (front_month - 1 + offset) % 12 + 1
+        y = front_year + (front_month - 1 + offset) // 12
+        code = _FUTURES_MONTH_CODES[m]
+        symbol = f"{root}{code}{y:02d}.{exchange}"
+        month_label = f"{_FUTURES_MONTH_NAMES[m]} 20{y:02d}"
+
+        try:
+            ticker = yf.Ticker(symbol)
+            if cutoff is not None:
+                hist = ticker.history(
+                    start=(cutoff - timedelta(days=5)).isoformat(),
+                    end=cutoff.isoformat(),
+                )
+            else:
+                hist = ticker.history(period="5d")
+
+            if hist is not None and not hist.empty:
+                last_close = float(hist["Close"].iloc[-1])
+                contracts.append(
+                    FuturesContract(
+                        symbol=symbol,
+                        month=month_label,
+                        price=round(last_close, 2),
+                    )
+                )
+        except Exception:
+            continue
+
+    if len(contracts) < 2:
+        return None
+
+    # Determine term structure direction
+    prices = [c["price"] for c in contracts]
+    if prices[-1] > prices[0]:
+        structure = "contango"
+    elif prices[-1] < prices[0]:
+        structure = "backwardation"
+    else:
+        structure = "flat"
+
+    return FuturesCurve(
+        contracts=contracts,
+        structure=structure,
+        front_month_symbol=underlying,
+    )
+
+
 @tool(
     "stock_price",
     (
         "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
         "Returns current price, previous close, 52-week range, market cap, and recent "
         "daily closing prices (last 30 days by default). "
-        "Use for stock price comparison questions.\n\n"
+        "For futures symbols (e.g. BZ=F, CL=F, GC=F), also returns a futures_curve "
+        "with nearby contract prices and term structure (contango/backwardation).\n\n"
         "Examples:\n"
         "  stock_price(symbol='AAPL') → current Apple price, metrics, and 30-day history\n"
-        "  stock_price(symbol='^VIX') → current VIX level with recent history\n"
+        "  stock_price(symbol='BZ=F') → Brent crude price, 30-day history, and futures curve\n"
         "  stock_price(symbol='^GSPC') → current S&P 500 level with recent history"
     ),
     StockPriceInput.model_json_schema(),
@@ -737,6 +995,16 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             if summary is not None:
                 result["summary_stats"] = summary
 
+            if recent:
+                shock = _detect_shock(symbol, recent, cutoff)
+                if shock is not None:
+                    result["shock_alert"] = shock
+
+            if symbol.endswith("=F"):
+                curve = _fetch_futures_curve(ticker.info, cutoff)
+                if curve is not None:
+                    result["futures_curve"] = curve
+
             return mcp_success(result)
 
         info = ticker.info
@@ -763,6 +1031,17 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
         summary = _compute_summary_stats(result)
         if summary is not None:
             result["summary_stats"] = summary
+
+        history = result.get("recent_history")
+        if history:
+            shock = _detect_shock(symbol, history, cutoff)
+            if shock is not None:
+                result["shock_alert"] = shock
+
+        if symbol.endswith("=F"):
+            curve = _fetch_futures_curve(info, cutoff)
+            if curve is not None:
+                result["futures_curve"] = curve
 
         return mcp_success(result)
 
@@ -947,14 +1226,100 @@ def _compute_conditional_return_stats(
     )
 
 
+def _compute_single_day_shock_stats(
+    closes: list[DailyClose],
+    threshold_pct: float,
+    horizon_days: int,
+) -> ConditionalReturnStats | str:
+    """Compute forward return distribution after single-day moves exceeding threshold.
+
+    Looks for days where the absolute daily return >= threshold_pct, then
+    measures the forward return over horizon_days after each event.
+    """
+    if len(closes) < 252 + horizon_days:
+        return "Insufficient data: need at least 252 + horizon_days data points"
+
+    close_arr = np.array([e["close"] for e in closes], dtype=float)
+    date_arr = [e["date"] for e in closes]
+
+    daily_returns = np.diff(close_arr) / close_arr[:-1] * 100
+
+    # Find single-day shocks (negative direction: drops)
+    neg_events: list[int] = []
+    pos_events: list[int] = []
+    for i in range(len(daily_returns)):
+        if daily_returns[i] <= -threshold_pct:
+            neg_events.append(i)
+        elif daily_returns[i] >= threshold_pct:
+            pos_events.append(i)
+
+    # Use whichever direction has more events, or negative by default
+    if len(neg_events) >= len(pos_events):
+        event_indices = neg_events
+        direction = "drop"
+    else:
+        event_indices = pos_events
+        direction = "spike"
+
+    if not event_indices:
+        return f"No single-day moves >= {threshold_pct}% found in history"
+
+    # Compute forward returns with minimum spacing
+    forward_returns: list[float] = []
+    last_event = -horizon_days
+    for idx in event_indices:
+        close_idx = idx + 1  # daily_returns[idx] = return from idx to idx+1
+        if close_idx + horizon_days >= len(close_arr):
+            continue
+        if idx - last_event < horizon_days:
+            continue
+        last_event = idx
+        fwd = (
+            (close_arr[close_idx + horizon_days] - close_arr[close_idx])
+            / close_arr[close_idx]
+            * 100
+        )
+        forward_returns.append(float(fwd))
+
+    if not forward_returns:
+        return f"No single-day {direction}s >= {threshold_pct}% with sufficient forward data"
+
+    returns_arr = np.array(forward_returns)
+    positive_count = int(np.sum(returns_arr > 0))
+
+    return ConditionalReturnStats(
+        reference_index="",
+        condition=f"single-day {direction} >= {threshold_pct}%",
+        horizon_days=horizon_days,
+        total_events=len(forward_returns),
+        pct_positive=positive_count / len(forward_returns) * 100,
+        return_distribution=ReturnDistribution(
+            mean=float(np.mean(returns_arr)),
+            median=float(np.median(returns_arr)),
+            std=float(np.std(returns_arr, ddof=1)) if len(returns_arr) > 1 else 0.0,
+            p10=float(np.percentile(returns_arr, 10)),
+            p25=float(np.percentile(returns_arr, 25)),
+            p75=float(np.percentile(returns_arr, 75)),
+            p90=float(np.percentile(returns_arr, 90)),
+            min=float(np.min(returns_arr)),
+            max=float(np.max(returns_arr)),
+        ),
+        data_period=f"{date_arr[0]} to {date_arr[-1]}",
+    )
+
+
 @tool(
     "stock_conditional_returns",
     (
-        "Get the empirical distribution of forward returns conditioned on drawdown "
-        "magnitude from a reference index's full history. "
-        "Use this to find the right base rate for stocks in a given drawdown regime — "
-        "e.g. 'when the S&P 500 is down >=25% from its 52-week high, what does the "
-        "next 4 trading days' return distribution look like?'"
+        "Get the empirical distribution of forward returns conditioned on market events. "
+        "Two trigger types:\n\n"
+        "  trigger_type='drawdown' (default): Forward returns when price is down >= "
+        "threshold from 52-week high. E.g. 'when the S&P 500 is down >=25% from its "
+        "52-week high, what does the next 10 days look like?'\n\n"
+        "  trigger_type='single_day': Forward returns after a single-day move exceeding "
+        "threshold. E.g. 'when Brent crude drops >=5% in one day, what does the next "
+        "10 days look like?' Use this to quantify mean-reversion after shocks.\n\n"
+        "Works with any ticker: indices (^GSPC), stocks (AAPL), futures (BZ=F, CL=F)."
     ),
     StockConditionalReturnsInput.model_json_schema(),
 )
@@ -971,11 +1336,17 @@ async def stock_conditional_returns(args: dict[str, Any]) -> dict[str, Any]:
     try:
         closes = await _fetch_index_closes(validated.reference_index, end_date)
         if not closes:
-            return mcp_error(f"No data found for index: {validated.reference_index}")
+            return mcp_error(f"No data found for: {validated.reference_index}")
 
-        result = _compute_conditional_return_stats(
-            closes, validated.drawdown_pct, validated.horizon_days
-        )
+        if validated.trigger_type == "single_day":
+            result = _compute_single_day_shock_stats(
+                closes, validated.drawdown_pct, validated.horizon_days
+            )
+        else:
+            result = _compute_conditional_return_stats(
+                closes, validated.drawdown_pct, validated.horizon_days
+            )
+
         if isinstance(result, str):
             return mcp_error(result)
 
