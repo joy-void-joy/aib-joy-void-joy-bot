@@ -1,0 +1,247 @@
+---
+timestamp: 2026-02-28 15:38:14 UTC
+question_type: multiple_choice
+factors:
+- description: 'Historical base rate: Over 40 tournaments (1985-2025), the average
+    is 2.70 #1 seeds reaching E8. Empirical distribution: 0→2.5%, 1→7.5%, 2→32.5%,
+    3→32.5%, 4→25%.'
+  supports: '3'
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Per-seed probability of reaching E8 is 67.5% (108/160), making 3 the
+    binomial mode at p=0.675.
+  supports: '3'
+  logit: 0.8
+  confidence: 0.85
+  effective_logit: 0.68
+- description: 'Recent decade (2015-2025) shows slightly more upset volatility: mean
+    dropped to 2.30, with the first-ever 0-seed year (2023) and more 2-seed years.
+    This could indicate small recent trend toward more parity.'
+  supports: '2'
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: Tournament hasn't started yet - no team-specific info available to
+    adjust. Pure base rate question.
+  supports: '3'
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+- description: 'Overdispersion in empirical data vs binomial: #1 seed outcomes are
+    correlated (tournament-level factors affect all seeds), leading to fatter tails
+    (more 0s and 4s than binomial predicts).'
+  supports: '4'
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+tentative_estimate:
+  center: 2.7
+  low: 1.0
+  high: 4.0
+assessment: 'This is a measurement/prediction question about how many of 4 #1 seeds
+  will reach the Elite Eight. The tournament hasn''t started yet (Selection Sunday
+  is mid-March 2026), so this is purely a base-rate question.
+
+
+  Historical data from 40 tournaments (1985-2025) provides robust evidence:
+
+  - The empirical distribution peaks at 2 and 3 (each at 32.5%), with 4 at 25%, 1
+  at 7.5%, and 0 at just 2.5% (only happened once, in 2023).
+
+  - The per-seed probability of reaching E8 is 67.5%.
+
+  - A binomial model with p=0.675 slightly overestimates 3 and underestimates 2 and
+  4, likely due to correlation between seed outcomes.
+
+
+  I''m using a 70/30 blend of empirical and binomial distributions as my forecast,
+  which yields: 0→2.1%, 1→8.0%, 2→31.4%, 3→34.7%, 4→23.7%.
+
+
+  The recent decade shows somewhat more upset tendency (mean 2.30 vs earlier 2.83),
+  but this is a small sample and could be noise. I don''t want to overweight recent
+  trends.'
+tool_audit: '- get_metaculus_questions: Returned question details, no community prediction
+  available (AIB tournament). Useful for confirming resolution criteria.
+
+  - wikipedia search: Found the key statistic that on average 3 of 4 #1 seeds make
+  E8.
+
+  - web_search: Found NCAA.com article with complete year-by-year #1 seed results
+  from 1985-2025.
+
+  - fetch_url (NCAA.com): Extracted complete year-by-year data for all 40 tournaments.
+
+  - fetch_url (betfirm.com): Provided per-seed round-by-round advancement rates (66%
+  for E8).
+
+  - execute_code: Computed empirical distribution, binomial comparison, and blended
+  forecast.'
+process_reflection: 'This question was well-suited to the available tools. The key
+  data (year-by-year #1 seed results) was available from a single NCAA.com article,
+  and the computation was straightforward. The fetch_url tool with prompt extraction
+  worked well for parsing the long article. The sandbox code execution was clean for
+  statistical analysis. No missing tools or friction points for this question type.
+  The main challenge was verifying the year-by-year counts, which I cross-checked
+  against known results (2023=0, 2025=4) mentioned in the question itself.'
+computed:
+  factor_count: 5
+  factor_sum: 1.99
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Historical base rate: Over 40 tournaments (1985-2025), the average
+      is 2.70 #1 seeds reaching E8. Empirical distribution: 0→2.5%, 1→7.5%, 2→32.5%,
+      3→32.5%, 4→25%.'
+    supports: '3'
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Per-seed probability of reaching E8 is 67.5% (108/160), making 3
+      the binomial mode at p=0.675.
+    supports: '3'
+    logit: 0.8
+    confidence: 0.85
+    effective_logit: 0.68
+  - description: 'Recent decade (2015-2025) shows slightly more upset volatility:
+      mean dropped to 2.30, with the first-ever 0-seed year (2023) and more 2-seed
+      years. This could indicate small recent trend toward more parity.'
+    supports: '2'
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: Tournament hasn't started yet - no team-specific info available to
+      adjust. Pure base rate question.
+    supports: '3'
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  - description: 'Overdispersion in empirical data vs binomial: #1 seed outcomes are
+      correlated (tournament-level factors affect all seeds), leading to fatter tails
+      (more 0s and 4s than binomial predicts).'
+    supports: '4'
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  dominant_factor: 'Historical base rate: Over 40 tournaments (1985-2025), the average
+    is 2.70 #1 seeds reaching E8. Empirical distribution: 0→2.5%, 1→7.5%, 2→32.5%,
+    3→32.5%, 4→25%.'
+  dominant_effective_logit: 0.9
+  outcome_breakdown:
+  - outcome: '3'
+    factor_count: 3
+    logit_sum: 1.58
+    factors:
+    - description: 'Historical base rate: Over 40 tournaments (1985-2025), the average
+        is 2.70 #1 seeds reaching E8. Empirical distribution: 0→2.5%, 1→7.5%, 2→32.5%,
+        3→32.5%, 4→25%.'
+      supports: '3'
+      logit: 1.0
+      confidence: 0.9
+      effective_logit: 0.9
+    - description: Per-seed probability of reaching E8 is 67.5% (108/160), making
+        3 the binomial mode at p=0.675.
+      supports: '3'
+      logit: 0.8
+      confidence: 0.85
+      effective_logit: 0.68
+    - description: Tournament hasn't started yet - no team-specific info available
+        to adjust. Pure base rate question.
+      supports: '3'
+      logit: 0.0
+      confidence: 1.0
+      effective_logit: 0.0
+  - outcome: '2'
+    factor_count: 1
+    logit_sum: 0.2
+    factors:
+    - description: 'Recent decade (2015-2025) shows slightly more upset volatility:
+        mean dropped to 2.30, with the first-ever 0-seed year (2023) and more 2-seed
+        years. This could indicate small recent trend toward more parity.'
+      supports: '2'
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  - outcome: '4'
+    factor_count: 1
+    logit_sum: 0.21
+    factors:
+    - description: 'Overdispersion in empirical data vs binomial: #1 seed outcomes
+        are correlated (tournament-level factors affect all seeds), leading to fatter
+        tails (more 0s and 4s than binomial predicts).'
+      supports: '4'
+      logit: 0.3
+      confidence: 0.7
+      effective_logit: 0.21
+  sources:
+  - '[(Metaculus) How many #1 seeds will reach the Elite Eight in the NCAA''s 2026
+    March Madness?](https://www.metaculus.com/questions/42301)'
+  - '[(Metaculus) How many #1 seeds will reach the Elite Eight in the NCAA''s 2026
+    March Madness?](https://www.metaculus.com/questions/42290)'
+  - '[(Wikipedia) 2022 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2022_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2009 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2009_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2021 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2021_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2012 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2012_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2010 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2010_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2011 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2011_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 1999 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/1999_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2008 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2008_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 1991 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/1991_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[(Wikipedia) 2003 NCAA Division I men''s basketball tournament](https://en.wikipedia.org/wiki/2003_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[Elite Eight - Wikipedia](https://en.wikipedia.org/wiki/Elite_Eight)'
+  - '[NCAA Division I men''s basketball tournament upsets - Wikipedia](https://en.wikipedia.org/wiki/NCAA_Division_I_men''s_basketball_tournament_upsets)'
+  - '[Records for every seed in March Madness from 1985 to 2025](https://www.ncaa.com/news/basketball-men/article/2025-04-16/records-every-seed-march-madness-1985-2025)'
+  - '[NCAA Division I men''s basketball tournament - Wikipedia](https://en.wikipedia.org/wiki/NCAA_Division_I_men''s_basketball_tournament)'
+  - '[Records By Seed](https://mcubed.net/ncaab/seeds.shtml)'
+  - '[NCAA tournament: All-time No. 1 seeds, teams, history](https://www.ncaa.com/news/basketball-men/article/2025-04-07/ncaa-tournament-all-time-no-1-seeds-teams-history)'
+  - '[History of Records By Seed in the NCAA Tournament](https://www.betfirm.com/seeds-national-championship-odds/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42301
+- **Question ID**: 42093
+- **Session Duration**: 280.5s (4.7 min)
+- **Cost**: $2.3078
+- **Tokens**: 5,387 total (27 in, 5,360 out)
+  - Cache: 455,533 read, 65,154 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42301_20260228_153344/20260228-153344.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 409ms |
+| fetch_url | 4 | 0 | 13249ms |
+| get_metaculus_questions | 1 | 0 | 19334ms |
+| reflection | 1 | 0 | 63904ms |
+| web_search | 2 | 0 | 20049ms |
+| wikipedia | 5 | 0 | 594ms |
+
+### Sources Consulted
+
+- [(Metaculus) How many #1 seeds will reach the Elite Eight in the NCAA's 2026 ...
+- [(Metaculus) How many #1 seeds will reach the Elite Eight in the NCAA's 2026 ...
+- [(Wikipedia) 2022 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2009 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2021 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2012 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2010 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2011 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 1999 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2008 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 1991 NCAA Division I men's basketball tournament](https://en.wik...
+- [(Wikipedia) 2003 NCAA Division I men's basketball tournament](https://en.wik...
+- [Elite Eight - Wikipedia](https://en.wikipedia.org/wiki/Elite_Eight)
+- [NCAA Division I men's basketball tournament upsets - Wikipedia](https://en.w...
+- [Records for every seed in March Madness from 1985 to 2025](https://www.ncaa....
+- [NCAA Division I men's basketball tournament - Wikipedia](https://en.wikipedi...
+- [Records By Seed](https://mcubed.net/ncaab/seeds.shtml)
+- [NCAA tournament: All-time No. 1 seeds, teams, history](https://www.ncaa.com/...
+- [History of Records By Seed in the NCAA Tournament](https://www.betfirm.com/s...
