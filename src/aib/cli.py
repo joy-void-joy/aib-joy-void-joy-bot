@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 from typing import Annotated, TypedDict
@@ -11,7 +12,7 @@ from typing import Annotated, TypedDict
 import httpx
 import typer
 
-from aib.agent import ForecastOutput, run_forecast
+from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.agent.history import (
     RetrodictComparison,
     commit_forecast,
@@ -386,9 +387,48 @@ def setup_logging() -> None:
     logging.getLogger().setLevel(logging.DEBUG)
 
 
+def _resolve_text_arg(value: str) -> str:
+    """Resolve a text argument: read from file if prefixed with @, else return as-is."""
+    if value.startswith("@"):
+        return Path(value[1:]).read_text().strip()
+    return value
+
+
+def _build_overrides(
+    description: str | None,
+    resolution_criteria: str | None,
+    fine_print: str | None,
+) -> ContextOverrides | None:
+    """Build ContextOverrides from optional CLI args, resolving @file references."""
+    overrides = ContextOverrides()
+    if description is not None:
+        overrides["description"] = _resolve_text_arg(description)
+    if resolution_criteria is not None:
+        overrides["resolution_criteria"] = _resolve_text_arg(resolution_criteria)
+    if fine_print is not None:
+        overrides["fine_print"] = _resolve_text_arg(fine_print)
+    return overrides or None
+
+
 @app.command()
 def test(
     question_id: Annotated[int, typer.Argument(help="Metaculus question/post ID")],
+    description: Annotated[
+        str | None,
+        typer.Option(
+            help="Override background description (prefix with @ to read from file)"
+        ),
+    ] = None,
+    resolution_criteria: Annotated[
+        str | None,
+        typer.Option(
+            help="Override resolution criteria (prefix with @ to read from file)"
+        ),
+    ] = None,
+    fine_print: Annotated[
+        str | None,
+        typer.Option(help="Override fine print (prefix with @ to read from file)"),
+    ] = None,
 ) -> None:
     """Test forecasting on a single question without submitting."""
     meta = asyncio.run(get_question_meta(question_id))
@@ -398,7 +438,8 @@ def test(
     setup_logging()
 
     try:
-        output = asyncio.run(run_forecast(question_id))
+        overrides = _build_overrides(description, resolution_criteria, fine_print)
+        output = asyncio.run(run_forecast(question_id, context_overrides=overrides))
         display_forecast(output)
     except CreditExhaustedError as e:
         reset_msg = ""
@@ -863,6 +904,22 @@ def submit(
             help="Use cached forecast if available instead of re-running agent",
         ),
     ] = True,
+    description: Annotated[
+        str | None,
+        typer.Option(
+            help="Override background description (prefix with @ to read from file)"
+        ),
+    ] = None,
+    resolution_criteria: Annotated[
+        str | None,
+        typer.Option(
+            help="Override resolution criteria (prefix with @ to read from file)"
+        ),
+    ] = None,
+    fine_print: Annotated[
+        str | None,
+        typer.Option(help="Override fine print (prefix with @ to read from file)"),
+    ] = None,
 ) -> None:
     """Forecast a question and submit the prediction to Metaculus."""
     meta = asyncio.run(get_question_meta(question_id))
@@ -889,7 +946,8 @@ def submit(
         setup_logging()
 
         try:
-            output = asyncio.run(run_forecast(question_id))
+            overrides = _build_overrides(description, resolution_criteria, fine_print)
+            output = asyncio.run(run_forecast(question_id, context_overrides=overrides))
             display_forecast(output)
         except CreditExhaustedError as e:
             reset_msg = ""

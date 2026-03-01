@@ -4,10 +4,11 @@ import dataclasses
 import json
 import logging
 import sys
+import textwrap
 from datetime import date
 from pathlib import Path
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 
 from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
 
@@ -109,6 +110,12 @@ def _build_system_prompt(
     )
 
 
+class ContextOverrides(TypedDict, total=False):
+    description: str
+    resolution_criteria: str
+    fine_print: str
+
+
 class ReasoningLogger:
     """Accumulates agent reasoning for feedback loop analysis.
 
@@ -144,7 +151,11 @@ class ReasoningLogger:
                     input_str = json.dumps(actual_input, indent=2)
                     parts.append(f"```json\n{input_str}\n```\n")
                 content_str = _normalize_content(block.content)
-                parts.append(f"### 📋 Result\n\n```\n{content_str}\n```\n")
+                wrapped = "\n".join(
+                    textwrap.fill(line, width=200)
+                    for line in content_str.splitlines()
+                )
+                parts.append(f"### 📋 Result\n\n```\n{wrapped}\n```\n")
                 return "\n".join(parts)
             case _:
                 return f"## ❓ {type(block).__name__}\n\n{block}\n"
@@ -661,6 +672,7 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
+    context_overrides: ContextOverrides | None = None,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
@@ -719,6 +731,9 @@ async def run_forecast(
         context = build_question_context(post_data)
     else:
         raise ValueError("Either question_id or question_context must be provided")
+
+    if context_overrides:
+        context.update(context_overrides)
 
     # Setup notes folder (using post_id for directory structure)
     # In retrodict mode, block read access to historical data
