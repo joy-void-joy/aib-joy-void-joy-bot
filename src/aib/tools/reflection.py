@@ -367,8 +367,9 @@ async def _write_trace_file(session_dir: Path, trace: str) -> Path:
 _REVIEWER_SYSTEM_PROMPT = """\
 You verify a forecasting agent's evidence chain before it commits \
 to a probability. Your job is to catch concrete errors that would \
-make the forecast wrong. You do not research the question \
-independently or form your own probability estimate.
+make the forecast wrong and to challenge the probability when the \
+evidence doesn't support it. You do not research the question \
+independently — you work from the agent's trace and factors.
 
 ## What to check
 
@@ -424,24 +425,34 @@ independently or form your own probability estimate.
   this is a **warn** — the drift estimate is contaminated by the \
   regime transition, not representative of current dynamics.
 
+- **Probability assessment** — After reviewing the factors and \
+  trace, form your own independent probability estimate based on \
+  the evidence. If your estimate meaningfully differs from the \
+  agent's tentative probability, this is a **fail** — state what \
+  you think the probability should be and why. Don't just flag the \
+  gap; explain what evidence the agent is over- or under-weighting. \
+  Common failure modes: hedging toward round numbers without \
+  evidentiary support, anchoring on an intuition that isn't captured \
+  in any factor, double-discounting uncertainty already reflected in \
+  factor confidence values, or ignoring strong evidence that should \
+  dominate the estimate.
+
 ## What NOT to check
 
-- The probability value or factor-probability gap
 - Whether the agent did enough research (but resolution criteria \
   recovery IS your concern)
-- Whether factor magnitudes are appropriate
 - Scenarios the agent could have researched but didn't
-- Calibration or base rates
 
 ## Verdicts
 
 - **fail** — A core claim is fabricated (no trace support) AND \
-  correcting it would change the forecast.
-- **warn** — An error that doesn't affect the forecast direction \
-  or probability. Includes: unsupported details when the underlying \
-  conclusion is well-grounded, missing resolution criteria with no \
-  recovery attempt, or factors that don't clearly map to the \
-  resolution criteria's specific terms.
+  correcting it would change the forecast; OR the probability is \
+  meaningfully wrong given the evidence (state your estimate).
+- **warn** — An error that doesn't affect the forecast direction. \
+  Includes: unsupported details when the underlying conclusion is \
+  well-grounded, missing resolution criteria with no recovery \
+  attempt, or factors that don't clearly map to the resolution \
+  criteria's specific terms.
 - **approve** — No errors found, or only trivial issues.
 
 If you find no errors, approve and stop. Do not manufacture \
@@ -472,10 +483,7 @@ def _build_reviewer_prompt(
     question_context: dict[str, Any] | None,
     trace_file: Path | None,
 ) -> str:
-    """Build the prompt for the reviewer sub-agent.
-
-    Deliberately excludes probability metrics to prevent gap commentary.
-    """
+    """Build the prompt for the reviewer sub-agent."""
     sections: list[str] = []
 
     if question_context:
@@ -518,6 +526,18 @@ def _build_reviewer_prompt(
 
     sections.append(f"## Assessment\n\n{inp.assessment}")
 
+    estimate = inp.tentative_estimate
+    if isinstance(estimate, BinaryEstimate):
+        sections.append(
+            f"## Tentative estimate\n\n"
+            f"Probability: {estimate.probability:.1%}"
+        )
+    elif isinstance(estimate, NumericEstimate):
+        sections.append(
+            f"## Tentative estimate\n\n"
+            f"Center: {estimate.center}, Range: {estimate.low}–{estimate.high}"
+        )
+
     if trace_file:
         sections.append(
             f"## Research Trace\n\n"
@@ -541,7 +561,7 @@ def _build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
 
     from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
 
-    allowed = ["Read", "Glob", "Grep", "WebFetch", "StructuredOutput"]
+    allowed = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "StructuredOutput"]
     hooks = create_allowed_tools_hook(allowed)
 
     if not allowed_dirs:
@@ -634,7 +654,7 @@ async def _run_reviewer(
         structured_output: dict[str, Any] | None = None
         async with build_client(
             model="sonnet",
-            allowed_tools=["Read", "Glob", "Grep", "WebFetch"],
+            allowed_tools=["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
             permission_mode="bypassPermissions",
             system_prompt=system_prompt,
             hooks=reviewer_hooks,
