@@ -1,0 +1,200 @@
+---
+timestamp: 2026-03-02 11:34:13 UTC
+question_type: numeric
+factors:
+- description: Last observed value is 6.214% on 2026-02-26, anchoring the forecast
+    center
+  supports:
+    center: 6.214
+    low: 6.1
+    high: 6.3
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Strong mean reversion in daily changes (autocorrelation -0.688) means
+    levels oscillate around a mean rather than trending. Stationary distribution is
+    tight.
+  supports:
+    center: 6.18
+    low: 6.05
+    high: 6.31
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: Stable regime since 2026-02-20 with mean 6.1812 and std 0.055 - rates
+    have settled into a lower range after shifting down from ~6.26
+  supports:
+    center: 6.18
+    low: 6.07
+    high: 6.29
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 30-year Treasury yields very stable at 4.67-4.72 in recent 10 days,
+    slight downward trend. No sign of imminent large move in underlying rates.
+  supports:
+    center: 6.17
+    low: 6.05
+    high: 6.3
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Regime shift risk: tariff news, Fed signals, or economic data could
+    shift Treasury yields and thus jumbo mortgage rates by ±0.15-0.30 over 10 days'
+  supports:
+    center: 6.18
+    low: 5.9
+    high: 6.45
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  center: 6.18
+  low: 6.05
+  high: 6.31
+assessment: "The 30-Year Fixed Rate Jumbo Mortgage Index shows strong mean-reverting\
+  \ behavior around ~6.18% in the current regime. The autocorrelation of daily changes\
+  \ is -0.688, indicating that large daily moves quickly reverse. The full sample\
+  \ standard deviation of levels is only 0.083, and the OU model with parameter uncertainty\
+  \ gives a distribution centered at 6.18 with a standard deviation of ~0.105.\n\n\
+  The 30-year Treasury is extremely stable (4.67-4.70 range), providing a stable floor.\
+  \ The spread between jumbo rates and Treasury (currently 1.544) fluctuates more,\
+  \ contributing most of the daily noise. \n\nMonte Carlo simulation with OU dynamics\
+  \ and parameter uncertainty gives P10=6.046, P50=6.180, P90=6.314. These seem reasonable\
+  \ given the strong mean reversion observed in the data.\n\nThe main risk is a macro\
+  \ event (tariff escalation, unexpected Fed guidance, employment shock) that shifts\
+  \ Treasury yields meaningfully, which would drag jumbo rates in the same direction."
+calibration_notes: 'The OU model with parameter uncertainty gives a tighter distribution
+  than a random walk would, which is correct given the strong mean reversion. The
+  key calibration check: the full observed range over 18 days was 6.104-6.391 (width
+  0.287). My 80% CI (P10-P90) spans roughly 0.27, which is consistent with the observed
+  range being close to a ~90% range over a similar period.'
+key_uncertainties: '1. Whether the mean-reversion target shifts (if Treasury yields
+  move materially)
+
+  2. Only 19 data points for parameter estimation - OU parameters could be poorly
+  estimated
+
+  3. Possible macro shock (tariffs, Fed, employment data) driving rates sharply in
+  either direction'
+tool_audit: '- fred_series (OBMMIJUMBO30YF): Provided 19 daily observations with regime
+  stats - very useful for modeling
+
+  - fred_series (DGS30): 30-year Treasury data confirmed stable underlying rates
+
+  - Monte Carlo simulation in sandbox: Ran OU model with parameter uncertainty - key
+  analytical tool
+
+  - get_metaculus_questions: Confirmed question details, 71 forecasters already active'
+update_triggers: '- Major tariff announcement or trade policy change moving Treasury
+  yields
+
+  - Unexpected Fed communication shifting rate expectations
+
+  - Significant economic data release (jobs, CPI) in early March'
+process_reflection: 'This question was well-suited to the quantitative pipeline. The
+  FRED series tool provided clean daily data with regime stats, which immediately
+  informed the modeling approach. The sandbox for Monte Carlo was essential. One limitation:
+  I only had ~19 data points for parameter estimation, which makes the OU parameter
+  estimates noisy. A longer historical pull would have been better but the tool''s
+  default limit worked fine for the recent regime. The reflection framework works
+  well for numeric questions where I can show distributional evidence per factor.'
+computed:
+  factor_count: 5
+  factor_sum: 3.735
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Last observed value is 6.214% on 2026-02-26, anchoring the forecast
+      center
+    supports:
+      center: 6.214
+      low: 6.1
+      high: 6.3
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Strong mean reversion in daily changes (autocorrelation -0.688) means
+      levels oscillate around a mean rather than trending. Stationary distribution
+      is tight.
+    supports:
+      center: 6.18
+      low: 6.05
+      high: 6.31
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: Stable regime since 2026-02-20 with mean 6.1812 and std 0.055 - rates
+      have settled into a lower range after shifting down from ~6.26
+    supports:
+      center: 6.18
+      low: 6.07
+      high: 6.29
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 30-year Treasury yields very stable at 4.67-4.72 in recent 10 days,
+      slight downward trend. No sign of imminent large move in underlying rates.
+    supports:
+      center: 6.17
+      low: 6.05
+      high: 6.3
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Regime shift risk: tariff news, Fed signals, or economic data could
+      shift Treasury yields and thus jumbo mortgage rates by ±0.15-0.30 over 10 days'
+    supports:
+      center: 6.18
+      low: 5.9
+      high: 6.45
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Last observed value is 6.214% on 2026-02-26, anchoring the forecast
+    center
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 6.192034805890227
+    implied_p10: 6.06760374832664
+    implied_p90: 6.306318607764391
+    median_gap: -0.012034805890227318
+    median_gap_pct: -5.0414984297890335
+    spread_ratio: 1.089165545087482
+    precision: 0.0420711974110032
+  sources:
+  - '[(FRED) OBMMIJUMBO30YF](https://fred.stlouisfed.org/series/OBMMIJUMBO30YF)'
+  - '[(FRED) DGS30](https://fred.stlouisfed.org/series/DGS30)'
+  - '[(Metaculus) What will be the value of "30-Year Fixed Rate Jumbo Mortgage Index"
+    on 2026-03-12?](https://www.metaculus.com/questions/42389)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42389
+- **Question ID**: 42179
+- **Session Duration**: 237.4s (4.0 min)
+- **Cost**: $2.2622
+- **Tokens**: 7,341 total (27 in, 7,314 out)
+  - Cache: 415,265 read, 58,150 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42389_20260302_113020/20260302-113020.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 73ms |
+| fred_series | 2 | 0 | 566ms |
+| get_metaculus_questions | 1 | 0 | 433ms |
+| reflection | 1 | 0 | 89127ms |
+
+### Sources Consulted
+
+- [(FRED) OBMMIJUMBO30YF](https://fred.stlouisfed.org/series/OBMMIJUMBO30YF)
+- [(FRED) DGS30](https://fred.stlouisfed.org/series/DGS30)
+- [(Metaculus) What will be the value of "30-Year Fixed Rate Jumbo Mortgage Ind...
