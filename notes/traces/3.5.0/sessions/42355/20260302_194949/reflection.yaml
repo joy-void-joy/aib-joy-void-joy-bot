@@ -1,0 +1,288 @@
+---
+timestamp: 2026-03-02 19:56:13 UTC
+question_type: numeric
+factors:
+- description: Full-history (2020-2026) 10-day NQ-ES spread averages +0.21pp with
+    std 1.76pp, reflecting long-run NQ outperformance via tech premium
+  supports:
+    center: 0.21
+    low: -1.98
+    high: 2.36
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Recent 3-month regime shows NQ underperformance: daily spread mean
+    -0.034%, implying ~-0.34pp over 10 days. NQ beta ~1.3 with negative alpha reflecting
+    tech selloff, tariff concerns, and rotation away from mega-cap tech'
+  supports:
+    center: -0.35
+    low: -1.93
+    high: 1.12
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Recent 6-month regime shows near-zero spread drift (+0.004%/day), with
+    tighter volatility (std ~1.1pp vs 1.76pp full history), suggesting lower-dispersion
+    regime
+  supports:
+    center: 0.04
+    low: -1.57
+    high: 1.66
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: FOMC meeting March 17-18 is a major catalyst at period start. Markets
+    divided on rate cut vs hold. A cut would likely be risk-on favoring NQ (higher
+    beta); a hold could be neutral to slightly negative. This adds event volatility
+    but ambiguous direction
+  supports:
+    center: 0.0
+    low: -1.5
+    high: 1.5
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+- description: NQ beta to ES is ~1.3 in recent months, meaning NQ amplifies broad
+    market moves. In an uncertain macro environment with tariff risks, this higher
+    beta cuts both ways but introduces slight negative skew to the spread in risk-off
+    scenarios
+  supports:
+    center: -0.1
+    low: -2.0
+    high: 1.0
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Q1 2026 prior biweekly spreads: +0.09, +0.08, -1.72, +0.25 pp. Three
+    of four periods near zero, one large negative outlier (Feb 2-14 tech selloff).
+    Median near zero with negative tail risk'
+  supports:
+    center: 0.0
+    low: -1.72
+    high: 0.25
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+tentative_estimate:
+  center: -0.1
+  low: -1.85
+  high: 1.78
+assessment: 'The NQ-ES 10-trading-day return spread is fundamentally a bet on tech
+  vs. broad market performance. Over the full 2020-2026 history, NQ has slightly outperformed
+  (+0.21pp mean), but recent months show a reversal: the 3-month regime has NQ underperforming
+  by ~0.34pp per 10-day window, driven by tariff concerns, tech rotation, and negative
+  alpha.
+
+
+  The FOMC meeting on March 17-18 is a major event at the very start of this period.
+  If the Fed cuts rates (which some banks expect), this would likely be risk-on and
+  benefit NQ disproportionately via its higher beta (~1.3). If they hold, the reaction
+  depends on guidance — dovish hold could still be positive. This adds variance but
+  the expected impact on the NQ-ES spread direction is ambiguous.
+
+
+  The blended Monte Carlo simulation (40% 3-month params, 35% 6-month, 25% full history)
+  produces a distribution centered near -0.07 to -0.12pp, reflecting the recent NQ
+  underperformance trend without fully committing to it continuing. The spread''s
+  standard deviation is about 1.3-1.5pp over 10 trading days.
+
+
+  Key tension: Should we weight the recent NQ underperformance more (anchoring on
+  -0.35pp center) or revert toward the long-run mean (+0.21pp)? The blended approach
+  splits the difference, yielding a slightly negative center. This seems appropriate
+  given that the drivers of recent underperformance (tariffs, tech rotation) are still
+  active but could reverse with a positive FOMC surprise.'
+calibration_notes: 'Base rate: Historical 10-day NQ-ES spread has mean +0.21pp, median
+  +0.25pp. Recent 3-month window shows mean -0.33pp. The blended simulation center
+  at -0.07pp is between these, appropriately reflecting uncertainty about regime persistence.
+  The 80% CI of roughly [-1.85, +1.78] is consistent with historical empirical percentiles.'
+key_uncertainties: 1. Whether the FOMC cuts rates on March 18 — this is the single
+  largest catalyst and could swing the spread ±1pp. 2. Whether the recent NQ underperformance
+  trend continues or reverts. 3. Whether tariff/trade policy escalates or de-escalates
+  during this window. 4. Macro surprise data (jobs, CPI) that could shift risk sentiment.
+tool_audit: 'Useful: yfinance via execute_code (6 years of NQ=F and ES=F daily data),
+  stock_history (provided recent data but limited range), web_search (found FOMC schedule
+  and market expectations), fred_series (current fed funds rate and rate futures path).
+  Empty/Limited: stock_history 2y returned same data as 1y (only ~30 points), kalshi_price
+  returned empty for Fed rate queries, get_cp_history returned 403 (AIB tournament
+  restriction). No actual failures, just expected limitations.'
+update_triggers: '- FOMC rate decision on March 18: a surprise cut would push spread
+  positive; a hawkish hold would push it negative. - Major tariff announcements affecting
+  tech supply chains. - Significant single-day moves in either direction during the
+  period.'
+process_reflection: The forecasting process worked well for this financial spread
+  question. The sandbox with yfinance was essential — the stock_history tool only
+  returned ~30 data points even for 2y/5y requests, so the sandbox was the only way
+  to get the full 6 years of data needed for proper Monte Carlo simulation. The bivariate
+  normal simulation with correlated returns was straightforward and produced sensible
+  results. The main friction was the stock_history tool's truncated data — it would
+  be more useful if it reliably returned the full requested period. The blending approach
+  (weighting recent vs historical regimes) felt like the right way to handle regime
+  uncertainty. The FOMC catalyst identification via web_search was valuable context
+  that the simulation alone wouldn't capture.
+computed:
+  factor_count: 6
+  factor_sum: 0.97
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Full-history (2020-2026) 10-day NQ-ES spread averages +0.21pp with
+      std 1.76pp, reflecting long-run NQ outperformance via tech premium
+    supports:
+      center: 0.21
+      low: -1.98
+      high: 2.36
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Recent 3-month regime shows NQ underperformance: daily spread mean
+      -0.034%, implying ~-0.34pp over 10 days. NQ beta ~1.3 with negative alpha reflecting
+      tech selloff, tariff concerns, and rotation away from mega-cap tech'
+    supports:
+      center: -0.35
+      low: -1.93
+      high: 1.12
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Recent 6-month regime shows near-zero spread drift (+0.004%/day),
+      with tighter volatility (std ~1.1pp vs 1.76pp full history), suggesting lower-dispersion
+      regime
+    supports:
+      center: 0.04
+      low: -1.57
+      high: 1.66
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: FOMC meeting March 17-18 is a major catalyst at period start. Markets
+      divided on rate cut vs hold. A cut would likely be risk-on favoring NQ (higher
+      beta); a hold could be neutral to slightly negative. This adds event volatility
+      but ambiguous direction
+    supports:
+      center: 0.0
+      low: -1.5
+      high: 1.5
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  - description: NQ beta to ES is ~1.3 in recent months, meaning NQ amplifies broad
+      market moves. In an uncertain macro environment with tariff risks, this higher
+      beta cuts both ways but introduces slight negative skew to the spread in risk-off
+      scenarios
+    supports:
+      center: -0.1
+      low: -2.0
+      high: 1.0
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Q1 2026 prior biweekly spreads: +0.09, +0.08, -1.72, +0.25 pp. Three
+      of four periods near zero, one large negative outlier (Feb 2-14 tech selloff).
+      Median near zero with negative tail risk'
+    supports:
+      center: 0.0
+      low: -1.72
+      high: 0.25
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  dominant_factor: 'Recent 3-month regime shows NQ underperformance: daily spread
+    mean -0.034%, implying ~-0.34pp over 10 days. NQ beta ~1.3 with negative alpha
+    reflecting tech selloff, tariff concerns, and rotation away from mega-cap tech'
+  dominant_effective_logit: 0.7
+  distribution_metrics:
+    implied_median: -0.12973856209150322
+    implied_p10: -1.8620915032679737
+    implied_p90: 1.3575163398692809
+    median_gap: 0.029738562091503218
+    median_gap_pct: 0.923670320747055
+    spread_ratio: 1.1274665042630938
+    precision: 36.3
+  sources:
+  - '[(yfinance) NQ=F](https://finance.yahoo.com/quote/NQ=F)'
+  - '[(yfinance) ES=F](https://finance.yahoo.com/quote/ES=F)'
+  - '[(Metaculus) How much will Nasdaq-100 Futures total price returns exceed S&P
+    500 Futures in these biweekly periods of Q1 2026? (Mar 16 - Mar 27](https://www.metaculus.com/questions/42355)'
+  - '[(yfinance) QQQ](https://finance.yahoo.com/quote/QQQ)'
+  - '[(yfinance) SPY](https://finance.yahoo.com/quote/SPY)'
+  - '[Fed decision in January 2026? Odds & Predictions](https://kalshi.com/markets/kxfeddecision/fed-meeting/kxfeddecision-26jan)'
+  - '[Fed Watch 2026: Markets Divided Over March Rate Cut as Inflation ''Stickiness''
+    Persists](https://markets.financialcontent.com/stocks/article/marketminute-2026-2-25-fed-watch-2026-markets-divided-over-march-rate-cut-as-inflation-stickiness-persists)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  reviewer_critique: "I verified all factual claims in the six factors against the\
+    \ research trace and found them well-grounded. Here's my fact-check:\n\n**Factor\
+    \ 1** (full-history mean +0.21pp, std 1.76pp): ✓ SUPPORTED\n- Trace line 392:\
+    \ \"Mean: 0.2114 pp... Std: 1.7635 pp\" (full history 2020-2026, N=1540)\n\n**Factor\
+    \ 2** (3-month regime, -0.34pp over 10 days): ✓ SUPPORTED  \n- Trace line 408:\
+    \ \"Recent 3 months daily spread: Mean: -0.0344% per day\"\n- -0.0344% × 10 ≈\
+    \ -0.34pp ✓\n- Trace line 827 confirms: \"NQ has been underperforming ES over\
+    \ the last 3 months (daily spread mean of -0.034% per day)\"\n- NQ beta claim\
+    \ of ~1.3: Trace line 745 shows \"Beta: 1.299\" (3-month regression) ✓\n\n**Factor\
+    \ 3** (6-month regime, +0.004%/day): ✓ SUPPORTED\n- Trace line 408-409: \"Recent\
+    \ 6 months daily spread: Mean: 0.0041% per day\" ✓\n- Volatility claim of ~1.1pp\
+    \ vs 1.76pp full history: Trace line 509-510 shows 6-month empirical std is 1.093pp\
+    \ vs full-history 1.763pp ✓\n\n**Factor 4** (FOMC March 17-18, ambiguous direction):\
+    \ ✓ SUPPORTED\n- Trace lines 603, 683, 825 confirm FOMC meeting on March 17-18\
+    \ ✓\n- Trace line 770 confirms markets are divided (no specific probability given,\
+    \ Goldman/Morgan expect June cut, Citi/Wells expect March cut) ✓\n- Ambiguous\
+    \ direction claim is reasonable given the division\n\n**Factor 5** (NQ beta ~1.3,\
+    \ negative skew in risk-off): ✓ SUPPORTED  \n- Trace line 745: \"Beta: 1.299\"\
+    \ (3-month), line 746: \"Beta: 1.324\" (6-month) ✓\n- The negative skew logic\
+    \ follows from beta > 1 in uncertain macro environment\n\n**Factor 6** (Q1 prior\
+    \ spreads): ✓ SUPPORTED\n- Trace lines 410-411 show actual resolved spreads:\n\
+    \  - Jan 5-17: +0.09pp ✓\n  - Jan 19-31: +0.08pp ✓  \n  - Feb 2-14: -1.72pp ✓\n\
+    \  - Feb 16-28: +0.25pp ✓\n- \"Three of four periods near zero, one large negative\
+    \ outlier\" is accurate ✓\n\n**Probability Assessment:**\nThe agent's tentative\
+    \ center of -0.1pp with range [-1.85, 1.78] comes from a blended Monte Carlo simulation\
+    \ (40% 3-month, 35% 6-month, 25% full-history parameters). Trace line 573-574\
+    \ confirms this blending produced:\n- Mean: -0.070 pp (agent rounded to -0.1)\
+    \ ✓\n- P10: -1.85pp, P90: 1.78pp ✓\n\nThis estimate is well-supported by the evidence\
+    \ chain. The slight negative center reflects the recent NQ underperformance trend\
+    \ while acknowledging the FOMC event risk creates uncertainty. The 40/35/25 weighting\
+    \ is a reasonable judgment call balancing recent regime shift against longer-run\
+    \ mean reversion.\n\n**No errors found.** All factor claims trace back to concrete\
+    \ data points in the research. The probability assessment aligns with the simulation\
+    \ results and the qualitative reasoning about regime uncertainty."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42355
+- **Question ID**: 42145
+- **Session Duration**: 403.0s (6.7 min)
+- **Cost**: $4.5588
+- **Tokens**: 13,259 total (50 in, 13,209 out)
+  - Cache: 1,516,898 read, 68,907 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42355_20260302_194949/20260302-194949.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 1 (3.8%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 330ms |
+| fetch_url | 1 | 0 | 12423ms |
+| fred_series | 1 | 0 | 1149ms |
+| get_cp_history | 1 | 1 ⚠️ | 336ms |
+| get_metaculus_questions | 1 | 0 | 442ms |
+| install_package | 1 | 0 | 76ms |
+| kalshi_price | 3 | 0 | 638ms |
+| reflection | 1 | 0 | 103406ms |
+| stock_history | 6 | 0 | 216ms |
+| web_search | 3 | 0 | 15642ms |
+
+### Sources Consulted
+
+- [(yfinance) NQ=F](https://finance.yahoo.com/quote/NQ=F)
+- [(yfinance) ES=F](https://finance.yahoo.com/quote/ES=F)
+- [(Metaculus) How much will Nasdaq-100 Futures total price returns exceed S&P ...
+- [(yfinance) QQQ](https://finance.yahoo.com/quote/QQQ)
+- [(yfinance) SPY](https://finance.yahoo.com/quote/SPY)
+- [Fed decision in January 2026? Odds & Predictions](https://kalshi.com/markets...
+- [Fed Watch 2026: Markets Divided Over March Rate Cut as Inflation 'Stickiness...
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)
