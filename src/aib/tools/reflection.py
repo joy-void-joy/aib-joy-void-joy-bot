@@ -25,7 +25,13 @@ from pydantic import BaseModel, Field
 from claude_agent_sdk import tool
 
 from aib.agent.hooks import HooksConfig
-from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSupport
+from aib.agent.models import (
+    BinaryEstimate,
+    Factor,
+    MultipleChoiceEstimate,
+    NumericEstimate,
+    NumericSupport,
+)
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
@@ -48,11 +54,12 @@ class ReflectionInput(BaseModel):
             "Same format as your final forecast factors."
         )
     )
-    tentative_estimate: BinaryEstimate | NumericEstimate = Field(
+    tentative_estimate: BinaryEstimate | NumericEstimate | MultipleChoiceEstimate = Field(
         description=(
             "Your synthesized estimate. "
             "Binary: {logit, probability}. "
-            "Numeric/discrete: {center, low, high}."
+            "Numeric/discrete: {center, low, high}. "
+            "MC: {probabilities: {option: probability}}."
         ),
     )
     assessment: str = Field(
@@ -128,6 +135,16 @@ class NumericDistributionMetrics(BaseModel):
     precision: float | None = None
 
 
+class MCDistributionMetrics(BaseModel):
+    """Softmax gap metrics for multiple choice questions."""
+
+    implied_probabilities: dict[str, float]
+    tentative_probabilities: dict[str, float]
+    per_option_gap_pp: dict[str, float]
+    max_gap_pp: float
+    max_gap_option: str
+
+
 class ReflectionOutput(BaseModel):
     """Computed feedback from a reflection checkpoint."""
 
@@ -145,8 +162,9 @@ class ReflectionOutput(BaseModel):
     tentative_probability: float | None = None
     gap_pp: float | None = None
 
-    # MC: per-outcome aggregation
+    # MC: per-outcome aggregation and softmax gap metrics
     outcome_breakdown: list[OutcomeBreakdown] | None = None
+    mc_distribution_metrics: MCDistributionMetrics | None = None
 
     # Numeric/discrete: distribution-level metrics
     distribution_metrics: NumericDistributionMetrics | None = None
@@ -316,6 +334,29 @@ def compute_reflection(
             )
             for outcome, factors in by_outcome.items()
         ]
+
+        if isinstance(estimate, MultipleChoiceEstimate) and output.outcome_breakdown:
+            all_options = set(estimate.probabilities) | set(by_outcome)
+            logit_sums = {
+                opt: sum(fb.effective_logit for fb in by_outcome.get(opt, []))
+                for opt in all_options
+            }
+            max_logit = max(logit_sums.values()) if logit_sums else 0.0
+            exp_values = {opt: math.exp(v - max_logit) for opt, v in logit_sums.items()}
+            exp_total = sum(exp_values.values())
+            implied = {opt: ev / exp_total for opt, ev in exp_values.items()}
+            per_option_gap = {
+                opt: (estimate.probabilities.get(opt, 0.0) - implied.get(opt, 0.0)) * 100
+                for opt in all_options
+            }
+            max_gap_opt = max(per_option_gap, key=lambda o: abs(per_option_gap[o]))
+            output.mc_distribution_metrics = MCDistributionMetrics(
+                implied_probabilities=implied,
+                tentative_probabilities=dict(estimate.probabilities),
+                per_option_gap_pp=per_option_gap,
+                max_gap_pp=per_option_gap[max_gap_opt],
+                max_gap_option=max_gap_opt,
+            )
 
     return output
 
@@ -537,6 +578,14 @@ def _build_reviewer_prompt(
             f"## Tentative estimate\n\n"
             f"Center: {estimate.center}, Range: {estimate.low}–{estimate.high}"
         )
+    elif isinstance(estimate, MultipleChoiceEstimate):
+        prob_lines = [
+            f"  {opt}: {p:.1%}"
+            for opt, p in sorted(estimate.probabilities.items())
+        ]
+        sections.append(
+            "## Tentative estimate\n\nProbabilities:\n" + "\n".join(prob_lines)
+        )
 
     if trace_file:
         sections.append(
@@ -713,6 +762,17 @@ Numeric example:
     ],
     tentative_estimate={"center": 148, "low": 142, "high": 155},
     assessment="Historical data centers around 145 but recent trend pushes higher.",
+    ...
+  )
+
+MC example:
+  reflection(
+    factors=[
+      {"description": "Polls favor candidate A", "supports": "A", "logit": 1.5, "confidence": 0.8},
+      {"description": "Endorsement for B", "supports": "B", "logit": 0.8, "confidence": 0.7}
+    ],
+    tentative_estimate={"probabilities": {"A": 0.55, "B": 0.30, "C": 0.15}},
+    assessment="Candidate A leads in polls but B has momentum from endorsements.",
     ...
   )
 """

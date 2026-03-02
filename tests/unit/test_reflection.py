@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from aib.agent.models import BinaryEstimate, Factor, NumericEstimate, NumericSupport
+from aib.agent.models import (
+    BinaryEstimate,
+    Factor,
+    MultipleChoiceEstimate,
+    NumericEstimate,
+    NumericSupport,
+)
 from aib.tools.reflection import (
     ReflectionInput,
     ReflectionOutput,
@@ -553,3 +559,117 @@ class TestReviewState:
         state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
         assert state.passed is False
         assert state.consecutive_fails == 1
+
+
+def _make_mc_input(
+    factors: list[Factor] | None = None,
+    probabilities: dict[str, float] | None = None,
+) -> ReflectionInput:
+    """Helper to create a ReflectionInput for multiple choice questions."""
+    return ReflectionInput(
+        factors=factors or [],
+        tentative_estimate=MultipleChoiceEstimate(
+            probabilities=probabilities or {"A": 0.5, "B": 0.3, "C": 0.2},
+        ),
+        assessment="Test assessment.",
+        tool_audit="No tools used.",
+        process_reflection="Test reflection.",
+    )
+
+
+class TestComputeReflectionMC:
+    """Tests for multiple choice question reflection computation."""
+
+    def test_mc_outcome_breakdown(self) -> None:
+        """MC factors should be grouped by supports into outcome breakdown."""
+        factors = [
+            Factor(description="Polls favor A", supports="A", logit=1.5, confidence=0.8),
+            Factor(description="Endorsement for A", supports="A", logit=0.5, confidence=1.0),
+            Factor(description="B has momentum", supports="B", logit=0.8, confidence=0.7),
+        ]
+        inp = _make_mc_input(factors=factors)
+
+        result = compute_reflection(inp, "multiple_choice")
+
+        assert result.outcome_breakdown is not None
+        outcomes = {ob.outcome: ob for ob in result.outcome_breakdown}
+        assert "A" in outcomes
+        assert "B" in outcomes
+        assert outcomes["A"].factor_count == 2
+        assert outcomes["B"].factor_count == 1
+
+    def test_mc_distribution_metrics_computed(self) -> None:
+        """Softmax implied probs should sum to 1.0 and respect logit ordering."""
+        factors = [
+            Factor(description="Strong for A", supports="A", logit=2.0, confidence=1.0),
+            Factor(description="Weak for B", supports="B", logit=0.5, confidence=1.0),
+        ]
+        inp = _make_mc_input(
+            factors=factors,
+            probabilities={"A": 0.6, "B": 0.25, "C": 0.15},
+        )
+
+        result = compute_reflection(inp, "multiple_choice")
+
+        assert result.mc_distribution_metrics is not None
+        implied = result.mc_distribution_metrics.implied_probabilities
+        assert sum(implied.values()) == pytest.approx(1.0)
+        assert implied["A"] > implied["B"]
+        assert implied["B"] > implied["C"]
+
+    def test_mc_gap_calculation(self) -> None:
+        """Per-option gap signs should reflect tentative - implied direction."""
+        factors = [
+            Factor(description="All for A", supports="A", logit=3.0, confidence=1.0),
+        ]
+        inp = _make_mc_input(
+            factors=factors,
+            probabilities={"A": 0.5, "B": 0.5},
+        )
+
+        result = compute_reflection(inp, "multiple_choice")
+
+        assert result.mc_distribution_metrics is not None
+        gaps = result.mc_distribution_metrics.per_option_gap_pp
+        assert gaps["A"] < 0
+        assert gaps["B"] > 0
+
+    def test_mc_no_factors_no_metrics(self) -> None:
+        """Empty factors should produce no mc_distribution_metrics."""
+        inp = _make_mc_input(factors=[])
+
+        result = compute_reflection(inp, "multiple_choice")
+
+        assert result.mc_distribution_metrics is None
+
+    def test_mc_no_binary_fields(self) -> None:
+        """MC questions should not populate binary-specific fields."""
+        factors = [
+            Factor(description="For A", supports="A", logit=1.0, confidence=1.0),
+        ]
+        inp = _make_mc_input(factors=factors)
+
+        result = compute_reflection(inp, "multiple_choice")
+
+        assert result.factor_implied_probability is None
+        assert result.tentative_probability is None
+        assert result.gap_pp is None
+        assert result.tentative_logit is None
+        assert result.distribution_metrics is None
+
+    def test_mc_reviewer_prompt(self) -> None:
+        """Reviewer prompt should render MC probabilities."""
+        factors = [
+            Factor(description="For A", supports="A", logit=1.0, confidence=0.9),
+        ]
+        inp = _make_mc_input(
+            factors=factors,
+            probabilities={"A": 0.6, "B": 0.3, "C": 0.1},
+        )
+
+        prompt = _build_reviewer_prompt(inp, None, None)
+
+        assert "Probabilities:" in prompt
+        assert "A: 60.0%" in prompt
+        assert "B: 30.0%" in prompt
+        assert "C: 10.0%" in prompt

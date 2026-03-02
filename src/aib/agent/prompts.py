@@ -302,7 +302,7 @@ Reflection serves two purposes:
 
 **Required:**
 - **factors** — your current evidence list (description, logit, confidence, supports, conditional). Same factors as your final output.
-- **tentative_estimate** — Binary: `{logit, probability}`. Numeric/discrete: `{center, low, high}`.
+- **tentative_estimate** — Binary: `{logit, probability}`. Numeric/discrete: `{center, low, high}`. MC: `{probabilities: {option: probability}}`.
 - **assessment** — freeform narrative. Pro/con for binary, scenario analysis for numeric, key tensions.
 - **tool_audit** — which tools provided useful data, which returned empty results (and why), which had failures. Distinguish tool failures (HTTP errors, timeouts) from informative empty results (tool worked, data doesn't exist).
 - **process_reflection** — how the forecasting system supported or hindered you. What tools are missing? Did the prompt guide you well for this question type? Be specific — this feedback shapes system evolution.
@@ -321,6 +321,12 @@ The reviewer returns approve, warn, or fail. On **fail**, reflection returns an 
 - **Implied median/range** — weighted average of your factors' center/low/high values (weighted by abs(effective_logit))
 - **Median gap** — how far your tentative center is from the factor-implied median (as % of implied range)
 - **Spread ratio** — your range divided by the factor-implied range (>1 means you're wider, <1 means narrower)
+
+### Distribution metrics (MC)
+
+- **Implied probabilities** — softmax over per-option logit sums from your factors
+- **Per-option gap** — (tentative − implied) × 100 per option, in percentage points
+- **Max gap** — largest absolute gap, flagging where intuition diverges most from factors
 
 Provide your actual evidence and genuine assessment — vague placeholders produce useless metrics and waste the reviewer's time. Ground this in the specifics of THIS forecast.\
 """
