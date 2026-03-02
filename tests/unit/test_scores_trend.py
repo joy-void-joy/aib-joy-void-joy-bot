@@ -57,21 +57,13 @@ class TestLoadVersionDates:
         assert result == {}
 
 
-def _make_record(post_id: int, score: float) -> dict[str, object]:
-    return {
-        "post_id": post_id,
-        "score": score,
-        "score_timestamp": 1771053678.0,
-        "question_title": f"Test question {post_id}",
-        "question_resolution": "yes",
-    }
-
-
 def _make_forecast(
     post_id: int,
     version: str,
+    peer_score: float,
     timestamp: str = "20260215_120000",
     baseline_score: float = 5.0,
+    score_timestamp: float = 1771053678.0,
 ) -> dict[str, object]:
     return {
         "post_id": post_id,
@@ -80,53 +72,33 @@ def _make_forecast(
         "timestamp": timestamp,
         "question_close_time": f"2026-02-{15 + post_id}T12:00:00Z",
         "baseline_score": baseline_score,
+        "peer_score": peer_score,
+        "score_timestamp": score_timestamp,
     }
 
 
 @pytest.fixture
-def mock_data() -> tuple[dict[str, object], list[dict[str, object]]]:
-    track_record: dict[str, object] = {
-        "scraped_at": "2026-03-01T12:00:00+00:00",
-        "user_id": 290661,
-        "username": "test-bot",
-        "records": [
-            _make_record(1, 10.0),
-            _make_record(2, 20.0),
-            _make_record(3, 15.0),
-            _make_record(4, -5.0),
-            _make_record(5, 30.0),
-            _make_record(6, 25.0),
-            _make_record(7, 50.0),
-            _make_record(8, 40.0),
-            _make_record(9, 45.0),
-        ],
-    }
-    forecasts = [
-        _make_forecast(1, "0.3.1"),
-        _make_forecast(2, "0.3.1"),
-        _make_forecast(3, "0.3.1"),
-        _make_forecast(4, "1.0.0"),
-        _make_forecast(5, "1.0.0"),
-        _make_forecast(6, "1.0.0"),
-        _make_forecast(7, "3.2.0"),
-        _make_forecast(8, "3.2.0"),
-        _make_forecast(9, "3.2.0"),
+def mock_forecasts() -> list[dict[str, object]]:
+    return [
+        _make_forecast(1, "0.3.1", 10.0),
+        _make_forecast(2, "0.3.1", 20.0),
+        _make_forecast(3, "0.3.1", 15.0),
+        _make_forecast(4, "1.0.0", -5.0),
+        _make_forecast(5, "1.0.0", 30.0),
+        _make_forecast(6, "1.0.0", 25.0),
+        _make_forecast(7, "3.2.0", 50.0),
+        _make_forecast(8, "3.2.0", 40.0),
+        _make_forecast(9, "3.2.0", 45.0),
     ]
-    return track_record, forecasts
 
 
 class TestStripCommand:
-    def test_basic_invocation(
-        self, mock_data: tuple[dict[str, object], list[dict[str, object]]]
-    ) -> None:
+    def test_basic_invocation(self, mock_forecasts: list[dict[str, object]]) -> None:
         from aib.devtools.scores import app
 
-        track_record, forecasts = mock_data
-        with (
-            patch("aib.devtools.scores.load_scores", return_value=track_record),
-            patch(
-                "aib.devtools.scores.load_all_forecast_jsons", return_value=forecasts
-            ),
+        with patch(
+            "aib.devtools.scores.load_all_forecast_jsons",
+            return_value=mock_forecasts,
         ):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "1"])
         assert result.exit_code == 0
@@ -137,28 +109,15 @@ class TestStripCommand:
     def test_min_n_filters(self) -> None:
         from aib.devtools.scores import app
 
-        track_record: dict[str, object] = {
-            "scraped_at": "2026-03-01T12:00:00+00:00",
-            "user_id": 290661,
-            "username": "test-bot",
-            "records": [
-                _make_record(1, 10.0),
-                _make_record(4, -5.0),
-                _make_record(5, 30.0),
-                _make_record(6, 25.0),
-            ],
-        }
         forecasts = [
-            _make_forecast(1, "0.3.1"),
-            _make_forecast(4, "1.0.0"),
-            _make_forecast(5, "1.0.0"),
-            _make_forecast(6, "1.0.0"),
+            _make_forecast(1, "0.3.1", 10.0),
+            _make_forecast(4, "1.0.0", -5.0),
+            _make_forecast(5, "1.0.0", 30.0),
+            _make_forecast(6, "1.0.0", 25.0),
         ]
-        with (
-            patch("aib.devtools.scores.load_scores", return_value=track_record),
-            patch(
-                "aib.devtools.scores.load_all_forecast_jsons", return_value=forecasts
-            ),
+        with patch(
+            "aib.devtools.scores.load_all_forecast_jsons",
+            return_value=forecasts,
         ):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "3"])
         assert result.exit_code == 0
@@ -168,23 +127,18 @@ class TestStripCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_scores", return_value=None):
+        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
             result = runner.invoke(app, ["strip", "--no-watch"])
         assert result.exit_code == 1
 
 
 class TestTrendCommand:
-    def test_basic_invocation(
-        self, mock_data: tuple[dict[str, object], list[dict[str, object]]]
-    ) -> None:
+    def test_basic_invocation(self, mock_forecasts: list[dict[str, object]]) -> None:
         from aib.devtools.scores import app
 
-        track_record, forecasts = mock_data
-        with (
-            patch("aib.devtools.scores.load_scores", return_value=track_record),
-            patch(
-                "aib.devtools.scores.load_all_forecast_jsons", return_value=forecasts
-            ),
+        with patch(
+            "aib.devtools.scores.load_all_forecast_jsons",
+            return_value=mock_forecasts,
         ):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
@@ -194,21 +148,18 @@ class TestTrendCommand:
         assert "v3.2.0" in result.output
 
     def test_legend_uses_forecast_dates(
-        self, mock_data: tuple[dict[str, object], list[dict[str, object]]]
+        self, mock_forecasts: list[dict[str, object]]
     ) -> None:
         """Legend date ranges should come from forecast timestamps, not resolution dates."""
         from aib.devtools.scores import _load_scatter_data
 
-        track_record, forecasts = mock_data
-        with (
-            patch("aib.devtools.scores.load_scores", return_value=track_record),
-            patch(
-                "aib.devtools.scores.load_all_forecast_jsons", return_value=forecasts
-            ),
+        with patch(
+            "aib.devtools.scores.load_all_forecast_jsons",
+            return_value=mock_forecasts,
         ):
             result = _load_scatter_data()
         assert result is not None
-        _, _, version_forecast_dates, _ = result
+        _, _, version_forecast_dates = result
         assert "0.3.1" in version_forecast_dates
         assert "3.2.0" in version_forecast_dates
         assert len(version_forecast_dates["0.3.1"]) == 3
@@ -216,6 +167,6 @@ class TestTrendCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_scores", return_value=None):
+        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 1

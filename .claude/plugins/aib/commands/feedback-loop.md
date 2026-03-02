@@ -179,12 +179,9 @@ The agent forecasts as if it were making the prediction at the original question
 - Shows actual resolution and final CP for comparison
 - Computes Brier scores for binary questions
 
-**Resolution data workaround (as of Feb 2026):**
+**Pulling resolution data:**
 
-The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12, 2026. This means `fetch_post_json()` can no longer enrich resolution data — the `resolution` field is null for all questions. Until this is fixed upstream:
-- Retrodict will save forecasts with `resolution: null` and `comparison: null`
-- Use `uv run aib-devtools resolution set <post_id> <value>` to manually apply known resolutions
-- For re-retrodictions of questions with existing data, use `aib-devtools track-record scrape && aib-devtools track-record resolve` to pull resolutions from the Metaculus profile page
+Use `aib-devtools track-record scrape` to pull resolutions, peer scores, and baseline scores into forecast JSONs from the Metaculus profile page.
 
 **Retrodict vs Live forecasts:**
 - Live forecasts go to `notes/traces/<version>/forecasts/`
