@@ -6,6 +6,7 @@ import pytest
 
 from aib.scoring import (
     build_score_row,
+    compute_baseline_score,
     compute_brier,
     compute_log_score,
     resolve_binary,
@@ -151,6 +152,84 @@ class TestResolveMC:
 
     def test_comparison_not_dict(self) -> None:
         assert resolve_mc({"comparison": "invalid"}) is None
+
+
+class TestComputeBaselineScore:
+    def _uniform_cdf(self, n: int = 201) -> list[float]:
+        """A uniform CDF: linearly from 0 to 1."""
+        return [i / (n - 1) for i in range(n)]
+
+    def _peaked_cdf(self, center: float, n: int = 201) -> list[float]:
+        """A CDF peaked near center (sigmoid-shaped)."""
+        import math
+        return [1.0 / (1.0 + math.exp(-20 * (i / (n - 1) - center))) for i in range(n)]
+
+    def test_binary_positive(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.9,
+            "resolution": "yes",
+        }
+        score = compute_baseline_score(data)
+        assert score is not None
+        assert score > 0
+
+    def test_numeric_uniform_scores_zero(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 50.0,
+            "cdf": self._uniform_cdf(),
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+        }
+        score = compute_baseline_score(data)
+        assert score is not None
+        assert score == pytest.approx(0.0, abs=1.0)
+
+    def test_numeric_peaked_scores_positive(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 50.0,
+            "cdf": self._peaked_cdf(0.5),
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+        }
+        score = compute_baseline_score(data)
+        assert score is not None
+        assert score > 0
+
+    def test_numeric_peaked_wrong_scores_negative(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 10.0,
+            "cdf": self._peaked_cdf(0.9),
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+        }
+        score = compute_baseline_score(data)
+        assert score is not None
+        assert score < 0
+
+    def test_numeric_missing_cdf_returns_none(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 50.0,
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+        }
+        assert compute_baseline_score(data) is None
+
+    def test_numeric_missing_bounds_returns_none(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 50.0,
+            "cdf": self._uniform_cdf(),
+        }
+        assert compute_baseline_score(data) is None
+
+    def test_numeric_unresolved_returns_none(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "cdf": self._uniform_cdf(),
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+        }
+        assert compute_baseline_score(data) is None
 
 
 class TestBuildScoreRow:

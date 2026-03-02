@@ -1,7 +1,7 @@
-"""Forecast scoring and CSV generation.
+"""Forecast scoring.
 
 Scoring functions (Brier, log loss), resolution extraction from saved
-forecast JSONs, and CSV row building for the unified scores table.
+forecast JSONs, and score row building for the unified scores table.
 
 Convention: both Brier and log loss are positive, lower-is-better, 0 = perfect.
 """
@@ -9,30 +9,6 @@ Convention: both Brier and log loss are positive, lower-is-better, 0 = perfect.
 import math
 
 from aib.paths import load_all_forecast_jsons, load_all_retrodict_jsons
-
-CSV_COLUMNS = [
-    "post_id",
-    "question_id",
-    "source",
-    "agent_version",
-    "question_type",
-    "question_title",
-    "timestamp",
-    "retrodict_date",
-    "probability",
-    "median",
-    "ci_lower",
-    "ci_upper",
-    "resolution",
-    "resolved",
-    "brier",
-    "log_score",
-    "abs_error",
-    "norm_error",
-    "within_ci",
-    "duration_seconds",
-    "cost_usd",
-]
 
 
 def compute_brier(probability: float, outcome: bool) -> float:
@@ -45,6 +21,86 @@ def compute_log_score(probability: float, outcome: bool) -> float:
     """Log loss: 0 = perfect, 0.693 = random. Clamped to [0.001, 0.999]."""
     p = max(0.001, min(0.999, probability))
     return -math.log(p) if outcome else -math.log(1 - p)
+
+
+def compute_baseline_score(data: dict[str, object]) -> float | None:
+    """Metaculus baseline score: rescaled log score vs uniform prior.
+
+    Binary:  100 * (log2(P(outcome)) + 1)
+    MC:      100 * (ln(P(outcome)) - ln(1/N)) / ln(N)
+    Numeric: 100 * (ln(pdf) - ln(baseline)) / 2
+
+    Positive = better than chance, 0 = chance level, negative = worse.
+    """
+    qtype = str(data.get("question_type", ""))
+
+    if qtype == "binary":
+        prob = data.get("probability")
+        resolution = resolve_binary(data)
+        if not isinstance(prob, (int, float)) or resolution is None:
+            return None
+        p_outcome = prob if resolution == "yes" else 1.0 - prob
+        p_outcome = max(0.001, min(0.999, p_outcome))
+        return 100.0 * (math.log2(p_outcome) + 1.0)
+
+    if qtype == "multiple_choice":
+        mc_res = resolve_mc(data)
+        probs = data.get("probabilities")
+        if not mc_res or not isinstance(probs, dict):
+            return None
+        p_outcome = probs.get(mc_res, 0)
+        if not isinstance(p_outcome, (int, float)) or p_outcome <= 0:
+            return None
+        n = len(probs)
+        if n < 2:
+            return None
+        p_outcome = max(0.001, p_outcome)
+        return 100.0 * (math.log(p_outcome) - math.log(1.0 / n)) / math.log(n)
+
+    if qtype in ("numeric", "discrete"):
+        return _baseline_numeric(data)
+
+    return None
+
+
+def _baseline_numeric(data: dict[str, object]) -> float | None:
+    """Baseline score for numeric/discrete questions from stored CDF.
+
+    Uses the Metaculus formula: 100 * (ln(pdf) - ln(baseline)) / 2
+    where pdf is in normalized [0,1] space and baseline depends on
+    open/closed bounds (1.0 both closed, 0.95 one open, 0.9 both open).
+    """
+    resolution = resolve_numeric(data)
+    cdf = data.get("cdf")
+    bounds = data.get("numeric_bounds")
+    if resolution is None or not isinstance(cdf, list) or not isinstance(bounds, dict):
+        return None
+
+    range_min = bounds.get("range_min")
+    range_max = bounds.get("range_max")
+    if not isinstance(range_min, (int, float)) or not isinstance(range_max, (int, float)):
+        return None
+    if range_max <= range_min:
+        return None
+
+    n_points = len(cdf)
+    if n_points < 2:
+        return None
+
+    qrange = float(range_max - range_min)
+    frac = (resolution - range_min) / qrange
+    idx = frac * (n_points - 1)
+    i = max(0, min(n_points - 2, int(idx)))
+
+    pdf = (cdf[i + 1] - cdf[i]) * (n_points - 1)
+    pdf = max(0.01, min(pdf, 35.0))
+
+    open_lower = bounds.get("open_lower_bound", False)
+    open_upper = bounds.get("open_upper_bound", False)
+    n_open = (1 if open_lower else 0) + (1 if open_upper else 0)
+    uniform_baseline = 1.0 - 0.05 * n_open
+
+    return 100.0 * (math.log(pdf) - math.log(uniform_baseline)) / 2.0
 
 
 def resolve_binary(data: dict[str, object]) -> str | None:
