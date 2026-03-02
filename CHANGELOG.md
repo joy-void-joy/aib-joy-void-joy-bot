@@ -2,6 +2,13 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.5.0 (2026-03-02)
+
+Reviewer independently assesses probability and flags disagreements; CLI supports question metadata overrides
+- reviewer probability assessment with WebSearch access
+- CLI --description/--resolution-criteria/--fine-print overrides
+- trace output line wrapping
+
 ## v3.4.0 (2026-02-27)
 
 conditional MC guidance with directional-change-specific Google Trends instructions and resolution mechanism uncertainty
