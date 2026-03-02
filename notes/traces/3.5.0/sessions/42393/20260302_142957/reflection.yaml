@@ -1,0 +1,414 @@
+---
+timestamp: 2026-03-02 14:33:47 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high, 54.4%
+    of 9-day forward returns are positive (n=1170, 1972-2026)'
+  logit: 0.18
+  confidence: 0.9
+  effective_logit: 0.162
+- description: 'Recent short-term momentum is negative: DD down ~5% from recent high
+    of $51.53 (Feb 11), 5-day return -2.0%'
+  logit: -0.25
+  confidence: 0.6
+  effective_logit: -0.15
+- description: 'Broader market weakness: S&P 500 down ~2.8% from 52w high, down 1.1%
+    today, negative near-term tone'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Post-earnings consolidation: DD rallied 25% in 2 months after strong
+    Q4 beat and bullish 2026 guidance, now consolidating - natural digestion period'
+  logit: -0.1
+  confidence: 0.5
+  effective_logit: -0.05
+- description: 'Monte Carlo zero-drift simulation: 50.0% probability over 9 trading
+    days with empirical volatility'
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: No known major catalysts (earnings, splits, etc.) in the Mar 2-13 window
+    to drive directional move
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+tentative_estimate:
+  logit: -0.05
+  probability: 0.49
+assessment: 'DD is a stock that has rallied significantly (~25%) over the past 2 months
+  following a strong Q4 2025 earnings beat and bullish 2026 outlook. However, the
+  stock has been consolidating around $50-51 for the past two weeks and is now pulling
+  back, closing at ~$49.08 on Mar 2 (down 1.9% from prior close). The broader market
+  is also weak with the S&P 500 down ~2.8% from its 52-week high.
+
+
+  The conditional base rate for DD in a 3%+ drawdown from 52w high shows 54.4% positive
+  9-day forward returns, providing mild upside bias. However, the recent negative
+  momentum and market weakness offset this. Zero-drift Monte Carlo gives exactly 50%.
+
+
+  The question essentially asks about a near-coin-flip outcome over 9 trading days.
+  With no major catalysts expected and the stock in a consolidation/mild pullback
+  phase, I lean very slightly below 50% given the current negative momentum, but this
+  is within noise.'
+calibration_notes: The conditional base rate of 54.4% is the most robust anchor (n=1170).
+  Zero-drift MC gives 50%. Recent short-term negative momentum and market weakness
+  push slightly below 50%. The stock's high recent volatility (~36% annualized) means
+  the outcome is genuinely uncertain over 9 trading days. No extreme probability warranted
+  in either direction.
+key_uncertainties: '1. What the actual Mar 2 close price will be (market still open
+  or just closed)
+
+  2. Whether broader market weakness continues or reverses
+
+  3. Whether any unexpected news/catalysts emerge for DD in the next 9 trading days
+
+  4. Whether the post-earnings consolidation breaks to the upside or downside'
+tool_audit: '- stock_price (DD): Provided current price, 60-day history, and key metrics.
+  Very useful.
+
+  - stock_history (DD, 1y): Provided OHLCV data for detailed analysis. Useful.
+
+  - stock_price (^GSPC): Market context. Useful.
+
+  - stock_conditional_returns (DD): Critical for base rate - 54.4% positive over 9
+  days when in 3%+ drawdown. Large sample (n=1170).
+
+  - web_search: Confirmed earnings beat on Feb 10 and bullish guidance. Useful for
+  context.
+
+  - execute_code: Monte Carlo simulations. Core analytical tool.'
+process_reflection: This was a straightforward stock direction question. The tools
+  worked well together - stock_price for current data, stock_conditional_returns for
+  base rates, and execute_code for Monte Carlo. The real-time price data from Yahoo
+  Finance via web_search was important for discovering that DD was down significantly
+  on Mar 2 itself. The main challenge is that stock direction over short horizons
+  is inherently close to 50/50, and the evidence provides only mild directional signal.
+computed:
+  factor_count: 6
+  factor_sum: -0.188
+  tentative_logit: -0.05
+  logit_gap: 0.138
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high,
+      54.4% of 9-day forward returns are positive (n=1170, 1972-2026)'
+    logit: 0.18
+    confidence: 0.9
+    effective_logit: 0.162
+  - description: 'Recent short-term momentum is negative: DD down ~5% from recent
+      high of $51.53 (Feb 11), 5-day return -2.0%'
+    logit: -0.25
+    confidence: 0.6
+    effective_logit: -0.15
+  - description: 'Broader market weakness: S&P 500 down ~2.8% from 52w high, down
+      1.1% today, negative near-term tone'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Post-earnings consolidation: DD rallied 25% in 2 months after strong
+      Q4 beat and bullish 2026 guidance, now consolidating - natural digestion period'
+    logit: -0.1
+    confidence: 0.5
+    effective_logit: -0.05
+  - description: 'Monte Carlo zero-drift simulation: 50.0% probability over 9 trading
+      days with empirical volatility'
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: No known major catalysts (earnings, splits, etc.) in the Mar 2-13
+      window to drive directional move
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  dominant_factor: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high,
+    54.4% of 9-day forward returns are positive (n=1170, 1972-2026)'
+  dominant_effective_logit: 0.162
+  factor_implied_probability: 0.4531379431409354
+  tentative_probability: 0.49
+  gap_pp: 3.686205685906457
+  sources:
+  - '[(yfinance) DD](https://finance.yahoo.com/quote/DD)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[DuPont de Nemours, Inc. (DD) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/DD/)'
+  reviewer_critique: '## Verdict: FAIL
+
+
+    ### Critical Error: Probability Contradicts Evidence
+
+
+    The agent''s **49.0% probability estimate is meaningfully wrong** given the evidence
+    presented in its own factors and research trace.
+
+
+    **Evidence from the agent''s research:**
+
+    - **Conditional base rate**: 54.4% positive returns when DD is in 3%+ drawdown
+    over 9 days (n=1170, 1972-2026) — high reliability, large sample
+
+    - **Monte Carlo zero drift**: 50.0% (pure random walk baseline)
+
+    - **Monte Carlo with conditional base rate drift**: 52.8%
+
+    - **Agent''s own conclusion in trace (line 269)**: "the conditional base rate
+    of 54.4% carries the most credibility given the large sample size, though the
+    recent consolidation and broader market weakness create some headwind. My estimate
+    lands around **52-53%** probability"
+
+
+    **The problem:** The final submitted probability of **49.0%** is:
+
+    1. Below even the zero-drift baseline (50%)
+
+    2. Contradicts the agent''s own reasoning in the trace (52-53%)
+
+    3. Severely under-weights the strongest piece of evidence (54.4% conditional base
+    rate with n=1170)
+
+    4. Over-weights the negative momentum factors despite acknowledging they are low-confidence
+    offsets
+
+
+    **Why this matters:** For a near-coin-flip question over 9 trading days with no
+    major catalysts, the conditional historical base rate (54.4%) should anchor the
+    estimate. The negative momentum (Factor 2: -2.0% over 5 days, confidence 0.6)
+    and market weakness (Factor 3: S&P down 2.8%, confidence 0.5) are relatively weak
+    signals that might justify moving from 54.4% down to ~52-53%, as the agent itself
+    concluded in the trace. But 49.0% represents an unjustified over-correction that:
+
+    - Treats recent noise as more predictive than 50+ years of conditional data
+
+    - Falls below the neutral baseline without sufficient evidence
+
+    - Creates internal contradiction between the trace reasoning and final output
+
+
+    **My independent estimate:** Given the evidence, the probability should be **52-53%**
+    — starting from the 54.4% conditional base rate, with modest downward adjustment
+    for current negative momentum and market weakness. The 49.0% estimate is too pessimistic
+    and ignores the weight of historical evidence.
+
+
+    ### Other Issues Checked:
+
+
+    ✅ **No hallucinated evidence** - All factual claims verified against trace:
+
+    - Conditional base rate: 54.4% confirmed (line 155)
+
+    - 5-day return: -2.0% confirmed (line 214: -1.997%)
+
+    - S&P 500: -2.8% from high, -1.1% today confirmed (lines 108, 113)
+
+    - Monte Carlo results: 50.0% zero drift confirmed (line 247)
+
+    - Recent high $51.53 on Feb 11 confirmed (lines 54, 211)
+
+
+    ✅ **No double-counting** - Factors draw on distinct evidence sources
+
+
+    ✅ **No wrong-direction factors** - All logit signs match factor descriptions
+
+
+    ✅ **Assessment aligns with factors** - The narrative correctly identifies this
+    as a near-50% coin flip, though the final probability doesn''t reflect this
+
+
+    ✅ **Resolution criteria present** - Question provides clear criteria (Yahoo Finance
+    close prices, accounting for splits)
+
+
+    ❌ **Probability assessment fails** - The 49.0% estimate contradicts the agent''s
+    own evidence and reasoning, representing an unjustified hedge below the neutral
+    baseline.'
+---
+timestamp: 2026-03-02 14:35:51 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high, 54.4%
+    of 9-day forward returns are positive (n=1170, 1972-2026). This is the most reliable
+    anchor.'
+  logit: 0.25
+  confidence: 0.9
+  effective_logit: 0.225
+- description: 'Recent short-term momentum is negative: DD down ~5% from recent high
+    of $51.53, 5-day return -2.0%. Mild headwind but short-term noise.'
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+- description: 'Broader market weakness: S&P 500 down ~2.8% from 52w high, negative
+    near-term tone. Mild directional headwind for all equities.'
+  logit: -0.15
+  confidence: 0.4
+  effective_logit: -0.06
+- description: 'Bullish fundamental backdrop: strong Q4 beat, raised 2026 guidance,
+    strategic restructuring. Supports mean reversion toward higher levels after pullback.'
+  logit: 0.15
+  confidence: 0.5
+  effective_logit: 0.075
+- description: Monte Carlo zero-drift simulation gives 50.0% — the pure random walk
+    baseline over 9 trading days.
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  logit: 0.1
+  probability: 0.52
+assessment: 'The strongest evidence is the conditional base rate: when DD is in a
+  3%+ drawdown from its 52-week high, 54.4% of 9-day forward returns are positive
+  (n=1170, large sample, 1972-2026). This provides mild upside bias. Zero-drift MC
+  gives 50%, and MC with conditional drift gives 52.8%.
+
+
+  The negative short-term momentum (-2% over 5 days) and broader market weakness (~2.8%
+  S&P drawdown) create modest headwinds, but these are low-confidence signals that
+  should only modestly offset the base rate. DD also has a bullish fundamental backdrop
+  (earnings beat, raised guidance) that supports mean-reversion upward.
+
+
+  Synthesizing: start from 54.4% base rate, adjust down ~2pp for recent negative momentum
+  and market weakness, partially offset by positive fundamentals. Final estimate:
+  ~52%.'
+calibration_notes: Starting from conditional base rate of 54.4% (strongest anchor).
+  Adjusting modestly downward for recent momentum and market context. Final ~52% reflects
+  genuine near-coin-flip uncertainty with mild upward bias from historical base rates.
+  Not pushing to extremes given the inherent unpredictability of 9-day stock returns.
+key_uncertainties: '1. Actual Mar 2 close price (intraday price was $49.08, market
+  may not be finalized)
+
+  2. Whether broader market weakness continues or reverses over the next 9 days
+
+  3. Any unexpected news or catalysts for DD
+
+  4. Whether post-earnings consolidation resolves upward or downward'
+tool_audit: '- stock_price (DD): Provided current price, 60-day history, and key metrics.
+  Very useful.
+
+  - stock_history (DD, 1y): Provided OHLCV data for detailed analysis. Useful.
+
+  - stock_price (^GSPC): Market context. Useful.
+
+  - stock_conditional_returns (DD): Critical anchor - 54.4% positive over 9 days when
+  in 3%+ drawdown (n=1170).
+
+  - web_search: Confirmed earnings beat on Feb 10 and bullish guidance. Useful context.
+
+  - execute_code: Monte Carlo simulations. Core analytical tool.'
+process_reflection: Corrected the initial under-estimation. The conditional base rate
+  should anchor the estimate, with other factors as modest adjustments. For stock
+  direction questions with no clear catalysts, the historical conditional base rate
+  is the most reliable signal available.
+computed:
+  factor_count: 5
+  factor_sum: 0.165
+  tentative_logit: 0.1
+  logit_gap: -0.065
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high,
+      54.4% of 9-day forward returns are positive (n=1170, 1972-2026). This is the
+      most reliable anchor.'
+    logit: 0.25
+    confidence: 0.9
+    effective_logit: 0.225
+  - description: 'Recent short-term momentum is negative: DD down ~5% from recent
+      high of $51.53, 5-day return -2.0%. Mild headwind but short-term noise.'
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  - description: 'Broader market weakness: S&P 500 down ~2.8% from 52w high, negative
+      near-term tone. Mild directional headwind for all equities.'
+    logit: -0.15
+    confidence: 0.4
+    effective_logit: -0.06
+  - description: 'Bullish fundamental backdrop: strong Q4 beat, raised 2026 guidance,
+      strategic restructuring. Supports mean reversion toward higher levels after
+      pullback.'
+    logit: 0.15
+    confidence: 0.5
+    effective_logit: 0.075
+  - description: Monte Carlo zero-drift simulation gives 50.0% — the pure random walk
+      baseline over 9 trading days.
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: 'Conditional base rate: when DD is in 3%+ drawdown from 52w high,
+    54.4% of 9-day forward returns are positive (n=1170, 1972-2026). This is the most
+    reliable anchor.'
+  dominant_effective_logit: 0.225
+  factor_implied_probability: 0.541156668150228
+  tentative_probability: 0.52
+  gap_pp: -2.1156668150227986
+  sources:
+  - '[(yfinance) DD](https://finance.yahoo.com/quote/DD)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[DuPont de Nemours, Inc. (DD) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/DD/)'
+  reviewer_critique: "I've reviewed the forecast against the research trace and checked\
+    \ the evidence for each factor. Here's my assessment:\n\n## Verification of Factor\
+    \ Claims\n\n**Factor 1** (Conditional base rate 54.4%): ✓ VERIFIED - Trace line\
+    \ 155 shows `\"pct_positive\": 54.35897435897436` with `\"total_events\": 1170`\
+    \ for the 3%+ drawdown condition over 9-day horizon.\n\n**Factor 2** (Recent momentum\
+    \ -2%): ✓ VERIFIED - Trace line 214 shows `\"five_day\": -1.996805111821086`,\
+    \ which rounds to -2.0%. The recent high of $51.53 is confirmed at line 58. The\
+    \ \"~5% from recent high\" is accurate ($50.04 is -2.89% from $51.53, and the\
+    \ Mar 2 price of $49.08 is -4.75%).\n\n**Factor 3** (S&P 500 weakness): ✓ VERIFIED\
+    \ - Trace line 113 shows S&P 500 `\"drawdown_from_52w_high_pct\": -2.8370759238419465`,\
+    \ confirming the ~2.8% claim.\n\n**Factor 4** (Bullish fundamentals): ✓ VERIFIED\
+    \ - Trace lines 195-200 show web search results about \"DuPont Reinvents Itself:\
+    \ Strategic Pivot Drives Earnings Beat and Bullish 2026 Outlook\" from Feb 10,\
+    \ 2026, confirming Q4 beat and raised 2026 guidance.\n\n**Factor 5** (Zero-drift\
+    \ MC at 50%): ✓ VERIFIED - Trace line 247 shows `\"MC zero drift: P(higher) =\
+    \ 0.5000\"`.\n\n## No Evidence of Errors\n\n- **No hallucinated evidence**: All\
+    \ factor claims are grounded in the trace\n- **No double-counting**: Each factor\
+    \ draws on distinct evidence (historical base rate, recent price action, market\
+    \ conditions, fundamentals, simulation)\n- **No wrong-direction factors**: All\
+    \ logit signs match the descriptions\n- **No contradictions**: The assessment\
+    \ synthesizes the factors consistently\n- **Resolution criteria present**: The\
+    \ question includes clear resolution criteria (compare Mar 2 vs Mar 13 close prices\
+    \ from Yahoo Finance API)\n\n## Probability Assessment\n\nThe agent's 52% estimate\
+    \ is a reasonable synthesis of the evidence:\n- Conditional base rate: 54.4% (strong\
+    \ anchor, n=1170)\n- Zero-drift MC: 50.0% \n- Conditional drift MC: 52.8%\n- The\
+    \ agent weighted these by adjusting down ~2pp from 54.4% for negative momentum/market\
+    \ conditions, partially offset by fundamentals\n\nThis produces 52%, which is\
+    \ defensible. The range of reasonable estimates is probably 51-54%. While I might\
+    \ personally lean slightly higher (53%), the 52% estimate is not meaningfully\
+    \ wrong—it reflects appropriate caution about near-term headwinds while still\
+    \ respecting the historical base rate.\n\n## Conclusion\n\nNo concrete errors\
+    \ found. The forecast is well-grounded in research, the factors are accurate,\
+    \ and the probability is reasonable given the evidence. The agent properly anchored\
+    \ on the conditional base rate while making modest adjustments for current conditions."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42393
+- **Question ID**: 42183
+- **Session Duration**: 365.1s (6.1 min)
+- **Cost**: $2.3555
+- **Tokens**: 7,088 total (27 in, 7,061 out)
+  - Cache: 433,799 read, 62,656 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42393_20260302_142957/20260302-142957.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 1 (9.1%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 117ms |
+| reflection | 2 | 1 ⚠️ | 92217ms |
+| stock_conditional_returns | 1 | 0 | 427ms |
+| stock_history | 1 | 0 | 170ms |
+| stock_price | 3 | 0 | 518ms |
+| web_search | 1 | 0 | 18104ms |
+
+### Sources Consulted
+
+- [(yfinance) DD](https://finance.yahoo.com/quote/DD)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [DuPont de Nemours, Inc. (DD) Stock Price, News, Quote & History - Yahoo Fina...
