@@ -1,0 +1,380 @@
+---
+timestamp: 2026-03-02 22:32:36 UTC
+question_type: multiple_choice
+factors:
+- description: 'June 2025 precedent: During the Twelve-Day War, IRGC daily interest
+    dropped from 100 to 15 on day 2, then to 5 by day 14. The peak-to-day-14 decay
+    was dramatic (~95%). Even adjusting for the current conflict''s much higher sustained
+    interest, decay from 70 to below 67 is very likely.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Current Mar 2 value (70) is at the upper end of what Google Trends
+    shows for day 2 of a crisis. Natural decay dynamics from peak search interest
+    mean that by day 14, daily search volume for a specific military term like 'IRGC'
+    almost always drops from the initial shock levels. The ±3 threshold means Mar
+    14 must stay above 67 to avoid Decreases.
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: Active, ongoing US-Iran war with IRGC as central actor. Trump says
+    4-5 weeks of operations. The conflict is the biggest US military engagement since
+    Iraq 2003. This could sustain elevated 'IRGC' searches much longer than the June
+    2025 12-day war, but the peak-day shock interest still typically decays.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Major potential catalysts within the 12-day window: IRGC-specific
+    events (sinking of US ships, IRGC ground engagements, IRGC leadership changes,
+    nuclear threats) could create secondary spikes. Rising queries include ''IRGC
+    missile strikes school'', ''IRGC chief killed'', showing active IRGC-specific
+    news angles.'
+  supports: Increases
+  logit: 0.7
+  confidence: 0.5
+  effective_logit: 0.35
+- description: 'Scale recalibration risk: If any day Mar 3-14 exceeds Mar 1''s absolute
+    search volume, the scale compresses all earlier values down. This lowers the Mar
+    2 baseline, making ''Decreases'' harder and ''Increases'' or ''DC'' more possible.
+    However, exceeding the Khamenei assassination day''s search volume is unlikely
+    (~15%).'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: The 'Doesn't change' band is very narrow (67-73, just 7 points out
+    of 100). Even if expected Mar 14 value is somewhere reasonable, landing in this
+    specific 7-point band is low probability given daily volatility during an active
+    conflict (trailing volatility is ~33 points).
+  supports: Decreases
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+tentative_estimate:
+  probabilities:
+    Increases: 0.2
+    Doesn't change: 0.15
+    Decreases: 0.65
+assessment: 'This question asks whether Google Trends interest in "IRGC" will change
+  between Mar 2 and Mar 14 in the context of a massive, ongoing US-Israel-Iran war
+  that began Feb 28, 2026. Key facts:
+
+
+  1. Current state: Mar 1 = 100 (peak, Khamenei assassination day), Mar 2 = 70 (still
+  very elevated)
+
+  2. The war is actively ongoing with no ceasefire in sight (Trump says 4-5 weeks)
+
+  3. IRGC is the central Iranian military actor in this conflict
+
+
+  The June 2025 Twelve-Day War provides the best precedent: interest spiked to 100
+  on the attack day, dropped to 15 the next day, sustained at ~15-20 for a week, then
+  dropped after ceasefire. The current conflict shows MUCH higher sustained interest
+  (70 vs 15 on day 2), suggesting stronger public engagement.
+
+
+  The core question: Will Mar 14 be above 67 (within ±3 of 70)? This seems unlikely
+  because:
+
+  - Peak-day search interest for specific military terms always decays over 12 days
+
+  - Even during the bigger current conflict, the specific term "IRGC" will likely
+  see declining daily searches as the conflict normalizes
+
+  - The "Doesn''t change" band (67-73) is very narrow
+
+
+  The main counterarguments for higher interest:
+
+  - Active escalating war with daily major developments involving IRGC
+
+  - Possible major IRGC-specific event near Mar 14
+
+  - Scale recalibration if a new peak day occurs
+
+
+  I assess ~65% Decreases, 20% Increases, 15% Doesn''t change.'
+calibration_notes: 'Base rates from change_stats in the resolution range: 83.3% no_change,
+  11.1% increases, 5.6% decreases. However, these base rates are heavily influenced
+  by the quiet pre-crisis period (Feb 12-27) and are not representative of post-spike
+  dynamics. The trailing_change_stats (recent 6 observations) show 33% increases,
+  17% decreases, 50% no_change - reflecting the volatile crisis period. Given we''re
+  comparing a post-peak day (70) to a day 12 days later during an active but potentially
+  waning crisis, the historical pattern strongly favors decreasing interest.'
+key_uncertainties: '1. How sustained will IRGC-specific search interest be in a war
+  of this magnitude? No perfect precedent exists.
+
+  2. Will there be a major IRGC-specific event near Mar 14 that creates a secondary
+  spike?
+
+  3. Will scale recalibration from a potential new peak day affect the comparison?
+
+  4. SerpAPI vs pytrends differences (±1-3 points) could matter near the threshold.'
+tool_audit: '- google_trends: Extremely useful. Provided both the resolution-range
+  data (Feb 12 - Mar 14) and the June 2025 daily precedent data. The change_stats
+  and tail_stats were informative.
+
+  - get_metaculus_questions: Useful for confirming question details and resolution
+  criteria.
+
+  - web_search: Very useful for understanding the context - revealed the massive US-Israel-Iran
+  war, Khamenei assassination, IRGC military operations.
+
+  - execute_code: Used for quantitative analysis and scenario modeling.'
+update_triggers: '1. Ceasefire announcement → sharply increases P(Decreases)
+
+  2. Major IRGC escalation (nuclear threat, major US ship sunk) → increases P(Increases)
+
+  3. US ground invasion → could sustain or increase interest
+
+  4. Media cycle shifting away from IRGC to other aspects of war → increases P(Decreases)'
+process_reflection: The Google Trends tool was excellent for this question type, providing
+  both the exact resolution-range data and historical precedent data. The recent_news
+  feature was particularly valuable for understanding the current context. The web_search
+  results were rich with relevant news. The main challenge was reasoning about scale
+  recalibration effects in Google Trends, which is inherently complex. The guidance
+  about threshold arithmetic and post-spike dynamics was very helpful.
+computed:
+  factor_count: 6
+  factor_sum: 3.45
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'June 2025 precedent: During the Twelve-Day War, IRGC daily interest
+      dropped from 100 to 15 on day 2, then to 5 by day 14. The peak-to-day-14 decay
+      was dramatic (~95%). Even adjusting for the current conflict''s much higher
+      sustained interest, decay from 70 to below 67 is very likely.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Current Mar 2 value (70) is at the upper end of what Google Trends
+      shows for day 2 of a crisis. Natural decay dynamics from peak search interest
+      mean that by day 14, daily search volume for a specific military term like 'IRGC'
+      almost always drops from the initial shock levels. The ±3 threshold means Mar
+      14 must stay above 67 to avoid Decreases.
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: Active, ongoing US-Iran war with IRGC as central actor. Trump says
+      4-5 weeks of operations. The conflict is the biggest US military engagement
+      since Iraq 2003. This could sustain elevated 'IRGC' searches much longer than
+      the June 2025 12-day war, but the peak-day shock interest still typically decays.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Major potential catalysts within the 12-day window: IRGC-specific
+      events (sinking of US ships, IRGC ground engagements, IRGC leadership changes,
+      nuclear threats) could create secondary spikes. Rising queries include ''IRGC
+      missile strikes school'', ''IRGC chief killed'', showing active IRGC-specific
+      news angles.'
+    supports: Increases
+    logit: 0.7
+    confidence: 0.5
+    effective_logit: 0.35
+  - description: 'Scale recalibration risk: If any day Mar 3-14 exceeds Mar 1''s absolute
+      search volume, the scale compresses all earlier values down. This lowers the
+      Mar 2 baseline, making ''Decreases'' harder and ''Increases'' or ''DC'' more
+      possible. However, exceeding the Khamenei assassination day''s search volume
+      is unlikely (~15%).'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: The 'Doesn't change' band is very narrow (67-73, just 7 points out
+      of 100). Even if expected Mar 14 value is somewhere reasonable, landing in this
+      specific 7-point band is low probability given daily volatility during an active
+      conflict (trailing volatility is ~33 points).
+    supports: Decreases
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  dominant_factor: 'June 2025 precedent: During the Twelve-Day War, IRGC daily interest
+    dropped from 100 to 15 on day 2, then to 5 by day 14. The peak-to-day-14 decay
+    was dramatic (~95%). Even adjusting for the current conflict''s much higher sustained
+    interest, decay from 70 to below 67 is very likely.'
+  dominant_effective_logit: 1.2000000000000002
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 2.5
+    factors:
+    - description: 'June 2025 precedent: During the Twelve-Day War, IRGC daily interest
+        dropped from 100 to 15 on day 2, then to 5 by day 14. The peak-to-day-14 decay
+        was dramatic (~95%). Even adjusting for the current conflict''s much higher
+        sustained interest, decay from 70 to below 67 is very likely.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: Current Mar 2 value (70) is at the upper end of what Google Trends
+        shows for day 2 of a crisis. Natural decay dynamics from peak search interest
+        mean that by day 14, daily search volume for a specific military term like
+        'IRGC' almost always drops from the initial shock levels. The ±3 threshold
+        means Mar 14 must stay above 67 to avoid Decreases.
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.85
+      effective_logit: 1.02
+    - description: The 'Doesn't change' band is very narrow (67-73, just 7 points
+        out of 100). Even if expected Mar 14 value is somewhere reasonable, landing
+        in this specific 7-point band is low probability given daily volatility during
+        an active conflict (trailing volatility is ~33 points).
+      supports: Decreases
+      logit: 0.4
+      confidence: 0.7
+      effective_logit: 0.27999999999999997
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.83
+    factors:
+    - description: Active, ongoing US-Iran war with IRGC as central actor. Trump says
+        4-5 weeks of operations. The conflict is the biggest US military engagement
+        since Iraq 2003. This could sustain elevated 'IRGC' searches much longer than
+        the June 2025 12-day war, but the peak-day shock interest still typically
+        decays.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: 'Major potential catalysts within the 12-day window: IRGC-specific
+        events (sinking of US ships, IRGC ground engagements, IRGC leadership changes,
+        nuclear threats) could create secondary spikes. Rising queries include ''IRGC
+        missile strikes school'', ''IRGC chief killed'', showing active IRGC-specific
+        news angles.'
+      supports: Increases
+      logit: 0.7
+      confidence: 0.5
+      effective_logit: 0.35
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.12
+    factors:
+    - description: 'Scale recalibration risk: If any day Mar 3-14 exceeds Mar 1''s
+        absolute search volume, the scale compresses all earlier values down. This
+        lowers the Mar 2 baseline, making ''Decreases'' harder and ''Increases'' or
+        ''DC'' more possible. However, exceeding the Khamenei assassination day''s
+        search volume is unlikely (~15%).'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.4
+      effective_logit: 0.12
+  mc_distribution_metrics:
+    implied_probabilities:
+      Decreases: 0.7807634604489945
+      Doesn't change: 0.07226010916352851
+      Increases: 0.14697643038747696
+    tentative_probabilities:
+      Increases: 0.2
+      Doesn't change: 0.15
+      Decreases: 0.65
+    per_option_gap_pp:
+      Decreases: -13.076346044899445
+      Doesn't change: 7.773989083647148
+      Increases: 5.302356961252305
+    max_gap_pp: -13.076346044899445
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) irgc](https://trends.google.com/trends/explore?q=irgc)'
+  - '[(Metaculus) Will the interest in “irgc” change between 2026-03-02 and 2026-03-14
+    according to Google Trends?](https://www.metaculus.com/questions/42401)'
+  - '[2025–2026 Iran–United States negotiations - Wikipedia](https://en.wikipedia.org/wiki/2025%E2%80%932026_Iran%E2%80%93United_States_negotiations)'
+  - '[2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia.org/wiki/2026_Israeli%E2%80%93United_States_strikes_on_Iran)'
+  - '[Twelve-Day War ceasefire - Wikipedia](https://en.wikipedia.org/wiki/Iran%E2%80%93Israel_war_ceasefire)'
+  - '[2026 Iran conflict - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_conflict)'
+  reviewer_critique: "## Errors Found\n\n### 1. **Factor 1 Hallucination - WARN**\n\
+    \n**Claim:** \"IRGC daily interest dropped from 100 to 15 on day 2, then to 5\
+    \ by day 14\"\n\n**Trace support:** The trace shows June 2025 Twelve-Day War data:\n\
+    - Jun 13: 100 (peak)\n- Jun 14: 15 (day 1)\n- Jun 15: 20 (day 2)\n- Jun 25: 7\
+    \ (day 12, last data point shown)\n\n**Issue:** The agent claims day 14 had a\
+    \ value of 5, but:\n1. The trace only shows data through Jun 25 (day 12), not\
+    \ day 14\n2. Day 12's actual value was 7, not 5\n3. No data for day 13 or day\
+    \ 14 is present in the trace\n\n**Severity:** This is a hallucination of a specific\
+    \ data point. However, the core directional claim (dramatic decay from peak) is\
+    \ well-supported. The error is specific to the endpoint claim \"to 5 by day 14.\"\
+    \ This doesn't fundamentally change the factor's logic - decay from 100 to 7 by\
+    \ day 12 (what the trace shows) versus decay to 5 by day 14 (what was claimed)\
+    \ both support the same conclusion about natural decay dynamics.\n\n**Verdict:**\
+    \ WARN - The hallucinated detail doesn't change the forecast direction, but it's\
+    \ a fabricated specific claim.\n\n### 2. **Volatility Claim - Verified**\n\n**Factor\
+    \ 6 claim:** \"trailing volatility is ~33 points\"\n\n**Trace support:** Line\
+    \ 347-348 shows `\"trailing_volatility\": 35.27`\n\n**Status:** Well-supported\
+    \ (35.27 rounds to ~33)\n\n### 3. **Rising Queries Claim - Verified**\n\n**Factor\
+    \ 4 claim:** \"Rising queries include 'IRGC missile strikes school', 'IRGC chief\
+    \ killed'\"\n\n**Trace support:** Lines 48-49 and 344-345 show these exact queries\
+    \ in the rising_queries list\n\n**Status:** Well-supported\n\n### 4. **Trump 4-5\
+    \ weeks claim - Verified**\n\n**Factor 3 claim:** \"Trump says 4-5 weeks of operations\"\
+    \n\n**Trace support:** Lines 312-313 show \"Trump says war to last 4-5 weeks\"\
+    \ from Al Jazeera\n\n**Status:** Well-supported\n\n### 5. **Current values - Verified**\n\
+    \nMar 1 = 100, Mar 2 = 70 are consistently shown throughout the trace.\n\n## Probability\
+    \ Assessment\n\nBased on the evidence in the trace, I need to form my own independent\
+    \ estimate:\n\n**Key facts:**\n- Mar 2 value: 70 (day 2 after peak)\n- Must stay\
+    \ above 67 to avoid \"Decreases\"\n- June 2025 precedent: dropped from 100 → 15\
+    \ on day 1, then sustained 9-20 range through day 12\n- Current conflict: dropped\
+    \ from 100 → 70 on day 1 (much smaller drop, suggesting stronger sustained interest)\n\
+    - Active ongoing war with IRGC as central actor\n- 12 days is a long time for\
+    \ a specific search term to maintain day-2 levels\n\n**My assessment:**\n\nThe\
+    \ agent estimates 65% Decreases, 15% Doesn't Change, 20% Increases.\n\nI believe\
+    \ this is **reasonable but slightly conservative on Decreases**. Here's why:\n\
+    \n- The June 2025 comparison actually undermines a strong Decreases thesis: that\
+    \ conflict showed immediate collapse to 15, whereas the current conflict is at\
+    \ 70 on day 2. This suggests fundamentally different search dynamics.\n- The current\
+    \ war is bigger, ongoing, with no ceasefire in sight and Trump saying 4-5 weeks\
+    \ more\n- The \"Doesn't change\" band is only 7 points wide (67-73), but 70 is\
+    \ right in the middle of it\n- With ongoing war, there's a plausible scenario\
+    \ where Mar 14 stays in the 60-75 range\n\nHowever, the agent's reasoning about\
+    \ natural decay of specific search terms is sound. Even in ongoing conflicts,\
+    \ initial spike days tend to decay as the public adjusts to the \"new normal.\"\
+    \n\n**My independent estimate:** \n- Decreases: 55%\n- Doesn't change: 25% \n\
+    - Increases: 20%\n\n**Gap analysis:** My estimate differs meaningfully from the\
+    \ agent's 65/15/20 split, primarily on the Doesn't change probability. The agent\
+    \ underestimates the chance of landing in the narrow 67-73 band given that Mar\
+    \ 2 is already at 70 (middle of the band) and the war is actively ongoing. The\
+    \ volatility argument cuts both ways - yes, it makes the narrow band harder to\
+    \ hit, but starting at 70 means even moderate decay (to ~68) keeps you in the\
+    \ band.\n\nHowever, this gap is not severe enough to be a FAIL. The agent's core\
+    \ reasoning is sound, and my 55% vs their 65% on Decreases is a difference in\
+    \ degree, not kind. Both estimates reflect the same underlying dynamics: likely\
+    \ decay, but meaningful uncertainty due to ongoing conflict."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42401
+- **Question ID**: 42191
+- **Session Duration**: 553.2s (9.2 min)
+- **Cost**: $4.0556
+- **Tokens**: 17,633 total (39 in, 17,594 out)
+  - Cache: 755,144 read, 85,481 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42401_20260302_222456/20260302-222456.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 6 | 0 | 213ms |
+| get_metaculus_questions | 1 | 0 | 449ms |
+| google_trends | 3 | 0 | 1881ms |
+| reflection | 1 | 0 | 112998ms |
+| web_search | 3 | 0 | 18902ms |
+| wikipedia | 5 | 0 | 2139ms |
+
+### Sources Consulted
+
+- [(Google Trends) irgc](https://trends.google.com/trends/explore?q=irgc)
+- [(Metaculus) Will the interest in “irgc” change between 2026-03-02 and 2026-0...
+- [2025–2026 Iran–United States negotiations - Wikipedia](https://en.wikipedia....
+- [2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia...
+- [Twelve-Day War ceasefire - Wikipedia](https://en.wikipedia.org/wiki/Iran%E2%...
+- [2026 Iran conflict - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_conf...
