@@ -14,6 +14,7 @@ from aib.devtools.queue import app as queue_app
 from aib.devtools.resolution import app as resolution_app
 from aib.devtools.scores import app as scores_app
 from aib.devtools.trace import app as trace_app
+from aib.devtools.track_record import app as track_record_app
 from aib.devtools.usage import app as usage_app
 from aib.devtools.version import app as version_app
 
@@ -39,6 +40,7 @@ app.add_typer(health_app, name="health", help="Service health checks")
 app.add_typer(migration_app, name="migration", help="One-time data migrations")
 app.add_typer(usage_app, name="usage", help="API usage and rate limits")
 app.add_typer(version_app, name="version", help="Agent version management")
+app.add_typer(track_record_app, name="track-record", help="Metaculus track record scraping")
 
 if __name__ == "__main__":
     app()
