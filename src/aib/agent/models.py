@@ -120,6 +120,14 @@ class NumericEstimate(BaseModel):
     high: float = Field(description="90th percentile estimate.")
 
 
+class MultipleChoiceEstimate(BaseModel):
+    """Tentative estimate for multiple choice questions."""
+
+    probabilities: dict[str, float] = Field(
+        description="Mapping of option label to probability (values sum to 1.0)."
+    )
+
+
 class NumericSupport(BaseModel):
     """Distributional evidence for numeric/discrete questions.
 
