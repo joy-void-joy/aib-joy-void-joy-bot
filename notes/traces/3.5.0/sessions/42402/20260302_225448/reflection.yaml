@@ -1,0 +1,202 @@
+---
+timestamp: 2026-03-02 22:58:37 UTC
+question_type: binary
+factors:
+- description: 'Unconditional base rate: stocks are higher ~52-53% of the time over
+    8 trading days due to positive equity risk premium'
+  logit: 0.1
+  confidence: 0.9
+  effective_logit: 0.09000000000000001
+- description: 'Historical conditional returns after ≥3% single-day YUM moves: 53.8%
+    positive over 8 days (197 events), mean +0.47%, very close to unconditional rate'
+  logit: 0.15
+  confidence: 0.8
+  effective_logit: 0.12
+- description: 'Recent strong uptrend: YUM rose ~18% from Dec low to recent 168 high,
+    positive 20-day trailing return of +5.25%. Momentum provides slight tailwind'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Today's -3.1% drop is the largest in the 60-day window, interrupting
+    uptrend. Near 52-week high but just pulled back. Could signal trend reversal or
+    just noise
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: Broader S&P 500 market has been range-bound and slightly weak (6800-6950
+    range), not providing a strong tailwind
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+- description: YUM is a defensive, low-beta (0.64) consumer staples stock with analyst
+    consensus of strong buy and 12-month target of ~$172
+  logit: 0.1
+  confidence: 0.4
+  effective_logit: 0.04000000000000001
+tentative_estimate:
+  logit: 0.15
+  probability: 0.54
+assessment: 'The question asks whether YUM''s close on March 14 (effectively March
+  13 since March 14 is Saturday) will be higher than its close on March 3. This is
+  an 8-trading-day forward return question.
+
+
+  The unconditional base rate for a stock being higher over 8 trading days is approximately
+  52-53%. The conditional base rate after large single-day moves (≥3%) is 53.8% positive
+  from the historical YUM data (197 events), essentially indistinguishable from the
+  unconditional rate.
+
+
+  Recent momentum was strong (18% gain from Dec lows), which would push the estimate
+  slightly higher. However, today''s -3.1% drop (the largest in the 60-day window)
+  interrupts the trend, and the broader market is showing some weakness.
+
+
+  The Monte Carlo bootstrap using recent returns gives ~65%, but this is inflated
+  by the unusually strong recent drift (~40% annualized). Using more conservative
+  drift assumptions gives 52-53%. The conditional return data is the most directly
+  applicable, suggesting ~54%.
+
+
+  The starting price for the comparison will be established on March 3, one day after
+  today''s drop. Any immediate mean-reversion bounce on March 3 would actually raise
+  the starting bar, making it harder for March 13 to exceed it. This is a slight headwind
+  relative to the conditional base rate.'
+calibration_notes: The conditional base rate of 53.8% from 197 historical events is
+  the strongest anchor. The bootstrap simulation (65%) is inflated by unusual recent
+  momentum and should be discounted. The analytical estimate with standard equity
+  premium gives 52.7%. Blending these with more weight on the conditional base rate
+  and standard drift gives ~53-54%.
+key_uncertainties: Whether today's large drop signals a trend reversal or is just
+  noise. Broader market direction over the next 8 trading days. Any company-specific
+  news or macro catalysts that could emerge.
+tool_audit: 'stock_price: Useful - provided current price, 60-day history, summary
+  stats. stock_history: Useful - provided 1y OHLCV for YUM and 3mo for S&P 500. stock_conditional_returns:
+  Very useful - provided the conditional base rate for 8-day returns after ≥3% single-day
+  moves (53.8% positive, 197 events). execute_code: Useful - ran Monte Carlo simulations
+  and computed various drift scenarios. web_search: Useful - confirmed no major company-specific
+  news catalysts, found analyst targets.'
+process_reflection: This is a straightforward stock direction question. The tools
+  worked well - stock_conditional_returns was particularly valuable for anchoring
+  on a relevant base rate. The Monte Carlo simulation confirmed the general range.
+  The main challenge is deciding how much weight to give the recent strong momentum
+  vs. the unconditional/conditional base rates. The prompt guidance to anchor on conditional
+  returns rather than unconditional ~52% was helpful.
+computed:
+  factor_count: 6
+  factor_sum: 0.225
+  tentative_logit: 0.15
+  logit_gap: -0.07500000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Unconditional base rate: stocks are higher ~52-53% of the time over
+      8 trading days due to positive equity risk premium'
+    logit: 0.1
+    confidence: 0.9
+    effective_logit: 0.09000000000000001
+  - description: 'Historical conditional returns after ≥3% single-day YUM moves: 53.8%
+      positive over 8 days (197 events), mean +0.47%, very close to unconditional
+      rate'
+    logit: 0.15
+    confidence: 0.8
+    effective_logit: 0.12
+  - description: 'Recent strong uptrend: YUM rose ~18% from Dec low to recent 168
+      high, positive 20-day trailing return of +5.25%. Momentum provides slight tailwind'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Today's -3.1% drop is the largest in the 60-day window, interrupting
+      uptrend. Near 52-week high but just pulled back. Could signal trend reversal
+      or just noise
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: Broader S&P 500 market has been range-bound and slightly weak (6800-6950
+      range), not providing a strong tailwind
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  - description: YUM is a defensive, low-beta (0.64) consumer staples stock with analyst
+      consensus of strong buy and 12-month target of ~$172
+    logit: 0.1
+    confidence: 0.4
+    effective_logit: 0.04000000000000001
+  dominant_factor: 'Recent strong uptrend: YUM rose ~18% from Dec low to recent 168
+    high, positive 20-day trailing return of +5.25%. Momentum provides slight tailwind'
+  dominant_effective_logit: 0.15
+  factor_implied_probability: 0.5560138905446199
+  tentative_probability: 0.54
+  gap_pp: -1.601389054461988
+  sources:
+  - '[(yfinance) YUM](https://finance.yahoo.com/quote/YUM)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Yum! Brands, Inc. (YUM) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/YUM/)'
+  reviewer_critique: "**VERDICT: WARN**\n\n## Evidence Quality: ✅ PASS\nAll six factors\
+    \ are well-grounded in the trace:\n- Factor 1 (base rate ~52-53%): Confirmed in\
+    \ Monte Carlo code output (trace lines 173-181)\n- Factor 2 (conditional returns\
+    \ 53.8%): Direct tool result (trace lines 200-206, 197 events)\n- Factor 3 (momentum\
+    \ +18% from Dec, +5.25% 20-day): Verified in trace (line 146, lines 36-53)\n-\
+    \ Factor 4 (today's -3.1% drop): Confirmed (trace line 145, line 52 notes it's\
+    \ largest in 60-day window)\n- Factor 5 (S&P 500 weakness): S&P data present in\
+    \ trace (lines 102-126)\n- Factor 6 (beta 0.64, analyst targets ~$172): Web search\
+    \ confirms (trace lines 248, 244)\n\nNo hallucinations. No double-counting. Factor\
+    \ directions align correctly with descriptions.\n\n## ⚠️ Issue: Probability Assessment\
+    \ Contains Internal Contradiction\n\nThe agent estimates **54%**, but this contradicts\
+    \ its own reasoning and the evidence weight:\n\n**The contradiction:**\nIn the\
+    \ assessment, the agent states: \"Any immediate mean-reversion bounce on March\
+    \ 3 would actually raise the starting bar, making it harder for March 13 to exceed\
+    \ it. This is a slight headwind relative to the conditional base rate.\"\n\nThis\
+    \ reasoning is correct BUT the 54% estimate **ignores** this headwind. The agent\
+    \ acknowledges the headwind but then provides a probability **higher** than the\
+    \ 53.8% conditional base rate, when it should be **lower**.\n\n**Evidence-based\
+    \ estimate:**\n1. **Conditional base rate (most applicable)**: 53.8% for 8-day\
+    \ returns after ≥3% single-day moves (197 events, trace lines 200-206)\n2. **Timing\
+    \ difference**: The conditional data measures from the close of the drop day (March\
+    \ 2), but the question measures from March 3 close. If March 3 bounces (mean reversion),\
+    \ it raises the comparison bar → this should **lower** the probability below 53.8%\n\
+    3. **Momentum factor**: Recent +5.25% 20-day return provides a modest tailwind\
+    \ (+0.5% to +1%)\n4. **Net effect**: The timing headwind roughly offsets the momentum\
+    \ tailwind → estimate should be **52-53%**, close to the unconditional base rate\n\
+    \n**My independent probability: 52-53%**\n\nThe agent's 54% isn't drastically\
+    \ wrong, but it's on the high side given:\n- The agent's own recognition of a\
+    \ \"headwind\" \n- The conditional base rate of 53.8% being the ceiling, not the\
+    \ floor\n- Similar past forecasts (DD at 52%, SYY at 52.5%, COO at 55%) clustering\
+    \ around this range for comparable 8-9 day windows\n\nThis is a **WARN** because\
+    \ the probability error is modest (~1-2 percentage points) and doesn't reverse\
+    \ the forecast direction, but the internal logical inconsistency (acknowledging\
+    \ a headwind while estimating above the conditional baseline) suggests the agent\
+    \ is over-weighting the recent momentum relative to the structural evidence."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42402
+- **Question ID**: 42192
+- **Session Duration**: 234.3s (3.9 min)
+- **Cost**: $2.2897
+- **Tokens**: 7,110 total (26 in, 7,084 out)
+  - Cache: 380,613 read, 63,311 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42402_20260302_225448/20260302-225448.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 419ms |
+| reflection | 1 | 0 | 69058ms |
+| stock_conditional_returns | 1 | 0 | 232ms |
+| stock_history | 2 | 0 | 75ms |
+| stock_price | 2 | 0 | 570ms |
+| web_search | 1 | 0 | 17938ms |
+
+### Sources Consulted
+
+- [(yfinance) YUM](https://finance.yahoo.com/quote/YUM)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Yum! Brands, Inc. (YUM) Stock Price, News, Quote & History - Yahoo Finance](...
