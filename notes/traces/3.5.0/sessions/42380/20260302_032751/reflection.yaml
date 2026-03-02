@@ -1,0 +1,313 @@
+---
+timestamp: 2026-03-02 03:34:04 UTC
+question_type: multiple_choice
+factors:
+- description: March 2 is at 100 (peak of the entire range). Google Trends relative
+    scaling means March 11 cannot exceed 100 unless a new peak emerges between Mar
+    3-10 that rescales everything down. Even then, March 11 would need to specifically
+    be the new highest day to approach or exceed March 2.
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: Historical decay pattern from this exact term shows ~50% retention
+    9 days after peak. Previous spikes decayed from 51→27 and 60→29 within 9 days.
+    The ±3 threshold is tiny compared to the expected ~50 point decline.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'The March 1-2 spike was driven by a specific one-time catalyst: Caroline
+    Kennedy''s rare CBS Sunday Morning interview endorsing son Jack Schlossberg. This
+    won''t repeat.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Love Story FX series has weekly episodes through March 26. Episode
+    6 likely airs ~March 5, Episode 7 ~March 12. But previous episode-only spikes
+    reached only 51-60 in relative terms, well below the 100 peak. Shows sustained
+    floor but not enough to prevent decline from peak.
+  supports: Decreases
+  logit: -0.5
+  confidence: 0.7
+  conditional: Only partially offsets decline; creates a higher floor but doesn't
+    prevent decrease
+  effective_logit: -0.35
+- description: Jack Schlossberg's congressional campaign and ongoing Kennedy family
+    news could produce unexpected spikes, but nothing specific is scheduled for March
+    11.
+  supports: Increases
+  logit: 0.3
+  confidence: 0.3
+  effective_logit: 0.09
+- description: For 'Doesn't change', March 11 would need to be 97-103. This requires
+    nearly identical search volume to the peak day, which is extremely unlikely absent
+    a major new catalyst on exactly March 11.
+  supports: Doesn't change
+  logit: -2.0
+  confidence: 0.9
+  effective_logit: -1.8
+tentative_estimate:
+  logit: 2.5
+  probability: 0.88
+assessment: "March 2 is at the peak (100) of the Google Trends range for \"caroline\
+  \ kennedy\". The spike was driven by a confluence of Caroline Kennedy's CBS Sunday\
+  \ Morning interview (March 1), the ongoing FX Love Story series about JFK Jr. and\
+  \ Carolyn Bessette, and Jack Schlossberg's congressional campaign. \n\nHistorical\
+  \ decay patterns from this exact search term show values dropping to ~50% of peak\
+  \ within 9 days. With March 2 at 100, March 11 is projected around 30-55, representing\
+  \ a decrease of 45-70 points — far exceeding the ±3 threshold.\n\nThe only scenarios\
+  \ that prevent \"Decreases\":\n1. A major unexpected news event involving Caroline\
+  \ Kennedy on March 11 specifically (very unlikely)\n2. A day between March 3-10\
+  \ becomes the new peak, rescaling March 2 down, AND March 11 has nearly identical\
+  \ volume to March 2 (extremely unlikely)\n\nThe Love Story series provides some\
+  \ sustained interest floor but previous episode-only spikes only reached 51-60,\
+  \ well below the current 100 peak. \"Decreases\" is overwhelmingly likely."
+calibration_notes: 'Base rate from change_stats: increases 38.1%, decreases 33.3%,
+  no_change 28.6%. But these base rates are computed from ALL day-over-day transitions
+  in the range, not specifically from peak-day starting points. Starting from the
+  peak (100) is a very different starting condition — the probability of decrease
+  from peak is much higher than the overall base rate. The trailing_change_stats show
+  increase_rate 50% and decrease_rate 16.7% in the recent window, but again this includes
+  the ascending phase of the current spike, not the expected post-peak decline.
+
+
+  Status quo check: The value is at the absolute peak. "Status quo" in the sense of
+  returning to normal/baseline IS a decrease. There''s no "maintaining peak" status
+  quo for a news-driven spike.'
+key_uncertainties: '1. Whether a major unexpected Caroline Kennedy news event occurs
+  on or near March 11 (low probability but would change the forecast)
+
+  2. Whether the Love Story show generates a dramatically larger spike than previous
+  episodes (unlikely given the pattern)
+
+  3. Small differences between SerpAPI and pytrends data (could shift values by 1-3
+  points, but irrelevant given the expected magnitude of decline)'
+tool_audit: 'Google Trends tool: Returned full data for the exact resolution date
+  range with tz=0. Change_stats and tail_stats were useful for base rates. Recent_news
+  provided helpful context about active catalysts.
+
+
+  Web search: Successfully identified the three main drivers (Love Story FX series,
+  CBS Sunday Morning interview, Jack Schlossberg campaign, Tatiana''s death). Multiple
+  search queries with different formulations provided complementary information.
+
+
+  Metaculus question fetch: Returned full question details including resolution criteria
+  and fine print.
+
+
+  Wikipedia fetch for Love Story: Returned limited content - didn''t include episode
+  schedule details. Had to supplement with web search.
+
+
+  Execute code: Successfully used for decay analysis and threshold arithmetic.'
+update_triggers: '- Major news event involving Caroline Kennedy in the March 8-11
+  window (health emergency, political statement, legal action)
+
+  - Love Story finale moved up to early March (currently scheduled March 26)
+
+  - Jack Schlossberg campaign generating national headline news around March 11'
+process_reflection: The Google Trends tool with the exact resolution parameters (tz=0,
+  matching date range) was very useful and matched the resolution methodology well.
+  The change_stats were somewhat misleading for this question since they compute over
+  all transitions rather than from-peak transitions — a "conditional change_stats"
+  feature (starting from above a certain threshold) would be more useful. The news
+  search tools worked well for identifying catalysts. The code sandbox was useful
+  for quantitative decay analysis. The overall workflow felt smooth for this question
+  type.
+computed:
+  factor_count: 6
+  factor_sum: 3.365
+  tentative_logit: 2.5
+  logit_gap: -0.8650000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: March 2 is at 100 (peak of the entire range). Google Trends relative
+      scaling means March 11 cannot exceed 100 unless a new peak emerges between Mar
+      3-10 that rescales everything down. Even then, March 11 would need to specifically
+      be the new highest day to approach or exceed March 2.
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: Historical decay pattern from this exact term shows ~50% retention
+      9 days after peak. Previous spikes decayed from 51→27 and 60→29 within 9 days.
+      The ±3 threshold is tiny compared to the expected ~50 point decline.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'The March 1-2 spike was driven by a specific one-time catalyst:
+      Caroline Kennedy''s rare CBS Sunday Morning interview endorsing son Jack Schlossberg.
+      This won''t repeat.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Love Story FX series has weekly episodes through March 26. Episode
+      6 likely airs ~March 5, Episode 7 ~March 12. But previous episode-only spikes
+      reached only 51-60 in relative terms, well below the 100 peak. Shows sustained
+      floor but not enough to prevent decline from peak.
+    supports: Decreases
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+    conditional: Only partially offsets decline; creates a higher floor but doesn't
+      prevent decrease
+  - description: Jack Schlossberg's congressional campaign and ongoing Kennedy family
+      news could produce unexpected spikes, but nothing specific is scheduled for
+      March 11.
+    supports: Increases
+    logit: 0.3
+    confidence: 0.3
+    effective_logit: 0.09
+  - description: For 'Doesn't change', March 11 would need to be 97-103. This requires
+      nearly identical search volume to the peak day, which is extremely unlikely
+      absent a major new catalyst on exactly March 11.
+    supports: Doesn't change
+    logit: -2.0
+    confidence: 0.9
+    effective_logit: -1.8
+  dominant_factor: March 2 is at 100 (peak of the entire range). Google Trends relative
+    scaling means March 11 cannot exceed 100 unless a new peak emerges between Mar
+    3-10 that rescales everything down. Even then, March 11 would need to specifically
+    be the new highest day to approach or exceed March 2.
+  dominant_effective_logit: 2.375
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 5.075
+    factors:
+    - description: March 2 is at 100 (peak of the entire range). Google Trends relative
+        scaling means March 11 cannot exceed 100 unless a new peak emerges between
+        Mar 3-10 that rescales everything down. Even then, March 11 would need to
+        specifically be the new highest day to approach or exceed March 2.
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.95
+      effective_logit: 2.375
+    - description: Historical decay pattern from this exact term shows ~50% retention
+        9 days after peak. Previous spikes decayed from 51→27 and 60→29 within 9 days.
+        The ±3 threshold is tiny compared to the expected ~50 point decline.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'The March 1-2 spike was driven by a specific one-time catalyst:
+        Caroline Kennedy''s rare CBS Sunday Morning interview endorsing son Jack Schlossberg.
+        This won''t repeat.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: Love Story FX series has weekly episodes through March 26. Episode
+        6 likely airs ~March 5, Episode 7 ~March 12. But previous episode-only spikes
+        reached only 51-60 in relative terms, well below the 100 peak. Shows sustained
+        floor but not enough to prevent decline from peak.
+      supports: Decreases
+      logit: -0.5
+      confidence: 0.7
+      effective_logit: -0.35
+      conditional: Only partially offsets decline; creates a higher floor but doesn't
+        prevent decrease
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.09
+    factors:
+    - description: Jack Schlossberg's congressional campaign and ongoing Kennedy family
+        news could produce unexpected spikes, but nothing specific is scheduled for
+        March 11.
+      supports: Increases
+      logit: 0.3
+      confidence: 0.3
+      effective_logit: 0.09
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: -1.8
+    factors:
+    - description: For 'Doesn't change', March 11 would need to be 97-103. This requires
+        nearly identical search volume to the peak day, which is extremely unlikely
+        absent a major new catalyst on exactly March 11.
+      supports: Doesn't change
+      logit: -2.0
+      confidence: 0.9
+      effective_logit: -1.8
+  sources:
+  - '[(Google Trends) caroline kennedy](https://trends.google.com/trends/explore?q=caroline
+    kennedy)'
+  - '[Caroline Kennedy - Wikipedia](https://en.wikipedia.org/wiki/Caroline_Kennedy)'
+  - '[(Metaculus) Will the interest in “caroline kennedy” change between 2026-03-02
+    and 2026-03-11 according to Google Trends?](https://www.metaculus.com/questions/42380)'
+  - '[Love Story (2026 TV series) - Wikipedia](https://en.wikipedia.org/wiki/Love_Story_(2026_TV_series))'
+  - '[Tatiana Schlossberg - Wikipedia](https://en.wikipedia.org/wiki/Tatiana_Schlossberg)'
+  reviewer_critique: "I've reviewed the forecast against the research trace and found\
+    \ one minor numerical inaccuracy in Factor 2, but overall the forecast is well-grounded\
+    \ and the probability estimate is reasonable.\n\n**Issue Found:**\n\n**Factor\
+    \ 2 numerical inaccuracy (warn-level):** The factor states \"Previous spikes decayed\
+    \ from 51→27 and 60→29 within 9 days.\" However, the trace data shows:\n- Feb\
+    \ 15 spike: 51 → 27 occurred in 4 days (Feb 15 to Feb 19), not 9 days\n- Feb 22\
+    \ spike: 60 → 29 occurred in 5 days (Feb 22 to Feb 27), not 9 days\n\nThe factor\
+    \ conflates the specific decay examples (which show 4-5 day timeframes) with the\
+    \ 9-day projection needed for the forecast. That said, the agent's computational\
+    \ analysis (trace lines 440-456) correctly calculates that average retention at\
+    \ day 9 from peak is ~51%, which does support the factor's general claim about\
+    \ \"~50% retention 9 days after peak.\" The core conclusion—that significant decay\
+    \ occurs—is well-supported even though the specific examples cited don't match\
+    \ the 9-day timeframe claimed.\n\nThis is a presentation issue rather than a substantive\
+    \ error. The evidence supports the conclusion, just not via the specific pathway\
+    \ described.\n\n**What I verified:**\n\n✓ Factor 1: March 2 at 100 confirmed (trace\
+    \ lines 45-50)\n✓ Factor 3: CBS Sunday Morning interview confirmed (trace lines\
+    \ 354-387)  \n✓ Factor 4: Love Story episode schedule and previous spike magnitudes\
+    \ confirmed (trace lines 90-93, 440-456)\n✓ Factor 5: Campaign activity confirmed,\
+    \ no specific March 11 events found\n✓ Factor 6: Threshold mathematics confirmed\
+    \ (trace lines 445-455)\n✓ No hallucinated evidence—all major claims trace to\
+    \ tool results\n✓ No double-counting—factors address distinct aspects\n✓ Resolution\
+    \ criteria properly applied\n✓ No pre-publication or regime-spanning issues\n\n\
+    **Probability check:**\n\nThe agent estimates 88% for \"Decreases.\" Based on\
+    \ the evidence:\n- March 2 is the peak at 100\n- ~50% retention after 9 days from\
+    \ historical pattern\n- One-time CBS interview catalyst won't repeat\n- Episode\
+    \ spikes only reached 51-60 previously\n- ±3 threshold is negligible vs. expected\
+    \ 40-70 point decline\n\nMy independent estimate would be 90-92% for \"Decreases,\"\
+    \ making the agent's 88% slightly conservative but well within reasonable bounds\
+    \ given the evidence. The difference is not material enough to constitute an error.\n\
+    \n**Verdict: warn** for the numerical inaccuracy in Factor 2's timeframe claims,\
+    \ though the underlying conclusion remains sound."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42380
+- **Question ID**: 42170
+- **Session Duration**: 383.8s (6.4 min)
+- **Cost**: $2.2919
+- **Tokens**: 9,122 total (25 in, 9,097 out)
+  - Cache: 371,370 read, 56,118 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42380_20260302_032751/20260302-032751.log`
+
+### Tool Calls
+
+- **Total**: 14 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 1 | 0 | 164ms |
+| fetch_url | 1 | 0 | 193ms |
+| get_metaculus_questions | 1 | 0 | 454ms |
+| google_trends | 1 | 0 | 3227ms |
+| reflection | 1 | 0 | 66094ms |
+| web_search | 5 | 0 | 26300ms |
+| wikipedia | 4 | 0 | 186ms |
+
+### Sources Consulted
+
+- [(Google Trends) caroline kennedy](https://trends.google.com/trends/explore?q...
+- [Caroline Kennedy - Wikipedia](https://en.wikipedia.org/wiki/Caroline_Kennedy)
+- [(Metaculus) Will the interest in “caroline kennedy” change between 2026-03-0...
+- [Love Story (2026 TV series) - Wikipedia](https://en.wikipedia.org/wiki/Love_...
+- [Tatiana Schlossberg - Wikipedia](https://en.wikipedia.org/wiki/Tatiana_Schlo...
