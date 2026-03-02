@@ -6,13 +6,11 @@ reliably expose peer/baseline scores, so we scrape the rendered page.
 
 Usage:
     uv run aib-devtools track-record scrape
-    uv run aib-devtools track-record show --ours
-    uv run aib-devtools track-record resolve --dry-run
+    uv run aib-devtools track-record show
 """
 
 import asyncio
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -21,7 +19,6 @@ import typer
 app = typer.Typer(no_args_is_help=True)
 
 PROFILE_URL = "https://www.metaculus.com/accounts/profile/{user_id}/track-record/"
-DATA_PATH = Path("notes/track_record/scores.json")
 DEFAULT_USER_ID = 290661
 
 EXTRACT_JS = """
@@ -128,49 +125,6 @@ async def fetch_scores(user_id: int) -> dict:
     return result
 
 
-def save_scores(data: dict, user_id: int) -> Path:
-    """Persist scraped data to disk."""
-    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "scraped_at": datetime.now(timezone.utc).isoformat(),
-        "user_id": user_id,
-        "username": data.get("username", ""),
-        "records": data.get("records", []),
-    }
-    DATA_PATH.write_text(json.dumps(payload, indent=2))
-    return DATA_PATH
-
-
-def load_scores() -> dict | None:
-    """Load latest scraped data."""
-    if not DATA_PATH.exists():
-        return None
-    return json.loads(DATA_PATH.read_text())
-
-
-@app.command()
-def scrape(
-    user_id: int = typer.Option(
-        DEFAULT_USER_ID, "--user-id", "-u", help="Metaculus user ID"
-    ),
-) -> None:
-    """Scrape track record page for peer scores and resolutions."""
-    typer.echo(f"Scraping track record for user {user_id}...")
-
-    data = asyncio.run(fetch_scores(user_id))
-    path = save_scores(data, user_id)
-    records = data.get("records", [])
-    typer.echo(f"Saved {len(records)} records to {path}")
-
-    if records:
-        typer.echo(f"Fields per record: {', '.join(records[0].keys())}")
-
-    scores = [r["score"] for r in records if r.get("score") is not None]
-    if scores:
-        avg = sum(scores) / len(scores)
-        typer.echo(f"Avg peer score: {avg:.4f} (n={len(scores)})")
-
-
 def normalize_resolution(raw: str) -> str | float:
     """Normalize a scraped resolution string to forecast JSON format."""
     s = raw.strip()
@@ -183,29 +137,20 @@ def normalize_resolution(raw: str) -> str | float:
         return s
 
 
-@app.command("resolve")
-def resolve_cmd(
-    version: str | None = typer.Option(
-        None, "--version", "-v", help="Only update forecasts for this version"
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
-) -> None:
-    """Update resolutions, peer scores, and baseline scores in forecast JSONs."""
+def resolve_scraped(
+    records: list[dict[str, object]],
+    version: str | None = None,
+    dry_run: bool = False,
+) -> tuple[int, int]:
+    """Write peer_score, score_timestamp, resolution, baseline_score to forecast JSONs."""
     from aib.agent.history import _update_forecast_json
     from aib.paths import iter_forecast_files, iter_retrodict_files
     from aib.scoring import compute_baseline_score
 
-    data = load_scores()
-    if not data:
-        typer.echo("No scraped data. Run 'track-record scrape' first.")
-        raise typer.Exit(1)
-
-    typer.echo(f"Using scrape from {data['scraped_at'][:19]}")
-
-    scores_by_post: dict[int, dict] = {}
-    for rec in data.get("records", []):
+    scores_by_post: dict[int, dict[str, object]] = {}
+    for rec in records:
         pid = rec.get("post_id")
-        if pid:
+        if isinstance(pid, int):
             scores_by_post[pid] = rec
 
     updated = 0
@@ -214,6 +159,7 @@ def resolve_cmd(
     for post_id, rec in sorted(scores_by_post.items()):
         raw_res = rec.get("question_resolution")
         peer = rec.get("score")
+        score_ts = rec.get("score_timestamp")
 
         if raw_res is None or str(raw_res).strip() == "":
             continue
@@ -232,6 +178,8 @@ def resolve_cmd(
                 updates["resolution"] = resolution
             if peer is not None and forecast.get("peer_score") is None:
                 updates["peer_score"] = peer
+            if score_ts is not None and forecast.get("score_timestamp") is None:
+                updates["score_timestamp"] = score_ts
 
             if forecast.get("baseline_score") is None:
                 merged = {**forecast, **updates}
@@ -250,6 +198,32 @@ def resolve_cmd(
                     typer.echo(f"  {post_id}: {updates}")
             updated += 1
 
+    return updated, unchanged
+
+
+@app.command()
+def scrape(
+    user_id: int = typer.Option(
+        DEFAULT_USER_ID, "--user-id", "-u", help="Metaculus user ID"
+    ),
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Only update forecasts for this version"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
+) -> None:
+    """Scrape track record and update forecast JSONs with peer scores."""
+    typer.echo(f"Scraping track record for user {user_id}...")
+
+    data = asyncio.run(fetch_scores(user_id))
+    records = data.get("records", [])
+    typer.echo(f"Scraped {len(records)} records")
+
+    scores = [r["score"] for r in records if r.get("score") is not None]
+    if scores:
+        avg = sum(scores) / len(scores)
+        typer.echo(f"Avg peer score: {avg:.4f} (n={len(scores)})")
+
+    updated, unchanged = resolve_scraped(records, version, dry_run)
     typer.echo(f"\nUpdated: {updated}, Unchanged: {unchanged}")
     if dry_run:
         typer.echo("(dry run)")
@@ -263,9 +237,6 @@ def show(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
-    ours_only: bool = typer.Option(
-        False, "--ours", help="Only show questions we forecast"
-    ),
 ) -> None:
     """Display peer and baseline scores from forecast JSONs."""
     from aib.paths import (
@@ -275,68 +246,56 @@ def show(
     )
     from aib.version import AGENT_VERSION
 
-    data = load_scores()
-    if not data:
-        typer.echo("No scraped data. Run 'track-record scrape' first.")
-        raise typer.Exit(1)
-
     effective_version = version if version is not None else AGENT_VERSION
     effective, warning = resolve_version(effective_version, all_versions)
     if warning:
         typer.echo(warning)
 
-    forecasts: dict[int, dict[str, object]] = {}
+    forecasts: list[dict[str, object]] = []
     for d in load_all_forecast_jsons(versions=effective):
-        pid = d.get("post_id")
-        if isinstance(pid, int):
-            forecasts[pid] = d
+        if d.get("peer_score") is not None:
+            forecasts.append(d)
     for d in load_all_retrodict_jsons(versions=effective):
-        pid = d.get("post_id")
-        if isinstance(pid, int):
-            forecasts[pid] = d
+        if d.get("peer_score") is not None:
+            forecasts.append(d)
 
-    records = data.get("records", [])
-    if ours_only:
-        records = [r for r in records if r.get("post_id") in forecasts]
-
-    if not records:
-        typer.echo("No records to show.")
+    if not forecasts:
+        typer.echo("No scored forecasts found. Run 'track-record scrape' first.")
         return
 
-    typer.echo(
-        f"Track record: {data['username']} (scraped {data['scraped_at'][:10]})\n"
-    )
-    typer.echo(f"{'ID':<8} {'Peer':>8} {'Base':>8} {'Res':<10} {'Title'}")
+    typer.echo(f"\n{'ID':<8} {'Peer':>8} {'Base':>8} {'Res':<10} {'Title'}")
     typer.echo("-" * 95)
 
     peer_scores: list[float] = []
     baseline_scores: list[float] = []
 
-    for rec in records:
-        pid = rec.get("post_id", "")
-        peer = rec.get("score")
-        res_raw = rec.get("question_resolution", "")
-        fc = forecasts.get(pid) if pid else None
-        title = str(rec.get("question_title", ""))[:55]
+    def by_post_id(d: dict[str, object]) -> int:
+        pid = d.get("post_id")
+        if isinstance(pid, int):
+            return pid
+        return 0
 
-        peer_str = f"{peer:+.1f}" if peer is not None else "-"
-        res_str = str(res_raw)[:10] if res_raw else "-"
+    for fc in sorted(forecasts, key=by_post_id):
+        pid = fc.get("post_id", "")
+        peer = fc.get("peer_score")
+        resolution = fc.get("resolution", "")
+        title = str(fc.get("question_title", ""))[:55]
 
-        baseline = fc.get("baseline_score") if fc else None
+        peer_str = f"{peer:+.1f}" if isinstance(peer, (int, float)) else "-"
+        res_str = str(resolution)[:10] if resolution else "-"
+
+        baseline = fc.get("baseline_score")
         base_str = f"{baseline:+.1f}" if isinstance(baseline, (int, float)) else "-"
 
-        if peer is not None:
-            peer_scores.append(peer)
+        if isinstance(peer, (int, float)):
+            peer_scores.append(float(peer))
         if isinstance(baseline, (int, float)):
-            baseline_scores.append(baseline)
+            baseline_scores.append(float(baseline))
 
         typer.echo(f"{pid:<8} {peer_str:>8} {base_str:>8} {res_str:<10} {title}")
 
     typer.echo(f"\n{'=' * 40}")
-    typer.echo(f"Total scored:      {len(records)}")
-    typer.echo(
-        f"Our forecasts:     {sum(1 for r in records if r.get('post_id') in forecasts)}"
-    )
+    typer.echo(f"Total scored:      {len(forecasts)}")
 
     if peer_scores:
         typer.echo(f"Avg peer score:    {sum(peer_scores) / len(peer_scores):>+8.2f}")
@@ -387,7 +346,9 @@ def fetch_cdf(post_id: int, client: httpx.Client) -> dict[str, object]:
 @app.command("backfill-cdf")
 def backfill_cdf_cmd(
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
-    limit: int = typer.Option(0, "--limit", "-l", help="Max questions to process (0=all)"),
+    limit: int = typer.Option(
+        0, "--limit", "-l", help="Max questions to process (0=all)"
+    ),
 ) -> None:
     """Backfill CDF and numeric_bounds into forecast JSONs via Metaculus API."""
     import time
@@ -453,7 +414,9 @@ def backfill_cdf_cmd(
                 if bounds:
                     updates["numeric_bounds"] = bounds
                 _update_forecast_json(f, **updates)
-            tqdm.write(f"  {pid}: {len(cdf)} points -> {len(needs_backfill[pid])} files")
+            tqdm.write(
+                f"  {pid}: {len(cdf)} points -> {len(needs_backfill[pid])} files"
+            )
 
         updated += 1
         time.sleep(10)

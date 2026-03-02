@@ -14,7 +14,6 @@ from pathlib import Path
 
 import typer
 
-from aib.devtools.track_record import load_scores
 from aib.paths import (
     load_all_forecast_jsons,
     parse_semver,
@@ -38,7 +37,6 @@ META_PATTERNS = [
 def _is_meta(title: str) -> bool:
     t = title.lower()
     return any(p in t for p in META_PATTERNS)
-
 
 
 @app.command()
@@ -431,7 +429,6 @@ def _print_numeric_rows(rows: list[dict[str, str]]) -> None:
 def _build_strip(
     by_version: dict[str, list[float]],
     version_dates: dict[str, str],
-    scraped_at: str,
     term_width: int,
 ) -> str:
     """Build a horizontal scatter strip chart + summary table."""
@@ -464,7 +461,11 @@ def _build_strip(
 
     def to_pos(score: float) -> int:
         return max(
-            0, min(chart_width - 1, round((score - range_min) / score_range * (chart_width - 1)))
+            0,
+            min(
+                chart_width - 1,
+                round((score - range_min) / score_range * (chart_width - 1)),
+            ),
         )
 
     if range_max < 0:
@@ -532,8 +533,6 @@ def _build_strip(
     lines.append(f"{scale_pad}{DIM}{''.join(labels)}{RESET}")
 
     lines.append("")
-    lines.append(f"Scraped: {scraped_at}")
-    lines.append("")
     lines.append(
         f"{'Version':<12} {'Date':<12} {'N':>4}  "
         f"{'Avg':>8}  {'Std':>8}  {'Min':>8}  {'Max':>8}"
@@ -542,64 +541,46 @@ def _build_strip(
     for v, n, avg, std, mn, mx in version_stats:
         d = version_dates.get(v, "-")
         lines.append(
-            f"v{v:<11} {d:<12} {n:>4}  "
-            f"{avg:>8.2f}  {std:>8.2f}  {mn:>8.2f}  {mx:>8.2f}"
+            f"v{v:<11} {d:<12} {n:>4}  {avg:>8.2f}  {std:>8.2f}  {mn:>8.2f}  {mx:>8.2f}"
         )
-    lines.append("\nPeer score: higher is better  ● individual forecast  2-9 overlapping")
+    lines.append(
+        "\nPeer score: higher is better  ● individual forecast  2-9 overlapping"
+    )
 
     return "\n".join(lines)
 
 
-def _load_strip_data(min_n: int) -> tuple[dict[str, list[float]], str] | None:
-    """Load and aggregate peer scores by version. Returns None if no data."""
-    data = load_scores()
-    if not data:
-        return None
-
-    peer_by_post: dict[int, float] = {}
-    for rec in data.get("records", []):
-        pid = rec.get("post_id")
-        score = rec.get("score")
-        if pid is not None and score is not None:
-            peer_by_post[int(pid)] = float(score)
-
-    version_by_post: dict[int, str] = {}
-    for d in load_all_forecast_jsons():
-        pid = d.get("post_id")
-        v = d.get("agent_version")
-        if isinstance(pid, int) and v:
-            version_by_post[pid] = str(v)
-
+def _load_strip_data(min_n: int) -> dict[str, list[float]] | None:
+    """Load and aggregate peer scores by version from forecast JSONs."""
     by_version: dict[str, list[float]] = {}
-    for pid, score in peer_by_post.items():
-        v = version_by_post.get(pid, "")
-        if not v:
-            continue
-        by_version.setdefault(v, []).append(score)
+    for d in load_all_forecast_jsons():
+        peer = d.get("peer_score")
+        version = d.get("agent_version")
+        if isinstance(peer, (int, float)) and isinstance(version, str) and version:
+            by_version.setdefault(version, []).append(float(peer))
 
     by_version = {v: s for v, s in by_version.items() if len(s) >= min_n}
     if not by_version:
         return None
 
-    scraped_at = data.get("scraped_at", "")[:19]
-    return by_version, scraped_at
+    return by_version
 
 
 SCATTER_EPOCH = datetime(2026, 2, 1)
-ScatterPoint = tuple[float, float, str, int]  # (day_offset, peer_score, version, post_id)
+ScatterPoint = tuple[
+    float, float, str, int
+]  # (day_offset, peer_score, version, post_id)
 
 
-def _load_scatter_data() -> tuple[list[ScatterPoint], list[ScatterPoint], dict[str, list[float]], str] | None:
-    """Load scored forecasts for two scatter plots.
+def _load_scatter_data() -> (
+    tuple[list[ScatterPoint], list[ScatterPoint], dict[str, list[float]]] | None
+):
+    """Load scored forecasts for two scatter plots from forecast JSONs.
 
     Returns (baseline_by_forecast_date, peer_by_resolution_date,
-    version_forecast_dates, scraped_at).
+    version_forecast_dates).
     """
     from datetime import timezone
-
-    data = load_scores()
-    if not data:
-        return None
 
     forecast_by_post: dict[int, dict[str, object]] = {}
     for forecast in load_all_forecast_jsons():
@@ -610,8 +591,13 @@ def _load_scatter_data() -> tuple[list[ScatterPoint], list[ScatterPoint], dict[s
                 forecast_by_post[pid] = forecast
 
     version_forecast_dates: dict[str, list[float]] = {}
-    for forecast in forecast_by_post.values():
+    baseline_points: list[ScatterPoint] = []
+    peer_points: list[ScatterPoint] = []
+
+    for pid, forecast in forecast_by_post.items():
         version = forecast.get("agent_version") or "0.0.0"
+        peer_score = forecast.get("peer_score")
+
         ts_str = forecast.get("timestamp")
         if isinstance(ts_str, str):
             try:
@@ -621,57 +607,58 @@ def _load_scatter_data() -> tuple[list[ScatterPoint], list[ScatterPoint], dict[s
             day_offset = (dt - SCATTER_EPOCH).total_seconds() / 86400
             version_forecast_dates.setdefault(str(version), []).append(day_offset)
 
-    baseline_points: list[ScatterPoint] = []
-    peer_points: list[ScatterPoint] = []
+            baseline = forecast.get("baseline_score")
+            if isinstance(baseline, (int, float)) and peer_score is not None:
+                baseline_points.append((day_offset, float(baseline), str(version), pid))
 
-    for rec in data.get("records", []):
-        pid = rec.get("post_id")
-        peer_score = rec.get("score")
-        if pid is None or peer_score is None:
-            continue
-        pid = int(pid)
-
-        forecast = forecast_by_post.get(pid, {})
-        version = forecast.get("agent_version") or "0.0.0"
-
-        ts_str = forecast.get("timestamp")
-        if isinstance(ts_str, str):
-            try:
-                dt = parse_timestamp(ts_str)
-            except ValueError:
-                dt = None
-            if dt is not None:
-                day_offset = (dt - SCATTER_EPOCH).total_seconds() / 86400
-                baseline = forecast.get("baseline_score")
-                if isinstance(baseline, (int, float)):
-                    baseline_points.append(
-                        (day_offset, float(baseline), str(version), pid)
-                    )
-
-        score_ts = rec.get("score_timestamp")
-        if score_ts:
-            dt_res = datetime.fromtimestamp(
-                float(score_ts), tz=timezone.utc
-            ).replace(tzinfo=None)
-            day_offset_res = (dt_res - SCATTER_EPOCH).total_seconds() / 86400
-            peer_points.append(
-                (day_offset_res, float(peer_score), str(version), pid)
-            )
+        if isinstance(peer_score, (int, float)):
+            score_ts = forecast.get("score_timestamp")
+            if isinstance(score_ts, (int, float)):
+                dt_res = datetime.fromtimestamp(score_ts, tz=timezone.utc).replace(
+                    tzinfo=None
+                )
+                day_offset_res = (dt_res - SCATTER_EPOCH).total_seconds() / 86400
+                peer_points.append(
+                    (day_offset_res, float(peer_score), str(version), pid)
+                )
 
     if not baseline_points and not peer_points:
         return None
 
-    scraped_at = data.get("scraped_at", "")[:19]
-    return baseline_points, peer_points, version_forecast_dates, scraped_at
+    return baseline_points, peer_points, version_forecast_dates
 
 
 SATURATED_RING = [
-    196, 202, 208, 214, 220, 226,
-    190, 154, 118, 82, 46,
-    47, 48, 49, 50, 51,
-    45, 39, 33, 27, 21,
-    57, 93, 129, 165, 201,
-    200, 199, 198, 197,
+    196,
+    202,
+    208,
+    214,
+    220,
+    226,
+    190,
+    154,
+    118,
+    82,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    45,
+    39,
+    33,
+    27,
+    21,
+    57,
+    93,
+    129,
+    165,
+    201,
+    200,
+    199,
+    198,
+    197,
 ]
 
 
@@ -684,7 +671,6 @@ def _pick_colors(n: int) -> list[int]:
         return list(ring[:n])
     step = len(ring) / n
     return [ring[int(i * step) % len(ring)] for i in range(n)]
-
 
 
 def _build_scatter(
@@ -725,8 +711,10 @@ def _build_scatter(
         if not vp:
             continue
         plt.scatter(
-            [p[0] for p in vp], [p[1] for p in vp],
-            marker="dot", color=color,
+            [p[0] for p in vp],
+            [p[1] for p in vp],
+            marker="dot",
+            color=color,
         )
 
     plt.ylim(y_lo, y_hi)
@@ -755,7 +743,6 @@ def _build_trend_output(
     baseline_points: list[ScatterPoint],
     peer_points: list[ScatterPoint],
     version_forecast_dates: dict[str, list[float]],
-    scraped_at: str,
     term_width: int,
     term_height: int,
 ) -> str:
@@ -814,7 +801,6 @@ def _build_trend_output(
         remaining = max(0, term_width - visible_total)
         gap = remaining // max(1, n - 1) if n > 1 else 0
         parts.append((" " * gap).join(entry for entry, _ in legend_entries))
-    parts.append(f"Scraped: {scraped_at}")
     return "\n\n".join(parts)
 
 
@@ -859,7 +845,7 @@ def strip(
     from aib.devtools.track_record import (
         DEFAULT_USER_ID,
         fetch_scores,
-        save_scores,
+        resolve_scraped,
     )
     from aib.devtools.version import load_version_dates
 
@@ -870,28 +856,22 @@ def strip(
     def refresh_scrape() -> None:
         try:
             raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            save_scores(raw, DEFAULT_USER_ID)
+            resolve_scraped(raw.get("records", []))
         except Exception:
             pass
 
     def build_output() -> str:
-        result = _load_strip_data(min_n)
-        if not result:
+        by_version = _load_strip_data(min_n)
+        if not by_version:
             return f"No versions with >= {min_n} scored forecasts."
-        by_version, scraped_at = result
-        return _build_strip(
-            by_version, version_dates, scraped_at, console.width
-        )
+        return _build_strip(by_version, version_dates, console.width)
 
     if not watch:
-        result = _load_strip_data(min_n)
-        if not result:
+        by_version = _load_strip_data(min_n)
+        if not by_version:
             typer.echo("No track record data.")
             raise typer.Exit(1)
-        by_version, scraped_at = result
-        output = _build_strip(
-            by_version, version_dates, scraped_at, console.width
-        )
+        output = _build_strip(by_version, version_dates, console.width)
         print()
         print(output)
         return
@@ -946,7 +926,7 @@ def trend(
     from aib.devtools.track_record import (
         DEFAULT_USER_ID,
         fetch_scores,
-        save_scores,
+        resolve_scraped,
     )
 
     console = Console()
@@ -955,7 +935,7 @@ def trend(
     def refresh_scrape() -> None:
         try:
             raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            save_scores(raw, DEFAULT_USER_ID)
+            resolve_scraped(raw.get("records", []))
         except Exception:
             pass
 
@@ -963,9 +943,9 @@ def trend(
         result = _load_scatter_data()
         if not result:
             return "No scored forecasts found."
-        baseline_pts, peer_pts, ver_dates, scraped_at = result
+        baseline_pts, peer_pts, ver_dates = result
         return _build_trend_output(
-            baseline_pts, peer_pts, ver_dates, scraped_at, console.width, console.height
+            baseline_pts, peer_pts, ver_dates, console.width, console.height
         )
 
     if not watch:
@@ -973,9 +953,9 @@ def trend(
         if not result:
             typer.echo("No scored forecasts found.")
             raise typer.Exit(1)
-        baseline_pts, peer_pts, ver_dates, scraped_at = result
+        baseline_pts, peer_pts, ver_dates = result
         output = _build_trend_output(
-            baseline_pts, peer_pts, ver_dates, scraped_at, console.width, console.height
+            baseline_pts, peer_pts, ver_dates, console.width, console.height
         )
         print()
         print(output)
