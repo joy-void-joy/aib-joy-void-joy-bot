@@ -1,0 +1,569 @@
+---
+timestamp: 2026-03-02 03:01:28 UTC
+question_type: multiple_choice
+factors:
+- description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in search
+    interest for an assassinated person''s name from day 2 to day 14 after peak. Both
+    cases: value went from 23-41 to 1-2 in 12 days.'
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+- description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+    decline. The starting value of 33 on Mar 2 is already well into the decay phase.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Ongoing US-Israel military operations in Iran (projected to last weeks)
+    could sustain some search interest in 'khamenei' above historical analogues. Unlike
+    Soleimani/bin Laden, this is a full-scale war.
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Search term 'khamenei' is specifically about one dead person. Ongoing
+    war coverage shifts to broader terms ('Iran war', 'Iran strikes', etc.). The person's
+    name decays even when the broader event continues.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Possible Khamenei-specific catalysts before Mar 14: successor announcement,
+    funeral events, 40-day mourning period. These could create secondary spikes in
+    ''khamenei'' searches, potentially on or near Mar 14.'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.35
+  effective_logit: 0.175
+- description: Resolution uses ±3 threshold. At value 33, 'Doesn't change' requires
+    end value in [30, 36]. Given typical decay patterns, sustaining near 33 for 12
+    more days is very unlikely without a new catalyst.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+tentative_estimate:
+  logit: 1.8
+  probability: 0.858
+assessment: 'The question asks whether Google Trends interest in "khamenei" will change
+  between Mar 2 (value: 33) and Mar 14. Khamenei was assassinated on Feb 28, 2026
+  in joint US-Israeli strikes, causing a massive spike to 100. By Mar 2, interest
+  had already decayed to 33.
+
+
+  Historical analogues strongly favor DECREASE:
+
+  - Soleimani: Day 2 value 41 → Day 14 value 2 (95% decay)
+
+  - Bin Laden: Day 2 value 23 → Day 14 value 1 (96% decay)
+
+
+  Even accounting for the unique ongoing-war context (which may slow the decay somewhat),
+  reaching <30 by Mar 14 is overwhelmingly likely. The search term is the dead person''s
+  name specifically, and media coverage shifts to broader conflict terms.
+
+
+  The main risk to the "Decreases" forecast is a major Khamenei-specific event (successor
+  announcement, major revelation) occurring exactly on or right before Mar 14, which
+  could create a secondary spike. But the timing alignment is low probability.
+
+
+  P(Decreases) ≈ 72%, P(Doesn''t change) ≈ 16%, P(Increases) ≈ 12%'
+calibration_notes: 'Base rate from change_stats for khamenei in this range: 83.3%
+  no_change, 5.6% increase, 11.1% decrease. BUT this base rate is misleading because
+  it''s dominated by the pre-spike period (Feb 12-27) when values were all 0. The
+  trailing_change_stats (last 6 days) show: 50% no_change, 16.7% increase, 33.3% decrease,
+  which is more relevant but still small sample. Historical analogues of assassinated
+  leaders'' name decay are the strongest calibration anchor.'
+key_uncertainties: '1. Whether the ongoing war creates enough sustained ''khamenei''-specific
+  coverage to significantly slow name decay vs historical analogues.
+
+  2. Whether a successor announcement or major Khamenei-related event happens near
+  Mar 14.
+
+  3. SerpAPI vs pytrends measurement differences (typically ±2 points).'
+tool_audit: '- Google Trends (pytrends via mcp__trends): Returned full data for khamenei
+  (Feb 12-Mar 14 range), Soleimani, and bin Laden. Very useful for establishing current
+  values and historical analogues.
+
+  - Web search: Confirmed the massive geopolitical context - US/Israel strikes killing
+  Khamenei, ongoing military operations, regional escalation. Multiple sources.
+
+  - Metaculus question details: Retrieved full resolution criteria confirming ±3 threshold
+  and SerpAPI resolution method.
+
+  - No tool failures.'
+update_triggers: '- Successor to Khamenei officially announced (would spike ''khamenei''
+  searches)
+
+  - Major new development specifically about Khamenei (discovery of documents, etc.)
+
+  - Cessation of hostilities (would reduce all Iran-related search interest faster)'
+process_reflection: 'The Google Trends tool was excellent for this question type -
+  provided exactly the data needed with change_stats and tail_stats. Historical analogue
+  searches worked well. The web search tools quickly confirmed the massive geopolitical
+  context. The workflow felt natural: get current data → find analogues → compare
+  → assess. The main limitation was not being able to simulate the exact SerpAPI resolution
+  method, which introduces some measurement uncertainty.'
+computed:
+  factor_count: 6
+  factor_sum: 5.7
+  tentative_logit: 1.8
+  logit_gap: -3.9000000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in search
+      interest for an assassinated person''s name from day 2 to day 14 after peak.
+      Both cases: value went from 23-41 to 1-2 in 12 days.'
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  - description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+      decline. The starting value of 33 on Mar 2 is already well into the decay phase.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Ongoing US-Israel military operations in Iran (projected to last
+      weeks) could sustain some search interest in 'khamenei' above historical analogues.
+      Unlike Soleimani/bin Laden, this is a full-scale war.
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Search term 'khamenei' is specifically about one dead person. Ongoing
+      war coverage shifts to broader terms ('Iran war', 'Iran strikes', etc.). The
+      person's name decays even when the broader event continues.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Possible Khamenei-specific catalysts before Mar 14: successor announcement,
+      funeral events, 40-day mourning period. These could create secondary spikes
+      in ''khamenei'' searches, potentially on or near Mar 14.'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.35
+    effective_logit: 0.175
+  - description: Resolution uses ±3 threshold. At value 33, 'Doesn't change' requires
+      end value in [30, 36]. Given typical decay patterns, sustaining near 33 for
+      12 more days is very unlikely without a new catalyst.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  dominant_factor: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in
+    search interest for an assassinated person''s name from day 2 to day 14 after
+    peak. Both cases: value went from 23-41 to 1-2 in 12 days.'
+  dominant_effective_logit: 2.125
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 5.125
+    factors:
+    - description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in
+        search interest for an assassinated person''s name from day 2 to day 14 after
+        peak. Both cases: value went from 23-41 to 1-2 in 12 days.'
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.85
+      effective_logit: 2.125
+    - description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+        decline. The starting value of 33 on Mar 2 is already well into the decay
+        phase.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: Search term 'khamenei' is specifically about one dead person. Ongoing
+        war coverage shifts to broader terms ('Iran war', 'Iran strikes', etc.). The
+        person's name decays even when the broader event continues.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: Resolution uses ±3 threshold. At value 33, 'Doesn't change' requires
+        end value in [30, 36]. Given typical decay patterns, sustaining near 33 for
+        12 more days is very unlikely without a new catalyst.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.4
+    factors:
+    - description: Ongoing US-Israel military operations in Iran (projected to last
+        weeks) could sustain some search interest in 'khamenei' above historical analogues.
+        Unlike Soleimani/bin Laden, this is a full-scale war.
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.175
+    factors:
+    - description: 'Possible Khamenei-specific catalysts before Mar 14: successor
+        announcement, funeral events, 40-day mourning period. These could create secondary
+        spikes in ''khamenei'' searches, potentially on or near Mar 14.'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.35
+      effective_logit: 0.175
+  sources:
+  - '[(Google Trends) khamenei](https://trends.google.com/trends/explore?q=khamenei)'
+  - '[(Metaculus) Will the interest in “khamenei” change between 2026-03-02 and 2026-03-14
+    according to Google Trends?](https://www.metaculus.com/questions/42375)'
+  - '[2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia.org/wiki/2026_Israeli%E2%80%93United_States_strikes_on_Iran)'
+  - '[2026 Iranian Supreme Leader election - Wikipedia](https://en.wikipedia.org/wiki/Next_Supreme_Leader_of_Iran_election)'
+  - '[(Google Trends) soleimani](https://trends.google.com/trends/explore?q=soleimani)'
+  - '[(Google Trends) bin laden](https://trends.google.com/trends/explore?q=bin laden)'
+  reviewer_critique: '## Verdict: FAIL
+
+
+    ### Critical Error: Probability Inconsistency
+
+
+    The forecast contains a **fundamental contradiction** in probability presentation:
+
+    - **Assessment text** states: "P(Decreases) ≈ 72%, P(Doesn''t change) ≈ 16%, P(Increases)
+    ≈ 12%"
+
+    - **Tentative estimate field** shows: "85.8%"
+
+
+    These cannot both be correct for a multiple-choice question where we need P(Decreases).
+    The agent never clarified which probability is authoritative, creating ambiguity
+    that would make the forecast wrong.
+
+
+    ### Evidence Verification
+
+
+    All factual claims in factors are **well-grounded** in the trace:
+
+
+    ✓ **Factor 1**: Soleimani (41→2) and bin Laden (23→1) decay rates verified from
+    Google Trends tool results (trace lines 319-363)
+
+
+    ✓ **Factor 2**: Khamenei decay trajectory (100→91→33) confirmed in trace line
+    44-50
+
+
+    ✓ **Factor 3**: "Weeks-long operations" supported by Wikipedia extract showing
+    Trump projected "one month or less" (trace line 192)
+
+
+    ✓ **Factor 4**: Search term shift reasoning is sound and stated in trace analysis
+    (line 424)
+
+
+    ✓ **Factor 5**: Succession/mourning catalysts supported by web search results
+    (trace lines 81-82, 237-246)
+
+
+    ✓ **Factor 6**: Threshold calculation is mathematically correct
+
+
+    ### Probability Assessment Error
+
+
+    Beyond the internal inconsistency, the 72% probability for Decreases appears **too
+    conservative** given the evidence:
+
+
+    **What the evidence shows:**
+
+    - Both historical analogues: 95-96% decay from Day 2 to Day 14
+
+    - Soleimani Day 2→14: 41→2 (decline of 39 points)
+
+    - Bin Laden Day 2→14: 23→1 (decline of 22 points)
+
+    - Current value at Day 2: 33
+
+    - "Doesn''t change" requires staying in narrow [30,36] band
+
+
+    **Why 72% is too low:**
+
+    Even accounting generously for the ongoing-war context (which could sustain interest
+    above historical baselines), the probability that the value drops below 30 by
+    Mar 14 should be **80-85%**, not 72%. The agent''s own analysis (trace lines 426-427)
+    states "Even with 50% less decay (ongoing war), 33→~8-15" and "All scenarios point
+    to value well below 30."
+
+
+    The 85.8% figure (if it represents Decreases) would actually be more aligned with
+    the evidence, but this creates the contradiction.
+
+
+    ### Conclusion
+
+
+    This forecast fails due to the probability inconsistency making it impossible
+    to determine the agent''s actual prediction. Additionally, whichever probability
+    the agent intended (72% or 85.8%), there''s evidence the forecast may be miscalibrated—though
+    the 85.8% figure would be closer to correct.'
+---
+timestamp: 2026-03-02 03:02:53 UTC
+question_type: multiple_choice
+factors:
+- description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in search
+    interest for an assassinated person''s name from day 2 to day 14 after peak. Soleimani:
+    41→2, bin Laden: 23→1. Both resolved as massive decreases.'
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+- description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+    decline. Starting at 33, even 50% less decay than analogues gives 8-15 by Mar
+    14, well below the 30 threshold for Decreases.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Ongoing US-Israel military operations could sustain some search interest
+    in 'khamenei' above historical analogues, but the search term is a dead person's
+    name and coverage shifts to broader terms ('Iran war', etc.).
+  supports: Decreases
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Possible Khamenei-specific catalysts (successor announcement, funeral
+    events) could create secondary spikes. Soleimani analogue shows Iran retaliation
+    spike on Day 5 (32→39) but still crashed to 2 by Day 14.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: 'Resolution threshold: ''Doesn''t change'' requires [30,36] on Mar
+    14. This is a very narrow band that requires sustained ~33 level interest for
+    12 more days — nearly impossible given decay dynamics without a new major catalyst.'
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+tentative_estimate:
+  logit: 2.0
+  probability: 0.82
+assessment: 'This is a multiple choice question with options: Increases, Doesn''t
+  change, Decreases.
+
+
+  My probability distribution:
+
+  - P(Decreases) = 82% — Overwhelming historical evidence from Soleimani and bin Laden
+  analogues shows 95%+ decay in a person''s name search interest from Day 2 to Day
+  14 post-assassination. Even with the ongoing war providing some sustained interest,
+  33→below 30 by Mar 14 is highly probable. My own analysis shows even 50% less decay
+  gives values of 8-15.
+
+  - P(Doesn''t change) = 10% — Requires value to stay in narrow [30,36] band for 12
+  more days. This would require sustained high interest in the specific name ''khamenei''
+  at near-peak levels. Only plausible if a major Khamenei-specific event happens right
+  around Mar 14 AND brings value to exactly the right range.
+
+  - P(Increases) = 8% — Requires value > 36 on Mar 14. Would need a stronger-than-peak-level
+  catalyst on the specific name. Possible (successor announcement, major revelation)
+  but timing and magnitude both need to align.
+
+
+  The tentative_estimate uses Decreases as the primary outcome with logit 2.0 (≈88%),
+  but I''ve adjusted down to 82% to account for the ongoing-war context that distinguishes
+  this from pure assassination-decay analogues. The factors sum supports a probability
+  well above 75% for Decreases.'
+calibration_notes: The empirical base rates from change_stats (83% no_change) are
+  misleading because they're dominated by the flat pre-spike period. The relevant
+  comparison is post-spike decay patterns from historical analogues of assassinated
+  leaders, which show near-certain decreases over 12 days. I'm at 82% for Decreases
+  rather than 90%+ because the ongoing war is a genuine differentiator that could
+  sustain name-specific interest somewhat above historical norms.
+key_uncertainties: 1. Whether the ongoing war keeps 'khamenei' specifically elevated
+  (vs broader Iran terms). 2. Whether successor announcement timing falls near Mar
+  14. 3. SerpAPI measurement differences (±2 points).
+tool_audit: '- Google Trends (pytrends): Excellent data for current values and historical
+  analogues. Provided change_stats and tail_stats.
+
+  - Web search: Confirmed massive geopolitical context with multiple corroborating
+  sources.
+
+  - Metaculus question API: Full resolution criteria retrieved.
+
+  - No tool failures.'
+update_triggers: Successor announcement, ceasefire, or major Khamenei-specific development
+  near Mar 14.
+process_reflection: The workflow was effective. The main issue was formatting the
+  tentative_estimate for a multiple choice question using the binary format. The reflection
+  tool's reviewer feedback was valuable for catching this inconsistency. For MC questions,
+  the tentative_estimate should represent the primary outcome probability.
+computed:
+  factor_count: 5
+  factor_sum: 4.325
+  tentative_logit: 2.0
+  logit_gap: -2.325
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in search
+      interest for an assassinated person''s name from day 2 to day 14 after peak.
+      Soleimani: 41→2, bin Laden: 23→1. Both resolved as massive decreases.'
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  - description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+      decline. Starting at 33, even 50% less decay than analogues gives 8-15 by Mar
+      14, well below the 30 threshold for Decreases.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Ongoing US-Israel military operations could sustain some search interest
+      in 'khamenei' above historical analogues, but the search term is a dead person's
+      name and coverage shifts to broader terms ('Iran war', etc.).
+    supports: Decreases
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Possible Khamenei-specific catalysts (successor announcement, funeral
+      events) could create secondary spikes. Soleimani analogue shows Iran retaliation
+      spike on Day 5 (32→39) but still crashed to 2 by Day 14.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: 'Resolution threshold: ''Doesn''t change'' requires [30,36] on Mar
+      14. This is a very narrow band that requires sustained ~33 level interest for
+      12 more days — nearly impossible given decay dynamics without a new major catalyst.'
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  dominant_factor: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in
+    search interest for an assassinated person''s name from day 2 to day 14 after
+    peak. Soleimani: 41→2, bin Laden: 23→1. Both resolved as massive decreases.'
+  dominant_effective_logit: 2.125
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 4.175
+    factors:
+    - description: 'Historical analogues (Soleimani, bin Laden) show 95%+ decay in
+        search interest for an assassinated person''s name from day 2 to day 14 after
+        peak. Soleimani: 41→2, bin Laden: 23→1. Both resolved as massive decreases.'
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.85
+      effective_logit: 2.125
+    - description: 'Current decay trajectory: 100→91→33 in 2 days already shows rapid
+        decline. Starting at 33, even 50% less decay than analogues gives 8-15 by
+        Mar 14, well below the 30 threshold for Decreases.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: Ongoing US-Israel military operations could sustain some search
+        interest in 'khamenei' above historical analogues, but the search term is
+        a dead person's name and coverage shifts to broader terms ('Iran war', etc.).
+      supports: Decreases
+      logit: -0.3
+      confidence: 0.5
+      effective_logit: -0.15
+    - description: 'Resolution threshold: ''Doesn''t change'' requires [30,36] on
+        Mar 14. This is a very narrow band that requires sustained ~33 level interest
+        for 12 more days — nearly impossible given decay dynamics without a new major
+        catalyst.'
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: Possible Khamenei-specific catalysts (successor announcement, funeral
+        events) could create secondary spikes. Soleimani analogue shows Iran retaliation
+        spike on Day 5 (32→39) but still crashed to 2 by Day 14.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  sources:
+  - '[(Google Trends) khamenei](https://trends.google.com/trends/explore?q=khamenei)'
+  - '[(Metaculus) Will the interest in “khamenei” change between 2026-03-02 and 2026-03-14
+    according to Google Trends?](https://www.metaculus.com/questions/42375)'
+  - '[2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia.org/wiki/2026_Israeli%E2%80%93United_States_strikes_on_Iran)'
+  - '[2026 Iranian Supreme Leader election - Wikipedia](https://en.wikipedia.org/wiki/Next_Supreme_Leader_of_Iran_election)'
+  - '[(Google Trends) soleimani](https://trends.google.com/trends/explore?q=soleimani)'
+  - '[(Google Trends) bin laden](https://trends.google.com/trends/explore?q=bin laden)'
+  reviewer_critique: "## Verification Summary\n\nI verified all factual claims in\
+    \ the factors against the research trace. The core evidence is well-grounded:\n\
+    \n### Verified Claims\n1. **Factor 1**: Soleimani 41→2 (day 2 to day 14) ✓ Verified\
+    \ in trace lines 323-324\n2. **Factor 1**: Bin Laden decay ✓ Mostly verified,\
+    \ though trace shows 23→2 (not 23→1 as stated)\n3. **Factor 2**: Current trajectory\
+    \ 100→91→33 ✓ Verified in trace lines 45-50\n4. **Factor 4**: Soleimani day 5\
+    \ spike (32→39) ✓ Verified in trace lines 323-324\n5. **Factor 5**: Resolution\
+    \ threshold [30,36] ✓ Correct calculation\n\n### Minor Inaccuracy (non-critical)\n\
+    Factor 1 states \"bin Laden: 23→1\" but the trace (line 353) shows bin Laden at\
+    \ value 2 on day 14 (May 14, 2011), not 1. This doesn't affect the 95%+ decay\
+    \ claim since (23-2)/23 = 91%, which combined with Soleimani's 95% supports the\
+    \ \"95%+ decay\" characterization.\n\n### No Structural Errors Found\n- No hallucinated\
+    \ evidence (all claims traced to tool results)\n- No double-counting (factors\
+    \ use distinct evidence)\n- No wrong-direction factors (all [Decreases] factors\
+    \ support decrease)\n- No contradictory assessment\n- Resolution criteria present\
+    \ and correctly applied\n\n### Probability Assessment Concern (warn-level)\nThe\
+    \ agent's 82% probability for \"Decreases\" appears **conservative** given the\
+    \ strength of the evidence:\n\n- Both historical analogues showed >90% decay from\
+    \ day 2 to day 14\n- Soleimani: 41→2 (95% decline) despite having an Iran retaliation\
+    \ spike\n- Bin Laden: 23→2 (91% decline)  \n- Agent's own analysis: \"Even with\
+    \ 50% less decay (ongoing war), 33→8-15\"\n- A value of 8-15 is **well below**\
+    \ the 30 threshold for \"Decreases\"\n\nThe agent assigned only 82% to Decreases\
+    \ when the historical evidence and the agent's own mathematical projections point\
+    \ to a higher probability (85-90%+). The 10% assigned to \"Doesn't change\" and\
+    \ 8% to \"Increases\" seem generous given that staying in the narrow [30,36] band\
+    \ would require sustained interest at near-current levels for 12 days - something\
+    \ neither analogue achieved.\n\n**Verdict: warn** - The evidence is solid and\
+    \ well-researched, but the probability calibration doesn't fully reflect the strength\
+    \ of the historical pattern the agent documented. The forecast is reasonable but\
+    \ appears to under-weight the compelling analogue evidence."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42375
+- **Question ID**: 42165
+- **Session Duration**: 490.3s (8.2 min)
+- **Cost**: $2.8080
+- **Tokens**: 9,760 total (27 in, 9,733 out)
+  - Cache: 481,766 read, 72,264 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42375_20260302_025452/20260302-025452.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 1 (7.7%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 82ms |
+| get_metaculus_questions | 1 | 0 | 252ms |
+| google_trends | 3 | 0 | 2019ms |
+| reflection | 2 | 1 ⚠️ | 59220ms |
+| web_search | 3 | 0 | 59910ms |
+| wikipedia | 2 | 0 | 185ms |
+
+### Sources Consulted
+
+- [(Google Trends) khamenei](https://trends.google.com/trends/explore?q=khamenei)
+- [(Metaculus) Will the interest in “khamenei” change between 2026-03-02 and 20...
+- [2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia...
+- [2026 Iranian Supreme Leader election - Wikipedia](https://en.wikipedia.org/w...
+- [(Google Trends) soleimani](https://trends.google.com/trends/explore?q=soleim...
+- [(Google Trends) bin laden](https://trends.google.com/trends/explore?q=bin la...
