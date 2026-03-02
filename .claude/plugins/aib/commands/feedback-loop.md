@@ -74,10 +74,8 @@ When the Metaculus API is rate-limited (429), skip all API-calling scripts. In o
 
 1. **Skip** `aib-devtools feedback collect` and `aib-devtools resolution check` (both hit the authenticated DRF API)
 2. **Ask the user** if they want to run `aib-devtools fetch-resolutions fetch` — it uses the unauthenticated `/api2/` endpoint with separate rate limits and may still work
-3. **Use cached data**: `feedback_state.json` (CP cache), `data/api_cache/` (resolution cache), `notes/scores.csv`
+3. **Use cached data**: `feedback_state.json` (CP cache), `data/api_cache/` (resolution cache)
 4. **All analysis scripts work offline**: `aib-devtools calibration`, `aib-devtools scores`, `aib-devtools trace`, trace-explorer
-
-If the user ran fetch-resolutions and got fresh data, run `uv run aib-devtools scores build` to rebuild scores before proceeding to analysis.
 
 ## Phase 0: Read Previous Analysis
 
@@ -186,8 +184,7 @@ The agent forecasts as if it were making the prediction at the original question
 The Metaculus DRF HTML endpoint (`Accept: text/html`) returns 406 since ~Feb 12, 2026. This means `fetch_post_json()` can no longer enrich resolution data — the `resolution` field is null for all questions. Until this is fixed upstream:
 - Retrodict will save forecasts with `resolution: null` and `comparison: null`
 - Use `uv run aib-devtools resolution set <post_id> <value>` to manually apply known resolutions
-- For re-retrodictions of questions with existing v0.3.1 data, the resolution is cached in `notes/scores.csv`
-- Run `uv run aib-devtools scores build` after setting resolutions to rebuild calibration data
+- For re-retrodictions of questions with existing data, use `aib-devtools track-record scrape && aib-devtools track-record resolve` to pull resolutions from the Metaculus profile page
 
 **Retrodict vs Live forecasts:**
 - Live forecasts go to `notes/traces/<version>/forecasts/`

@@ -228,6 +228,10 @@ The `forecasting-tools` library has some type annotation limitations:
 - Never manually parse Claude/agent output — use structured outputs via pydantic
 - **Never use `# type: ignore`** — Ask the user how to properly fix type errors
 
+### No Private Functions or Variables
+
+Don't use leading underscores on functions, constants, or variables. Everything should be public. If a utility might be reusable, it will be — and private names discourage reuse. Before writing a new helper, check if one already exists in the codebase that can be made public or is already public.
+
 ### No String Manipulation on Structured Data
 
 If you're reaching for `re`, `.replace()`, `.split()`, string slicing, or any string operation to extract, transform, or filter structured data, something is wrong. Operate on the structure directly.
@@ -385,7 +389,6 @@ aib-devtools
 │   └── cdf            CDF sharpness analysis
 │
 ├── scores             Unified scores table (wraps aib.scoring)
-│   ├── build          Rebuild scores CSV from all forecast JSONs
 │   ├── show           Show scores table (--post-id, --version, --source, --resolved)
 │   ├── summary        Aggregate statistics by type, source, version
 │   ├── compare        Compare two agent versions on overlapping questions
