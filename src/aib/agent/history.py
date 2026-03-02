@@ -136,10 +136,16 @@ class SavedForecast(BaseModel):
     reasoning: str = ""
     sources_consulted: list[str] = Field(default_factory=list)
     agent_version: str | None = None
+    # Numeric CDF and bounds (for baseline scoring)
+    cdf: list[float] | None = None
+    numeric_bounds: dict[str, object] | None = None
     # Retrodict tracking
     retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
     # Retrodict comparison (actual vs predicted)
     comparison: RetrodictComparison | None = None
+    # Metaculus track record scores (scraped from profile page)
+    peer_score: float | None = None
+    baseline_score: float | None = None
 
 
 def save_forecast(
@@ -156,6 +162,8 @@ def save_forecast(
     median: float | None = None,
     confidence_interval: tuple[float, float] | None = None,
     percentiles: dict[int, float] | None = None,
+    cdf: list[float] | None = None,
+    numeric_bounds: dict[str, object] | None = None,
     tool_metrics: dict[str, Any] | None = None,
     token_usage: TokenUsage | None = None,
     log_path: str | None = None,
@@ -196,6 +204,8 @@ def save_forecast(
         median=median,
         confidence_interval=confidence_interval,
         percentiles=percentiles,
+        cdf=cdf,
+        numeric_bounds=numeric_bounds,
         summary=summary,
         factors=[f if isinstance(f, dict) else f.model_dump() for f in factors],
         tool_metrics=tool_metrics,

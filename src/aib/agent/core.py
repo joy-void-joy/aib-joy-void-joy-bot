@@ -1135,6 +1135,8 @@ async def run_forecast(
                 "median": output.median,
                 "confidence_interval": output.confidence_interval,
                 "percentiles": output.percentiles,
+                "cdf": output.cdf,
+                "numeric_bounds": context.get("numeric_bounds"),
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
                 "log_path": str(log_path) if log_path.exists() else None,
