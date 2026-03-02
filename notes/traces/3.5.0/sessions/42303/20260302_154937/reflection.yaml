@@ -1,0 +1,393 @@
+---
+timestamp: 2026-03-02 15:59:49 UTC
+question_type: discrete
+factors:
+- description: PolitPro poll trend shows SDS at 27.9% vs GS at 20.0% (7.9pp gap),
+    with seat projection of SDS 31, GS 22 (diff = +9)
+  supports:
+    center: 9.0
+    low: 7.0
+    high: 11.0
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: 'Multiple polls agree SDS leads: Ninamedia (3.5pp lead), Info360 (11pp
+    lead), Mediana (GS at 19.8%). Consistent SDS advantage across pollsters.'
+  supports:
+    center: 8.0
+    low: 4.0
+    high: 12.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: D'Hondt proportional system with 88 seats across 8 constituencies.
+    Larger parties get slight D'Hondt bonus. At current polling, vote gap of ~8pp
+    translates to ~9 seat difference.
+  supports:
+    center: 9.0
+    low: 7.0
+    high: 11.0
+  logit: 0.8
+  confidence: 0.9
+  effective_logit: 0.7200000000000001
+- description: High undecided voter share (~20%) creates significant uncertainty.
+    Undecided voters could break either way, but incumbents (GS) typically lose undecided
+    voters.
+  supports:
+    center: 10.0
+    low: 3.0
+    high: 17.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: '2022 precedent: GS won 41 seats vs SDS 27 (diff = -14) with 34.45%
+    vs 23.52% vote shares. The roles are now roughly reversed with SDS leading, but
+    the gap is smaller.'
+  supports:
+    center: 9.0
+    low: 5.0
+    high: 13.0
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Favorable momentum for SDS: Janša acquittal, referendum win, governing
+    coalition struggling. These developments are already priced into polls but may
+    drive further shifts.'
+  supports:
+    center: 10.0
+    low: 8.0
+    high: 14.0
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Threshold effects: Resnica at 4.3% is borderline. If Resnica falls
+    below 4%, its votes are wasted and remaining parties (including SDS and GS) gain
+    proportionally, potentially shifting the balance.'
+  supports:
+    center: 9.0
+    low: 7.0
+    high: 11.0
+  logit: 0.2
+  confidence: 0.4
+  effective_logit: 0.08000000000000002
+tentative_estimate:
+  center: 9.0
+  low: 1.0
+  high: 17.0
+assessment: 'The evidence strongly suggests SDS will win more seats than GS in the
+  2026 Slovenian parliamentary election. Multiple polls consistently show SDS leading
+  by 3.5-11 percentage points in vote share. The PolitPro aggregated trend (SDS 27.9%,
+  GS 20.0%) translates to approximately a 9-seat advantage for SDS under D''Hondt
+  allocation.
+
+
+  The Monte Carlo simulation using 100k runs with realistic polling uncertainty (3.5%
+  std for both major parties) produces:
+
+  - Median: +9 seats for SDS
+
+  - P10: +1, P90: +17
+
+  - 91% probability SDS wins more seats
+
+
+  Key uncertainties: (1) large undecided voter pool (~20%) that could break either
+  way, (2) polling error - Slovenian polls missed badly in 2022, particularly for
+  GS, (3) threshold effects for small parties near 4%.
+
+
+  The simulation output directly drives my percentile estimates. I trust the computation
+  and do not dampen toward neutral.'
+calibration_notes: 'Base rate: In Slovenian elections, the leading party in polls
+  3 weeks before the election has won the most seats in most but not all cases. The
+  2022 election saw a significant polling miss for GS. However, that was a unique
+  case of a brand-new party. SDS''s polling advantage is consistent across pollsters,
+  which is a stronger signal than a single outlier poll. The median of +9 from the
+  simulation aligns with PolitPro''s seat projection and is consistent with the vote
+  share gap.'
+key_uncertainties: '1. Undecided voters (~20%): Could significantly shift outcomes
+  if they break strongly for GS. 2. Polling accuracy: Slovenian polls have had large
+  errors historically. 3. Threshold effects: Parties near 4% (Resnica, PVP) crossing
+  or falling below threshold redistributes seats. 4. New party dynamics: Demokrati
+  (Anže Logar) is polling ~10% as a new party, with attendant uncertainty.'
+tool_audit: '- get_metaculus_questions: Useful, provided question details and confirmed
+  47 forecasters on original question.
+
+  - web_search: Useful, found multiple poll sources and analysis articles.
+
+  - fetch_url (politpro.eu): Very useful, provided aggregated poll trend (SDS 27.9%,
+  GS 20.0%) and seat projections (31 vs 22).
+
+  - fetch_url (intellinews): Useful, provided Ninamedia poll data (SDS 22.6%, GS 19.1%).
+
+  - fetch_url (robert-schuman.eu): Useful, provided 2022 results context and analysis.
+
+  - fetch_url (Wikipedia polling page): FAILED - article not found, couldn''t extract
+  tabular poll data.
+
+  - wikipedia (electoral system): Partially useful, confirmed D''Hondt and 88+2 seat
+  structure.
+
+  - get_cp_history: FAILED - 403 Forbidden (AIB tournament restriction).
+
+  - execute_code: Essential - ran Monte Carlo simulation with D''Hondt allocation.'
+update_triggers: 1. New polls in the final 3 weeks before March 22 election. 2. Major
+  campaign events or scandals. 3. Coalition announcements or party alliances. 4. Changes
+  in undecided voter allocation.
+process_reflection: "The forecasting system worked reasonably well for this question.\
+  \ The combination of web search for poll data + code execution for Monte Carlo simulation\
+  \ was the right approach. \n\nKey friction points: (1) Wikipedia article fetching\
+  \ failed for the opinion polling page - the tabular data would have been extremely\
+  \ valuable but couldn't be extracted. (2) CP history was blocked by 403 for this\
+  \ AIB tournament question. (3) PolitPro's extracted data was somewhat limited -\
+  \ the full tables weren't captured.\n\nThe D'Hondt simulation code was straightforward\
+  \ and the results are consistent across approaches. The main gap is not having the\
+  \ full individual poll dataset to properly model poll-to-poll variation and trend."
+computed:
+  factor_count: 7
+  factor_sum: 3.605
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: PolitPro poll trend shows SDS at 27.9% vs GS at 20.0% (7.9pp gap),
+      with seat projection of SDS 31, GS 22 (diff = +9)
+    supports:
+      center: 9.0
+      low: 7.0
+      high: 11.0
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: 'Multiple polls agree SDS leads: Ninamedia (3.5pp lead), Info360
+      (11pp lead), Mediana (GS at 19.8%). Consistent SDS advantage across pollsters.'
+    supports:
+      center: 8.0
+      low: 4.0
+      high: 12.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: D'Hondt proportional system with 88 seats across 8 constituencies.
+      Larger parties get slight D'Hondt bonus. At current polling, vote gap of ~8pp
+      translates to ~9 seat difference.
+    supports:
+      center: 9.0
+      low: 7.0
+      high: 11.0
+    logit: 0.8
+    confidence: 0.9
+    effective_logit: 0.7200000000000001
+  - description: High undecided voter share (~20%) creates significant uncertainty.
+      Undecided voters could break either way, but incumbents (GS) typically lose
+      undecided voters.
+    supports:
+      center: 10.0
+      low: 3.0
+      high: 17.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: '2022 precedent: GS won 41 seats vs SDS 27 (diff = -14) with 34.45%
+      vs 23.52% vote shares. The roles are now roughly reversed with SDS leading,
+      but the gap is smaller.'
+    supports:
+      center: 9.0
+      low: 5.0
+      high: 13.0
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Favorable momentum for SDS: Janša acquittal, referendum win, governing
+      coalition struggling. These developments are already priced into polls but may
+      drive further shifts.'
+    supports:
+      center: 10.0
+      low: 8.0
+      high: 14.0
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Threshold effects: Resnica at 4.3% is borderline. If Resnica falls
+      below 4%, its votes are wasted and remaining parties (including SDS and GS)
+      gain proportionally, potentially shifting the balance.'
+    supports:
+      center: 9.0
+      low: 7.0
+      high: 11.0
+    logit: 0.2
+    confidence: 0.4
+    effective_logit: 0.08000000000000002
+  dominant_factor: PolitPro poll trend shows SDS at 27.9% vs GS at 20.0% (7.9pp gap),
+    with seat projection of SDS 31, GS 22 (diff = +9)
+  dominant_effective_logit: 1.275
+  distribution_metrics:
+    implied_median: 8.930651872399446
+    implied_p10: 6.040221914008321
+    implied_p90: 11.987517337031901
+    median_gap: 0.06934812760055387
+    median_gap_pct: 1.166044776119387
+    spread_ratio: 2.690298507462686
+    precision: 1.7777777777777777
+  sources:
+  - '[(Metaculus) How many more (or fewer) seats will SDS win compared to GS in the
+    2026 Slovenian parliamentary election?](https://www.metaculus.com/questions/42303)'
+  - '[(Metaculus) How many more (or fewer) seats will SDS win compared to GS in the
+    2026 Slovenian parliamentary election?](https://www.metaculus.com/questions/42296)'
+  - '[2026 Slovenian parliamentary election - Wikipedia](https://en.wikipedia.org/wiki/2026_Slovenian_parliamentary_election)'
+  - '[Opinion polling for the 2026 Slovenian parliamentary election - Wikipedia](https://en.wikipedia.org/wiki/Opinion_polling_for_the_2026_Slovenian_parliamentary_election)'
+  - '[Slovenia’s SDS holds narrow lead in latest poll ahead of March general elections](https://www.intellinews.com/slovenia-s-sds-holds-narrow-lead-in-latest-poll-ahead-of-march-general-elections-423321/)'
+  - '[Slovenia Election Polls & Voting Intentions 2026](https://politpro.eu/en/slovenia)'
+  - '[General Elections 2026 Slovenia](https://www.robert-schuman.eu/en/monitor/6746-janez-jansa-s-sds-rises-in-the-polls-is-robert-golob-and-his-svoboda-movement-s-time-counted-in-the-slovenian-general-election-on-22-march)'
+  - '[Slovenian Parliamentary Election Winner Predictions & Odd... | Polymarket](https://polymarket.com/event/slovenian-parliamentary-election-winner-791)'
+  - '[Slovenia Election Poll: Latest Survey by Info360 (February 11, 2026).](https://politpro.eu/en/slovenia/opinion-polls/info360-2025-02-11/parliamentary-election)'
+  - '[Slovenia - Europe Elects](https://europeelects.eu/slovenia/)'
+  - '[2022 Slovenian parliamentary election](https://en.wikipedia.org/wiki/2022_Slovenian_parliamentary_election)'
+  - '[The strange mathematics of the national television when it comes to smaller
+    parties - Demokracija](https://demokracija.eu/focus/the-strange-mathematics-of-the-national-television-when-it-comes-to-smaller-parties/)'
+  - '[Slovenia Election Polls: All Recent Surveys at a Glance.](https://politpro.eu/en/slovenia/opinion-polls)'
+  - '[2018 Slovenian parliamentary election](https://en.wikipedia.org/wiki/2018_Slovenian_parliamentary_election)'
+  - '[(Wikipedia) National Assembly (Slovenia](https://en.wikipedia.org/wiki/National_Assembly_(Slovenia))'
+  - '[(Wikipedia) New Slovenia](https://en.wikipedia.org/wiki/New_Slovenia)'
+  - '[(Wikipedia) 2026 national electoral calendar](https://en.wikipedia.org/wiki/2026_national_electoral_calendar)'
+  - '[(Wikipedia) List of electoral systems by country](https://en.wikipedia.org/wiki/List_of_electoral_systems_by_country)'
+  - '[(Wikipedia) 2027 national electoral calendar](https://en.wikipedia.org/wiki/2027_national_electoral_calendar)'
+  - '[(Wikipedia) National Council (Slovenia](https://en.wikipedia.org/wiki/National_Council_(Slovenia))'
+  - '[(Wikipedia) Freedom Movement (Slovenia](https://en.wikipedia.org/wiki/Freedom_Movement_(Slovenia))'
+  - '[(Wikipedia) Social Democrats (Slovenia](https://en.wikipedia.org/wiki/Social_Democrats_(Slovenia))'
+  - '[Slovenian Election Results | Detailed Data & Seat Allocation](https://politpro.eu/en/slovenia/election/2022-04-24/parliamentary-election)'
+  - '[Elections in Slovenia - Wikipedia](https://en.wikipedia.org/wiki/Elections_in_Slovenia)'
+  reviewer_critique: 'After thorough review of the agent''s research trace and factors,
+    I approve this forecast. Here''s what I verified:
+
+
+    **Evidence verification (all factors grounded):**
+
+    - Factor 1: PolitPro poll trend (SDS 27.9%, GS 20.0%, seat projection 31-22) —
+    VERIFIED at lines 249-256, 884, 923-924 of trace
+
+    - Factor 2: Multiple polls showing SDS lead — VERIFIED: Ninamedia 3.5pp (lines
+    221-227), Info360 11pp (lines 344-357), Mediana GS 19.8% (lines 473-480)
+
+    - Factor 3: D''Hondt system with 88 seats across 8 constituencies — VERIFIED at
+    lines 693, 820-821, 827-831
+
+    - Factor 4: High undecided share (~20%) — VERIFIED: 19.7% cited at line 225
+
+    - Factor 5: 2022 results (GS 41 seats, SDS 27, vote shares 34.45% vs 23.52%) —
+    VERIFIED at lines 271, 448-454
+
+    - Factor 6: Favorable momentum (Janša acquittal, referendum) — These events are
+    cited in the Metaculus question background (lines 83-84, 101-102), appropriately
+    incorporated
+
+    - Factor 7: Resnica at 4.3% near threshold — VERIFIED in PolitPro data at lines
+    884, 900, 916, 934
+
+
+    **Simulation verification:**
+
+    The Monte Carlo simulation (100k runs) at lines 934-947 produced:
+
+    - Median: +9 seats for SDS
+
+    - P10: +1, P90: +17
+
+    - P(SDS wins more): 91.1%
+
+
+    The agent''s stated estimate (Center: 9.0, Range: 1.0–17.0) perfectly matches
+    these results. The simulation parameters are reasonable: 3.5% std for both major
+    parties accounts for poll-to-poll variation (SDS ranges 22.6-27.9%, GS ranges
+    15.5-20.0%), ~20% undecided voters, and historical polling error. The agent appropriately
+    used negative correlations between competing parties.
+
+
+    **Probability assessment:**
+
+    The forecast median of +9 aligns with the PolitPro seat projection. The 91% probability
+    that SDS wins more seats is justified by consistent polling leads across multiple
+    pollsters and the mechanics of D''Hondt allocation. Even the narrowest poll (Ninamedia:
+    3.5pp) would likely produce an SDS seat advantage.
+
+
+    **Minor issue (not material):**
+
+    Factors 1 and 2 have slight overlap — PolitPro is an aggregator that includes
+    some of the polls mentioned in Factor 2. However, Factor 1 emphasizes the specific
+    seat projection while Factor 2 focuses on polling consensus, so this is not egregious
+    double-counting and doesn''t materially affect the forecast direction.
+
+
+    **Systematic considerations:**
+
+    The agent appropriately considered 2022 polling errors (lines 955-963) and reasoned
+    that the "new party" effect that benefited GS in 2022 is unlikely to repeat now
+    that GS is the struggling incumbent. The decision not to apply systematic bias
+    adjustments is defensible given this reasoning.
+
+
+    **No errors found in:**
+
+    - Resolution criteria alignment (straightforward seat difference calculation)
+
+    - Factor directions (all positive logits consistent with SDS advantage)
+
+    - Missing or fabricated evidence
+
+    - Contradictory assessments
+
+
+    The forecast is methodologically sound and well-grounded in the research trace.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42303
+- **Question ID**: 42095
+- **Session Duration**: 628.8s (10.5 min)
+- **Cost**: $4.5217
+- **Tokens**: 12,603 total (41 in, 12,562 out)
+  - Cache: 1,519,284 read, 69,335 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42303_20260302_154937/20260302-154937.log`
+
+### Tool Calls
+
+- **Total**: 50 calls
+- **Errors**: 5 (10.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 1642ms |
+| fetch_url | 12 | 0 | 6602ms |
+| get_cp_history | 2 | 2 ⚠️ | 1619ms |
+| get_metaculus_questions | 1 | 0 | 9454ms |
+| polymarket_price | 1 | 0 | 200ms |
+| reflection | 1 | 0 | 181223ms |
+| web_search | 6 | 0 | 17235ms |
+| wikipedia | 22 | 3 ⚠️ | 541ms |
+
+### Sources Consulted
+
+- [(Metaculus) How many more (or fewer) seats will SDS win compared to GS in th...
+- [(Metaculus) How many more (or fewer) seats will SDS win compared to GS in th...
+- [2026 Slovenian parliamentary election - Wikipedia](https://en.wikipedia.org/...
+- [Opinion polling for the 2026 Slovenian parliamentary election - Wikipedia](h...
+- [Slovenia’s SDS holds narrow lead in latest poll ahead of March general elect...
+- [Slovenia Election Polls & Voting Intentions 2026](https://politpro.eu/en/slo...
+- [General Elections 2026 Slovenia](https://www.robert-schuman.eu/en/monitor/67...
+- [Slovenian Parliamentary Election Winner Predictions & Odd... | Polymarket](h...
+- [Slovenia Election Poll: Latest Survey by Info360 (February 11, 2026).](https...
+- [Slovenia - Europe Elects](https://europeelects.eu/slovenia/)
+- [2022 Slovenian parliamentary election](https://en.wikipedia.org/wiki/2022_Sl...
+- [The strange mathematics of the national television when it comes to smaller ...
+- [Slovenia Election Polls: All Recent Surveys at a Glance.](https://politpro.e...
+- [2018 Slovenian parliamentary election](https://en.wikipedia.org/wiki/2018_Sl...
+- [(Wikipedia) National Assembly (Slovenia](https://en.wikipedia.org/wiki/Natio...
+- [(Wikipedia) New Slovenia](https://en.wikipedia.org/wiki/New_Slovenia)
+- [(Wikipedia) 2026 national electoral calendar](https://en.wikipedia.org/wiki/...
+- [(Wikipedia) List of electoral systems by country](https://en.wikipedia.org/w...
+- [(Wikipedia) 2027 national electoral calendar](https://en.wikipedia.org/wiki/...
+- [(Wikipedia) National Council (Slovenia](https://en.wikipedia.org/wiki/Nation...
+- ... and 4 more
