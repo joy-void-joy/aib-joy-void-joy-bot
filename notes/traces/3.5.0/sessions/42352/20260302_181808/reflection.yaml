@@ -1,0 +1,270 @@
+---
+timestamp: 2026-03-02 18:27:13 UTC
+question_type: numeric
+factors:
+- description: US-Iran military conflict with Strait of Hormuz disruption began Feb
+    28 - creates massive uncertainty and elevated oil prices. By the resolution period
+    (Mar 16-27), the crisis will be 2+ weeks old, meaning initial shock will be partially
+    absorbed into P0.
+  supports:
+    center: 0.0
+    low: -5.0
+    high: 5.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: 'Oil shock mean reversion: After 5%+ CL daily spikes, median 10-day
+    forward return is -2.6% with only 35.7% positive (14 historical events). Analysts
+    expect WTI to drop from $70-75 back to $62-66 fundamentals.'
+  supports:
+    center: -3.0
+    low: -8.0
+    high: 2.0
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: 'Equities under geopolitical pressure: ES is already down ~2% from
+    highs and faces ongoing uncertainty. Recovery likely if crisis de-escalates, but
+    further downside if escalation continues. Net mild negative drift expected.'
+  supports:
+    center: 1.0
+    low: -3.0
+    high: 5.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Escalation tail risk: If Hormuz stays closed and conflict widens,
+    oil could surge much further while equities crash. 20% scenario weight for this
+    outcome producing +8 pp or more differential.'
+  supports:
+    center: 8.0
+    low: 3.0
+    high: 20.0
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'De-escalation/resolution probability: 40% combined chance of partial
+    to full de-escalation in the 2-4 week timeframe, which would push CL down sharply
+    and ES up, creating negative differential.'
+  supports:
+    center: -7.0
+    low: -15.0
+    high: -2.0
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: 'Futures curve in backwardation: CL futures curve shows backwardation
+    (near-month > later months), suggesting market expects prices to ease over time.
+    Front month at $70.35 vs Jun at $69.23.'
+  supports:
+    center: -1.0
+    low: -3.0
+    high: 0.0
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  center: -2.0
+  low: -15.0
+  high: 13.0
+assessment: 'This question asks about the CL-ES return differential for a 10 trading
+  day period (Mar 16-27) beginning ~11 trading days from now. The US-Iran military
+  conflict that started Feb 28 dominates the outlook.
+
+
+  Key dynamics:
+
+  1. By Mar 13 (P0), the crisis will be ~2 weeks old. The initial oil price shock
+  ($67→$70+ WTI, Brent briefly to $82) will be partially priced in.
+
+  2. The resolution period measures MARGINAL change from Mar 13-27, not from today.
+  This means the question is about whether the crisis intensifies, stabilizes, or
+  resolves during that specific window.
+
+  3. Analysts broadly expect WTI to retreat from spike levels back toward $62-66 fundamentals
+  if no further escalation. Shock recovery base rates support mean reversion.
+
+  4. Equities (ES) face headwinds from geopolitical uncertainty but could recover
+  if crisis eases.
+
+
+  The distribution is centered slightly negative (~-2 pp) reflecting the higher probability
+  of partial de-escalation/normalization vs further escalation, and very wide (±13-15
+  pp at 80% CI) reflecting extreme uncertainty about the conflict trajectory. The
+  Monte Carlo simulation with 4 scenarios produces results consistent with this assessment.'
+calibration_notes: The median of -2 pp is modest, reflecting that by the resolution
+  period the initial crisis shock will largely be absorbed. The wide distribution
+  (P10=-15, P90=+13) reflects genuine uncertainty about a military conflict's trajectory.
+  The bounds of -10 to 10 are open, and roughly 35-40% of the probability mass falls
+  outside this range, which seems appropriate for a geopolitical crisis.
+key_uncertainties: '1. Will the Strait of Hormuz remain effectively closed through
+  late March? This is the single biggest driver.
+
+  2. Will the US-Iran conflict escalate or de-escalate? Killing the Supreme Leader
+  makes de-escalation harder.
+
+  3. Can OPEC spare capacity offset lost Iranian output? Saudi Arabia and UAE have
+  capacity but it takes time.
+
+  4. How will equities respond? Could see both flight-to-safety selling AND war-economy
+  optimism.'
+tool_audit: 'Useful: stock_price (current CL/ES prices, shock alert, futures curve),
+  stock_history (daily return data for simulation), web_search (crisis context, analyst
+  views), fetch_url (Kpler analysis, FXEmpire forecasts, Atlantic Council analysis).
+  CP history returned 403 (common for AIB tournament questions). Polymarket search
+  returned irrelevant results - no markets found for Iran/oil crisis. Kalshi had no
+  crude oil price markets. The Monte Carlo simulation in execute_code was the primary
+  analytical tool.'
+update_triggers: '- Ceasefire announcement → shift strongly negative (oil drops, equities
+  rally)
+
+  - Hormuz shipping resumption → shift negative
+
+  - Major new military escalation (nuclear facilities targeted) → shift strongly positive
+
+  - OPEC emergency production increase → shift negative
+
+  - Iranian oil infrastructure destruction → shift positive'
+process_reflection: The forecasting tools worked well for gathering financial data.
+  The Monte Carlo simulation approach was essential here - this is not a question
+  where intuition alone would produce well-calibrated distributions. The scenario-based
+  simulation framework worked well for modeling regime uncertainty. The main gap was
+  prediction markets - Polymarket and Kalshi had no relevant markets for the Iran
+  crisis or oil price brackets, which was surprising. CP history was unavailable as
+  expected for AIB. The web search tools were very helpful for establishing the current
+  geopolitical context and analyst views.
+computed:
+  factor_count: 6
+  factor_sum: 3.2
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: US-Iran military conflict with Strait of Hormuz disruption began
+      Feb 28 - creates massive uncertainty and elevated oil prices. By the resolution
+      period (Mar 16-27), the crisis will be 2+ weeks old, meaning initial shock will
+      be partially absorbed into P0.
+    supports:
+      center: 0.0
+      low: -5.0
+      high: 5.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: 'Oil shock mean reversion: After 5%+ CL daily spikes, median 10-day
+      forward return is -2.6% with only 35.7% positive (14 historical events). Analysts
+      expect WTI to drop from $70-75 back to $62-66 fundamentals.'
+    supports:
+      center: -3.0
+      low: -8.0
+      high: 2.0
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: 'Equities under geopolitical pressure: ES is already down ~2% from
+      highs and faces ongoing uncertainty. Recovery likely if crisis de-escalates,
+      but further downside if escalation continues. Net mild negative drift expected.'
+    supports:
+      center: 1.0
+      low: -3.0
+      high: 5.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Escalation tail risk: If Hormuz stays closed and conflict widens,
+      oil could surge much further while equities crash. 20% scenario weight for this
+      outcome producing +8 pp or more differential.'
+    supports:
+      center: 8.0
+      low: 3.0
+      high: 20.0
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'De-escalation/resolution probability: 40% combined chance of partial
+      to full de-escalation in the 2-4 week timeframe, which would push CL down sharply
+      and ES up, creating negative differential.'
+    supports:
+      center: -7.0
+      low: -15.0
+      high: -2.0
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: 'Futures curve in backwardation: CL futures curve shows backwardation
+      (near-month > later months), suggesting market expects prices to ease over time.
+      Front month at $70.35 vs Jun at $69.23.'
+    supports:
+      center: -1.0
+      low: -3.0
+      high: 0.0
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: US-Iran military conflict with Strait of Hormuz disruption began
+    Feb 28 - creates massive uncertainty and elevated oil prices. By the resolution
+    period (Mar 16-27), the crisis will be 2+ weeks old, meaning initial shock will
+    be partially absorbed into P0.
+  dominant_effective_logit: 1.2000000000000002
+  distribution_metrics:
+    implied_median: -0.8437499999999999
+    implied_p10: -6.1875
+    implied_p90: 4.765625
+    median_gap: -1.15625
+    median_gap_pct: -10.556348074179743
+    spread_ratio: 2.556348074179743
+    precision: 14.0
+  sources:
+  - '[(yfinance) CL=F](https://finance.yahoo.com/quote/CL=F)'
+  - '[(yfinance) ES=F](https://finance.yahoo.com/quote/ES=F)'
+  - '[(Metaculus) How much will Crude Oil Futures total price returns exceed S&P 500
+    Futures''s in these biweekly periods of Q1 2026? (Mar 16 - Mar 27](https://www.metaculus.com/questions/42352)'
+  - '[2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[US-Iran conflict: Strait of Hormuz crisis reshapes global oil markets | Kpler
+    - Mar 01, 2026](https://www.kpler.com/blog/us-iran-conflict-strait-of-hormuz-crisis-reshapes-global-oil-markets)'
+  - '[(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in
+    their November 18th matchup?](https://polymarket.com/event/nba-will-the-heat-beat-the-wizards-by-more-than-7pt5-points-in-their-november-18th-matchup)'
+  - '[Oil Price Forecast: Why WTI and Henry Hub Rallies May Fade After Iran Escalation](https://www.fxempire.com/forecasts/article/oil-price-forecast-why-wti-and-henry-hub-rallies-may-fade-after-iran-escalation-1582852)'
+  - '[Don''t worry about the Iran conflict''s impact on oil prices—yet](https://www.atlanticcouncil.org/dispatches/dont-worry-about-the-iran-conflicts-impact-on-oil-prices-yet/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42352
+- **Question ID**: 42142
+- **Session Duration**: 563.8s (9.4 min)
+- **Cost**: $3.6482
+- **Tokens**: 12,460 total (34 in, 12,426 out)
+  - Cache: 1,030,222 read, 62,424 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42352_20260302_181808/20260302-181808.log`
+
+### Tool Calls
+
+- **Total**: 21 calls
+- **Errors**: 1 (4.8%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 1083ms |
+| fetch_url | 3 | 0 | 10540ms |
+| get_cp_history | 1 | 1 ⚠️ | 334ms |
+| get_metaculus_questions | 1 | 0 | 288ms |
+| kalshi_price | 1 | 0 | 833ms |
+| polymarket_price | 2 | 0 | 186ms |
+| reflection | 1 | 0 | 144079ms |
+| stock_history | 2 | 0 | 59ms |
+| stock_price | 2 | 0 | 1627ms |
+| web_search | 3 | 0 | 30066ms |
+| wikipedia | 1 | 0 | 188ms |
+
+### Sources Consulted
+
+- [(yfinance) CL=F](https://finance.yahoo.com/quote/CL=F)
+- [(yfinance) ES=F](https://finance.yahoo.com/quote/ES=F)
+- [(Metaculus) How much will Crude Oil Futures total price returns exceed S&P 5...
+- [2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026...
+- [US-Iran conflict: Strait of Hormuz crisis reshapes global oil markets | Kple...
+- [(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in ...
+- [Oil Price Forecast: Why WTI and Henry Hub Rallies May Fade After Iran Escala...
+- [Don't worry about the Iran conflict's impact on oil prices—yet](https://www....
