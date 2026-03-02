@@ -1,0 +1,572 @@
+---
+timestamp: 2026-03-02 11:15:24 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+    elevated. Search interest in specific policy terms like ''war powers act'' decays
+    rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+    the value will almost certainly be well below 59.'
+  supports: Decreases
+  logit: 3.0
+  confidence: 0.9
+  effective_logit: 2.7
+- description: Congressional vote on war powers happening this week (Mar 3-7). This
+    is the peak catalyst for 'war powers act' searches. By Mar 14, the vote will be
+    ~9 days old and the search term will have declined from any vote-related bump.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+    in war-related terms longer than typical one-off events. Trump says operation
+    could take '4 weeks or less.' Conflict expanding with Hezbollah, multiple countries
+    retaliating.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  conditional: If war escalates dramatically with new unauthorized actions near Mar
+    14
+  effective_logit: 0.4
+- description: 'Rescaling risk: If any day Mar 3-14 exceeds Mar 1''s raw search volume
+    (creating a new peak), the entire scale recalibrates. Mar 2 value drops below
+    62, but Mar 14''s relative position also changes. Most rescaling scenarios still
+    favor Decreases since the Mar 14 value would be even further from the new peak.'
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only a 6-point
+    window (59-65). With trailing volatility of ~32 and a starting value of 62, the
+    probability of landing exactly in this narrow band is very low.'
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Monte Carlo simulation across multiple scenarios (standard decay, sustained
+    interest, major escalation, de-escalation) consistently shows ~95% probability
+    of Decreases, ~3.5% Increases, ~1.5% Doesn't change.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.75
+  effective_logit: 1.5
+tentative_estimate:
+  logit: 3.0
+  probability: 0.95
+assessment: 'The "war powers act" search term spiked massively due to US-Israel strikes
+  on Iran (Feb 28) and the killing of Khamenei. The value on Mar 2 is 62 (relative
+  to the Mar 1 peak of 100). The question asks whether the value on Mar 14 will be
+  more than 3 points different from Mar 2.
+
+
+  The overwhelming dynamic here is post-spike decay. Even though an active war continues,
+  the specific search term "war powers act" is tied to the legislative/constitutional
+  debate, which peaks during the initial shock and congressional vote (expected this
+  week). By Mar 14, these events will be 9-14 days old.
+
+
+  For "Doesn''t change" to occur, the Mar 14 value would need to be within 59-65 -
+  meaning search interest would need to remain at ~95-105% of its Mar 2 level. This
+  is extremely unlikely for a specific policy term 12 days after the initial spike.
+
+
+  For "Increases" to occur, some new massive catalyst on or near Mar 14 would need
+  to push searches even higher. While possible in an active war, it requires the right
+  timing and magnitude.
+
+
+  Decreases is the dominant outcome at ~85-90%. Increases gets ~6-8% for scenarios
+  where a dramatic new escalation or second war powers vote pushes interest higher.
+  Doesn''t change gets ~4-6% for the narrow possibility of landing in the exact band.'
+calibration_notes: Base rates from change_stats (61% no_change) are misleading here
+  because they're computed over a period dominated by low baseline values (0-12).
+  At a starting value of 62, the dynamics are fundamentally different. The trailing_change_stats
+  (50% no_change) include the spike period and show higher volatility. Given the extreme
+  elevation (62 vs baseline of ~5-10), mean reversion to lower levels is nearly guaranteed
+  over 12 days. The ±3 threshold is narrow relative to the volatility (~32 trailing).
+key_uncertainties: 1. Whether a major new war powers event occurs specifically around
+  Mar 14 (new unauthorized military action, dramatic vote, ground troops authorization
+  debate). 2. Whether rescaling from a larger spike during Mar 3-14 could compress
+  the Mar 2/Mar 14 comparison in unexpected ways. 3. SerpAPI vs pytrends measurement
+  differences (±2 points possible).
+tool_audit: '- google_trends: Excellent - provided the exact resolution date range
+  data with tz=0, change_stats, tail_stats, and related queries. The data clearly
+  shows the spike pattern (0-8 baseline, then 51→100→62).
+
+  - web_search: Very useful - confirmed the context (US-Iran war, Khamenei killed,
+  Congressional war powers votes). Multiple high-quality news sources corroborated
+  the situation.
+
+  - Wikipedia auto-enrichment: Helpful - provided comprehensive context on the 2026
+  Iran-US crisis.
+
+  - execute_code: Monte Carlo simulation confirmed the intuitive analysis that Decreases
+  is overwhelmingly likely given the high starting value and post-spike decay dynamics.
+
+  - Metaculus question fetch: Confirmed no community prediction available (AIB tournament).'
+update_triggers: '- Congressional vote outcome on war powers (if dramatic/close, could
+  sustain interest longer)
+
+  - Major new military escalation requiring new war powers debate
+
+  - Ceasefire/de-escalation would accelerate decay
+
+  - New unauthorized military action by President near Mar 14'
+process_reflection: The Google Trends tool worked well with the exact resolution parameters
+  (tz=0, specific date range). The change_stats were less useful here because they're
+  dominated by the low-baseline period and don't capture the elevated-value dynamics.
+  The trailing_change_stats were more relevant but still small sample. The simulation
+  approach was the most informative analytical step - it confirmed that at a starting
+  value of 62, post-spike decay almost certainly pushes below the -3 threshold within
+  12 days. The news search was helpful for understanding the catalysts but could have
+  been streamlined - the direction was clear from the data alone.
+computed:
+  factor_count: 6
+  factor_sum: 6.625
+  tentative_logit: 3.0
+  logit_gap: -3.625
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+      elevated. Search interest in specific policy terms like ''war powers act'' decays
+      rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+      the value will almost certainly be well below 59.'
+    supports: Decreases
+    logit: 3.0
+    confidence: 0.9
+    effective_logit: 2.7
+  - description: Congressional vote on war powers happening this week (Mar 3-7). This
+      is the peak catalyst for 'war powers act' searches. By Mar 14, the vote will
+      be ~9 days old and the search term will have declined from any vote-related
+      bump.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+      in war-related terms longer than typical one-off events. Trump says operation
+      could take '4 weeks or less.' Conflict expanding with Hezbollah, multiple countries
+      retaliating.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+    conditional: If war escalates dramatically with new unauthorized actions near
+      Mar 14
+  - description: 'Rescaling risk: If any day Mar 3-14 exceeds Mar 1''s raw search
+      volume (creating a new peak), the entire scale recalibrates. Mar 2 value drops
+      below 62, but Mar 14''s relative position also changes. Most rescaling scenarios
+      still favor Decreases since the Mar 14 value would be even further from the
+      new peak.'
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only a
+      6-point window (59-65). With trailing volatility of ~32 and a starting value
+      of 62, the probability of landing exactly in this narrow band is very low.'
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Monte Carlo simulation across multiple scenarios (standard decay,
+      sustained interest, major escalation, de-escalation) consistently shows ~95%
+      probability of Decreases, ~3.5% Increases, ~1.5% Doesn't change.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.75
+    effective_logit: 1.5
+  dominant_factor: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+    elevated. Search interest in specific policy terms like ''war powers act'' decays
+    rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+    the value will almost certainly be well below 59.'
+  dominant_effective_logit: 2.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 5
+    logit_sum: 6.225
+    factors:
+    - description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+        elevated. Search interest in specific policy terms like ''war powers act''
+        decays rapidly after the initial shock and congressional vote. By Mar 14,
+        12 days later, the value will almost certainly be well below 59.'
+      supports: Decreases
+      logit: 3.0
+      confidence: 0.9
+      effective_logit: 2.7
+    - description: Congressional vote on war powers happening this week (Mar 3-7).
+        This is the peak catalyst for 'war powers act' searches. By Mar 14, the vote
+        will be ~9 days old and the search term will have declined from any vote-related
+        bump.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: 'Rescaling risk: If any day Mar 3-14 exceeds Mar 1''s raw search
+        volume (creating a new peak), the entire scale recalibrates. Mar 2 value drops
+        below 62, but Mar 14''s relative position also changes. Most rescaling scenarios
+        still favor Decreases since the Mar 14 value would be even further from the
+        new peak.'
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+    - description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only
+        a 6-point window (59-65). With trailing volatility of ~32 and a starting value
+        of 62, the probability of landing exactly in this narrow band is very low.'
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+    - description: Monte Carlo simulation across multiple scenarios (standard decay,
+        sustained interest, major escalation, de-escalation) consistently shows ~95%
+        probability of Decreases, ~3.5% Increases, ~1.5% Doesn't change.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.75
+      effective_logit: 1.5
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.4
+    factors:
+    - description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+        in war-related terms longer than typical one-off events. Trump says operation
+        could take '4 weeks or less.' Conflict expanding with Hezbollah, multiple
+        countries retaliating.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+      conditional: If war escalates dramatically with new unauthorized actions near
+        Mar 14
+  sources:
+  - '[(Google Trends) war powers act](https://trends.google.com/trends/explore?q=war
+    powers act)'
+  - '[(Metaculus) Will the interest in “war powers act” change between 2026-03-02
+    and 2026-03-14 according to Google Trends?](https://www.metaculus.com/questions/42388)'
+  - '[2026 Iran–United States crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran%E2%80%93United_States_crisis)'
+  - '[2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia.org/wiki/2026_Israeli%E2%80%93United_States_strikes_on_Iran)'
+  reviewer_critique: "**FAIL: The 95% probability for 'Decreases' is unjustified and\
+    \ inconsistent with the agent's own reasoning and comparable forecasts.**\n\n\
+    ## Critical Probability Assessment Error\n\nThe agent reports a tentative probability\
+    \ of 95.0% for \"Decreases,\" directly copying the Monte Carlo simulation output.\
+    \ However, this probability is **too high** given the evidence and conflicts with\
+    \ the agent's own qualitative reasoning:\n\n1. **Agent's own qualitative estimates\
+    \ contradict 95%**: In the trace (line 467-469), the agent states: \"I'm settling\
+    \ on Decreases at 85%, Increases at 8%, and Doesn't change at 7%\" and then \"\
+    I'll adjust slightly to Decreases 82%, Increases 10%, Doesn't change 8%.\" The\
+    \ agent never reconciles why it jumped from 82-85% to 95%.\n\n2. **Comparable\
+    \ Google Trends forecasts show 85-90% range**: \n   - \"khamenei\" (similar Iran\
+    \ war context, starting at 33): 85% Decreases\n   - \"caroline kennedy\" (starting\
+    \ at 100, peak): 90% Decreases  \n   - \"russia\" (starting at 95, near ceiling):\
+    \ 67% Decreases\n   \n   The current question has starting value 62 — elevated\
+    \ but NOT at the peak (which is 100 on Mar 1). This is actually LESS extreme than\
+    \ \"caroline kennedy\" at 100 or even \"khamenei\" post-assassination. Yet the\
+    \ agent forecasts 95%, higher than both.\n\n3. **The ongoing war context supports\
+    \ LOWER confidence in decay, not higher**: Factor 3 explicitly argues that \"\
+    Active ongoing US-Iran war could sustain interest in war-related terms longer\
+    \ than typical one-off events.\" This should ADD uncertainty and reduce the \"\
+    Decreases\" probability relative to simple spike-and-decay scenarios, not increase\
+    \ it to 95%.\n\n4. **Monte Carlo scenario weights don't justify 95%**: The simulation\
+    \ gave 50% weight to standard decay, 30% to sustained interest, 13% to major escalation,\
+    \ and 7% to de-escalation. With 43% of scenarios (sustained interest + major escalation)\
+    \ modeling dynamics that RESIST decay, the overwhelming 95% result suggests the\
+    \ decay parameters in ALL scenarios were too aggressive, not that \"Decreases\"\
+    \ genuinely has 95% probability.\n\n## What the probability should be\n\nGiven\
+    \ the evidence:\n- Starting at 62 (not at peak, significant room for rescaling\
+    \ scenarios)\n- Active war providing sustained interest mechanisms  \n- Congressional\
+    \ vote this week (Mar 3-7) that could create secondary spike\n- Comparable forecasts\
+    \ in the 82-90% range for similar or MORE extreme starting positions\n- Agent's\
+    \ own qualitative reasoning settling on 82-85%\n\n**I estimate Decreases should\
+    \ be 85-88%**, not 95%. The agent over-anchored on the Monte Carlo output without\
+    \ critically evaluating whether the simulation parameters accurately captured\
+    \ the qualitative dynamics described in the factors.\n\n## Other issues checked\n\
+    \n**Factor verification** (no major issues):\n- Factor 1 (post-spike decay): Supported\
+    \ by value at 62 confirmed in trace\n- Factor 2 (congressional vote): Confirmed\
+    \ in trace, vote happening this week\n- Factor 3 (ongoing war): US-Iran war confirmed,\
+    \ Trump \"4 weeks or less\" confirmed, Hezbollah involvement confirmed\n- Factor\
+    \ 4 (rescaling risk): Logically sound\n- Factor 5 (narrow band): Correct that\
+    \ ±3 is narrow; trailing volatility of 32 confirmed in trace  \n- Factor 6 (Monte\
+    \ Carlo): Simulation exists and outputs 95%, but this doesn't validate the probability\n\
+    \n**No hallucinated evidence** detected in core claims.\n\n**No double-counting**\
+    \ detected.\n\n**No wrong-direction factors** detected.\n\n**Assessment-factor\
+    \ alignment**: The assessment is consistent with the factors' direction (all point\
+    \ to Decreases), but the final 95% probability contradicts the assessment's own\
+    \ characterization of uncertainty (\"Decreases is the dominant outcome at ~85-90%\"\
+    ).\n\n**Resolution criteria**: Present and correctly applied.\n\n## Conclusion\n\
+    \nThe forecast fails because the **95% probability is meaningfully wrong**. It's\
+    \ inflated by ~7-10 percentage points above what the evidence supports, represents\
+    \ uncritical anchoring on simulation output, and contradicts both the agent's\
+    \ qualitative reasoning and comparable forecasts. The correct probability should\
+    \ be **85-88% for Decreases**."
+---
+timestamp: 2026-03-02 11:18:48 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+    elevated. Search interest in specific policy terms like ''war powers act'' decays
+    rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+    the value will almost certainly be well below 59.'
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+- description: Congressional vote on war powers happening this week (Mar 3-7). This
+    is the peak catalyst for 'war powers act' searches specifically. By Mar 14, the
+    vote will be ~9 days old and the search term will have declined.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+    longer than typical one-off events. Trump says operation could take '4 weeks or
+    less.' Conflict expanding with Hezbollah, Gulf states. This resists normal decay
+    dynamics and adds genuine uncertainty.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Potential for rescaling if any day Mar 3-14 exceeds Mar 1's raw search
+    volume. If a new peak forms (e.g., dramatic vote day), Mar 2 value drops below
+    62, changing the comparison baseline. Most rescaling scenarios still favor Decreases
+    but add uncertainty.
+  supports: Decreases
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only a 6-point
+    window (59-65). With trailing volatility of ~32, the probability of landing exactly
+    in this narrow band is low.'
+  supports: Decreases
+  logit: 0.3
+  confidence: 0.75
+  effective_logit: 0.22499999999999998
+- description: Possible second spike near Mar 14 if war escalates dramatically with
+    new unauthorized military actions, ground troop deployment, or renewed congressional
+    action. Each day in an active war has non-trivial probability of a major catalyst.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.35
+  effective_logit: 0.175
+tentative_estimate:
+  logit: 2.0
+  probability: 0.87
+assessment: 'The ''war powers act'' search term spiked to 100 on Mar 1 due to US-Israel
+  strikes on Iran killing Khamenei. On Mar 2 (the start date), the value is 62 in
+  the resolution date range.
+
+
+  DECREASES (~87%): The dominant outcome. Starting at 62, the term needs to stay above
+  59 to avoid this. Policy-specific search terms decline after the initial shock and
+  congressional vote, even during ongoing conflicts. The vote expected this week (Mar
+  3-7) is the key catalyst; by Mar 14 it will be old news. Historical patterns of
+  news-driven search spikes strongly favor decay over 12 days.
+
+
+  INCREASES (~7%): Requires Mar 14 > 65. Possible if: (a) a major new escalation specifically
+  triggers renewed war powers debate near Mar 14, (b) rescaling from a larger new
+  peak changes the relative values in a way that makes Mar 14 relatively higher than
+  Mar 2, (c) sustained high interest due to ongoing active war. The active war context
+  gives this more probability than a typical policy spike.
+
+
+  DOESN''T CHANGE (~6%): Requires Mar 14 in 59-65 range. Very narrow band relative
+  to the high volatility. Would require interest to decay just enough to land in this
+  6-point window, which is statistically unlikely given the typical magnitude of post-spike
+  decline.
+
+
+  The key tension: Post-spike decay strongly favors Decreases, but the unprecedented
+  ongoing US-Iran war adds genuine uncertainty that a normal spike-and-decay model
+  underestimates. This justifies pulling back from the ~95% Monte Carlo output to
+  ~87%.'
+calibration_notes: 'Comparable Google Trends forecasts: ''khamenei'' (starting at
+  33, same context) at 85% Decreases; ''caroline kennedy'' (starting at 100) at 90%
+  Decreases. Starting at 62 with an ongoing war context, 87% Decreases is reasonable
+  - higher confidence in decay than khamenei (which starts lower and has more room
+  for rescaling effects) but lower than a pure one-off peak.'
+key_uncertainties: 1. Whether the ongoing war sustains 'war powers act' interest more
+  than typical policy spikes. 2. Whether a congressional vote creates a secondary
+  spike exceeding the original. 3. SerpAPI measurement variance (±2 points). 4. Timing
+  of any new major escalation relative to Mar 14.
+tool_audit: '- google_trends: Provided exact resolution range data showing the spike
+  trajectory (baseline ~5-10, spike to 51→100→62). change_stats less useful (dominated
+  by baseline period). Related queries confirmed Iran war as the driver.
+
+  - web_search: Confirmed active US-Iran war started Feb 28, Khamenei killed, congressional
+  war powers votes this week, conflict expanding.
+
+  - execute_code: Monte Carlo simulation output (95% Decreases) was directionally
+  correct but overly aggressive - the simulation''s decay parameters didn''t adequately
+  capture the sustained-interest scenario from an active war.
+
+  - Metaculus: Confirmed no community prediction available.'
+update_triggers: '- Dramatic congressional vote on war powers (close vote, veto battle)
+  - would sustain interest
+
+  - Major new unauthorized military escalation near Mar 14
+
+  - Ceasefire or de-escalation would accelerate decay
+
+  - New large-scale US casualties generating renewed war powers debate'
+process_reflection: The reviewer correctly identified that I over-anchored on the
+  Monte Carlo simulation without critically evaluating whether its decay parameters
+  matched the unprecedented nature of an active US-Iran war. The simulation's scenario
+  weights and decay rates likely underestimated how much an ongoing war sustains interest
+  in war-related policy terms. Comparable forecasts (khamenei at 85%, caroline kennedy
+  at 90%) provide useful calibration anchors. The Google Trends tool worked well but
+  I should have spent more time analyzing what sustained interest looks like during
+  extended conflicts rather than relying on standard post-spike decay models.
+computed:
+  factor_count: 6
+  factor_sum: 3.9050000000000002
+  tentative_logit: 2.0
+  logit_gap: -1.9050000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+      elevated. Search interest in specific policy terms like ''war powers act'' decays
+      rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+      the value will almost certainly be well below 59.'
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  - description: Congressional vote on war powers happening this week (Mar 3-7). This
+      is the peak catalyst for 'war powers act' searches specifically. By Mar 14,
+      the vote will be ~9 days old and the search term will have declined.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+      longer than typical one-off events. Trump says operation could take '4 weeks
+      or less.' Conflict expanding with Hezbollah, Gulf states. This resists normal
+      decay dynamics and adds genuine uncertainty.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Potential for rescaling if any day Mar 3-14 exceeds Mar 1's raw search
+      volume. If a new peak forms (e.g., dramatic vote day), Mar 2 value drops below
+      62, changing the comparison baseline. Most rescaling scenarios still favor Decreases
+      but add uncertainty.
+    supports: Decreases
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only a
+      6-point window (59-65). With trailing volatility of ~32, the probability of
+      landing exactly in this narrow band is low.'
+    supports: Decreases
+    logit: 0.3
+    confidence: 0.75
+    effective_logit: 0.22499999999999998
+  - description: Possible second spike near Mar 14 if war escalates dramatically with
+      new unauthorized military actions, ground troop deployment, or renewed congressional
+      action. Each day in an active war has non-trivial probability of a major catalyst.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.35
+    effective_logit: 0.175
+  dominant_factor: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+    elevated. Search interest in specific policy terms like ''war powers act'' decays
+    rapidly after the initial shock and congressional vote. By Mar 14, 12 days later,
+    the value will almost certainly be well below 59.'
+  dominant_effective_logit: 2.125
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 3.33
+    factors:
+    - description: 'Post-spike decay dynamics: Value at 62 (62% of peak) is extremely
+        elevated. Search interest in specific policy terms like ''war powers act''
+        decays rapidly after the initial shock and congressional vote. By Mar 14,
+        12 days later, the value will almost certainly be well below 59.'
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.85
+      effective_logit: 2.125
+    - description: Congressional vote on war powers happening this week (Mar 3-7).
+        This is the peak catalyst for 'war powers act' searches specifically. By Mar
+        14, the vote will be ~9 days old and the search term will have declined.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: Potential for rescaling if any day Mar 3-14 exceeds Mar 1's raw
+        search volume. If a new peak forms (e.g., dramatic vote day), Mar 2 value
+        drops below 62, changing the comparison baseline. Most rescaling scenarios
+        still favor Decreases but add uncertainty.
+      supports: Decreases
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+    - description: 'Narrow ''Doesn''t change'' band: The ±3 threshold creates only
+        a 6-point window (59-65). With trailing volatility of ~32, the probability
+        of landing exactly in this narrow band is low.'
+      supports: Decreases
+      logit: 0.3
+      confidence: 0.75
+      effective_logit: 0.22499999999999998
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.575
+    factors:
+    - description: Active ongoing US-Iran war (started Feb 28) could sustain interest
+        longer than typical one-off events. Trump says operation could take '4 weeks
+        or less.' Conflict expanding with Hezbollah, Gulf states. This resists normal
+        decay dynamics and adds genuine uncertainty.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: Possible second spike near Mar 14 if war escalates dramatically
+        with new unauthorized military actions, ground troop deployment, or renewed
+        congressional action. Each day in an active war has non-trivial probability
+        of a major catalyst.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.35
+      effective_logit: 0.175
+  sources:
+  - '[(Google Trends) war powers act](https://trends.google.com/trends/explore?q=war
+    powers act)'
+  - '[(Metaculus) Will the interest in “war powers act” change between 2026-03-02
+    and 2026-03-14 according to Google Trends?](https://www.metaculus.com/questions/42388)'
+  - '[2026 Iran–United States crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran%E2%80%93United_States_crisis)'
+  - '[2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia.org/wiki/2026_Israeli%E2%80%93United_States_strikes_on_Iran)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42388
+- **Question ID**: 42178
+- **Session Duration**: 804.9s (13.4 min)
+- **Cost**: $3.7605
+- **Tokens**: 16,236 total (30 in, 16,206 out)
+  - Cache: 702,980 read, 79,472 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42388_20260302_110532/20260302-110532.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 1 (6.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 866ms |
+| get_metaculus_questions | 1 | 0 | 268ms |
+| google_trends | 2 | 0 | 3170ms |
+| reflection | 2 | 1 ⚠️ | 174395ms |
+| web_search | 4 | 0 | 33543ms |
+| wikipedia | 2 | 0 | 257ms |
+
+### Sources Consulted
+
+- [(Google Trends) war powers act](https://trends.google.com/trends/explore?q=w...
+- [(Metaculus) Will the interest in “war powers act” change between 2026-03-02 ...
+- [2026 Iran–United States crisis - Wikipedia](https://en.wikipedia.org/wiki/20...
+- [2026 Israeli–United States strikes on Iran - Wikipedia](https://en.wikipedia...
