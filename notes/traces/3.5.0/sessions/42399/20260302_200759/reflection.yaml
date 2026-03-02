@@ -1,0 +1,295 @@
+---
+timestamp: 2026-03-02 20:18:13 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: Both prior spikes (Jan 25, Feb 11) showed
+    23-24 point declines over 10 days. Starting from 96, even moderate decay puts
+    Mar 12 below 93.'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: US-Israel Iran strikes are an ONGOING military operation expected to
+    last 4-5 weeks, sustaining Fox News interest above baseline. This is not a typical
+    one-day news spike.
+  supports: Doesn't change
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Baseline for 'fox' searches is ~74-78. Current value of 96 is 18-22
+    points above baseline. Even during sustained events, gradual decay toward baseline
+    occurs.
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: 'Unusually sustained elevation: Mar 2 still at 96 (Day+2), vs Jan 25
+    spike which decayed to 78 by Day+2. Confirms this is a sustained multi-day event,
+    not a flash spike.'
+  supports: Doesn't change
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: For 'Increases', Mar 12 value must exceed 99 (near peak). Active military
+    operations create potential for new escalation spikes (Iran retaliation, US casualties,
+    broader conflict).
+  supports: Increases
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Narrow 'Doesn't change' band [93-99] at such elevated levels is hard
+    to maintain for 10 days. Even 10% decay from 96 yields ~86, which is 'Decreases'.
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: SerpAPI vs pytrends measurement uncertainty (±2 points). At boundaries,
+    this introduces noise that could flip between 'Decreases' and 'Doesn't change'.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.2
+    Doesn't change: 0.3
+    Decreases: 0.5
+assessment: 'The "fox" search term (dominated by Fox News) spiked to 100 on Feb 28
+  coinciding with the onset of US-Israel military strikes on Iran. As of Mar 2, it
+  remains elevated at 96, which is unusually sustained compared to prior spikes. The
+  operation is expected to last 4-5 weeks, covering the entire forecast window.
+
+
+  Key tension: Post-spike decay patterns strongly favor "Decreases" (both prior spikes
+  declined 23-24 points over 10 days), but this is fundamentally different from a
+  one-day news event — it''s an active military operation with daily developments.
+  The sustained elevation (96 at Day+2 vs 78 at Day+2 for Jan 25) confirms stronger
+  underlying interest.
+
+
+  The critical threshold is 93. "Doesn''t change" requires sustained interest at 93+
+  for 10 days from a starting point of 96. This is plausible given ongoing combat
+  operations but challenging given that even major events show some interest decay
+  from initial shock levels.
+
+
+  "Increases" requires a new spike near 100 on or around Mar 12. While unlikely on
+  a specific day, the volatile nature of an active military operation (potential escalation,
+  retaliation, casualties) makes this non-negligible over a 10-day window.
+
+
+  Primary risk to forecast: If the operation escalates significantly or Iran retaliates,
+  interest could spike higher, favoring "Increases". If a ceasefire occurs or attention
+  shifts to other stories, rapid decay favors "Decreases".'
+calibration_notes: 'Base rates from 10-day change_stats in the data: Increases 35%,
+  Decreases 25%, DC 40%. But these are from all starting points, not specifically
+  post-spike. Post-spike starting points strongly skew toward Decreases. The ongoing
+  military operation partially counteracts this skew by providing sustained demand
+  for Fox News coverage.'
+key_uncertainties: '1. How quickly does war coverage interest decay during an ongoing
+  operation? (No good comparable in recent data)
+
+  2. Will there be a major escalation or de-escalation event in the Mar 3-12 window?
+
+  3. SerpAPI vs pytrends measurement differences at the 93 threshold boundary'
+tool_audit: '- google_trends: Primary data source, worked well. Returned full history
+  with change_stats, tail_stats, and related queries. The related/rising queries were
+  crucial for identifying the Iran story and Guthrie case as drivers.
+
+  - web_search: First call failed with ''temporarily unavailable'', second two calls
+  succeeded and were critical for identifying the Iran military operation as the spike
+  driver.
+
+  - search_exa: Failed with 400 error. Non-critical since web_search covered the need.
+
+  - get_metaculus_questions: Returned full question details including fine print about
+  SerpAPI resolution mechanics.
+
+  - execute_code: Essential for quantitative analysis of spike patterns and day-of-week
+  effects.'
+update_triggers: '- Iran retaliates against US/Israel → Increases probability jumps
+  significantly
+
+  - Ceasefire or de-escalation → Decreases probability jumps
+
+  - US military casualties reported → Increases probability rises
+
+  - Major new domestic story diverts attention → Decreases probability rises'
+process_reflection: 'The forecasting pipeline worked well for this question type.
+  The google_trends tool with tz=0 matching the resolution source was critical. The
+  change_stats and tail_stats gave immediate quantitative anchors. The biggest gap
+  was that search_exa failed, limiting my ability to find detailed coverage of the
+  Iran strikes timeline. Web search partially compensated. The guidance about post-spike
+  dynamics and threshold arithmetic in the prompt was directly applicable and helpful.
+  One friction point: I couldn''t easily find historical Google Trends data for comparable
+  sustained events (e.g., Iraq War 2003 Fox News searches) to calibrate the decay
+  rate during ongoing military operations.'
+computed:
+  factor_count: 7
+  factor_sum: 4.47
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: Both prior spikes (Jan 25, Feb 11) showed
+      23-24 point declines over 10 days. Starting from 96, even moderate decay puts
+      Mar 12 below 93.'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: US-Israel Iran strikes are an ONGOING military operation expected
+      to last 4-5 weeks, sustaining Fox News interest above baseline. This is not
+      a typical one-day news spike.
+    supports: Doesn't change
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Baseline for 'fox' searches is ~74-78. Current value of 96 is 18-22
+      points above baseline. Even during sustained events, gradual decay toward baseline
+      occurs.
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: 'Unusually sustained elevation: Mar 2 still at 96 (Day+2), vs Jan
+      25 spike which decayed to 78 by Day+2. Confirms this is a sustained multi-day
+      event, not a flash spike.'
+    supports: Doesn't change
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: For 'Increases', Mar 12 value must exceed 99 (near peak). Active
+      military operations create potential for new escalation spikes (Iran retaliation,
+      US casualties, broader conflict).
+    supports: Increases
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Narrow 'Doesn't change' band [93-99] at such elevated levels is hard
+      to maintain for 10 days. Even 10% decay from 96 yields ~86, which is 'Decreases'.
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: SerpAPI vs pytrends measurement uncertainty (±2 points). At boundaries,
+      this introduces noise that could flip between 'Decreases' and 'Doesn't change'.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: US-Israel Iran strikes are an ONGOING military operation expected
+    to last 4-5 weeks, sustaining Fox News interest above baseline. This is not a
+    typical one-day news spike.
+  dominant_effective_logit: 1.2000000000000002
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 1.97
+    factors:
+    - description: 'Post-spike decay pattern: Both prior spikes (Jan 25, Feb 11) showed
+        23-24 point declines over 10 days. Starting from 96, even moderate decay puts
+        Mar 12 below 93.'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.7
+      effective_logit: 0.84
+    - description: Baseline for 'fox' searches is ~74-78. Current value of 96 is 18-22
+        points above baseline. Even during sustained events, gradual decay toward
+        baseline occurs.
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.8
+      effective_logit: 0.6400000000000001
+    - description: Narrow 'Doesn't change' band [93-99] at such elevated levels is
+        hard to maintain for 10 days. Even 10% decay from 96 yields ~86, which is
+        'Decreases'.
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.7
+      effective_logit: 0.48999999999999994
+  - outcome: Doesn't change
+    factor_count: 3
+    logit_sum: 2.2
+    factors:
+    - description: US-Israel Iran strikes are an ONGOING military operation expected
+        to last 4-5 weeks, sustaining Fox News interest above baseline. This is not
+        a typical one-day news spike.
+      supports: Doesn't change
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: 'Unusually sustained elevation: Mar 2 still at 96 (Day+2), vs Jan
+        25 spike which decayed to 78 by Day+2. Confirms this is a sustained multi-day
+        event, not a flash spike.'
+      supports: Doesn't change
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+    - description: SerpAPI vs pytrends measurement uncertainty (±2 points). At boundaries,
+        this introduces noise that could flip between 'Decreases' and 'Doesn't change'.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.3
+    factors:
+    - description: For 'Increases', Mar 12 value must exceed 99 (near peak). Active
+        military operations create potential for new escalation spikes (Iran retaliation,
+        US casualties, broader conflict).
+      supports: Increases
+      logit: 0.5
+      confidence: 0.6
+      effective_logit: 0.3
+  mc_distribution_metrics:
+    implied_probabilities:
+      Decreases: 0.4086892106928148
+      Doesn't change: 0.5143762446360473
+      Increases: 0.07693454467113792
+    tentative_probabilities:
+      Increases: 0.2
+      Doesn't change: 0.3
+      Decreases: 0.5
+    per_option_gap_pp:
+      Decreases: 9.131078930718523
+      Doesn't change: -21.437624463604728
+      Increases: 12.30654553288621
+    max_gap_pp: -21.437624463604728
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) fox](https://trends.google.com/trends/explore?q=fox)'
+  - '[(Metaculus) Will the interest in “fox” change between 2026-03-02 and 2026-03-12
+    according to Google Trends?](https://www.metaculus.com/questions/42399)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42399
+- **Question ID**: 42189
+- **Session Duration**: 654.4s (10.9 min)
+- **Cost**: $3.2059
+- **Tokens**: 13,197 total (29 in, 13,168 out)
+  - Cache: 584,118 read, 71,558 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42399_20260302_200759/20260302-200759.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 2 (15.4%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 40ms |
+| get_metaculus_questions | 1 | 0 | 457ms |
+| google_trends | 2 | 0 | 3844ms |
+| reflection | 1 | 0 | 122705ms |
+| search_exa | 1 | 1 ⚠️ | 5228ms |
+| web_search | 3 | 1 ⚠️ | 18591ms |
+
+### Sources Consulted
+
+- [(Google Trends) fox](https://trends.google.com/trends/explore?q=fox)
+- [(Metaculus) Will the interest in “fox” change between 2026-03-02 and 2026-03...
