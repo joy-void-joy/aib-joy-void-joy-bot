@@ -275,12 +275,12 @@ def iter_trace_log_files(post_id: int | None = None) -> Iterator[Path]:
 
 MIN_VERSION_DATAPOINTS = 10
 
-_SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 
-def _parse_semver(version: str) -> tuple[int, int, int] | None:
+def parse_semver(version: str) -> tuple[int, int, int] | None:
     """Parse 'X.Y.Z' into (major, minor, patch), or None if invalid."""
-    m = _SEMVER_RE.match(version)
+    m = SEMVER_RE.match(version)
     if not m:
         return None
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -307,7 +307,7 @@ def resolve_version(
         return None, None
 
     effective = version if version is not None else AGENT_VERSION
-    semver = _parse_semver(effective)
+    semver = parse_semver(effective)
     available = [d.name for d in _version_dirs()]
 
     # Level 1: exact version
@@ -328,7 +328,7 @@ def resolve_version(
     minor_matches = [
         v
         for v in available
-        if (sv := _parse_semver(v)) is not None and sv[0] == major and sv[1] == minor
+        if (sv := parse_semver(v)) is not None and sv[0] == major and sv[1] == minor
     ]
     minor_count = _count_forecasts_for_versions(minor_matches)
     if minor_count >= min_datapoints:
@@ -339,7 +339,7 @@ def resolve_version(
 
     # Level 3: same major (X.*)
     major_matches = [
-        v for v in available if (sv := _parse_semver(v)) is not None and sv[0] == major
+        v for v in available if (sv := parse_semver(v)) is not None and sv[0] == major
     ]
     major_count = _count_forecasts_for_versions(major_matches)
     if major_count >= min_datapoints:
