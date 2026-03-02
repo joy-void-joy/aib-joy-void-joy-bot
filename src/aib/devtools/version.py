@@ -14,7 +14,26 @@ CHANGELOG_PATH = Path("CHANGELOG.md")
 VERSION_FILE = Path("src/aib/version.py")
 VERSION_RE = re.compile(r'^AGENT_VERSION\s*=\s*"([^"]+)"', re.MULTILINE)
 
-_git = sh.Command("git").bake("--no-pager", _tty_out=False)
+CHANGELOG_VERSION_RE = re.compile(r"^## v(\d+\.\d+\.\d+)\s+\((\d{4}-\d{2}-\d{2})\)")
+
+git = sh.Command("git").bake("--no-pager", _tty_out=False)
+
+
+def load_version_dates(
+    path: Path = CHANGELOG_PATH,
+) -> dict[str, str]:
+    """Parse CHANGELOG.md for version release dates.
+
+    Returns ``{version: date}`` e.g. ``{"3.2.0": "2026-02-24"}``.
+    """
+    if not path.exists():
+        return {}
+    result: dict[str, str] = {}
+    for line in path.read_text().splitlines():
+        m = CHANGELOG_VERSION_RE.match(line)
+        if m:
+            result[m.group(1)] = m.group(2)
+    return result
 
 
 def _parse_version(content: str) -> str:
@@ -26,7 +45,7 @@ def _parse_version(content: str) -> str:
 
 def _get_existing_tags() -> list[str]:
     try:
-        output = str(_git("tag", "-l", "v*")).strip()
+        output = str(git("tag", "-l", "v*")).strip()
         return output.splitlines() if output else []
     except sh.ErrorReturnCode:
         return []
@@ -34,7 +53,7 @@ def _get_existing_tags() -> list[str]:
 
 def _get_version_at_commit(commit: str) -> str:
     try:
-        content = str(_git("show", f"{commit}:src/aib/version.py"))
+        content = str(git("show", f"{commit}:src/aib/version.py"))
         return _parse_version(content)
     except sh.ErrorReturnCode as e:
         raise typer.BadParameter(f"git show failed for {commit}: {e}") from e
@@ -145,7 +164,7 @@ def bump(
         if tag_name in existing:
             typer.echo(f"Tag {tag_name} already exists, skipping auto-tag")
         else:
-            _git("tag", "-a", tag_name, "HEAD", "-m", message)
+            git("tag", "-a", tag_name, "HEAD", "-m", message)
             typer.echo(f"Created tag {tag_name}")
 
 
@@ -153,7 +172,7 @@ def bump(
 def list_cmd() -> None:
     """List all agent versions from git history."""
     try:
-        log = str(_git("log", "--all", "--oneline", "--", "src/aib/version.py"))
+        log = str(git("log", "--all", "--oneline", "--", "src/aib/version.py"))
     except sh.ErrorReturnCode:
         typer.echo("No version history found.")
         return
@@ -175,7 +194,7 @@ def list_cmd() -> None:
         tagged = f"v{version}" in existing_tags
         marker = " [tagged]" if tagged else ""
         try:
-            date = str(_git("log", "-1", "--format=%ai", commit_hash, "--")).strip()[
+            date = str(git("log", "-1", "--format=%ai", commit_hash, "--")).strip()[
                 :10
             ]
         except sh.ErrorReturnCode:
