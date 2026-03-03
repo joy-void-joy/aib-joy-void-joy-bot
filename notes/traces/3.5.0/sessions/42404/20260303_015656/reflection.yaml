@@ -1,0 +1,142 @@
+---
+timestamp: 2026-03-03 02:00:21 UTC
+question_type: binary
+factors:
+- description: Zero-drift Monte Carlo simulation with recent volatility (2.35%/day)
+    over 8 trading days gives ~50% probability of being higher
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: 'Conditional base rate: when INCY is in 10%+ drawdown from 52w high,
+    52.8% of 9-day forward returns are positive (627 events since 1993)'
+  logit: 0.15
+  confidence: 0.7
+  effective_logit: 0.105
+- description: 'Recent negative momentum: 5-day return -0.8%, 10-day return -1.0%,
+    slight downward drift in recent sample'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Stock has been range-bound $98-103 for 3 weeks after Feb 10 crash,
+    suggesting consolidation rather than continued decline
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+tentative_estimate:
+  logit: -0.04
+  probability: 0.49
+assessment: This is a near-coin-flip question. INCY needs to close higher on 2026-03-13
+  (since 03-14 is Saturday) than on 2026-03-03, spanning 8 trading days. The stock
+  is currently in a ~11% drawdown from its 52-week high, range-bound around $100-101
+  for the past 3 weeks. The conditional base rate for stocks in 10%+ drawdown shows
+  a slight positive bias (52.8%), but this is within noise. Recent momentum is mildly
+  negative but based on a short sample heavily influenced by one large drop on Feb
+  10 (-8.2%). Zero-drift MC gives exactly 50%. The competing forces roughly cancel,
+  yielding ~49% probability.
+calibration_notes: Unconditional base rate for stock being higher after 8 trading
+  days is approximately 52%. Conditional on being in a 10%+ drawdown, the base rate
+  is 52.8% (very similar). Recent drift is negative but based on short sample. No
+  strong reason to deviate far from 50%.
+key_uncertainties: The 03-03 close price is not yet known - market is still open or
+  hasn't opened. Any significant move today changes the reference point. Also, the
+  30-day sample of returns used for MC has high variance. Company-specific news or
+  broader market events during the 8-day window could dominate.
+tool_audit: 'stock_price: returned current price, 60-day history, and summary stats
+  - very useful. stock_history: returned data but limited to only 30 rows even for
+  2y period, which limited the Monte Carlo sample. stock_conditional_returns: provided
+  the key conditional base rate (52.8% at 10%+ drawdown, 627 events) - very useful
+  for calibration. execute_code: ran Monte Carlo simulations successfully with bootstrap
+  and parametric approaches.'
+process_reflection: The stock_history tool returned fewer data points than expected
+  for the 2y period, limiting the empirical return distribution to only 29 observations.
+  The conditional_returns tool was very helpful as it provided long-history base rates.
+  The overall flow was smooth for a stock direction question.
+computed:
+  factor_count: 4
+  factor_sum: 0.0050000000000000044
+  tentative_logit: -0.04
+  logit_gap: -0.045000000000000005
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Zero-drift Monte Carlo simulation with recent volatility (2.35%/day)
+      over 8 trading days gives ~50% probability of being higher
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: 'Conditional base rate: when INCY is in 10%+ drawdown from 52w high,
+      52.8% of 9-day forward returns are positive (627 events since 1993)'
+    logit: 0.15
+    confidence: 0.7
+    effective_logit: 0.105
+  - description: 'Recent negative momentum: 5-day return -0.8%, 10-day return -1.0%,
+      slight downward drift in recent sample'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Stock has been range-bound $98-103 for 3 weeks after Feb 10 crash,
+      suggesting consolidation rather than continued decline
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  dominant_factor: 'Recent negative momentum: 5-day return -0.8%, 10-day return -1.0%,
+    slight downward drift in recent sample'
+  dominant_effective_logit: -0.15
+  factor_implied_probability: 0.5012499973958399
+  tentative_probability: 0.49
+  gap_pp: -1.1249997395839872
+  sources:
+  - '[(yfinance) INCY](https://finance.yahoo.com/quote/INCY)'
+  reviewer_critique: "I verified all four factors against the research trace and found\
+    \ no errors:\n\n**Factor verification:**\n1. Zero-drift MC (50%, 2.35% vol, 8\
+    \ days) - Confirmed at trace lines 211-229\n2. Conditional base rate (52.8%, 627\
+    \ events) - Confirmed at lines 132-150  \n3. Recent momentum (-0.8% 5d, -1.0%\
+    \ 10d) - Confirmed at line 48\n4. Range-bound $98-103 for 3 weeks post-Feb-10\
+    \ crash - Confirmed at lines 44-47\n\n**No double-counting:** Factor 1 uses 29-day\
+    \ recent returns; Factor 2 uses 33-year conditional history; Factor 3 (momentum)\
+    \ and Factor 4 (consolidation) describe different aspects.\n\n**No wrong-direction\
+    \ factors:** All logit signs match descriptions correctly.\n\n**No contradictory\
+    \ assessment:** Factors sum to ~-0.03 effective logit ≈ 49%, matching the stated\
+    \ probability.\n\n**Resolution criteria properly applied:** Agent correctly identified\
+    \ March 14 is Saturday, effective comparison is March 13 vs March 3 (8 trading\
+    \ days), matching the Yahoo Finance resolution method.\n\n**Minor regime-spanning\
+    \ note (not an error):** The 29-day data window includes the Feb 10 crash (-8.2%),\
+    \ which contaminates the recent drift estimate. However, the agent explicitly\
+    \ recognized this (trace line 248: \"recent negative drift is really just noise\
+    \ from a 29-day sample dominated by a single -8.2% drop on Feb 10\") and appropriately\
+    \ de-weighted the contaminated estimate in favor of zero-drift MC and the conditional\
+    \ base rate.\n\n**Probability assessment is sound:** The 49% estimate is well-justified\
+    \ by (1) zero-drift MC at 50%, (2) conditional base rate only marginally higher\
+    \ at 52.8% with massive variance, and (3) range-bound consolidation suggesting\
+    \ no directional edge. The agent didn't arbitrarily hedge—this probability emerges\
+    \ naturally from genuinely balanced evidence."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42404
+- **Question ID**: 42194
+- **Session Duration**: 211.0s (3.5 min)
+- **Cost**: $2.1072
+- **Tokens**: 5,626 total (26 in, 5,600 out)
+  - Cache: 372,678 read, 60,151 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42404_20260303_015656/20260303-015656.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 143ms |
+| reflection | 1 | 0 | 94195ms |
+| stock_conditional_returns | 1 | 0 | 198ms |
+| stock_history | 3 | 0 | 63ms |
+| stock_price | 1 | 0 | 443ms |
+
+### Sources Consulted
+
+- [(yfinance) INCY](https://finance.yahoo.com/quote/INCY)
