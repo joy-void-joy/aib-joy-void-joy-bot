@@ -146,6 +146,7 @@ class SavedForecast(BaseModel):
     # Metaculus track record scores (scraped from profile page)
     peer_score: float | None = None
     baseline_score: float | None = None
+    score_timestamp: float | None = None
 
 
 def save_forecast(

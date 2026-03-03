@@ -1,8 +1,11 @@
 """Unified scores table CLI.
 
 Thin CLI wrapper around aib.scoring for interactive use.
+Also hosts the Metaculus track-record scraping logic (Playwright headless
+browser extraction of React internals from the profile page).
 """
 
+import asyncio
 import json
 import select
 import statistics
@@ -11,6 +14,7 @@ import termios
 import tty
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import typer
 
@@ -37,6 +41,218 @@ META_PATTERNS = [
 def _is_meta(title: str) -> bool:
     t = title.lower()
     return any(p in t for p in META_PATTERNS)
+
+
+PROFILE_URL = "https://www.metaculus.com/accounts/profile/{user_id}/track-record/"
+DEFAULT_USER_ID = 290661
+
+EXTRACT_JS = """
+() => {
+    const svgs = document.querySelectorAll("svg");
+    let chart = null;
+    for (const svg of svgs) {
+        const p = svg.parentElement;
+        if (p && p.className && p.className.toString().includes("VictoryContainer")
+            && parseInt(svg.getAttribute("width") || "0") > 500) {
+            chart = svg;
+            break;
+        }
+    }
+    if (!chart) {
+        for (const svg of svgs) {
+            if (svg.querySelectorAll("path").length > 100) {
+                chart = svg;
+                break;
+            }
+        }
+    }
+    if (!chart) return { error: "no_chart" };
+
+    const fk = Object.keys(chart).find(k => k.startsWith("__reactFiber"));
+    if (!fk) return { error: "no_fiber" };
+
+    let fiber = chart[fk];
+    let data = null;
+    let username = "";
+    let depth = 0;
+
+    while (fiber && depth < 60) {
+        const props = fiber.memoizedProps || fiber.pendingProps;
+        if (props) {
+            const src = props.scatterPlot || props.score_scatter_plot;
+            if (src && Array.isArray(src)) {
+                data = src;
+                username = props.username || "";
+                break;
+            }
+        }
+        fiber = fiber.return;
+        depth++;
+    }
+    if (!data || !data.length) return { error: "no_data" };
+
+    return {
+        username,
+        records: data.map(q => {
+            const r = {};
+            for (const [k, v] of Object.entries(q)) {
+                if (typeof v !== "function" && typeof v !== "object") r[k] = v;
+            }
+            return r;
+        })
+    };
+}
+"""
+
+
+async def fetch_scores(user_id: int) -> dict[str, object]:
+    """Launch headless browser, navigate to track record, extract React data."""
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        raise RuntimeError(
+            "playwright not installed. Run: uv add playwright && playwright install chromium"
+        )
+
+    url = PROFILE_URL.format(user_id=user_id)
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        page = await browser.new_page(
+            user_agent=(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            ),
+        )
+        await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+
+        try:
+            await page.wait_for_selector(
+                "svg[class*='VictoryContainer'], svg",
+                state="attached",
+                timeout=45_000,
+            )
+        except Exception:
+            await browser.close()
+            raise RuntimeError("Chart did not render within 45s")
+
+        await page.wait_for_timeout(5_000)
+        result = await page.evaluate(EXTRACT_JS)
+        await browser.close()
+
+    if isinstance(result, dict) and "error" in result:
+        errors = {
+            "no_chart": "No score scatter plot found on page",
+            "no_fiber": "Cannot access React internals",
+            "no_data": "Score data array is empty",
+        }
+        raise RuntimeError(errors.get(str(result["error"]), str(result["error"])))
+
+    return result
+
+
+def normalize_resolution(raw: str) -> str | float:
+    """Normalize a scraped resolution string to forecast JSON format."""
+    s = raw.strip()
+    low = s.lower()
+    if low in ("yes", "no"):
+        return low
+    try:
+        return float(s)
+    except ValueError:
+        return s
+
+
+def resolve_scraped(
+    records: list[dict[str, object]],
+    version: str | None = None,
+    dry_run: bool = False,
+) -> tuple[int, int]:
+    """Write peer_score, score_timestamp, resolution, baseline_score to forecast JSONs."""
+    from aib.agent.history import _update_forecast_json
+    from aib.paths import iter_forecast_files, iter_retrodict_files
+    from aib.scoring import compute_baseline_score
+
+    scores_by_post: dict[int, dict[str, object]] = {}
+    for rec in records:
+        pid = rec.get("post_id")
+        if isinstance(pid, int):
+            scores_by_post[pid] = rec
+
+    updated = 0
+    unchanged = 0
+
+    for post_id, rec in sorted(scores_by_post.items()):
+        raw_res = rec.get("question_resolution")
+        peer = rec.get("score")
+        score_ts = rec.get("score_timestamp")
+
+        if raw_res is None or str(raw_res).strip() == "":
+            continue
+
+        resolution = normalize_resolution(str(raw_res))
+
+        files = list(iter_forecast_files(post_id, version=version)) + list(
+            iter_retrodict_files(post_id, version=version)
+        )
+        for f in files:
+            forecast = json.loads(f.read_text())
+
+            updates: dict[str, object] = {}
+
+            if forecast.get("resolution") is None:
+                updates["resolution"] = resolution
+            if peer is not None and forecast.get("peer_score") is None:
+                updates["peer_score"] = peer
+            if score_ts is not None and forecast.get("score_timestamp") is None:
+                updates["score_timestamp"] = score_ts
+
+            if forecast.get("baseline_score") is None:
+                merged = {**forecast, **updates}
+                baseline = compute_baseline_score(merged)
+                if baseline is not None:
+                    updates["baseline_score"] = baseline
+
+            if not updates:
+                unchanged += 1
+                continue
+
+            if dry_run:
+                typer.echo(f"  {post_id}: {updates}")
+            else:
+                if _update_forecast_json(f, **updates):
+                    typer.echo(f"  {post_id}: {updates}")
+            updated += 1
+
+    return updated, unchanged
+
+
+@app.command()
+def scrape(
+    user_id: int = typer.Option(
+        DEFAULT_USER_ID, "--user-id", "-u", help="Metaculus user ID"
+    ),
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Only update forecasts for this version"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
+) -> None:
+    """Scrape track record and update forecast JSONs with peer scores."""
+    typer.echo(f"Scraping track record for user {user_id}...")
+
+    data = asyncio.run(fetch_scores(user_id))
+    records = data.get("records")
+    assert isinstance(records, list)
+    typer.echo(f"Scraped {len(records)} records")
+
+    scores = [r["score"] for r in records if r.get("score") is not None]
+    if scores:
+        avg = sum(scores) / len(scores)
+        typer.echo(f"Avg peer score: {avg:.4f} (n={len(scores)})")
+
+    updated, unchanged = resolve_scraped(records, version, dry_run)
+    typer.echo(f"\nUpdated: {updated}, Unchanged: {unchanged}")
+    if dry_run:
+        typer.echo("(dry run)")
 
 
 @app.command()
@@ -430,6 +646,9 @@ def _build_strip(
     by_version: dict[str, list[float]],
     version_dates: dict[str, str],
     term_width: int,
+    color_map: dict[str, int] | None = None,
+    version_totals: dict[str, int] | None = None,
+    score_mode: ScoreMode = "peer",
 ) -> str:
     """Build a horizontal scatter strip chart + summary table."""
 
@@ -437,26 +656,51 @@ def _build_strip(
         sv = parse_semver(v)
         return sv if sv else (0, 0, 0)
 
-    versions_sorted = sorted(by_version.keys(), key=sort_key)
+    all_versions = set(by_version.keys())
+    if version_totals:
+        all_versions |= version_totals.keys()
+    versions_sorted = sorted(all_versions, key=sort_key)
 
     version_stats: list[tuple[str, int, float, float, float, float]] = []
     for v in versions_sorted:
-        scores = by_version[v]
+        scores = by_version.get(v, [])
         n = len(scores)
-        avg = statistics.mean(scores)
-        std = statistics.stdev(scores) if n > 1 else 0.0
-        version_stats.append((v, n, avg, std, min(scores), max(scores)))
+        if n > 0:
+            avg = statistics.mean(scores)
+            std = statistics.stdev(scores) if n > 1 else 0.0
+            version_stats.append((v, n, avg, std, min(scores), max(scores)))
+        else:
+            version_stats.append((v, 0, 0.0, 0.0, 0.0, 0.0))
 
-    all_scores = [s for v in versions_sorted for s in by_version[v]]
-    score_min = min(all_scores)
-    score_max = max(all_scores)
+    all_scores = sorted(s for v in versions_sorted for s in by_version.get(v, []))
+    if not all_scores:
+        all_scores = [0.0]
+    n_scores = len(all_scores)
+    q1 = all_scores[n_scores // 4]
+    q3 = all_scores[3 * n_scores // 4]
+    iqr = q3 - q1
+    clip_lo = min(q1 - 2.0 * iqr, 0.0)
+    clip_hi = max(q3 + 2.0 * iqr, 0.0)
+    score_min = max(min(all_scores), clip_lo)
+    score_max = min(max(all_scores), clip_hi)
     margin = max((score_max - score_min) * 0.03, 1.0)
     range_min = score_min - margin
     range_max = score_max + margin
     score_range = range_max - range_min
 
-    label_width = max(len(f"v{s[0]} (n={s[1]:>2})") for s in version_stats)
-    value_width = 14
+    def _date_short(v: str) -> str:
+        d = version_dates.get(v, "")
+        return d[5:] if len(d) >= 10 else (d or "—")
+
+    def _label(v: str, n: int) -> str:
+        ds = _date_short(v)
+        total = version_totals.get(v) if version_totals else None
+        if total is not None:
+            return f"v{v} {ds} {n}/{total}"
+        return f"v{v} {ds} (n={n:>2})"
+
+    label_width = max(len(_label(s[0], s[1])) for s in version_stats)
+    value_width = 22
     chart_width = max(20, term_width - label_width - value_width - 4)
 
     def to_pos(score: float) -> int:
@@ -475,39 +719,48 @@ def _build_strip(
     else:
         zero_pos = to_pos(0.0)
 
-    GREEN = "\033[32m"
-    RED = "\033[31m"
+    if color_map is None:
+        colors = _pick_colors(len(versions_sorted))
+        color_map = dict(zip(versions_sorted, colors))
+
     BOLD = "\033[1m"
     DIM = "\033[2m"
     RESET = "\033[0m"
 
     lines: list[str] = [
-        f"{BOLD}Peer score by version (higher is better){RESET}",
+        f"{BOLD}{'Baseline' if score_mode == 'baseline' else 'Peer'} score by version (higher is better){RESET}",
         "",
     ]
 
-    for v, n, avg, std, _, _ in version_stats:
-        label = f"v{v} (n={n:>2})".ljust(label_width)
+    for v, n, avg, std, mn, mx in version_stats:
+        label = _label(v, n).ljust(label_width)
+        c = color_map.get(v)
+        ansi = f"\033[38;5;{c}m" if c is not None else ""
 
-        counts: dict[int, int] = {}
-        for s in by_version[v]:
-            pos = to_pos(s)
-            counts[pos] = counts.get(pos, 0) + 1
+        if n > 0:
+            counts: dict[int, int] = {}
+            for s in by_version.get(v, []):
+                pos = to_pos(s)
+                counts[pos] = counts.get(pos, 0) + 1
 
-        parts: list[str] = []
-        for col in range(chart_width):
-            count = counts.get(col, 0)
-            if count > 0:
-                color = GREEN if col >= zero_pos else RED
-                char = "●" if count == 1 else str(min(count, 9))
-                parts.append(f"{color}{char}{RESET}")
-            elif col == zero_pos:
-                parts.append(f"{DIM}│{RESET}")
-            else:
-                parts.append(" ")
-        row = "".join(parts)
-
-        lines.append(f"  {label} {row}  {avg:>6.1f} ±{std:>3.0f}")
+            parts: list[str] = []
+            for col in range(chart_width):
+                count = counts.get(col, 0)
+                if count > 0:
+                    char = "●" if count == 1 else str(min(count, 9))
+                    parts.append(f"{ansi}{char}{RESET}")
+                elif col == zero_pos:
+                    parts.append(f"{DIM}│{RESET}")
+                else:
+                    parts.append(" ")
+            row = "".join(parts)
+            stats = f"{avg:>5.1f} ±{std:>2.0f}  {mn:>3.0f}‥{mx:.0f}"
+            lines.append(f"  {ansi}{label}{RESET} {row}  {stats}")
+        else:
+            empty = list(" " * chart_width)
+            if 0 <= zero_pos < chart_width:
+                empty[zero_pos] = f"{DIM}│{RESET}"
+            lines.append(f"  {ansi}{label}{RESET} {''.join(empty)}")
 
     scale_pad = " " * (label_width + 3)
     ruler = list("─" * chart_width)
@@ -532,32 +785,51 @@ def _build_strip(
     lines.append(f"{scale_pad}{DIM}{''.join(ruler)}{RESET}")
     lines.append(f"{scale_pad}{DIM}{''.join(labels)}{RESET}")
 
-    lines.append("")
     lines.append(
-        f"{'Version':<12} {'Date':<12} {'N':>4}  "
-        f"{'Avg':>8}  {'Std':>8}  {'Min':>8}  {'Max':>8}"
-    )
-    lines.append("-" * 72)
-    for v, n, avg, std, mn, mx in version_stats:
-        d = version_dates.get(v, "-")
-        lines.append(
-            f"v{v:<11} {d:<12} {n:>4}  {avg:>8.2f}  {std:>8.2f}  {mn:>8.2f}  {mx:>8.2f}"
-        )
-    lines.append(
-        "\nPeer score: higher is better  ● individual forecast  2-9 overlapping"
+        f"\n{DIM}● individual  2-9 overlapping  avg ±std  min‥max{RESET}"
     )
 
     return "\n".join(lines)
 
 
-def _load_strip_data(min_n: int) -> dict[str, list[float]] | None:
-    """Load and aggregate peer scores by version from forecast JSONs."""
-    by_version: dict[str, list[float]] = {}
-    for d in load_all_forecast_jsons():
-        peer = d.get("peer_score")
-        version = d.get("agent_version")
-        if isinstance(peer, (int, float)) and isinstance(version, str) and version:
-            by_version.setdefault(version, []).append(float(peer))
+def _load_peer_data() -> dict[int, tuple[float, str]]:
+    """Load one peer score per post_id, deduped (first with version wins).
+
+    Returns {post_id: (peer_score, version)}.  Missing version defaults to "0.0.0".
+    """
+    best: dict[int, dict[str, object]] = {}
+    for forecast in load_all_forecast_jsons():
+        pid = forecast.get("post_id")
+        if not isinstance(pid, int):
+            continue
+        peer = forecast.get("peer_score")
+        if not isinstance(peer, (int, float)):
+            continue
+        prev = best.get(pid)
+        if prev is None or prev.get("agent_version") is None:
+            best[pid] = forecast
+
+    result: dict[int, tuple[float, str]] = {}
+    for pid, f in best.items():
+        peer = f.get("peer_score")
+        if not isinstance(peer, (int, float)):
+            continue
+        version = f.get("agent_version") or "0.0.0"
+        result[pid] = (float(peer), str(version))
+    return result
+
+
+def _load_strip_data(
+    min_n: int, score_mode: ScoreMode = "peer",
+) -> dict[str, list[float]] | None:
+    """Aggregate scores by version, applying min_n filter."""
+    if score_mode == "peer":
+        peer_data = _load_peer_data()
+        by_version: dict[str, list[float]] = {}
+        for peer_score, version in peer_data.values():
+            by_version.setdefault(version, []).append(peer_score)
+    else:
+        by_version = _load_baseline_strip_data()
 
     by_version = {v: s for v, s in by_version.items() if len(s) >= min_n}
     if not by_version:
@@ -566,19 +838,49 @@ def _load_strip_data(min_n: int) -> dict[str, list[float]] | None:
     return by_version
 
 
+def _load_baseline_strip_data() -> dict[str, list[float]]:
+    """Aggregate baseline scores by version (deduped by post_id)."""
+    best: dict[int, dict[str, object]] = {}
+    for forecast in load_all_forecast_jsons():
+        pid = forecast.get("post_id")
+        if not isinstance(pid, int):
+            continue
+        baseline = forecast.get("baseline_score")
+        if not isinstance(baseline, (int, float)):
+            continue
+        prev = best.get(pid)
+        if prev is None or prev.get("agent_version") is None:
+            best[pid] = forecast
+
+    by_version: dict[str, list[float]] = {}
+    for f in best.values():
+        baseline = f.get("baseline_score")
+        if not isinstance(baseline, (int, float)):
+            continue
+        version = str(f.get("agent_version") or "0.0.0")
+        by_version.setdefault(version, []).append(float(baseline))
+    return by_version
+
+
 SCATTER_EPOCH = datetime(2026, 2, 1)
 ScatterPoint = tuple[
     float, float, str, int
-]  # (day_offset, peer_score, version, post_id)
+]  # (day_offset, score, version, post_id)
+
+ScoreMode = Literal["baseline", "peer"]
+
+TrendPoint = tuple[
+    float, float, float, float, str, int
+]  # (forecast_day, resolved_day, baseline_score, peer_score, version, post_id)
 
 
-def _load_scatter_data() -> (
-    tuple[list[ScatterPoint], list[ScatterPoint], dict[str, list[float]]] | None
+def _load_trend_data() -> (
+    tuple[list[TrendPoint], dict[str, list[float]]] | None
 ):
-    """Load scored forecasts for two scatter plots from forecast JSONs.
+    """Load scored forecasts for trend scatter plots.
 
-    Returns (baseline_by_forecast_date, peer_by_resolution_date,
-    version_forecast_dates).
+    Returns (points, version_forecast_dates). Each point carries both dates
+    and both scores so the caller can project to any chart configuration.
     """
     from datetime import timezone
 
@@ -590,42 +892,44 @@ def _load_scatter_data() -> (
             if prev is None or prev.get("agent_version") is None:
                 forecast_by_post[pid] = forecast
 
+    peer_data = _load_peer_data()
+
     version_forecast_dates: dict[str, list[float]] = {}
-    baseline_points: list[ScatterPoint] = []
-    peer_points: list[ScatterPoint] = []
+    points: list[TrendPoint] = []
 
     for pid, forecast in forecast_by_post.items():
-        version = forecast.get("agent_version") or "0.0.0"
-        peer_score = forecast.get("peer_score")
+        version = str(forecast.get("agent_version") or "0.0.0")
 
         ts_str = forecast.get("timestamp")
-        if isinstance(ts_str, str):
-            try:
-                dt = parse_timestamp(ts_str)
-            except ValueError:
-                continue
-            day_offset = (dt - SCATTER_EPOCH).total_seconds() / 86400
-            version_forecast_dates.setdefault(str(version), []).append(day_offset)
+        if not isinstance(ts_str, str):
+            continue
+        try:
+            dt = parse_timestamp(ts_str)
+        except ValueError:
+            continue
+        fc_offset = (dt - SCATTER_EPOCH).total_seconds() / 86400
+        version_forecast_dates.setdefault(version, []).append(fc_offset)
 
-            baseline = forecast.get("baseline_score")
-            if isinstance(baseline, (int, float)) and peer_score is not None:
-                baseline_points.append((day_offset, float(baseline), str(version), pid))
+        baseline = forecast.get("baseline_score")
+        score_ts = forecast.get("score_timestamp")
+        if (
+            not isinstance(baseline, (int, float))
+            or not isinstance(score_ts, (int, float))
+            or pid not in peer_data
+        ):
+            continue
 
-        if isinstance(peer_score, (int, float)):
-            score_ts = forecast.get("score_timestamp")
-            if isinstance(score_ts, (int, float)):
-                dt_res = datetime.fromtimestamp(score_ts, tz=timezone.utc).replace(
-                    tzinfo=None
-                )
-                day_offset_res = (dt_res - SCATTER_EPOCH).total_seconds() / 86400
-                peer_points.append(
-                    (day_offset_res, float(peer_score), str(version), pid)
-                )
+        peer_score, _ = peer_data[pid]
+        dt_res = datetime.fromtimestamp(score_ts, tz=timezone.utc).replace(
+            tzinfo=None
+        )
+        res_offset = (dt_res - SCATTER_EPOCH).total_seconds() / 86400
+        points.append((fc_offset, res_offset, float(baseline), peer_score, version, pid))
 
-    if not baseline_points and not peer_points:
+    if not points:
         return None
 
-    return baseline_points, peer_points, version_forecast_dates
+    return points, version_forecast_dates
 
 
 SATURATED_RING = [
@@ -673,6 +977,26 @@ def _pick_colors(n: int) -> list[int]:
     return [ring[int(i * step) % len(ring)] for i in range(n)]
 
 
+def _version_color_map_and_totals() -> tuple[dict[str, int], dict[str, int]]:
+    """Stable version→color mapping and per-version forecast totals (deduped by post)."""
+    post_versions: dict[int, str] = {}
+    for d in load_all_forecast_jsons():
+        pid = d.get("post_id")
+        if not isinstance(pid, int):
+            continue
+        v = d.get("agent_version") or "0.0.0"
+        if isinstance(v, str) and pid not in post_versions:
+            post_versions[pid] = v
+
+    totals: dict[str, int] = {}
+    for v in post_versions.values():
+        totals[v] = totals.get(v, 0) + 1
+
+    all_versions = sorted(totals, key=lambda v: parse_semver(v) or (0, 0, 0))
+    colors = _pick_colors(len(all_versions))
+    return dict(zip(all_versions, colors)), totals
+
+
 def _build_scatter(
     points: list[ScatterPoint],
     title_label: str,
@@ -717,7 +1041,20 @@ def _build_scatter(
             color=color,
         )
 
-    plt.ylim(y_lo, y_hi)
+    n_yticks = max(3, chart_height // 3)
+    step = (y_hi - y_lo) / max(1, n_yticks)
+    yticks: list[float] = []
+    v = 0.0
+    while v >= y_lo:
+        yticks.append(v)
+        v -= step
+    v = step
+    while v <= y_hi:
+        yticks.append(v)
+        v += step
+    yticks.sort()
+    plt.yticks(yticks, [f"{v:.0f}" for v in yticks])
+    plt.ylim(yticks[0], yticks[-1])
 
     x_min, x_max = min(x_all), max(x_all)
     n_ticks = min(6, max(3, term_width // 20))
@@ -740,40 +1077,55 @@ def _build_scatter(
 
 
 def _build_trend_output(
-    baseline_points: list[ScatterPoint],
-    peer_points: list[ScatterPoint],
+    points: list[TrendPoint],
     version_forecast_dates: dict[str, list[float]],
     term_width: int,
     term_height: int,
+    min_n: int = 0,
+    score_mode: ScoreMode = "baseline",
 ) -> str:
-    """Build two stacked scatter charts: baseline by forecast date, peer by resolution date."""
-    all_versions = sorted(
-        set(p[2] for p in baseline_points + peer_points) | set(version_forecast_dates),
-        key=lambda v: parse_semver(v) or (0, 0, 0),
-    )
-    colors = _pick_colors(len(all_versions))
-    color_map = dict(zip(all_versions, colors))
+    """Build two stacked scatter charts: score by forecast date, score by resolution date."""
+    full_color_map, _ = _version_color_map_and_totals()
+    all_versions_raw = set(p[4] for p in points) | set(version_forecast_dates)
+    if min_n > 0:
+        all_versions_raw = {
+            v for v in all_versions_raw if len(version_forecast_dates.get(v, [])) >= min_n
+        }
+    color_map = {v: full_color_map.get(v, 7) for v in all_versions_raw}
+    filtered = [p for p in points if p[4] in all_versions_raw] if min_n > 0 else points
     chart_height = max(8, (term_height - 8) // 2)
-    parts: list[str] = []
 
-    if baseline_points:
+    label = "Baseline" if score_mode == "baseline" else "Peer"
+    ylabel = "baseline" if score_mode == "baseline" else "peer"
+
+    def _score(p: TrendPoint) -> float:
+        return p[2] if score_mode == "baseline" else p[3]
+
+    by_forecast: list[ScatterPoint] = [
+        (p[0], _score(p), p[4], p[5]) for p in filtered
+    ]
+    by_resolved: list[ScatterPoint] = [
+        (p[1], _score(p), p[4], p[5]) for p in filtered
+    ]
+
+    parts: list[str] = []
+    if by_forecast:
         parts.append(
             _build_scatter(
-                baseline_points,
-                "Baseline score by forecast date",
-                "baseline",
+                by_forecast,
+                f"{label} score by forecast date",
+                ylabel,
                 term_width,
                 chart_height,
                 color_map,
             )
         )
-
-    if peer_points:
+    if by_resolved:
         parts.append(
             _build_scatter(
-                peer_points,
-                "Peer score by resolution date",
-                "peer",
+                by_resolved,
+                f"{label} score by resolution date",
+                ylabel,
                 term_width,
                 chart_height,
                 color_map,
@@ -781,12 +1133,13 @@ def _build_trend_output(
         )
 
     resolved_by_version: dict[str, int] = {}
-    for p in peer_points:
-        v = p[2]
+    for p in filtered:
+        v = p[4]
         resolved_by_version[v] = resolved_by_version.get(v, 0) + 1
 
     legend_entries: list[tuple[str, int]] = []
-    for v, color in color_map.items():
+    for v in sorted(color_map, key=lambda v: parse_semver(v) or (0, 0, 0)):
+        color = color_map[v]
         total = len(version_forecast_dates.get(v, []))
         if not total:
             continue
@@ -804,8 +1157,8 @@ def _build_trend_output(
     return "\n\n".join(parts)
 
 
-def _sleep_or_escape(seconds: int) -> bool:
-    """Sleep for `seconds`, returning True immediately if Escape is pressed."""
+def _sleep_or_keypress(seconds: int) -> str | None:
+    """Sleep for `seconds`, returning the key pressed or None on timeout."""
     old = termios.tcgetattr(sys.stdin)
     try:
         tty.setcbreak(sys.stdin.fileno())
@@ -814,18 +1167,17 @@ def _sleep_or_escape(seconds: int) -> bool:
             ready, _, _ = select.select([sys.stdin], [], [], 0.2)
             if ready:
                 ch = sys.stdin.read(1)
-                if ch == "\x1b":
-                    return True
+                return ch
             elapsed += 0.2
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old)
-    return False
+    return None
 
 
 @app.command()
 def strip(
     min_n: int = typer.Option(
-        3, "--min-n", help="Minimum scored forecasts to include a version"
+        0, "--min-n", help="Minimum scored forecasts to include a version"
     ),
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
@@ -834,44 +1186,47 @@ def strip(
         600, "--interval", "-i", help="Watch refresh interval in seconds"
     ),
 ) -> None:
-    """Strip plot of peer scores by agent version (from track record)."""
-    import asyncio
+    """Strip plot of scores by agent version (from track record)."""
     from datetime import datetime
 
     from rich.console import Console, Group
     from rich.live import Live
     from rich.text import Text
 
-    from aib.devtools.track_record import (
-        DEFAULT_USER_ID,
-        fetch_scores,
-        resolve_scraped,
-    )
     from aib.devtools.version import load_version_dates
 
     console = Console()
     watch = not no_watch
     version_dates = load_version_dates()
+    mode: ScoreMode = "baseline"
 
     def refresh_scrape() -> None:
         try:
             raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            resolve_scraped(raw.get("records", []))
+            records = raw.get("records")
+            resolve_scraped(records if isinstance(records, list) else [])
         except Exception:
             pass
 
     def build_output() -> str:
-        by_version = _load_strip_data(min_n)
-        if not by_version:
+        by_version = _load_strip_data(min_n, mode) or {}
+        cmap, totals = _version_color_map_and_totals()
+        if not by_version and not totals:
             return f"No versions with >= {min_n} scored forecasts."
-        return _build_strip(by_version, version_dates, console.width)
+        return _build_strip(
+            by_version, version_dates, console.width, cmap, totals, mode,
+        )
 
     if not watch:
-        by_version = _load_strip_data(min_n)
-        if not by_version:
+        refresh_scrape()
+        by_version = _load_strip_data(min_n, mode) or {}
+        cmap, totals = _version_color_map_and_totals()
+        if not by_version and not totals:
             typer.echo("No track record data.")
             raise typer.Exit(1)
-        output = _build_strip(by_version, version_dates, console.width)
+        output = _build_strip(
+            by_version, version_dates, console.width, cmap, totals, mode,
+        )
         print()
         print(output)
         return
@@ -880,7 +1235,7 @@ def strip(
     output = build_output()
     timestamp = Text(
         f"  updated {datetime.now().strftime('%H:%M:%S')}"
-        f"  ·  every {interval}s  ·  esc to quit",
+        f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
         style="dim",
     )
 
@@ -892,15 +1247,20 @@ def strip(
     ) as live:
         while True:
             try:
-                if _sleep_or_escape(interval):
+                key = _sleep_or_keypress(interval)
+                if key == "\x1b":
                     break
-                refresh_scrape()
-                output = build_output()
+                if key == "s":
+                    mode = "peer" if mode == "baseline" else "baseline"
+                    output = build_output()
+                else:
+                    refresh_scrape()
+                    output = build_output()
             except KeyboardInterrupt:
                 break
             timestamp = Text(
                 f"  updated {datetime.now().strftime('%H:%M:%S')}"
-                f"  ·  every {interval}s  ·  esc to quit",
+                f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
                 style="dim",
             )
             live.update(Group(Text.from_ansi(output), timestamp))
@@ -908,6 +1268,9 @@ def strip(
 
 @app.command()
 def trend(
+    min_n: int = typer.Option(
+        0, "--min-n", help="Minimum forecasts to include a version"
+    ),
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
     ),
@@ -916,18 +1279,11 @@ def trend(
     ),
 ) -> None:
     """Scatter plot of peer scores over time, colored by agent version."""
-    import asyncio
     from datetime import datetime
 
     from rich.console import Console, Group
     from rich.live import Live
     from rich.text import Text
-
-    from aib.devtools.track_record import (
-        DEFAULT_USER_ID,
-        fetch_scores,
-        resolve_scraped,
-    )
 
     console = Console()
     watch = not no_watch
@@ -935,37 +1291,33 @@ def trend(
     def refresh_scrape() -> None:
         try:
             raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            resolve_scraped(raw.get("records", []))
+            records = raw.get("records")
+            resolve_scraped(records if isinstance(records, list) else [])
         except Exception:
             pass
 
+    mode: ScoreMode = "baseline"
+
     def build_output() -> str:
-        result = _load_scatter_data()
+        result = _load_trend_data()
         if not result:
             return "No scored forecasts found."
-        baseline_pts, peer_pts, ver_dates = result
+        pts, ver_dates = result
         return _build_trend_output(
-            baseline_pts, peer_pts, ver_dates, console.width, console.height
+            pts, ver_dates, console.width, console.height, min_n, mode,
         )
 
     if not watch:
-        result = _load_scatter_data()
-        if not result:
-            typer.echo("No scored forecasts found.")
-            raise typer.Exit(1)
-        baseline_pts, peer_pts, ver_dates = result
-        output = _build_trend_output(
-            baseline_pts, peer_pts, ver_dates, console.width, console.height
-        )
+        refresh_scrape()
         print()
-        print(output)
+        print(build_output())
         return
 
     refresh_scrape()
     output = build_output()
     timestamp = Text(
         f"  updated {datetime.now().strftime('%H:%M:%S')}"
-        f"  ·  every {interval}s  ·  esc to quit",
+        f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
         style="dim",
     )
 
@@ -977,15 +1329,20 @@ def trend(
     ) as live:
         while True:
             try:
-                if _sleep_or_escape(interval):
+                key = _sleep_or_keypress(interval)
+                if key == "\x1b":
                     break
-                refresh_scrape()
-                output = build_output()
+                if key == "s":
+                    mode = "peer" if mode == "baseline" else "baseline"
+                    output = build_output()
+                else:
+                    refresh_scrape()
+                    output = build_output()
             except KeyboardInterrupt:
                 break
             timestamp = Text(
                 f"  updated {datetime.now().strftime('%H:%M:%S')}"
-                f"  ·  every {interval}s  ·  esc to quit",
+                f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
                 style="dim",
             )
             live.update(Group(Text.from_ansi(output), timestamp))
