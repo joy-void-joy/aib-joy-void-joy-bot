@@ -1,0 +1,185 @@
+---
+timestamp: 2026-03-03 11:15:12 UTC
+question_type: binary
+factors:
+- description: 'Unconditional base rate: stocks are up ~52-54% over any 5-trading-day
+    window'
+  logit: 0.1
+  confidence: 0.9
+  effective_logit: 0.09000000000000001
+- description: 'Strong recent momentum: EXR up +10.6% over 20 days with clear uptrend
+    from $125 to $153'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: RSI at ~49 (neutral) - not overbought despite the rally, suggesting
+    room for continuation
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+- description: 'Analyst upgrade: Scotiabank raised price target to $156 (vs current
+    ~$153), providing mild upside catalyst'
+  logit: 0.15
+  confidence: 0.5
+  effective_logit: 0.075
+- description: Proximity to 52-week high ($160.58, only 5% away) - potential resistance
+    zone
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: 'Broader market choppy: S&P 500 slightly negative over 20 days (-1.4%),
+    creating headwinds'
+  logit: -0.15
+  confidence: 0.6
+  effective_logit: -0.09
+- description: Ex-dividend date (~March 13) is after March 10 resolution, so no dividend-related
+    price drop in window
+  logit: 0.05
+  confidence: 0.9
+  effective_logit: 0.045000000000000005
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+assessment: 'This is a standard 5-day stock direction question for EXR (Extra Space
+  Storage). The comparison is March 3 close vs March 10 close (5 trading days).
+
+
+  Key tension: The 90-day sample of daily returns shows very strong positive drift
+  (0.26% daily), giving bootstrap Monte Carlo P(up) = 64%. However, this sample is
+  biased by a specific rally period and is not representative of long-run behavior.
+  The unconditional base rate for stocks over 5 days is ~52%.
+
+
+  The positive momentum is real but the magnitude of the recent rally (10.6% in 20
+  days for a REIT) suggests some of the move may already be priced in. RSI at ~49
+  is neutral, which is mildly favorable - the stock isn''t technically overbought.
+
+
+  The Scotiabank price target upgrade to $156 provides a mild positive catalyst, but
+  the target is only ~2% above current price. Institutional flows are mixed (some
+  selling).
+
+
+  The broader market is choppy, providing mild headwinds. The ex-dividend date is
+  after the resolution window, so no mechanical price drop to worry about.
+
+
+  My estimate of 55% reflects a modest upward adjustment from the ~52% unconditional
+  base rate, driven primarily by recent positive momentum tempered by proximity to
+  52-week high and choppy broader market.'
+calibration_notes: 'Unconditional 5-day base rate for stocks: ~52%. Recent positive
+  momentum justifies a modest upward adjustment but the 90-day sample is too biased
+  by a specific rally to use its full drift. Conservative estimate of 54-55% balances
+  momentum signal against mean reversion risk near highs.'
+key_uncertainties: 1. Whether the strong recent momentum continues or mean-reverts
+  over the next 5 days. 2. Broader market direction - if S&P drops sharply, EXR likely
+  follows despite stock-specific momentum. 3. Any unexpected news (earnings guidance,
+  macro data) that could move the stock.
+tool_audit: '- stock_price: Very useful - provided current price, 52-week range, summary
+  stats, 90-day history
+
+  - stock_history: Useful but limited - only returned ~1.5 months despite requesting
+  1 year
+
+  - web_search: Useful - found analyst upgrade and dividend info
+
+  - fetch_url: Useful - confirmed ex-dividend date details
+
+  - execute_code: Essential - ran Monte Carlo simulations and computed statistics
+
+  - S&P 500 stock_history: Useful for broader market context'
+process_reflection: This is a straightforward stock direction question. The tools
+  worked well for gathering price data and running simulations. The main challenge
+  is that the 1-year stock history returned only ~1.5 months of data, limiting my
+  ability to compute longer-term base rates empirically. I had to rely on general
+  knowledge of the ~52% unconditional base rate. Having access to longer history would
+  improve the simulation quality. The conditional_returns tool could have been useful
+  but I didn't use it here since EXR isn't in a drawdown.
+computed:
+  factor_count: 7
+  factor_sum: 0.39999999999999997
+  tentative_logit: 0.2
+  logit_gap: -0.19999999999999996
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Unconditional base rate: stocks are up ~52-54% over any 5-trading-day
+      window'
+    logit: 0.1
+    confidence: 0.9
+    effective_logit: 0.09000000000000001
+  - description: 'Strong recent momentum: EXR up +10.6% over 20 days with clear uptrend
+      from $125 to $153'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: RSI at ~49 (neutral) - not overbought despite the rally, suggesting
+      room for continuation
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  - description: 'Analyst upgrade: Scotiabank raised price target to $156 (vs current
+      ~$153), providing mild upside catalyst'
+    logit: 0.15
+    confidence: 0.5
+    effective_logit: 0.075
+  - description: Proximity to 52-week high ($160.58, only 5% away) - potential resistance
+      zone
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: 'Broader market choppy: S&P 500 slightly negative over 20 days (-1.4%),
+      creating headwinds'
+    logit: -0.15
+    confidence: 0.6
+    effective_logit: -0.09
+  - description: Ex-dividend date (~March 13) is after March 10 resolution, so no
+      dividend-related price drop in window
+    logit: 0.05
+    confidence: 0.9
+    effective_logit: 0.045000000000000005
+  dominant_factor: 'Strong recent momentum: EXR up +10.6% over 20 days with clear
+    uptrend from $125 to $153'
+  dominant_effective_logit: 0.24
+  factor_implied_probability: 0.598687660112452
+  tentative_probability: 0.55
+  gap_pp: -4.868766011245196
+  sources:
+  - '[(yfinance) EXR](https://finance.yahoo.com/quote/EXR)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Extra Space Storage Inc. (EXR) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/EXR/)'
+  - '[Extra Space Storage Inc. Announces 1st Quarter 2026 Dividend](https://www.prnewswire.com/news-releases/extra-space-storage-inc-announces-1st-quarter-2026-dividend-302688099.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42409
+- **Question ID**: 42199
+- **Session Duration**: 257.7s (4.3 min)
+- **Cost**: $2.4428
+- **Tokens**: 7,121 total (28 in, 7,093 out)
+  - Cache: 492,293 read, 62,504 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42409_20260303_111101/20260303-111101.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 57ms |
+| fetch_url | 1 | 0 | 6459ms |
+| reflection | 1 | 0 | 93696ms |
+| stock_history | 2 | 0 | 67ms |
+| stock_price | 2 | 0 | 540ms |
+| web_search | 1 | 0 | 14766ms |
+
+### Sources Consulted
+
+- [(yfinance) EXR](https://finance.yahoo.com/quote/EXR)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Extra Space Storage Inc. (EXR) Stock Price, News, Quote & History - Yahoo Fi...
+- [Extra Space Storage Inc. Announces 1st Quarter 2026 Dividend](https://www.pr...
