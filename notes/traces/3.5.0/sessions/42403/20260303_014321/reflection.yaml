@@ -1,0 +1,228 @@
+---
+timestamp: 2026-03-03 01:45:33 UTC
+question_type: numeric
+factors:
+- description: Current value is 3.60% (Feb 27), right at the regime mean of 3.597%.
+    No mean-reversion pressure.
+  supports:
+    center: 3.6
+    low: 3.55
+    high: 3.64
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Extremely stable regime since Dec 11: std of only 0.018%, range 3.56-3.63
+    over 53 trading days. Low volatility environment.'
+  supports:
+    center: 3.6
+    low: 3.55
+    high: 3.64
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Fed funds futures imply rate at 3.60% for May, slight downward path.
+    No rate change expected in near term.
+  supports:
+    center: 3.59
+    low: 3.55
+    high: 3.64
+  logit: 0.8
+  confidence: 0.85
+  effective_logit: 0.68
+- description: Negligible daily drift (-0.0004%/day). Over 8 days this is essentially
+    zero (-0.003).
+  supports:
+    center: 3.6
+    low: 3.55
+    high: 3.64
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Tail risk: unexpected economic data, trade policy shock, or Fed surprise
+    could push yields outside recent range. But 8-day horizon limits exposure.'
+  supports:
+    center: 3.6
+    low: 3.5
+    high: 3.7
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 3.6
+  low: 3.55
+  high: 3.64
+assessment: The 6-month Treasury yield has been in an extremely stable regime since
+  mid-December 2025, oscillating between 3.56% and 3.63% with a mean of ~3.60%. The
+  current value (3.60%) is essentially at the regime mean. Fed funds futures show
+  no expected rate change through May 2026. Monte Carlo simulations using both empirical
+  bootstrap and normal distribution approaches consistently produce tight distributions
+  centered around 3.60%, with the 10th-90th percentile range of approximately 3.55-3.64%.
+  The total 8-day volatility is only ~3.6 basis points (1 standard deviation). All
+  simulation methods (bootstrap, normal, t-distribution, blended) converge on essentially
+  the same percentiles, which gives high confidence in the distribution shape.
+calibration_notes: The 6M yield has stayed within a 7bp range (3.56-3.63) for 53 consecutive
+  trading days. Base rate for staying in this range over the next 8 days is very high.
+  The distribution should reflect this stability. Status quo of ~3.60% is the most
+  likely outcome.
+key_uncertainties: Main uncertainty is whether an unexpected macro shock (surprise
+  economic data release, geopolitical event, trade policy shift) could push the yield
+  outside its recent range. The 8-day horizon limits this risk significantly. CPI
+  report or jobs data scheduled in this window could cause a small move.
+tool_audit: 'fred_series: Excellent - provided both the regime stats and rate futures,
+  which are the two most important inputs. The regime_stats field showing stable_since
+  2025-12-11 with std=0.0176 perfectly matched manual calculations. Kalshi: No matching
+  markets found for Fed rate - not a problem since fred_series rate_futures already
+  provided the rate path. execute_code: Monte Carlo simulations ran cleanly and provided
+  consistent results across 4 different methods.'
+process_reflection: This is a clean short-horizon financial forecast where the tools
+  worked well together. The FRED regime_stats feature was especially valuable - it
+  automatically identified the stable regime boundary, saving manual analysis. The
+  rate_futures inclusion in the fred_series response was also very helpful for validating
+  the no-change expectation. The simulation approach naturally produced a well-calibrated
+  distribution. No missing tools or friction points for this question type.
+computed:
+  factor_count: 5
+  factor_sum: 3.255
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current value is 3.60% (Feb 27), right at the regime mean of 3.597%.
+      No mean-reversion pressure.
+    supports:
+      center: 3.6
+      low: 3.55
+      high: 3.64
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Extremely stable regime since Dec 11: std of only 0.018%, range
+      3.56-3.63 over 53 trading days. Low volatility environment.'
+    supports:
+      center: 3.6
+      low: 3.55
+      high: 3.64
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Fed funds futures imply rate at 3.60% for May, slight downward path.
+      No rate change expected in near term.
+    supports:
+      center: 3.59
+      low: 3.55
+      high: 3.64
+    logit: 0.8
+    confidence: 0.85
+    effective_logit: 0.68
+  - description: Negligible daily drift (-0.0004%/day). Over 8 days this is essentially
+      zero (-0.003).
+    supports:
+      center: 3.6
+      low: 3.55
+      high: 3.64
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Tail risk: unexpected economic data, trade policy shock, or Fed
+      surprise could push yields outside recent range. But 8-day horizon limits exposure.'
+    supports:
+      center: 3.6
+      low: 3.5
+      high: 3.7
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: Current value is 3.60% (Feb 27), right at the regime mean of 3.597%.
+    No mean-reversion pressure.
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 3.598087201125176
+    implied_p10: 3.5478902953586497
+    implied_p90: 3.6425316455696204
+    median_gap: 0.0019127988748239844
+    median_gap_pct: 2.021102689849681
+    spread_ratio: 0.9509585376727611
+    precision: 0.025000000000000085
+  sources:
+  - '[(FRED) DGS6MO](https://fred.stlouisfed.org/series/DGS6MO)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  reviewer_critique: 'All five factors are well-grounded in the research trace:
+
+
+    1. **Factor 1** (current value 3.60%, regime mean 3.597%): Verified at trace lines
+    39, 121.
+
+
+    2. **Factor 2** (stable regime since Dec 11, std 0.018%, range 3.56-3.63, 53 obs):
+    Verified at trace lines 121, 154.
+
+
+    3. **Factor 3** (Fed funds futures at 3.60% for May): Verified at trace lines
+    44, 60, 122.
+
+
+    4. **Factor 4** (negligible daily drift -0.0004%/day): Verified at trace line
+    155 (mean change -0.000385).
+
+
+    5. **Factor 5** (tail risk acknowledgment): Reasonable qualitative assessment,
+    trace shows tail risk modeling at lines 180-190.
+
+
+    **No regime-spanning data contamination**: The agent correctly identified the
+    Dec 11, 2025 regime shift (prior mean 3.79% → new mean 3.60%) and used ONLY post-shift
+    data for simulations (trace lines 147-148). This avoids the critical error of
+    contaminating drift/volatility estimates with pre-shift data.
+
+
+    **Probability calibration**: The P10-P90 range of 3.55-3.64 is well-supported
+    by multiple Monte Carlo methods (empirical bootstrap, normal, t-distribution,
+    blended) that all converge on similar percentiles (trace lines 155-190). Given:
+
+    - Current value at regime mean (3.60 vs 3.597)
+
+    - Extremely low volatility (0.036% over 8 days)
+
+    - Negligible drift (-0.003% total over 8 days)
+
+    - Stable Fed policy through May
+
+
+    My independent estimate matches the agent''s distribution. The slight asymmetry
+    (P10 at 3.55 vs P90 at 3.64) appropriately reflects the tight historical upper
+    bound (3.63 max) with more downside room to 3.56 min.
+
+
+    **Resolution criteria**: Correctly uses FRED DGS6MO series as specified.
+
+
+    No hallucinations, double-counting, or directional errors detected. Forecast approved.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42403
+- **Question ID**: 42193
+- **Session Duration**: 137.6s (2.3 min)
+- **Cost**: $2.0208
+- **Tokens**: 4,976 total (26 in, 4,950 out)
+  - Cache: 368,883 read, 58,445 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42403_20260303_014321/20260303-014321.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 435ms |
+| fred_series | 3 | 0 | 878ms |
+| kalshi_price | 2 | 0 | 617ms |
+| reflection | 1 | 0 | 41777ms |
+
+### Sources Consulted
+
+- [(FRED) DGS6MO](https://fred.stlouisfed.org/series/DGS6MO)
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)
