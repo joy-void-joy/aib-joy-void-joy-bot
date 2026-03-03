@@ -1,0 +1,770 @@
+---
+timestamp: 2026-03-03 19:48:52 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one day
+    (58% drop). For news-driven spikes, the typical trajectory continues declining
+    over 5-10 days to 5-15% of peak. This strongly suggests Mar 12 will be well below
+    39.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'Ongoing active conflict (Operation Epic Fury expected to last 4-5
+    weeks): The USS Abraham Lincoln is actively deployed and launching strikes. This
+    could sustain interest above baseline and potentially produce new spikes if carrier-specific
+    incidents occur.'
+  supports: Increases
+  logit: 1.0
+  confidence: 0.5
+  effective_logit: 0.5
+- description: 'Specific entity search decay: During prolonged conflicts, people shift
+    from searching specific assets (''USS Abraham Lincoln'') to broader terms (''Iran
+    war'', ''Operation Epic Fury''). The carrier-specific search decays faster than
+    general conflict interest.'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.75
+  effective_logit: 0.8999999999999999
+- description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide out
+    of a 0-100 scale. Even with sustained elevated interest, hitting this exact range
+    9 days later is improbable. The probability space strongly favors Decreases over
+    Doesn''t change.'
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: 'Iran''s claims about striking the carrier drove the peak: The spike
+    was largely driven by the sensational claim (later denied) that Iran hit the carrier.
+    This is a one-time news cycle that won''t repeat in exactly the same way, making
+    the peak unrepeatable from this specific angle.'
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: 'Possibility of new carrier-specific incident: During an active war,
+    there''s non-trivial probability of a new major event involving the carrier (actual
+    damage, major strike launched from carrier, casualty event) that could spike interest
+    back up to or above 42 on or near Mar 12.'
+  supports: Increases
+  logit: 0.8
+  confidence: 0.4
+  effective_logit: 0.32000000000000006
+- description: 'Change_stats base rates from Google Trends data: In the 21 day-over-day
+    transitions observed, 81% were ''no change'' (within ±3), 14.3% were increases,
+    4.8% were decreases. However, the trailing 6-period stats show 50% increases,
+    16.7% decreases, 33.3% no change — reflecting the active spike period. These stats
+    are dominated by the low-baseline period and less informative for the post-spike
+    regime.'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.3
+  effective_logit: 0.09
+- description: 'Mar 3 value uncertainty: Today''s value of 42 is partial (day not
+    over). Final value could shift. SerpAPI vs pytrends differences of 1-3 points
+    possible. But even with ±5 point uncertainty on the start value, the dominant
+    trajectory still favors Decreases given the large gap between post-decay levels
+    and current value.'
+  supports: Decreases
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  probabilities:
+    Increases: 0.15
+    Doesn't change: 0.15
+    Decreases: 0.7
+assessment: 'The USS Abraham Lincoln search term spiked from baseline (~2) to 100
+  due to Operation Epic Fury (US-Iran war starting Feb 28, 2026) and Iran''s claims
+  of striking the carrier. The value has already dropped to 42 on Mar 3 — a 58% decline
+  in one day.
+
+
+  The dominant dynamic is post-spike decay. Even though the war is expected to last
+  4-5 weeks and the carrier remains actively deployed, the specific search term "uss
+  abraham lincoln" follows a different trajectory than broader conflict terms. People
+  searching for war updates will use "Iran war" or "Operation Epic Fury" rather than
+  the specific carrier name after the initial shock fades.
+
+
+  For "Doesn''t change" (value in [39, 45] on Mar 12): This requires interest to stabilize
+  at approximately the same level as the post-spike first day, which contradicts normal
+  decay patterns. The band is narrow and hard to hit 9 days out.
+
+
+  For "Increases" (value > 45 on Mar 12): This requires either sustained high interest
+  or a new carrier-specific spike near Mar 12. The ongoing conflict provides some
+  probability of this, but it requires a specific new incident timed near Mar 12.
+
+
+  For "Decreases" (value < 39 on Mar 12): This is the default trajectory. If interest
+  follows typical post-spike exponential decay, Mar 12 values would be in the 2-15
+  range, well below 39. Even with the ongoing conflict sustaining interest above zero,
+  the specific carrier term will likely be at 5-20 by Mar 12.
+
+
+  The main risk to the Decreases forecast is a perfectly-timed new carrier-specific
+  event (actual missile hit, major casualties aboard, political controversy about
+  the carrier) that spikes interest back up on or near Mar 12.'
+calibration_notes: 'Base rate from change_stats: 81% no change, 14% increase, 5% decrease.
+  But these are dominated by the baseline period where values were 1-4 and changes
+  were small. The post-spike regime is qualitatively different. For post-spike dynamics
+  on news events, exponential decay is the norm unless new catalysts emerge. The ongoing
+  war provides some sustained interest but the specific carrier term decays faster
+  than the general conflict. Status quo persistence doesn''t apply well here — the
+  ''status quo'' after a spike IS decay.'
+key_uncertainties: '1. Whether a new carrier-specific incident occurs before Mar 12
+  (this is the biggest source of uncertainty)
+
+  2. What the final Mar 3 value will be in the resolution data (partial day + SerpAPI
+  differences)
+
+  3. How much sustained interest the ongoing war generates specifically for this carrier
+  vs broader terms
+
+  4. Whether Iran makes new claims about the carrier or if the fact-checking cycle
+  drives renewed searches'
+tool_audit: '- google_trends: Excellent data. Returned full time series for the resolution
+  date range with tz=0 matching resolution script. Change_stats and tail_stats useful
+  but dominated by the low-baseline pre-spike period, making them less informative
+  for the post-spike regime.
+
+  - web_search: Provided essential context about Operation Epic Fury, confirming the
+  war is ongoing and expected to last weeks.
+
+  - get_metaculus_questions: Returned full question details. No community prediction
+  available (AIB tournament).
+
+  - search_exa: Failed with 400 error. Not critical since web_search covered the news
+  adequately.'
+update_triggers: '- USS Abraham Lincoln actually hit by missiles or damaged → sharp
+  increase in P(Increases)
+
+  - Ceasefire announced → increases P(Decreases)
+
+  - New Iran claims about carrier → could sustain interest
+
+  - Carrier returns to port → brief spike then rapid decay'
+process_reflection: The google_trends tool worked well and returned the exact resolution
+  date range data with tz=0. The change_stats are computed across the full series
+  including the long baseline period, which makes them less useful for post-spike
+  dynamics — it would be helpful to have change_stats computed only for the trailing
+  window or for a specific regime. The news search tools complemented well. The main
+  limitation is that I can't observe the actual post-spike decay trajectory (Mar 4-12
+  data doesn't exist yet), so I'm relying on general patterns of post-spike decay
+  for news events.
+computed:
+  factor_count: 8
+  factor_sum: 4.82
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one day
+      (58% drop). For news-driven spikes, the typical trajectory continues declining
+      over 5-10 days to 5-15% of peak. This strongly suggests Mar 12 will be well
+      below 39.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'Ongoing active conflict (Operation Epic Fury expected to last 4-5
+      weeks): The USS Abraham Lincoln is actively deployed and launching strikes.
+      This could sustain interest above baseline and potentially produce new spikes
+      if carrier-specific incidents occur.'
+    supports: Increases
+    logit: 1.0
+    confidence: 0.5
+    effective_logit: 0.5
+  - description: 'Specific entity search decay: During prolonged conflicts, people
+      shift from searching specific assets (''USS Abraham Lincoln'') to broader terms
+      (''Iran war'', ''Operation Epic Fury''). The carrier-specific search decays
+      faster than general conflict interest.'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.75
+    effective_logit: 0.8999999999999999
+  - description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide
+      out of a 0-100 scale. Even with sustained elevated interest, hitting this exact
+      range 9 days later is improbable. The probability space strongly favors Decreases
+      over Doesn''t change.'
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: 'Iran''s claims about striking the carrier drove the peak: The spike
+      was largely driven by the sensational claim (later denied) that Iran hit the
+      carrier. This is a one-time news cycle that won''t repeat in exactly the same
+      way, making the peak unrepeatable from this specific angle.'
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: 'Possibility of new carrier-specific incident: During an active war,
+      there''s non-trivial probability of a new major event involving the carrier
+      (actual damage, major strike launched from carrier, casualty event) that could
+      spike interest back up to or above 42 on or near Mar 12.'
+    supports: Increases
+    logit: 0.8
+    confidence: 0.4
+    effective_logit: 0.32000000000000006
+  - description: 'Change_stats base rates from Google Trends data: In the 21 day-over-day
+      transitions observed, 81% were ''no change'' (within ±3), 14.3% were increases,
+      4.8% were decreases. However, the trailing 6-period stats show 50% increases,
+      16.7% decreases, 33.3% no change — reflecting the active spike period. These
+      stats are dominated by the low-baseline period and less informative for the
+      post-spike regime.'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.3
+    effective_logit: 0.09
+  - description: 'Mar 3 value uncertainty: Today''s value of 42 is partial (day not
+      over). Final value could shift. SerpAPI vs pytrends differences of 1-3 points
+      possible. But even with ±5 point uncertainty on the start value, the dominant
+      trajectory still favors Decreases given the large gap between post-decay levels
+      and current value.'
+    supports: Decreases
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: 'Post-spike decay pattern: Value dropped from 100 to 42 in one
+    day (58% drop). For news-driven spikes, the typical trajectory continues declining
+    over 5-10 days to 5-15% of peak. This strongly suggests Mar 12 will be well below
+    39.'
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 5
+    logit_sum: 3.91
+    factors:
+    - description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one
+        day (58% drop). For news-driven spikes, the typical trajectory continues declining
+        over 5-10 days to 5-15% of peak. This strongly suggests Mar 12 will be well
+        below 39.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'Specific entity search decay: During prolonged conflicts, people
+        shift from searching specific assets (''USS Abraham Lincoln'') to broader
+        terms (''Iran war'', ''Operation Epic Fury''). The carrier-specific search
+        decays faster than general conflict interest.'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.75
+      effective_logit: 0.8999999999999999
+    - description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide
+        out of a 0-100 scale. Even with sustained elevated interest, hitting this
+        exact range 9 days later is improbable. The probability space strongly favors
+        Decreases over Doesn''t change.'
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.8
+      effective_logit: 0.6400000000000001
+    - description: 'Iran''s claims about striking the carrier drove the peak: The
+        spike was largely driven by the sensational claim (later denied) that Iran
+        hit the carrier. This is a one-time news cycle that won''t repeat in exactly
+        the same way, making the peak unrepeatable from this specific angle.'
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.7
+      effective_logit: 0.48999999999999994
+    - description: 'Mar 3 value uncertainty: Today''s value of 42 is partial (day
+        not over). Final value could shift. SerpAPI vs pytrends differences of 1-3
+        points possible. But even with ±5 point uncertainty on the start value, the
+        dominant trajectory still favors Decreases given the large gap between post-decay
+        levels and current value.'
+      supports: Decreases
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.8200000000000001
+    factors:
+    - description: 'Ongoing active conflict (Operation Epic Fury expected to last
+        4-5 weeks): The USS Abraham Lincoln is actively deployed and launching strikes.
+        This could sustain interest above baseline and potentially produce new spikes
+        if carrier-specific incidents occur.'
+      supports: Increases
+      logit: 1.0
+      confidence: 0.5
+      effective_logit: 0.5
+    - description: 'Possibility of new carrier-specific incident: During an active
+        war, there''s non-trivial probability of a new major event involving the carrier
+        (actual damage, major strike launched from carrier, casualty event) that could
+        spike interest back up to or above 42 on or near Mar 12.'
+      supports: Increases
+      logit: 0.8
+      confidence: 0.4
+      effective_logit: 0.32000000000000006
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.09
+    factors:
+    - description: 'Change_stats base rates from Google Trends data: In the 21 day-over-day
+        transitions observed, 81% were ''no change'' (within ±3), 14.3% were increases,
+        4.8% were decreases. However, the trailing 6-period stats show 50% increases,
+        16.7% decreases, 33.3% no change — reflecting the active spike period. These
+        stats are dominated by the low-baseline period and less informative for the
+        post-spike regime.'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.3
+      effective_logit: 0.09
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.020542617240533797
+      Decreases: 0.9368297960927624
+      Increases: 0.0426275866667038
+    tentative_probabilities:
+      Increases: 0.15
+      Doesn't change: 0.15
+      Decreases: 0.7
+    per_option_gap_pp:
+      Doesn't change: 12.945738275946619
+      Decreases: -23.682979609276245
+      Increases: 10.737241333329619
+    max_gap_pp: -23.682979609276245
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) uss abraham lincoln](https://trends.google.com/trends/explore?q=uss
+    abraham lincoln)'
+  - '[(Metaculus) Will the interest in “uss abraham lincoln” change between 2026-03-03
+    and 2026-03-12 according to Google Trends?](https://www.metaculus.com/questions/42416)'
+  - '[USS Abraham Lincoln (CVN-72) - Wikipedia](https://en.wikipedia.org/wiki/USS_Abraham_Lincoln_(CVN-72))'
+  reviewer_critique: "## Verdict: FAIL\n\nThe agent's forecast contains a critical\
+    \ probability calibration error when compared to similar forecasts and the available\
+    \ evidence.\n\n### Evidence Review: PASS\nAll factual claims in the factors are\
+    \ well-supported by the trace:\n- Google Trends data showing 100→42 decay is confirmed\
+    \ (trace lines 56-57)\n- Operation Epic Fury details and 4-5 week timeline confirmed\
+    \ (trace lines 182-221)  \n- Iran's claims about striking the carrier confirmed\
+    \ (trace lines 325-339)\n- US denial confirmed\n- Change statistics confirmed\
+    \ (trace lines 52-63)\n\nNo hallucinations detected. No double-counting issues\
+    \ found.\n\n### Critical Error: Underestimated Probability of Decreases\n\n**The\
+    \ agent assigns 70% to Decreases, but the evidence supports 80-85%.**\n\n**Comparison\
+    \ with similar forecasts reveals the calibration error:**\n\n1. **Question 42408\
+    \ (\"bbc news\" Iran conflict)**: 75% Decreases\n   - Starting value: 64, threshold:\
+    \ below 61 (4-point drop needed)\n   - Decay pattern: 100→94→79→64 (36% drop over\
+    \ 3 days)\n   - Days to forecast: 9 days\n\n2. **Question 42405 (\"ahmadinejad\"\
+    \ Iran conflict)**: 95% Decreases  \n   - Starting value: 35, threshold: below\
+    \ 32 (4-point drop needed)\n   - Decay pattern: 100→60→35 (65% drop in 2 days)\n\
+    \   - Days to forecast: 8 days\n\n3. **Current question (\"uss abraham lincoln\"\
+    )**:\n   - Starting value: 42, threshold: below 39 (4-point drop needed)\n   -\
+    \ Decay pattern: 100→42 (58% drop in 1 day)\n   - Days to forecast: 9 days\n \
+    \  - **Agent's forecast: 70% Decreases** ← TOO LOW\n\n**Why the current forecast\
+    \ should be 80-85% Decreases:**\n\n- The observed decay rate (58% in 1 day) is\
+    \ **steeper** than the \"bbc news\" question (36% over 3 days)\n- The threshold\
+    \ distance is identical (4 points)\n- Specific entity searches (\"USS Abraham\
+    \ Lincoln\") decay **faster** than general news searches (\"bbc news\") during\
+    \ ongoing events\n- All three questions share the same conflict context (Operation\
+    \ Epic Fury), so the \"ongoing conflict\" uncertainty is already priced into the\
+    \ comparable forecasts\n- Factor 3 correctly notes that people shift from specific\
+    \ carrier searches to broader terms, but this insight isn't properly weighted\
+    \ in the final probability\n\n**The agent is double-discounting:** The factors\
+    \ already account for uncertainty via confidence values (Factor 2: confidence=0.5,\
+    \ Factor 6: confidence=0.4), yet the final probability further hedges by keeping\
+    \ Decreases at only 70%. The \"bbc news\" forecast shows that even with the ongoing\
+    \ conflict, post-spike decay dominates.\n\n### Recommendation\nIncrease P(Decreases)\
+    \ to 80-85%, reduce P(Increases) to 8-10%, and P(Doesn't change) to 7-10%. The\
+    \ narrow 7-point band ([39,45]) combined with the steep observed decay trajectory\
+    \ makes Decreases the overwhelming favorite."
+---
+timestamp: 2026-03-03 19:50:37 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one day
+    (58% drop). For news-driven spikes, the typical trajectory continues declining
+    over 5-10 days to 5-15% of peak. Mar 12 should be well below 39.'
+  supports: Decreases
+  logit: 2.2
+  confidence: 0.9
+  effective_logit: 1.9800000000000002
+- description: 'Specific entity search decay: During prolonged conflicts, people shift
+    from searching specific assets (''USS Abraham Lincoln'') to broader terms (''Iran
+    war'', ''Operation Epic Fury''). The carrier-specific search decays faster than
+    general conflict interest.'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide. Hitting
+    this exact range 9 days after a peak-day crash is highly improbable. The probability
+    space strongly favors Decreases.'
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.85
+  effective_logit: 0.68
+- description: 'Iran''s carrier-strike claim drove the peak: The spike was driven
+    by the sensational claim (denied by CENTCOM) that Iran hit the carrier. This one-time
+    viral moment won''t recur identically.'
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.75
+  effective_logit: 0.5249999999999999
+- description: 'Ongoing active conflict provides some chance of new carrier-specific
+    incident: The war is expected to last 4-5 weeks and the carrier is actively deployed.
+    A new incident could spike interest. But the probability of a perfectly-timed
+    event on or near Mar 12 is low.'
+  supports: Increases
+  logit: 0.7
+  confidence: 0.35
+  effective_logit: 0.24499999999999997
+- description: 'Comparable forecast calibration: Similar Iran-conflict Google Trends
+    questions show 75-95% P(Decreases) for similar decay rates and threshold distances.
+    The 58% single-day decay here is steeper than comparable cases, supporting even
+    higher P(Decreases).'
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+tentative_estimate:
+  probabilities:
+    Increases: 0.09
+    Doesn't change: 0.09
+    Decreases: 0.82
+assessment: 'Revised assessment: The 58% single-day decay from 100→42 is one of the
+  steepest observed in the current conflict-related questions. The 4-point threshold
+  distance (needs to drop below 39) is modest and almost certainly achieved given
+  the trajectory. Comparable Iran-conflict trend questions with similar dynamics show
+  75-95% P(Decreases).
+
+
+  The ongoing war provides a small but real chance of a new carrier-specific spike,
+  but the probability of such an event being timed specifically to Mar 12 (rather
+  than any other day) is low. Even if such a spike occurs earlier (e.g., Mar 6), the
+  subsequent decay by Mar 12 would likely still leave the value well below 39.
+
+
+  The "Doesn''t change" band [39, 45] is extremely narrow and hard to hit 9 days after
+  a peak. The "Increases" scenario requires a value above 45 on Mar 12, which would
+  need a sustained or renewed carrier-specific news cycle — possible but unlikely
+  given the shift to broader conflict terms.'
+calibration_notes: 'Revised calibration: Comparable Iran-conflict Google Trends questions
+  suggest 75-95% base rate for Decreases with similar decay dynamics. The steep 58%
+  single-day decay and the narrow threshold band push this toward the higher end.
+  82% P(Decreases) is consistent with the evidence and comparable forecasts.'
+key_uncertainties: '1. Whether a new carrier-specific incident occurs before Mar 12
+  (main uncertainty)
+
+  2. Final Mar 3 value in resolution data (SerpAPI may differ by 1-3 points)
+
+  3. Whether the war escalates in ways that specifically foreground this carrier'
+tool_audit: Same as previous reflection. All key tools worked well. search_exa had
+  a 400 error but wasn't critical.
+update_triggers: '- USS Abraham Lincoln actually damaged → sharp increase in P(Increases)
+
+  - Ceasefire announced → increases P(Decreases) further
+
+  - New carrier-specific claims or incidents → could sustain interest'
+process_reflection: The reviewer's comparison with similar forecasts was very helpful
+  for calibration. Having access to past forecast traces for the same conflict improves
+  consistency. The main improvement would be better tools for modeling post-spike
+  decay trajectories across multiple similar events.
+computed:
+  factor_count: 6
+  factor_sum: 5.24
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one day
+      (58% drop). For news-driven spikes, the typical trajectory continues declining
+      over 5-10 days to 5-15% of peak. Mar 12 should be well below 39.'
+    supports: Decreases
+    logit: 2.2
+    confidence: 0.9
+    effective_logit: 1.9800000000000002
+  - description: 'Specific entity search decay: During prolonged conflicts, people
+      shift from searching specific assets (''USS Abraham Lincoln'') to broader terms
+      (''Iran war'', ''Operation Epic Fury''). The carrier-specific search decays
+      faster than general conflict interest.'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide.
+      Hitting this exact range 9 days after a peak-day crash is highly improbable.
+      The probability space strongly favors Decreases.'
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.85
+    effective_logit: 0.68
+  - description: 'Iran''s carrier-strike claim drove the peak: The spike was driven
+      by the sensational claim (denied by CENTCOM) that Iran hit the carrier. This
+      one-time viral moment won''t recur identically.'
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.75
+    effective_logit: 0.5249999999999999
+  - description: 'Ongoing active conflict provides some chance of new carrier-specific
+      incident: The war is expected to last 4-5 weeks and the carrier is actively
+      deployed. A new incident could spike interest. But the probability of a perfectly-timed
+      event on or near Mar 12 is low.'
+    supports: Increases
+    logit: 0.7
+    confidence: 0.35
+    effective_logit: 0.24499999999999997
+  - description: 'Comparable forecast calibration: Similar Iran-conflict Google Trends
+      questions show 75-95% P(Decreases) for similar decay rates and threshold distances.
+      The 58% single-day decay here is steeper than comparable cases, supporting even
+      higher P(Decreases).'
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  dominant_factor: 'Post-spike decay pattern: Value dropped from 100 to 42 in one
+    day (58% drop). For news-driven spikes, the typical trajectory continues declining
+    over 5-10 days to 5-15% of peak. Mar 12 should be well below 39.'
+  dominant_effective_logit: 1.9800000000000002
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 5
+    logit_sum: 4.995
+    factors:
+    - description: 'Post-spike decay pattern: Value dropped from 100 to 42 in one
+        day (58% drop). For news-driven spikes, the typical trajectory continues declining
+        over 5-10 days to 5-15% of peak. Mar 12 should be well below 39.'
+      supports: Decreases
+      logit: 2.2
+      confidence: 0.9
+      effective_logit: 1.9800000000000002
+    - description: 'Specific entity search decay: During prolonged conflicts, people
+        shift from searching specific assets (''USS Abraham Lincoln'') to broader
+        terms (''Iran war'', ''Operation Epic Fury''). The carrier-specific search
+        decays faster than general conflict interest.'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.8
+      effective_logit: 0.96
+    - description: 'Narrow ''Doesn''t change'' band: [39, 45] is only 7 points wide.
+        Hitting this exact range 9 days after a peak-day crash is highly improbable.
+        The probability space strongly favors Decreases.'
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.85
+      effective_logit: 0.68
+    - description: 'Iran''s carrier-strike claim drove the peak: The spike was driven
+        by the sensational claim (denied by CENTCOM) that Iran hit the carrier. This
+        one-time viral moment won''t recur identically.'
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.75
+      effective_logit: 0.5249999999999999
+    - description: 'Comparable forecast calibration: Similar Iran-conflict Google
+        Trends questions show 75-95% P(Decreases) for similar decay rates and threshold
+        distances. The 58% single-day decay here is steeper than comparable cases,
+        supporting even higher P(Decreases).'
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.24499999999999997
+    factors:
+    - description: 'Ongoing active conflict provides some chance of new carrier-specific
+        incident: The war is expected to last 4-5 weeks and the carrier is actively
+        deployed. A new incident could spike interest. But the probability of a perfectly-timed
+        event on or near Mar 12 is low.'
+      supports: Increases
+      logit: 0.7
+      confidence: 0.35
+      effective_logit: 0.24499999999999997
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.006668864426653456
+      Decreases: 0.9848108522469802
+      Increases: 0.008520283326366342
+    tentative_probabilities:
+      Increases: 0.09
+      Doesn't change: 0.09
+      Decreases: 0.82
+    per_option_gap_pp:
+      Doesn't change: 8.333113557334654
+      Decreases: -16.48108522469802
+      Increases: 8.147971667363366
+    max_gap_pp: -16.48108522469802
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) uss abraham lincoln](https://trends.google.com/trends/explore?q=uss
+    abraham lincoln)'
+  - '[(Metaculus) Will the interest in “uss abraham lincoln” change between 2026-03-03
+    and 2026-03-12 according to Google Trends?](https://www.metaculus.com/questions/42416)'
+  - '[USS Abraham Lincoln (CVN-72) - Wikipedia](https://en.wikipedia.org/wiki/USS_Abraham_Lincoln_(CVN-72))'
+  reviewer_critique: 'I''ve verified the agent''s forecast by reading the full research
+    trace and comparing against historical forecasts for similar Iran-conflict Google
+    Trends questions.
+
+
+    ## Core factual claims: VERIFIED
+
+
+    All major claims in the factors are well-supported by the trace:
+
+    - **Factor 1 (58% single-day decay)**: Trace lines 255-257 confirm the values:
+    peak 100 on Mar 2, dropped to 42 on Mar 3. Math checks out: (100-42)/100 = 58%.
+
+    - **Factor 4 (Iran''s carrier-strike claim)**: Trace lines 115-151 show extensive
+    news coverage of Iran''s Revolutionary Guard claiming they struck the USS Abraham
+    Lincoln with missiles (CENTCOM denied).
+
+    - **Assessment claim (4-5 week war duration)**: Trace lines 181-221 confirm Trump
+    stated operations could last "four weeks or less" and "4-5 weeks."
+
+    - **Factor 2 (specific entity search decay)**: The trace''s analysis (lines 268-282)
+    explicitly discusses this dynamic—specific asset searches decay faster than general
+    conflict terms.
+
+
+    ## Factor 6 calibration claim: PARTIALLY VERIFIED with a concern
+
+
+    Factor 6 claims "Comparable Iran-conflict trend questions show 75-95% P(Decreases)
+    for similar decay rates and threshold distances."
+
+
+    I checked historical forecasts and found:
+
+    - **Question 42375 ("khamenei")**: 85% Decreases. Starting value 33 on Mar 2 (already
+    decayed from 100 peak), 12-day window, threshold requires staying above 30.
+
+    - **Question 42394 ("reza pahlavi")**: 87% Decreases. Starting value 100 on Mar
+    2 (peak day), 9-day window.
+
+
+    The 75-95% range is supported. However, the agent''s **82% for this question appears
+    conservative**:
+
+    - This question has a 58% single-day decay (steeper than khamenei''s initial decay)
+
+    - The threshold distance is only 3 points below start (42→39), requiring just
+    a 7% additional drop
+
+    - The "khamenei" forecast gave 85% despite starting at 33 (less room to drop below
+    30) versus this question starting at 42 (more room to drop below 39)
+
+
+    ## Probability assessment: CONCERN (but not a FAIL)
+
+
+    Given the evidence, I would estimate **P(Decreases) = 88-92%**, slightly higher
+    than the agent''s 82%. Here''s why:
+
+
+    1. **The decay trajectory is extremely steep**: 58% in one day, and the trace
+    projects Mar 12 at ~2-8 (lines 277-278), well below the 39 threshold.
+
+
+    2. **The narrow threshold band**: The [39,45] range is only 7 points wide. With
+    9 days of decay ahead, hitting this exact band requires a perfectly-timed carrier
+    incident or sustained interest at near-current levels—both unlikely.
+
+
+    3. **Historical precedent**: The khamenei question (similar setup, Iran conflict,
+    person-name search with 100→33 decay) gave 85% to Decreases with a threshold at
+    30. This question has BETTER conditions for Decreases (42→39 threshold with steeper
+    initial decay).
+
+
+    4. **The "Increases" scenario**: Factor 5 gives this 9% (via logit +0.7), but
+    this requires a new carrier-specific spike right around Mar 12. The trace (lines
+    268-304) acknowledges this possibility but rates it as low-probability given the
+    specific-entity decay pattern.
+
+
+    The agent''s 82% isn''t *wrong* per se—it''s within the historical range—but it
+    appears to over-weight the ongoing-war factor (Factor 5) relative to the dominant
+    post-spike decay pattern. The comparison cases (khamenei at 85%, reza pahlavi
+    at 87%) both gave higher probabilities to Decreases despite less favorable threshold
+    arithmetic.
+
+
+    ## Other factors: NO ERRORS
+
+
+    - **Factor 1**: Post-spike decay math is correct, well-supported by trace.
+
+    - **Factor 2**: Specific entity search decay is a real phenomenon, well-explained.
+
+    - **Factor 3**: Narrow band arithmetic is correct (7 points vs typical >20-point
+    moves).
+
+    - **Factor 4**: Iran''s claim is factual, grounded in trace.
+
+    - **Factor 5**: Ongoing conflict risk is real but appropriately rated as low-confidence
+    (0.35).
+
+
+    ## No other issues found
+
+
+    - No hallucinated evidence
+
+    - No double-counting
+
+    - No wrong-direction factors
+
+    - No resolution criteria problems (criteria are clear and properly understood)
+
+    - Assessment aligns with factors
+
+
+    ## Verdict
+
+
+    This is a borderline case. The agent''s 82% estimate is defensible and within
+    the historical range (75-95%), but it appears ~5-10 percentage points too conservative
+    given:
+
+    1. The steeper decay rate than comparable cases
+
+    2. The more favorable threshold distance
+
+    3. The khamenei precedent at 85% with less favorable conditions
+
+
+    I''m issuing a **warn** rather than fail because:
+
+    - The estimate is within the agent''s own cited range (75-95%)
+
+    - The directional conclusion (Decreases strongly favored) is correct
+
+    - The error is one of calibration degree, not fundamental misunderstanding
+
+    - No factual claims are fabricated
+
+
+    However, forecasters should know that comparable historical cases suggest the
+    true probability for Decreases is likely **85-90%**, not 82%.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42416
+- **Question ID**: 42206
+- **Session Duration**: 484.2s (8.1 min)
+- **Cost**: $2.7306
+- **Tokens**: 9,676 total (27 in, 9,649 out)
+  - Cache: 463,947 read, 69,897 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42416_20260303_194249/20260303-194250.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 2 (16.7%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 93ms |
+| get_metaculus_questions | 1 | 0 | 456ms |
+| google_trends | 1 | 0 | 3085ms |
+| reflection | 2 | 1 ⚠️ | 80845ms |
+| search_exa | 1 | 1 ⚠️ | 5061ms |
+| web_search | 3 | 0 | 37432ms |
+| wikipedia | 2 | 0 | 749ms |
+
+### Sources Consulted
+
+- [(Google Trends) uss abraham lincoln](https://trends.google.com/trends/explor...
+- [(Metaculus) Will the interest in “uss abraham lincoln” change between 2026-0...
+- [USS Abraham Lincoln (CVN-72) - Wikipedia](https://en.wikipedia.org/wiki/USS_...
