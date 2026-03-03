@@ -1,0 +1,369 @@
+---
+timestamp: 2026-03-03 13:09:39 UTC
+question_type: binary
+factors:
+- description: 'Conditional drawdown base rate: when INTC is >=15% below 52-week high,
+    50.5% chance of positive 7-day return (n=776)'
+  logit: 0.02
+  confidence: 0.9
+  effective_logit: 0.018000000000000002
+- description: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+    continued selling pressure'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Monte Carlo with full sample stats: 51.6% positive, slightly positive
+    mean daily return overall'
+  logit: 0.06
+  confidence: 0.7
+  effective_logit: 0.041999999999999996
+- description: 'Post-spike (Feb 24 +5.7%) base rate: 52.2% positive over 10 days,
+    slight mean-reversion tendency'
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+- description: S&P 500 roughly flat over past month, neutral market environment
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+- description: Stock has recovered only 17.5% of its drawdown from peak, weak bounce
+    so far
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+tentative_estimate:
+  logit: -0.1
+  probability: 0.48
+assessment: INTC is in a mild downtrend, having fallen ~16% from its 52-week high
+  of $54.32 in late January to current levels around $45.50. The recent 20-day trend
+  shows negative drift, but the conditional base rate for stocks in this drawdown
+  level is essentially a coin flip (50.5%). The Monte Carlo simulation using recent
+  volatility gives ~46% probability of being higher, while the full-sample simulation
+  gives ~52%. The blended estimate is approximately 49-50%. Given the slightly negative
+  recent momentum but the lack of strong directional signal, I estimate approximately
+  48% probability of the price being higher on March 12 than March 3.
+calibration_notes: Base rate for any stock being up over 7 trading days is roughly
+  52-53% unconditionally. INTC's conditional base rate (in drawdown) is 50.5%. Recent
+  momentum is slightly negative. No strong reason to deviate far from 50%.
+key_uncertainties: Whether the recent downtrend continues or mean-reverts. Any news
+  catalyst (earnings, product announcements, broader market moves) could dominate
+  the 7-day outcome. INTC is a high-beta, high-volatility stock where any single day's
+  move could determine the outcome.
+tool_audit: 'stock_price and stock_history: provided good historical data. stock_conditional_returns:
+  useful drawdown base rate. web_search: confirmed no major breaking news catalyst.
+  Monte Carlo simulation: core quantitative estimate.'
+process_reflection: The stock direction question workflow worked well. The conditional
+  returns tool provided a useful empirical base rate, and the Monte Carlo simulation
+  grounded the estimate quantitatively. The main challenge is that for a high-volatility
+  stock like INTC, the 7-day horizon is short enough that the signal-to-noise ratio
+  is very low, making this genuinely close to a coin flip with slight negative bias
+  from recent momentum.
+computed:
+  factor_count: 6
+  factor_sum: -0.145
+  tentative_logit: -0.1
+  logit_gap: 0.044999999999999984
+  neutral_factor_count: 3
+  factor_breakdown:
+  - description: 'Conditional drawdown base rate: when INTC is >=15% below 52-week
+      high, 50.5% chance of positive 7-day return (n=776)'
+    logit: 0.02
+    confidence: 0.9
+    effective_logit: 0.018000000000000002
+  - description: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+      continued selling pressure'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Monte Carlo with full sample stats: 51.6% positive, slightly positive
+      mean daily return overall'
+    logit: 0.06
+    confidence: 0.7
+    effective_logit: 0.041999999999999996
+  - description: 'Post-spike (Feb 24 +5.7%) base rate: 52.2% positive over 10 days,
+      slight mean-reversion tendency'
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  - description: S&P 500 roughly flat over past month, neutral market environment
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  - description: Stock has recovered only 17.5% of its drawdown from peak, weak bounce
+      so far
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  dominant_factor: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+    continued selling pressure'
+  dominant_effective_logit: -0.18
+  factor_implied_probability: 0.4638133797682053
+  tentative_probability: 0.48
+  gap_pp: 1.618662023179468
+  sources:
+  - '[(yfinance) INTC](https://finance.yahoo.com/quote/INTC)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Intel Corporation (INTC) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/INTC/)'
+  reviewer_critique: '**FAIL: Unjustified probability adjustment**
+
+
+    All six factors are properly grounded in the research trace with no hallucinations,
+    double-counting, or directional errors:
+
+
+    1. ✓ Conditional drawdown base rate (50.5%, n=776) - verified in trace line 135
+
+    2. ✓ Recent 20-day negative drift (-0.11%) - verified in trace line 215
+
+    3. ✓ Monte Carlo full sample (51.6%) - verified in trace line 216
+
+    4. ✓ Post-spike base rate (52.2% over 10d) - verified in trace line 175
+
+    5. ✓ S&P 500 neutral (-0.52% change) - verified in trace lines 103-117
+
+    6. ✓ Weak bounce (17.5% recovery) - verified in trace line 232
+
+
+    **Critical Error**: The agent''s own weighted calculation (trace line 232) yields
+    **49.49%**, but the submitted probability is **48.0%** - a 1.5 percentage point
+    discrepancy with no justification.
+
+
+    The trace shows:
+
+    - Blended estimate: 0.4949 (49.49%)
+
+    - Final submission: 48.0%
+
+
+    This appears to be unjustified hedging toward a round number. The evidence consistently
+    points to ~49-50% (essentially a coin flip with slight negative bias from recent
+    momentum). All four quantitative estimates cluster around 50%:
+
+    - Conditional base rate: 50.5%
+
+    - Full sample MC: 51.6%
+
+    - Recent 20d MC: 46.0%
+
+    - Post-spike base: 52.2%
+
+
+    **My estimate**: Given the evidence, the probability should be **49-50%**, not
+    48%. The agent is under-weighting the evidence that points to near-neutral odds.
+    The 48% figure appears to be an arbitrary adjustment rather than evidence-based
+    reasoning.
+
+
+    The assessment narrative is otherwise sound and consistent with the factors. No
+    other errors detected.'
+---
+timestamp: 2026-03-03 13:11:10 UTC
+question_type: binary
+factors:
+- description: 'Conditional drawdown base rate: when INTC is >=15% below 52-week high,
+    50.5% chance of positive 7-day return (n=776)'
+  logit: 0.02
+  confidence: 0.9
+  effective_logit: 0.018000000000000002
+- description: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+    continued selling pressure'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Monte Carlo with full sample stats: 51.6% positive, slightly positive
+    mean daily return overall'
+  logit: 0.06
+  confidence: 0.7
+  effective_logit: 0.041999999999999996
+- description: 'Post-spike (Feb 24 +5.7%) base rate: 52.2% positive over 10 days,
+    slight mean-reversion tendency'
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+- description: S&P 500 roughly flat over past month, neutral market environment
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+- description: Stock has recovered only 17.5% of its drawdown from peak, weak bounce
+    so far
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+tentative_estimate:
+  logit: -0.02
+  probability: 0.495
+assessment: INTC is in a mild downtrend, down ~16% from its 52-week high. The conditional
+  drawdown base rate is 50.5% for 7-day positive returns. The blended Monte Carlo
+  estimate (weighting recent stats more heavily) gives ~49.5%. The recent 20-day negative
+  drift is the main factor pushing slightly below 50%, but it's offset by the post-spike
+  bounce signal and the full-sample MC estimate. Overall this is extremely close to
+  a coin flip with a very slight negative tilt from recent momentum. My probability
+  of 49.5% reflects the blended quantitative estimate without arbitrary adjustment.
+calibration_notes: Base rate for any stock being up over 7 trading days is roughly
+  52-53% unconditionally. INTC's conditional base rate (in drawdown) is 50.5%. Recent
+  momentum is slightly negative but not dramatically so. The blended estimate of ~49.5%
+  is appropriate.
+tool_audit: 'stock_price and stock_history: provided good historical data. stock_conditional_returns:
+  useful drawdown base rate. web_search: confirmed no major breaking news catalyst.
+  Monte Carlo simulation: core quantitative estimate.'
+process_reflection: The stock direction workflow is well-suited for this question.
+  The slight tension between recent negative momentum and the near-neutral conditional
+  base rates makes this genuinely uncertain. The key lesson is to trust the quantitative
+  outputs rather than manually nudging.
+computed:
+  factor_count: 6
+  factor_sum: -0.145
+  tentative_logit: -0.02
+  logit_gap: 0.12499999999999999
+  neutral_factor_count: 3
+  factor_breakdown:
+  - description: 'Conditional drawdown base rate: when INTC is >=15% below 52-week
+      high, 50.5% chance of positive 7-day return (n=776)'
+    logit: 0.02
+    confidence: 0.9
+    effective_logit: 0.018000000000000002
+  - description: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+      continued selling pressure'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Monte Carlo with full sample stats: 51.6% positive, slightly positive
+      mean daily return overall'
+    logit: 0.06
+    confidence: 0.7
+    effective_logit: 0.041999999999999996
+  - description: 'Post-spike (Feb 24 +5.7%) base rate: 52.2% positive over 10 days,
+      slight mean-reversion tendency'
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  - description: S&P 500 roughly flat over past month, neutral market environment
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  - description: Stock has recovered only 17.5% of its drawdown from peak, weak bounce
+      so far
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  dominant_factor: 'Recent 20-day negative drift: mean daily return of -0.11%, suggesting
+    continued selling pressure'
+  dominant_effective_logit: -0.18
+  factor_implied_probability: 0.4638133797682053
+  tentative_probability: 0.495
+  gap_pp: 3.1186620231794695
+  sources:
+  - '[(yfinance) INTC](https://finance.yahoo.com/quote/INTC)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Intel Corporation (INTC) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/INTC/)'
+  reviewer_critique: '**APPROVE** - No material errors found.
+
+
+    ## What I Checked
+
+
+    ### Evidence Verification (ALL PASSED)
+
+    I verified each factor against the research trace:
+
+
+    1. ✅ **Conditional drawdown base rate (50.5%, n=776)** - Confirmed in trace lines
+    134-137, exact match
+
+    2. ✅ **Recent 20-day drift (-0.11%)** - Confirmed in trace lines 215-216 (-0.1055%)
+
+    3. ✅ **Monte Carlo full sample (51.6%)** - Confirmed in trace lines 215-217 (0.5158)
+
+    4. ✅ **Post-spike base rate (52.2%, 10-day horizon)** - Confirmed in trace lines
+    52-53
+
+    5. ✅ **S&P 500 neutral** - Confirmed in trace lines 103-117 (down 0.52% over month)
+
+    6. ✅ **17.5% drawdown recovery** - Confirmed in trace line 232
+
+
+    All core claims are grounded in tool results. No hallucinations.
+
+
+    ### Double-Counting Check (PASSED)
+
+    While there is some data overlap (the recent 20 days appear in both the full sample
+    and the recent-sample Monte Carlo), the agent explicitly acknowledges this by
+    using different weights in the blending. The factors represent distinct analytical
+    approaches, not redundant claims from the same evidence.
+
+
+    ### Probability Assessment (MINOR CONCERN, BUT ACCEPTABLE)
+
+    The agent estimates **49.5%**. I would estimate **50-51%** based on the same evidence.
+    The agent may be slightly over-weighting recent negative momentum (based on only
+    20 days with high variance). However:
+
+
+    - All quantitative estimates genuinely cluster 46-52%
+
+    - The assessment correctly identifies this as "extremely close to a coin flip"
+
+    - The 1.5 percentage point difference falls within the natural uncertainty of
+    near-50% estimates
+
+    - The agent''s blended calculation is mathematically correct (trace line 233:
+    0.4949)
+
+
+    This is a **marginal disagreement** that doesn''t rise to a fail verdict. The
+    forecast appropriately captures the high uncertainty.
+
+
+    ### Resolution Criteria (PASSED)
+
+    Resolution criteria are clearly provided and properly understood: compare Yahoo
+    Finance close prices on 2026-03-03 vs 2026-03-12, accounting for stock splits.
+
+
+    ### Wrong-Direction Factors (PASSED)
+
+    All logit signs match their descriptions.
+
+
+    ## Verdict Rationale
+
+    The forecast is well-grounded, transparent about uncertainty, and arrives at a
+    reasonable probability through valid quantitative methods. While I would personally
+    lean 1-1.5 points higher, this difference is well within the margin of uncertainty
+    for a genuine coin-flip scenario. No errors warrant a warn or fail.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42411
+- **Question ID**: 42201
+- **Session Duration**: 373.5s (6.2 min)
+- **Cost**: $2.0488
+- **Tokens**: 4,750 total (26 in, 4,724 out)
+  - Cache: 377,776 read, 60,130 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42411_20260303_130504/20260303-130504.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 1 (10.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 127ms |
+| reflection | 2 | 1 ⚠️ | 129740ms |
+| stock_conditional_returns | 1 | 0 | 335ms |
+| stock_history | 2 | 0 | 74ms |
+| stock_price | 2 | 0 | 679ms |
+| web_search | 1 | 0 | 16482ms |
+
+### Sources Consulted
+
+- [(yfinance) INTC](https://finance.yahoo.com/quote/INTC)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Intel Corporation (INTC) Stock Price, News, Quote & History - Yahoo Finance]...
