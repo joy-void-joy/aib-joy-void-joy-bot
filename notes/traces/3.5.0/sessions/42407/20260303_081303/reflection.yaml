@@ -1,0 +1,252 @@
+---
+timestamp: 2026-03-03 08:18:35 UTC
+question_type: numeric
+factors:
+- description: 'Current downward trend in DFII20: fell from 2.42 to 2.19 over 3 weeks
+    (Feb 2-27), confirmed by parallel moves in DFII10 and DFII5. The regime shift
+    since Feb 12 shows mean 2.24, drifting to 2.19.'
+  supports:
+    center: 2.14
+    low: 2.05
+    high: 2.19
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: 'Mean reversion tendency: DFII20 ranged 2.07-2.58 over the past year
+    with mean ~2.32. Current 2.19 is well below the year''s average, suggesting some
+    pull upward, especially as trends in yields don''t persist indefinitely.'
+  supports:
+    center: 2.22
+    low: 2.1
+    high: 2.35
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: 'TIP ETF slight decline on Mar 2 (111.57 vs 111.88): suggests possible
+    minor yield bounce on that day, indicating the trend may be moderating.'
+  supports:
+    center: 2.2
+    low: 2.15
+    high: 2.25
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: 'Short horizon (8 trading days): limited time for large moves. Empirical
+    8-day change std is ~0.10, so 1-sigma move is ±0.10 from current 2.19.'
+  supports:
+    center: 2.18
+    low: 2.09
+    high: 2.29
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: Monte Carlo simulation (mixture of 3 scenarios) produces median 2.18,
+    p10=2.06, p90=2.30, well-calibrated against empirical 8-day vol.
+  supports:
+    center: 2.18
+    low: 2.06
+    high: 2.3
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+tentative_estimate:
+  center: 2.18
+  low: 2.06
+  high: 2.3
+assessment: The 20-year TIPS yield (DFII20) has been in a clear downtrend since early
+  February, falling from 2.42 to 2.19. This trend is confirmed across the TIPS curve
+  (5Y, 10Y, 20Y all declining). The Monte Carlo simulation using a mixture model (50%
+  continuing trend at moderated pace, 30% stabilization/bounce, 20% neutral with full-year
+  vol) produces a median of ~2.18 with reasonable spread. The simulation's 8-day volatility
+  (0.098) matches the empirical 8-day change std (0.099) very well, giving confidence
+  in the width of the distribution. The slight decline in TIP ETF on Mar 2 hints at
+  possible stabilization but is too weak to override the multi-week trend.
+calibration_notes: The simulation's 8-day volatility (0.098) closely matches the empirical
+  8-day change standard deviation (0.099) from 2025 data, providing good calibration.
+  The median (2.18) is slightly below the last observation (2.19), reflecting the
+  ongoing downtrend while not aggressively extrapolating. The distribution is approximately
+  symmetric, appropriate for yield changes over short horizons.
+key_uncertainties: 'Primary uncertainty is whether the 3-week downtrend in TIPS yields
+  continues, stabilizes, or reverses. Key drivers would be: (1) any Fed communications
+  or economic data releases in the coming week, (2) inflation expectations shifts,
+  (3) flight-to-safety flows. The TIP ETF''s slight decline on Mar 2 is ambiguous
+  - could be start of stabilization or just noise.'
+tool_audit: '- fred_series: Excellent - provided full year of DFII20 data plus regime
+  stats identifying the Feb 12 shift
+
+  - web_search: Confirmed parallel moves in DFII10, DFII5; picked up TIP ETF data
+
+  - stock_price (TIP): Useful - showed Mar 2 slight price decline suggesting possible
+  yield bounce
+
+  - execute_code: Essential for Monte Carlo simulation and calibration against empirical
+  8-day changes'
+update_triggers: '- Major economic data release (jobs report, CPI) would move yields
+  significantly
+
+  - Fed official speeches on rates or inflation
+
+  - Geopolitical shock driving safe-haven demand would push yields lower
+
+  - Unexpected inflation data would push real yields in either direction'
+process_reflection: The workflow was smooth for this type of short-horizon financial
+  measurement question. FRED data was comprehensive and the regime_stats feature was
+  particularly helpful for identifying the structural break. The main challenge was
+  deciding how much to weight the recent downward drift vs mean reversion - the mixture
+  model approach handled this well. One missing tool would be TIPS futures or forward
+  real rate expectations, which would provide a market-implied center for the distribution.
+computed:
+  factor_count: 5
+  factor_sum: 2.4699999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Current downward trend in DFII20: fell from 2.42 to 2.19 over 3
+      weeks (Feb 2-27), confirmed by parallel moves in DFII10 and DFII5. The regime
+      shift since Feb 12 shows mean 2.24, drifting to 2.19.'
+    supports:
+      center: 2.14
+      low: 2.05
+      high: 2.19
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: 'Mean reversion tendency: DFII20 ranged 2.07-2.58 over the past year
+      with mean ~2.32. Current 2.19 is well below the year''s average, suggesting
+      some pull upward, especially as trends in yields don''t persist indefinitely.'
+    supports:
+      center: 2.22
+      low: 2.1
+      high: 2.35
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: 'TIP ETF slight decline on Mar 2 (111.57 vs 111.88): suggests possible
+      minor yield bounce on that day, indicating the trend may be moderating.'
+    supports:
+      center: 2.2
+      low: 2.15
+      high: 2.25
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: 'Short horizon (8 trading days): limited time for large moves. Empirical
+      8-day change std is ~0.10, so 1-sigma move is ±0.10 from current 2.19.'
+    supports:
+      center: 2.18
+      low: 2.09
+      high: 2.29
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: Monte Carlo simulation (mixture of 3 scenarios) produces median 2.18,
+      p10=2.06, p90=2.30, well-calibrated against empirical 8-day vol.
+    supports:
+      center: 2.18
+      low: 2.06
+      high: 2.3
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  dominant_factor: Monte Carlo simulation (mixture of 3 scenarios) produces median
+    2.18, p10=2.06, p90=2.30, well-calibrated against empirical 8-day vol.
+  dominant_effective_logit: 0.9
+  distribution_metrics:
+    implied_median: 2.1744939271255066
+    implied_p10: 2.0718623481781377
+    implied_p90: 2.2706477732793524
+    median_gap: 0.005506072874493562
+    median_gap_pct: 2.769857433808369
+    spread_ratio: 1.2073319755600798
+    precision: 0.11009174311926594
+  sources:
+  - '[(FRED) DFII20](https://fred.stlouisfed.org/series/DFII20)'
+  - '[(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securities
+    at 20-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed"
+    on 2026-03-10?](https://www.metaculus.com/questions/42407)'
+  - '[(yfinance) TIP](https://finance.yahoo.com/quote/TIP)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis, Inflation-Indexed (DFII10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFII10)'
+  - '[20-Year 2% Treasury Inflation-Indexed Bond, Due 1/15/2026 (DTP20J26) | FRED
+    | St. Louis Fed](https://fred.stlouisfed.org/series/DTP20J26)'
+  - '[Market Yield on U.S. Treasury Securities at 5-Year Constant Maturity, Quoted
+    on an Investment Basis, Inflation-Indexed (DFII5) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFII5)'
+  reviewer_critique: 'I verified all five factors against the research trace and found
+    them well-grounded:
+
+
+    **Factor 1 (downward trend):** VERIFIED - Trace shows DFII20 fell from 2.42 (Feb
+    2) to 2.19 (Feb 27), confirmed by regime stats showing stable_since Feb 12 with
+    mean 2.235. DFII10 and DFII5 show parallel declines (lines 32-41, 244-305).
+
+
+    **Factor 2 (mean reversion):** VERIFIED - The 2025 full-year data shows values
+    ranging across the 2.07-2.58 range claimed. Current 2.19 is below year average,
+    supporting mean reversion tendency (lines 59-114).
+
+
+    **Factor 3 (TIP ETF):** VERIFIED - TIP ETF data shows decline from 111.88 (Feb
+    27) to 111.57 (Mar 2), correctly interpreted as suggesting yields may have ticked
+    up slightly on Mar 2, moderating the downtrend (lines 317-322).
+
+
+    **Factor 4 (short horizon):** VERIFIED - Empirical 8-day change std of 0.0993
+    from historical data supports the ±0.10 one-sigma range claim (line 353).
+
+
+    **Factor 5 (Monte Carlo):** VERIFIED - Simulation produces median 2.18, p10=2.06,
+    p90=2.30 as stated. Calibration check shows simulated 8-day volatility (0.0976)
+    matches empirical (0.0993) very well, ratio 0.983 (lines 369, 385).
+
+
+    **No regime-spanning error:** The Monte Carlo uses a mixture model with three
+    scenarios (50% moderated trend, 30% bounce, 20% neutral) rather than naively estimating
+    drift from data spanning the Feb 12 regime break. This is the correct approach.
+
+
+    **Probability assessment:** The agent''s center estimate of 2.18 with range 2.06-2.30
+    aligns with the well-calibrated Monte Carlo (Factor 5). Given the strong curve-wide
+    downtrend (all TIPS maturities declining together), current value of 2.19, and
+    empirical 8-day volatility, my independent estimate is 2.17-2.19, very close to
+    the agent''s 2.18. The forecast appropriately balances trend continuation against
+    mean reversion and volatility over an 8-day horizon.
+
+
+    No errors detected that would change the forecast direction or materially affect
+    the probability estimate.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42407
+- **Question ID**: 42197
+- **Session Duration**: 342.1s (5.7 min)
+- **Cost**: $3.1786
+- **Tokens**: 10,582 total (30 in, 10,552 out)
+  - Cache: 674,683 read, 73,319 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42407_20260303_081303/20260303-081303.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 7 | 0 | 48ms |
+| fred_series | 6 | 0 | 398ms |
+| get_metaculus_questions | 1 | 0 | 260ms |
+| reflection | 1 | 0 | 117114ms |
+| stock_price | 1 | 0 | 550ms |
+| web_search | 1 | 0 | 20572ms |
+
+### Sources Consulted
+
+- [(FRED) DFII20](https://fred.stlouisfed.org/series/DFII20)
+- [(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securit...
+- [(yfinance) TIP](https://finance.yahoo.com/quote/TIP)
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [20-Year 2% Treasury Inflation-Indexed Bond, Due 1/15/2026 (DTP20J26) | FRED ...
+- [Market Yield on U.S. Treasury Securities at 5-Year Constant Maturity, Quoted...
