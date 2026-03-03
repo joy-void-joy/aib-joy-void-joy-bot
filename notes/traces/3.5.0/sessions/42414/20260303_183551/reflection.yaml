@@ -1,0 +1,293 @@
+---
+timestamp: 2026-03-03 18:39:52 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay: The search term was at 0 for 2+ weeks before a news-driven
+    spike to 100. By Mar 3 it''s already decayed to 77. Standard news spike decay
+    predicts ~30-35 by Mar 14, well below the 74 threshold for ''Doesn''t change''.'
+  supports: Decreases
+  logit: 3.0
+  confidence: 0.9
+  effective_logit: 2.7
+- description: 'High starting value (77) creates asymmetric resolution space: Decreases
+    covers 0-73 (74 points), Doesn''t change covers 74-80 (7 points), Increases covers
+    81-100 (20 points). The narrow DC band at elevated levels strongly favors Decreases.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Active grant application deadlines in late March/April (RESTART, OJJDP)
+    could sustain some search interest, but unlikely at 74+ level for this specific
+    niche query.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: Possible second news spike (DOGE budget cuts, new grant announcements,
+    political controversy about reentry programs) could temporarily boost interest.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.15
+  effective_logit: 0.075
+- description: Niche government grant term with very low baseline (0 for weeks before
+    spike) - interest fundamentally lacks a sustained audience to keep searches elevated.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+tentative_estimate:
+  probabilities:
+    Increases: 0.03
+    Doesn't change: 0.02
+    Decreases: 0.95
+assessment: 'The search term "grants for reentry programs 2026" experienced a massive
+  spike from 0 to 100 driven by the DOL $81M RESTART grant announcement on Feb 25,
+  2026. By March 3, the value in the resolution date range has already decayed to
+  77. The question asks whether the value on March 14 will be within ±3 of 77.
+
+
+  Given 11 more days of decay from a news-driven spike on a niche government grant
+  term, the value almost certainly falls well below 74. Exponential decay modeling
+  predicts values around 30-35 by March 14. Even with generous assumptions about sustained
+  interest from grant applications and possible second news spikes, the overwhelming
+  probability favors Decreases.
+
+
+  The only way this doesn''t resolve Decreases is if a new major news event or sustained
+  application-deadline pressure keeps the value near 77 — but the term''s baseline
+  was 0, suggesting no organic sustained audience. Even the scenario analysis with
+  5% probability of a second spike and 5% sustained interest still yields ~96% Decreases.'
+calibration_notes: The empirical change_stats show 73.7% no-change rate across the
+  full date range, but this is dominated by the 14 days of baseline=0 values. The
+  trailing_change_stats (recent 6 days) show 50% increase, 33% decrease, 17% no-change
+  — reflecting the volatile spike period. Neither base rate is appropriate for extrapolating
+  post-spike decay over 11 days. The Monte Carlo approach better captures the dynamics.
+key_uncertainties: 1. Whether the RESTART grant application deadline creates a sustained
+  search interest floor high enough to keep values near 77. 2. Whether political controversy
+  (DOGE, budget cuts) could create a second spike. 3. SerpAPI vs pytrends measurement
+  differences (±2-3 points) — at the margin only, since we're predicting a ~40+ point
+  drop.
+tool_audit: 'google_trends: Excellent data, provided the full resolution date range
+  with daily values, change_stats, tail_stats, and recent_news. The exact tz=0 and
+  date range matching was critical. web_search: Confirmed the DOL RESTART grant announcement
+  as the spike driver and identified upcoming application deadlines. execute_code:
+  Monte Carlo simulations with multiple scenarios confirmed overwhelming Decreases
+  probability. get_metaculus_questions: Confirmed resolution criteria and no community
+  prediction available yet.'
+update_triggers: 1. New major federal announcement about reentry program funding.
+  2. Political controversy or DOGE targeting reentry programs. 3. Values remaining
+  elevated (>60) through March 7-8 would suggest more sustained interest than modeled.
+process_reflection: The google_trends tool worked perfectly for this question type
+  — providing exactly the right data with tz=0 matching. The recent_news feature was
+  a valuable addition, confirming the spike driver. Monte Carlo simulations in the
+  sandbox provided clean quantitative backing. The multi-scenario approach (decay
+  + second spike + sustained) helped bound the estimate. For this question type, the
+  threshold arithmetic plus basic decay modeling made the answer very clear — extensive
+  further research would have been unnecessary and potentially introduced narrative
+  bias.
+computed:
+  factor_count: 5
+  factor_sum: 5.625
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay: The search term was at 0 for 2+ weeks before a
+      news-driven spike to 100. By Mar 3 it''s already decayed to 77. Standard news
+      spike decay predicts ~30-35 by Mar 14, well below the 74 threshold for ''Doesn''t
+      change''.'
+    supports: Decreases
+    logit: 3.0
+    confidence: 0.9
+    effective_logit: 2.7
+  - description: 'High starting value (77) creates asymmetric resolution space: Decreases
+      covers 0-73 (74 points), Doesn''t change covers 74-80 (7 points), Increases
+      covers 81-100 (20 points). The narrow DC band at elevated levels strongly favors
+      Decreases.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Active grant application deadlines in late March/April (RESTART,
+      OJJDP) could sustain some search interest, but unlikely at 74+ level for this
+      specific niche query.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: Possible second news spike (DOGE budget cuts, new grant announcements,
+      political controversy about reentry programs) could temporarily boost interest.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.15
+    effective_logit: 0.075
+  - description: Niche government grant term with very low baseline (0 for weeks before
+      spike) - interest fundamentally lacks a sustained audience to keep searches
+      elevated.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  dominant_factor: 'Post-spike decay: The search term was at 0 for 2+ weeks before
+    a news-driven spike to 100. By Mar 3 it''s already decayed to 77. Standard news
+    spike decay predicts ~30-35 by Mar 14, well below the 74 threshold for ''Doesn''t
+    change''.'
+  dominant_effective_logit: 2.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 5.4
+    factors:
+    - description: 'Post-spike decay: The search term was at 0 for 2+ weeks before
+        a news-driven spike to 100. By Mar 3 it''s already decayed to 77. Standard
+        news spike decay predicts ~30-35 by Mar 14, well below the 74 threshold for
+        ''Doesn''t change''.'
+      supports: Decreases
+      logit: 3.0
+      confidence: 0.9
+      effective_logit: 2.7
+    - description: 'High starting value (77) creates asymmetric resolution space:
+        Decreases covers 0-73 (74 points), Doesn''t change covers 74-80 (7 points),
+        Increases covers 81-100 (20 points). The narrow DC band at elevated levels
+        strongly favors Decreases.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.95
+      effective_logit: 1.4249999999999998
+    - description: Niche government grant term with very low baseline (0 for weeks
+        before spike) - interest fundamentally lacks a sustained audience to keep
+        searches elevated.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: Active grant application deadlines in late March/April (RESTART,
+        OJJDP) could sustain some search interest, but unlikely at 74+ level for this
+        specific niche query.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.075
+    factors:
+    - description: Possible second news spike (DOGE budget cuts, new grant announcements,
+        political controversy about reentry programs) could temporarily boost interest.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.15
+      effective_logit: 0.075
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.005194966793491418
+      Decreases: 0.9899854366021538
+      Increases: 0.00481959660435479
+    tentative_probabilities:
+      Increases: 0.03
+      Doesn't change: 0.02
+      Decreases: 0.95
+    per_option_gap_pp:
+      Doesn't change: 1.4805033206508584
+      Decreases: -3.998543660215381
+      Increases: 2.518040339564521
+    max_gap_pp: -3.998543660215381
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) grants for reentry programs 2026](https://trends.google.com/trends/explore?q=grants
+    for reentry programs 2026)'
+  - '[(Metaculus) Will the interest in “grants for reentry programs 2026” change between
+    2026-03-03 and 2026-03-14 according to Google Trends?](https://www.metaculus.com/questions/42414)'
+  reviewer_critique: 'After reviewing the full reasoning trace and verifying all factual
+    claims, I find no substantive errors in this forecast.
+
+
+    **Evidence verification:**
+
+    - Factor 1''s spike data (0 for weeks → 17 → 75 → 100 → 91 → 76 → 77) is directly
+    confirmed in the trace''s Google Trends API results (lines 43-61)
+
+    - The DOL $81M RESTART grant announcement on Feb 25 is confirmed by multiple news
+    articles in the trace (lines 55-61)
+
+    - The Monte Carlo decay predictions of ~30-35 by Mar 14 are computed and shown
+    in the trace (lines 263-274)
+
+    - Factor 2''s resolution threshold math is accurate (Decreases: 0-73, DC: 74-80,
+    Increases: 81-100)
+
+    - Factor 3''s grant deadline claims (OJJDP March 30, RESTART in late March/April)
+    are supported by web search results (lines 159-207)
+
+    - Factor 5''s baseline claim (0 for 2+ weeks) is confirmed by the historical data
+
+
+    **Probability assessment:**
+
+    The agent ran two Monte Carlo simulations:
+
+    1. Basic decay model: 100% Decreases (median prediction ~35)
+
+    2. Enhanced model with 5% second-spike and 5% sustained scenarios: 96.25% Decreases,
+    1.53% DC, 2.23% Increases
+
+
+    The final estimate of 95% Decreases / 2% DC / 3% Increases is **directly derived
+    from these quantitative analyses**, not arbitrary hedging. The small adjustments
+    from the 96.25% Monte Carlo result are reasonable given uncertainty about model
+    assumptions.
+
+
+    **No errors found:**
+
+    - No hallucinated claims (all core factual assertions are trace-supported)
+
+    - No double-counting (each factor addresses distinct aspects: decay trajectory,
+    resolution geometry, deadline effects, spike baseline, niche term dynamics)
+
+    - No wrong-direction factors
+
+    - Assessment aligns with factor conclusions
+
+    - Resolution criteria properly engaged
+
+    - Probability well-calibrated to evidence
+
+
+    The forecast is thorough, quantitatively rigorous, and appropriately confident
+    given the strong evidence for post-spike decay from an elevated starting point
+    (77) to well below the threshold (74) over 11 days.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42414
+- **Question ID**: 42204
+- **Session Duration**: 247.8s (4.1 min)
+- **Cost**: $2.3211
+- **Tokens**: 6,969 total (17 in, 6,952 out)
+  - Cache: 391,251 read, 64,670 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42414_20260303_183551/20260303-183551.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 72ms |
+| get_metaculus_questions | 1 | 0 | 251ms |
+| google_trends | 2 | 0 | 2293ms |
+| reflection | 1 | 0 | 76333ms |
+| web_search | 2 | 0 | 18584ms |
+
+### Sources Consulted
+
+- [(Google Trends) grants for reentry programs 2026](https://trends.google.com/...
+- [(Metaculus) Will the interest in “grants for reentry programs 2026” change b...
