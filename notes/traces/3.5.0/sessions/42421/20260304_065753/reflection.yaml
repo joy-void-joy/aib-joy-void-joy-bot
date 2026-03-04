@@ -1,0 +1,139 @@
+---
+timestamp: 2026-03-04 07:00:55 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: When MCO is in 15%+ drawdown from 52w high,
+    56.6% of 7-day forward returns are positive (n=265 historical events)'
+  logit: 0.27
+  confidence: 0.8
+  effective_logit: 0.21600000000000003
+- description: 'Recent bounce: MCO already bounced 16.3% from Feb 11 low of $411 to
+    $478 high, now pulling back to $464. The easy bounce may be over.'
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+- description: 'Broad market weakness: S&P 500 down ~1% over past 5 days, slightly
+    negative trend, adds headwind'
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: Very high volatility (45% annualized) means wide distribution of outcomes,
+    slightly favoring the unconditional ~50% base rate
+  logit: -0.05
+  confidence: 0.5
+  effective_logit: -0.025
+- description: 'Zero-drift Monte Carlo with empirical volatility: 50.1% probability
+    of positive 7-day return'
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+tentative_estimate:
+  logit: 0.08
+  probability: 0.52
+assessment: MCO is in a significant drawdown (15.1% from 52w high), which historically
+  slightly favors positive forward returns (56.6% over 7 days). However, the stock
+  has already bounced sharply from its recent low, and the broader market is under
+  mild pressure. The very high volatility (45% annualized) creates a wide distribution
+  centered near 50-50. The net effect is a slight lean toward YES but close to a coin
+  flip. The conditional base rate provides mild directional evidence toward a gain,
+  but the recent pullback after the bounce and market weakness temper this. Overall
+  probability around 50-52%.
+calibration_notes: Unconditional base rate for any stock being higher after 7 trading
+  days is approximately 52%. The conditional drawdown base rate of 56.6% is modestly
+  higher but not dramatically so. With the stock having already bounced significantly
+  from its low, the remaining upside from the drawdown-bounce effect is partially
+  exhausted. Final estimate of 52% is close to the unconditional base but reflects
+  the slight positive tilt from being in drawdown territory.
+key_uncertainties: 1. Whether the current market weakness (tariff fears, macro uncertainty)
+  persists or reverses. 2. Whether MCO's recent pullback from $478 to $464 is the
+  start of a new leg down or a pause before resumption. 3. General market sentiment
+  over the next week.
+tool_audit: 'stock_price: Provided current price, 52w data, and summary stats. Very
+  useful.
+
+  stock_history: Provided 3-month OHLCV for both MCO and S&P 500. Useful for context.
+
+  stock_conditional_returns: Key tool - provided the drawdown conditional base rate
+  (56.6%). Most informative single data point.
+
+  execute_code: Ran Monte Carlo simulations successfully. Zero-drift MC confirmed
+  ~50% base rate.'
+process_reflection: 'The tools worked well for this standard stock direction question.
+  The conditional returns tool was the most valuable single input. The workflow of
+  getting price data, computing conditional base rates, and running Monte Carlo simulations
+  was smooth. One minor friction: it''s hard to know exactly what the March 4 close
+  will be since the question asks about March 4 close vs March 13 close and we''re
+  forecasting on March 4 before market close.'
+computed:
+  factor_count: 5
+  factor_sum: -0.028999999999999977
+  tentative_logit: 0.08
+  logit_gap: 0.10899999999999999
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'Conditional base rate: When MCO is in 15%+ drawdown from 52w high,
+      56.6% of 7-day forward returns are positive (n=265 historical events)'
+    logit: 0.27
+    confidence: 0.8
+    effective_logit: 0.21600000000000003
+  - description: 'Recent bounce: MCO already bounced 16.3% from Feb 11 low of $411
+      to $478 high, now pulling back to $464. The easy bounce may be over.'
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  - description: 'Broad market weakness: S&P 500 down ~1% over past 5 days, slightly
+      negative trend, adds headwind'
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: Very high volatility (45% annualized) means wide distribution of
+      outcomes, slightly favoring the unconditional ~50% base rate
+    logit: -0.05
+    confidence: 0.5
+    effective_logit: -0.025
+  - description: 'Zero-drift Monte Carlo with empirical volatility: 50.1% probability
+      of positive 7-day return'
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  dominant_factor: 'Conditional base rate: When MCO is in 15%+ drawdown from 52w high,
+    56.6% of 7-day forward returns are positive (n=265 historical events)'
+  dominant_effective_logit: 0.21600000000000003
+  factor_implied_probability: 0.4927505080614387
+  tentative_probability: 0.52
+  gap_pp: 2.72494919385613
+  sources:
+  - '[(yfinance) MCO](https://finance.yahoo.com/quote/MCO)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42421
+- **Question ID**: 42211
+- **Session Duration**: 186.9s (3.1 min)
+- **Cost**: $1.5957
+- **Tokens**: 4,910 total (16 in, 4,894 out)
+  - Cache: 321,878 read, 39,763 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42421_20260304_065753/20260304-065753.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 416ms |
+| reflection | 1 | 0 | 89293ms |
+| stock_conditional_returns | 2 | 0 | 134ms |
+| stock_history | 2 | 0 | 65ms |
+| stock_price | 1 | 0 | 507ms |
+
+### Sources Consulted
+
+- [(yfinance) MCO](https://finance.yahoo.com/quote/MCO)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
