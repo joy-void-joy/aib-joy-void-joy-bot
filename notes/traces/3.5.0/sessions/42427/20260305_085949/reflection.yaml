@@ -1,0 +1,236 @@
+---
+timestamp: 2026-03-05 09:05:44 UTC
+question_type: binary
+factors:
+- description: CP exactly at threshold (76.00%) - any directional movement resolves
+    the question; no buffer in either direction
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+- description: Helium repair confirmed successful (March 3) - positive news after
+    CP measurement date, should push new forecasters slightly upward
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: April 1 launch target confirmed with multiple backup windows - mission
+    is on track, reduces delay risk
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: Manifold markets show ~85% for Moon return in 2026 and only 4.6% disaster
+    risk - fundamentals support CP moving upward toward these levels
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Rollout to launch pad expected 'later this month' - if this happens
+    before March 13, a visible positive milestone that could bump CP
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: 729 forecasters - large base makes CP sticky and harder to move, but
+    recency weighting means new forecasts have outsized influence
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+- description: History of Artemis delays and general program uncertainty could keep
+    some forecasters cautious
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: No CP history available to confirm trajectory - reduces confidence
+    in directional assessment
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+assessment: 'This is a meta-prediction with the CP sitting exactly at the threshold
+  (76.00%). The question resolves YES only if CP is strictly above 76.00% on March
+  13.
+
+
+  The news environment since March 1 is mildly positive: the helium repair was confirmed
+  on March 3, and April 1 launch is on track. This post-measurement positive news
+  should attract slightly more optimistic new forecasts, which with recency weighting
+  could nudge the CP upward. Cross-platform signals (Manifold at ~85% for Moon return)
+  suggest the fundamental case supports higher CP.
+
+
+  However, the CP is sticky with 729 forecasters, and the margin is razor-thin. The
+  CP could easily stay at exactly 76% or drift slightly below if any minor negative
+  news emerges. Without CP history data, I can''t confirm the direction of recent
+  trajectory.
+
+
+  On balance, the mildly positive news environment and fundamental upward pressure
+  give a slight lean toward YES, but this is close to a coin flip given the exact
+  threshold positioning.'
+calibration_notes: 'Base rate: For meta-predictions where CP is exactly at the threshold,
+  in the absence of strong directional catalysts, the question is essentially a coin
+  flip. The mildly positive news environment shifts this slightly toward YES. The
+  threshold was likely auto-generated near the CP at question creation, which was
+  near March 1.
+
+
+  Status quo: If nothing changes, CP stays at 76.00%, which resolves NO (threshold
+  is strictly greater than). So status quo favors NO.
+
+
+  Hedging check: My 55% is close to 50% but reflects a genuine mild lean based on
+  the positive news since the CP measurement date. I''m not splitting the difference
+  arbitrarily.'
+key_uncertainties: '1. CP trajectory between March 1-5 is unknown - it may have already
+  moved above or below 76%
+
+  2. Whether the rollout to the launch pad happens before March 13 (would be a positive
+  catalyst)
+
+  3. Whether any new technical issues emerge in the next 8 days
+
+  4. How much the recency weighting amplifies new forecasts vs. the large existing
+  forecaster base'
+tool_audit: '- get_metaculus_questions: Returned question details but no CP (AIB tournament
+  restriction). Useful for context.
+
+  - get_cp_history: Failed with 403 error twice. This is the MOST IMPORTANT tool for
+  meta-predictions and its absence significantly hurts confidence.
+
+  - web_search: Very useful - found detailed timeline of Artemis II events, helium
+  issue, repair, and launch schedule.
+
+  - fetch_url: Useful - got detailed NASA blog post about repair status.
+
+  - manifold_price: Useful cross-reference - showed market sentiment for related questions.
+
+  - polymarket_price: Returned irrelevant result (NBA market) - no Artemis markets
+  on Polymarket.
+
+  - get_coherence_links: Returned empty - no related questions found.'
+update_triggers: '- If rollout to launch pad happens before March 13: strong upward
+  pressure on CP
+
+  - If a new technical issue emerges: downward pressure on CP
+
+  - If budget/DOGE-related news threatens Artemis II specifically: downward pressure
+
+  - If actual CP data becomes available showing trajectory direction'
+process_reflection: The CP history tool failing with 403 is a major limitation for
+  this meta-prediction. The tool is described as 'ESSENTIAL for meta-prediction questions'
+  but failed consistently. Without it, I'm making a directional call based on fundamentals
+  and news analysis rather than actual CP trajectory data. This reduces my confidence
+  significantly. The Manifold data was a helpful cross-reference for understanding
+  fundamental sentiment. The web search tools worked well for gathering the Artemis
+  II timeline.
+computed:
+  factor_count: 8
+  factor_sum: 0.6599999999999999
+  tentative_logit: 0.2
+  logit_gap: -0.4599999999999999
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: CP exactly at threshold (76.00%) - any directional movement resolves
+      the question; no buffer in either direction
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  - description: Helium repair confirmed successful (March 3) - positive news after
+      CP measurement date, should push new forecasters slightly upward
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: April 1 launch target confirmed with multiple backup windows - mission
+      is on track, reduces delay risk
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: Manifold markets show ~85% for Moon return in 2026 and only 4.6%
+      disaster risk - fundamentals support CP moving upward toward these levels
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Rollout to launch pad expected 'later this month' - if this happens
+      before March 13, a visible positive milestone that could bump CP
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: 729 forecasters - large base makes CP sticky and harder to move,
+      but recency weighting means new forecasts have outsized influence
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  - description: History of Artemis delays and general program uncertainty could keep
+      some forecasters cautious
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: No CP history available to confirm trajectory - reduces confidence
+      in directional assessment
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  dominant_factor: Helium repair confirmed successful (March 3) - positive news after
+    CP measurement date, should push new forecasters slightly upward
+  dominant_effective_logit: 0.35
+  factor_implied_probability: 0.6592603884513855
+  tentative_probability: 0.55
+  gap_pp: -10.926038845138542
+  sources:
+  - '[(Metaculus) Will NASA''s Artemis II complete its mission successfully before
+    2027?](https://www.metaculus.com/questions/40864)'
+  - '[Artemis II - Wikipedia](https://en.wikipedia.org/wiki/Artemis_II)'
+  - '[Artemis program - Wikipedia](https://en.wikipedia.org/wiki/Artemis_program)'
+  - '[NASA Repairs Upper Stage Helium Flow, Preps Continue Ahead of Rollout - NASA](https://www.nasa.gov/blogs/missions/2026/03/03/nasa-repairs-upper-stage-helium-flow-preps-continue-ahead-of-rollout/)'
+  - '[(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in
+    their November 18th matchup?](https://polymarket.com/event/nba-will-the-heat-beat-the-wizards-by-more-than-7pt5-points-in-their-november-18th-matchup)'
+  - '[(Manifold) What day will Artemis II launch?](https://manifold.markets/JoshuaWilkes/what-day-will-artemis-ii-launch)'
+  - '[(Manifold) Will Artemis II fly before Starship Flight 12?](https://manifold.markets/RyanTyznar/will-artemis-ii-fly-before-starship)'
+  - '[(Manifold) Will there be a lethal disaster during the Artemis II mission?](https://manifold.markets/ChuckBaggettChuckBaggettW/will-there-be-a-lethal-disaster-dur)'
+  - '[(Manifold) Will humans return to the Moon in 2026?](https://manifold.markets/NicpSUCg/will-humans-return-to-the-moon-in-2)'
+  - '[(Manifold) Will SLS launch in 2027?](https://manifold.markets/JoshuaWilkes/will-sls-launch-in-2027)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42427
+- **Question ID**: 42217
+- **Session Duration**: 380.0s (6.3 min)
+- **Cost**: $2.6576
+- **Tokens**: 8,653 total (27 in, 8,626 out)
+  - Cache: 465,741 read, 69,953 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42427_20260305_085949/20260305-085949.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 3 (15.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 1 | 0 | 1ms |
+| fetch_url | 2 | 0 | 4701ms |
+| get_coherence_links | 1 | 0 | 443ms |
+| get_cp_history | 2 | 2 ⚠️ | 3344ms |
+| get_metaculus_questions | 2 | 0 | 1536ms |
+| manifold_price | 1 | 0 | 748ms |
+| polymarket_price | 1 | 0 | 178ms |
+| reflection | 1 | 0 | 103306ms |
+| search_exa | 1 | 1 ⚠️ | 4652ms |
+| web_search | 4 | 0 | 16646ms |
+| wikipedia | 4 | 0 | 204ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will NASA's Artemis II complete its mission successfully before ...
+- [Artemis II - Wikipedia](https://en.wikipedia.org/wiki/Artemis_II)
+- [Artemis program - Wikipedia](https://en.wikipedia.org/wiki/Artemis_program)
+- [NASA Repairs Upper Stage Helium Flow, Preps Continue Ahead of Rollout - NASA...
+- [(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in ...
+- [(Manifold) What day will Artemis II launch?](https://manifold.markets/Joshua...
+- [(Manifold) Will Artemis II fly before Starship Flight 12?](https://manifold....
+- [(Manifold) Will there be a lethal disaster during the Artemis II mission?](h...
+- [(Manifold) Will humans return to the Moon in 2026?](https://manifold.markets...
+- [(Manifold) Will SLS launch in 2027?](https://manifold.markets/JoshuaWilkes/w...
