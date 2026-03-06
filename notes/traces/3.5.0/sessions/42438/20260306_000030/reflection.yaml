@@ -1,0 +1,352 @@
+---
+timestamp: 2026-03-06 00:05:07 UTC
+question_type: multiple_choice
+factors:
+- description: 'Duke is projected as #1 overall seed (28-2 record, #1 AP ranking),
+    with Cameron Boozer as Wooden Award favorite. This significantly exceeds generic
+    1-seed strength.'
+  supports: Championship Game (win)
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Betting markets have Duke as championship favorite at +320 (implied
+    ~20% de-vigged), much higher than generic 1-seed rate of 16%
+  supports: Championship Game (win)
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Duke Final Four odds at -175 (implied ~57% de-vigged), indicating strong
+    probability of deep run
+  supports: Final Four
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: 'Historical 1-seed base rates: ~99% past R64, ~85% past R32, ~66% past
+    S16, ~40% to F4, ~25% to CG, ~16% win championship'
+  supports: Elite Eight
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: Duke reached Final Four in 2025 under Scheyer, showing program continuity
+    and upward trajectory
+  supports: Championship Game (win)
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: March Madness inherent variance - single elimination tournament format
+    creates significant upset risk regardless of team quality
+  supports: Sweet 16
+  logit: -0.8
+  confidence: 0.9
+  effective_logit: -0.7200000000000001
+- description: Strong competition field with Michigan (27-2), Arizona, UConn also
+    as 1-seeds - Duke is not clearly dominant over the field
+  supports: Elite Eight
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+tentative_estimate:
+  probabilities:
+    Round of 64: 0.005
+    Round of 32: 0.095
+    Sweet 16: 0.16
+    Elite Eight: 0.17
+    Final Four: 0.21
+    Championship Game (loss): 0.16
+    Championship Game (win): 0.2
+assessment: 'Duke is one of the strongest teams in the 2026 NCAA tournament field,
+  projected as the #1 overall seed with a 28-2 record. The betting markets heavily
+  favor Duke, placing them as championship favorites (+320) with strong Final Four
+  odds (-175).
+
+
+  My distribution is anchored on two key market-implied data points: ~57% probability
+  of reaching the Final Four and ~20% probability of winning the championship. I filled
+  in earlier rounds based on historical 1-seed performance, scaled up slightly to
+  reflect Duke''s above-average 1-seed quality.
+
+
+  The modal outcome is the Final Four (21%), which makes sense - it''s the round where
+  the strongest teams most commonly exit because they face other strong seeds. The
+  distribution correctly shows most probability mass in the middle-to-deep rounds
+  (Sweet 16 through Championship Game), consistent with a top-tier 1-seed.
+
+
+  Key tension: market odds can embed vig and public bias toward popular teams like
+  Duke. However, multiple sportsbooks converge on similar numbers, suggesting the
+  market is relatively efficient here.'
+calibration_notes: Base rates for generic 1-seeds provide the foundation, then adjusted
+  upward based on Duke's specific market-implied strength. The 20% championship win
+  probability is notably higher than the 16% generic 1-seed rate, justified by Duke
+  being the consensus best team. The 57% Final Four probability is well above the
+  generic 40%, again justified by Duke's superior metrics.
+key_uncertainties: '1. Exact strength of Duke''s draw/bracket placement (unknown until
+  Selection Sunday)
+
+  2. Whether betting market odds overrate Duke due to public bias
+
+  3. Injuries or other unexpected developments before tournament
+
+  4. Single-elimination variance in matchups against strong mid-seeds'
+tool_audit: "Useful: web_search (found Duke's odds, seeding projections, historical\
+  \ data), fetch_url (extracted specific odds from betfirm.com, foxsports, betmgm),\
+  \ execute_code (computed probability distribution). \nEmpty/less useful: polymarket_price\
+  \ (no relevant NCAA markets found, returned irrelevant NBA result).\nNo failures\
+  \ encountered."
+process_reflection: The question type is well-suited to a market-anchored approach.
+  Having betting odds for both Final Four and Championship provided excellent calibration
+  anchors. The main challenge was converting between cumulative and per-round probabilities,
+  and filling in rounds where direct market data wasn't available. The execute_code
+  sandbox was valuable for computing and cross-checking the probability distribution.
+  The lack of Metaculus community prediction data (AIB tournament) meant I couldn't
+  cross-check against other forecasters.
+computed:
+  factor_count: 7
+  factor_sum: 2.875
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Duke is projected as #1 overall seed (28-2 record, #1 AP ranking),
+      with Cameron Boozer as Wooden Award favorite. This significantly exceeds generic
+      1-seed strength.'
+    supports: Championship Game (win)
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Betting markets have Duke as championship favorite at +320 (implied
+      ~20% de-vigged), much higher than generic 1-seed rate of 16%
+    supports: Championship Game (win)
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Duke Final Four odds at -175 (implied ~57% de-vigged), indicating
+      strong probability of deep run
+    supports: Final Four
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: 'Historical 1-seed base rates: ~99% past R64, ~85% past R32, ~66%
+      past S16, ~40% to F4, ~25% to CG, ~16% win championship'
+    supports: Elite Eight
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: Duke reached Final Four in 2025 under Scheyer, showing program continuity
+      and upward trajectory
+    supports: Championship Game (win)
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: March Madness inherent variance - single elimination tournament format
+      creates significant upset risk regardless of team quality
+    supports: Sweet 16
+    logit: -0.8
+    confidence: 0.9
+    effective_logit: -0.7200000000000001
+  - description: Strong competition field with Michigan (27-2), Arizona, UConn also
+      as 1-seeds - Duke is not clearly dominant over the field
+    supports: Elite Eight
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  dominant_factor: 'Duke is projected as #1 overall seed (28-2 record, #1 AP ranking),
+    with Cameron Boozer as Wooden Award favorite. This significantly exceeds generic
+    1-seed strength.'
+  dominant_effective_logit: 1.275
+  outcome_breakdown:
+  - outcome: Championship Game (win)
+    factor_count: 3
+    logit_sum: 2.525
+    factors:
+    - description: 'Duke is projected as #1 overall seed (28-2 record, #1 AP ranking),
+        with Cameron Boozer as Wooden Award favorite. This significantly exceeds generic
+        1-seed strength.'
+      supports: Championship Game (win)
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: Betting markets have Duke as championship favorite at +320 (implied
+        ~20% de-vigged), much higher than generic 1-seed rate of 16%
+      supports: Championship Game (win)
+      logit: 1.0
+      confidence: 0.9
+      effective_logit: 0.9
+    - description: Duke reached Final Four in 2025 under Scheyer, showing program
+        continuity and upward trajectory
+      supports: Championship Game (win)
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: Final Four
+    factor_count: 1
+    logit_sum: 1.02
+    factors:
+    - description: Duke Final Four odds at -175 (implied ~57% de-vigged), indicating
+        strong probability of deep run
+      supports: Final Four
+      logit: 1.2
+      confidence: 0.85
+      effective_logit: 1.02
+  - outcome: Elite Eight
+    factor_count: 2
+    logit_sum: 0.04999999999999999
+    factors:
+    - description: 'Historical 1-seed base rates: ~99% past R64, ~85% past R32, ~66%
+        past S16, ~40% to F4, ~25% to CG, ~16% win championship'
+      supports: Elite Eight
+      logit: 0.5
+      confidence: 0.9
+      effective_logit: 0.45
+    - description: Strong competition field with Michigan (27-2), Arizona, UConn also
+        as 1-seeds - Duke is not clearly dominant over the field
+      supports: Elite Eight
+      logit: -0.5
+      confidence: 0.8
+      effective_logit: -0.4
+  - outcome: Sweet 16
+    factor_count: 1
+    logit_sum: -0.7200000000000001
+    factors:
+    - description: March Madness inherent variance - single elimination tournament
+        format creates significant upset risk regardless of team quality
+      supports: Sweet 16
+      logit: -0.8
+      confidence: 0.9
+      effective_logit: -0.7200000000000001
+  mc_distribution_metrics:
+    implied_probabilities:
+      Final Four: 0.14004539367895025
+      Championship Game (win): 0.6307859683442236
+      Round of 32: 0.05049966035517626
+      Elite Eight: 0.05308883330820297
+      Championship Game (loss): 0.05049966035517626
+      Sweet 16: 0.02458082360309438
+      Round of 64: 0.05049966035517626
+    tentative_probabilities:
+      Round of 64: 0.005
+      Round of 32: 0.095
+      Sweet 16: 0.16
+      Elite Eight: 0.17
+      Final Four: 0.21
+      Championship Game (loss): 0.16
+      Championship Game (win): 0.2
+    per_option_gap_pp:
+      Final Four: 6.995460632104974
+      Championship Game (win): -43.07859683442236
+      Round of 32: 4.450033964482374
+      Elite Eight: 11.691116669179705
+      Championship Game (loss): 10.950033964482376
+      Sweet 16: 13.541917639690562
+      Round of 64: -4.549966035517626
+    max_gap_pp: -43.07859683442236
+    max_gap_option: Championship Game (win)
+  sources:
+  - '[(Metaculus) How far will the Duke Blue Devils advance in the NCAA''s 2026 March
+    Madness?](https://www.metaculus.com/questions/42438)'
+  - '[(Metaculus) How far will the Duke Blue Devils advance in the NCAA''s 2026 March
+    Madness?](https://www.metaculus.com/questions/42346)'
+  - '[(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in
+    their November 18th matchup?](https://polymarket.com/event/nba-will-the-heat-beat-the-wizards-by-more-than-7pt5-points-in-their-november-18th-matchup)'
+  - '[2025–26 Duke Blue Devils men''s basketball team - Wikipedia](https://en.wikipedia.org/wiki/2025%E2%80%9326_Duke_Blue_Devils_men''s_basketball_team)'
+  - '[History of Records By Seed in the NCAA Tournament](https://www.betfirm.com/seeds-national-championship-odds/)'
+  - '[2025-26 Men''s March Madness Odds: Duke Emerges as New Favorite](https://www.foxsports.com/stories/college-basketball/2025-26-mens-march-madness-odds)'
+  - '[Duke March Madness Odds: Championship, Final Four In 2026](https://sports.betmgm.com/en/blog/ncaab/duke-march-madness-odds-ncaa-tournament-march-2-bm06/)'
+  reviewer_critique: 'I reviewed all seven factors against the research trace and
+    verified each claim:
+
+
+    **Factor verification:**
+
+    1. ✅ Duke #1 overall seed (28-2, #1 AP, Boozer as Wooden favorite) - Confirmed
+    by NCAA.com, ESPN (lines 68-71, 270-271, 161)
+
+    2. ✅ Championship odds +320 (~20% de-vigged) - Confirmed by multiple sportsbooks
+    (lines 145-148, 316, 334)
+
+    3. ✅ Final Four odds -175 (~57% de-vigged) - Confirmed by BetMGM (lines 334-335)
+
+    4. ✅ Historical 1-seed base rates - Confirmed by Betfirm data (lines 300-303),
+    though labeling in factor is slightly ambiguous, the agent used the numbers correctly
+
+    5. ✅ Duke 2025 Final Four run - Confirmed in Metaculus background (lines 37-39)
+
+    6. ✅ Tournament variance - General knowledge, appropriately applied
+
+    7. ✅ Strong competition field (Michigan 27-2, Arizona, UConn as 1-seeds) - Confirmed
+    by bracket predictions (lines 78-79, 150-151)
+
+
+    **No hallucinations detected.** Every factual claim traces to specific tool results.
+
+
+    **No double-counting detected.** Factors draw on distinct evidence sources (seeding
+    projections, betting markets, historical data, competition assessment).
+
+
+    **No wrong-direction factors.** All logit signs align with their descriptions.
+
+
+    **Probability assessment:** The agent anchored appropriately on two market-implied
+    probabilities (~57% Final Four from -175 odds, ~20% championship from +320 odds)
+    and interpolated earlier rounds using historical 1-seed rates scaled for Duke''s
+    above-average strength. The resulting distribution is well-calibrated:
+
+    - Modal outcome at Final Four (21%) is appropriate for a strong 1-seed
+
+    - Early round elimination probabilities (0.5% R64, 9.5% R32) reflect near-certainty
+    against weak opponents
+
+    - Deep run probabilities align with market consensus that Duke is the favorite
+    but not dominant
+
+
+    The distribution correctly balances Duke''s exceptional regular season (28-2,
+    #1 overall seed) against single-elimination tournament variance. The agent''s
+    methodology - using efficient market prices as anchors and filling gaps with historical
+    base rates - is sound.
+
+
+    **Resolution criteria alignment:** The criteria specify the furthest stage Duke
+    qualifies for, distinguishing between winning/losing the championship game. The
+    agent''s probability distribution properly addresses all seven possible outcomes.
+
+
+    No errors found that would affect forecast accuracy.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42438
+- **Question ID**: 42236
+- **Session Duration**: 282.9s (4.7 min)
+- **Cost**: $2.4049
+- **Tokens**: 7,372 total (26 in, 7,346 out)
+  - Cache: 397,451 read, 67,062 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42438_20260306_000030/20260306-000030.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 1ms |
+| fetch_url | 3 | 0 | 6606ms |
+| get_metaculus_questions | 1 | 0 | 9437ms |
+| polymarket_price | 1 | 0 | 150ms |
+| reflection | 1 | 0 | 70928ms |
+| web_search | 4 | 0 | 15165ms |
+| wikipedia | 1 | 0 | 242ms |
+
+### Sources Consulted
+
+- [(Metaculus) How far will the Duke Blue Devils advance in the NCAA's 2026 Mar...
+- [(Metaculus) How far will the Duke Blue Devils advance in the NCAA's 2026 Mar...
+- [(Polymarket) NBA: Will the Heat beat the Wizards by more than 7.5 points in ...
+- [2025–26 Duke Blue Devils men's basketball team - Wikipedia](https://en.wikip...
+- [History of Records By Seed in the NCAA Tournament](https://www.betfirm.com/s...
+- [2025-26 Men's March Madness Odds: Duke Emerges as New Favorite](https://www....
+- [Duke March Madness Odds: Championship, Final Four In 2026](https://sports.be...
