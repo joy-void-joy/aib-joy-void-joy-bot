@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Any, cast
 
 import aiofiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
-from claude_agent_sdk import tool
+from claude_agent_sdk import ToolUseBlock, tool
 
 from aib.agent.hooks import HooksConfig
 from aib.agent.models import (
@@ -54,13 +54,15 @@ class ReflectionInput(BaseModel):
             "Same format as your final forecast factors."
         )
     )
-    tentative_estimate: BinaryEstimate | NumericEstimate | MultipleChoiceEstimate = Field(
-        description=(
-            "Your synthesized estimate. "
-            "Binary: {logit, probability}. "
-            "Numeric/discrete: {center, low, high}. "
-            "MC: {probabilities: {option: probability}}."
-        ),
+    tentative_estimate: BinaryEstimate | NumericEstimate | MultipleChoiceEstimate = (
+        Field(
+            description=(
+                "Your synthesized estimate. "
+                "Binary: {logit, probability}. "
+                "Numeric/discrete: {center, low, high}. "
+                "MC: {probabilities: {option: probability}}."
+            ),
+        )
     )
     assessment: str = Field(
         description=(
@@ -346,7 +348,8 @@ def compute_reflection(
             exp_total = sum(exp_values.values())
             implied = {opt: ev / exp_total for opt, ev in exp_values.items()}
             per_option_gap = {
-                opt: (estimate.probabilities.get(opt, 0.0) - implied.get(opt, 0.0)) * 100
+                opt: (estimate.probabilities.get(opt, 0.0) - implied.get(opt, 0.0))
+                * 100
                 for opt in all_options
             }
             max_gap_opt = max(per_option_gap, key=lambda o: abs(per_option_gap[o]))
@@ -455,7 +458,14 @@ independently — you work from the agent's trace and factors.
   pre-publication event as the dominant factor, this is a **fail** \
   — the forecast is built on a misreading of the question's intent \
   unless the resolution criteria explicitly include a lookback \
-  window.
+  window. \
+  \
+  When recommending a probability, **discard all pre-publication \
+  factors entirely** and estimate based only on the forward-looking \
+  question: "What is the probability of a NEW qualifying event \
+  between published_at and close_time?" Common rationalizations \
+  that do NOT override this rule: "bot-generated question", "no \
+  start date specified", "literal reading of criteria."
 
 - **Regime-spanning data window** (numeric/discrete only) — If the \
   agent ran a Monte Carlo simulation or computed drift/volatility from \
@@ -570,8 +580,7 @@ def _build_reviewer_prompt(
     estimate = inp.tentative_estimate
     if isinstance(estimate, BinaryEstimate):
         sections.append(
-            f"## Tentative estimate\n\n"
-            f"Probability: {estimate.probability:.1%}"
+            f"## Tentative estimate\n\nProbability: {estimate.probability:.1%}"
         )
     elif isinstance(estimate, NumericEstimate):
         sections.append(
@@ -580,8 +589,7 @@ def _build_reviewer_prompt(
         )
     elif isinstance(estimate, MultipleChoiceEstimate):
         prob_lines = [
-            f"  {opt}: {p:.1%}"
-            for opt, p in sorted(estimate.probabilities.items())
+            f"  {opt}: {p:.1%}" for opt, p in sorted(estimate.probabilities.items())
         ]
         sections.append(
             "## Tentative estimate\n\nProbabilities:\n" + "\n".join(prob_lines)
@@ -701,6 +709,7 @@ async def _run_reviewer(
 
     try:
         structured_output: dict[str, Any] | None = None
+        so_tool_blocks: list[ToolUseBlock] = []
         async with build_client(
             model="sonnet",
             allowed_tools=["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
@@ -718,11 +727,35 @@ async def _run_reviewer(
                 if isinstance(message, _AssistantMessage):
                     for block in message.content:
                         print_block(block, prefix="  ↳ [reviewer] ")
+                        if (
+                            isinstance(block, ToolUseBlock)
+                            and block.name == "StructuredOutput"
+                        ):
+                            so_tool_blocks.append(block)
                 elif isinstance(message, ResultMessage):
                     structured_output = message.structured_output
 
         if structured_output:
             return ReviewResult.model_validate(structured_output)
+
+        # Fallback: reparse from StructuredOutput tool_use blocks
+        if so_tool_blocks:
+            last_block = so_tool_blocks[-1]
+            try:
+                json_output = last_block.input["json_output"]
+                result = ReviewResult.model_validate(json_output)
+                logger.warning(
+                    "Recovered reviewer verdict from ToolUseBlock fallback: %s",
+                    result.verdict,
+                )
+                return result
+            except (KeyError, ValidationError):
+                logger.warning(
+                    "Reviewer produced %d StructuredOutput blocks but "
+                    "none could be parsed as ReviewResult",
+                    len(so_tool_blocks),
+                )
+
         return None
     except Exception:
         logger.exception("Reviewer sub-agent failed")
@@ -840,6 +873,11 @@ def _create_reflection_tool(
         # Record verdict for StructuredOutput gate
         if review_result and review_state is not None:
             review_state.record(review_result)
+            logger.info(
+                "Reviewer verdict: %s (consecutive_fails=%d)",
+                review_result.verdict,
+                review_state.consecutive_fails,
+            )
 
         # On reviewer crash, auto-approve so the agent isn't stuck
         if (
@@ -847,6 +885,7 @@ def _create_reflection_tool(
             and review_state is not None
             and retrodict_cutoff.get() is None
         ):
+            logger.warning("Reviewer returned None — auto-approving")
             review_state.record(
                 ReviewResult(
                     verdict=ReviewVerdict.approve,
@@ -869,6 +908,10 @@ def _create_reflection_tool(
         # Gate: fail verdict → tool error (unless escape hatch)
         if review_result and review_result.verdict == ReviewVerdict.fail:
             if review_state and review_state.passed:
+                logger.warning(
+                    "Escape hatch: force-approving after %d consecutive fails",
+                    review_state.consecutive_fails,
+                )
                 result_data["reviewer_note"] = (
                     f"Force-approved after {review_state.consecutive_fails} "
                     f"consecutive reviewer failures."

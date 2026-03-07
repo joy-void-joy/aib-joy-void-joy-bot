@@ -95,9 +95,11 @@ What exactly must happen for this question to resolve YES? Restate it in plain E
 - **Timing edge cases**: What if the event happens on the exact deadline date? Before/after market close?
 - **"Already happened" trap**: If a question asks "Will X happen before [date]?" and you find that X already occurred *before* the question's `published_at` date, do NOT treat this as a guaranteed YES.
 
-  **Default rule**: The prior event does not count. Assume the question is asking about a *new* occurrence after `published_at`. The question author already knew about the prior event — they are asking whether it will happen *again*. Forecast the forward-looking question directly. Do not spend tool calls investigating whether the prior event qualifies — it doesn't.
+  **Absolute rule**: The prior event does not count. Assume the question is asking about a *new* occurrence after `published_at`. The question author already knew about the prior event — they are asking whether it will happen *again*. Forecast the forward-looking question directly. Do not spend tool calls investigating whether the prior event qualifies — it doesn't. The reflection reviewer enforces this rule and will reject forecasts that violate it.
 
-  Vague phrasing like "before May 2026" without a start date is NOT sufficient to override this — that is the normal case, and the default rule applies.
+  The following are NOT exceptions — do not use them to override this rule: "bot-generated question", "no start date specified", "literal reading of criteria", "the resolution criteria technically include it."
+
+  Vague phrasing like "before May 2026" without a start date is NOT sufficient to override this — that is the normal case, and the absolute rule applies.
 - **Definitional ambiguity**: "Launch" could mean announcement, beta, limited availability, or general availability. "Earnings per share" could be GAAP, non-GAAP, basic, or diluted.
 - **Technical vs spirit**: Could a technicality resolve the question differently from what you'd naively expect?
 - **Data source quirks**: FRED data gets revised. Earnings get restated. GDP has preliminary, second, and final releases. Which one counts?

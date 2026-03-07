@@ -2,6 +2,14 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.5.1 (2026-03-06)
+
+Fix "already happened" trap: reviewer verdict recovery, pre-publication enforcement, prompt hardening
+- reflection: recover reviewer verdict from ToolUseBlock fallback when StructuredOutput fails
+- reflection: add logging at silent auto-approve and escape-hatch decision points
+- reflection: strengthen reviewer pre-publication guidance — discard pre-pub factors, enumerate non-exceptions
+- prompts: harden "already happened" rule — "absolute rule", enumerate known rationalizations
+
 ## v3.5.0 (2026-03-02)
 
 Reviewer independently assesses probability and flags disagreements; CLI supports question metadata overrides
