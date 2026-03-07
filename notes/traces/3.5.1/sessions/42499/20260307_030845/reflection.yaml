@@ -1,0 +1,555 @@
+---
+timestamp: 2026-03-07 03:15:47 UTC
+question_type: binary
+factors:
+- description: 'Regime stability: 11/13 months (84.6%) in the Jan 2025-Jan 2026 period
+    were >= 4.0M SAAR. The regime mean is 4.063M with std 0.084M. The threshold of
+    4.0M is below the regime mean.'
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: 'January 2026 weather-driven dip: The 3.91M reading was the sharpest
+    drop in 4 years, explicitly attributed by NAR to below-normal temperatures/precipitation.
+    Weather-driven dips typically mean-revert, giving March 2 months to recover.'
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: 'Spring seasonal effect: March is the start of spring buying season,
+    historically one of the stronger months. March 2025 was 4.02M (above threshold).'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: 'Mortgage rates declining to ~6.0%: Down from 6.3% in October 2025,
+    now at the most supportive level in months. Affordability at best level since
+    March 2022.'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Weak pending home sales: January 2026 pending sales fell 0.8% MoM
+    (second consecutive decline). Pending sales lead existing sales by 1-2 months,
+    so January pending weakness directly affects March closings.'
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: 'Tariff/economic uncertainty: Growing consumer anxiety about tariffs
+    (75% of consumers mentioning them), recession fears, and trade war escalation
+    creating headwinds for large purchase decisions.'
+  logit: -0.6
+  confidence: 0.5
+  effective_logit: -0.3
+- description: 'Weekly recovery signals: Weekly pending sales data for February shows
+    YoY growth returning, and purchase mortgage applications +8% YoY through first
+    6 weeks of 2026.'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+assessment: The question asks whether March 2026 existing home sales SAAR will be
+  at least 4.0M. The regime over the past 13 months has been remarkably stable around
+  4.06M, with only 2 of 13 months falling below 4.0M. However, the most recent data
+  point (January 2026 at 3.91M) is below the threshold, and leading indicators (pending
+  home sales) are weak. The January dip was attributed to weather, and spring seasonal
+  effects plus declining mortgage rates support recovery. But tariff uncertainty and
+  weak pending sales create meaningful downside risk. Monte Carlo simulations give
+  a range of 26-77% depending on the model, with a mean-reversion model at ~60% and
+  a hybrid model with demand weakness at ~48%. I settle on ~55%, reflecting that while
+  the regime strongly favors above-4.0M readings, the current momentum is weak and
+  the threshold is close to the boundary.
+calibration_notes: 'Base rate from regime: 84.6% of months >= 4.0M. But this is conditioned
+  on the regime, not on the current momentum. After accounting for the January dip,
+  weak pending sales, and economic uncertainty, the probability should be significantly
+  lower than the base rate. The mean-reversion model (59.5%) and hybrid model (48.0%)
+  bracket my estimate. The 4.0M threshold is only 0.063M below the regime mean (0.75
+  standard deviations), making it relatively easy to reach from the regime perspective
+  but harder from the current 3.91M starting point.'
+key_uncertainties: 1. Whether January weakness was truly just weather or reflects
+  deeper demand issues. 2. How much tariff/economic uncertainty will weigh on March
+  activity. 3. Whether the February pending sales data (released March 17, after question
+  closes but before resolution) will show strength. 4. The exact February existing
+  home sales number (released March 10) would help calibrate but won't be available
+  before the question closes.
+tool_audit: 'FRED series for EXHOSLUSM495S: Excellent - provided full historical data
+  through Jan 2026. FRED MORTGAGE30US: Excellent - showed declining rate trend. Web
+  search for NAR data: Good - confirmed January 2026 was 3.91M and weather-driven.
+  Web search for pending sales: Good - showed January weakness and weekly recovery.
+  CP history: Failed (403 Forbidden) - could not get community prediction trajectory.
+  Fetch URL for February 2026 report: The February 2026 existing home sales report
+  hasn''t been released yet (scheduled for March 10), so the URL returned January
+  data. HousingWire article: Useful for weekly pending sales context.'
+update_triggers: 1. February existing home sales report (March 10) showing strong
+  recovery vs continued weakness. 2. Major tariff escalation or de-escalation affecting
+  consumer confidence. 3. Significant mortgage rate movement (drop below 5.8% or spike
+  above 6.3%). 4. February pending home sales data (March 17).
+process_reflection: The tools worked well for getting historical data and current
+  context. The FRED tool was excellent for the core data series. The CP history 403
+  error was unfortunate - having the community prediction would have been a useful
+  calibration anchor, especially since this is a bot tournament question with many
+  forecasters. The fact that the February 2026 existing home sales report hasn't been
+  released yet (comes out March 10, after the question close date of March 7) means
+  I'm forecasting March 2026 with only January 2026 as the latest hard data, plus
+  leading indicators. This is a 2-month-ahead forecast which inherently has meaningful
+  uncertainty. The simulation approach was appropriate for this type of measurement
+  question.
+computed:
+  factor_count: 7
+  factor_sum: 1.42
+  tentative_logit: 0.2
+  logit_gap: -1.22
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Regime stability: 11/13 months (84.6%) in the Jan 2025-Jan 2026
+      period were >= 4.0M SAAR. The regime mean is 4.063M with std 0.084M. The threshold
+      of 4.0M is below the regime mean.'
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: 'January 2026 weather-driven dip: The 3.91M reading was the sharpest
+      drop in 4 years, explicitly attributed by NAR to below-normal temperatures/precipitation.
+      Weather-driven dips typically mean-revert, giving March 2 months to recover.'
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: 'Spring seasonal effect: March is the start of spring buying season,
+      historically one of the stronger months. March 2025 was 4.02M (above threshold).'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: 'Mortgage rates declining to ~6.0%: Down from 6.3% in October 2025,
+      now at the most supportive level in months. Affordability at best level since
+      March 2022.'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Weak pending home sales: January 2026 pending sales fell 0.8% MoM
+      (second consecutive decline). Pending sales lead existing sales by 1-2 months,
+      so January pending weakness directly affects March closings.'
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: 'Tariff/economic uncertainty: Growing consumer anxiety about tariffs
+      (75% of consumers mentioning them), recession fears, and trade war escalation
+      creating headwinds for large purchase decisions.'
+    logit: -0.6
+    confidence: 0.5
+    effective_logit: -0.3
+  - description: 'Weekly recovery signals: Weekly pending sales data for February
+      shows YoY growth returning, and purchase mortgage applications +8% YoY through
+      first 6 weeks of 2026.'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  dominant_factor: 'Regime stability: 11/13 months (84.6%) in the Jan 2025-Jan 2026
+    period were >= 4.0M SAAR. The regime mean is 4.063M with std 0.084M. The threshold
+    of 4.0M is below the regime mean.'
+  dominant_effective_logit: 0.96
+  factor_implied_probability: 0.8053384164084221
+  tentative_probability: 0.55
+  gap_pp: -25.533841640842205
+  sources:
+  - '[(FRED) EXHOSLUSM495S](https://fred.stlouisfed.org/series/EXHOSLUSM495S)'
+  - '[(Metaculus) Will US existing home sales (seasonally adjusted annual rate) for
+    March 2026 be at least 4.0 million?](https://www.metaculus.com/questions/42499)'
+  - '[(FRED) MORTGAGE30US](https://fred.stlouisfed.org/series/MORTGAGE30US)'
+  - '[Existing-Home Sales](https://www.nar.realtor/newsroom/existing-home-sales-accelerated-4-2-in-february)'
+  - '[Weekly pending home sales back to year-over-year growth as we head into spring](https://www.housingwire.com/articles/pending-sales-inventory-growth-2026/)'
+  reviewer_critique: 'The forecast contains a meaningful probability assessment error.
+    The agent estimates 55%, but the evidence strongly supports a higher probability
+    around 65-70%.
+
+
+    **Core issue:** The agent significantly underweights the regime stability evidence.
+    Key facts:
+
+
+    1. **Regime dominance**: 11/13 months (84.6%) were >= 4.0M over Jan 2025-Jan 2026,
+    with mean 4.063M and std 0.084M. The 4.0M threshold is *below* the regime mean.
+
+
+    2. **Weather causation confirmed**: NAR explicitly attributed the January 3.91M
+    drop to "below-normal temperatures and above-normal precipitation" (trace lines
+    91-95). This was characterized as the "sharpest drop in nearly 4 years" specifically
+    due to weather, not demand fundamentals.
+
+
+    3. **Spring seasonal support**: March is spring buying season. March 2025 was
+    4.02M. The agent needs only a 90K recovery over 2 months from January''s weather-depressed
+    baseline.
+
+
+    4. **Recovery signals present**: Weekly pending sales returned to YoY growth (trace
+    lines 289-299), mortgage rates improved to 6.0% (most supportive in months), and
+    after the only other sub-4.0M month (June 2025 at 3.98M), the market immediately
+    recovered to 4.03M in July.
+
+
+    **Why 55% is too low:**
+
+    The agent ran multiple simulations:
+
+    - Raw MoM walk: 26%
+
+    - Mean-reversion model: 59.5%
+
+    - Regime distribution: 77%
+
+    - Hybrid model (70% weather/30% weak demand): 48%
+
+
+    The agent settled on 55% by giving substantial weight to the hybrid model''s 48%
+    estimate, which assumes a 30% probability of "genuine demand weakness" with a
+    lower equilibrium around 3.95M. However, the trace provides minimal evidence for
+    this structural shift. The pending sales weakness (-0.8% MoM) occurred in the
+    same January period affected by weather. The tariff uncertainty is real but speculative
+    in magnitude.
+
+
+    **Correct weighting:** Given that NAR explicitly identified the January drop as
+    weather-driven (not demand-driven), the mean-reversion model at 59.5% should receive
+    primary weight, with the regime distribution (77%) as an upper bound. The evidence
+    for a structural demand collapse to a 3.95M equilibrium is thin. A probability
+    around 65-70% better reflects:
+
+    - The 84.6% historical base rate
+
+    - Weather-driven dip with spring recovery ahead
+
+    - Threshold below regime mean
+
+    - Modest discounting for pending sales uncertainty and tariff headwinds
+
+
+    The 55% estimate treats this as roughly a coin flip when the regime stability,
+    weather causation, and seasonal tailwinds create a meaningful tilt toward >=4.0M.'
+---
+timestamp: 2026-03-07 03:18:10 UTC
+question_type: binary
+factors:
+- description: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were >=
+    4.0M SAAR. Regime mean 4.063M, std 0.084M. The 4.0M threshold is 0.75 std below
+    the mean.'
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: 'January 2026 weather-driven dip confirmed by NAR: The 3.91M was explicitly
+    attributed to extreme weather, not demand weakness. After the only other sub-4.0M
+    month (Jun 2025 at 3.98M), immediate recovery to 4.03M in July.'
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: 'Spring seasonal effect: March is start of spring buying season. March
+    2025 was 4.02M. March only needs a 90K recovery over 2 months from weather-depressed
+    January.'
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+- description: 'Mortgage rates at ~6.0%: Down from 6.3% in October, most supportive
+    in months. Affordability at best level since March 2022.'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Weekly recovery signals: Weekly pending sales returned to YoY growth
+    in February, purchase mortgage applications +8% YoY through all 6 weeks of 2026.'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: 'Weak January pending sales: -0.8% MoM, second consecutive decline.
+    However, this was during the same weather-affected January, partially double-counting
+    the weather effect.'
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: 'Tariff/economic uncertainty: Growing consumer anxiety, recession fears,
+    trade war escalation. Real but speculative in magnitude for existing home sales.'
+  logit: -0.5
+  confidence: 0.4
+  effective_logit: -0.2
+tentative_estimate:
+  logit: 0.5
+  probability: 0.62
+assessment: March 2026 existing home sales have been in a stable regime around 4.06M
+  for 13 months, with 84.6% of months above the 4.0M threshold. The January 2026 dip
+  to 3.91M was explicitly weather-driven per NAR, and historical precedent shows quick
+  recovery after sub-4.0M months. Spring seasonal effects, declining mortgage rates
+  (~6.0%), and weekly pending sales recovery all support a return to the regime mean.
+  The primary risks are tariff-driven economic uncertainty and weak January pending
+  sales, though the latter was also weather-affected. Monte Carlo models give 26-77%
+  depending on assumptions, with the most appropriate mean-reversion model at ~60%.
+  I estimate 62%, reflecting strong regime stability and weather-reversion tailwinds,
+  modestly discounted for economic uncertainty.
+calibration_notes: 'Base rate: 84.6% of regime months >= 4.0M. After accounting for
+  January momentum weakness and economic headwinds, discounted to ~62%. The threshold
+  is below the regime mean, making it more likely to be exceeded than not. The mean-reversion
+  model (59.5%) with spring/rate uplift supports the 62% estimate.'
+key_uncertainties: Whether January weakness was purely weather or partly demand-driven.
+  Magnitude of tariff impact on consumer confidence for home purchases. Whether February
+  pending sales (released March 17) confirm recovery.
+tool_audit: 'FRED EXHOSLUSM495S: Excellent - core data. FRED MORTGAGE30US: Excellent
+  - rate trend. Web search: Good for NAR reports and context. CP history: Failed (403).
+  HousingWire article: Useful for weekly leading indicators. Monte Carlo simulations:
+  Ran 4 scenarios spanning the reasonable range.'
+update_triggers: February existing home sales report (March 10). Major tariff policy
+  changes. Significant mortgage rate movements.
+process_reflection: The revision process worked well. The reviewer correctly identified
+  that I was overweighting a structural demand weakness scenario with thin evidence.
+  The simulation approach provided a useful range but the model selection/weighting
+  is where judgment matters most. Having CP history would have helped anchor the estimate.
+computed:
+  factor_count: 7
+  factor_sum: 2.02
+  tentative_logit: 0.5
+  logit_gap: -1.52
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were
+      >= 4.0M SAAR. Regime mean 4.063M, std 0.084M. The 4.0M threshold is 0.75 std
+      below the mean.'
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: 'January 2026 weather-driven dip confirmed by NAR: The 3.91M was
+      explicitly attributed to extreme weather, not demand weakness. After the only
+      other sub-4.0M month (Jun 2025 at 3.98M), immediate recovery to 4.03M in July.'
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: 'Spring seasonal effect: March is start of spring buying season.
+      March 2025 was 4.02M. March only needs a 90K recovery over 2 months from weather-depressed
+      January.'
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  - description: 'Mortgage rates at ~6.0%: Down from 6.3% in October, most supportive
+      in months. Affordability at best level since March 2022.'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Weekly recovery signals: Weekly pending sales returned to YoY growth
+      in February, purchase mortgage applications +8% YoY through all 6 weeks of 2026.'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: 'Weak January pending sales: -0.8% MoM, second consecutive decline.
+      However, this was during the same weather-affected January, partially double-counting
+      the weather effect.'
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: 'Tariff/economic uncertainty: Growing consumer anxiety, recession
+      fears, trade war escalation. Real but speculative in magnitude for existing
+      home sales.'
+    logit: -0.5
+    confidence: 0.4
+    effective_logit: -0.2
+  dominant_factor: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were
+    >= 4.0M SAAR. Regime mean 4.063M, std 0.084M. The 4.0M threshold is 0.75 std below
+    the mean.'
+  dominant_effective_logit: 0.96
+  factor_implied_probability: 0.8828810091242195
+  tentative_probability: 0.62
+  gap_pp: -26.288100912421953
+  sources:
+  - '[(FRED) EXHOSLUSM495S](https://fred.stlouisfed.org/series/EXHOSLUSM495S)'
+  - '[(Metaculus) Will US existing home sales (seasonally adjusted annual rate) for
+    March 2026 be at least 4.0 million?](https://www.metaculus.com/questions/42499)'
+  - '[(FRED) MORTGAGE30US](https://fred.stlouisfed.org/series/MORTGAGE30US)'
+  - '[Existing-Home Sales](https://www.nar.realtor/newsroom/existing-home-sales-accelerated-4-2-in-february)'
+  - '[Weekly pending home sales back to year-over-year growth as we head into spring](https://www.housingwire.com/articles/pending-sales-inventory-growth-2026/)'
+  reviewer_critique: "## Verification Summary\n\nI verified all factual claims in\
+    \ the factors against the research trace. All core claims are well-supported:\n\
+    \n**Factor verification:**\n1. ✓ Regime statistics (84.6%, mean 4.063M, std 0.084M)\
+    \ - directly from FRED data\n2. ✓ Weather attribution and June recovery pattern\
+    \ - confirmed in NAR quotes and historical data\n3. ✓ March 2025 at 4.02M - confirmed\
+    \ in FRED data\n4. ✓ Mortgage rates ~6.0%, down from 6.3% in October - confirmed\
+    \ in MORTGAGE30US series\n5. ✓ Weekly recovery signals (+8% YoY purchase apps,\
+    \ 6 weeks) - confirmed in HousingWire article fetch\n6. ✓ Pending sales -0.8%\
+    \ MoM - confirmed, and factor correctly notes partial double-counting with weather\n\
+    7. ✓ Tariff uncertainty - confirmed in multiple web search results\n\n**No hallucinations\
+    \ detected.** All factor claims have clear trace support.\n\n**Double-counting\
+    \ check:** Factor 6 explicitly acknowledges that pending sales weakness occurred\
+    \ \"during the same weather-affected January, partially double-counting the weather\
+    \ effect.\" The agent recognized this and assigned low confidence (0.5) and modest\
+    \ negative logit (-0.5). This is appropriate.\n\n**Probability assessment concern:**\n\
+    \nHowever, I believe the **62% probability is too conservative** given the evidence.\
+    \ Here's why:\n\n**Strong evidence the agent under-weighted:**\n- Historical base\
+    \ rate: 84.6% (11/13 months ≥ 4.0M)\n- Regime mean 4.063M is well above threshold;\
+    \ 4.0M is only 0.75σ below mean\n- In a normal distribution N(4.063, 0.084), P(X\
+    \ ≥ 4.0) ≈ 77%\n- January was **explicitly** weather-driven per NAR, not demand-driven\n\
+    - After the only other sub-4.0 month (June 3.98M), immediate +50K recovery to\
+    \ 4.03M\n- March benefits from: (a) 2-month recovery window, (b) spring seasonal\
+    \ strength, (c) improving mortgage rates\n- Weekly indicators show actual recovery\
+    \ happening (not just hoped-for)\n\n**Headwinds the agent may have over-weighted:**\n\
+    - Pending sales weakness (-0.8%) occurred in the **same weather month** - agent\
+    \ correctly noted partial double-counting but may still have over-discounted\n\
+    - Tariff uncertainty is real but **speculative in magnitude** for existing home\
+    \ sales (which measure signed contracts from 30-60 days prior)\n- The agent's\
+    \ \"hybrid model\" giving 30% weight to a \"genuine demand weakness\" scenario\
+    \ at 48% probability appears pessimistic given explicit weather attribution\n\n\
+    **My independent estimate: 66-68%**\n\nThe mean-reversion model at 59.5% is reasonable,\
+    \ but deserves more weight. The regime model at 77% reflects the strong statistical\
+    \ reality that 4.0M is below the stable center of gravity. A better weighting:\n\
+    - 60% mean-reversion model: 59.5%\n- 35% regime model: 77% \n- 5% downside scenario:\
+    \ 40%\n\n= 0.60(59.5) + 0.35(77) + 0.05(40) = **64.4%**\n\nAdd qualitative boost\
+    \ for spring seasonal (+2-3pp) and mortgage rate improvement (+1-2pp) = **~67%**\n\
+    \nThe agent's 62% estimate under-weights the powerful regime stability evidence\
+    \ (only 2/13 months below threshold, weather-caused) and over-weights speculative\
+    \ downside risks (tariffs, pending sales that were also weather-affected).\n\n\
+    **Verdict: FAIL** - The probability should be approximately 66-68%, not 62%. While\
+    \ this is not a massive gap, it represents meaningful under-weighting of strong\
+    \ statistical evidence in favor of speculative concerns."
+---
+timestamp: 2026-03-07 03:20:27 UTC
+question_type: binary
+factors:
+- description: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were >=
+    4.0M SAAR. Regime mean 4.063M, std 0.084M. Under normal distribution N(4.063,
+    0.084), P(X>=4.0) ≈ 77%.'
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: January 2026 weather-driven dip explicitly confirmed by NAR. After
+    only other sub-4.0M month (Jun 2025 at 3.98M), immediate recovery to 4.03M in
+    July. Two-month recovery window before March.
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: 'Spring seasonal + mortgage rates: March is spring buying season (March
+    2025: 4.02M). Mortgage rates at ~6.0%, down from 6.3% in Oct. Affordability best
+    since March 2022.'
+  logit: 0.6
+  confidence: 0.7
+  effective_logit: 0.42
+- description: 'Weekly recovery signals: Weekly pending sales returned to YoY growth
+    in February, purchase mortgage applications +8% YoY through all 6 weeks of 2026.'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: Weak January pending sales (-0.8% MoM) occurred during same weather-affected
+    month. Partially double-counts weather dip. Modest negative signal when discounted.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Tariff/economic uncertainty: Real but speculative in magnitude for
+    existing home sales (which measure contracts signed 30-60 days prior).'
+  logit: -0.4
+  confidence: 0.4
+  effective_logit: -0.16000000000000003
+tentative_estimate:
+  logit: 0.7
+  probability: 0.67
+assessment: 'The regime evidence is the strongest signal: 84.6% of months in the current
+  regime exceeded 4.0M, and the regime mean (4.063M) sits well above the threshold.
+  The January dip was explicitly weather-driven per NAR, and historical precedent
+  shows quick recovery from sub-4.0M months. With 2 months to recover, spring seasonal
+  effects, and declining mortgage rates at ~6.0%, the odds favor crossing the 4.0M
+  threshold. Headwinds from tariff uncertainty and weak pending sales (themselves
+  weather-affected) provide modest downside risk but are speculative in magnitude
+  for existing home sales. Monte Carlo model weights: 60% mean-reversion (59.5%),
+  35% regime (77%), 5% downside (40%) → 64.4%, plus qualitative spring/rate boost
+  → ~67%.'
+calibration_notes: Regime base rate 84.6% discounted to 67% after accounting for current
+  momentum weakness and economic headwinds. The 4.0M threshold is only 0.75σ below
+  regime mean, making exceedance statistically likely under normal conditions.
+key_uncertainties: Whether tariff impact materializes concretely in March home sales.
+  Whether February pending sales confirm weekly recovery signals.
+tool_audit: 'FRED data: excellent core data. Mortgage rates: confirmed declining trend.
+  NAR reports: confirmed weather attribution. Weekly indicators: confirmed recovery.
+  CP history: failed (403). Overall good data coverage.'
+update_triggers: February existing home sales (March 10). Tariff policy changes. Mortgage
+  rate movements.
+process_reflection: Third iteration. The reviewer pushed me to appropriately weight
+  the regime stability evidence, which is the strongest quantitative signal. The iterative
+  process helped correct an initial bias toward the dramatic (uncertainty and weakness
+  narratives) over the statistical (stable regime with weather-driven outlier).
+computed:
+  factor_count: 6
+  factor_sum: 2.265
+  tentative_logit: 0.7
+  logit_gap: -1.5650000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were
+      >= 4.0M SAAR. Regime mean 4.063M, std 0.084M. Under normal distribution N(4.063,
+      0.084), P(X>=4.0) ≈ 77%.'
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: January 2026 weather-driven dip explicitly confirmed by NAR. After
+      only other sub-4.0M month (Jun 2025 at 3.98M), immediate recovery to 4.03M in
+      July. Two-month recovery window before March.
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: 'Spring seasonal + mortgage rates: March is spring buying season
+      (March 2025: 4.02M). Mortgage rates at ~6.0%, down from 6.3% in Oct. Affordability
+      best since March 2022.'
+    logit: 0.6
+    confidence: 0.7
+    effective_logit: 0.42
+  - description: 'Weekly recovery signals: Weekly pending sales returned to YoY growth
+      in February, purchase mortgage applications +8% YoY through all 6 weeks of 2026.'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: Weak January pending sales (-0.8% MoM) occurred during same weather-affected
+      month. Partially double-counts weather dip. Modest negative signal when discounted.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Tariff/economic uncertainty: Real but speculative in magnitude for
+      existing home sales (which measure contracts signed 30-60 days prior).'
+    logit: -0.4
+    confidence: 0.4
+    effective_logit: -0.16000000000000003
+  dominant_factor: 'Regime stability: 11/13 months (84.6%) in Jan 2025-Jan 2026 were
+    >= 4.0M SAAR. Regime mean 4.063M, std 0.084M. Under normal distribution N(4.063,
+    0.084), P(X>=4.0) ≈ 77%.'
+  dominant_effective_logit: 1.275
+  factor_implied_probability: 0.9059365742081922
+  tentative_probability: 0.67
+  gap_pp: -23.593657420819213
+  sources:
+  - '[(FRED) EXHOSLUSM495S](https://fred.stlouisfed.org/series/EXHOSLUSM495S)'
+  - '[(Metaculus) Will US existing home sales (seasonally adjusted annual rate) for
+    March 2026 be at least 4.0 million?](https://www.metaculus.com/questions/42499)'
+  - '[(FRED) MORTGAGE30US](https://fred.stlouisfed.org/series/MORTGAGE30US)'
+  - '[Existing-Home Sales](https://www.nar.realtor/newsroom/existing-home-sales-accelerated-4-2-in-february)'
+  - '[Weekly pending home sales back to year-over-year growth as we head into spring](https://www.housingwire.com/articles/pending-sales-inventory-growth-2026/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42499
+- **Question ID**: 42297
+- **Session Duration**: 707.2s (11.8 min)
+- **Cost**: $3.4335
+- **Tokens**: 12,296 total (41 in, 12,255 out)
+  - Cache: 778,128 read, 71,818 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42499_20260307_030845/20260307-030845.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 3 (16.7%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 62ms |
+| fetch_url | 2 | 0 | 10248ms |
+| fred_series | 2 | 0 | 586ms |
+| get_cp_history | 1 | 1 ⚠️ | 338ms |
+| get_metaculus_questions | 1 | 0 | 436ms |
+| reflection | 3 | 2 ⚠️ | 102524ms |
+| web_search | 4 | 0 | 29692ms |
+
+### Sources Consulted
+
+- [(FRED) EXHOSLUSM495S](https://fred.stlouisfed.org/series/EXHOSLUSM495S)
+- [(Metaculus) Will US existing home sales (seasonally adjusted annual rate) fo...
+- [(FRED) MORTGAGE30US](https://fred.stlouisfed.org/series/MORTGAGE30US)
+- [Existing-Home Sales](https://www.nar.realtor/newsroom/existing-home-sales-ac...
+- [Weekly pending home sales back to year-over-year growth as we head into spri...
