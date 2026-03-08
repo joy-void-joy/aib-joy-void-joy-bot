@@ -1,0 +1,307 @@
+---
+timestamp: 2026-03-08 09:15:13 UTC
+question_type: multiple_choice
+factors:
+- description: 'Futures curve anchoring: May 2026 NG futures at $3.20 and Apr 2026
+    at $3.19 — market expects price firmly in 2.50-3.50 range'
+  supports: 2.50 to below 3.50
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Current spot price at ~$3.00 (FRED March 2) — well within 2.50-3.50
+    range, status quo favors this bucket
+  supports: 2.50 to below 3.50
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Spring shoulder season typically brings lower prices as heating demand
+    drops and before summer AC kicks in — seasonal downward pressure from winter highs
+  supports: 2.50 to below 3.50
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: EIA January STEO forecast 2026 annual avg ~$3.50; February STEO revised
+    up 23% after Winter Storm Fern — March forecast $4.12 but actual spot already
+    well below this
+  supports: 2.50 to below 3.50
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Natural gas extreme volatility (~50-65% annualized) creates meaningful
+    tail risk — Monte Carlo shows ~12% chance of falling below $2.50
+  supports: Below 2.50
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+- description: Late cold snap or supply disruption could push prices into $3.50-4.50
+    range — Monte Carlo shows ~28% probability
+  supports: 3.50 to below 4.50
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+- description: LNG export ramp (Golden Pass, Plaquemines) adds structural demand support
+    that could tighten market
+  supports: 3.50 to below 4.50
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: April 30, 2025 spot price was $3.12 — historical precedent supports
+    2.50-3.50 range for late April
+  supports: 2.50 to below 3.50
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Extreme upside scenario ($4.50+) requires major supply disruption or
+    extreme late-season cold — Monte Carlo shows ~5% probability
+  supports: 4.50 or higher
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+tentative_estimate:
+  probabilities:
+    Below 2.50: 0.11
+    2.50 to below 3.50: 0.55
+    3.50 to below 4.50: 0.28
+    4.50 or higher: 0.06
+assessment: "The Henry Hub natural gas spot price is currently around $3.00 (FRED,\
+  \ March 2) and the NG futures curve prices May 2026 at $3.20. Both strongly anchor\
+  \ expectations in the $2.50-$3.50 range. Spring shoulder season typically sees lower\
+  \ prices as heating demand wanes, and the market has already corrected sharply from\
+  \ winter highs of $7+ during the January cold snap. \n\nMonte Carlo simulations\
+  \ using fat-tailed t-distributions with 50-55% annualized volatility (consistent\
+  \ with recent observed vol) consistently show the 2.50-3.50 bucket as the mode at\
+  \ ~55%. The second most likely outcome is 3.50-4.50 at ~28%, driven by natural gas's\
+  \ inherent volatility and upside risk from weather events or supply disruptions.\
+  \ Below 2.50 has ~11% probability, and 4.50+ has only ~5-6% probability.\n\nThe\
+  \ futures curve is the strongest signal here — it reflects all available market\
+  \ information including storage, LNG exports, production forecasts, and seasonal\
+  \ patterns. The simulation results align well with the futures-implied distribution."
+calibration_notes: 'Base rate: April 30, 2025 spot was $3.12 (in the 2.50-3.50 range).
+  The futures curve currently points to ~$3.20 for this time frame. Natural gas prices
+  in the $2.50-3.50 range are the modal outcome for late April historically when prices
+  aren''t in a structural shortage environment. The 2024 prices were much lower ($1.50-2.50)
+  but 2025-2026 have structural demand support from LNG exports.'
+key_uncertainties: 'Weather is the dominant uncertainty — a late-season cold snap
+  or early extreme heat wave could spike prices. Supply disruptions (pipeline outages,
+  production freeze-offs) are low probability but high impact. Also uncertain: pace
+  of storage refill heading into injection season, and whether LNG export facility
+  ramp-ups create tighter-than-expected supply.'
+tool_audit: 'FRED series DHHNGSP: excellent — provided current and historical spot
+  prices. Stock price/history for NG=F: excellent — provided futures curve and price
+  history. Web search: good — found EIA STEO forecasts and analyst outlook. LongForecast:
+  useful secondary source. Kalshi: no natural gas markets found. CP history: failed
+  (403 forbidden, AIB tournament). Monte Carlo simulations: very useful for quantifying
+  distribution across buckets.'
+update_triggers: Major weather event in March-April; significant LNG export capacity
+  change; pipeline disruption; EIA storage report surprises; macro recession reducing
+  industrial demand.
+process_reflection: 'The tools worked well for this commodity price question. FRED
+  data + futures prices gave a solid anchor. The Monte Carlo simulation was essential
+  for translating price uncertainty into bucket probabilities. One friction point:
+  the EIA STEO page didn''t provide monthly forecasts beyond March in the extracted
+  content — a more structured EIA data API would help. The Kalshi market search returned
+  nothing for natural gas, which limits prediction market cross-checks. Overall the
+  workflow of data gathering → simulation → bucket assignment felt natural for this
+  question type.'
+computed:
+  factor_count: 9
+  factor_sum: 2.12
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Futures curve anchoring: May 2026 NG futures at $3.20 and Apr 2026
+      at $3.19 — market expects price firmly in 2.50-3.50 range'
+    supports: 2.50 to below 3.50
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Current spot price at ~$3.00 (FRED March 2) — well within 2.50-3.50
+      range, status quo favors this bucket
+    supports: 2.50 to below 3.50
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Spring shoulder season typically brings lower prices as heating demand
+      drops and before summer AC kicks in — seasonal downward pressure from winter
+      highs
+    supports: 2.50 to below 3.50
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: EIA January STEO forecast 2026 annual avg ~$3.50; February STEO revised
+      up 23% after Winter Storm Fern — March forecast $4.12 but actual spot already
+      well below this
+    supports: 2.50 to below 3.50
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Natural gas extreme volatility (~50-65% annualized) creates meaningful
+      tail risk — Monte Carlo shows ~12% chance of falling below $2.50
+    supports: Below 2.50
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  - description: Late cold snap or supply disruption could push prices into $3.50-4.50
+      range — Monte Carlo shows ~28% probability
+    supports: 3.50 to below 4.50
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  - description: LNG export ramp (Golden Pass, Plaquemines) adds structural demand
+      support that could tighten market
+    supports: 3.50 to below 4.50
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: April 30, 2025 spot price was $3.12 — historical precedent supports
+      2.50-3.50 range for late April
+    supports: 2.50 to below 3.50
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Extreme upside scenario ($4.50+) requires major supply disruption
+      or extreme late-season cold — Monte Carlo shows ~5% probability
+    supports: 4.50 or higher
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  dominant_factor: 'Futures curve anchoring: May 2026 NG futures at $3.20 and Apr
+    2026 at $3.19 — market expects price firmly in 2.50-3.50 range'
+  dominant_effective_logit: 1.35
+  outcome_breakdown:
+  - outcome: 2.50 to below 3.50
+    factor_count: 5
+    logit_sum: 3.0
+    factors:
+    - description: 'Futures curve anchoring: May 2026 NG futures at $3.20 and Apr
+        2026 at $3.19 — market expects price firmly in 2.50-3.50 range'
+      supports: 2.50 to below 3.50
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: Current spot price at ~$3.00 (FRED March 2) — well within 2.50-3.50
+        range, status quo favors this bucket
+      supports: 2.50 to below 3.50
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+    - description: Spring shoulder season typically brings lower prices as heating
+        demand drops and before summer AC kicks in — seasonal downward pressure from
+        winter highs
+      supports: 2.50 to below 3.50
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+    - description: EIA January STEO forecast 2026 annual avg ~$3.50; February STEO
+        revised up 23% after Winter Storm Fern — March forecast $4.12 but actual spot
+        already well below this
+      supports: 2.50 to below 3.50
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+    - description: April 30, 2025 spot price was $3.12 — historical precedent supports
+        2.50-3.50 range for late April
+      supports: 2.50 to below 3.50
+      logit: 0.5
+      confidence: 0.6
+      effective_logit: 0.3
+  - outcome: Below 2.50
+    factor_count: 1
+    logit_sum: -0.21
+    factors:
+    - description: Natural gas extreme volatility (~50-65% annualized) creates meaningful
+        tail risk — Monte Carlo shows ~12% chance of falling below $2.50
+      supports: Below 2.50
+      logit: -0.3
+      confidence: 0.7
+      effective_logit: -0.21
+  - outcome: 3.50 to below 4.50
+    factor_count: 2
+    logit_sum: 0.03
+    factors:
+    - description: Late cold snap or supply disruption could push prices into $3.50-4.50
+        range — Monte Carlo shows ~28% probability
+      supports: 3.50 to below 4.50
+      logit: -0.2
+      confidence: 0.6
+      effective_logit: -0.12
+    - description: LNG export ramp (Golden Pass, Plaquemines) adds structural demand
+        support that could tighten market
+      supports: 3.50 to below 4.50
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  - outcome: 4.50 or higher
+    factor_count: 1
+    logit_sum: -0.7
+    factors:
+    - description: Extreme upside scenario ($4.50+) requires major supply disruption
+        or extreme late-season cold — Monte Carlo shows ~5% probability
+      supports: 4.50 or higher
+      logit: -1.0
+      confidence: 0.7
+      effective_logit: -0.7
+  mc_distribution_metrics:
+    implied_probabilities:
+      Below 2.50: 0.03614941915284181
+      3.50 to below 4.50: 0.045954918382662455
+      4.50 or higher: 0.022146088307466543
+      2.50 to below 3.50: 0.8957495741570292
+    tentative_probabilities:
+      Below 2.50: 0.11
+      2.50 to below 3.50: 0.55
+      3.50 to below 4.50: 0.28
+      4.50 or higher: 0.06
+    per_option_gap_pp:
+      Below 2.50: 7.385058084715819
+      3.50 to below 4.50: 23.404508161733755
+      4.50 or higher: 3.7853911692533453
+      2.50 to below 3.50: -34.57495741570291
+    max_gap_pp: -34.57495741570291
+    max_gap_option: 2.50 to below 3.50
+  sources:
+  - '[(FRED) DHHNGSP](https://fred.stlouisfed.org/series/DHHNGSP)'
+  - '[(yfinance) NG=F](https://finance.yahoo.com/quote/NG=F)'
+  - '[Short-Term Energy Outlook](https://www.eia.gov/outlooks/steo/report/natgas.php)'
+  - '[NATURAL GAS PRICE FORECAST 2026, 2027, 2028 AND 2029](https://longforecast.com/natural-gas-forecast-2017-2018-2019)'
+  - '[(Metaculus) Which range will the Henry Hub natural gas spot price (USD per MMBtu)
+    fall in on April 30, 2026?](https://www.metaculus.com/questions/42502)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42502
+- **Question ID**: 42300
+- **Session Duration**: 328.5s (5.5 min)
+- **Cost**: $2.7984
+- **Tokens**: 8,221 total (29 in, 8,192 out)
+  - Cache: 588,214 read, 69,375 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42502_20260308_091000/20260308-091001.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 1 (6.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 2560ms |
+| fetch_url | 2 | 0 | 12383ms |
+| fred_series | 2 | 0 | 589ms |
+| get_cp_history | 1 | 1 ⚠️ | 2862ms |
+| get_metaculus_questions | 1 | 0 | 276ms |
+| kalshi_price | 1 | 0 | 379ms |
+| reflection | 1 | 0 | 80005ms |
+| stock_history | 1 | 0 | 92ms |
+| stock_price | 1 | 0 | 1139ms |
+| web_search | 2 | 0 | 25229ms |
+
+### Sources Consulted
+
+- [(FRED) DHHNGSP](https://fred.stlouisfed.org/series/DHHNGSP)
+- [(yfinance) NG=F](https://finance.yahoo.com/quote/NG=F)
+- [Short-Term Energy Outlook](https://www.eia.gov/outlooks/steo/report/natgas.php)
+- [NATURAL GAS PRICE FORECAST 2026, 2027, 2028 AND 2029](https://longforecast.c...
+- [(Metaculus) Which range will the Henry Hub natural gas spot price (USD per M...
