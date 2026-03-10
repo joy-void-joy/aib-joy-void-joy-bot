@@ -28,7 +28,7 @@ from claude_agent_sdk import (
 
 from pydantic import BaseModel, Field
 
-from aib.agent.client import build_client, one_shot
+from aib.agent.client import build_client
 from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
@@ -642,29 +642,72 @@ class CondensedReasoning(BaseModel):
     )
 
 
-async def condense_reasoning(trace: str, question_title: str) -> str | None:
-    """Condense a full forecast trace into a readable narrative using Sonnet."""
-    try:
-        result = await one_shot(
-            f"Question: {question_title}\n\nTrace:\n{trace[:50000]}",
-            model="sonnet",
-            system_prompt=(
-                "Condense the forecast trace into a clear, well-structured narrative. "
-                "Cover everything: what research was done, key evidence found, "
-                "and how the conclusion was reached. "
-                "Use markdown formatting extensively: **bold** for key figures and "
-                "data points, bullet lists for evidence, `inline code` for tickers "
-                "and identifiers. Use ## subtitles to organize sections (e.g., "
-                "## Research, ## Key Evidence, ## Conclusion) but no top-level # title. "
-                "Write in first-person voice throughout — use constructions like "
-                "'I researched...', 'I found...', 'I concluded...'. "
-            ),
-            output_type=CondensedReasoning,
+async def condense_reasoning(
+    trace: str,
+    question_title: str,
+    session_dir: Path,
+    structured_output: dict[str, Any] | None = None,
+) -> str | None:
+    """Condense a full forecast trace into a readable narrative using Sonnet.
+
+    Writes the trace to a file and gives Sonnet the Read tool so it can
+    access the full trace without truncation.
+    """
+    trace_file = session_dir / "trace_for_condensation.md"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    trace_file.write_text(trace, encoding="utf-8")
+
+    forecast_block = ""
+    if structured_output:
+        forecast_block = (
+            "\n\nThe agent's final submitted forecast:\n"
+            f"```json\n{json.dumps(structured_output, indent=2)}\n```\n"
+            "Your narrative MUST match this forecast. Do not infer a different "
+            "conclusion — report what the agent actually concluded."
         )
-        return result.narrative if result else None
+
+    system_prompt = (
+        "Condense the forecast trace into a clear, well-structured narrative. "
+        "Cover everything: what research was done, key evidence found, "
+        "and how the conclusion was reached. "
+        "Use markdown formatting extensively: **bold** for key figures and "
+        "data points, bullet lists for evidence, `inline code` for tickers "
+        "and identifiers. Use ## subtitles to organize sections (e.g., "
+        "## Research, ## Key Evidence, ## Conclusion) but no top-level # title. "
+        "Write in first-person voice throughout — use constructions like "
+        "'I researched...', 'I found...', 'I concluded...'. "
+    )
+    prompt = (
+        f"Question: {question_title}\n\n"
+        f"Read the full forecast trace from: {trace_file}\n"
+        f"Then produce the condensed narrative.{forecast_block}"
+    )
+
+    try:
+        result_output: dict[str, Any] | None = None
+        async with build_client(
+            model="sonnet",
+            system_prompt=system_prompt,
+            allowed_tools=["Read"],
+            permission_mode="bypassPermissions",
+            max_turns=10,
+            output_format={
+                "type": "json_schema",
+                "schema": CondensedReasoning.model_json_schema(),
+            },
+        ) as client:
+            await client.query(prompt)
+            async for message in client.receive_response():
+                if isinstance(message, ResultMessage):
+                    result_output = message.structured_output
+        if result_output:
+            return CondensedReasoning.model_validate(result_output).narrative
+        return None
     except Exception:
         logger.exception("Reasoning condensation failed")
-    return None
+        return None
+    finally:
+        pass
 
 
 async def run_forecast(
@@ -963,7 +1006,10 @@ async def run_forecast(
             "",
         ),
         condensed_reasoning=await condense_reasoning(
-            build_trace(all_messages, question_title), question_title
+            build_trace(all_messages, question_title),
+            question_title,
+            notes.session,
+            structured_output=result.structured_output,
         ),
         sources_consulted=extract_sources(all_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
