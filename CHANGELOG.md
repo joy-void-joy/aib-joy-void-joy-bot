@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v3.6.0 (2026-03-11)
+
+add MC reflection, file-based trace condensation, save CDF/scores in output
+- MC question reflection with softmax gap metrics
+- file-based trace reading for reasoning condensation
+- CDF + numeric bounds + score fields in forecast output
+- baseline score computation
+- reviewer verdict recovery and already-happened hardening
+
 ## v3.5.1 (2026-03-06)
 
 Fix "already happened" trap: reviewer verdict recovery, pre-publication enforcement, prompt hardening
