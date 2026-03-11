@@ -54,6 +54,10 @@ For each **resolved** question, investigate the real-world outcome by looking at
 ### 2a. Fetch resolution details
 
 ```bash
+# Update forecast JSONs with any new resolutions first
+uv run aib-devtools resolution check
+
+# Then inspect the full API data for each resolved question
 uv run aib-devtools api post <post_id>
 ```
 

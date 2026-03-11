@@ -101,7 +101,10 @@ The ONLY true ground truth is **resolution outcomes**. Everything else is proxy 
 ### 1a. Collect Resolution Data
 
 ```bash
-# Default: only new data since last feedback session
+# First: update forecast JSONs with any new resolutions (lightweight, few API calls)
+uv run aib-devtools resolution check
+
+# Then: full metrics collection (resolutions + CP + Brier scores)
 uv run aib-devtools feedback collect --include-retrodict
 
 # Full view when needed (e.g., first run, or to recompute everything)
@@ -181,7 +184,7 @@ The agent forecasts as if it were making the prediction at the original question
 
 **Pulling resolution data:**
 
-Use `aib-devtools track-record scrape` to pull resolutions, peer scores, and baseline scores into forecast JSONs from the Metaculus profile page.
+Use `aib-devtools scores scrape` to pull resolutions, peer scores, and baseline scores into forecast JSONs from the Metaculus profile page.
 
 **Retrodict vs Live forecasts:**
 - Live forecasts go to `notes/traces/<version>/forecasts/`
