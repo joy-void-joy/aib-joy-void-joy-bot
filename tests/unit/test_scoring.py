@@ -162,6 +162,7 @@ class TestComputeBaselineScore:
     def _peaked_cdf(self, center: float, n: int = 201) -> list[float]:
         """A CDF peaked near center (sigmoid-shaped)."""
         import math
+
         return [1.0 / (1.0 + math.exp(-20 * (i / (n - 1) - center))) for i in range(n)]
 
     def test_binary_positive(self) -> None:

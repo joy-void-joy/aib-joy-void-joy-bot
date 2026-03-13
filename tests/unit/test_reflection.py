@@ -583,9 +583,15 @@ class TestComputeReflectionMC:
     def test_mc_outcome_breakdown(self) -> None:
         """MC factors should be grouped by supports into outcome breakdown."""
         factors = [
-            Factor(description="Polls favor A", supports="A", logit=1.5, confidence=0.8),
-            Factor(description="Endorsement for A", supports="A", logit=0.5, confidence=1.0),
-            Factor(description="B has momentum", supports="B", logit=0.8, confidence=0.7),
+            Factor(
+                description="Polls favor A", supports="A", logit=1.5, confidence=0.8
+            ),
+            Factor(
+                description="Endorsement for A", supports="A", logit=0.5, confidence=1.0
+            ),
+            Factor(
+                description="B has momentum", supports="B", logit=0.8, confidence=0.7
+            ),
         ]
         inp = _make_mc_input(factors=factors)
 

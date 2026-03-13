@@ -152,8 +152,7 @@ class ReasoningLogger:
                     parts.append(f"```json\n{input_str}\n```\n")
                 content_str = _normalize_content(block.content)
                 wrapped = "\n".join(
-                    textwrap.fill(line, width=200)
-                    for line in content_str.splitlines()
+                    textwrap.fill(line, width=200) for line in content_str.splitlines()
                 )
                 parts.append(f"### 📋 Result\n\n```\n{wrapped}\n```\n")
                 return "\n".join(parts)

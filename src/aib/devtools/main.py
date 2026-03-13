@@ -40,7 +40,9 @@ app.add_typer(health_app, name="health", help="Service health checks")
 app.add_typer(migration_app, name="migration", help="One-time data migrations")
 app.add_typer(usage_app, name="usage", help="API usage and rate limits")
 app.add_typer(version_app, name="version", help="Agent version management")
-app.add_typer(track_record_app, name="track-record", help="Metaculus track record scraping")
+app.add_typer(
+    track_record_app, name="track-record", help="Metaculus track record scraping"
+)
 
 if __name__ == "__main__":
     app()

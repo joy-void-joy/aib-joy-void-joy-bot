@@ -78,7 +78,9 @@ def _baseline_numeric(data: dict[str, object]) -> float | None:
 
     range_min = bounds.get("range_min")
     range_max = bounds.get("range_max")
-    if not isinstance(range_min, (int, float)) or not isinstance(range_max, (int, float)):
+    if not isinstance(range_min, (int, float)) or not isinstance(
+        range_max, (int, float)
+    ):
         return None
     if range_max <= range_min:
         return None
