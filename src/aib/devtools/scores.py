@@ -272,7 +272,8 @@ def show(
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
 ) -> None:
     """Show the scores table (formatted)."""
-    effective, warning = resolve_version(version, all_versions)
+    widen = all_versions or post_id is not None
+    effective, warning = resolve_version(version, widen)
     if warning:
         typer.echo(warning)
     rows = load_all_score_rows(versions=effective)
@@ -282,6 +283,13 @@ def show(
 
     if post_id is not None:
         rows = [r for r in rows if r["post_id"] == str(post_id)]
+        rows.sort(
+            key=lambda r: (
+                parse_semver(r.get("agent_version", "") or "0.0.0") or (0, 0, 0),
+                r.get("timestamp", ""),
+            ),
+            reverse=True,
+        )
     if source:
         rows = [r for r in rows if r["source"] == source]
     if resolved_only:
@@ -700,7 +708,7 @@ def _build_strip(
         return f"v{v} {ds} (n={n:>2})"
 
     label_width = max(len(_label(s[0], s[1])) for s in version_stats)
-    value_width = 22
+    value_width = 23
     chart_width = max(20, term_width - label_width - value_width - 4)
 
     def to_pos(score: float) -> int:
@@ -754,7 +762,7 @@ def _build_strip(
                 else:
                     parts.append(" ")
             row = "".join(parts)
-            stats = f"{avg:>5.1f} ±{std:>2.0f}  {mn:>3.0f}‥{mx:.0f}"
+            stats = f"{avg:>5.1f} ±{std:>3.0f}  {mn:>4.0f}‥{mx:>4.0f}"
             lines.append(f"  {ansi}{label}{RESET} {row}  {stats}")
         else:
             empty = list(" " * chart_width)
@@ -1133,9 +1141,11 @@ def _build_trend_output(
         )
 
     resolved_by_version: dict[str, int] = {}
+    scores_by_version: dict[str, list[float]] = {}
     for p in filtered:
         v = p[4]
         resolved_by_version[v] = resolved_by_version.get(v, 0) + 1
+        scores_by_version.setdefault(v, []).append(_score(p))
 
     legend_entries: list[tuple[str, int]] = []
     for v in sorted(color_map, key=lambda v: parse_semver(v) or (0, 0, 0)):
@@ -1144,16 +1154,24 @@ def _build_trend_output(
         if not total:
             continue
         resolved = resolved_by_version.get(v, 0)
+        scores = scores_by_version.get(v, [])
+        avg = statistics.mean(scores) if scores else 0.0
+        std = statistics.stdev(scores) if len(scores) > 1 else 0.0
         ansi = f"\033[38;5;{color}m"
-        text = f"v{v} {resolved}/{total}"
+        text = f"v{v} {resolved}/{total}  {avg:>5.1f} ±{std:.0f}"
         legend_entries.append((f"{ansi}{text}\033[0m", len(text)))
 
     if legend_entries:
-        visible_total = sum(vl for _, vl in legend_entries)
-        n = len(legend_entries)
-        remaining = max(0, term_width - visible_total)
-        gap = remaining // max(1, n - 1) if n > 1 else 0
-        parts.append((" " * gap).join(entry for entry, _ in legend_entries))
+        col_width = max(vl for _, vl in legend_entries) + 3
+        cols = max(1, term_width // col_width)
+        rows: list[str] = []
+        for i in range(0, len(legend_entries), cols):
+            chunk = legend_entries[i : i + cols]
+            cells = [
+                entry + " " * (col_width - vl) for entry, vl in chunk
+            ]
+            rows.append("".join(cells).rstrip())
+        parts.append("\n".join(rows))
     return "\n\n".join(parts)
 
 
