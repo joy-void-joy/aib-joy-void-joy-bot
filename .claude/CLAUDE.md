@@ -131,9 +131,9 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 1. **Create a worktree** (if the user hasn't already created one):
    ```bash
-   git worktree add ./worktrees/feat-name -b feat/feature-name
-   cd ./worktrees/feat-name
+   uv run aib-devtools dev worktree feat-name
    ```
+   This creates the worktree as a sibling under `tree/` (e.g., `tree/feat-name` alongside `tree/main`), syncs dependencies, and refreshes plugins. **Never** use `git worktree add ./worktrees/...` — worktrees must be siblings, not nested inside another checkout.
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
 4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run aib-devtools version bump` or manually add an entry following the existing format.
@@ -403,6 +403,7 @@ aib-devtools
 │
 ├── resolution         Resolution updates
 │   ├── check          Fetch and apply resolutions from Metaculus (--dry-run)
+│   ├── resolve        AI-powered early resolution (--post-id, --max, --dry-run)
 │   ├── status         Show resolution status of all forecasts
 │   └── set            Manually set resolution for a post
 │

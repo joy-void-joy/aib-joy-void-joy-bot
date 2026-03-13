@@ -178,7 +178,7 @@ def check(
                 if not dry_run:
                     post_dir = items_by_id[post_id]["dir"]
                     for f in post_dir.glob("*.json"):
-                        if update_forecast_file(f, resolution):
+                        if update_forecast_file(f, resolution, source="metaculus"):
                             updated += 1
                 else:
                     updated += 1
@@ -252,10 +252,10 @@ def set_resolution(
     """Manually set resolution for a forecast."""
     updated = 0
     for f in iter_forecast_files(post_id):
-        if update_forecast_file(f, resolution):
+        if update_forecast_file(f, resolution, source="manual"):
             updated += 1
     for f in iter_retrodict_files(post_id):
-        if update_forecast_file(f, resolution):
+        if update_forecast_file(f, resolution, source="manual"):
             updated += 1
 
     if updated == 0:
@@ -263,3 +263,127 @@ def set_resolution(
         raise typer.Exit(1)
 
     typer.echo(f"Updated {updated} forecast files for post {post_id}")
+
+
+@app.command("resolve")
+def resolve(
+    post_ids: list[int] = typer.Argument(
+        None, help="Post IDs to resolve (all unresolved if omitted)"
+    ),
+    min_confidence: float = typer.Option(
+        0.7, "--min-confidence", help="Minimum confidence to apply resolution"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
+) -> None:
+    """Attempt early resolution using AI agents to check criteria."""
+    from aib.agent.resolver import (
+        QuestionForResolution,
+        resolve_batch,
+        resolve_question,
+    )
+
+    unresolved: list[dict[str, object]] = []
+    for base in {d.parent for d in iter_forecast_dirs()}:
+        unresolved.extend(find_unresolved(base))
+
+    if post_ids:
+        pid_set = set(post_ids)
+        unresolved = [u for u in unresolved if u["post_id"] in pid_set]
+
+    if not unresolved:
+        typer.echo("No unresolved forecasts found")
+        return
+
+    typer.echo(f"Attempting resolution for {len(unresolved)} questions...\n")
+
+    async def run() -> None:
+        client = get_client()
+
+        questions: list[QuestionForResolution] = []
+        for item in unresolved:
+            pid = item["post_id"]
+            if not isinstance(pid, int):
+                continue
+            typer.echo(f"  Fetching criteria for {pid}...")
+            try:
+                post_data = await client.fetch_post_json(pid)
+            except (OSError, ValueError) as e:
+                typer.echo(f"    Error fetching {pid}: {e}")
+                continue
+
+            question = post_data.get("question", {})
+            criteria = question.get("resolution_criteria") or ""
+            fine_print = question.get("fine_print") or ""
+
+            if not criteria:
+                typer.echo(f"    No resolution criteria for {pid}, skipping")
+                continue
+
+            questions.append(
+                QuestionForResolution(
+                    post_id=pid,
+                    question_title=question.get("title") or str(item.get("title", "")),
+                    question_type=question.get("type", "binary"),
+                    resolution_criteria=criteria,
+                    fine_print=fine_print,
+                    scheduled_resolve_time=question.get("scheduled_resolve_time"),
+                    scheduled_close_time=question.get("scheduled_close_time"),
+                )
+            )
+            await asyncio.sleep(1.0)
+
+        if not questions:
+            typer.echo("No questions with resolution criteria to check")
+            return
+
+        typer.echo(f"\nRunning {len(questions)} resolver agents...\n")
+
+        if len(questions) == 1:
+            results = [(questions[0].post_id, await resolve_question(questions[0]))]
+        else:
+            results = await resolve_batch(questions)
+
+        applied = 0
+        skipped = 0
+        for pid, verdict in results:
+            status_icon = "Y" if verdict.resolved else "N"
+            conf_str = f"{verdict.confidence:.0%}"
+            typer.echo(
+                f"  [{status_icon}] {pid} (conf={conf_str}): {verdict.reason[:80]}"
+            )
+
+            if verdict.sources:
+                for src in verdict.sources[:3]:
+                    typer.echo(f"      src: {src}")
+
+            if not verdict.resolved or verdict.resolution is None:
+                skipped += 1
+                continue
+
+            if verdict.confidence < min_confidence:
+                typer.echo(
+                    f"      -> Skipped (confidence {conf_str} < {min_confidence:.0%})"
+                )
+                skipped += 1
+                continue
+
+            if not dry_run:
+                for f in iter_forecast_files(pid):
+                    update_forecast_file(
+                        f,
+                        verdict.resolution,
+                        source="tentative",
+                        reason=verdict.reason,
+                    )
+                applied += 1
+            else:
+                typer.echo(f"      -> Would apply: {verdict.resolution}")
+                applied += 1
+
+        typer.echo("\nResults:")
+        typer.echo(f"  Applied: {applied}")
+        typer.echo(f"  Skipped: {skipped}")
+        if dry_run:
+            typer.echo("  (dry run - no files changed)")
+
+    asyncio.run(run())

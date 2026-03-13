@@ -316,7 +316,9 @@ def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None
         return None
 
 
-async def _fetch_recent_news(keyword: str, max_results: int = 5) -> list[NewsItem] | None:
+async def _fetch_recent_news(
+    keyword: str, max_results: int = 5
+) -> list[NewsItem] | None:
     """Fetch recent news headlines for an elevated trends topic via Exa."""
     from datetime import datetime, timedelta, timezone
 
@@ -325,7 +327,9 @@ async def _fetch_recent_news(keyword: str, max_results: int = 5) -> list[NewsIte
     try:
         cutoff = retrodict_cutoff.get()
         if cutoff is not None:
-            reference = datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc)
+            reference = datetime(
+                cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc
+            )
         else:
             reference = datetime.now(timezone.utc)
         after_date = (reference - timedelta(hours=48)).strftime("%Y-%m-%d")

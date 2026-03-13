@@ -147,6 +147,8 @@ class SavedForecast(BaseModel):
     peer_score: float | None = None
     baseline_score: float | None = None
     score_timestamp: float | None = None
+    resolution_source: str | None = None
+    resolution_reason: str | None = None
 
 
 def save_forecast(
@@ -248,9 +250,20 @@ def _update_forecast_json(
     return True
 
 
-def update_forecast_file(filepath: Path, resolution: str | float) -> bool:
+def update_forecast_file(
+    filepath: Path,
+    resolution: str | float,
+    *,
+    source: str | None = None,
+    reason: str | None = None,
+) -> bool:
     """Update a single forecast file with resolution data."""
-    return _update_forecast_json(filepath, resolution=resolution)
+    updates: dict[str, str | float | None] = {"resolution": resolution}
+    if source is not None:
+        updates["resolution_source"] = source
+    if reason is not None:
+        updates["resolution_reason"] = reason
+    return _update_forecast_json(filepath, **updates)
 
 
 def update_retrodict_comparison(

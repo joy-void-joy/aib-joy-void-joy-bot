@@ -201,6 +201,7 @@ def resolve_scraped(
 
             if forecast.get("resolution") is None:
                 updates["resolution"] = resolution
+                updates["resolution_source"] = "scrape"
             if peer is not None and forecast.get("peer_score") is None:
                 updates["peer_score"] = peer
             if score_ts is not None and forecast.get("score_timestamp") is None:
@@ -793,9 +794,7 @@ def _build_strip(
     lines.append(f"{scale_pad}{DIM}{''.join(ruler)}{RESET}")
     lines.append(f"{scale_pad}{DIM}{''.join(labels)}{RESET}")
 
-    lines.append(
-        f"\n{DIM}● individual  2-9 overlapping  avg ±std  min‥max{RESET}"
-    )
+    lines.append(f"\n{DIM}● individual  2-9 overlapping  avg ±std  min‥max{RESET}")
 
     return "\n".join(lines)
 
@@ -828,7 +827,8 @@ def _load_peer_data() -> dict[int, tuple[float, str]]:
 
 
 def _load_strip_data(
-    min_n: int, score_mode: ScoreMode = "peer",
+    min_n: int,
+    score_mode: ScoreMode = "peer",
 ) -> dict[str, list[float]] | None:
     """Aggregate scores by version, applying min_n filter."""
     if score_mode == "peer":
@@ -871,9 +871,7 @@ def _load_baseline_strip_data() -> dict[str, list[float]]:
 
 
 SCATTER_EPOCH = datetime(2026, 2, 1)
-ScatterPoint = tuple[
-    float, float, str, int
-]  # (day_offset, score, version, post_id)
+ScatterPoint = tuple[float, float, str, int]  # (day_offset, score, version, post_id)
 
 ScoreMode = Literal["baseline", "peer"]
 
@@ -882,9 +880,7 @@ TrendPoint = tuple[
 ]  # (forecast_day, resolved_day, baseline_score, peer_score, version, post_id)
 
 
-def _load_trend_data() -> (
-    tuple[list[TrendPoint], dict[str, list[float]]] | None
-):
+def _load_trend_data() -> tuple[list[TrendPoint], dict[str, list[float]]] | None:
     """Load scored forecasts for trend scatter plots.
 
     Returns (points, version_forecast_dates). Each point carries both dates
@@ -928,11 +924,11 @@ def _load_trend_data() -> (
             continue
 
         peer_score, _ = peer_data[pid]
-        dt_res = datetime.fromtimestamp(score_ts, tz=timezone.utc).replace(
-            tzinfo=None
-        )
+        dt_res = datetime.fromtimestamp(score_ts, tz=timezone.utc).replace(tzinfo=None)
         res_offset = (dt_res - SCATTER_EPOCH).total_seconds() / 86400
-        points.append((fc_offset, res_offset, float(baseline), peer_score, version, pid))
+        points.append(
+            (fc_offset, res_offset, float(baseline), peer_score, version, pid)
+        )
 
     if not points:
         return None
@@ -1097,7 +1093,9 @@ def _build_trend_output(
     all_versions_raw = set(p[4] for p in points) | set(version_forecast_dates)
     if min_n > 0:
         all_versions_raw = {
-            v for v in all_versions_raw if len(version_forecast_dates.get(v, [])) >= min_n
+            v
+            for v in all_versions_raw
+            if len(version_forecast_dates.get(v, [])) >= min_n
         }
     color_map = {v: full_color_map.get(v, 7) for v in all_versions_raw}
     filtered = [p for p in points if p[4] in all_versions_raw] if min_n > 0 else points
@@ -1109,12 +1107,8 @@ def _build_trend_output(
     def _score(p: TrendPoint) -> float:
         return p[2] if score_mode == "baseline" else p[3]
 
-    by_forecast: list[ScatterPoint] = [
-        (p[0], _score(p), p[4], p[5]) for p in filtered
-    ]
-    by_resolved: list[ScatterPoint] = [
-        (p[1], _score(p), p[4], p[5]) for p in filtered
-    ]
+    by_forecast: list[ScatterPoint] = [(p[0], _score(p), p[4], p[5]) for p in filtered]
+    by_resolved: list[ScatterPoint] = [(p[1], _score(p), p[4], p[5]) for p in filtered]
 
     parts: list[str] = []
     if by_forecast:
@@ -1167,9 +1161,7 @@ def _build_trend_output(
         rows: list[str] = []
         for i in range(0, len(legend_entries), cols):
             chunk = legend_entries[i : i + cols]
-            cells = [
-                entry + " " * (col_width - vl) for entry, vl in chunk
-            ]
+            cells = [entry + " " * (col_width - vl) for entry, vl in chunk]
             rows.append("".join(cells).rstrip())
         parts.append("\n".join(rows))
     return "\n\n".join(parts)
@@ -1232,7 +1224,12 @@ def strip(
         if not by_version and not totals:
             return f"No versions with >= {min_n} scored forecasts."
         return _build_strip(
-            by_version, version_dates, console.width, cmap, totals, mode,
+            by_version,
+            version_dates,
+            console.width,
+            cmap,
+            totals,
+            mode,
         )
 
     if not watch:
@@ -1243,7 +1240,12 @@ def strip(
             typer.echo("No track record data.")
             raise typer.Exit(1)
         output = _build_strip(
-            by_version, version_dates, console.width, cmap, totals, mode,
+            by_version,
+            version_dates,
+            console.width,
+            cmap,
+            totals,
+            mode,
         )
         print()
         print(output)
@@ -1322,7 +1324,12 @@ def trend(
             return "No scored forecasts found."
         pts, ver_dates = result
         return _build_trend_output(
-            pts, ver_dates, console.width, console.height, min_n, mode,
+            pts,
+            ver_dates,
+            console.width,
+            console.height,
+            min_n,
+            mode,
         )
 
     if not watch:
