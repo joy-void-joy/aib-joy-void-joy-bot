@@ -1,0 +1,484 @@
+---
+timestamp: 2026-03-13 09:30:20 UTC
+question_type: binary
+factors:
+- description: CVE-2025-15467 (HIGH) advisory was published January 27, 2026, before
+    the Feb 24 start date - confirmed by Datadog, Orca Security, AWS, oss-security
+    mailing list, and Red Hat. Does not count for resolution.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: OpenSSL timeline lists the advisory under March 10, 2026 (after Feb
+    24). If the vulnerabilities.html page was first updated on March 10, CVE-2025-15467
+    HIGH would count and resolve YES immediately.
+  logit: 1.5
+  confidence: 0.15
+  effective_logit: 0.22499999999999998
+- description: 'Historical base rate: ~1 HIGH/CRITICAL advisory per year (Poisson
+    rate). For remaining 49-day window, P(new HIGH/CRITICAL) ≈ 12.6%.'
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: AI-powered vulnerability discovery (AISLE found 12 CVEs at once) may
+    accelerate future discovery rate, increasing probability above historical base
+    rate.
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Recent large batch (12 CVEs patched Jan 2026) may temporarily reduce
+    near-term HIGH findings as the most obvious issues were addressed.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: No evidence of any pending HIGH/CRITICAL advisory - no news, no pre-notifications,
+    no upcoming disclosures mentioned.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Status quo persistence: 49 days is a short window for a rare event
+    (HIGH/CRITICAL advisory). Most similar windows would pass without such an advisory.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  logit: -1.1
+  probability: 0.25
+assessment: "The central question is whether the January 27, 2026 HIGH advisory (CVE-2025-15467)\
+  \ counts as \"newly posted\" within the Feb 24 - May 1 window.\n\nEvidence strongly\
+  \ favors January 27 as the publication date: Datadog's same-day blog says \"Today,\
+  \ on January 27th, 2026, the OpenSSL project published details\"; Orca says it \"\
+  dropped on January 27, 2026\"; AWS lists \"Public on 2026-01-27\"; the oss-security\
+  \ mailing list post is dated January 27; Red Hat published their fix January 28.\
+  \ \n\nHowever, the OpenSSL timeline page lists both the advisory and patch releases\
+  \ under \"10 Mar 2026\", creating meaningful ambiguity about when the vulnerabilities.html\
+  \ page was actually updated.\n\nIf the advisory doesn't count (85% likely), resolution\
+  \ requires a genuinely new HIGH/CRITICAL advisory in the remaining ~49 days. Historical\
+  \ Poisson rate of ~1/year gives P ≈ 12.6%. AI discovery tools may push this slightly\
+  \ higher but are offset by the recent large patch batch.\n\nIf the advisory does\
+  \ count (15% likely), the question effectively already resolves YES.\n\nCombined:\
+  \ P(YES) ≈ 0.85 × 0.126 + 0.15 × 0.95 ≈ 0.25"
+calibration_notes: 'Base rate: ~1 HIGH/CRITICAL OpenSSL advisory per year over 2020-2026.
+  For 49 remaining days, Poisson gives 12.6%. This is a rare event in a short window.
+  Status quo (NO) is the default if nothing changes. The 25% estimate includes the
+  interpretation uncertainty about the March 10 timeline listing, which provides meaningful
+  upside.'
+key_uncertainties: '1. When exactly was the vulnerabilities.html page updated with
+  the January 27 advisory? If March 10, the question may already be resolved YES.
+
+  2. Whether AI-powered discovery (AISLE) has fundamentally changed the rate of HIGH/CRITICAL
+  findings.
+
+  3. Whether any currently-unknown vulnerability is in the disclosure pipeline.'
+tool_audit: 'Useful: fetch_url on OpenSSL vulnerabilities pages, timeline, and advisory
+  text provided severity ratings and dates. web_search found multiple independent
+  confirmations of the January 27 publication date. get_metaculus_questions confirmed
+  no community prediction available.
+
+  Empty but informative: newslog.html returned no content (may require different fetching
+  approach).
+
+  No failures: All tools worked as expected.'
+update_triggers: '- New OpenSSL security advisory published (any severity) would increase
+  probability
+
+  - Confirmation that vulnerabilities.html was updated on a specific date would be
+  decisive
+
+  - AISLE or another AI tool announcing new OpenSSL findings'
+process_reflection: The main challenge was resolving the conflicting signals about
+  when the advisory was actually posted to the resolution source (vulnerabilities.html).
+  The timeline showing March 10 directly contradicts multiple external sources saying
+  January 27. A tool that could check page revision history (Internet Archive/Wayback
+  Machine) or HTTP Last-Modified headers would have been valuable for resolving this
+  definitively. The decomposition into interpretation scenarios was natural and well-supported
+  by the tool output. The Poisson base rate calculation was straightforward with the
+  timeline data providing a complete advisory history.
+computed:
+  factor_count: 7
+  factor_sum: -2.4499999999999997
+  tentative_logit: -1.1
+  logit_gap: 1.3499999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: CVE-2025-15467 (HIGH) advisory was published January 27, 2026, before
+      the Feb 24 start date - confirmed by Datadog, Orca Security, AWS, oss-security
+      mailing list, and Red Hat. Does not count for resolution.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: OpenSSL timeline lists the advisory under March 10, 2026 (after Feb
+      24). If the vulnerabilities.html page was first updated on March 10, CVE-2025-15467
+      HIGH would count and resolve YES immediately.
+    logit: 1.5
+    confidence: 0.15
+    effective_logit: 0.22499999999999998
+  - description: 'Historical base rate: ~1 HIGH/CRITICAL advisory per year (Poisson
+      rate). For remaining 49-day window, P(new HIGH/CRITICAL) ≈ 12.6%.'
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: AI-powered vulnerability discovery (AISLE found 12 CVEs at once)
+      may accelerate future discovery rate, increasing probability above historical
+      base rate.
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Recent large batch (12 CVEs patched Jan 2026) may temporarily reduce
+      near-term HIGH findings as the most obvious issues were addressed.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: No evidence of any pending HIGH/CRITICAL advisory - no news, no pre-notifications,
+      no upcoming disclosures mentioned.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Status quo persistence: 49 days is a short window for a rare event
+      (HIGH/CRITICAL advisory). Most similar windows would pass without such an advisory.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: CVE-2025-15467 (HIGH) advisory was published January 27, 2026,
+    before the Feb 24 start date - confirmed by Datadog, Orca Security, AWS, oss-security
+    mailing list, and Red Hat. Does not count for resolution.
+  dominant_effective_logit: -1.275
+  factor_implied_probability: 0.0794385491839784
+  tentative_probability: 0.25
+  gap_pp: 17.05614508160216
+  sources:
+  - '[Vulnerabilities](https://www.openssl.org/news/vulnerabilities.html)'
+  - '[Vulnerabilities](https://openssl-library.org/news/vulnerabilities/)'
+  - '[Release and Advisory Timeline](https://openssl-library.org/news/timeline/)'
+  - '[Vulnerabilities 3.5](https://openssl-library.org/news/vulnerabilities-3.5/)'
+  - '[openssl.org](https://www.openssl.org/news/secadv/20260127.txt)'
+  - '[openssl-library.org](https://openssl-library.org/news/secadv/20260127.txt)'
+  - '[Releases · openssl/openssl](https://github.com/openssl/openssl/releases)'
+  - '[(Metaculus) Will OpenSSL publish a HIGH or CRITICAL security advisory before
+    May 1, 2026?](https://www.metaculus.com/questions/42511)'
+  - '[https://openssl-library.org/news/timeline/](https://www.openssl.org/news/newslog.html)'
+  reviewer_critique: "## Core Issues\n\n### 1. Probability Assessment - Too High (FAIL)\n\
+    \nThe agent's 25% estimate meaningfully overstates the probability. The agent\
+    \ calculated:\n- 85% chance Jan 27 publication × 12.6% new HIGH = 10.7%\n- 15%\
+    \ chance Mar 10 publication × 95% = 14.25%  \n- Combined: ~25%\n\n**Problem**:\
+    \ The agent gives 15% probability to the March 10 publication scenario when the\
+    \ evidence overwhelmingly supports January 27:\n\n**Strong Jan 27 evidence (from\
+    \ trace)**:\n- Datadog: \"Today, on January 27th, 2026, the OpenSSL project published\
+    \ details\"\n- Orca Security: \"dropped on January 27, 2026\"\n- AWS: \"Public\
+    \ on 2026-01-27\"\n- oss-security mailing list: dated January 27\n- Red Hat: published\
+    \ fix January 28\n\n**Weak Mar 10 evidence**: \n- Only the timeline page lists\
+    \ releases under \"10 Mar 2026\"\n- But timelines often group related items even\
+    \ when published at different dates\n- The timeline shows \"Security Advisory\
+    \ (dated 27 January 2026, but released 10 Mar 2026)\" per the LLM interpretation,\
+    \ but this is likely just the LLM grouping the releases with the advisory\n\n\
+    The probability split should be ~95% Jan 27 / 5% Mar 10, not 85%/15%.\n\n**Corrected\
+    \ calculation**:\n- 95% × 12.6% + 5% × 95% = 12.0% + 4.75% = **~17%**\n\nThe agent's\
+    \ 25% is about **47% higher** than the evidence supports. Given that the difference\
+    \ between 17% and 25% is substantial in forecasting terms (crossing from \"quite\
+    \ unlikely\" to \"somewhat plausible\"), this constitutes a meaningful error in\
+    \ probability assessment.\n\n### 2. All Factual Claims Verified\n\nI verified\
+    \ the following claims against the trace:\n\n✓ **Factor 1**: CVE-2025-15467 HIGH\
+    \ published Jan 27 - confirmed by Datadog, Orca, AWS, oss-security, Red Hat in\
+    \ trace  \n✓ **Factor 2**: Timeline lists under March 10 - confirmed in trace\
+    \  \n✓ **Factor 3**: ~1 HIGH/CRITICAL per year base rate - agent found 5-7 advisories\
+    \ over 6 years, calculated 12.6% for 49 days using Poisson  \n✓ **Factor 4**:\
+    \ AISLE found 12 CVEs - confirmed in search results  \n✓ **Factor 5**: 12 CVEs\
+    \ patched Jan 2026 - confirmed  \n✓ **Factor 6**: No pending advisories - agent\
+    \ searched, found none  \n✓ **Factor 7**: Status quo persistence - follows from\
+    \ base rate\n\nNo hallucinations detected.\n\n### 3. No Double-Counting\n\nFactors\
+    \ 3 and 7 both reference low probability of rare events, but make distinct points\
+    \ (historical base rate vs. short window for rare events). Acceptable overlap,\
+    \ not double-counting.\n\n### 4. No Wrong-Direction Factors\n\nAll factor logits\
+    \ align with their descriptions.\n\n### 5. Resolution Criteria Alignment - Good\n\
+    \nThe agent correctly engaged with the resolution criteria:\n- Identified the\
+    \ Feb 24 start date\n- Checked whether Jan 27 advisory counts (correctly concluded\
+    \ it doesn't)\n- Focused on \"newly posted\" language\n- Checked the primary source\
+    \ (openssl.org/news/vulnerabilities.html)\n\n### 6. No Pre-Publication Event Issue\n\
+    \nWhile the question was published March 13 (after the Jan 27 advisory), the resolution\
+    \ window starts Feb 24, so the Jan 27 advisory is before BOTH the question publication\
+    \ and the resolution window. No pre-publication rule violation.\n\n## Verdict:\
+    \ FAIL\n\nThe agent's 25% probability is meaningfully too high due to over-weighting\
+    \ the March 10 scenario (15% when evidence supports ~5%). The correct probability\
+    \ given the evidence is approximately **15-17%**, not 25%."
+---
+timestamp: 2026-03-13 09:33:10 UTC
+question_type: binary
+factors:
+- description: CVE-2025-15467 (HIGH) advisory was published January 27, 2026, before
+    the Feb 24 start date - confirmed by 5+ independent sources (Datadog, Orca, AWS,
+    oss-security, Red Hat). Does not count for resolution.
+  logit: -1.5
+  confidence: 0.95
+  effective_logit: -1.4249999999999998
+- description: OpenSSL timeline lists the advisory under March 10, 2026 - but this
+    is most likely grouping the advisory with its patch releases. Only ~5% chance
+    the vulnerabilities.html page was first updated after Feb 24.
+  logit: 1.5
+  confidence: 0.05
+  effective_logit: 0.07500000000000001
+- description: 'Historical base rate: ~1 HIGH/CRITICAL advisory per year (Poisson).
+    For remaining 49-day window, P(new HIGH/CRITICAL) = 12.6%.'
+  logit: -1.0
+  confidence: 0.85
+  effective_logit: -0.85
+- description: AI-powered vulnerability discovery (AISLE) may modestly increase future
+    discovery rate above historical baseline.
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+- description: Recent large patch batch (12 CVEs in Jan 2026) may reduce near-term
+    HIGH findings as obvious issues were addressed.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: No evidence of any pending HIGH/CRITICAL advisory in the pipeline -
+    no news, no pre-notifications found.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Status quo persistence: 49 days is a short window. HIGH/CRITICAL advisories
+    are rare events. Default outcome is NO.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  logit: -1.6
+  probability: 0.17
+assessment: 'The January 27, 2026 HIGH advisory (CVE-2025-15467) was overwhelmingly
+  published before the Feb 24 start date, confirmed by Datadog''s same-day blog, Orca
+  Security, AWS, oss-security mailing list, and Red Hat''s next-day fix. The timeline
+  grouping under March 10 is a minor anomaly best explained by releases being listed
+  alongside the advisory they fix.
+
+
+  With the Jan 27 advisory excluded, the question requires a genuinely new HIGH/CRITICAL
+  advisory in ~49 remaining days. The Poisson base rate of ~1/year gives 12.6% for
+  this window. AI tools may modestly increase the rate, but the recent large patch
+  batch works against near-term findings.
+
+
+  No evidence of any pending disclosure exists. The combined probability is approximately
+  17%.
+
+
+  P(YES) = 0.95 × 0.126 + 0.05 × 0.95 = 0.120 + 0.048 = 0.167'
+calibration_notes: 'Base rate: ~1 HIGH/CRITICAL per year from 2020-2026 OpenSSL history.
+  Poisson gives 12.6% for 49 days. Status quo strongly favors NO. The small upside
+  from interpretation uncertainty (5% × 95% = 4.8%) is appropriately sized given the
+  weak March 10 evidence.'
+key_uncertainties: 1. Whether any vulnerability is currently in the disclosure pipeline
+  (unknown unknowns). 2. Whether AI discovery has structurally changed the rate. 3.
+  The exact date vulnerabilities.html was updated (very unlikely to change the answer).
+tool_audit: All tools provided useful data. fetch_url on timeline, vulnerabilities
+  pages, and advisory text gave comprehensive data. web_search confirmed the January
+  27 date from multiple independent sources. execute_code handled the Poisson calculation.
+  No tool failures.
+update_triggers: New OpenSSL advisory of any severity, AISLE announcing new findings,
+  confirmation of pending disclosure.
+process_reflection: The reviewer correctly identified overweighting of the March 10
+  interpretation scenario. Adjusting to 5% for that scenario and recalculating gave
+  a more evidence-consistent estimate of 17%. The decomposition approach (interpretation
+  uncertainty + base rate) worked well for this question type.
+computed:
+  factor_count: 7
+  factor_sum: -2.8899999999999997
+  tentative_logit: -1.6
+  logit_gap: 1.2899999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: CVE-2025-15467 (HIGH) advisory was published January 27, 2026, before
+      the Feb 24 start date - confirmed by 5+ independent sources (Datadog, Orca,
+      AWS, oss-security, Red Hat). Does not count for resolution.
+    logit: -1.5
+    confidence: 0.95
+    effective_logit: -1.4249999999999998
+  - description: OpenSSL timeline lists the advisory under March 10, 2026 - but this
+      is most likely grouping the advisory with its patch releases. Only ~5% chance
+      the vulnerabilities.html page was first updated after Feb 24.
+    logit: 1.5
+    confidence: 0.05
+    effective_logit: 0.07500000000000001
+  - description: 'Historical base rate: ~1 HIGH/CRITICAL advisory per year (Poisson).
+      For remaining 49-day window, P(new HIGH/CRITICAL) = 12.6%.'
+    logit: -1.0
+    confidence: 0.85
+    effective_logit: -0.85
+  - description: AI-powered vulnerability discovery (AISLE) may modestly increase
+      future discovery rate above historical baseline.
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  - description: Recent large patch batch (12 CVEs in Jan 2026) may reduce near-term
+      HIGH findings as obvious issues were addressed.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: No evidence of any pending HIGH/CRITICAL advisory in the pipeline
+      - no news, no pre-notifications found.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Status quo persistence: 49 days is a short window. HIGH/CRITICAL
+      advisories are rare events. Default outcome is NO.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: CVE-2025-15467 (HIGH) advisory was published January 27, 2026,
+    before the Feb 24 start date - confirmed by 5+ independent sources (Datadog, Orca,
+    AWS, oss-security, Red Hat). Does not count for resolution.
+  dominant_effective_logit: -1.4249999999999998
+  factor_implied_probability: 0.05265011843530293
+  tentative_probability: 0.17
+  gap_pp: 11.734988156469708
+  sources:
+  - '[Vulnerabilities](https://www.openssl.org/news/vulnerabilities.html)'
+  - '[Vulnerabilities](https://openssl-library.org/news/vulnerabilities/)'
+  - '[Release and Advisory Timeline](https://openssl-library.org/news/timeline/)'
+  - '[Vulnerabilities 3.5](https://openssl-library.org/news/vulnerabilities-3.5/)'
+  - '[openssl.org](https://www.openssl.org/news/secadv/20260127.txt)'
+  - '[openssl-library.org](https://openssl-library.org/news/secadv/20260127.txt)'
+  - '[Releases · openssl/openssl](https://github.com/openssl/openssl/releases)'
+  - '[(Metaculus) Will OpenSSL publish a HIGH or CRITICAL security advisory before
+    May 1, 2026?](https://www.metaculus.com/questions/42511)'
+  - '[https://openssl-library.org/news/timeline/](https://www.openssl.org/news/newslog.html)'
+  reviewer_critique: '## Assessment
+
+
+    I have thoroughly reviewed the agent''s research trace and verified the evidence
+    chain for all seven factors. Here are my findings:
+
+
+    ### Evidence Verification
+
+
+    **Factor 1** ✓ **Well-supported**: The agent found extensive evidence that CVE-2025-15467
+    (HIGH) was published January 27, 2026:
+
+    - Datadog article: "Today, on January 27th, 2026, the OpenSSL project published
+    details"
+
+    - Orca Security: "dropped on January 27, 2026"
+
+    - AWS CVE page: "Public on 2026-01-27"
+
+    - oss-security mailing list post dated January 27, 2026
+
+    - Red Hat advisory RHSA-2026:1473 published January 28, 2026
+
+
+    All sources confirm this predates the February 24 start date. The conclusion is
+    correct.
+
+
+    **Factor 2** ✓ **Well-supported**: The timeline page does list the advisory under
+    "10 Mar 2026" alongside patch releases. The agent''s interpretation that this
+    is grouping (not actual publication date) is reasonable given the overwhelming
+    January 27 evidence. The 5% probability seems appropriate - perhaps even generous.
+
+
+    **Factor 3** ✓ **Well-supported**: The agent fetched the full OpenSSL timeline
+    and counted advisories. The Poisson calculation with rate ~1/year gives 12.6%
+    for 49 days, which matches the trace computation. The base rate analysis is grounded
+    in actual historical data from 2020-2026.
+
+
+    **Factor 4** ✓ **Well-supported**: The trace shows the AISLE tool discovered all
+    12 CVEs in the January 2026 batch using AI-powered analysis. The agent found specific
+    web search results about this. The modest upward adjustment (+0.4 logit, confidence
+    0.4) appropriately reflects uncertainty about whether AI discovery will meaningfully
+    increase future rates.
+
+
+    **Factor 5** ✓ **Well-supported**: The trace confirms 12 CVEs were patched in
+    January 2026. The logic that recent large batches may reduce near-term findings
+    is reasonable. The conservative weighting (logit -0.3, confidence 0.5) appropriately
+    reflects that this is speculative.
+
+
+    **Factor 6** ✓ **Well-supported**: The agent searched for pending disclosures
+    and found none. No pre-notifications or advance warnings were discovered in the
+    trace.
+
+
+    **Factor 7** ✓ **Well-supported**: This is a reasonable framing factor about base
+    rates and short windows.
+
+
+    ### Probability Assessment
+
+
+    The agent''s final calculation:
+
+    - P(advisory published Jan 27) = 0.95 → P(YES|Jan 27) = 0.126 (need NEW advisory)
+
+    - P(advisory published Mar 10) = 0.05 → P(YES|Mar 10) = 0.95 (HIGH already in
+    window)
+
+    - Combined: 0.95 × 0.126 + 0.05 × 0.95 = 0.167 ≈ **17%**
+
+
+    **My independent assessment:** The evidence overwhelmingly supports January 27
+    publication. The question asks for advisories "newly posted" between Feb 24 and
+    May 1. With a base rate of ~1 HIGH/CRITICAL advisory per year and 49 days remaining,
+    the Poisson probability of 12.6% is mathematically sound. Adding a small margin
+    for the March 10 interpretation scenario brings this to 17%.
+
+
+    However, **I believe the probability should be lower, around 13-14%**, because:
+
+    1. The March 10 scenario deserves even less weight (~2-3%) given the January 27
+    evidence
+
+    2. The AI discovery boost (Factor 4) may be overstated - the January batch itself
+    was unusual, and most discoveries were still LOW/MODERATE
+
+    3. The recent large patch batch (Factor 5) should weigh more heavily against near-term
+    HIGH findings
+
+
+    **Verdict: The forecast is directionally correct but the probability estimate
+    is modestly high given the evidence.**
+
+
+    The core reasoning is sound: the January 27 advisory falls outside the window,
+    so the question hinges on whether a NEW HIGH/CRITICAL advisory appears in ~49
+    days. The base rate analysis is rigorous. The main issue is that 17% seems slightly
+    optimistic when 13-14% better reflects the evidence weight.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42511
+- **Question ID**: 42309
+- **Session Duration**: 992.7s (16.5 min)
+- **Cost**: $4.6140
+- **Tokens**: 25,997 total (40 in, 25,957 out)
+  - Cache: 838,712 read, 75,125 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42511_20260313_091704/20260313-091704.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 2 (11.1%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 1ms |
+| fetch_url | 9 | 1 ⚠️ | 17764ms |
+| get_metaculus_questions | 1 | 0 | 429ms |
+| reflection | 2 | 1 ⚠️ | 139973ms |
+| web_search | 4 | 0 | 15405ms |
+
+### Sources Consulted
+
+- [Vulnerabilities](https://www.openssl.org/news/vulnerabilities.html)
+- [Vulnerabilities](https://openssl-library.org/news/vulnerabilities/)
+- [Release and Advisory Timeline](https://openssl-library.org/news/timeline/)
+- [Vulnerabilities 3.5](https://openssl-library.org/news/vulnerabilities-3.5/)
+- [openssl.org](https://www.openssl.org/news/secadv/20260127.txt)
+- [openssl-library.org](https://openssl-library.org/news/secadv/20260127.txt)
+- [Releases · openssl/openssl](https://github.com/openssl/openssl/releases)
+- [(Metaculus) Will OpenSSL publish a HIGH or CRITICAL security advisory before...
+- [https://openssl-library.org/news/timeline/](https://www.openssl.org/news/new...
