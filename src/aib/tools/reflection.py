@@ -715,7 +715,7 @@ async def _run_reviewer(
         structured_output: dict[str, Any] | None = None
         so_tool_blocks: list[ToolUseBlock] = []
         async with build_client(
-            model="sonnet",
+            model="opus",
             allowed_tools=["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
             permission_mode="bypassPermissions",
             system_prompt=system_prompt,
