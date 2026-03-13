@@ -1,0 +1,426 @@
+---
+timestamp: 2026-03-13 15:41:09 UTC
+question_type: numeric
+factors:
+- description: Current Brent price ~$101 with May futures at $101 sets the baseline
+    for April. Minimum possible max is essentially current price level.
+  supports:
+    center: 101.0
+    low: 97.0
+    high: 105.0
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Strait of Hormuz effectively closed since Feb 28, ~20% of global oil
+    supply disrupted. Iran's new supreme leader Mojtaba Khamenei vowed to keep it
+    closed as 'tool to pressure the enemy.' This is the largest supply disruption
+    since the 1970s energy crisis.
+  supports:
+    center: 125.0
+    low: 105.0
+    high: 155.0
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'Extreme realized volatility: 5.8% daily vol (92% annualized) during
+    crisis period. March 9 intraday high reached $119.40 before crashing to close
+    at $98.96. This level of volatility means the max-over-22-days could be substantially
+    above the average price.'
+  supports:
+    center: 120.0
+    low: 105.0
+    high: 160.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: IEA releasing 400 million barrels from reserves; US Treasury allowing
+    purchase of Russian oil; OPEC+ adding 206k bpd from April. These measures may
+    cap upside and could accelerate normalization.
+  supports:
+    center: 100.0
+    low: 85.0
+    high: 115.0
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+- description: 'Goldman Sachs base case: Hormuz recovery starts March 21, Brent averages
+    $98 in March-April. But notes ''non-linear upside'' for each day beyond March
+    21, and prices could exceed $145 in full-month disruption scenario.'
+  supports:
+    center: 115.0
+    low: 98.0
+    high: 145.0
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: Futures curve in steep backwardation (May $101 → Jun $97 → Jul $93
+    → Aug $89), indicating market expects prices to decline from current levels as
+    crisis resolves. But the max during April will be higher than the average.
+  supports:
+    center: 105.0
+    low: 95.0
+    high: 120.0
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Goldman's escalation scenario (full month closure) implies prices could
+    exceed 2008 peak of $145/bbl. Iran has clearly stated intent to keep Hormuz closed.
+    Military conflict is ongoing with no ceasefire in sight.
+  supports:
+    center: 140.0
+    low: 120.0
+    high: 180.0
+  logit: 1.0
+  confidence: 0.6
+  conditional: If Hormuz closure extends through all of April
+  effective_logit: 0.6
+- description: EIA expects Brent above $95 for next two months then declining. This
+    is a 'gradual easing' scenario that is their base case.
+  supports:
+    center: 105.0
+    low: 95.0
+    high: 120.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+tentative_estimate:
+  center: 118.0
+  low: 103.0
+  high: 160.0
+assessment: 'This is a max-over-period question during an unprecedented oil supply
+  crisis. The Strait of Hormuz has been effectively closed for ~2 weeks, representing
+  the largest oil supply disruption since the 1970s. Brent is currently at $101, already
+  hit $119.40 intraday on March 9, and volatility is extreme (92% annualized).
+
+
+  Key tension: The crisis fundamentals (ongoing war, new Iranian leader vowing continued
+  closure, 20% of global supply disrupted) point to sustained high prices, while emergency
+  measures (IEA reserve release of 400M barrels, Russian oil purchases, OPEC+ increases)
+  and the futures curve backwardation suggest eventual normalization.
+
+
+  For the MAX price during April specifically:
+
+  - Even if prices average ~$95-100, the max from a single volatile trading day could
+  easily be $115-125
+
+  - If the crisis intensifies, we could see March 9-style spikes to $120-140+
+
+  - Goldman''s extreme scenario of $145+ is plausible if closure persists all month
+
+  - A rapid resolution (unlikely given Iran''s new leader''s stance) would still produce
+  max around $100-105
+
+
+  Monte Carlo simulation with scenario mixing (20% rapid de-escalation, 30% partial
+  reopening, 35% continued closure, 15% escalation) gives median max of ~$118, P10
+  ~$103, P90 ~$158. These results account for both close-only and intraday-high interpretations
+  of the resolution criteria.
+
+
+  The distribution is right-skewed, consistent with the max-over-period structure
+  and geopolitical tail risk.'
+calibration_notes: 'Base rate: Oil supply crises of this magnitude are extremely rare
+  (1973, 1979, 1990). In each case, prices spiked 50-200% from pre-crisis levels.
+  Pre-crisis Brent was ~$72, so a 50% spike = $108, 100% = $144, 200% = $216. We''ve
+  already seen a spike to $119.40 (66% above pre-crisis).
+
+
+  The current max already hit ($119.40 intraday on March 9) provides a hard floor
+  for March. For April, even with some normalization, a single volatile day early
+  in the month could match or exceed this.
+
+
+  Status quo check: The status quo is CONTINUED CRISIS. Iran''s new leader took power
+  after his father was killed in the US/Israel strike and has explicitly stated Hormuz
+  will remain closed. This is not a situation where ''nothing changes'' means prices
+  fall - the status quo supports elevated prices.'
+key_uncertainties: '1. How long does the Hormuz closure persist? This is the dominant
+  uncertainty. Goldman''s base case (recovery starts March 21) vs reality (Iran''s
+  new leader vowing continued closure) creates massive uncertainty.
+
+  2. Resolution interpretation: Does ''highest value'' mean daily high or daily close?
+  This matters a lot given $20+ intraday ranges.
+
+  3. Effectiveness of emergency measures (IEA reserves, Russian oil license) in actually
+  supplying physical barrels to market.
+
+  4. Risk of further military escalation or de-escalation.
+
+  5. Whether OPEC+ spare capacity can actually be brought online quickly enough.'
+tool_audit: 'Useful: stock_price (BZ=F) provided current price, futures curve, and
+  60-day history. stock_history gave detailed OHLCV data showing intraday ranges.
+  web_search found critical context about the Hormuz crisis, analyst forecasts, and
+  IEA/Goldman projections. wikipedia summary provided excellent crisis overview. fetch_url
+  extracted specific EIA and Goldman forecasts.
+
+
+  Empty/limited: kalshi_price returned no markets for oil price. get_cp_history returned
+  403 Forbidden for the Metaculus question (likely AIB tournament restriction). Metaculus
+  questions had no community prediction available.
+
+
+  Failures: CP history 403 error, but this is expected for AIB tournament questions.'
+update_triggers: '- Ceasefire or diplomatic breakthrough → Significant downward shift
+
+  - US military escort operations through Hormuz → Partial reopening, moderate downward
+  shift
+
+  - Attack on major oil infrastructure (Saudi Aramco, etc.) → Spike to $140+
+
+  - Iran regime collapse or capitulation → Sharp decline
+
+  - Successful reserve releases stabilizing physical supply → Gradual decline'
+process_reflection: "The tools worked well for this question. The financial data tools\
+  \ (stock_price, stock_history) gave me exactly what I needed for current prices,\
+  \ futures curve, and volatility estimation. The web_search tool found the key geopolitical\
+  \ context efficiently.\n\nThe main friction was the MarketWatch resolution source\
+  \ ambiguity - I couldn't easily determine if 'highest value' refers to daily highs\
+  \ or closes from the download data. A tool that could actually fetch the MarketWatch\
+  \ data format would help. \n\nThe sandbox execute_code tool was essential for Monte\
+  \ Carlo simulation with multiple scenarios. The scenario-mixture approach feels\
+  \ right for this question given the huge regime uncertainty.\n\nOne gap: I couldn't\
+  \ find specific April-delivery Brent futures (April contract would have expired,\
+  \ so May is the front month). The backwardation structure gives useful information\
+  \ about market expectations though."
+computed:
+  factor_count: 8
+  factor_sum: 4.975
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current Brent price ~$101 with May futures at $101 sets the baseline
+      for April. Minimum possible max is essentially current price level.
+    supports:
+      center: 101.0
+      low: 97.0
+      high: 105.0
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Strait of Hormuz effectively closed since Feb 28, ~20% of global
+      oil supply disrupted. Iran's new supreme leader Mojtaba Khamenei vowed to keep
+      it closed as 'tool to pressure the enemy.' This is the largest supply disruption
+      since the 1970s energy crisis.
+    supports:
+      center: 125.0
+      low: 105.0
+      high: 155.0
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'Extreme realized volatility: 5.8% daily vol (92% annualized) during
+      crisis period. March 9 intraday high reached $119.40 before crashing to close
+      at $98.96. This level of volatility means the max-over-22-days could be substantially
+      above the average price.'
+    supports:
+      center: 120.0
+      low: 105.0
+      high: 160.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: IEA releasing 400 million barrels from reserves; US Treasury allowing
+      purchase of Russian oil; OPEC+ adding 206k bpd from April. These measures may
+      cap upside and could accelerate normalization.
+    supports:
+      center: 100.0
+      low: 85.0
+      high: 115.0
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  - description: 'Goldman Sachs base case: Hormuz recovery starts March 21, Brent
+      averages $98 in March-April. But notes ''non-linear upside'' for each day beyond
+      March 21, and prices could exceed $145 in full-month disruption scenario.'
+    supports:
+      center: 115.0
+      low: 98.0
+      high: 145.0
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: Futures curve in steep backwardation (May $101 → Jun $97 → Jul $93
+      → Aug $89), indicating market expects prices to decline from current levels
+      as crisis resolves. But the max during April will be higher than the average.
+    supports:
+      center: 105.0
+      low: 95.0
+      high: 120.0
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Goldman's escalation scenario (full month closure) implies prices
+      could exceed 2008 peak of $145/bbl. Iran has clearly stated intent to keep Hormuz
+      closed. Military conflict is ongoing with no ceasefire in sight.
+    supports:
+      center: 140.0
+      low: 120.0
+      high: 180.0
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+    conditional: If Hormuz closure extends through all of April
+  - description: EIA expects Brent above $95 for next two months then declining. This
+      is a 'gradual easing' scenario that is their base case.
+    supports:
+      center: 105.0
+      low: 95.0
+      high: 120.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  dominant_factor: Strait of Hormuz effectively closed since Feb 28, ~20% of global
+    oil supply disrupted. Iran's new supreme leader Mojtaba Khamenei vowed to keep
+    it closed as 'tool to pressure the enemy.' This is the largest supply disruption
+    since the 1970s energy crisis.
+  dominant_effective_logit: 1.7
+  distribution_metrics:
+    implied_median: 115.07773851590105
+    implied_p10: 100.95053003533569
+    implied_p90: 139.41696113074204
+    median_gap: 2.9222614840989536
+    median_gap_pct: 7.596913466838179
+    spread_ratio: 1.4818115010104727
+    precision: 0.4830508474576271
+  sources:
+  - '[(yfinance) BZ=F](https://finance.yahoo.com/quote/BZ=F)'
+  - '[2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[Short-Term Energy Outlook](https://www.eia.gov/outlooks/steo/)'
+  - '[(Metaculus) What will be the highest price of Brent crude oil during April 2026?](https://www.metaculus.com/questions/42561)'
+  - '[(Metaculus) What will be the highest price of Brent crude oil during April 2026?](https://www.metaculus.com/questions/42538)'
+  - '[The Biggest Supply Shock Ever – And Goldman Just Raises Oil Price Forecasts
+    - United States Oil Fund (ARCA:USO](https://www.benzinga.com/markets/commodities/26/03/51211404/goldman-oil-forecast-iran-war-hormuz-supply-shock)'
+  - '[Crude Oil Price Forecast | Strait of Hormuz Closure | Capital.com](https://capital.com/en-int/market-updates/crude-oil-price-forecast-09-03-2026)'
+  - '[Strait of Hormuz - Wikipedia](https://en.wikipedia.org/wiki/Strait_of_Hormuz)'
+  reviewer_critique: '## Verification Summary
+
+
+    I systematically checked all 8 factors against the research trace.
+
+
+    ### Factors Verified (All Grounded)
+
+
+    **Factor 1** - Current Brent ~$101, May futures $101: ✓ Trace shows `"current_price":
+    101.04` and futures data `"BZK26.NYM", "month": "May 2026", "price": 101.04`.
+
+
+    **Factor 2** - Hormuz closed since Feb 28, ~20% of supply, largest since 1970s,
+    Mojtaba Khamenei vowing closure: ✓ Wikipedia extract confirms "disruption since
+    28 February 2026", "about 20% of the world''s daily oil supply", and "largest
+    disruption to the energy supply since the 1970s energy crisis." CNBC article confirms
+    Khamenei''s statements.
+
+
+    **Factor 3** - 5.8% daily vol (92% annualized), March 9 intraday $119.40: ✓ Simulation
+    output shows "Std daily return: 5.79%... Annualized vol: 92.0%". Price data shows
+    `"high": 119.4000015258789` for March 9.
+
+
+    **Factor 4** - IEA 400M barrel release, Russian oil license, OPEC+ 206k bpd: ✓
+    Multiple search results confirm "record 400 million barrel IEA reserve release",
+    "US Treasury issued a 30-day license for countries to purchase 100 million barrels
+    of Russian oil", and "OPEC+ plans to add 206,000 bpd from April 2026".
+
+
+    **Factor 5** - Goldman base case (Hormuz recovery March 21, Brent $98 avg), $145+
+    in full-month scenario: ✓ Benzinga fetch confirms "Base case: Strait of Hormuz
+    begins recovering on March 21", "Goldman expects Brent to average $98 in March
+    and April", and "daily prices could exceed $145/barrel".
+
+
+    **Factor 6** - Futures backwardation: ✓ Trace shows May $101.04 → Jun $96.91 →
+    Jul $92.73 → Aug $89.43.
+
+
+    **Factor 7** - Goldman escalation scenario $145+: ✓ Same Goldman source as Factor
+    5 - this is mild double-counting but factors have different logit weights (+1.5
+    vs +1.0) reflecting different confidence levels.
+
+
+    **Factor 8** - EIA expects Brent above $95 for two months: ✓ EIA STEO fetch confirms
+    "Q2 2026: Expected to remain above $95/b over the next two months".
+
+
+    ### Double-Counting Check
+
+    Factors 5 and 7 both cite Goldman''s $145 escalation scenario. This is mild double-counting,
+    but the logit contributions are modest (+1.0 and +1.0) and they frame it differently
+    (Factor 5 as upside scenario, Factor 7 as escalation risk). Not materially distorting.
+
+
+    ### Regime-Spanning Data Check
+
+    The Monte Carlo uses volatility from Feb 27 - Mar 13 data, which is entirely within
+    the crisis period (began Feb 28). The agent correctly uses crisis-period volatility
+    for crisis-period forecasting. No regime contamination.
+
+
+    ### Resolution Criteria Check
+
+    The agent correctly identifies the MarketWatch source and considers both intraday
+    high and close interpretations, blending them appropriately. The agent notes the
+    "highest value" language is ambiguous but accounts for this in the simulation.
+
+
+    ### Probability Assessment
+
+    The tentative estimate (Center: $118, Range: $103-160) aligns well with simulation
+    outputs:
+
+    - Jump-diffusion simulation: P10=$104.9, P50=$123.1, P90=$165.9
+
+    - Blended simulation (40% intraday, 60% close): P10=$101.7, P50=$117.5, P90=$153.4
+
+
+    The center of $118 is reasonable given the P50 ranges from $117-123 across interpretations.
+    The P10 of $103 and P90 of $160 are conservative but defensible given the extraordinary
+    uncertainty. The estimate appropriately captures the right-skewed nature of max-over-period
+    questions.
+
+
+    No hallucinations, no wrong-direction factors, no contradictions between assessment
+    and factors. All key claims are grounded in trace evidence.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42561
+- **Question ID**: 42488
+- **Session Duration**: 672.5s (11.2 min)
+- **Cost**: $4.5328
+- **Tokens**: 14,694 total (37 in, 14,657 out)
+  - Cache: 1,223,156 read, 85,239 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42561_20260313_153043/20260313-153043.log`
+
+### Tool Calls
+
+- **Total**: 24 calls
+- **Errors**: 1 (4.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 6 | 0 | 365ms |
+| fetch_url | 3 | 0 | 15613ms |
+| get_cp_history | 1 | 1 ⚠️ | 324ms |
+| get_metaculus_questions | 1 | 0 | 9444ms |
+| kalshi_price | 1 | 0 | 476ms |
+| reflection | 1 | 0 | 123781ms |
+| stock_history | 1 | 0 | 102ms |
+| stock_price | 1 | 0 | 980ms |
+| web_search | 5 | 0 | 35299ms |
+| wikipedia | 4 | 0 | 2538ms |
+
+### Sources Consulted
+
+- [(yfinance) BZ=F](https://finance.yahoo.com/quote/BZ=F)
+- [2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026...
+- [Short-Term Energy Outlook](https://www.eia.gov/outlooks/steo/)
+- [(Metaculus) What will be the highest price of Brent crude oil during April 2...
+- [(Metaculus) What will be the highest price of Brent crude oil during April 2...
+- [The Biggest Supply Shock Ever – And Goldman Just Raises Oil Price Forecasts ...
+- [Crude Oil Price Forecast | Strait of Hormuz Closure | Capital.com](https://c...
+- [Strait of Hormuz - Wikipedia](https://en.wikipedia.org/wiki/Strait_of_Hormuz)
