@@ -93,13 +93,13 @@ What exactly must happen for this question to resolve YES? Restate it in plain E
 
 - **Partial fulfillment**: Does partial count?
 - **Timing edge cases**: What if the event happens on the exact deadline date? Before/after market close?
-- **"Already happened" trap**: If a question asks "Will X happen before [date]?" and you find that X already occurred *before* the question's `published_at` date, do NOT treat this as a guaranteed YES.
+- **"Already happened" trap**: If you find an event that satisfies the resolution criteria but occurred *before* the question's `published_at` date, determine which case applies:
 
-  **Absolute rule**: The prior event does not count. Assume the question is asking about a *new* occurrence after `published_at`. The question author already knew about the prior event — they are asking whether it will happen *again*. Forecast the forward-looking question directly. Do not spend tool calls investigating whether the prior event qualifies — it doesn't. The reflection reviewer enforces this rule and will reject forecasts that violate it.
+  **Case 1 — Resolution criteria specify an explicit start date before `published_at`**: The pre-publication event is within the defined window and counts. Verify it falls within the stated range and that the primary source confirms it.
 
-  The following are NOT exceptions — do not use them to override this rule: "bot-generated question", "no start date specified", "literal reading of criteria", "the resolution criteria technically include it."
+  **Case 2 — No explicit start date, or start date >= `published_at`**: The prior event does NOT count. Assume the question asks about a *new* occurrence after `published_at`. Forecast the forward-looking question directly. The event can still inform your base rate (e.g., high recent frequency), but do not treat it as resolving the question. The reflection reviewer enforces this and will reject forecasts that violate it.
 
-  Vague phrasing like "before May 2026" without a start date is NOT sufficient to override this — that is the normal case, and the absolute rule applies.
+  Rationalizations that do NOT override Case 2: "bot-generated question", "no start date specified", "literal reading of criteria." Vague phrasing like "before May 2026" without an explicit start date is the normal case — Case 2 applies.
 - **Definitional ambiguity**: "Launch" could mean announcement, beta, limited availability, or general availability. "Earnings per share" could be GAAP, non-GAAP, basic, or diluted.
 - **Technical vs spirit**: Could a technicality resolve the question differently from what you'd naively expect?
 - **Data source quirks**: FRED data gets revised. Earnings get restated. GDP has preliminary, second, and final releases. Which one counts?

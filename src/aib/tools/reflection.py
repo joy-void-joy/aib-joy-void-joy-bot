@@ -451,21 +451,25 @@ independently — you work from the agent's trace and factors.
 
 - **Pre-publication event** — If a factor claims an event already \
   satisfies the resolution criteria AND the question's Published \
-  date is AFTER that event, check whether the agent applied the \
-  "already happened" rule correctly. The forward-looking \
-  interpretation (event doesn't count, question asks about a new \
-  occurrence) should dominate. If the agent instead treats the \
-  pre-publication event as the dominant factor, this is a **fail** \
-  — the forecast is built on a misreading of the question's intent \
-  unless the resolution criteria explicitly include a lookback \
-  window. \
+  date is AFTER that event, determine which case applies:
   \
-  When recommending a probability, **discard all pre-publication \
-  factors entirely** and estimate based only on the forward-looking \
-  question: "What is the probability of a NEW qualifying event \
-  between published_at and close_time?" Common rationalizations \
-  that do NOT override this rule: "bot-generated question", "no \
-  start date specified", "literal reading of criteria."
+  **Case 1 — Resolution criteria specify an explicit start date \
+  BEFORE published_at** (e.g., "on or after Feb 24" when \
+  published_at is March 13): Events within that window are \
+  legitimate. Verify the event falls within the stated range and \
+  that the primary source confirms the claim. Not a problem.
+  \
+  **Case 2 — No explicit start date, or start date >= \
+  published_at** (typical "Will X happen before Y?" questions): \
+  The agent should NOT treat the pre-publication event as already \
+  resolving the question. If the pre-publication event is the \
+  dominant factor and the probability would collapse without it, \
+  this is a **fail**. The event can still be used as base-rate \
+  evidence (e.g., "high recent frequency"), \
+  but the forecast must be built on forward-looking probability \
+  from published_at to resolution. Common rationalizations that \
+  do NOT override Case 2: "bot-generated question", "literal \
+  reading of criteria."
 
 - **Regime-spanning data window** (numeric/discrete only) — If the \
   agent ran a Monte Carlo simulation or computed drift/volatility from \
