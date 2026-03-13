@@ -178,7 +178,7 @@ def check(
                 if not dry_run:
                     post_dir = items_by_id[post_id]["dir"]
                     for f in post_dir.glob("*.json"):
-                        if update_forecast_file(f, resolution):
+                        if update_forecast_file(f, resolution, source="metaculus"):
                             updated += 1
                 else:
                     updated += 1
@@ -252,10 +252,10 @@ def set_resolution(
     """Manually set resolution for a forecast."""
     updated = 0
     for f in iter_forecast_files(post_id):
-        if update_forecast_file(f, resolution):
+        if update_forecast_file(f, resolution, source="manual"):
             updated += 1
     for f in iter_retrodict_files(post_id):
-        if update_forecast_file(f, resolution):
+        if update_forecast_file(f, resolution, source="manual"):
             updated += 1
 
     if updated == 0:
