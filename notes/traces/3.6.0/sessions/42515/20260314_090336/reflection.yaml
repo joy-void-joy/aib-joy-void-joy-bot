@@ -1,0 +1,244 @@
+---
+timestamp: 2026-03-14 09:08:08 UTC
+question_type: binary
+factors:
+- description: 'Historical base rate: Apple discloses ~8-12 actively exploited iOS/iPadOS
+    vulnerabilities per year, giving 64-79% probability of at least one in a 47-day
+    window via Poisson model'
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: CISA added 3 iOS vulnerabilities to KEV catalog on March 5, 2026 (just
+    10 days before window opens), indicating active exploitation that Apple needs
+    to address with patches
+  logit: 2.5
+  confidence: 0.85
+  effective_logit: 2.125
+- description: Apple already patched CVE-2026-20700 (iOS zero-day) in February 2026,
+    showing elevated threat activity in early 2026
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Broad resolution definition includes 'may have been actively exploited'
+    language, capturing suspected exploitation reports as well
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Commercial spyware ecosystem (NSO Group etc.) and nation-state actors
+    continuously discover iOS vulnerabilities - structural driver ensures steady supply
+    of zero-days
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: No known 47-day gap without at least one such iOS/iPadOS disclosure
+    in the past 2-3 years based on historical pattern
+  logit: 1.5
+  confidence: 0.7
+  effective_logit: 1.0499999999999998
+tentative_estimate:
+  logit: 3.5
+  probability: 0.97
+assessment: 'This is a near-certain YES outcome. Apple has been consistently publishing
+  iOS/iPadOS security updates noting active exploitation at a rate of approximately
+  8-12 per year in recent years, sometimes much higher (2023 had ~20). The 47-day
+  resolution window (March 15 - May 1, 2026) is long enough that even under conservative
+  assumptions, the probability exceeds 65%. Multiple compounding factors push this
+  much higher: CISA just added 3 iOS vulnerabilities to its KEV catalog on March 5
+  (indicating active exploitation Apple must address), Apple already patched a zero-day
+  in February 2026 showing the threat pipeline is active, and the broad resolution
+  definition captures even suspected exploitation reports. The only NO scenario would
+  require an unprecedented 47-day pause in iOS zero-day disclosures during a period
+  of elevated threat activity.'
+calibration_notes: 'Base rate from Poisson model: 64-79% (conservative 8-12/year).
+  Adjusted upward significantly due to: (1) CISA March 5 KEV additions virtually guaranteeing
+  upcoming iOS patches, (2) elevated 2026 threat activity already demonstrated, (3)
+  broad definition capturing suspected exploitation. Final 97% reflects near-certainty
+  tempered only by the small possibility Apple consolidates all patches into a single
+  pre-March-15 or post-May-1 release window. Status quo persistence actually favors
+  YES here - the status quo IS that Apple regularly publishes such updates.'
+key_uncertainties: 'Main uncertainty: Could Apple somehow delay all iOS security updates
+  noting active exploitation until after May 1? This seems extremely unlikely given
+  the active threat landscape and CISA pressure. Secondary: Could all actively exploited
+  vulnerabilities be addressed in non-iOS-specific updates (macOS-only, Safari-only)?
+  The fine print excludes these, but most WebKit flaws affect iOS too.'
+tool_audit: '- web_search: Highly useful - confirmed multiple recent iOS zero-day
+  disclosures in 2025-2026, CISA KEV additions in March 2026
+
+  - fetch_url (Apple security page): Moderately useful - showed the index page but
+  individual CVE details require clicking through
+
+  - get_metaculus_questions: Useful for confirming resolution criteria; no community
+  prediction available
+
+  - execute_code: Useful for Poisson probability calculations'
+update_triggers: 'Downward triggers: Apple announces major change to security update
+  cadence, unprecedented pause in zero-day disclosures. Upward triggers: Additional
+  zero-day disclosures before March 15 (already near ceiling).'
+process_reflection: This question was straightforward to analyze. The base rate is
+  extremely high and the evidence strongly supports YES. The web search tools performed
+  well in finding recent security advisories and CISA alerts. The main challenge was
+  estimating the precise per-year rate of actively exploited iOS disclosures - ideally
+  a tool that could systematically scrape Apple's security update index and count
+  entries mentioning active exploitation would be valuable. The Poisson model provided
+  a useful floor estimate but the real probability is higher due to clustering and
+  current threat elevation.
+computed:
+  factor_count: 6
+  factor_sum: 6.625
+  tentative_logit: 3.5
+  logit_gap: -3.125
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: Apple discloses ~8-12 actively exploited iOS/iPadOS
+      vulnerabilities per year, giving 64-79% probability of at least one in a 47-day
+      window via Poisson model'
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: CISA added 3 iOS vulnerabilities to KEV catalog on March 5, 2026
+      (just 10 days before window opens), indicating active exploitation that Apple
+      needs to address with patches
+    logit: 2.5
+    confidence: 0.85
+    effective_logit: 2.125
+  - description: Apple already patched CVE-2026-20700 (iOS zero-day) in February 2026,
+      showing elevated threat activity in early 2026
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Broad resolution definition includes 'may have been actively exploited'
+      language, capturing suspected exploitation reports as well
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Commercial spyware ecosystem (NSO Group etc.) and nation-state actors
+      continuously discover iOS vulnerabilities - structural driver ensures steady
+      supply of zero-days
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: No known 47-day gap without at least one such iOS/iPadOS disclosure
+      in the past 2-3 years based on historical pattern
+    logit: 1.5
+    confidence: 0.7
+    effective_logit: 1.0499999999999998
+  dominant_factor: CISA added 3 iOS vulnerabilities to KEV catalog on March 5, 2026
+    (just 10 days before window opens), indicating active exploitation that Apple
+    needs to address with patches
+  dominant_effective_logit: 2.125
+  factor_implied_probability: 0.9986749775827868
+  tentative_probability: 0.97
+  gap_pp: -2.867497758278681
+  sources:
+  - '[(Metaculus) Will Apple publish an iOS or iPadOS security update noting active
+    exploitation before May 1, 2026?](https://www.metaculus.com/questions/42515)'
+  - '[Apple security releases - Apple Support](https://support.apple.com/en-us/100100)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified all six factors against the research trace:
+
+
+    **Factor 1 (Historical base rate: 8-12/year, 64-79% Poisson probability)**: SUPPORTED.
+    The trace shows explicit Poisson calculations with outputs matching these figures
+    (Rate=8/year gives 0.643, Rate=12/year gives 0.787).
+
+
+    **Factor 2 (CISA added 3 iOS vulnerabilities to KEV on March 5, 2026)**: SUPPORTED.
+    Multiple independent search results confirm this exact date and count (cybersecuritynews.com,
+    gbhackers.com, securityaffairs.com).
+
+
+    **Factor 3 (Apple patched CVE-2026-20700 in February 2026)**: SUPPORTED. Multiple
+    sources confirm: cyberscoop.com ("Apple discloses first actively exploited zero-day
+    of 2026... CVE-2026-20700"), cybersecuritynews.com ("Apple released iOS 26.3 and
+    iPadOS 26.3 on February 11, 2026...").
+
+
+    **Factor 4 (Broad resolution definition)**: SUPPORTED. The Metaculus question
+    fine_print explicitly states "reports of suspected exploitation counts for resolution"
+    and includes the "may have been actively exploited" example.
+
+
+    **Factor 5 (Commercial spyware/nation-state ecosystem)**: SUPPORTED, though indirect.
+    Multiple search results reference "nation-state actors or commercial spyware"
+    and "Google''s Threat Analysis Group" discovery patterns.
+
+
+    **Factor 6 (No 47-day gap in recent history)**: PARTIALLY SUPPORTED. The agent
+    asserts this in reasoning but doesn''t provide explicit data verification. This
+    is a minor concern but doesn''t invalidate the forecast.
+
+
+    ## Double-counting Check
+
+    No double-counting identified. Factors 2 and 3 cite distinct events (CISA KEV
+    additions vs. February CVE-2026-20700 patch, which appear to be different vulnerabilities).
+
+
+    ## Resolution Criteria Alignment
+
+    The agent correctly identifies:
+
+    - Window: March 15 to May 1, 2026 (47 days)
+
+    - Broad definition including "may have been actively exploited"
+
+    - iOS/iPadOS updates only
+
+    - Primary source: Apple Security Updates pages
+
+
+    ## Probability Assessment
+
+    The agent''s 97% estimate is at the high end but defensible:
+
+    - Base Poisson (8-12/year) gives 64-79%
+
+    - Elevated activity rates (14-18/year) give 83-90%
+
+    - CISA''s March 5 KEV additions (just 10 days before window) are a strong leading
+    indicator that Apple must address these vulnerabilities
+
+    - The broad definition meaningfully expands qualifying events
+
+
+    My independent estimate would be 90-95%, but 97% is within reasonable bounds given
+    the CISA KEV additions represent confirmed active exploitation requiring Apple
+    response. The only NO scenario requires an unprecedented pause in disclosures
+    during elevated threat activity.
+
+
+    No hallucinations, wrong-direction factors, or contradictory assessments found.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42515
+- **Question ID**: 42313
+- **Session Duration**: 282.1s (4.7 min)
+- **Cost**: $2.2342
+- **Tokens**: 5,871 total (26 in, 5,845 out)
+  - Cache: 391,299 read, 64,451 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42515_20260314_090336/20260314-090336.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 1ms |
+| fetch_url | 1 | 0 | 8373ms |
+| get_metaculus_questions | 1 | 0 | 426ms |
+| reflection | 1 | 0 | 68526ms |
+| web_search | 5 | 0 | 15006ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will Apple publish an iOS or iPadOS security update noting activ...
+- [Apple security releases - Apple Support](https://support.apple.com/en-us/100...
