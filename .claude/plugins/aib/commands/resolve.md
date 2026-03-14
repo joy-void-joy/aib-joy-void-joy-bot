@@ -59,7 +59,7 @@ After applying tentative resolutions, run the official check to ensure authorita
 uv run aib-devtools resolution check
 ```
 
-This fetches resolutions from Metaculus for any questions that have officially resolved. Official resolutions (source=metaculus) always take precedence over tentative ones.
+This scrapes the user's Metaculus profile page for resolutions and scores. Profile-sourced resolutions (source=scrape) always take precedence over tentative ones.
 
 ### Phase 5: Score update
 
@@ -75,8 +75,7 @@ Resolutions are tracked with a `resolution_source` field:
 
 | Source | Priority | Set by |
 |--------|----------|--------|
-| `metaculus` | Highest | `resolution check` (from Metaculus API) |
-| `scrape` | High | `scores scrape` (from track record page) |
+| `scrape` | Highest | `resolution check` / `scores scrape` (from track record page) |
 | `manual` | Medium | `resolution set` (human override) |
 | `tentative` | Low | `resolution resolve` (AI agent check) |
 

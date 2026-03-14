@@ -402,7 +402,7 @@ aib-devtools
 │   └── search         Search questions (--type, --limit, --resolved/--open)
 │
 ├── resolution         Resolution updates
-│   ├── check          Fetch and apply resolutions from Metaculus (--dry-run)
+│   ├── check          Scrape profile page for resolutions and scores (--backfill, --dry-run)
 │   ├── resolve        AI-powered early resolution (--post-id, --max, --dry-run)
 │   ├── status         Show resolution status of all forecasts
 │   └── set            Manually set resolution for a post

@@ -1,6 +1,7 @@
 ---
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write, Task, WebSearch, AskUserQuestion
 description: Analyze forecasts and improve agent based on calibration and process quality
+argument-hint: [post_id1 post_id2 ...] (optional — scope analysis to specific forecasts)
 ---
 
 # Feedback Loop: Three Levels of Analysis
@@ -29,6 +30,17 @@ Don't stop after finding object-level improvements. Ask yourself:
 - Are there scripts that would make next session easier? (meta-meta)
 
 A good feedback loop session produces changes at multiple levels. If you only made object-level changes, you probably skipped the reflection phases.
+
+## Input: Focused Mode
+
+**Post IDs**: $ARGUMENTS
+
+If post IDs are provided, run in **focused mode** — all phases still execute, but data collection and trace analysis are scoped to these posts:
+
+- **Phase 1**: Add `--post-id <id>` to scores/trace commands to prioritize these posts (still run broad calibration)
+- **Phase 2**: Pass the post IDs to the trace-explorer instead of discovering them via `scores extremes`
+
+If no post IDs are provided, run the full workflow with automatic post discovery.
 
 ## Critical Constraint: What the Agent Can and Cannot See
 
@@ -72,7 +84,7 @@ Keep the system prompt fresh - periodically review and remove guidance that no l
 
 When the Metaculus API is rate-limited (429), skip all API-calling scripts. In offline mode:
 
-1. **Skip** `aib-devtools feedback collect` and `aib-devtools resolution check` (both hit the authenticated DRF API)
+1. **Skip** `aib-devtools feedback collect` (hits the authenticated DRF API) and `aib-devtools resolution check` (uses Playwright to scrape profile page)
 2. **Ask the user** if they want to run `aib-devtools fetch-resolutions fetch` — it uses the unauthenticated `/api2/` endpoint with separate rate limits and may still work
 3. **Use cached data**: `feedback_state.json` (CP cache), `data/api_cache/` (resolution cache)
 4. **All analysis scripts work offline**: `aib-devtools calibration`, `aib-devtools scores`, `aib-devtools trace`, trace-explorer
