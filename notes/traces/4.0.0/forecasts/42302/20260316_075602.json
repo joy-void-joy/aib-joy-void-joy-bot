@@ -1,0 +1,184 @@
+{
+  "question_id": 42094,
+  "post_id": 42302,
+  "question_title": "Will Cloudflare experience another critical incident before May 2026?",
+  "question_type": "binary",
+  "timestamp": "20260316_075602",
+  "probability": 0.12,
+  "logit": -2.0,
+  "probabilities": null,
+  "median": null,
+  "confidence_interval": null,
+  "percentiles": null,
+  "summary": "The question asks whether Cloudflare will have a \"critical\" (red) incident on their official status page between Feb 25 and May 1, 2026. The key finding from my analysis is that \"critical\" on the Cloudflare status page is EXTREMELY rare and does NOT correlate with actual incident severity. I confirmed via the Statuspage.io JSON API that only 2 incidents in ~48 months were classified as \"critical\": Jun 21, 2022 and Feb 4, 2026. Critically, even massive P0 outages (Feb 20, 2026 BYOIP outage; likely Nov 18 and Dec 5, 2025 outages) were NOT classified as \"critical\" on the status page. The most recent 50 incidents (Feb 16-Mar 15, 2026) show 0 critical, 3 major, 38 minor, and 9 none — confirming that 19 days into the resolution window, no critical incident has occurred. With a Poisson base rate of ~0.042/month and ~46 days remaining, the probability of at least one critical incident is approximately 6-12%. I estimate 12%, at the upper end, to account for uncertainty about unobserved historical critical incidents.",
+  "factors": [
+    {
+      "description": "Critical classification on Cloudflare status page is extremely rare - only 2 confirmed in ~48 months (Jun 2022, Feb 2026)",
+      "logit": -1.5,
+      "confidence": 0.8,
+      "conditional": null,
+      "effective_logit": -1.2000000000000002
+    },
+    {
+      "description": "Even massive outages (Feb 20 P0 BYOIP, Nov 18 worst-since-2019) were NOT classified as critical on the status page, suggesting 'critical' is component-specific, not severity-based",
+      "logit": -1.0,
+      "confidence": 0.7,
+      "conditional": null,
+      "effective_logit": -0.7
+    },
+    {
+      "description": "High incident volume (~50/month) creates many opportunities for any component to trigger critical classification",
+      "logit": 0.5,
+      "confidence": 0.6,
+      "conditional": null,
+      "effective_logit": 0.3
+    },
+    {
+      "description": "19 days of the 65-day window already elapsed with no critical incident observed in API data",
+      "logit": -0.5,
+      "confidence": 0.9,
+      "conditional": null,
+      "effective_logit": -0.45
+    },
+    {
+      "description": "Code Orange resilience initiative post-Nov/Dec 2025 may reduce incident severity",
+      "logit": -0.3,
+      "confidence": 0.4,
+      "conditional": null,
+      "effective_logit": -0.12
+    },
+    {
+      "description": "Cloudflare experiencing unusually turbulent period with multiple major outages in 2025-2026",
+      "logit": 0.3,
+      "confidence": 0.6,
+      "conditional": null,
+      "effective_logit": 0.18
+    }
+  ],
+  "resolution": null,
+  "submitted_at": null,
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 874.78,
+    "total_tool_calls": 37,
+    "total_errors": 2,
+    "overall_error_rate": "5.4%",
+    "total_tool_time_ms": 380121.87,
+    "tools_used": 7,
+    "by_tool": {
+      "fetch_url": {
+        "call_count": 13,
+        "error_count": 2,
+        "error_rate": "15.4%",
+        "total_duration_ms": 144166.02,
+        "avg_duration_ms": 11089.69,
+        "min_duration_ms": 55.66,
+        "max_duration_ms": 23291.8
+      },
+      "web_search": {
+        "call_count": 7,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 118548.23,
+        "avg_duration_ms": 16935.46,
+        "min_duration_ms": 14966.31,
+        "max_duration_ms": 20590.33
+      },
+      "get_metaculus_questions": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 6445.11,
+        "avg_duration_ms": 6445.11,
+        "min_duration_ms": 6445.11,
+        "max_duration_ms": 6445.11
+      },
+      "execute_code": {
+        "call_count": 13,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 4752.01,
+        "avg_duration_ms": 365.54,
+        "min_duration_ms": 0.55,
+        "max_duration_ms": 2267.39
+      },
+      "polymarket_price": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 88.38,
+        "avg_duration_ms": 88.38,
+        "min_duration_ms": 88.38,
+        "max_duration_ms": 88.38
+      },
+      "manifold_price": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 250.42,
+        "avg_duration_ms": 250.42,
+        "min_duration_ms": 250.42,
+        "max_duration_ms": 250.42
+      },
+      "reflection": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 105871.7,
+        "avg_duration_ms": 105871.7,
+        "min_duration_ms": 105871.7,
+        "max_duration_ms": 105871.7
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 60,
+    "output_tokens": 16761,
+    "cache_read_input_tokens": 2581589,
+    "cache_creation_input_tokens": 84687,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 84687,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42302_20260316_074128/20260316-074128.log",
+  "question_published_at": "2026-03-01T15:30:00Z",
+  "question_close_time": "2026-03-01T17:00:00Z",
+  "question_scheduled_resolve_time": "2026-04-01T01:00:00Z",
+  "reasoning": "## Summary\n\n**Probability: 12%**\n\nThe critical insight is that \"critical\" (red) on the Cloudflare Status Page is an **extremely rare classification** that does not correlate with actual outage severity:\n\n- **Only 2 confirmed critical incidents in ~48 months**: Jun 2022 and Feb 4, 2026\n- Even massive P0 outages (Feb 20 BYOIP, likely Nov 18 and Dec 5, 2025) were **NOT** classified as \"critical\"\n- The most recent 50 incidents (Feb 16–Mar 15) show: **0 critical**, 3 major, 38 minor, 9 none\n- 19 days into the resolution window with no critical incident\n\nWith a Poisson base rate of ~0.042/month and ~46 days remaining, the Monte Carlo model yields a mean probability of ~10.5%. I estimate **12%** to allow for uncertainty about unobserved historical critical incidents and the possibility that Nov/Dec 2025 outages were also classified as critical (which would roughly double the rate).",
+  "sources_consulted": [
+    "[Cloudflare Status](https://www.cloudflarestatus.com/history)",
+    "[Cloudflare WAF Incident — March 3, 2026: Challenge Actions Broken Globally | Statusfield Blog](https://statusfield.com/blog/2026-03-03-cloudflare-waf-outage)",
+    "[Major Cloudflare Outage Triggers Widespread 500 Errors Across the Web](https://cyberpress.org/major-cloudflare-outage/)",
+    "[cloudflarestatus.com](https://www.cloudflarestatus.com/history.rss)",
+    "[Cloudflare Status | Is Cloudflare Down?](https://drdroid.io/status-page-aggregator/cloudflare)",
+    "[Cloudflare Incident History | Statusfield](https://statusfield.com/services/cloudflare/incidents)",
+    "[(Metaculus) Will Cloudflare experience another critical incident before May 2026?](https://www.metaculus.com/questions/42302)",
+    "[(Metaculus) Will Cloudflare experience another critical incident before May 2026?](https://www.metaculus.com/questions/42284)",
+    "[Cloudflare Outage History (2019-2026](https://controld.com/blog/biggest-cloudflare-outages/)",
+    "[Cloudflare Stream Issues](https://www.cloudflarestatus.com/incidents/gx9nbv7l3yqs)",
+    "[cloudflarestatus.com](https://www.cloudflarestatus.com/api/v2/incidents.json)",
+    "[cloudflarestatus.com](https://www.cloudflarestatus.com/incidents/gx9nbv7l3yqs.json)",
+    "[cloudflarestatus.com](https://www.cloudflarestatus.com/api/v2/incidents.json?page=2)",
+    "[Cloudflare’s 2025: A Year of Outages, Attacks, and Infrastructure Challenges](https://medium.com/@reactjsbd/cloudflares-2025-a-year-of-outages-attacks-and-infrastructure-challenges-77d437f4450e)",
+    "[statusgator.com](https://statusgator.com/blog/cloudflare-outage-history/)"
+  ],
+  "agent_version": "4.0.0",
+  "cdf": null,
+  "numeric_bounds": null,
+  "retrodict_date": null,
+  "comparison": null,
+  "peer_score": null,
+  "baseline_score": null,
+  "score_timestamp": null,
+  "resolution_source": null,
+  "resolution_reason": null,
+  "resolution_criteria": "This question will resolve as Yes if after February 25, 2026 and before May 1, 2026, Cloudflare experiences a critical incident.\n\nThe primary source for this question will be the [Cloudflare Status Page](https://www.cloudflarestatus.com/history), with critical incidents shown in red.\n",
+  "fine_print": "This question will only consider reporting and categorisation directly from Cloudflare. If Cloudflare changes their categorisation scheme such that no comparable category exists, this question will be annulled.\n\nThis question's information (resolution criteria, fine print, background info, etc) is synced with an [original identical question](https://www.metaculus.com/questions/42284) which opened on 2026-02-25 17:00:00. This question will resolve based on the resolution criteria and fine print contained above. However, if this question would resolve differently than the original question, then this question will be annulled. Additionally, if the original question's resolution could have been known before this question opened, then this question will be annulled.",
+  "background_info": null
+}

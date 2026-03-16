@@ -17,6 +17,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.cache import cached
 from aib.tools.decorator import ToolError, mcp_tool
+from aib.tools.throttle import fred_throttle
 
 logger = logging.getLogger(__name__)
 
@@ -280,19 +281,17 @@ async def fred_series(params: FredSeriesInput) -> dict[str, Any]:
     try:
         from fredapi import Fred
 
-        fred = Fred(api_key=api_key)
+        async with fred_throttle:
+            fred = Fred(api_key=api_key)
 
-        # Get series info
-        info = fred.get_series_info(series_id)
+            info = fred.get_series_info(series_id)
 
-        # Get observations
-        observations = fred.get_series(
-            series_id,
-            observation_start=start_date,
-            observation_end=end_date,
-        )
+            observations = fred.get_series(
+                series_id,
+                observation_start=start_date,
+                observation_end=end_date,
+            )
 
-        # Convert to list of dicts
         obs_list: list[FredObservation] = []
         for date, value in observations.items():
             obs_list.append(
@@ -400,10 +399,9 @@ async def fred_search(params: FredSearchInput) -> dict[str, Any]:
     try:
         from fredapi import Fred
 
-        fred = Fred(api_key=api_key)
-
-        # Search for series
-        results = fred.search(params.query)
+        async with fred_throttle:
+            fred = Fred(api_key=api_key)
+            results = fred.search(params.query)
 
         if results is None or len(results) == 0:
             return {

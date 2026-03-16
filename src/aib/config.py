@@ -170,6 +170,36 @@ class Settings(BaseSettings):
         validation_alias="AIB_ASKNEWS_MIN_INTERVAL",
         description="Minimum seconds between AskNews API requests",
     )
+    trends_max_concurrent: int = Field(
+        default=1,
+        validation_alias="AIB_TRENDS_MAX_CONCURRENT",
+        description="Max concurrent Google Trends requests",
+    )
+    trends_min_interval: float = Field(
+        default=5.0,
+        validation_alias="AIB_TRENDS_MIN_INTERVAL",
+        description="Minimum seconds between Google Trends requests",
+    )
+    fred_max_concurrent: int = Field(
+        default=2,
+        validation_alias="AIB_FRED_MAX_CONCURRENT",
+        description="Max concurrent FRED API requests",
+    )
+    arxiv_max_concurrent: int = Field(
+        default=2,
+        validation_alias="AIB_ARXIV_MAX_CONCURRENT",
+        description="Max concurrent arXiv API requests",
+    )
+    arxiv_min_interval: float = Field(
+        default=3.0,
+        validation_alias="AIB_ARXIV_MIN_INTERVAL",
+        description="Minimum seconds between arXiv API requests",
+    )
+    markets_max_concurrent: int = Field(
+        default=3,
+        validation_alias="AIB_MARKETS_MAX_CONCURRENT",
+        description="Max concurrent prediction market API requests",
+    )
 
     # === Tool Defaults ===
     search_default_limit: int = Field(

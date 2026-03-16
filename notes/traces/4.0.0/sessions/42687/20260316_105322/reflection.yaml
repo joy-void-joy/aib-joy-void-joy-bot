@@ -1,0 +1,325 @@
+---
+timestamp: 2026-03-16 10:57:17 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike exponential decay pattern: KC-135 interest spiked to 100
+    on Mar 13 due to Iraq crash, then rapidly decayed (37→19→9 over 3 days). By Mar
+    28 (day 15), interest should return near baseline of 0-1. Starting at ~9, ending
+    at ~1 gives a decrease of ~8, well beyond the -3 threshold.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: Baseline interest for 'kc-135' is 0-1 (essentially zero). Before the
+    crash, the term had no measurable search interest. The natural equilibrium strongly
+    pulls toward 0-1 by Mar 28.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Ongoing US-Iran conflict (Operation Epic Fury) means KC-135s are actively
+    deployed in combat operations. Another incident, investigation results, or Congressional
+    hearings could generate renewed interest in the specific search term.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.4
+  effective_logit: 0.32000000000000006
+- description: SerpAPI vs pytrends measurement differences could shift values by ±2-3
+    points. At the margin, this could move the outcome between 'Decreases' and 'Doesn't
+    change' if the actual values are close to the threshold.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Change stats from Google Trends show 94.4% no-change base rate over
+    3 months. However, this base rate reflects the pre-crash period when values were
+    flat at 0-1. The current post-spike regime is fundamentally different, making
+    this base rate inapplicable.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.15
+  effective_logit: 0.045
+- description: 'Monte Carlo simulation with mixture model (85% return to baseline,
+    10% residual, 5% renewed spike) yields: Decreases 87%, Doesn''t change 8%, Increases
+    5%. Sensitivity analysis shows Decreases dominates across all plausible Mar 16
+    starting values (6-15).'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.13
+    Decreases: 0.77
+assessment: 'The KC-135 search term experienced a massive spike due to the Iraq crash
+  on Mar 12-13 that killed 6 crew members during Operation Epic Fury. The spike peaked
+  at 100 and has been decaying rapidly: 100→37→19→9 over 3 days. The baseline interest
+  for this term is 0-1 (essentially zero).
+
+
+  The comparison is between Mar 16 (~9) and Mar 28 values. By Mar 28 (15 days after
+  peak), standard news cycle decay should bring interest back to baseline (0-2). The
+  difference would be approximately -7 to -9, far exceeding the -3 threshold for "Decreases."
+
+
+  For "Doesn''t change," Mar 28 would need to be 6+ (if Mar 16 ≈ 9), requiring sustained
+  above-baseline interest 15 days after the spike. This is unlikely without specific
+  follow-up events.
+
+
+  For "Increases," Mar 28 would need to be 13+, requiring a significant new KC-135-specific
+  event. The ongoing US-Iran conflict creates some possibility (another incident,
+  investigation report, congressional hearing), but these are speculative catalysts.
+
+
+  Key counterargument: The ongoing military conflict provides more opportunity for
+  follow-up KC-135 coverage than a typical peacetime crash. Investigation results,
+  memorials for the 6 killed, fleet safety reviews, or another KC-135 incident during
+  active operations could sustain or renew interest. However, even with follow-up
+  coverage, the specific search term "kc-135" would need to generate significant search
+  volume—most people would search broader terms like "Iran war" or "Iraq crash."
+
+
+  I''m adjusting slightly upward from the Monte Carlo''s 87% Decreases to give more
+  weight to the active conflict context and measurement uncertainty, landing at 77%.'
+calibration_notes: The change_stats base rate (94.4% no-change) is misleading here
+  because it reflects a flat baseline period. The post-spike regime is fundamentally
+  different. The trailing change stats (last 6 days) show 50% decrease rate, which
+  is more relevant but still captures the spike itself. Historical pattern for military
+  incident news interest suggests full decay to baseline within 7-14 days.
+key_uncertainties: 1. Whether the ongoing US-Iran conflict generates KC-135-specific
+  follow-up news within the forecast window. 2. Exact SerpAPI values in the resolution
+  date range (Feb 26 - Mar 28) vs our pytrends estimates. 3. Whether investigation
+  results or Congressional attention creates a secondary interest spike.
+update_triggers: Another KC-135 crash or shoot-down incident would massively shift
+  toward Increases. Release of investigation findings or Congressional hearings on
+  KC-135 fleet safety would moderately shift toward Doesn't change or Increases. Cessation
+  of US-Iran hostilities would shift further toward Decreases as the news cycle fully
+  ends.
+computed:
+  factor_count: 6
+  factor_sum: 4.865
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike exponential decay pattern: KC-135 interest spiked to
+      100 on Mar 13 due to Iraq crash, then rapidly decayed (37→19→9 over 3 days).
+      By Mar 28 (day 15), interest should return near baseline of 0-1. Starting at
+      ~9, ending at ~1 gives a decrease of ~8, well beyond the -3 threshold.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: Baseline interest for 'kc-135' is 0-1 (essentially zero). Before
+      the crash, the term had no measurable search interest. The natural equilibrium
+      strongly pulls toward 0-1 by Mar 28.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Ongoing US-Iran conflict (Operation Epic Fury) means KC-135s are
+      actively deployed in combat operations. Another incident, investigation results,
+      or Congressional hearings could generate renewed interest in the specific search
+      term.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.4
+    effective_logit: 0.32000000000000006
+  - description: SerpAPI vs pytrends measurement differences could shift values by
+      ±2-3 points. At the margin, this could move the outcome between 'Decreases'
+      and 'Doesn't change' if the actual values are close to the threshold.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Change stats from Google Trends show 94.4% no-change base rate over
+      3 months. However, this base rate reflects the pre-crash period when values
+      were flat at 0-1. The current post-spike regime is fundamentally different,
+      making this base rate inapplicable.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.15
+    effective_logit: 0.045
+  - description: 'Monte Carlo simulation with mixture model (85% return to baseline,
+      10% residual, 5% renewed spike) yields: Decreases 87%, Doesn''t change 8%, Increases
+      5%. Sensitivity analysis shows Decreases dominates across all plausible Mar
+      16 starting values (6-15).'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  dominant_factor: 'Post-spike exponential decay pattern: KC-135 interest spiked to
+    100 on Mar 13 due to Iraq crash, then rapidly decayed (37→19→9 over 3 days). By
+    Mar 28 (day 15), interest should return near baseline of 0-1. Starting at ~9,
+    ending at ~1 gives a decrease of ~8, well beyond the -3 threshold.'
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 4.25
+    factors:
+    - description: 'Post-spike exponential decay pattern: KC-135 interest spiked to
+        100 on Mar 13 due to Iraq crash, then rapidly decayed (37→19→9 over 3 days).
+        By Mar 28 (day 15), interest should return near baseline of 0-1. Starting
+        at ~9, ending at ~1 gives a decrease of ~8, well beyond the -3 threshold.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: Baseline interest for 'kc-135' is 0-1 (essentially zero). Before
+        the crash, the term had no measurable search interest. The natural equilibrium
+        strongly pulls toward 0-1 by Mar 28.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: 'Monte Carlo simulation with mixture model (85% return to baseline,
+        10% residual, 5% renewed spike) yields: Decreases 87%, Doesn''t change 8%,
+        Increases 5%. Sensitivity analysis shows Decreases dominates across all plausible
+        Mar 16 starting values (6-15).'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.32000000000000006
+    factors:
+    - description: Ongoing US-Iran conflict (Operation Epic Fury) means KC-135s are
+        actively deployed in combat operations. Another incident, investigation results,
+        or Congressional hearings could generate renewed interest in the specific
+        search term.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.4
+      effective_logit: 0.32000000000000006
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.295
+    factors:
+    - description: SerpAPI vs pytrends measurement differences could shift values
+        by ±2-3 points. At the margin, this could move the outcome between 'Decreases'
+        and 'Doesn't change' if the actual values are close to the threshold.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+    - description: Change stats from Google Trends show 94.4% no-change base rate
+        over 3 months. However, this base rate reflects the pre-crash period when
+        values were flat at 0-1. The current post-spike regime is fundamentally different,
+        making this base rate inapplicable.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.15
+      effective_logit: 0.045
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.018443035591647
+      Decreases: 0.9626470411478671
+      Increases: 0.01890992326048588
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.13
+      Decreases: 0.77
+    per_option_gap_pp:
+      Doesn't change: 11.1556964408353
+      Decreases: -19.264704114786714
+      Increases: 8.109007673951412
+    max_gap_pp: -19.264704114786714
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) kc-135](https://trends.google.com/trends/explore?q=kc-135)'
+  - '[(Metaculus) Will the interest in “kc-135” change between 2026-03-16 and 2026-03-28
+    according to Google Trends?](https://www.metaculus.com/questions/42687)'
+  reviewer_critique: '## Verification Summary
+
+
+    **All key factual claims verified against trace:**
+
+
+    1. **Decay pattern (Factor 1)**: Trace confirms exact values - peak 100 on Mar
+    13, then 37→19→9 on Mar 14-16 (lines 252-268).
+
+
+    2. **Baseline 0-1 (Factor 2)**: Trace shows values of 0-1 for all dates from Jan
+    26 through Mar 11 before the spike.
+
+
+    3. **Operation Epic Fury context (Factor 3)**: News search results confirm KC-135
+    crash during active US-Iran operations, killing 6 crew members (lines 97-227).
+
+
+    4. **Monte Carlo results (Factor 6)**: Trace confirms 86.9% Decreases, 8.0% Doesn''t
+    change, 5.0% Increases from simulation (lines 365-367).
+
+
+    5. **94.4% no-change base rate (Factor 5)**: Exact value confirmed at line 253.
+
+
+    **No errors found:**
+
+
+    - **No hallucination**: All core claims are grounded in trace data
+
+    - **No double-counting**: Factors capture distinct aspects (decay rate vs baseline
+    vs catalyst risk)
+
+    - **No wrong-direction factors**: All logit signs align with their outcome labels
+
+    - **No contradictory assessment**: The 77% Decreases conclusion follows logically
+    from strong decay factors, with reasonable adjustment down from Monte Carlo''s
+    87% to account for conflict context
+
+    - **Resolution criteria properly engaged**: Agent correctly understood the ±3
+    threshold and Mar 16 vs Mar 28 comparison
+
+    - **Adversarial reasoning present**: Assessment explicitly addresses counterargument
+    about ongoing conflict creating more KC-135 coverage opportunities
+
+
+    **Probability assessment:**
+
+
+    My independent estimate is ~80-85% Decreases, ~10-12% Doesn''t change, ~5-8% Increases.
+    The agent''s 77% Decreases is within reasonable range. The decay dynamics are
+    strong (100→9 in 3 days) and the baseline is very low (0-1), making a drop below
+    6 by Mar 28 highly likely. The 10% downward adjustment from Monte Carlo results
+    is reasonable given the active conflict context creates genuine catalyst risk.
+    No meaningful probability disagreement.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42687
+- **Question ID**: 42632
+- **Session Duration**: 245.5s (4.1 min)
+- **Cost**: $2.3086
+- **Tokens**: 8,005 total (25 in, 7,980 out)
+  - Cache: 402,668 read, 58,974 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42687_20260316_105322/20260316-105322.log`
+
+### Tool Calls
+
+- **Total**: 42 calls
+- **Errors**: 1 (2.4%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 19 | 0 | 552ms |
+| fred_series | 2 | 0 | 551ms |
+| get_metaculus_questions | 3 | 0 | 1314ms |
+| google_trends | 3 | 1 ⚠️ | 2634ms |
+| manifold_price | 1 | 0 | 310ms |
+| polymarket_price | 1 | 0 | 84ms |
+| reflection | 5 | 0 | 108438ms |
+| stock_price | 3 | 0 | 505ms |
+| web_search | 3 | 0 | 37039ms |
+| wikipedia | 2 | 0 | 209ms |
+
+### Sources Consulted
+
+- [(Google Trends) kc-135](https://trends.google.com/trends/explore?q=kc-135)
+- [(Metaculus) Will the interest in “kc-135” change between 2026-03-16 and 2026...
