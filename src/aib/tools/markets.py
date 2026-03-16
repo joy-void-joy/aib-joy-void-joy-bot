@@ -21,7 +21,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from metaculus import ApiFilter, BinaryQuestion
 from metaculus.models import AggregationMethod
 
-from aib.agent.history import load_past_forecasts
 from aib.clients.metaculus import get_client as get_metaculus_client
 from aib.config import settings
 from aib.tools.redact import redact_future_info
@@ -51,10 +50,33 @@ class MarketQueryInput(BaseModel):
     )
 
 
+class SearchMarketsInput(BaseModel):
+    """Input for unified prediction market search."""
+
+    query: str = Field(
+        min_length=1,
+        description="What you're looking for. Can be a natural-language question or topic.",
+    )
+    limit: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum relevant markets to return (default 5).",
+    )
+
+
 class KalshiEventInput(BaseModel):
     """Input for fetching a single Kalshi event with all its markets."""
 
     event_ticker: str = Field(min_length=1)
+
+
+class RelevanceJudgment(BaseModel):
+    """LLM-judged relevance of a market result to a query."""
+
+    relevant_indices: list[int] = Field(
+        description="0-based indices of markets that are relevant to the query.",
+    )
 
 
 # --- Output Schemas ---
@@ -499,7 +521,8 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
 
         query_words = {w.lower() for w in query.split() if len(w) > 2}
         relevant_events = [
-            e for e in events
+            e
+            for e in events
             if query_words & {w.lower() for w in e.title.split() if len(w) > 2}
         ]
         if not relevant_events:
@@ -1325,7 +1348,7 @@ def _build_prediction_history(
     In retrodict mode, filters out forecasts after the cutoff and hides
     resolution data to prevent future leak.
     """
-    from aib.agent.history import SavedForecast
+    from aib.agent.history import SavedForecast, load_past_forecasts
 
     forecasts = load_past_forecasts(post_id)
     if cutoff is not None:
@@ -1764,7 +1787,182 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
 
 # --- MCP Server ---
 
+
+async def _filter_relevant_markets(
+    query: str,
+    candidates: list[MarketPrice],
+) -> list[MarketPrice]:
+    """Use a fast LLM call to filter market results by relevance to the query.
+
+    Returns only markets judged relevant. Falls back to returning all
+    candidates if the LLM call fails.
+    """
+    if not candidates:
+        return []
+
+    from aib.agent.client import one_shot
+
+    numbered = "\n".join(
+        f"[{i}] {c['market_title']} ({c['source']}, prob={c['probability']:.2f})"
+        for i, c in enumerate(candidates)
+    )
+    prompt = (
+        f"Query: {query}\n\n"
+        f"Markets:\n{numbered}\n\n"
+        "Which markets are relevant to the query? "
+        "Return the indices of relevant markets only. "
+        "Ignore markets about unrelated topics even if they share keywords."
+    )
+
+    try:
+        result = await one_shot(
+            prompt,
+            model="haiku",
+            system_prompt=(
+                "You judge whether prediction market titles are relevant to a "
+                "search query. Be strict — only include markets that genuinely "
+                "address the query topic."
+            ),
+            output_type=RelevanceJudgment,
+        )
+    except Exception:
+        logger.warning("Relevance filtering failed, returning all candidates")
+        return candidates
+
+    if result is None:
+        return candidates
+
+    valid_indices = [i for i in result.relevant_indices if 0 <= i < len(candidates)]
+    return [candidates[i] for i in valid_indices]
+
+
+@tool(
+    "search_markets",
+    (
+        "Search across Polymarket, Manifold, and Kalshi simultaneously for "
+        "prediction markets relevant to your query. Uses AI to filter out "
+        "irrelevant results — much more reliable than searching each platform "
+        "individually, especially for non-English topics or ambiguous queries.\n\n"
+        "Returns unified results with probability, volume, URL, source, and "
+        "recent price history. Use this as your primary market search tool.\n\n"
+        "Examples:\n"
+        "  search_markets(query='CDU Baden-Württemberg election') → German state election markets\n"
+        "  search_markets(query='Fed interest rate June 2026') → rate decision markets\n"
+        "  search_markets(query='Will GPT-5 be released') → AI release markets\n\n"
+        "For Kalshi bracket drill-down, use kalshi_event with the event_ticker "
+        "from the results."
+    ),
+    SearchMarketsInput.model_json_schema(),
+)
+@tracked("search_markets")
+async def search_markets(args: dict[str, Any]) -> dict[str, Any]:
+    """Search all prediction markets and return relevant results."""
+    try:
+        validated = SearchMarketsInput.model_validate(args)
+    except Exception as e:
+        return mcp_error(f"Invalid input: {e}")
+
+    query = validated.query
+    limit = validated.limit
+    cutoff = retrodict_cutoff.get()
+
+    poly_results: list[MarketPrice] = []
+    manifold_results: list[MarketPrice] = []
+    kalshi_results: list[MarketPrice] = []
+
+    async def _fetch_poly() -> None:
+        try:
+            events = await _search_polymarket(query)
+            for event in events[:10]:
+                if cutoff is not None:
+                    parsed = await _polymarket_event_at_cutoff(event, cutoff)
+                else:
+                    parsed = parse_polymarket_event(event)
+                if parsed is not None and parsed["probability"] > 0.001:
+                    poly_results.append(parsed)
+        except Exception:
+            logger.warning("Polymarket search failed in search_markets")
+
+    async def _fetch_manifold() -> None:
+        try:
+            markets = await _search_manifold(query)
+            for m in markets[:10]:
+                if cutoff is not None:
+                    parsed = await _manifold_market_at_cutoff(m, cutoff)
+                else:
+                    parsed = parse_manifold_market(m)
+                if parsed is not None:
+                    manifold_results.append(parsed)
+        except Exception:
+            logger.warning("Manifold search failed in search_markets")
+
+    async def _fetch_kalshi() -> None:
+        try:
+            if cutoff is not None:
+                events = await _fetch_kalshi_events(query, status=None)
+            else:
+                events = await _fetch_kalshi_events(query, status="open")
+            for event in events[:5]:
+                for market in event.markets:
+                    if cutoff is not None:
+                        prob = await _kalshi_market_at_cutoff(market, cutoff)
+                        if prob is None:
+                            continue
+                    else:
+                        prob = market.probability
+                        if prob is None:
+                            continue
+                    kalshi_results.append(
+                        {
+                            "market_title": market.title or event.title,
+                            "probability": prob,
+                            "volume": market.volume_fp,
+                            "url": f"https://kalshi.com/markets/{market.ticker}",
+                            "source": "kalshi",
+                            "description": market.rules_primary,
+                            "market_id": market.ticker,
+                            "recent_history": None,
+                        }
+                    )
+        except Exception:
+            logger.warning("Kalshi search failed in search_markets")
+
+    await asyncio.gather(_fetch_poly(), _fetch_manifold(), _fetch_kalshi())
+
+    all_candidates = poly_results + manifold_results + kalshi_results
+
+    if not all_candidates:
+        return mcp_success(
+            {
+                "markets": [],
+                "query": query,
+                "sources_searched": ["polymarket", "manifold", "kalshi"],
+            }
+        )
+
+    relevant = await _filter_relevant_markets(query, all_candidates)
+    relevant = relevant[:limit]
+
+    if cutoff is None:
+        poly_relevant = [r for r in relevant if r["source"] == "polymarket"]
+        manifold_relevant = [r for r in relevant if r["source"] == "manifold"]
+        await asyncio.gather(
+            _augment_polymarket_history(poly_relevant, 7),
+            _augment_manifold_history(manifold_relevant, 7),
+        )
+
+    return mcp_success(
+        {
+            "markets": relevant,
+            "query": query,
+            "total_candidates": len(all_candidates),
+            "sources_searched": ["polymarket", "manifold", "kalshi"],
+        }
+    )
+
+
 _PREDICTION_MARKET_TOOLS = [
+    search_markets,
     polymarket_price,
     manifold_price,
     kalshi_price,
