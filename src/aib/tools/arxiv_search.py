@@ -14,15 +14,12 @@ from typing import Any, TypedDict
 import arxiv
 import httpx
 import trafilatura
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.fetch_http import downloads_dir
-
+from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.extract import extract_with_prompt
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.fetch_http import downloads_dir
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +66,7 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
     }
 
 
-@tool(
+@mcp_tool(
     "search_arxiv",
     (
         "Search arXiv for academic papers. USE THIS for questions about AI benchmarks, "
@@ -82,16 +79,9 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
         "  search_arxiv(query='cat:cs.AI AND ti:reasoning', max_results=20) → AI reasoning papers\n"
         "  search_arxiv(query='au:hinton AND ti:capsule') → papers by author on topic"
     ),
-    SearchArxivInput.model_json_schema(),
 )
-@tracked("search_arxiv")
-async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:
+async def search_arxiv(params: SearchArxivInput) -> dict[str, Any]:
     """Search arXiv for academic papers."""
-    try:
-        validated = SearchArxivInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     retrodict_date = retrodict_cutoff.get()
     cutoff: datetime | None = None
     if retrodict_date is not None:
@@ -99,35 +89,25 @@ async def search_arxiv(args: dict[str, Any]) -> dict[str, Any]:
             retrodict_date + timedelta(days=1), datetime.min.time()
         )
 
-    try:
-        # Use arxiv library - fetch more results if filtering by date
-        fetch_count = validated.max_results * 2 if cutoff else validated.max_results
+    fetch_count = params.max_results * 2 if cutoff else params.max_results
 
-        search = arxiv.Search(
-            query=validated.query,
-            max_results=fetch_count,
-            sort_by=arxiv.SortCriterion.Relevance,
-        )
+    search = arxiv.Search(
+        query=params.query,
+        max_results=fetch_count,
+        sort_by=arxiv.SortCriterion.Relevance,
+    )
 
-        client = arxiv.Client()
-        results: list[dict[str, Any]] = []
+    client = arxiv.Client()
+    results: list[dict[str, Any]] = []
 
-        for result in client.results(search):
-            paper = _result_to_dict(result, cutoff)
-            if paper:  # Skip empty (filtered) results
-                results.append(paper)
-                if len(results) >= validated.max_results:
-                    break
+    for result in client.results(search):
+        paper = _result_to_dict(result, cutoff)
+        if paper:
+            results.append(paper)
+            if len(results) >= params.max_results:
+                break
 
-        if not results:
-            return mcp_success({"query": validated.query, "results": [], "count": 0})
-
-        return mcp_success(
-            {"query": validated.query, "results": results, "count": len(results)}
-        )
-    except Exception as e:
-        logger.exception("arXiv search failed")
-        return mcp_error(f"Search failed: {e}")
+    return {"query": params.query, "results": results, "count": len(results)}
 
 
 class FetchArxivInput(BaseModel):
@@ -157,7 +137,7 @@ def _parse_arxiv_id(raw: str) -> str | None:
     return m.group(1) if m else None
 
 
-@tool(
+@mcp_tool(
     "fetch_arxiv",
     (
         "Fetch an arXiv paper's full text. Tries HTML first (fast, searchable); "
@@ -168,20 +148,17 @@ def _parse_arxiv_id(raw: str) -> str | None:
         "  fetch_arxiv(paper_id='2301.12345') → full paper text\n"
         "  fetch_arxiv(paper_id='2301.12345', prompt='What datasets were used?') → targeted extraction"
     ),
-    FetchArxivInput.model_json_schema(),
+    url_route=(
+        r"arxiv\.org/(?:abs|pdf)/(\d+\.\d+)",
+        lambda m: {"paper_id": m.group(1)},
+    ),
 )
-@tracked("fetch_arxiv")
-async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
+async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
     """Fetch full arXiv paper content (HTML preferred, PDF fallback)."""
-    try:
-        validated = FetchArxivInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    paper_id = _parse_arxiv_id(validated.paper_id)
+    paper_id = _parse_arxiv_id(params.paper_id)
     if not paper_id:
-        return mcp_error(
-            f"Could not parse arXiv ID from '{validated.paper_id}'. "
+        raise ToolError(
+            f"Could not parse arXiv ID from '{params.paper_id}'. "
             "Expected format: '2301.12345' or 'https://arxiv.org/abs/2301.12345'."
         )
 
@@ -192,7 +169,9 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
             search = arxiv.Search(id_list=[paper_id])
             result = next(arxiv.Client().results(search), None)
             if result and result.published and result.published > cutoff_dt:
-                return mcp_error(f"Paper not found: {paper_id}")
+                raise ToolError(f"Paper not found: {paper_id}")
+        except ToolError:
+            raise
         except Exception as e:
             logger.warning("arXiv metadata check failed for %s: %s", paper_id, e)
 
@@ -209,18 +188,16 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
                 text = trafilatura.extract(resp.text) or ""
                 if len(text) > 500:
                     content = text
-                    if validated.prompt:
+                    if params.prompt:
                         content = await extract_with_prompt(
-                            content, validated.prompt, html_url
+                            content, params.prompt, html_url
                         )
-                    return mcp_success(
-                        {
-                            "paper_id": paper_id,
-                            "format": "html",
-                            "url": html_url,
-                            "content": content[:30000],
-                        }
-                    )
+                    return {
+                        "paper_id": paper_id,
+                        "format": "html",
+                        "url": html_url,
+                        "content": content[:30000],
+                    }
         except httpx.HTTPError:
             logger.debug("HTML fetch failed for %s, trying PDF", paper_id)
 
@@ -230,22 +207,20 @@ async def fetch_arxiv(args: dict[str, Any]) -> dict[str, Any]:
             resp = await client.get(pdf_url)
             resp.raise_for_status()
         except httpx.HTTPError as e:
-            return mcp_error(f"Failed to fetch paper {paper_id}: {e}")
+            raise ToolError(f"Failed to fetch paper {paper_id}: {e}") from e
 
     target = downloads_dir.get() / "arxiv"
     target.mkdir(parents=True, exist_ok=True)
     pdf_path = target / f"{paper_id.replace('/', '_')}.pdf"
     pdf_path.write_bytes(resp.content)
 
-    return mcp_success(
-        {
-            "paper_id": paper_id,
-            "format": "pdf",
-            "url": pdf_url,
-            "pdf_path": str(pdf_path.resolve()),
-            "hint": (
-                f"PDF downloaded to {pdf_path.resolve()}. "
-                "Use the Read tool to read the PDF content."
-            ),
-        }
-    )
+    return {
+        "paper_id": paper_id,
+        "format": "pdf",
+        "url": pdf_url,
+        "pdf_path": str(pdf_path.resolve()),
+        "hint": (
+            f"PDF downloaded to {pdf_path.resolve()}. "
+            "Use the Read tool to read the PDF content."
+        ),
+    }

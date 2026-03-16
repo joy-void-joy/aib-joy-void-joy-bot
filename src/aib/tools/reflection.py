@@ -79,26 +79,9 @@ class ReflectionInput(BaseModel):
         default=None,
         description="What you're most uncertain about and what would change your mind.",
     )
-    tool_audit: str = Field(
-        description=(
-            "Which tools provided useful information, which returned "
-            "empty results, and which had actual failures."
-        ),
-    )
     update_triggers: str | None = Field(
         default=None,
         description="Events that would move your forecast significantly.",
-    )
-    process_reflection: str = Field(
-        description=(
-            "How did the forecasting system feel to use — not what you "
-            "did, but how the scaffolding supported you. What felt rigid "
-            "or lacking, what felt smooth? What tools are missing that "
-            "would have helped? What subagents would have been useful? "
-            "Did the prompt guide you well or lead you astray for this "
-            "question type? Where did you hit friction — a tool returning "
-            "junk, a forced workaround, a missing capability?"
-        ),
     )
 
 
@@ -491,6 +474,13 @@ independently — you work from the agent's trace and factors.
   used data spanning two clearly different regimes to estimate drift, \
   this is a **warn** — the drift estimate is contaminated by the \
   regime transition, not representative of current dynamics.
+
+- **Missing adversarial reasoning** — The assessment should engage \
+  with the strongest counterargument, not just the supporting \
+  evidence. If the assessment doesn't address what a smart \
+  disagreer would say or what scenario makes the forecast most \
+  wrong, this is a **warn** — one-sided assessments are a \
+  calibration risk.
 
 - **Probability assessment** — After reviewing the factors and \
   trace, form your own independent probability estimate based on \

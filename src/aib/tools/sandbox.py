@@ -16,12 +16,13 @@ import tarfile
 import time
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal, Self, TypedDict
+from typing import Any, Literal, Self
 
 import docker
-from claude_agent_sdk import SdkMcpTool, tool
+from claude_agent_sdk import SdkMcpTool
 from pydantic import BaseModel, Field
 
+from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.mcp_server import create_mcp_server
 from claude_agent_sdk.types import McpSdkServerConfig
 from docker.errors import APIError, DockerException, NotFound
@@ -29,8 +30,6 @@ from docker.models.containers import Container, ExecResult
 from docker.utils.socket import next_frame_header, read_exactly, SocketError
 
 from aib.config import settings
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ class InstallPackageInput(BaseModel):
 # --- TypedDict definitions for result types ---
 
 
-class ExecuteCodeResult(TypedDict):
+class ExecuteCodeResult(BaseModel):
     """Result from executing Python code in the sandbox."""
 
     exit_code: int
@@ -77,7 +76,7 @@ class ExecuteCodeResult(TypedDict):
     duration_ms: int
 
 
-class InstallPackageResult(TypedDict):
+class InstallPackageResult(BaseModel):
     """Result from installing packages in the sandbox."""
 
     exit_code: int
@@ -211,8 +210,8 @@ class ReplSession:
         self._exec_id = exec_result["Id"]
         self._sock = self._client.api.exec_start(self._exec_id, socket=True)
         result = self.execute("pass", timeout_seconds=10)
-        if result["exit_code"] != 0:
-            raise RuntimeError(f"REPL startup failed: {result['stderr']}")
+        if result.exit_code != 0:
+            raise RuntimeError(f"REPL startup failed: {result.stderr}")
         logger.info("Persistent REPL started")
 
     def stop(self) -> None:
@@ -247,12 +246,12 @@ class ReplSession:
                 f"Code execution timed out after {timeout_seconds} seconds"
             )
 
-        return {
-            "exit_code": response.get("exit_code", 1),
-            "stdout": response.get("stdout", ""),
-            "stderr": response.get("stderr", ""),
-            "duration_ms": response.get("duration_ms", 0),
-        }
+        return ExecuteCodeResult(
+            exit_code=response.get("exit_code", 1),
+            stdout=response.get("stdout", ""),
+            stderr=response.get("stderr", ""),
+            duration_ms=response.get("duration_ms", 0),
+        )
 
     def _send(self, data: bytes) -> None:
         """Write raw bytes to the exec socket stdin."""
@@ -632,16 +631,16 @@ class Sandbox:
                 logger.exception("REPL restart failed")
                 self._repl = None
                 raise SandboxNotInitializedError("REPL restart failed")
-            return {
-                "exit_code": 1,
-                "stdout": "",
-                "stderr": (
+            return ExecuteCodeResult(
+                exit_code=1,
+                stdout="",
+                stderr=(
                     "REPL process crashed and was restarted. "
                     "Variables from previous cells have been lost. "
                     "Please re-run any setup code."
                 ),
-                "duration_ms": 0,
-            }
+                duration_ms=0,
+            )
 
     def run_install(self, packages: list[str]) -> InstallPackageResult:
         """Install Python packages using uv.
@@ -661,17 +660,15 @@ class Sandbox:
         # When demux=False, output is just bytes
         output_text = _decode_output(result.output)
 
-        return {
-            "exit_code": result.exit_code,
-            "output": output_text,
-            "packages": packages,
-        }
+        return InstallPackageResult(
+            exit_code=result.exit_code,
+            output=output_text,
+            packages=packages,
+        )
 
     # --- MCP tool creation ---
 
-    def create_tools(
-        self,
-    ) -> list[SdkMcpTool[ExecuteCodeInput] | SdkMcpTool[InstallPackageInput]]:
+    def create_tools(self) -> list[SdkMcpTool[Any]]:
         """Create MCP tools bound to this sandbox instance.
 
         Returns:
@@ -682,7 +679,7 @@ class Sandbox:
 
         network_desc = "network access"
 
-        @tool(
+        @mcp_tool(
             "execute_code",
             (
                 "Execute Python code in an isolated Docker container with persistent state. "
@@ -697,50 +694,23 @@ class Sandbox:
                 "print(np.percentile(paths[:,-1], [10,25,50,75,90]))')\n"
                 "State persists: define variables in one call, use them in the next."
             ),
-            ExecuteCodeInput.model_json_schema(),
         )
-        @tracked("execute_code")
-        async def execute_code(args: dict[str, Any]) -> dict[str, Any]:
+        async def execute_code(args: ExecuteCodeInput) -> ExecuteCodeResult:
             try:
-                validated = ExecuteCodeInput.model_validate(args)
-            except Exception as e:
-                return mcp_error(f"Invalid input: {e}")
+                return self.run_code(args.code)
+            except (SandboxNotInitializedError, CodeExecutionTimeoutError) as e:
+                raise ToolError(str(e)) from e
 
-            try:
-                result = self.run_code(validated.code)
-                return mcp_success(result)
-            except SandboxNotInitializedError as e:
-                logger.error("Sandbox not initialized: %s", e)
-                return mcp_error(f"Sandbox error: {e}")
-            except CodeExecutionTimeoutError as e:
-                logger.warning("Code execution timed out")
-                return mcp_error(str(e))
-            except (APIError, DockerException) as e:
-                logger.exception("Docker execution failed")
-                return mcp_error(f"Docker error: {e}")
-
-        @tool(
+        @mcp_tool(
             "install_package",
             "Install one or more Python packages from PyPI using uv. Packages persist "
             "in the container across executions.",
-            InstallPackageInput.model_json_schema(),
         )
-        @tracked("install_package")
-        async def install_package(args: dict[str, Any]) -> dict[str, Any]:
+        async def install_package(args: InstallPackageInput) -> InstallPackageResult:
             try:
-                validated = InstallPackageInput.model_validate(args)
-            except Exception as e:
-                return mcp_error(f"Invalid input: {e}")
-
-            try:
-                result = self.run_install(validated.packages)
-                return mcp_success(result)
+                return self.run_install(args.packages)
             except SandboxNotInitializedError as e:
-                logger.error("Sandbox not initialized: %s", e)
-                return mcp_error(f"Sandbox error: {e}")
-            except (APIError, DockerException) as e:
-                logger.exception("Docker execution failed")
-                return mcp_error(f"Docker error: {e}")
+                raise ToolError(str(e)) from e
 
         return [execute_code, install_package]
 
