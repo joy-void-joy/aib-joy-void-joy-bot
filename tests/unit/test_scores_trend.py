@@ -128,7 +128,7 @@ class TestStripCommand:
 
         with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
             result = runner.invoke(app, ["strip", "--no-watch"])
-        assert result.exit_code == 1
+        assert result.exit_code == 0
 
 
 class TestTrendCommand:

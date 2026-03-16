@@ -214,7 +214,6 @@ def _make_fake_route(
     from aib.tools.fetch_routes import DomainRoute
 
     return DomainRoute(
-        domain=domain,
         pattern=re.compile(pattern),
         handler=handler,
         param_builder=lambda m: {"symbol": m.group(1)},
@@ -234,7 +233,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=fake_routes):
+        with patch("aib.tools.fetch_routes._registry", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -247,7 +246,7 @@ class TestAugmentWithApiData:
     async def test_suggest_only_gets_hint(self) -> None:
         results = [_make_result("https://tradingeconomics.com/us/gdp")]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=[]):
+        with patch("aib.tools.fetch_routes._registry", []):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -266,7 +265,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=fake_routes):
+        with patch("aib.tools.fetch_routes._registry", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -283,7 +282,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=fake_routes):
+        with patch("aib.tools.fetch_routes._registry", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -303,7 +302,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=fake_routes):
+        with patch("aib.tools.fetch_routes._registry", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -324,7 +323,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes.get_routes", return_value=fake_routes):
+        with patch("aib.tools.fetch_routes._registry", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 3

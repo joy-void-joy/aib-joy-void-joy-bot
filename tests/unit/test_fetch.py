@@ -64,10 +64,14 @@ class TestDomainDispatch:
         with patch(
             "aib.tools.search.domain_dispatch",
             new_callable=AsyncMock,
-            return_value={"content": [{"type": "text", "text": "stock data"}]},
+            return_value={
+                "content": [
+                    {"type": "text", "text": '{"symbol": "AAPL", "price": 150.0}'}
+                ]
+            },
         ):
             result = await fetch_url({"url": "https://finance.yahoo.com/quote/AAPL"})
-        assert "stock data" in result["content"][0]["text"]
+        assert "AAPL" in result["content"][0]["text"]
 
     @pytest.mark.asyncio
     async def test_unknown_domain_falls_through(self) -> None:

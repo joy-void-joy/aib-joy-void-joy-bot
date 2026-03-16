@@ -39,8 +39,6 @@ def _make_binary_input(
             probability=tentative_probability,
         ),
         assessment="Test assessment.",
-        tool_audit="No tools used.",
-        process_reflection="Test reflection.",
     )
 
 
@@ -55,8 +53,6 @@ def _make_numeric_input(
         factors=factors or [],
         tentative_estimate=NumericEstimate(center=center, low=low, high=high),
         assessment="Test assessment.",
-        tool_audit="No tools used.",
-        process_reflection="Test reflection.",
     )
 
 
@@ -400,8 +396,6 @@ class TestFileWriting:
             factors=[],
             tentative_estimate=BinaryEstimate(logit=0.0, probability=0.5),
             assessment="Strong positive evidence outweighs base rate concerns.",
-            tool_audit="web_search worked well, fred_series returned empty",
-            process_reflection="Missing a tool for satellite imagery analysis",
             calibration_notes="Base rate is 30% for similar events",
             key_uncertainties="Whether the trend persists past Q1",
         )
@@ -410,10 +404,8 @@ class TestFileWriting:
         await _append_reflection(tmp_path, inp, computed, "binary")
 
         content = (tmp_path / "reflection.yaml").read_text()
-        assert "tool_audit" in content
-        assert "process_reflection" in content
-        assert "satellite imagery" in content
         assert "calibration_notes" in content
+        assert "key_uncertainties" in content
 
 
 class TestSourcesInOutput:
@@ -572,8 +564,6 @@ def _make_mc_input(
             probabilities=probabilities or {"A": 0.5, "B": 0.3, "C": 0.2},
         ),
         assessment="Test assessment.",
-        tool_audit="No tools used.",
-        process_reflection="Test reflection.",
     )
 
 
