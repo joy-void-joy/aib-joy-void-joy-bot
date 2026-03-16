@@ -103,6 +103,18 @@ For each error, ground the counterfactual in what the data investigation reveale
 
 Carry this into Phase 3 — the trace explorer needs it.
 
+### Phase 2 Gate (MANDATORY)
+
+Before launching subagents, use **AskUserQuestion** to present:
+
+1. **Post-mortem table** (Post ID, Version, Type, Forecast, Resolution, Score, Error Type)
+2. **For each resolved post**: 1-2 sentence summary of what happened and error classification
+3. **Counterfactuals**: What data/tool would have prevented each error?
+
+Options: "Proceed to trace analysis" / "Investigate [post] deeper first"
+
+**Do NOT launch subagents until the user confirms.** The trace explorer needs this resolution context — rushing past it produces shallow analysis.
+
 ## Phase 3: Parallel Subagent Analysis
 
 Launch both subagents simultaneously — they are independent.
@@ -186,6 +198,19 @@ For each unaddressed issue, formulate an actionable recommendation following the
 - Prefer tools/capabilities over prompt patches
 - Prefer general principles over specific rules
 - Be specific: "build a tool that provides X" not "add a prompt rule about Y"
+
+### Phase 4 Gate (MANDATORY)
+
+Before writing the final report, use **AskUserQuestion** to present:
+
+1. **Fixed issues** — with diff citations (not just descriptions)
+2. **Unaddressed issues** — with Bitter Lesson recommendations
+3. **Strengths at risk** — scaffolding that may have been removed
+4. **Recommended actions** — prioritized
+
+Options: "Write the report" / "Investigate [issue] further" / "Adjust recommendations"
+
+**Do NOT write the report until the user confirms.** The synthesis is the audit's unique value — if "What Has Been Fixed" or "Strengths to Preserve" sections are empty, the cross-referencing wasn't done.
 
 ## Phase 5: Report
 

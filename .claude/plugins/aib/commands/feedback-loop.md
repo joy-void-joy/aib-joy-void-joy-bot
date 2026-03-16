@@ -31,16 +31,17 @@ Don't stop after finding object-level improvements. Ask yourself:
 
 A good feedback loop session produces changes at multiple levels. If you only made object-level changes, you probably skipped the reflection phases.
 
-## Input: Focused Mode
+## Input
 
 **Post IDs**: $ARGUMENTS
 
-If post IDs are provided, run in **focused mode** — all phases still execute, but data collection and trace analysis are scoped to these posts:
+If post IDs are provided, use them directly — skip discovery.
 
-- **Phase 1**: Add `--post-id <id>` to scores/trace commands to prioritize these posts (still run broad calibration)
-- **Phase 2**: Pass the post IDs to the trace-explorer instead of discovering them via `scores extremes`
-
-If no post IDs are provided, run the full workflow with automatic post discovery.
+If none provided, discover automatically:
+```bash
+uv run aib-devtools scores extremes --non-meta
+uv run aib-devtools scores extremes --meta-only
+```
 
 ## Critical Constraint: What the Agent Can and Cannot See
 
@@ -106,52 +107,65 @@ Read the most recent `*_analysis.md` file. Understand:
 
 The `feedback_state.json` tracks which items have been analyzed. The `--new-only` flag (default) automatically filters these out.
 
-## Phase 1: Ground Truth - What Actually Matters
+## Phase 1: Discovery & Resolution
 
 The ONLY true ground truth is **resolution outcomes**. Everything else is proxy signal.
 
-### 1a. Collect Resolution Data
+### 1a. Overview
 
 ```bash
-# First: update forecast JSONs with any new resolutions (lightweight, few API calls)
-uv run aib-devtools resolution check
-
-# Then: full metrics collection (resolutions + CP + Brier scores)
-uv run aib-devtools feedback collect --include-retrodict
-
-# Full view when needed (e.g., first run, or to recompute everything)
-uv run aib-devtools feedback collect --all-time --no-new-only
-```
-
-**If we have resolved forecasts**: Run calibration analysis first, then check Brier.
-- Calibration tells you WHERE you're wrong (actionable diagnostic)
-- Brier/log scores tell you HOW you're scoring (tournament metric)
-- **Always pass `--version`** to scope analysis to the current agent version
-```bash
-# Get current version
 grep AGENT_VERSION src/aib/version.py
-
-# Calibration analysis scoped to current version
-uv run aib-devtools calibration summary --version 0.7.2
-
-# Detailed binary calibration with reliability diagram
-uv run aib-devtools calibration binary --version 0.7.2
-
-# Numeric PIT calibration
-uv run aib-devtools calibration numeric --version 0.7.2
-
-# Cross-version comparison via scores table
-uv run aib-devtools scores compare 0.6.0 0.7.2
+uv run aib-devtools resolution check
+uv run aib-devtools resolution resolve --all  # expand tentative AI resolutions
+uv run aib-devtools scores show <post_id1> <post_id2> ...
 ```
-- Which probability ranges have the worst calibration gaps? Read those traces.
-- Are there systematic patterns (overconfidence? underconfidence in a range?)
 
-**If we have NO resolved forecasts yet**: We're flying blind on accuracy. Focus on:
-- Process quality (is the agent reasoning well?)
-- Tool failures (what's blocking the agent?)
-- Do NOT treat CP divergence as evidence of error
+**Tentative AI resolutions count as ground truth for calibration.** The `resolution resolve --all`
+command uses AI agents to check resolution criteria and populate resolution values for questions
+that Metaculus hasn't officially resolved yet. These are stored with `resolution_source: "tentative"`
+and are included in all calibration and scoring pipelines. Run this early to maximize calibration data.
 
-### 1b. Retrodict Missed Questions (and Check Airtightness)
+Group posts by version, type, and resolution status.
+
+### 1b. Resolution Investigation
+
+For each **resolved** post, investigate what actually happened. Use the data sources relevant to the question (Google Trends, FRED, stock APIs, web search) to build first-hand understanding — don't just read the resolution value.
+
+- How did the underlying data evolve before, during, and after the forecast period?
+- Was the outcome predictable from data available at forecast time, or was there a genuine surprise?
+- At what point did the outcome become clear?
+
+Classify each resolved forecast:
+
+| Error Type | Description |
+|---|---|
+| **Good forecast** | Well-calibrated given available information |
+| **Wrong base rate** | Bad prior, missed relevant reference classes |
+| **Missed key data** | A data source existed but wasn't found or used |
+| **Stale data** | Used outdated information when fresher data existed |
+| **Misunderstood scope** | Misinterpreted question criteria or resolution conditions |
+| **Overconfident CDF** | Directionally correct but tails too narrow |
+| **Underconfident CDF** | Directionally correct but distribution too diffuse |
+| **Directionally wrong** | Forecast pointed the wrong way entirely |
+| **Timing error** | Right prediction, wrong timeframe |
+
+For each error, ground the counterfactual:
+- "The data showed [trajectory] — querying [source] at forecast time would have shown [signal]"
+- "The outcome was a genuine surprise — [data] shifted after [event], post-forecast"
+
+Carry these findings into Phase 2 — the trace explorer needs this context.
+
+### 1c. Calibration (Aggregate View)
+
+Run calibration **after** individual investigation, not before. Use it to confirm or challenge patterns found in 1b.
+
+```bash
+uv run aib-devtools calibration summary --version <version>
+```
+
+If you find a systematic pattern (e.g., all numeric CDFs too narrow), verify it against the individual cases from 1b — don't take the aggregate at face value.
+
+### 1d. Retrodict Missed Questions (and Check Airtightness)
 
 If questions resolved before we forecast them, **retrodict** them to build calibration data. Blind mode restricts all tools to data that was available before the question resolved, ensuring the agent cannot "cheat" by looking up the answer.
 
@@ -232,7 +246,7 @@ Tool-level sandboxing prevents the agent from *fetching* future data, but the LL
 - Uncertainty reflects what was knowable at `forecast_date`
 - No mentions of resolution or what "actually happened"
 
-### 1c. Collect and Analyze Retrodiction Results
+### 1e. Collect and Analyze Retrodiction Results
 
 Retrodictions are our **best** calibration signal — they have known resolutions by definition. After running retrodictions (1b) and checking for future leaks, incorporate them into analysis.
 
@@ -258,7 +272,7 @@ uv run aib-devtools feedback collect --include-retrodict
 
 **Note**: `uv run aib-devtools feedback collect --include-retrodict` processes both `notes/traces/<version>/forecasts/` and `notes/traces/<version>/retrodict/`.
 
-### 1d. About Community Prediction
+### 1f. About Community Prediction
 
 CP is just another forecaster. Diverging from CP is not inherently bad - we WANT an edge.
 
@@ -275,9 +289,26 @@ CP is just another forecaster. Diverging from CP is not inherently bad - we WANT
 - As a primary signal without resolution data
 - When the agent has information CP lacks (breaking news, specific API data)
 
-## Phase 2: Object Level - Read Traces Deeply
+### Phase 1 Gate (MANDATORY)
+
+Before proceeding to trace analysis, use **AskUserQuestion** to present:
+
+1. **Per-forecast post-mortem table** (Post ID, Version, Type, Forecast, Resolution, Score, Error Type)
+2. **Error classification summary** — how many of each type?
+3. **Calibration headline** — ECE, coverage, any systematic patterns
+4. **Key counterfactuals** — for the 3 worst forecasts, what data would have helped?
+
+Options: "Proceed to trace analysis" / "Dig deeper on specific posts" / "Skip to implementation (only if no resolved forecasts)"
+
+**Do NOT continue until the user confirms.** This forces you to synthesize Phase 1 findings before moving on. If you can't fill out the post-mortem table, Phase 1 isn't done.
+
+## Phase 2: Trace Analysis
 
 **This is the most important phase.** Do not skip to aggregate patterns.
+
+**Do NOT read traces directly in this conversation.** Traces consume ~1160 lines each and will
+exhaust the context window before you reach later phases. Instead, launch the `trace-explorer`
+subagent which reads traces in its own context and returns a compact pattern report.
 
 ### Version Scoping
 
@@ -296,43 +327,18 @@ uv run aib-devtools scores extremes --all-versions
 uv run aib-devtools scores compare 2.0.0 3.0.0
 ```
 
-**Scoping examples:**
-```bash
-# Current version (default) — for diagnostics and current performance
-uv run aib-devtools scores extremes --non-meta
-uv run aib-devtools trace errors
-
-# All versions — for learning from resolved outcomes
-uv run aib-devtools scores extremes --all-versions
-uv run aib-devtools calibration binary --all-versions
-```
-
 ### 2a. Launch Trace Explorer (Subagent)
 
-**Do NOT read traces directly in this conversation.** Traces consume ~1160 lines each and will
-exhaust the context window before you reach later phases. Instead, launch the `trace-explorer`
-subagent which reads traces in its own context and returns a compact pattern report.
-
-**Select which traces to analyze:**
-
-```bash
-# Use extremes to find best/worst forecasts
-uv run aib-devtools scores extremes --version <current>
-
-# Or list all available traces
-uv run aib-devtools trace logs
-```
-
-**Launch the trace explorer:**
+Pass the resolution investigation from Phase 1b so the explorer has context about what actually happened.
 
 ```
 Task(subagent_type="aib-workflow:trace-explorer", prompt="""
-Analyze traces for these post IDs: [list of 5-15 IDs]
+Analyze traces for these post IDs: [list]
 
 Context:
-- Current agent version: [X.Y.Z]
-- Focus areas: [e.g., "tool failures", "reasoning on meta-predictions", "numeric CDF quality"]
-- Known issues from Phase 1: [brief summary of calibration findings]
+- Version grouping: [from 1a]
+- Resolution findings: [from 1b — error classifications and counterfactuals]
+- Calibration patterns: [from 1c, if any]
 
 Return the standard pattern report.
 """)
@@ -341,7 +347,8 @@ Return the standard pattern report.
 **What to include in the prompt:**
 - Post IDs to analyze (from extremes, or all recent forecasts)
 - Current agent version (so the explorer can filter)
-- Any specific focus areas from Phase 1 calibration findings
+- Resolution investigation results from Phase 1b (error classifications, counterfactuals)
+- Any specific focus areas from Phase 1c calibration findings
 - Known issues from the previous feedback session (Phase 0)
 
 **What you get back:**
@@ -418,6 +425,22 @@ Common gaps:
 - **No question type tagging** → Can't identify patterns by category
 
 If you find gaps, add tracking in Phase 4.
+
+### Phase 2+3 Gate (MANDATORY)
+
+Before implementing anything, use **AskUserQuestion** to present:
+
+1. **Tool failure summary** — which tools fail, how often, is it fixable?
+2. **Capability requests** — what the agent says it needs (quote directly)
+3. **Reasoning quality verdict** — systematic errors or individual misjudgments?
+4. **What's already been fixed** — cross-reference with Phase 0 findings
+5. **What remains unaddressed** — prioritized list
+6. **Meta-level assessment** — is the agent tracking its own performance well enough?
+7. **Proposed changes** — ranked by priority, with Bitter Lesson classification (tool/capability/principle)
+
+Options: "Proceed with proposed changes" / "Adjust priorities" / "Need deeper investigation on [topic]"
+
+**Do NOT implement changes until the user approves the priority list.** This prevents rushing to implementation with shallow analysis. If the "What's already been fixed" section is empty, you skipped Phase 0.
 
 ## Phase 4: Implement Changes (Bitter Lesson Order)
 
@@ -522,6 +545,22 @@ uv run aib-devtools version bump <level> "<summary>" [--detail "a, b, c"]
 
 Data-only or infrastructure changes (scripts, feedback-loop docs) don't need a bump.
 
+### Phase 4 Verification (MANDATORY)
+
+After listing changes in the analysis document, **verify each one actually exists**:
+
+```bash
+git diff --stat
+git diff --name-only
+```
+
+For each change in your "Changes Made" table:
+- If `git diff` shows the file was modified → mark as **COMMITTED** (or STAGED)
+- If `git diff` shows nothing → mark as **PROPOSED** (not yet implemented)
+- If the change was a prompt/tool fix, grep for the specific text you added to confirm it's there
+
+**Never mark a change as DONE/COMMITTED without verifying it in the diff.** The previous session listed 3 changes as "made" that were never committed — this verification step prevents that.
+
 ## Phase 5: Meta-Meta Level - Improve This Document
 
 This phase is about improving the feedback loop infrastructure itself.
@@ -605,6 +644,19 @@ The `aib-devtools feedback collect` command automatically organizes data by bran
 - Resolved forecasts with our predictions: N
 - Average Brier score: X.XX (or "none yet - process analysis only")
 
+## Per-Forecast Post-Mortem
+
+| Post ID | Version | Type | Forecast | Resolution | Score | Error Type |
+|---------|---------|------|----------|------------|-------|------------|
+
+### Post [ID]: [question title]
+- **Forecast**: [prediction]
+- **Resolution**: [actual outcome]
+- **Error type**: [classification from Phase 1b]
+- **What happened**: [1-2 sentences — what data/event determined the resolution]
+- **Where reasoning diverged**: [specific trace point, or "N/A — good forecast"]
+- **What would have helped**: [concrete tool, data source, or reasoning direction]
+
 ## Object-Level Findings
 
 ### Tool Failures
@@ -638,11 +690,13 @@ The `aib-devtools feedback collect` command automatically organizes data by bran
 - [Changes to forecast tracking, metrics, etc.]
 
 ## Changes Made
-| Level | Change | Rationale |
-|-------|--------|-----------|
-| Object | Added X tool | Agent requested it in N meta-reflections |
-| Meta | Improved analysis queries | Was missing Y data |
-| Meta-Meta | Updated feedback-loop.md | Clarified Z section |
+| Level | Change | Status | Rationale |
+|-------|--------|--------|-----------|
+| Object | Added X tool | COMMITTED | Agent requested it in N meta-reflections |
+| Meta | Improved analysis queries | PROPOSED | Was missing Y data |
+| Meta-Meta | Updated feedback-loop.md | COMMITTED | Clarified Z section |
+
+Status must be one of: **COMMITTED** (verified in git diff), **PROPOSED** (not yet implemented), **DEFERRED** (for next session).
 
 ## Retrodiction Queue
 uv run forecast retrodict <ids>
@@ -651,54 +705,44 @@ uv run forecast retrodict <ids>
 ## Commands Available
 
 ```bash
-# Incremental collection (default: only new since last session)
-uv run aib-devtools feedback collect --include-retrodict
-
-# Full collection (all-time, no filtering)
-uv run aib-devtools feedback collect --all-time --no-new-only --include-retrodict
-
-# Collect from specific tournament
-uv run aib-devtools feedback collect --tournament spring-aib-2026
-
-# Check missed questions
-uv run aib-devtools queue missed aib --days 14
-
-# Check resolutions for specific questions
-uv run aib-devtools resolution check
-
-# Retrodict resolved questions (blind mode - restricts to historical data)
-uv run forecast retrodict 41835 41521 41517
-
-# Retrodict with specific cutoff date
-uv run forecast retrodict 41835 --forecast-date 2026-01-15
-
-# Retrodict without time restriction (for debugging)
-uv run forecast retrodict 41835 --no-blind
-
-# Trace a forecast to its logs and metrics
-uv run aib-devtools trace show 41906
-
-# Aggregate metrics across all forecasts
-uv run aib-devtools metrics summary
-
-# Calibration analysis (primary diagnostic — ECE, reliability diagrams, PIT)
-# Always pass --version to scope to the current agent version
-uv run aib-devtools calibration summary --version 0.7.2
-uv run aib-devtools calibration binary --version 0.7.2 --source retrodict
-uv run aib-devtools calibration numeric --version 0.7.2
-
-# Basic calibration report (Brier/log scores, bucket table)
-uv run aib-devtools calibration report
+# Scores for specific posts (positional args or --post-id)
+uv run aib-devtools scores show 42408 42380 42400
+uv run aib-devtools scores show --resolved
 
 # Best/worst forecasts (for deep trace reading)
 uv run aib-devtools scores extremes
 uv run aib-devtools scores extremes --non-meta
-uv run aib-devtools scores extremes --meta-only --version 0.11.0
+uv run aib-devtools scores extremes --meta-only
 
 # Version comparison
-uv run aib-devtools scores compare 0.10.0 0.11.0
+uv run aib-devtools scores compare 3.4.0 3.5.0
 
-# (Add more commands as you build them — this tooling is in constant evolution)
+# Check resolutions (scrapes profile page)
+uv run aib-devtools resolution check
+
+# Feedback collection (resolutions + CP + Brier scores)
+uv run aib-devtools feedback collect --include-retrodict
+uv run aib-devtools feedback collect --all-time --no-new-only --include-retrodict
+
+# Check missed questions for retrodiction
+uv run aib-devtools queue missed aib --days 14
+
+# Retrodict resolved questions (blind mode - restricts to historical data)
+uv run forecast retrodict 41835 41521 41517
+uv run forecast retrodict 41835 --forecast-date 2026-01-15
+uv run forecast retrodict 41835 --no-blind  # debugging only
+
+# Trace a forecast
+uv run aib-devtools trace show 41906
+uv run aib-devtools trace log 41906
+
+# Calibration analysis (ECE, reliability diagrams, PIT)
+uv run aib-devtools calibration summary --version 3.5.0
+uv run aib-devtools calibration binary --version 3.5.0
+uv run aib-devtools calibration numeric --version 3.5.0
+
+# Aggregate metrics
+uv run aib-devtools metrics summary
 ```
 
 ## Periodic Maintenance
@@ -779,3 +823,29 @@ The user runs the retrodictions, then the next feedback loop session:
 2. Checks airtightness
 3. Evaluates accuracy against the improvements made
 4. Queues more retrodictions → repeat
+
+## Completion Checklist (MANDATORY)
+
+**Before writing the final analysis document, fill out this checklist.** If any item is unchecked, go back and complete it. Do not skip items — the whole point of the feedback loop is thoroughness.
+
+| Phase | Deliverable | Done? |
+|-------|------------|-------|
+| 0 | Read previous analysis, noted what was already fixed | [ ] |
+| 1a | Scores table for all target posts | [ ] |
+| 1b | Per-forecast post-mortem with error classifications | [ ] |
+| 1c | Calibration summary (ECE, coverage, Brier) | [ ] |
+| 1-gate | User confirmed findings before trace analysis | [ ] |
+| 2a | Trace explorer launched with resolution context | [ ] |
+| 2c | Tool failures enumerated with root causes | [ ] |
+| 2c | Capability requests quoted from agent | [ ] |
+| 3a | Meta-level: is the agent's self-tracking sufficient? | [ ] |
+| 3b | What data was missing for this analysis? | [ ] |
+| 2+3-gate | User approved priority list before implementation | [ ] |
+| 4 | Changes implemented (or clearly marked PROPOSED) | [ ] |
+| 4-verify | `git diff` confirms each COMMITTED change exists | [ ] |
+| 5 | This document reviewed for outdated guidance | [ ] |
+| 6 | Retrodict queue proposed (or "none available" noted) | [ ] |
+
+**If you only made object-level changes, you skipped Phase 3 and 5.** Go back.
+**If "What's already been fixed" is empty, you skipped Phase 0.** Go back.
+**If no tool failures are listed, you didn't read the traces carefully enough.** Go back.

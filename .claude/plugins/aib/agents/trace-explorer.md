@@ -11,7 +11,7 @@ The trace explorer reads all traces in its own context (not the main conversatio
 </commentary>
 </example>
 
-model: sonnet
+model: opus
 color: cyan
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
