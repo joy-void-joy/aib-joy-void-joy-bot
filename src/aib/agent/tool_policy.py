@@ -13,17 +13,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 from claude_agent_sdk.types import (
     McpHttpServerConfig,
-    McpSdkServerConfig,
     McpServerConfig,
 )
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.financial import create_financial_server
-from aib.tools.government import create_government_server
-from aib.tools.markets import create_markets_server
-from aib.tools.reddit import create_reddit_server
-from aib.tools.search import create_search_server
-from aib.tools.trends import create_trends_server
+from aib.tools.mcp_server import create_mcp_server
 from aib.tools.reflection import create_reflection_server
 
 if TYPE_CHECKING:
@@ -238,7 +232,7 @@ class ToolPolicy:
 
     Example:
         policy = ToolPolicy.from_settings(settings)
-        mcp_servers = policy.get_mcp_servers(sandbox, composition_server, session_dir=Path("notes/traces/1.2.1/sessions/41906/20260202"))
+        mcp_servers = policy.get_mcp_servers(sandbox, session_dir=Path("notes/traces/1.2.1/sessions/41906/20260202"))
         allowed_tools = policy.get_allowed_tools(allow_spawn=True)
     """
 
@@ -307,7 +301,6 @@ class ToolPolicy:
     def get_mcp_servers(
         self,
         sandbox: Sandbox,
-        composition_server: McpSdkServerConfig,
         *,
         session_dir: Path | None = None,
         question_type: str = "binary",
@@ -321,7 +314,6 @@ class ToolPolicy:
 
         Args:
             sandbox: The sandbox instance for code execution.
-            composition_server: The composition MCP server for spawn_subquestions.
             session_dir: Session directory path for the reflection tool.
                 If None, reflection is disabled.
             question_type: Question type for the reflection tool.
@@ -339,12 +331,77 @@ class ToolPolicy:
         Returns:
             Dict mapping server name to server config.
         """
+        from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
+        from aib.tools.composition import spawn_subquestions
+        from aib.tools.financial import (
+            company_financials,
+            fred_search,
+            fred_series,
+            stock_conditional_returns,
+            stock_history,
+            stock_price,
+            world_bank_indicator,
+            world_bank_search,
+        )
+        from aib.tools.government import bls_series, census_data
+        from aib.tools.markets import (
+            get_coherence_links,
+            get_cp_history,
+            get_metaculus_questions,
+            kalshi_event,
+            kalshi_history,
+            kalshi_price,
+            list_tournament_questions,
+            manifold_history,
+            manifold_price,
+            polymarket_history,
+            polymarket_price,
+            search_metaculus,
+        )
+        from aib.tools.reddit import reddit_hot, reddit_search
+        from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
+        from aib.tools.trends import google_trends, google_trends_compare
+
         servers: dict[str, McpServerConfig] = {
-            "financial": create_financial_server(),
-            "government": create_government_server(),
+            "financial": create_mcp_server(
+                "financial",
+                tools=[
+                    fred_series,
+                    fred_search,
+                    company_financials,
+                    stock_price,
+                    stock_history,
+                    stock_conditional_returns,
+                    world_bank_indicator,
+                    world_bank_search,
+                ],
+            ),
+            "government": create_mcp_server(
+                "government",
+                tools=[
+                    bls_series,
+                    census_data,
+                ],
+            ),
             "sandbox": sandbox.create_mcp_server(),
-            "composition": composition_server,
-            "markets": create_markets_server(),
+            "composition": create_mcp_server("composition", tools=[spawn_subquestions]),
+            "markets": create_mcp_server(
+                "markets",
+                tools=[
+                    polymarket_price,
+                    polymarket_history,
+                    manifold_price,
+                    manifold_history,
+                    kalshi_price,
+                    kalshi_event,
+                    kalshi_history,
+                    get_metaculus_questions,
+                    list_tournament_questions,
+                    search_metaculus,
+                    get_coherence_links,
+                    get_cp_history,
+                ],
+            ),
             "notes": create_reflection_server(
                 session_dir,
                 question_type,
@@ -354,8 +411,24 @@ class ToolPolicy:
                 traces_dir=traces_dir,
                 review_state=review_state,
             ),
-            "trends": create_trends_server(),
-            "search": create_search_server(),
+            "trends": create_mcp_server(
+                "trends",
+                tools=[
+                    google_trends,
+                    google_trends_compare,
+                ],
+            ),
+            "search": create_mcp_server(
+                "search",
+                tools=[
+                    web_search,
+                    search_exa,
+                    wikipedia,
+                    fetch_url,
+                    search_arxiv,
+                    fetch_arxiv,
+                ],
+            ),
         }
 
         # Reddit MCP server (excluded in retrodict — no exact date cutoff)
@@ -364,7 +437,9 @@ class ToolPolicy:
             and self.reddit_client_secret
             and not self.is_retrodict
         ):
-            servers["reddit"] = create_reddit_server()
+            servers["reddit"] = create_mcp_server(
+                "reddit", tools=[reddit_search, reddit_hot]
+            )
 
         # AskNews remote MCP server (excluded in retrodict — no date filtering)
         if self.asknews_api_key and not self.is_retrodict:

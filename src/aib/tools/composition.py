@@ -6,34 +6,14 @@ forecast sub-questions recursively via spawn_subquestions.
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.agent.models import ForecastOutput
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.agent.session import get_session
+from aib.tools.decorator import ToolError, mcp_tool
 
 logger = logging.getLogger(__name__)
-
-
-# --- Dependencies (set by core.py) ---
-
-_RunForecastFn = Callable[..., Awaitable["ForecastOutput"]]
-
-_run_forecast_fn: _RunForecastFn | None = None
-
-
-def set_run_forecast_fn(fn: _RunForecastFn) -> None:
-    """Set the run_forecast function reference.
-
-    Called by core.py after run_forecast is defined to enable
-    subquestion agents to recursively call the forecasting pipeline.
-    """
-    global _run_forecast_fn
-    _run_forecast_fn = fn
 
 
 # --- Input Schemas ---
@@ -78,15 +58,24 @@ class SubquestionOutput(BaseModel):
     error: str | None = None
 
 
+class SpawnSubquestionsOutput(BaseModel):
+    """Output from spawn_subquestions tool."""
+
+    results: list[dict[str, object]]
+    successful_count: int
+    failed_count: int
+
+
 # --- Runner ---
 
 
 async def _run_subforecast(spec: SubquestionSpec) -> SubquestionOutput:
     """Run a recursive sub-forecast via run_forecast()."""
-    if _run_forecast_fn is None:
+    session = get_session()
+    if session.run_forecast_fn is None:
         return SubquestionOutput(
             question=spec.question,
-            error="run_forecast not configured - call set_run_forecast_fn first",
+            error="run_forecast not configured on session",
         )
 
     question_type = spec.question_type
@@ -106,7 +95,7 @@ async def _run_subforecast(spec: SubquestionSpec) -> SubquestionOutput:
             context["numeric_bounds"] = bounds.model_dump(exclude_none=True)
 
     try:
-        result = await _run_forecast_fn(
+        result = await session.run_forecast_fn(
             question_context=context,
             allow_spawn=False,
         )
@@ -129,68 +118,46 @@ async def _run_subforecast(spec: SubquestionSpec) -> SubquestionOutput:
 # --- Tool ---
 
 
-@tool(
+@mcp_tool(
     "spawn_subquestions",
-    (
-        "Decompose a question into independent sub-forecasts. Each sub-question "
-        "gets its own full forecasting agent (research, computation, calibration). "
-        "Pass multiple sub-questions to forecast them concurrently. You receive "
-        "all individual results — synthesize them yourself.\n\n"
-        "Use when a question naturally breaks into independent parts:\n"
-        "- Revenue segments: forecast each independently, then sum\n"
-        "- Conditional chains: P(A and B) = P(A) * P(B|A)\n"
-        "- Multi-component questions: each part needs its own research\n\n"
-        "Example (conditional chain):\n"
-        "  spawn_subquestions(agents=[\n"
-        '    {"question": "Will Country X apply to join Org Y by mid-2026?", '
-        '"context": "Requires parliamentary vote.", "question_type": "binary"},\n'
-        '    {"question": "If applied, will all members approve?", '
-        '"context": "Requires unanimous approval.", "question_type": "binary"}\n'
-        "  ])\n"
-        "  Then multiply: P(join) = P(apply) * P(approve|apply).\n\n"
-        "Example (revenue segments):\n"
-        "  spawn_subquestions(agents=[\n"
-        '    {"question": "What will Search revenue be in Q1?", '
-        '"context": "Q1 2025 was $50.7B.", "question_type": "numeric"},\n'
-        '    {"question": "What will Cloud revenue be in Q1?", '
-        '"context": "Q1 2025 was $12.3B.", "question_type": "numeric"}\n'
-        "  ])\n"
-        "  Then sum the sub-forecast medians and propagate uncertainty.\n"
-    ),
-    SpawnSubquestionsInput.model_json_schema(),
+    "Decompose a question into independent sub-forecasts. Each sub-question "
+    "gets its own full forecasting agent (research, computation, calibration). "
+    "Pass multiple sub-questions to forecast them concurrently. You receive "
+    "all individual results — synthesize them yourself.\n\n"
+    "Use when a question naturally breaks into independent parts:\n"
+    "- Revenue segments: forecast each independently, then sum\n"
+    "- Conditional chains: P(A and B) = P(A) * P(B|A)\n"
+    "- Multi-component questions: each part needs its own research\n\n"
+    "Example (conditional chain):\n"
+    "  spawn_subquestions(agents=[\n"
+    '    {"question": "Will Country X apply to join Org Y by mid-2026?", '
+    '"context": "Requires parliamentary vote.", "question_type": "binary"},\n'
+    '    {"question": "If applied, will all members approve?", '
+    '"context": "Requires unanimous approval.", "question_type": "binary"}\n'
+    "  ])\n"
+    "  Then multiply: P(join) = P(apply) * P(approve|apply).\n\n"
+    "Example (revenue segments):\n"
+    "  spawn_subquestions(agents=[\n"
+    '    {"question": "What will Search revenue be in Q1?", '
+    '"context": "Q1 2025 was $50.7B.", "question_type": "numeric"},\n'
+    '    {"question": "What will Cloud revenue be in Q1?", '
+    '"context": "Q1 2025 was $12.3B.", "question_type": "numeric"}\n'
+    "  ])\n"
+    "  Then sum the sub-forecast medians and propagate uncertainty.\n",
 )
-@tracked("spawn_subquestions")
-async def spawn_subquestions(
-    args: dict[str, object],
-) -> dict[str, object]:
+async def spawn_subquestions(args: SpawnSubquestionsInput) -> SpawnSubquestionsOutput:
     """Spawn parallel sub-question forecasts for structural decomposition."""
-    try:
-        validated = SpawnSubquestionsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    results = await asyncio.gather(*[_run_subforecast(s) for s in validated.agents])
+    results = await asyncio.gather(*[_run_subforecast(s) for s in args.agents])
 
     errors = [r for r in results if r.error is not None]
     successful = [r for r in results if r.error is None]
 
     if not successful:
         error_msgs = [r.error for r in errors]
-        return mcp_error(f"All sub-forecasts failed: {error_msgs}")
+        raise ToolError(f"All sub-forecasts failed: {error_msgs}")
 
-    return mcp_success(
-        {
-            "results": [r.model_dump(exclude_none=True) for r in results],
-            "successful_count": len(successful),
-            "failed_count": len(errors),
-        }
+    return SpawnSubquestionsOutput(
+        results=[r.model_dump(exclude_none=True) for r in results],
+        successful_count=len(successful),
+        failed_count=len(errors),
     )
-
-
-# --- MCP Server ---
-
-composition_server = create_mcp_server(
-    name="composition",
-    version="4.0.0",
-    tools=[spawn_subquestions],
-)

@@ -9,13 +9,12 @@ question details, tournament listings, search, coherence links, and CP history.
 
 import ast
 import asyncio
+import re
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Annotated, Any, TypedDict
 
 import httpx
-from claude_agent_sdk import tool
-from claude_agent_sdk.types import McpSdkServerConfig
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from metaculus import ApiFilter, BinaryQuestion
@@ -26,9 +25,7 @@ from aib.config import settings
 from aib.tools.redact import redact_future_info
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -486,7 +483,7 @@ async def _augment_kalshi_history(results: list[KalshiMarketPrice], days: int) -
     await asyncio.gather(*[_add_one(r) for r in results])
 
 
-@tool(
+@mcp_tool(
     "polymarket_price",
     (
         "Search Polymarket for prediction markets and return current prices "
@@ -498,18 +495,15 @@ async def _augment_kalshi_history(results: list[KalshiMarketPrice], days: int) -
         "  polymarket_price(query='Fed rate cut') → find Fed policy markets\n"
         "Check volume before trusting — low-volume markets (<$1k) may be stale."
     ),
-    MarketQueryInput.model_json_schema(),
+    url_route=(
+        r"polymarket\.com/event/([^/?#]+)",
+        lambda m: {"query": m.group(1).replace("-", " ")},
+    ),
 )
-@tracked("polymarket_price")
-async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
+async def polymarket_price(params: MarketQueryInput) -> dict[str, Any]:
     """Search Polymarket and return market prices."""
-    try:
-        validated = MarketQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    limit = validated.limit
+    query = params.query
+    limit = params.limit
 
     cutoff = retrodict_cutoff.get()
 
@@ -517,7 +511,7 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
         events = await _search_polymarket(query)
 
         if not events:
-            return mcp_success({"markets": [], "query": query})
+            return {"markets": [], "query": query}
 
         query_words = {w.lower() for w in query.split() if len(w) > 2}
         relevant_events = [
@@ -526,7 +520,7 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
             if query_words & {w.lower() for w in e.title.split() if len(w) > 2}
         ]
         if not relevant_events:
-            return mcp_success({"markets": [], "query": query})
+            return {"markets": [], "query": query}
 
         results: list[MarketPrice] = []
         for event in relevant_events[:limit]:
@@ -538,21 +532,23 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
                 results.append(parsed)
 
         if not results and cutoff is not None:
-            return mcp_error(
+            raise ToolError(
                 f"Found markets for '{query}' but no price data is available."
             )
 
-        if cutoff is None and validated.history_days:
-            await _augment_polymarket_history(results, validated.history_days)
+        if cutoff is None and params.history_days:
+            await _augment_polymarket_history(results, params.history_days)
 
-        return mcp_success({"markets": results, "query": query})
+        return {"markets": results, "query": query}
 
+    except ToolError:
+        raise
     except httpx.HTTPStatusError as e:
         logger.exception("Polymarket API error")
-        return mcp_error(f"Polymarket API error: {e.response.status_code}")
+        raise ToolError(f"Polymarket API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Polymarket search failed")
-        return mcp_error(f"Polymarket search failed: {e}")
+        raise ToolError(f"Polymarket search failed: {e}")
 
 
 # --- Manifold Markets API ---
@@ -625,7 +621,7 @@ async def _manifold_market_at_cutoff(
     }
 
 
-@tool(
+@mcp_tool(
     "manifold_price",
     (
         "Search Manifold Markets for prediction markets and return current prices "
@@ -633,25 +629,18 @@ async def _manifold_market_at_cutoff(
         "Returns probability, trading volume (in mana), URL, and daily price trend. "
         f"Optional limit (default: {settings.market_default_limit})."
     ),
-    MarketQueryInput.model_json_schema(),
 )
-@tracked("manifold_price")
-async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
+async def manifold_price(params: MarketQueryInput) -> dict[str, Any]:
     """Search Manifold Markets and return market prices."""
-    try:
-        validated = MarketQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    limit = validated.limit
+    query = params.query
+    limit = params.limit
     cutoff = retrodict_cutoff.get()
 
     try:
         markets = await _search_manifold(query)
 
         if not markets:
-            return mcp_success({"markets": [], "query": query})
+            return {"markets": [], "query": query}
 
         results: list[MarketPrice] = []
         for m in markets[:limit]:
@@ -662,17 +651,17 @@ async def manifold_price(args: dict[str, Any]) -> dict[str, Any]:
             if parsed is not None:
                 results.append(parsed)
 
-        if cutoff is None and validated.history_days:
-            await _augment_manifold_history(results, validated.history_days)
+        if cutoff is None and params.history_days:
+            await _augment_manifold_history(results, params.history_days)
 
-        return mcp_success({"markets": results, "query": query})
+        return {"markets": results, "query": query}
 
     except httpx.HTTPStatusError as e:
         logger.exception("Manifold API error")
-        return mcp_error(f"Manifold API error: {e.response.status_code}")
+        raise ToolError(f"Manifold API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Manifold search failed")
-        return mcp_error(f"Manifold search failed: {e}")
+        raise ToolError(f"Manifold search failed: {e}")
 
 
 # --- Historical Market APIs (for retrodict mode) ---
@@ -716,7 +705,7 @@ async def _fetch_polymarket_history(
         return [PolymarketPricePoint.model_validate(p) for p in data.get("history", [])]
 
 
-@tool(
+@mcp_tool(
     "polymarket_history",
     (
         "Get historical Polymarket price at a specific past timestamp. "
@@ -724,18 +713,11 @@ async def _fetch_polymarket_history(
         "useful for understanding trend direction. Get the token ID from polymarket_price first, "
         "then query specific timestamps. Returns price closest to but not after the timestamp."
     ),
-    HistoricalPriceInput.model_json_schema(),
 )
-@tracked("polymarket_history")
-async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
+async def polymarket_history(params: HistoricalPriceInput) -> HistoricalPrice:
     """Get historical Polymarket price at a timestamp."""
-    try:
-        validated = HistoricalPriceInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    token_id = validated.market_id
-    target_ts = validated.timestamp
+    token_id = params.market_id
+    target_ts = params.timestamp
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
@@ -748,7 +730,7 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
         history = await _fetch_polymarket_history(token_id, start_ts, target_ts)
 
         if not history:
-            return mcp_error(f"No historical data found for market {token_id}")
+            raise ToolError(f"No historical data found for market {token_id}")
 
         closest_point = max(
             (p for p in history if p.t <= target_ts),
@@ -757,7 +739,7 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
         )
 
         if closest_point is None:
-            return mcp_error(
+            raise ToolError(
                 f"No price data found before timestamp {target_ts} for market {token_id}"
             )
 
@@ -767,14 +749,16 @@ async def polymarket_history(args: dict[str, Any]) -> dict[str, Any]:
             "probability": closest_point.p,
             "source": "polymarket",
         }
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except httpx.HTTPStatusError as e:
         logger.exception("Polymarket history API error")
-        return mcp_error(f"Polymarket API error: {e.response.status_code}")
+        raise ToolError(f"Polymarket API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Polymarket history lookup failed")
-        return mcp_error(f"Polymarket history lookup failed: {e}")
+        raise ToolError(f"Polymarket history lookup failed: {e}")
 
 
 @with_retry(max_attempts=3)
@@ -795,7 +779,7 @@ async def _fetch_manifold_bets(
         return [ManifoldBet.model_validate(b) for b in response.json()]
 
 
-@tool(
+@mcp_tool(
     "manifold_history",
     (
         "Get historical Manifold market price at a specific past timestamp. "
@@ -803,18 +787,11 @@ async def _fetch_manifold_bets(
         "Get the contract ID from manifold_price first, then query timestamps. "
         "Returns probability just after the last bet before the given timestamp."
     ),
-    HistoricalPriceInput.model_json_schema(),
 )
-@tracked("manifold_history")
-async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
+async def manifold_history(params: HistoricalPriceInput) -> HistoricalPrice:
     """Get historical Manifold price at a timestamp."""
-    try:
-        validated = HistoricalPriceInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    contract_id = validated.market_id
-    target_ts = validated.timestamp
+    contract_id = params.market_id
+    target_ts = params.timestamp
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
@@ -827,7 +804,7 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
         bets = await _fetch_manifold_bets(contract_id, target_ts_ms)
 
         if not bets:
-            return mcp_error(f"No bet history found for contract {contract_id}")
+            raise ToolError(f"No bet history found for contract {contract_id}")
 
         relevant_bet = max(
             (b for b in bets if b.created_time <= target_ts_ms),
@@ -836,8 +813,8 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
         )
 
         if relevant_bet is None:
-            return mcp_error(
-                f"No bets found before timestamp {validated.timestamp} for contract {contract_id}"
+            raise ToolError(
+                f"No bets found before timestamp {params.timestamp} for contract {contract_id}"
             )
 
         result: HistoricalPrice = {
@@ -846,14 +823,16 @@ async def manifold_history(args: dict[str, Any]) -> dict[str, Any]:
             "probability": relevant_bet.probability,
             "source": "manifold",
         }
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except httpx.HTTPStatusError as e:
         logger.exception("Manifold history API error")
-        return mcp_error(f"Manifold API error: {e.response.status_code}")
+        raise ToolError(f"Manifold API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Manifold history lookup failed")
-        return mcp_error(f"Manifold history lookup failed: {e}")
+        raise ToolError(f"Manifold history lookup failed: {e}")
 
 
 # --- Kalshi API ---
@@ -980,7 +959,19 @@ async def _kalshi_market_at_cutoff(
     return closest.close_price
 
 
-@tool(
+def _kalshi_url_params(m: re.Match[str]) -> dict[str, Any]:
+    """Extract a search query from a Kalshi URL path.
+
+    URL forms: /markets/<series>, /markets/<series>/<slug>,
+    /markets/<series>/<slug>/<market-ticker>.
+    Uses the slug (human-readable) when available, falls back to series.
+    """
+    segments = m.group(1).rstrip("/").split("/")
+    slug = segments[1] if len(segments) > 1 else segments[0]
+    return {"query": slug.replace("-", " ")}
+
+
+@mcp_tool(
     "kalshi_price",
     (
         "Search Kalshi (CFTC-regulated event contracts exchange) for prediction markets "
@@ -994,18 +985,12 @@ async def _kalshi_market_at_cutoff(
         "  kalshi_price(query='GDP') → find GDP growth markets\n"
         "Use kalshi_event to drill into bracket markets for numeric distributions."
     ),
-    MarketQueryInput.model_json_schema(),
+    url_route=(r"kalshi\.com/markets/([^?#]+)", _kalshi_url_params),
 )
-@tracked("kalshi_price")
-async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
+async def kalshi_price(params: MarketQueryInput) -> dict[str, Any]:
     """Search Kalshi and return market prices."""
-    try:
-        validated = MarketQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    limit = validated.limit
+    query = params.query
+    limit = params.limit
     cutoff = retrodict_cutoff.get()
 
     try:
@@ -1015,7 +1000,7 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
             events = await _fetch_kalshi_events(query, status="open")
 
         if not events:
-            return mcp_success({"markets": [], "query": query})
+            return {"markets": [], "query": query}
 
         results: list[KalshiMarketPrice] = []
         for event in events[:limit]:
@@ -1047,20 +1032,20 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
 
         limited = results[:limit]
 
-        if cutoff is None and validated.history_days:
-            await _augment_kalshi_history(limited, validated.history_days)
+        if cutoff is None and params.history_days:
+            await _augment_kalshi_history(limited, params.history_days)
 
-        return mcp_success({"markets": limited, "query": query})
+        return {"markets": limited, "query": query}
 
     except httpx.HTTPStatusError as e:
         logger.exception("Kalshi API error")
-        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+        raise ToolError(f"Kalshi API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Kalshi search failed")
-        return mcp_error(f"Kalshi search failed: {e}")
+        raise ToolError(f"Kalshi search failed: {e}")
 
 
-@tool(
+@mcp_tool(
     "kalshi_event",
     (
         "Get all bracket markets within a Kalshi event. Events like 'Fed funds rate March' "
@@ -1070,23 +1055,16 @@ async def kalshi_price(args: dict[str, Any]) -> dict[str, Any]:
         "Get event tickers from kalshi_price results, then drill in:\n"
         "  kalshi_event(event_ticker='KXFED-26MAR12') → all Fed rate brackets for March"
     ),
-    KalshiEventInput.model_json_schema(),
 )
-@tracked("kalshi_event")
-async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
+async def kalshi_event(params: KalshiEventInput) -> KalshiEvent:
     """Get all markets in a Kalshi event."""
-    try:
-        validated = KalshiEventInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    event_ticker = validated.event_ticker
+    event_ticker = params.event_ticker
     cutoff = retrodict_cutoff.get()
 
     try:
         event = await _fetch_kalshi_event(event_ticker)
         if not event:
-            return mcp_error(f"Event not found: {event_ticker}")
+            raise ToolError(f"Event not found: {event_ticker}")
 
         event_markets: list[KalshiEventMarket] = []
         for market in event.markets:
@@ -1120,17 +1098,19 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
             "url": f"https://kalshi.com/events/{event_ticker}",
             "description": event.sub_title,
         }
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except httpx.HTTPStatusError as e:
         logger.exception("Kalshi API error")
-        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+        raise ToolError(f"Kalshi API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Kalshi event fetch failed")
-        return mcp_error(f"Kalshi event fetch failed: {e}")
+        raise ToolError(f"Kalshi event fetch failed: {e}")
 
 
-@tool(
+@mcp_tool(
     "kalshi_history",
     (
         "Get historical Kalshi market price at a specific past timestamp via candlestick data. "
@@ -1138,18 +1118,11 @@ async def kalshi_event(args: dict[str, Any]) -> dict[str, Any]:
         "Get the market ticker from kalshi_price first, then query specific timestamps. "
         "Returns the closing price of the last daily candle at or before the timestamp."
     ),
-    HistoricalPriceInput.model_json_schema(),
 )
-@tracked("kalshi_history")
-async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
+async def kalshi_history(params: HistoricalPriceInput) -> HistoricalPrice:
     """Get historical Kalshi price at a timestamp."""
-    try:
-        validated = HistoricalPriceInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    market_ticker = validated.market_id
-    target_ts = validated.timestamp
+    market_ticker = params.market_id
+    target_ts = params.timestamp
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         cutoff_unix = int(datetime.combine(cutoff, time()).timestamp())
@@ -1164,7 +1137,7 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
         )
 
         if not candles:
-            return mcp_error(f"No historical data found for market {market_ticker}")
+            raise ToolError(f"No historical data found for market {market_ticker}")
 
         closest = max(
             (c for c in candles if c.end_period_ts <= target_ts),
@@ -1172,12 +1145,12 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
             default=None,
         )
         if closest is None:
-            return mcp_error(
+            raise ToolError(
                 f"No price data found before timestamp {target_ts} for market {market_ticker}"
             )
 
         if closest.close_price is None:
-            return mcp_error(f"No price in candlestick data for {market_ticker}")
+            raise ToolError(f"No price in candlestick data for {market_ticker}")
 
         result: HistoricalPrice = {
             "market_id": market_ticker,
@@ -1185,14 +1158,16 @@ async def kalshi_history(args: dict[str, Any]) -> dict[str, Any]:
             "probability": closest.close_price,
             "source": "kalshi",
         }
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except httpx.HTTPStatusError as e:
         logger.exception("Kalshi history API error")
-        return mcp_error(f"Kalshi API error: {e.response.status_code}")
+        raise ToolError(f"Kalshi API error: {e.response.status_code}")
     except Exception as e:
         logger.exception("Kalshi history lookup failed")
-        return mcp_error(f"Kalshi history lookup failed: {e}")
+        raise ToolError(f"Kalshi history lookup failed: {e}")
 
 
 # --- Metaculus Input Schemas ---
@@ -1491,7 +1466,7 @@ async def _fetch_aggregation(post_id: int) -> AggregationMethod:
 # --- Metaculus Tools ---
 
 
-@tool(
+@mcp_tool(
     "get_metaculus_questions",
     (
         "Fetch details for one or more Metaculus questions by their POST ID. "
@@ -1505,17 +1480,14 @@ async def _fetch_aggregation(post_id: int) -> AggregationMethod:
         "Note: Community predictions are NOT available in the AIB tournament. "
         "Maximum 20 questions per request."
     ),
-    GetMetaculusQuestionsInput.model_json_schema(),
+    url_route=(
+        r"metaculus\.com/questions/(\d+)",
+        lambda m: {"post_id_list": [int(m.group(1))]},
+    ),
 )
-@tracked("get_metaculus_questions")
-async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
+async def get_metaculus_questions(params: GetMetaculusQuestionsInput) -> dict[str, Any]:
     """Fetch one or more Metaculus questions (cached for 5 minutes)."""
-    try:
-        validated = GetMetaculusQuestionsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    post_ids = validated.post_id_list
+    post_ids = params.post_id_list
     cutoff = retrodict_cutoff.get()
 
     async def _apply_retrodict_filters(result: dict[str, Any]) -> dict[str, Any]:
@@ -1559,17 +1531,19 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         if len(results) == 1:
             result = results[0]
             if "error" in result:
-                return mcp_error(
+                raise ToolError(
                     f"Failed to fetch question {result['post_id']}: {result['error']}"
                 )
-            return mcp_success(result)
-        return mcp_success({"questions": list(results)})
+            return result
+        return {"questions": list(results)}
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Failed to fetch Metaculus questions")
-        return mcp_error(f"Failed to fetch questions: {e}")
+        raise ToolError(f"Failed to fetch questions: {e}")
 
 
-@tool(
+@mcp_tool(
     "list_tournament_questions",
     (
         "List open questions from a specific Metaculus tournament. "
@@ -1578,18 +1552,13 @@ async def get_metaculus_questions(args: dict[str, Any]) -> dict[str, Any]:
         "Returns question post IDs that can be used with get_metaculus_questions. "
         f"Optional num_questions (default: {settings.tournament_default_limit})."
     ),
-    ListTournamentQuestionsInput.model_json_schema(),
 )
-@tracked("list_tournament_questions")
-async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
+async def list_tournament_questions(
+    params: ListTournamentQuestionsInput,
+) -> list[dict[str, Any]]:
     """List questions from a tournament (native async)."""
-    try:
-        validated = ListTournamentQuestionsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    tournament_id = validated.tournament_id
-    num_questions = validated.num_questions
+    tournament_id = params.tournament_id
+    num_questions = params.num_questions
 
     try:
         client = get_metaculus_client()
@@ -1608,7 +1577,7 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
 
         questions = questions[:num_questions]
 
-        results = [
+        return [
             {
                 "post_id": q.id_of_post,
                 "title": q.question_text,
@@ -1617,31 +1586,22 @@ async def list_tournament_questions(args: dict[str, Any]) -> dict[str, Any]:
             }
             for q in questions
         ]
-
-        return mcp_success(results)
     except Exception as e:
         logger.exception("Failed to list tournament questions")
-        return mcp_error(f"Failed to list questions: {e}")
+        raise ToolError(f"Failed to list questions: {e}")
 
 
-@tool(
+@mcp_tool(
     "search_metaculus",
     (
         "Search Metaculus questions by text query. Returns matching questions with IDs, titles, and types. "
         f"Optional num_results (default: {settings.metaculus_default_limit})."
     ),
-    SearchMetaculusInput.model_json_schema(),
 )
-@tracked("search_metaculus")
-async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
+async def search_metaculus(params: SearchMetaculusInput) -> list[dict[str, Any]]:
     """Search Metaculus questions by text (native async)."""
-    try:
-        validated = SearchMetaculusInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    search_query = validated.query
-    num_results = validated.num_results
+    search_query = params.query
+    num_results = params.num_results
 
     try:
         client = get_metaculus_client()
@@ -1663,7 +1623,7 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
                 if q.published_time is None or q.published_time <= cutoff_dt
             ]
 
-        results = [
+        return [
             {
                 "post_id": q.id_of_post,
                 "title": q.question_text,
@@ -1681,14 +1641,12 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
             }
             for q in questions
         ]
-
-        return mcp_success(results)
     except Exception as e:
         logger.exception("Metaculus search failed")
-        return mcp_error(f"Search failed: {e}")
+        raise ToolError(f"Search failed: {e}")
 
 
-@tool(
+@mcp_tool(
     "get_coherence_links",
     (
         "Get Metaculus questions that are logically related to this one. "
@@ -1699,24 +1657,17 @@ async def search_metaculus(args: dict[str, Any]) -> dict[str, Any]:
         "Examples:\n"
         "  get_coherence_links(post_id=42135) → find related questions"
     ),
-    CoherenceLinksInput.model_json_schema(),
 )
-@tracked("get_coherence_links")
-async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
+async def get_coherence_links(params: CoherenceLinksInput) -> list[dict[str, Any]]:
     """Fetch coherence links for a question (native async)."""
-    try:
-        validated = CoherenceLinksInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    post_id = validated.post_id
+    post_id = params.post_id
     try:
         client = get_metaculus_client()
         question = await client.get_question_by_post_id(post_id)
         if isinstance(question, list):
             question = question[0]
         links = await client.get_links_for_question(question.id_of_question)
-        results = [
+        return [
             {
                 "post_id_1": link.question1.id_of_post,
                 "title_1": link.question1.question_text,
@@ -1728,13 +1679,12 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
             }
             for link in links
         ]
-        return mcp_success(results)
     except Exception as e:
         logger.exception("Failed to fetch coherence links")
-        return mcp_error(f"Failed to fetch links: {e}")
+        raise ToolError(f"Failed to fetch links: {e}")
 
 
-@tool(
+@mcp_tool(
     "get_cp_history",
     (
         "Fetch historical community prediction (CP) data for a question. "
@@ -1751,18 +1701,11 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
         "For meta-predictions: pass the UNDERLYING question's post_id "
         "(from the meta-question's description), not the meta-question's own post_id."
     ),
-    CPHistoryInput.model_json_schema(),
 )
-@tracked("get_cp_history")
-async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
+async def get_cp_history(params: CPHistoryInput) -> dict[str, Any]:
     """Fetch community prediction history for a question."""
-    try:
-        validated = CPHistoryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    post_id = validated.post_id
-    days = validated.days
+    post_id = params.post_id
+    days = params.days
 
     cutoff_dt = None
     cutoff_date = retrodict_cutoff.get()
@@ -1779,13 +1722,13 @@ async def get_cp_history(args: dict[str, Any]) -> dict[str, Any]:
         response = _build_cp_history_response(
             aggregation, post_id, title, url, days, cutoff_dt
         )
-        return mcp_success(response.model_dump())
+        return response.model_dump()
     except Exception as e:
         logger.exception("Failed to fetch CP history for post %d", post_id)
-        return mcp_error(f"Failed to fetch CP history: {e}")
+        raise ToolError(f"Failed to fetch CP history: {e}")
 
 
-# --- MCP Server ---
+# --- Tool Lists ---
 
 
 async def _filter_relevant_markets(
@@ -1836,7 +1779,7 @@ async def _filter_relevant_markets(
     return [candidates[i] for i in valid_indices]
 
 
-@tool(
+@mcp_tool(
     "search_markets",
     (
         "Search across Polymarket, Manifold, and Kalshi simultaneously for "
@@ -1852,18 +1795,11 @@ async def _filter_relevant_markets(
         "For Kalshi bracket drill-down, use kalshi_event with the event_ticker "
         "from the results."
     ),
-    SearchMarketsInput.model_json_schema(),
 )
-@tracked("search_markets")
-async def search_markets(args: dict[str, Any]) -> dict[str, Any]:
+async def search_markets(params: SearchMarketsInput) -> dict[str, Any]:
     """Search all prediction markets and return relevant results."""
-    try:
-        validated = SearchMarketsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    limit = validated.limit
+    query = params.query
+    limit = params.limit
     cutoff = retrodict_cutoff.get()
 
     poly_results: list[MarketPrice] = []
@@ -1932,13 +1868,11 @@ async def search_markets(args: dict[str, Any]) -> dict[str, Any]:
     all_candidates = poly_results + manifold_results + kalshi_results
 
     if not all_candidates:
-        return mcp_success(
-            {
-                "markets": [],
-                "query": query,
-                "sources_searched": ["polymarket", "manifold", "kalshi"],
-            }
-        )
+        return {
+            "markets": [],
+            "query": query,
+            "sources_searched": ["polymarket", "manifold", "kalshi"],
+        }
 
     relevant = await _filter_relevant_markets(query, all_candidates)
     relevant = relevant[:limit]
@@ -1951,14 +1885,12 @@ async def search_markets(args: dict[str, Any]) -> dict[str, Any]:
             _augment_manifold_history(manifold_relevant, 7),
         )
 
-    return mcp_success(
-        {
-            "markets": relevant,
-            "query": query,
-            "total_candidates": len(all_candidates),
-            "sources_searched": ["polymarket", "manifold", "kalshi"],
-        }
-    )
+    return {
+        "markets": relevant,
+        "query": query,
+        "total_candidates": len(all_candidates),
+        "sources_searched": ["polymarket", "manifold", "kalshi"],
+    }
 
 
 _PREDICTION_MARKET_TOOLS = [
@@ -1978,12 +1910,3 @@ _METACULUS_TOOLS = [
     search_metaculus,
     get_coherence_links,
 ]
-
-
-def create_markets_server() -> McpSdkServerConfig:
-    """Create the markets MCP server with prediction market and Metaculus tools."""
-    return create_mcp_server(
-        name="markets",
-        version="2.0.0",
-        tools=_PREDICTION_MARKET_TOOLS + _METACULUS_TOOLS,
-    )

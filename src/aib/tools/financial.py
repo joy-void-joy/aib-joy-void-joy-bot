@@ -9,7 +9,6 @@ from datetime import date, datetime, timedelta
 import math
 from typing import Any, TypedDict
 
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 import numpy as np
@@ -17,9 +16,7 @@ import numpy as np
 from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.cache import cached
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.decorator import ToolError, mcp_tool
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +228,7 @@ def _fetch_rate_futures(
         return None
 
 
-@tool(
+@mcp_tool(
     "fred_series",
     (
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
@@ -251,35 +248,32 @@ def _fetch_rate_futures(
         '  fred_series(series_id="CPIAUCSL", observation_start="2024-01-01", observation_end="2025-06-01") → CPI for a specific window\n'
         "Use fred_search first if you don't know the series ID."
     ),
-    FredSeriesInput.model_json_schema(),
+    url_route=(
+        r"fred\.stlouisfed\.org/series/([A-Za-z0-9]+)",
+        lambda m: {"series_id": m.group(1).upper()},
+    ),
 )
-@tracked("fred_series")
-async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
+async def fred_series(params: FredSeriesInput) -> dict[str, Any]:
     """Get FRED series data."""
-    try:
-        validated = FredSeriesInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     api_key = settings.fred_api_key
     if not api_key:
-        return mcp_error(
+        raise ToolError(
             "FRED_API_KEY not configured. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"
         )
 
-    series_id = validated.series_id.upper()
+    series_id = params.series_id.upper()
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
         end_date = cutoff.isoformat()
         start_date = (
-            validated.observation_start or (cutoff - timedelta(days=30)).isoformat()
+            params.observation_start or (cutoff - timedelta(days=30)).isoformat()
         )
     else:
         reference_date = datetime.now().date()
-        end_date = validated.observation_end or reference_date.isoformat()
+        end_date = params.observation_end or reference_date.isoformat()
         start_date = (
-            validated.observation_start
+            params.observation_start
             or (reference_date - timedelta(days=30)).isoformat()
         )
 
@@ -320,7 +314,7 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
                 break
 
         if cutoff is not None and latest_value is None:
-            return mcp_error(f"No observations available for {series_id}.")
+            raise ToolError(f"No observations available for {series_id}.")
 
         raw_updated = str(info.get("last_updated", ""))[:10]
         if cutoff is not None and raw_updated > cutoff.isoformat():
@@ -342,9 +336,7 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
             "observation_start": start_date,
             "observation_end": end_date,
             "data_points": len(obs_list),
-            "observations": obs_list[-validated.limit :]
-            if validated.limit
-            else obs_list,
+            "observations": obs_list[-params.limit :] if params.limit else obs_list,
         }
 
         regime = _detect_regime(obs_list)
@@ -356,11 +348,13 @@ async def fred_series(args: dict[str, Any]) -> dict[str, Any]:
             if rate_futures is not None:
                 result_data["rate_futures"] = rate_futures
 
-        return mcp_success(result_data)
+        return result_data
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("FRED series lookup failed")
-        return mcp_error(f"FRED series lookup failed for {series_id}: {e}")
+        raise ToolError(f"FRED series lookup failed for {series_id}: {e}")
 
 
 def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
@@ -381,7 +375,7 @@ def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
         pass
 
 
-@tool(
+@mcp_tool(
     "fred_search",
     (
         "Search FRED for economic data series by keyword. USE THIS when you don't know "
@@ -394,19 +388,12 @@ def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
         '  fred_search(query="housing starts seasonally adjusted") → find HOUST or similar\n'
         "Two-step workflow: fred_search to find the ID, then fred_series to get data."
     ),
-    FredSearchInput.model_json_schema(),
 )
-@tracked("fred_search")
-async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
+async def fred_search(params: FredSearchInput) -> dict[str, Any]:
     """Search for FRED series."""
-    try:
-        validated = FredSearchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     api_key = settings.fred_api_key
     if not api_key:
-        return mcp_error(
+        raise ToolError(
             "FRED_API_KEY not configured. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"
         )
 
@@ -416,20 +403,18 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
         fred = Fred(api_key=api_key)
 
         # Search for series
-        results = fred.search(validated.query)
+        results = fred.search(params.query)
 
         if results is None or len(results) == 0:
-            return mcp_success(
-                {
-                    "query": validated.query,
-                    "results": [],
-                    "total_found": 0,
-                }
-            )
+            return {
+                "query": params.query,
+                "results": [],
+                "total_found": 0,
+            }
 
         # Convert to list of dicts (results is a DataFrame)
         series_list = []
-        for idx, row in results.head(validated.limit).iterrows():
+        for idx, row in results.head(params.limit).iterrows():
             series_list.append(
                 {
                     "id": str(idx),
@@ -443,17 +428,17 @@ async def fred_search(args: dict[str, Any]) -> dict[str, Any]:
         if series_list:
             _enrich_fred_top_result(fred, series_list[0])
 
-        return mcp_success(
-            {
-                "query": validated.query,
-                "results": series_list,
-                "total_found": len(results),
-            }
-        )
+        return {
+            "query": params.query,
+            "results": series_list,
+            "total_found": len(results),
+        }
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("FRED search failed")
-        return mcp_error(f"FRED search failed: {e}")
+        raise ToolError(f"FRED search failed: {e}")
 
 
 # --- Company Financials (yfinance) ---
@@ -530,7 +515,7 @@ class CompanyFinancialsInput(BaseModel):
     )
 
 
-@tool(
+@mcp_tool(
     "company_financials",
     (
         "Get quarterly or annual income statements for a public company. "
@@ -543,28 +528,21 @@ class CompanyFinancialsInput(BaseModel):
         '  company_financials(ticker="GOOG", period="annual") → last 8 years of annual financials\n'
         "Returns: Revenue, Net Income, EPS, Operating Income, Gross Profit, etc. per period."
     ),
-    CompanyFinancialsInput.model_json_schema(),
 )
-@tracked("company_financials")
-async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
+async def company_financials(params: CompanyFinancialsInput) -> dict[str, Any]:
     """Get company financial statements via yfinance."""
-    try:
-        validated = CompanyFinancialsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     try:
         import yfinance as yf
 
-        ticker = yf.Ticker(validated.ticker.upper())
+        ticker = yf.Ticker(params.ticker.upper())
 
-        if validated.period == "annual":
+        if params.period == "annual":
             income = ticker.financials
         else:
             income = ticker.quarterly_financials
 
         if income is None or income.empty:
-            return mcp_error(f"No financial data found for {validated.ticker.upper()}")
+            raise ToolError(f"No financial data found for {params.ticker.upper()}")
 
         cutoff = retrodict_cutoff.get()
         if cutoff is not None:
@@ -582,8 +560,8 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
                 ],
             ]
             if income.empty:
-                return mcp_error(
-                    f"No financial data available for {validated.ticker.upper()}"
+                raise ToolError(
+                    f"No financial data available for {params.ticker.upper()}"
                 )
 
         # Convert DataFrame to serializable format
@@ -600,19 +578,19 @@ async def company_financials(args: dict[str, Any]) -> dict[str, Any]:
         # Also get basic info
         info = ticker.info or {}
 
-        return mcp_success(
-            {
-                "ticker": validated.ticker.upper(),
-                "company_name": info.get("shortName", validated.ticker.upper()),
-                "period_type": validated.period,
-                "num_periods": len(periods),
-                "financials": periods[:8],  # Last 8 periods
-            }
-        )
+        return {
+            "ticker": params.ticker.upper(),
+            "company_name": info.get("shortName", params.ticker.upper()),
+            "period_type": params.period,
+            "num_periods": len(periods),
+            "financials": periods[:8],  # Last 8 periods
+        }
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Company financials lookup failed")
-        return mcp_error(f"Failed to fetch financials for {validated.ticker}: {e}")
+        raise ToolError(f"Failed to fetch financials for {params.ticker}: {e}")
 
 
 # --- Stock Price Tools (Yahoo Finance) ---
@@ -1121,7 +1099,7 @@ def _fetch_futures_curve(
     )
 
 
-@tool(
+@mcp_tool(
     "stock_price",
     (
         "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
@@ -1134,17 +1112,14 @@ def _fetch_futures_curve(
         "  stock_price(symbol='BZ=F') → Brent crude price, 30-day history, and futures curve\n"
         "  stock_price(symbol='^GSPC') → current S&P 500 level with recent history"
     ),
-    StockPriceInput.model_json_schema(),
+    url_route=(
+        r"finance\.yahoo\.com/quote/([A-Za-z0-9^._-]+)",
+        lambda m: {"symbol": m.group(1).upper()},
+    ),
 )
-@tracked("stock_price")
-async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
+async def stock_price(params: StockPriceInput) -> Any:
     """Get stock price from Yahoo Finance."""
-    try:
-        validated = StockPriceInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    symbol = validated.symbol.upper()
+    symbol = params.symbol.upper()
     cutoff = retrodict_cutoff.get()
 
     try:
@@ -1157,11 +1132,11 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             start_52w = (cutoff - timedelta(days=365)).isoformat()
             hist_52w = ticker.history(start=start_52w, end=end_str)
             if hist_52w.empty:
-                return mcp_error(f"No recent data found for {symbol}")
+                raise ToolError(f"No recent data found for {symbol}")
 
             all_closes: list[float] = hist_52w["Close"].tolist()
             all_dates: list[str] = [str(d.date()) for d in hist_52w.index.tolist()]
-            history_days = validated.history_days or 30
+            history_days = params.history_days or 30
             recent = [
                 DailyClose(date=d, close=c)
                 for d, c in zip(all_dates[-history_days:], all_closes[-history_days:])
@@ -1194,12 +1169,12 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
                 if curve is not None:
                     result["futures_curve"] = curve
 
-            return mcp_success(result)
+            return result
 
         info = ticker.info
 
         if not info or info.get("regularMarketPrice") is None:
-            return mcp_error(f"No data found for symbol: {symbol}")
+            raise ToolError(f"No data found for symbol: {symbol}")
 
         result: StockPrice = {
             "symbol": symbol,
@@ -1214,8 +1189,8 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             "recent_history": None,
         }
 
-        if cutoff is None and validated.history_days:
-            _augment_stock_history(ticker, result, validated.history_days)
+        if cutoff is None and params.history_days:
+            _augment_stock_history(ticker, result, params.history_days)
 
         summary = _compute_summary_stats(result)
         if summary is not None:
@@ -1232,14 +1207,16 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
             if curve is not None:
                 result["futures_curve"] = curve
 
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Yahoo Finance lookup failed")
-        return mcp_error(f"Yahoo Finance lookup failed for {symbol}: {e}")
+        raise ToolError(f"Yahoo Finance lookup failed for {symbol}: {e}")
 
 
-@tool(
+@mcp_tool(
     "stock_history",
     (
         "Get historical stock prices for a ticker symbol. "
@@ -1254,20 +1231,13 @@ async def stock_price(args: dict[str, Any]) -> dict[str, Any]:
         "  stock_history(symbol='GC=F', period='3mo') → 3 months of gold futures\n"
         "Feed the output to execute_code for Monte Carlo simulation or rolling volatility analysis."
     ),
-    StockQueryInput.model_json_schema(),
 )
-@tracked("stock_history")
-async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
+async def stock_history(params: StockQueryInput) -> dict[str, Any]:
     """Get historical stock prices from Yahoo Finance."""
-    try:
-        validated = StockQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    symbol = validated.symbol.upper()
-    period = validated.period
+    symbol = params.symbol.upper()
+    period = params.period
     cutoff = retrodict_cutoff.get()
-    end_date = cutoff.isoformat() if cutoff is not None else validated.end_date
+    end_date = cutoff.isoformat() if cutoff is not None else params.end_date
 
     try:
         import yfinance as yf
@@ -1293,7 +1263,7 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
             hist = ticker.history(period=period)
 
         if hist.empty:
-            return mcp_error(f"No historical data found for symbol: {symbol}")
+            raise ToolError(f"No historical data found for symbol: {symbol}")
 
         hist_reset = hist.reset_index()
         hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%d")
@@ -1346,11 +1316,13 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
                     "low": round(min(closes), 4),
                 }
 
-        return mcp_success(result_data)
+        return result_data
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Yahoo Finance history lookup failed")
-        return mcp_error(f"Yahoo Finance history lookup failed for {symbol}: {e}")
+        raise ToolError(f"Yahoo Finance history lookup failed for {symbol}: {e}")
 
 
 # --- Conditional Returns ---
@@ -1520,7 +1492,7 @@ def _compute_single_day_shock_stats(
     )
 
 
-@tool(
+@mcp_tool(
     "stock_conditional_returns",
     (
         "Get the empirical distribution of forward returns conditioned on market events. "
@@ -1533,41 +1505,36 @@ def _compute_single_day_shock_stats(
         "10 days look like?' Use this to quantify mean-reversion after shocks.\n\n"
         "Works with any ticker: indices (^GSPC), stocks (AAPL), futures (BZ=F, CL=F)."
     ),
-    StockConditionalReturnsInput.model_json_schema(),
 )
-@tracked("stock_conditional_returns")
-async def stock_conditional_returns(args: dict[str, Any]) -> dict[str, Any]:
-    try:
-        validated = StockConditionalReturnsInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
+async def stock_conditional_returns(params: StockConditionalReturnsInput) -> Any:
     cutoff = retrodict_cutoff.get()
     end_date = cutoff.isoformat() if cutoff is not None else None
 
     try:
-        closes = await _fetch_index_closes(validated.reference_index, end_date)
+        closes = await _fetch_index_closes(params.reference_index, end_date)
         if not closes:
-            return mcp_error(f"No data found for: {validated.reference_index}")
+            raise ToolError(f"No data found for: {params.reference_index}")
 
-        if validated.trigger_type == "single_day":
+        if params.trigger_type == "single_day":
             result = _compute_single_day_shock_stats(
-                closes, validated.drawdown_pct, validated.horizon_days
+                closes, params.drawdown_pct, params.horizon_days
             )
         else:
             result = _compute_conditional_return_stats(
-                closes, validated.drawdown_pct, validated.horizon_days
+                closes, params.drawdown_pct, params.horizon_days
             )
 
         if isinstance(result, str):
-            return mcp_error(result)
+            raise ToolError(result)
 
-        result["reference_index"] = validated.reference_index
-        return mcp_success(result)
+        result["reference_index"] = params.reference_index
+        return result
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Conditional return analysis failed")
-        return mcp_error(f"Conditional return analysis failed: {e}")
+        raise ToolError(f"Conditional return analysis failed: {e}")
 
 
 # --- World Bank Tools ---
@@ -1617,7 +1584,7 @@ class WBIndicatorInfo(TypedDict):
     name: str
 
 
-@tool(
+@mcp_tool(
     "world_bank_indicator",
     (
         "Get time series data for a World Bank indicator and country. "
@@ -1632,44 +1599,39 @@ class WBIndicatorInfo(TypedDict):
         "  SP.POP.TOTL — Population, total\n\n"
         "Use world_bank_search first if you don't know the indicator code."
     ),
-    WorldBankIndicatorInput.model_json_schema(),
 )
-@tracked("world_bank_indicator")
-async def world_bank_indicator(args: dict[str, Any]) -> dict[str, Any]:
+async def world_bank_indicator(params: WorldBankIndicatorInput) -> dict[str, Any]:
     """Get World Bank indicator data for a country."""
-    try:
-        validated = WorldBankIndicatorInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     import wbgapi as wb  # type: ignore[import-untyped]
 
     cutoff = retrodict_cutoff.get()
 
     reference_year = cutoff.year if cutoff is not None else date.today().year
-    end_year = validated.end_year or reference_year
-    start_year = validated.start_year or (end_year - 10)
+    end_year = params.end_year or reference_year
+    start_year = params.start_year or (end_year - 10)
 
     if cutoff is not None and end_year > cutoff.year:
         end_year = cutoff.year
 
     try:
-        info = wb.series.get(validated.indicator)
+        info = wb.series.get(params.indicator)
         if info is None:
-            return mcp_error(f"Indicator '{validated.indicator}' not found.")
+            raise ToolError(f"Indicator '{params.indicator}' not found.")
         indicator_info: WBIndicatorInfo = {
             "id": str(info["id"]),
             "name": str(info["value"]),
         }
+    except ToolError:
+        raise
     except Exception as e:
-        return mcp_error(f"Indicator '{validated.indicator}' not found: {e}")
+        raise ToolError(f"Indicator '{params.indicator}' not found: {e}")
 
     try:
-        country = validated.country.upper()
+        country = params.country.upper()
         time_range = f"YR{start_year}:YR{end_year}"
         data = list(
             wb.data.fetch(
-                validated.indicator,
+                params.indicator,
                 country,
                 time=time_range,
             )
@@ -1696,24 +1658,22 @@ async def world_bank_indicator(args: dict[str, Any]) -> dict[str, Any]:
                 latest_year = obs["year"]
                 break
 
-        return mcp_success(
-            {
-                "indicator": indicator_info,
-                "country": country,
-                "start_year": start_year,
-                "end_year": end_year,
-                "latest_value": latest_value,
-                "latest_year": latest_year,
-                "data_points": len(observations),
-                "observations": observations,
-            }
-        )
+        return {
+            "indicator": indicator_info,
+            "country": country,
+            "start_year": start_year,
+            "end_year": end_year,
+            "latest_value": latest_value,
+            "latest_year": latest_year,
+            "data_points": len(observations),
+            "observations": observations,
+        }
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("World Bank indicator fetch failed")
-        return mcp_error(
-            f"Failed to fetch {validated.indicator} for {validated.country}: {e}"
-        )
+        raise ToolError(f"Failed to fetch {params.indicator} for {params.country}: {e}")
 
 
 def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
@@ -1732,7 +1692,7 @@ def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
         pass
 
 
-@tool(
+@mcp_tool(
     "world_bank_search",
     (
         "Search World Bank indicators by keyword. USE THIS when forecasting "
@@ -1744,20 +1704,13 @@ def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
         "Two-step workflow: world_bank_search to find the code, then "
         "world_bank_indicator to get data."
     ),
-    WorldBankSearchInput.model_json_schema(),
 )
-@tracked("world_bank_search")
-async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
+async def world_bank_search(params: WorldBankSearchInput) -> dict[str, Any]:
     """Search for World Bank indicators by keyword."""
-    try:
-        validated = WorldBankSearchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     try:
         import wbgapi as wb  # type: ignore[import-untyped]
 
-        results_iter = wb.series.list(q=validated.query)
+        results_iter = wb.series.list(q=params.query)
         results: list[dict[str, object]] = []
         for item in results_iter:
             results.append(
@@ -1766,23 +1719,23 @@ async def world_bank_search(args: dict[str, Any]) -> dict[str, Any]:
                     "name": item["value"],
                 }
             )
-            if len(results) >= validated.limit:
+            if len(results) >= params.limit:
                 break
 
         if results:
             _enrich_wb_top_result(wb, results[0])
 
-        return mcp_success(
-            {
-                "query": validated.query,
-                "results": results,
-                "total_found": len(results),
-            }
-        )
+        return {
+            "query": params.query,
+            "results": results,
+            "total_found": len(results),
+        }
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("World Bank search failed")
-        return mcp_error(f"World Bank search failed: {e}")
+        raise ToolError(f"World Bank search failed: {e}")
 
 
 # --- MCP Server ---
@@ -1804,6 +1757,8 @@ _financial_tools.extend([world_bank_indicator, world_bank_search])
 
 def create_financial_server():
     """Create the financial MCP server with all economic/financial data tools."""
+    from aib.tools.mcp_server import create_mcp_server
+
     return create_mcp_server(
         name="financial",
         version="2.0.0",
