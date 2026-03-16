@@ -1,0 +1,351 @@
+---
+timestamp: 2026-03-16 10:11:01 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay trajectory: massive spike to 100 on Mar 12 (Trump
+    endorsement), now decaying 100->39->25->15->13. The decay rate is slowing but
+    still pointing downward, suggesting continued drift toward pre-spike baseline
+    of 7-8.'
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: Pre-spike baseline was 7-8 (early March avg ~7.7), which is below the
+    'Decreases' threshold of <10. If interest returns to this baseline, it would resolve
+    as Decreases.
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: The story driving the spike (Trump endorsement, jake paul running for
+    office) is a developing narrative, not a one-time event. Rising queries show sustained
+    political interest. This could keep interest elevated above the pre-spike floor.
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Change stats from full period show 72.7% no-change rate with ±3 threshold,
+    suggesting stability is the default outcome for this search term in most periods.
+  supports: Doesn't change
+  logit: 0.7
+  confidence: 0.6
+  effective_logit: 0.42
+- description: 'Decay rate slowing dramatically: from 0.39 ratio to 0.87 ratio between
+    consecutive days. The value may plateau around 10-12 rather than returning to
+    7-8 baseline, which would fall within the ''Doesn''t change'' range.'
+  supports: Doesn't change
+  logit: 0.6
+  confidence: 0.6
+  effective_logit: 0.36
+- description: 'SerpAPI measurement uncertainty: values can differ ±1-2 from pytrends.
+    At start value of 13, the effective threshold boundaries shift, affecting borderline
+    outcomes especially around 10.'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: No specific major Jake Paul event scheduled for Mar 17-24 that would
+    cause a new spike above 16. A value >16 requires a significant new catalyst.
+  supports: Increases
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+- description: 'Monte Carlo simulations with baseline ~9.6 show: Increases ~9%, Doesn''t
+    change ~55%, Decreases ~35%. Sensitivity analysis shows results vary significantly
+    with assumed baseline.'
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.5
+    Decreases: 0.4
+assessment: 'The key dynamic here is a post-spike decay. Jake Paul search interest
+  spiked to 100 on Mar 12 (driven by Trump endorsement/political career news) and
+  has been declining: 100->39->25->15->13. The start value for comparison is 13 on
+  Mar 16. The question is whether by Mar 24 (8 days later), the value will be in range
+  [10,16] (Doesn''t change), below 10 (Decreases), or above 16 (Increases).
+
+
+  The pre-spike baseline was ~7-8, which is below the Decreases threshold of <10.
+  If interest fully reverts to baseline, this resolves as Decreases. However, the
+  decay is slowing (from 15->13 is only -2), and the developing political narrative
+  (Trump endorsement, running for office) could sustain interest somewhat above the
+  historical floor.
+
+
+  The main tension: does the value settle around 10-12 (Doesn''t change) or continue
+  falling to 7-8 (Decreases)? The late-February baseline was higher (~10-12), but
+  that may have been influenced by pre-spike buildup. The true quiet baseline appears
+  to be 7-8.
+
+
+  I''m weighting Doesn''t change slightly above Decreases because: (1) the decay rate
+  is clearly slowing, (2) the political angle is genuinely new and ongoing, (3) there''s
+  measurement uncertainty that could push borderline values either way. But Decreases
+  has substantial probability because the pre-spike floor of 7-8 is below the threshold.'
+calibration_notes: 'Full-period change stats show 72.7% no-change rate, but the trailing
+  period is volatile due to the spike. The trailing stats (50% decrease) are more
+  representative of current dynamics but based on only 6 observations. I''m between
+  the two: more likely to see change than the full-period stats suggest (due to ongoing
+  decay), but the decay slowdown mitigates this.'
+key_uncertainties: '1. Where does the decay equilibrium settle - at 7-8 (pre-spike
+  floor) or 10-12 (slightly elevated)?
+
+  2. Will the Trump endorsement / political office narrative generate follow-up news?
+
+  3. SerpAPI vs pytrends measurement differences at borderline values'
+update_triggers: '1. Any major Jake Paul news (fight announcement, political statement)
+  would push toward Increases.
+
+  2. Absence of news for several days would push toward Decreases as decay continues.
+
+  3. If tomorrow''s (Mar 17) value drops below 10, strongly favors Decreases.'
+computed:
+  factor_count: 8
+  factor_sum: 2.2399999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay trajectory: massive spike to 100 on Mar 12 (Trump
+      endorsement), now decaying 100->39->25->15->13. The decay rate is slowing but
+      still pointing downward, suggesting continued drift toward pre-spike baseline
+      of 7-8.'
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: Pre-spike baseline was 7-8 (early March avg ~7.7), which is below
+      the 'Decreases' threshold of <10. If interest returns to this baseline, it would
+      resolve as Decreases.
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: The story driving the spike (Trump endorsement, jake paul running
+      for office) is a developing narrative, not a one-time event. Rising queries
+      show sustained political interest. This could keep interest elevated above the
+      pre-spike floor.
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Change stats from full period show 72.7% no-change rate with ±3 threshold,
+      suggesting stability is the default outcome for this search term in most periods.
+    supports: Doesn't change
+    logit: 0.7
+    confidence: 0.6
+    effective_logit: 0.42
+  - description: 'Decay rate slowing dramatically: from 0.39 ratio to 0.87 ratio between
+      consecutive days. The value may plateau around 10-12 rather than returning to
+      7-8 baseline, which would fall within the ''Doesn''t change'' range.'
+    supports: Doesn't change
+    logit: 0.6
+    confidence: 0.6
+    effective_logit: 0.36
+  - description: 'SerpAPI measurement uncertainty: values can differ ±1-2 from pytrends.
+      At start value of 13, the effective threshold boundaries shift, affecting borderline
+      outcomes especially around 10.'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: No specific major Jake Paul event scheduled for Mar 17-24 that would
+      cause a new spike above 16. A value >16 requires a significant new catalyst.
+    supports: Increases
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  - description: 'Monte Carlo simulations with baseline ~9.6 show: Increases ~9%,
+      Doesn''t change ~55%, Decreases ~35%. Sensitivity analysis shows results vary
+      significantly with assumed baseline.'
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  dominant_factor: 'Post-spike decay trajectory: massive spike to 100 on Mar 12 (Trump
+    endorsement), now decaying 100->39->25->15->13. The decay rate is slowing but
+    still pointing downward, suggesting continued drift toward pre-spike baseline
+    of 7-8.'
+  dominant_effective_logit: 0.75
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 1.31
+    factors:
+    - description: 'Post-spike decay trajectory: massive spike to 100 on Mar 12 (Trump
+        endorsement), now decaying 100->39->25->15->13. The decay rate is slowing
+        but still pointing downward, suggesting continued drift toward pre-spike baseline
+        of 7-8.'
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.75
+      effective_logit: 0.75
+    - description: Pre-spike baseline was 7-8 (early March avg ~7.7), which is below
+        the 'Decreases' threshold of <10. If interest returns to this baseline, it
+        would resolve as Decreases.
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+  - outcome: Doesn't change
+    factor_count: 5
+    logit_sum: 1.63
+    factors:
+    - description: The story driving the spike (Trump endorsement, jake paul running
+        for office) is a developing narrative, not a one-time event. Rising queries
+        show sustained political interest. This could keep interest elevated above
+        the pre-spike floor.
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: Change stats from full period show 72.7% no-change rate with ±3
+        threshold, suggesting stability is the default outcome for this search term
+        in most periods.
+      supports: Doesn't change
+      logit: 0.7
+      confidence: 0.6
+      effective_logit: 0.42
+    - description: 'Decay rate slowing dramatically: from 0.39 ratio to 0.87 ratio
+        between consecutive days. The value may plateau around 10-12 rather than returning
+        to 7-8 baseline, which would fall within the ''Doesn''t change'' range.'
+      supports: Doesn't change
+      logit: 0.6
+      confidence: 0.6
+      effective_logit: 0.36
+    - description: 'SerpAPI measurement uncertainty: values can differ ±1-2 from pytrends.
+        At start value of 13, the effective threshold boundaries shift, affecting
+        borderline outcomes especially around 10.'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+    - description: 'Monte Carlo simulations with baseline ~9.6 show: Increases ~9%,
+        Doesn''t change ~55%, Decreases ~35%. Sensitivity analysis shows results vary
+        significantly with assumed baseline.'
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.6
+      effective_logit: 0.3
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: -0.7
+    factors:
+    - description: No specific major Jake Paul event scheduled for Mar 17-24 that
+        would cause a new spike above 16. A value >16 requires a significant new catalyst.
+      supports: Increases
+      logit: -1.0
+      confidence: 0.7
+      effective_logit: -0.7
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.5484125478792047
+      Decreases: 0.398229243561614
+      Increases: 0.05335820855918137
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.5
+      Decreases: 0.4
+    per_option_gap_pp:
+      Doesn't change: -4.841254787920468
+      Decreases: 0.1770756438386034
+      Increases: 4.664179144081864
+    max_gap_pp: -4.841254787920468
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) jake paul](https://trends.google.com/trends/explore?q=jake paul)'
+  - '[(Metaculus) Will the interest in “jake paul” change between 2026-03-16 and 2026-03-24
+    according to Google Trends?](https://www.metaculus.com/questions/42684)'
+  reviewer_critique: '**Verification Summary:**
+
+
+    I verified all major factual claims in the factors against the research trace:
+
+
+    1. **Factor 1 (Post-spike decay trajectory)**: Trace confirms spike to 100 on
+    Mar 12, decay sequence 100→39→25→15→13 exactly matches the Google Trends history
+    data. Rising queries confirm Trump endorsement driver. ✓
+
+
+    2. **Factor 2 (Pre-spike baseline 7-8)**: Trace shows two baselines - late Feb
+    ~10-12 and early March ~7.7. The claim of "early March avg ~7.7" is supported
+    by code analysis showing Mar 2-10 values: 7, 7, 6, 8, 8, 9, 10, 7, 7. ✓
+
+
+    3. **Factor 3 (Rising queries/developing narrative)**: Trace confirms "jake paul
+    running for office" (212250), "trump endorses jake paul" (194100) in rising_queries.
+    ✓
+
+
+    4. **Factor 4 (72.7% no-change rate)**: Directly from change_stats in API response:
+    no_change_rate: 0.727. ✓
+
+
+    5. **Factor 5 (Decay rate slowing)**: Code output shows ratios: 0.39→0.64→0.60→0.87,
+    confirming the slowdown. ✓
+
+
+    6. **Factor 7 (No scheduled events)**: News search found no Jake Paul fights scheduled
+    in window; he''s recovering from jaw surgery until late 2026. ✓
+
+
+    7. **Factor 8 (Monte Carlo results)**: Code output shows 9.1% Increases, 55.5%
+    Doesn''t change, 35.5% Decreases, closely matching factor claims. ✓
+
+
+    **No critical errors found:**
+
+    - No hallucinated evidence - all claims grounded in trace
+
+    - No wrong-direction factors - logit signs are consistent with descriptions
+
+    - No contradictory assessment - narrative aligns with factor weights
+
+    - Resolution criteria properly engaged (start value 13, thresholds correctly identified)
+
+
+    **Minor note on baseline assumption:** The Monte Carlo used baseline 9.6 (full
+    pre-spike average), while early March floor was ~7.7. The sensitivity analysis
+    showed this matters (baseline 7-8 would push Decreases to 53-64%). The agent''s
+    final 40% Decreases, 50% Doesn''t change represents a reasonable middle ground
+    given baseline uncertainty. The probabilities are internally consistent with the
+    stated reasoning.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42684
+- **Question ID**: 42629
+- **Session Duration**: 200.3s (3.3 min)
+- **Cost**: $2.4684
+- **Tokens**: 7,249 total (25 in, 7,224 out)
+  - Cache: 381,416 read, 72,220 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42684_20260316_100753/20260316-100753.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 11 | 0 | 710ms |
+| fred_series | 1 | 0 | 608ms |
+| get_metaculus_questions | 2 | 0 | 1848ms |
+| google_trends | 1 | 0 | 5668ms |
+| manifold_price | 1 | 0 | 310ms |
+| polymarket_price | 1 | 0 | 84ms |
+| reflection | 3 | 0 | 77892ms |
+| stock_price | 2 | 0 | 569ms |
+| web_search | 2 | 0 | 47658ms |
+| wikipedia | 2 | 0 | 209ms |
+
+### Sources Consulted
+
+- [(Google Trends) jake paul](https://trends.google.com/trends/explore?q=jake p...
+- [(Metaculus) Will the interest in “jake paul” change between 2026-03-16 and 2...
