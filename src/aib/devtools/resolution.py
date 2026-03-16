@@ -54,7 +54,6 @@ def map_scraped_fields(data: dict[str, str | None]) -> dict[str, str | None]:
     }
 
 
-
 def find_unresolved(
     base_path: Path,
     include_tentative: bool = False,
@@ -91,9 +90,7 @@ def find_unresolved(
                         "scheduled_resolve_time": data.get(
                             "question_scheduled_resolve_time"
                         ),
-                        "scheduled_close_time": data.get(
-                            "question_close_time"
-                        ),
+                        "scheduled_close_time": data.get("question_close_time"),
                         "background_info": data.get("background_info"),
                         "resolution_source": data.get("resolution_source"),
                     }
@@ -108,6 +105,7 @@ QUESTION_PAGE_URL = "https://www.metaculus.com/questions/{post_id}/"
 
 class NoCriteriaError(Exception):
     """Page loaded but no resolution criteria found (likely a 429)."""
+
 
 SCRAPE_USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -190,7 +188,9 @@ EXTRACT_QUESTION_JS = """() => {
 
 
 def find_question_data(
-    obj: object, depth: int = 0, parent_description: str | None = None,
+    obj: object,
+    depth: int = 0,
+    parent_description: str | None = None,
 ) -> dict[str, str | None] | None:
     """Recursively search nested data for an object with resolution_criteria.
 
@@ -245,7 +245,10 @@ async def scrape_question_page(
         if response.status != 200:
             return
         resp_url = response.url
-        if f"/api/posts/{post_id}" in resp_url or f"/api2/questions/{post_id}" in resp_url:
+        if (
+            f"/api/posts/{post_id}" in resp_url
+            or f"/api2/questions/{post_id}" in resp_url
+        ):
             api_responses.append(response)
 
     page.on("response", capture)
@@ -297,7 +300,9 @@ async def scrape_questions_batch(
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
 
-        @with_retry(max_attempts=8, min_wait=8, max_wait=64, extra_exceptions=(NoCriteriaError,))
+        @with_retry(
+            max_attempts=8, min_wait=8, max_wait=64, extra_exceptions=(NoCriteriaError,)
+        )
         async def scrape_with_retry(pid: int) -> dict[str, str | None]:
             page = await browser.new_page(user_agent=SCRAPE_USER_AGENT)
             await page.add_init_script(CAPTURE_RSC_INIT)
@@ -344,8 +349,11 @@ def backfill_metadata(
     from aib.agent.history import _update_forecast_json
 
     BACKFILLABLE = {
-        "resolution_criteria", "fine_print", "background_info",
-        "question_scheduled_resolve_time", "question_close_time",
+        "resolution_criteria",
+        "fine_print",
+        "background_info",
+        "question_scheduled_resolve_time",
+        "question_close_time",
     }
 
     targets: list[int] = []
@@ -421,8 +429,12 @@ def _count_tentative_resolutions() -> dict[int, str]:
 @app.command("check")
 def check(
     user_id: int = typer.Option(DEFAULT_USER_ID, "--user-id", help="Metaculus user ID"),
-    version: str | None = typer.Option(None, "--version", "-v", help="Scope to agent version"),
-    backfill: bool = typer.Option(False, "--backfill", help="Also scrape question pages for missing metadata"),
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Scope to agent version"
+    ),
+    backfill: bool = typer.Option(
+        False, "--backfill", help="Also scrape question pages for missing metadata"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
 ) -> None:
     """Check for and apply resolution updates via profile page scrape."""
@@ -545,7 +557,10 @@ def resolve(
         None, help="Post IDs to resolve (all unresolved if omitted)"
     ),
     days: float = typer.Option(
-        2.5, "--days", "-d", help="Only check questions resolving within N days (0=past due only, use --all to skip)"
+        2.5,
+        "--days",
+        "-d",
+        help="Only check questions resolving within N days (0=past due only, use --all to skip)",
     ),
     all_questions: bool = typer.Option(
         False, "--all", help="Check all unresolved questions regardless of resolve time"
@@ -554,7 +569,9 @@ def resolve(
         0.7, "--min-confidence", help="Minimum confidence to apply resolution"
     ),
     override: bool = typer.Option(
-        False, "--override", help="Re-check questions that already have tentative resolutions"
+        False,
+        "--override",
+        help="Re-check questions that already have tentative resolutions",
     ),
 ) -> None:
     """Attempt early resolution using AI agents to check criteria."""
@@ -584,7 +601,7 @@ def resolve(
             )
             if no_time:
                 typer.echo(
-                    f"  Tip: run 'aib-devtools resolution check --backfill' to backfill resolve times"
+                    "  Tip: run 'aib-devtools resolution check --backfill' to backfill resolve times"
                 )
         unresolved = due
 
@@ -611,8 +628,12 @@ def resolve(
                 resolution_criteria=criteria,
                 fine_print=str(item.get("fine_print") or ""),
                 description=str(item.get("background_info") or ""),
-                scheduled_resolve_time=str(v) if (v := item.get("scheduled_resolve_time")) else None,
-                scheduled_close_time=str(v2) if (v2 := item.get("scheduled_close_time")) else None,
+                scheduled_resolve_time=str(v)
+                if (v := item.get("scheduled_resolve_time"))
+                else None,
+                scheduled_close_time=str(v2)
+                if (v2 := item.get("scheduled_close_time"))
+                else None,
             )
         )
 
@@ -643,12 +664,24 @@ def resolve(
                 QuestionForResolution(
                     post_id=pid,
                     question_title=str(data.get("title") or local.get("title") or ""),
-                    question_type=str(data.get("type") or local.get("question_type") or "binary"),
+                    question_type=str(
+                        data.get("type") or local.get("question_type") or "binary"
+                    ),
                     resolution_criteria=str(data["resolution_criteria"]),
                     fine_print=str(data.get("fine_print") or ""),
                     description=str(data.get("description") or ""),
-                    scheduled_resolve_time=str(v) if (v := data.get("scheduled_resolve_time") or local.get("scheduled_resolve_time")) else None,
-                    scheduled_close_time=str(v2) if (v2 := data.get("scheduled_close_time") or local.get("scheduled_close_time")) else None,
+                    scheduled_resolve_time=str(v)
+                    if (
+                        v := data.get("scheduled_resolve_time")
+                        or local.get("scheduled_resolve_time")
+                    )
+                    else None,
+                    scheduled_close_time=str(v2)
+                    if (
+                        v2 := data.get("scheduled_close_time")
+                        or local.get("scheduled_close_time")
+                    )
+                    else None,
                 )
             )
 
@@ -798,8 +831,7 @@ def backfill_criteria(
             for forecast_file in post_dir.glob("*.json"):
                 data = json.loads(forecast_file.read_text(encoding="utf-8"))
                 new_fields = {
-                    k: v for k, v in trace_fields.items()
-                    if v and not data.get(k)
+                    k: v for k, v in trace_fields.items() if v and not data.get(k)
                 }
                 if not new_fields:
                     already_complete += 1
@@ -810,8 +842,8 @@ def backfill_criteria(
                 if _update_forecast_json(forecast_file, **new_fields):
                     updated += 1
 
-    typer.echo(f"Updated: {updated}, Already complete: {already_complete}, No trace data: {no_trace}")
+    typer.echo(
+        f"Updated: {updated}, Already complete: {already_complete}, No trace data: {no_trace}"
+    )
     if dry_run:
         typer.echo("  (dry run - no files changed)")
-
-
