@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 from typing import Any, Literal, TypedDict
+from urllib.parse import unquote
 
 import httpx
 from claude_agent_sdk import (
@@ -775,7 +776,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                     WIKIPEDIA_API_URL,
                     params={
                         "action": "query",
-                        "titles": query,
+                        "titles": unquote(query),
                         "prop": "extracts|info",
                         "exintro": mode == "summary",
                         "explaintext": True,

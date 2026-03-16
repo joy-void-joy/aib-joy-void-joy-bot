@@ -177,9 +177,9 @@ async def resolve_batch(
         try:
             async with semaphore:
                 logger.info("Resolving post %d: %s", q.post_id, q.question_title[:60])
-                verdict = await asyncio.shield(resolve_question(
-                    q, mcp_servers=servers, allowed_tools=tools
-                ))
+                verdict = await asyncio.shield(
+                    resolve_question(q, mcp_servers=servers, allowed_tools=tools)
+                )
         except (Exception, asyncio.CancelledError) as exc:
             logger.exception("Resolver failed for post %d", q.post_id)
             verdict = ResolutionVerdict(

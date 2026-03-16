@@ -140,7 +140,9 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     return results
 
 
-async def _fetch_resolved(tournament_ids: list[int | str], limit: int = 50) -> list[dict]:
+async def _fetch_resolved(
+    tournament_ids: list[int | str], limit: int = 50
+) -> list[dict]:
     """Fetch resolved questions from one or more tournaments."""
     all_questions: list[dict] = []
 

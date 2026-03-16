@@ -4,7 +4,16 @@ Agent version history. Each version tracks a behavioral change in the forecastin
 
 ## v3.6.0 (2026-03-11)
 
-add MC reflection, file-based trace condensation, save CDF/scores in output
+Unified market search; reflection and prompt quality improvements; reviewer adversarial check
+- prompts: reframe factors as scaffolding — agent owns its probability, factors organize evidence
+- prompts: rewrite reflection guidance as prose (adversarial reasoning, calibration check, tool audit, update triggers)
+- prompts: add Threshold Questions guidance (model continuous quantity first, derive crossing probability)
+- prompts: add sensitivity testing guidance for numeric questions
+- prompts: soften "trust your computation" to encourage distributional variants via additional simulations
+- prompts: add small-CP-sample warning to meta-predictions section
+- tools: add unified prediction market search across Polymarket, Manifold, and Kalshi with relevance filtering
+- tools: fix Wikipedia URL-encoding bug in direct article handler (unquote titles)
+- reviewer: add adversarial reasoning check (warn when assessment lacks counterarguments)
 - MC question reflection with softmax gap metrics
 - file-based trace reading for reasoning condensation
 - CDF + numeric bounds + score fields in forecast output

@@ -114,6 +114,7 @@ COMPOSITION_TOOLS: frozenset[str] = frozenset(
 # Market tools - live prices
 LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
     {
+        "mcp__markets__search_markets",
         "mcp__markets__polymarket_price",
         "mcp__markets__manifold_price",
         "mcp__markets__kalshi_price",

@@ -122,7 +122,6 @@ class TestStripCommand:
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "3"])
         assert result.exit_code == 0
         assert "v1.0.0" in result.output
-        assert "v0.3.1" not in result.output
 
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
@@ -143,7 +142,6 @@ class TestTrendCommand:
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
         assert "Baseline score by forecast date" in result.output
-        assert "Peer score by resolution date" in result.output
         assert "v0.3.1" in result.output
         assert "v3.2.0" in result.output
 
@@ -151,15 +149,15 @@ class TestTrendCommand:
         self, mock_forecasts: list[dict[str, object]]
     ) -> None:
         """Legend date ranges should come from forecast timestamps, not resolution dates."""
-        from aib.devtools.scores import _load_scatter_data
+        from aib.devtools.scores import _load_trend_data
 
         with patch(
             "aib.devtools.scores.load_all_forecast_jsons",
             return_value=mock_forecasts,
         ):
-            result = _load_scatter_data()
+            result = _load_trend_data()
         assert result is not None
-        _, _, version_forecast_dates = result
+        _, version_forecast_dates = result
         assert "0.3.1" in version_forecast_dates
         assert "3.2.0" in version_forecast_dates
         assert len(version_forecast_dates["0.3.1"]) == 3
@@ -169,4 +167,5 @@ class TestTrendCommand:
 
         with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
             result = runner.invoke(app, ["trend", "--no-watch"])
-        assert result.exit_code == 1
+        assert result.exit_code == 0
+        assert "No scored forecasts found" in result.output

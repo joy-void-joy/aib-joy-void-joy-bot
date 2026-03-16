@@ -282,7 +282,9 @@ def show(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
     ),
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show the scores table (formatted)."""
     all_post_ids = list(post_id) + (post_ids or [])
@@ -351,7 +353,9 @@ def summary(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Aggregate statistics by type, source, and version."""
     if not no_refresh:
@@ -409,7 +413,9 @@ def summary(
 def compare(
     version_a: str = typer.Argument(help="First version to compare"),
     version_b: str = typer.Argument(help="Second version to compare"),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Compare scores between two agent versions on overlapping questions."""
     if not no_refresh:
@@ -489,7 +495,9 @@ def regression(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show latest scores for curated regression suite questions."""
     if not no_refresh:
@@ -570,7 +578,9 @@ def extremes(
     qtype: str | None = typer.Option(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show best and worst forecasts."""
     if not no_refresh:

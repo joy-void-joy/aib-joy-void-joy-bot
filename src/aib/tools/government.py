@@ -137,8 +137,19 @@ class CensusRecord(TypedDict):
 BLS_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 
 MONTH_NAMES = [
-    "", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -154,9 +165,7 @@ async def fetch_bls_series(
     Returns a dict mapping series_id to a sorted list of observations.
     Handles the BLS 20-year-per-request limit by chunking.
     """
-    all_observations: dict[str, list[BLSObservation]] = {
-        sid: [] for sid in series_ids
-    }
+    all_observations: dict[str, list[BLSObservation]] = {sid: [] for sid in series_ids}
 
     chunk_start = start_year
     while chunk_start <= end_year:
@@ -202,7 +211,8 @@ async def fetch_bls_series(
                         year=year,
                         period=period,
                         period_name=(
-                            MONTH_NAMES[month_num] if 1 <= month_num <= 12
+                            MONTH_NAMES[month_num]
+                            if 1 <= month_num <= 12
                             else item.get("periodName", period)
                         ),
                         value=value,
@@ -261,7 +271,8 @@ async def bls_series(args: dict[str, Any]) -> dict[str, Any]:
                 cutoff_period = f"M{cutoff.month:02d}"
                 cutoff_year = str(cutoff.year)
                 observations = [
-                    o for o in observations
+                    o
+                    for o in observations
                     if (o["year"], o["period"]) <= (cutoff_year, cutoff_period)
                 ]
 
@@ -273,9 +284,7 @@ async def bls_series(args: dict[str, Any]) -> dict[str, Any]:
                     observations=observations,
                     latest_value=latest["value"] if latest else None,
                     latest_period=(
-                        f"{latest['year']}-{latest['period']}"
-                        if latest
-                        else None
+                        f"{latest['year']}-{latest['period']}" if latest else None
                     ),
                 )
             )
