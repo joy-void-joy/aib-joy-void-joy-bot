@@ -55,8 +55,17 @@ def map_scraped_fields(data: dict[str, str | None]) -> dict[str, str | None]:
 
 
 
-def find_unresolved(base_path: Path) -> list[dict]:
-    """Find all forecast files without resolution in a directory tree."""
+def find_unresolved(
+    base_path: Path,
+    include_tentative: bool = False,
+) -> list[dict]:
+    """Find forecast files needing resolution in a directory tree.
+
+    Args:
+        base_path: Root path containing post_id subdirectories.
+        include_tentative: If True, also include forecasts with
+            resolution_source="tentative" (from AI-powered early resolution).
+    """
     unresolved: list[dict] = []
     if not base_path.exists():
         return unresolved
@@ -66,25 +75,29 @@ def find_unresolved(base_path: Path) -> list[dict]:
         for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
             try:
                 data = json.loads(forecast_file.read_text())
-                if data.get("resolution") is None:
-                    unresolved.append(
-                        {
-                            "post_id": data.get("post_id") or int(post_dir.name),
-                            "file": forecast_file,
-                            "dir": post_dir,
-                            "title": data.get("question_title", "Unknown")[:50],
-                            "question_type": data.get("question_type", "binary"),
-                            "resolution_criteria": data.get("resolution_criteria"),
-                            "fine_print": data.get("fine_print"),
-                            "scheduled_resolve_time": data.get(
-                                "question_scheduled_resolve_time"
-                            ),
-                            "scheduled_close_time": data.get(
-                                "question_close_time"
-                            ),
-                            "background_info": data.get("background_info"),
-                        }
-                    )
+                has_resolution = data.get("resolution") is not None
+                is_tentative = data.get("resolution_source") == "tentative"
+                if has_resolution and not (include_tentative and is_tentative):
+                    continue
+                unresolved.append(
+                    {
+                        "post_id": data.get("post_id") or int(post_dir.name),
+                        "file": forecast_file,
+                        "dir": post_dir,
+                        "title": data.get("question_title", "Unknown")[:50],
+                        "question_type": data.get("question_type", "binary"),
+                        "resolution_criteria": data.get("resolution_criteria"),
+                        "fine_print": data.get("fine_print"),
+                        "scheduled_resolve_time": data.get(
+                            "question_scheduled_resolve_time"
+                        ),
+                        "scheduled_close_time": data.get(
+                            "question_close_time"
+                        ),
+                        "background_info": data.get("background_info"),
+                        "resolution_source": data.get("resolution_source"),
+                    }
+                )
             except (json.JSONDecodeError, OSError, ValueError):
                 continue
     return unresolved
@@ -384,6 +397,27 @@ def backfill_metadata(
         typer.echo("  (dry run — no files changed)")
 
 
+def _count_tentative_resolutions() -> dict[int, str]:
+    """Find all forecasts with resolution_source='tentative'."""
+    tentative: dict[int, str] = {}
+    for base in {d.parent for d in iter_forecast_dirs()}:
+        if not base.exists():
+            continue
+        for post_dir in base.iterdir():
+            if not post_dir.is_dir():
+                continue
+            for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+                try:
+                    data = json.loads(forecast_file.read_text())
+                    if data.get("resolution_source") == "tentative":
+                        pid = data.get("post_id") or int(post_dir.name)
+                        res = str(data.get("resolution", "?"))
+                        tentative[pid] = res
+                except (json.JSONDecodeError, OSError, ValueError):
+                    continue
+    return tentative
+
+
 @app.command("check")
 def check(
     user_id: int = typer.Option(DEFAULT_USER_ID, "--user-id", help="Metaculus user ID"),
@@ -392,6 +426,13 @@ def check(
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
 ) -> None:
     """Check for and apply resolution updates via profile page scrape."""
+    tentative = _count_tentative_resolutions()
+    if tentative:
+        typer.echo(f"Tentative resolutions (from AI resolve): {len(tentative)}")
+        for pid, res in sorted(tentative.items()):
+            typer.echo(f"  {pid}: {res}")
+        typer.echo()
+
     typer.echo(f"Fetching scores from profile page (user {user_id})...")
     raw = asyncio.run(fetch_scores(user_id))
     records = raw.get("records")
@@ -414,6 +455,7 @@ def status() -> None:
     resolved_yes = 0
     resolved_no = 0
     resolved_other = 0
+    tentative_count = 0
     unresolved = 0
 
     seen_posts: set[str] = set()
@@ -434,23 +476,27 @@ def status() -> None:
                 try:
                     data = json.loads(forecast_file.read_text())
                     resolution = data.get("resolution")
-                    if resolution == "yes":
-                        resolved_yes += 1
-                    elif resolution == "no":
-                        resolved_no += 1
-                    elif resolution is not None:
-                        resolved_other += 1
-                    else:
+                    source = data.get("resolution_source")
+                    if resolution is None:
                         unresolved += 1
+                    elif source == "tentative":
+                        tentative_count += 1
+                    elif str(resolution).lower() == "yes":
+                        resolved_yes += 1
+                    elif str(resolution).lower() == "no":
+                        resolved_no += 1
+                    else:
+                        resolved_other += 1
                 except (json.JSONDecodeError, OSError):
                     continue
 
-    total = resolved_yes + resolved_no + resolved_other + unresolved
+    total = resolved_yes + resolved_no + resolved_other + tentative_count + unresolved
 
     typer.echo(f"\n=== Resolution Status ({total} forecasts) ===\n")
     typer.echo(f"Resolved YES:   {resolved_yes}")
     typer.echo(f"Resolved NO:    {resolved_no}")
     typer.echo(f"Resolved other: {resolved_other}")
+    typer.echo(f"Tentative:      {tentative_count}")
     typer.echo(f"Unresolved:     {unresolved}")
 
 
@@ -507,7 +553,9 @@ def resolve(
     min_confidence: float = typer.Option(
         0.7, "--min-confidence", help="Minimum confidence to apply resolution"
     ),
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
+    override: bool = typer.Option(
+        False, "--override", help="Re-check questions that already have tentative resolutions"
+    ),
 ) -> None:
     """Attempt early resolution using AI agents to check criteria."""
     from aib.agent.resolver import (
@@ -519,7 +567,7 @@ def resolve(
 
     unresolved: list[dict[str, object]] = []
     for base in {d.parent for d in iter_forecast_dirs()}:
-        unresolved.extend(find_unresolved(base))
+        unresolved.extend(find_unresolved(base, include_tentative=override))
 
     if post_ids:
         pid_set = set(post_ids)
@@ -621,14 +669,33 @@ def resolve(
         TextColumn("{task.completed}/{task.total}"),
     )
 
-    verdicts: list[tuple[int, ResolutionVerdict]] = []
+    applied = 0
+    skipped = 0
 
     def on_complete(pid: int, verdict: ResolutionVerdict) -> None:
+        nonlocal applied, skipped
         icon = "Y" if verdict.resolved else "N"
         progress.console.print(
             f"  [{icon}] {pid} ({verdict.confidence:.0%}): {verdict.reason[:80]}"
         )
-        verdicts.append((pid, verdict))
+
+        if not verdict.resolved or verdict.resolution is None:
+            skipped += 1
+        elif verdict.confidence < min_confidence:
+            progress.console.print(
+                f"  -> Skipped {pid} (confidence {verdict.confidence:.0%} < {min_confidence:.0%})"
+            )
+            skipped += 1
+        else:
+            for f in iter_forecast_files(pid):
+                update_forecast_file(
+                    f,
+                    verdict.resolution,
+                    source="tentative",
+                    reason=verdict.reason,
+                )
+            applied += 1
+
         progress.advance(task_id)
 
     with progress:
@@ -641,38 +708,9 @@ def resolve(
                 return [(questions[0].post_id, v)]
             return await resolve_batch(questions, on_complete=on_complete)
 
-        results = asyncio.run(run())
-
-    applied = 0
-    skipped = 0
-    for pid, verdict in results:
-        if not verdict.resolved or verdict.resolution is None:
-            skipped += 1
-            continue
-
-        if verdict.confidence < min_confidence:
-            typer.echo(
-                f"  -> Skipped {pid} (confidence {verdict.confidence:.0%} < {min_confidence:.0%})"
-            )
-            skipped += 1
-            continue
-
-        if not dry_run:
-            for f in iter_forecast_files(pid):
-                update_forecast_file(
-                    f,
-                    verdict.resolution,
-                    source="tentative",
-                    reason=verdict.reason,
-                )
-            applied += 1
-        else:
-            typer.echo(f"  -> Would apply {pid}: {verdict.resolution}")
-            applied += 1
+        asyncio.run(run())
 
     typer.echo(f"\nResults: {applied} applied, {skipped} skipped")
-    if dry_run:
-        typer.echo("  (dry run - no files changed)")
 
 
 TRACE_FIELD_MAP: dict[str, str] = {

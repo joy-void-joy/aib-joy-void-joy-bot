@@ -43,6 +43,16 @@ def _is_meta(title: str) -> bool:
     return any(p in t for p in META_PATTERNS)
 
 
+def refresh_scrape() -> None:
+    """Scrape track record and update local forecast JSONs with scores/resolutions."""
+    try:
+        raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
+        records = raw.get("records")
+        resolve_scraped(records if isinstance(records, list) else [])
+    except Exception:
+        pass
+
+
 PROFILE_URL = "https://www.metaculus.com/accounts/profile/{user_id}/track-record/"
 DEFAULT_USER_ID = 290661
 
@@ -258,8 +268,9 @@ def scrape(
 
 @app.command()
 def show(
-    post_id: int | None = typer.Option(
-        None, "--post-id", "-p", help="Filter by post ID"
+    post_ids: list[int] = typer.Argument(None, help="Post IDs to filter by"),
+    post_id: list[int] = typer.Option(
+        [], "--post-id", "-p", help="Filter by post ID(s); repeatable"
     ),
     version: str | None = typer.Option(
         AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
@@ -271,9 +282,13 @@ def show(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
     ),
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
+    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
 ) -> None:
     """Show the scores table (formatted)."""
-    widen = all_versions or post_id is not None
+    all_post_ids = list(post_id) + (post_ids or [])
+    if not no_refresh:
+        refresh_scrape()
+    widen = all_versions or len(all_post_ids) > 0
     effective, warning = resolve_version(version, widen)
     if warning:
         typer.echo(warning)
@@ -282,8 +297,9 @@ def show(
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
 
-    if post_id is not None:
-        rows = [r for r in rows if r["post_id"] == str(post_id)]
+    if all_post_ids:
+        pid_strs = {str(p) for p in all_post_ids}
+        rows = [r for r in rows if r["post_id"] in pid_strs]
         rows.sort(
             key=lambda r: (
                 parse_semver(r.get("agent_version", "") or "0.0.0") or (0, 0, 0),
@@ -302,20 +318,26 @@ def show(
 
     typer.echo(
         f"\n{'ID':<8} {'Src':<6} {'Ver':<6} {'Type':<8} "
-        f"{'Brier':<8} {'LogS':<8} {'Res':<6} {'Title'}"
+        f"{'Brier':<8} {'LogS':<8} {'AbsErr':<8} {'NormErr':<8} "
+        f"{'Res':<6} {'Title'}"
     )
-    typer.echo("-" * 100)
+    typer.echo("-" * 116)
 
     for r in rows:
         brier = r.get("brier", "")
         log_s = r.get("log_score", "")
+        abs_err = r.get("abs_error", "")
+        norm_err = r.get("norm_error", "")
         brier_str = f"{float(brier):.4f}" if brier else "-"
         log_str = f"{float(log_s):.4f}" if log_s else "-"
+        abs_str = f"{float(abs_err):.2f}" if abs_err else "-"
+        norm_str = f"{float(norm_err):.2f}" if norm_err else "-"
         res = r.get("resolution", "")[:6] if r["resolved"] == "True" else "-"
         ver = r.get("agent_version", "")[:6] or "-"
         typer.echo(
             f"{r['post_id']:<8} {r['source']:<6} {ver:<6} {r['question_type']:<8} "
-            f"{brier_str:<8} {log_str:<8} {res:<6} {r['question_title'][:45]}"
+            f"{brier_str:<8} {log_str:<8} {abs_str:<8} {norm_str:<8} "
+            f"{res:<6} {r['question_title'][:40]}"
         )
 
     typer.echo(f"\nTotal: {len(rows)} rows")
@@ -329,8 +351,11 @@ def summary(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
+    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
 ) -> None:
     """Aggregate statistics by type, source, and version."""
+    if not no_refresh:
+        refresh_scrape()
     effective, warning = resolve_version(version, all_versions)
     if warning:
         typer.echo(warning)
@@ -384,8 +409,11 @@ def summary(
 def compare(
     version_a: str = typer.Argument(help="First version to compare"),
     version_b: str = typer.Argument(help="Second version to compare"),
+    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
 ) -> None:
     """Compare scores between two agent versions on overlapping questions."""
+    if not no_refresh:
+        refresh_scrape()
     rows = load_all_score_rows()
     if not rows:
         typer.echo("No forecast data found.")
@@ -461,8 +489,11 @@ def regression(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
+    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
 ) -> None:
     """Show latest scores for curated regression suite questions."""
+    if not no_refresh:
+        refresh_scrape()
     if not REGRESSION_SUITE_PATH.exists():
         typer.echo("No regression suite found at notes/regression_suite.json")
         raise typer.Exit(1)
@@ -539,8 +570,11 @@ def extremes(
     qtype: str | None = typer.Option(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
+    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
 ) -> None:
     """Show best and worst forecasts."""
+    if not no_refresh:
+        refresh_scrape()
     effective, warning = resolve_version(version, all_versions)
     if warning:
         typer.echo(warning)
@@ -1210,14 +1244,6 @@ def strip(
     version_dates = load_version_dates()
     mode: ScoreMode = "baseline"
 
-    def refresh_scrape() -> None:
-        try:
-            raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            records = raw.get("records")
-            resolve_scraped(records if isinstance(records, list) else [])
-        except Exception:
-            pass
-
     def build_output() -> str:
         by_version = _load_strip_data(min_n, mode) or {}
         cmap, totals = _version_color_map_and_totals()
@@ -1307,14 +1333,6 @@ def trend(
 
     console = Console()
     watch = not no_watch
-
-    def refresh_scrape() -> None:
-        try:
-            raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
-            records = raw.get("records")
-            resolve_scraped(records if isinstance(records, list) else [])
-        except Exception:
-            pass
 
     mode: ScoreMode = "baseline"
 
