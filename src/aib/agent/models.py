@@ -105,6 +105,98 @@ class CreditExhaustedError(Exception):
         return cls(message, reset_time)
 
 
+class ToolAudit(BaseModel):
+    """Aggregated tool usage review from post-session Opus reviewer."""
+
+    by_tool: dict[str, str] = Field(
+        description=(
+            "Per-tool qualitative assessment. Key is the exact tool name. "
+            "Value is a compact one-line summary in this format: "
+            "'N calls, M errors (brief cause), impact: none/minor/significant, "
+            "value: high/medium/low/wasted, [notes]'. "
+            "Example: '5 calls, 1 error (timeout on earnings API), impact: minor "
+            "(retried successfully), value: high — key data source for forecast'."
+        )
+    )
+    capability_gaps: list[str] = Field(
+        description="Tools or capabilities the agent needed but didn't have.",
+    )
+    subtle_bugs: list[str] = Field(
+        description="Tool behaviors that weren't errors but produced misleading or suboptimal results.",
+    )
+
+
+class WorkflowAssessment(BaseModel):
+    """Assessment of the agent's workflow quality."""
+
+    info_gathering: str = Field(
+        description="Quality of research strategy and source selection."
+    )
+    structured_reasoning: str = Field(
+        description="Quality of evidence organization and factor construction."
+    )
+    self_correction: str = Field(
+        description="How well the agent caught and corrected its own mistakes."
+    )
+    efficiency: str = Field(
+        description="Whether the agent used its budget wisely or wasted effort."
+    )
+
+
+class ReasoningReview(BaseModel):
+    """Review of the agent's reasoning quality."""
+
+    evidence_quality: int = Field(
+        ge=1, le=5, description="1-5 rating of evidence quality."
+    )
+    evidence_notes: str
+    logical_coherence: int = Field(
+        ge=1, le=5, description="1-5 rating of logical coherence."
+    )
+    logical_notes: str
+    calibration_sense: int = Field(
+        ge=1, le=5, description="1-5 rating of calibration awareness."
+    )
+    calibration_notes: str
+    strengths: list[str]
+    weaknesses: list[str]
+
+
+class PipelineHealth(BaseModel):
+    """Health check of the forecasting pipeline during this session."""
+
+    issues: list[str] = Field(
+        description="MCP errors, sandbox issues, token waste, prompt problems."
+    )
+    clean: bool = Field(description="True if no pipeline issues were observed.")
+
+
+class FutureLeak(BaseModel):
+    """Future-leak detection for retrodict traces."""
+
+    verdict: str = Field(description="CLEAN, SUSPECT, or LEAKED.")
+    evidence: list[str] = Field(description="Specific evidence supporting the verdict.")
+
+
+class ForecastSummary(BaseModel):
+    """Post-session structured review of a forecast trace."""
+
+    summary: str = Field(description="2-3 sentence review summary.")
+    condensed_reasoning: str = Field(
+        description="Full narrative for Metaculus comments."
+    )
+    tool_audit: ToolAudit
+    workflow: WorkflowAssessment
+    reasoning: ReasoningReview
+    pipeline: PipelineHealth
+    future_leak: FutureLeak | None = Field(
+        default=None,
+        description="Only populated for retrodict traces.",
+    )
+    notable_observations: list[str]
+    actionable_improvements: list[str]
+
+
 class BinaryEstimate(BaseModel):
     """Tentative estimate for binary questions."""
 
@@ -612,7 +704,7 @@ class ForecastOutput(BaseModel):
     )
     condensed_reasoning: str | None = Field(
         default=None,
-        description="Sonnet-condensed narrative of the agent's research and reasoning.",
+        description="Opus-reviewed narrative of the agent's research and reasoning.",
     )
     sources_consulted: list[str] = Field(
         default_factory=list,
@@ -649,6 +741,10 @@ class ForecastOutput(BaseModel):
     revision_history: list[dict[str, object]] | None = Field(
         default=None,
         description="Reviewer revision history: list of {probability/center, verdict} per reflection call.",
+    )
+    partial: bool = Field(
+        default=False,
+        description="True if the agent crashed mid-forecast and this is partial output.",
     )
 
     @staticmethod
