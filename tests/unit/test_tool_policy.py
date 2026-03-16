@@ -260,7 +260,7 @@ class TestToolPolicyMcpServers:
         assert "search" in servers
 
     def test_includes_asknews_server_with_api_key(self) -> None:
-        """Should register AskNews HTTP server when api_key is set."""
+        """Should register throttled AskNews proxy server when api_key is set."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
 
@@ -270,8 +270,8 @@ class TestToolPolicyMcpServers:
         assert "asknews" in servers
         asknews = servers["asknews"]
         assert isinstance(asknews, dict)
-        assert asknews.get("type") == "http"
-        assert asknews.get("url") == "https://mcp.asknews.app"
+        assert asknews.get("type") == "sdk"
+        assert asknews.get("name") == "asknews"
 
     def test_excludes_asknews_server_without_api_key(self) -> None:
         """Should not register AskNews server without api_key."""

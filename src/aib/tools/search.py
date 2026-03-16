@@ -554,25 +554,24 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
         return []
 
     try:
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamable_http_client
+        from aib.tools.asknews import _call_remote
 
-        http_client = httpx.AsyncClient(
-            timeout=15,
-            headers={"x-api-key": api_key},
-        )
-        async with streamable_http_client(
-            url="https://mcp.asknews.app",
-            http_client=http_client,
-        ) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.call_tool("search_wikipedia", {"query": query})
-
-                if result.isError:
-                    return []
-
-                return _parse_asknews_articles(result)
+        text = await _call_remote(api_key, "search_wikipedia", {"query": query})
+        data = json.loads(text)
+        items: list[dict[str, str]] = []
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            for key in ("results", "articles", "data"):
+                candidate = data.get(key)
+                if isinstance(candidate, list):
+                    items = candidate
+                    break
+        return [
+            {"title": a["title"], "snippet": a.get("snippet", ""), "url": a.get("url", "")}
+            for a in items
+            if isinstance(a, dict) and "title" in a
+        ]
     except Exception:
         logger.debug("AskNews Wikipedia search failed", exc_info=True)
         return []

@@ -160,6 +160,16 @@ class Settings(BaseSettings):
         validation_alias="AIB_WAYBACK_MAX_CONCURRENT",
         description="Max concurrent Wayback Machine requests",
     )
+    asknews_max_concurrent: int = Field(
+        default=1,
+        validation_alias="AIB_ASKNEWS_MAX_CONCURRENT",
+        description="Max concurrent AskNews API requests",
+    )
+    asknews_min_interval: float = Field(
+        default=10.0,
+        validation_alias="AIB_ASKNEWS_MIN_INTERVAL",
+        description="Minimum seconds between AskNews API requests",
+    )
 
     # === Tool Defaults ===
     search_default_limit: int = Field(

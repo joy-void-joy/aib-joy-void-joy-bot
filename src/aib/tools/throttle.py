@@ -79,3 +79,7 @@ class Throttle:
 exa_throttle = Throttle(max_concurrent=settings.exa_max_concurrent)
 wayback_throttle = Throttle(max_concurrent=settings.wayback_max_concurrent)
 wikipedia_throttle = Throttle(max_concurrent=settings.wikipedia_max_concurrent)
+asknews_throttle = Throttle(
+    max_concurrent=settings.asknews_max_concurrent,
+    min_interval=settings.asknews_min_interval,
+)

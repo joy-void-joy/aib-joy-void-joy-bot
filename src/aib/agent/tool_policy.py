@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from claude_agent_sdk.types import (
-    McpHttpServerConfig,
     McpServerConfig,
 )
 
@@ -441,13 +440,11 @@ class ToolPolicy:
                 "reddit", tools=[reddit_search, reddit_hot]
             )
 
-        # AskNews remote MCP server (excluded in retrodict — no date filtering)
+        # AskNews throttled proxy (excluded in retrodict — no date filtering)
         if self.asknews_api_key and not self.is_retrodict:
-            servers["asknews"] = McpHttpServerConfig(
-                type="http",
-                url="https://mcp.asknews.app",
-                headers={"x-api-key": self.asknews_api_key},
-            )
+            from aib.tools.asknews import create_asknews_server
+
+            servers["asknews"] = create_asknews_server(self.asknews_api_key)
 
         return cast(dict[str, McpServerConfig], servers)
 
