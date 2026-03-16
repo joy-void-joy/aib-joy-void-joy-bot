@@ -105,6 +105,98 @@ class CreditExhaustedError(Exception):
         return cls(message, reset_time)
 
 
+class ToolAudit(BaseModel):
+    """Aggregated tool usage review from post-session Opus reviewer."""
+
+    by_tool: dict[str, str] = Field(
+        description=(
+            "Per-tool qualitative assessment. Key is the exact tool name. "
+            "Value is a compact one-line summary in this format: "
+            "'N calls, M errors (brief cause), impact: none/minor/significant, "
+            "value: high/medium/low/wasted, [notes]'. "
+            "Example: '5 calls, 1 error (timeout on earnings API), impact: minor "
+            "(retried successfully), value: high — key data source for forecast'."
+        )
+    )
+    capability_gaps: list[str] = Field(
+        description="Tools or capabilities the agent needed but didn't have.",
+    )
+    subtle_bugs: list[str] = Field(
+        description="Tool behaviors that weren't errors but produced misleading or suboptimal results.",
+    )
+
+
+class WorkflowAssessment(BaseModel):
+    """Assessment of the agent's workflow quality."""
+
+    info_gathering: str = Field(
+        description="Quality of research strategy and source selection."
+    )
+    structured_reasoning: str = Field(
+        description="Quality of evidence organization and factor construction."
+    )
+    self_correction: str = Field(
+        description="How well the agent caught and corrected its own mistakes."
+    )
+    efficiency: str = Field(
+        description="Whether the agent used its budget wisely or wasted effort."
+    )
+
+
+class ReasoningReview(BaseModel):
+    """Review of the agent's reasoning quality."""
+
+    evidence_quality: int = Field(
+        ge=1, le=5, description="1-5 rating of evidence quality."
+    )
+    evidence_notes: str
+    logical_coherence: int = Field(
+        ge=1, le=5, description="1-5 rating of logical coherence."
+    )
+    logical_notes: str
+    calibration_sense: int = Field(
+        ge=1, le=5, description="1-5 rating of calibration awareness."
+    )
+    calibration_notes: str
+    strengths: list[str]
+    weaknesses: list[str]
+
+
+class PipelineHealth(BaseModel):
+    """Health check of the forecasting pipeline during this session."""
+
+    issues: list[str] = Field(
+        description="MCP errors, sandbox issues, token waste, prompt problems."
+    )
+    clean: bool = Field(description="True if no pipeline issues were observed.")
+
+
+class FutureLeak(BaseModel):
+    """Future-leak detection for retrodict traces."""
+
+    verdict: str = Field(description="CLEAN, SUSPECT, or LEAKED.")
+    evidence: list[str] = Field(description="Specific evidence supporting the verdict.")
+
+
+class ForecastSummary(BaseModel):
+    """Post-session structured review of a forecast trace."""
+
+    summary: str = Field(description="2-3 sentence review summary.")
+    condensed_reasoning: str = Field(
+        description="Full narrative for Metaculus comments."
+    )
+    tool_audit: ToolAudit
+    workflow: WorkflowAssessment
+    reasoning: ReasoningReview
+    pipeline: PipelineHealth
+    future_leak: FutureLeak | None = Field(
+        default=None,
+        description="Only populated for retrodict traces.",
+    )
+    notable_observations: list[str]
+    actionable_improvements: list[str]
+
+
 class BinaryEstimate(BaseModel):
     """Tentative estimate for binary questions."""
 
@@ -421,30 +513,16 @@ class NumericForecast(BaseModel):
         description="Key pieces of evidence that influenced the estimate.",
     )
 
-    # Percentile mode fields (traditional approach)
-    percentile_10: float | None = Field(
+    # Percentile mode: flexible dict of percentile level → value
+    percentile_values: dict[str, float] | None = Field(
         default=None,
-        description="10th percentile estimate: 90% chance the outcome is above this value.",
-    )
-    percentile_20: float | None = Field(
-        default=None,
-        description="20th percentile estimate: 80% chance the outcome is above this value.",
-    )
-    percentile_40: float | None = Field(
-        default=None,
-        description="40th percentile estimate: 60% chance the outcome is above this value.",
-    )
-    percentile_60: float | None = Field(
-        default=None,
-        description="60th percentile estimate: 40% chance the outcome is above this value.",
-    )
-    percentile_80: float | None = Field(
-        default=None,
-        description="80th percentile estimate: 20% chance the outcome is above this value.",
-    )
-    percentile_90: float | None = Field(
-        default=None,
-        description="90th percentile estimate: 10% chance the outcome is above this value.",
+        description=(
+            "Percentile estimates mapping percentile level to value. "
+            "Minimum required: '10', '20', '40', '60', '80', '90'. "
+            "For better tail accuracy, include more: '1', '5', '25', '50', '75', '95', '99'. "
+            "When you have Monte Carlo simulation output, provide many percentiles. "
+            "Values must be non-decreasing by percentile level."
+        ),
     )
 
     # Mixture mode fields (scenario-based approach)
@@ -459,43 +537,38 @@ class NumericForecast(BaseModel):
 
     @model_validator(mode="after")
     def validate_has_distribution(self) -> Self:
-        """Ensure either all percentiles OR components are provided."""
+        """Ensure either percentiles OR components are provided."""
         has_components = self.components is not None and len(self.components) > 0
-        has_all_percentiles = all(
-            p is not None
-            for p in [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
+        has_percentiles = (
+            self.percentile_values is not None and len(self.percentile_values) >= 6
         )
 
-        if not has_components and not has_all_percentiles:
+        if not has_components and not has_percentiles:
             raise ValueError(
-                "NumericForecast requires either all 6 percentiles "
-                "(percentile_10, percentile_20, percentile_40, percentile_60, "
-                "percentile_80, percentile_90) OR components for mixture mode. "
-                "Percentiles must be non-decreasing values."
+                "NumericForecast requires either percentile_values (at least "
+                "keys '10','20','40','60','80','90') OR components for mixture mode."
             )
 
-        # Validate percentiles are non-decreasing if all provided
-        if has_all_percentiles:
-            percentiles = [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
-            for i in range(len(percentiles) - 1):
-                if percentiles[i] > percentiles[i + 1]:  # type: ignore[operator]
+        if has_percentiles:
+            assert self.percentile_values is not None
+            required = {"10", "20", "40", "60", "80", "90"}
+            missing = required - set(self.percentile_values.keys())
+            if missing:
+                raise ValueError(
+                    f"Missing required percentiles: {sorted(missing)}. "
+                    f"Got: {sorted(self.percentile_values.keys())}"
+                )
+            sorted_items = sorted(
+                ((int(k), v) for k, v in self.percentile_values.items()),
+                key=lambda x: x[0],
+            )
+            for i in range(len(sorted_items) - 1):
+                pct_a, val_a = sorted_items[i]
+                pct_b, val_b = sorted_items[i + 1]
+                if val_a > val_b:
                     raise ValueError(
                         f"Percentiles must be non-decreasing. "
-                        f"Got {percentiles[i]} > {percentiles[i + 1]} at indices {i} and {i + 1}."
+                        f"Got P{pct_a}={val_a} > P{pct_b}={val_b}."
                     )
 
         return self
@@ -510,12 +583,14 @@ class NumericForecast(BaseModel):
     def median(self) -> float | None:
         """Estimated median (interpolated from 40th and 60th percentiles)."""
         if self.uses_mixture_mode:
-            # For mixture mode, compute weighted average of component modes
             if self.components:
                 return sum(c.mode * c.weight for c in self.components)
             return None
-        if self.percentile_40 is not None and self.percentile_60 is not None:
-            return (self.percentile_40 + self.percentile_60) / 2
+        if self.percentile_values:
+            if "50" in self.percentile_values:
+                return self.percentile_values["50"]
+            if "40" in self.percentile_values and "60" in self.percentile_values:
+                return (self.percentile_values["40"] + self.percentile_values["60"]) / 2
         return None
 
     @computed_field
@@ -523,44 +598,30 @@ class NumericForecast(BaseModel):
     def confidence_interval(self) -> tuple[float, float] | None:
         """90% confidence interval (10th to 90th percentile)."""
         if self.uses_mixture_mode:
-            # For mixture mode, use min lower and max upper across components
             if self.components:
                 return (
                     min(c.lower_bound for c in self.components),
                     max(c.upper_bound for c in self.components),
                 )
             return None
-        if self.percentile_10 is not None and self.percentile_90 is not None:
-            return (self.percentile_10, self.percentile_90)
+        if (
+            self.percentile_values
+            and "10" in self.percentile_values
+            and "90" in self.percentile_values
+        ):
+            return (self.percentile_values["10"], self.percentile_values["90"])
         return None
 
     def get_percentile_dict(self) -> dict[int, float] | None:
-        """Return percentiles as a dict for CDF generation.
+        """Return percentiles as int-keyed dict for CDF generation.
 
         Returns None if using mixture mode (use components instead).
         """
         if self.uses_mixture_mode:
             return None
-        if any(
-            p is None
-            for p in [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
-        ):
+        if not self.percentile_values:
             return None
-        return {
-            10: self.percentile_10,  # type: ignore[dict-item]
-            20: self.percentile_20,  # type: ignore[dict-item]
-            40: self.percentile_40,  # type: ignore[dict-item]
-            60: self.percentile_60,  # type: ignore[dict-item]
-            80: self.percentile_80,  # type: ignore[dict-item]
-            90: self.percentile_90,  # type: ignore[dict-item]
-        }
+        return {int(k): v for k, v in self.percentile_values.items()}
 
 
 class ForecastMeta(BaseModel):
@@ -643,7 +704,7 @@ class ForecastOutput(BaseModel):
     )
     condensed_reasoning: str | None = Field(
         default=None,
-        description="Sonnet-condensed narrative of the agent's research and reasoning.",
+        description="Opus-reviewed narrative of the agent's research and reasoning.",
     )
     sources_consulted: list[str] = Field(
         default_factory=list,
@@ -680,6 +741,10 @@ class ForecastOutput(BaseModel):
     revision_history: list[dict[str, object]] | None = Field(
         default=None,
         description="Reviewer revision history: list of {probability/center, verdict} per reflection call.",
+    )
+    partial: bool = Field(
+        default=False,
+        description="True if the agent crashed mid-forecast and this is partial output.",
     )
 
     @staticmethod
