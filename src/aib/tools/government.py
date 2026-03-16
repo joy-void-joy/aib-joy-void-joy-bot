@@ -9,14 +9,11 @@ from datetime import date
 from typing import Any, TypedDict
 
 import httpx
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -137,8 +134,19 @@ class CensusRecord(TypedDict):
 BLS_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 
 MONTH_NAMES = [
-    "", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -154,9 +162,7 @@ async def fetch_bls_series(
     Returns a dict mapping series_id to a sorted list of observations.
     Handles the BLS 20-year-per-request limit by chunking.
     """
-    all_observations: dict[str, list[BLSObservation]] = {
-        sid: [] for sid in series_ids
-    }
+    all_observations: dict[str, list[BLSObservation]] = {sid: [] for sid in series_ids}
 
     chunk_start = start_year
     while chunk_start <= end_year:
@@ -202,7 +208,8 @@ async def fetch_bls_series(
                         year=year,
                         period=period,
                         period_name=(
-                            MONTH_NAMES[month_num] if 1 <= month_num <= 12
+                            MONTH_NAMES[month_num]
+                            if 1 <= month_num <= 12
                             else item.get("periodName", period)
                         ),
                         value=value,
@@ -217,7 +224,7 @@ async def fetch_bls_series(
     return all_observations
 
 
-@tool(
+@mcp_tool(
     "bls_series",
     (
         "Get time series data from the Bureau of Labor Statistics. "
@@ -227,71 +234,56 @@ async def fetch_bls_series(
         f"{_BLS_SERIES_GUIDE} "
         "Data typically lags 1-2 months. More granular than FRED for BLS-specific data."
     ),
-    BLSSeriesInput.model_json_schema(),
 )
-@tracked("bls_series")
-async def bls_series(args: dict[str, Any]) -> dict[str, Any]:
+async def bls_series(params: BLSSeriesInput) -> dict[str, Any]:
     """Get BLS time series data."""
-    try:
-        validated = BLSSeriesInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     cutoff = retrodict_cutoff.get()
     reference_year = cutoff.year if cutoff else date.today().year
-    start_year = validated.start_year or (reference_year - 5)
-    end_year = validated.end_year or reference_year
+    start_year = params.start_year or (reference_year - 5)
+    end_year = params.end_year or reference_year
 
     if cutoff and end_year > cutoff.year:
         end_year = cutoff.year
 
-    try:
-        all_obs = await fetch_bls_series(
-            validated.series_ids,
-            start_year,
-            end_year,
-            settings.bls_api_key,
-        )
+    all_obs = await fetch_bls_series(
+        params.series_ids,
+        start_year,
+        end_year,
+        settings.bls_api_key,
+    )
 
-        results: list[BLSSeriesResult] = []
-        for series_id in validated.series_ids:
-            observations = all_obs.get(series_id, [])
+    results: list[BLSSeriesResult] = []
+    for series_id in params.series_ids:
+        observations = all_obs.get(series_id, [])
 
-            if cutoff is not None:
-                cutoff_period = f"M{cutoff.month:02d}"
-                cutoff_year = str(cutoff.year)
-                observations = [
-                    o for o in observations
-                    if (o["year"], o["period"]) <= (cutoff_year, cutoff_period)
-                ]
+        if cutoff is not None:
+            cutoff_period = f"M{cutoff.month:02d}"
+            cutoff_year = str(cutoff.year)
+            observations = [
+                o
+                for o in observations
+                if (o["year"], o["period"]) <= (cutoff_year, cutoff_period)
+            ]
 
-            observations = observations[-60:]
-            latest = observations[-1] if observations else None
-            results.append(
-                BLSSeriesResult(
-                    series_id=series_id,
-                    observations=observations,
-                    latest_value=latest["value"] if latest else None,
-                    latest_period=(
-                        f"{latest['year']}-{latest['period']}"
-                        if latest
-                        else None
-                    ),
-                )
+        observations = observations[-60:]
+        latest = observations[-1] if observations else None
+        results.append(
+            BLSSeriesResult(
+                series_id=series_id,
+                observations=observations,
+                latest_value=latest["value"] if latest else None,
+                latest_period=(
+                    f"{latest['year']}-{latest['period']}" if latest else None
+                ),
             )
-
-        return mcp_success(
-            {
-                "start_year": start_year,
-                "end_year": end_year,
-                "series_count": len(results),
-                "series": results,
-            }
         )
 
-    except Exception as e:
-        logger.exception("BLS series fetch failed")
-        return mcp_error(f"BLS data fetch failed: {e}")
+    return {
+        "start_year": start_year,
+        "end_year": end_year,
+        "series_count": len(results),
+        "series": results,
+    }
 
 
 # --- Census Tools ---
@@ -313,7 +305,7 @@ def _resolve_state_fips(state_input: str) -> str:
     return state_input
 
 
-@tool(
+@mcp_tool(
     "census_data",
     (
         "Get Census Bureau / American Community Survey (ACS) data. "
@@ -323,120 +315,81 @@ def _resolve_state_fips(state_input: str) -> str:
         "ACS 5-year estimates (2009-2023) have the most geographic detail. "
         "ACS 1-year estimates are more recent but limited to areas with 65k+ population."
     ),
-    CensusDataInput.model_json_schema(),
 )
-@tracked("census_data")
-async def census_data(args: dict[str, Any]) -> dict[str, Any]:
+async def census_data(params: CensusDataInput) -> dict[str, Any]:
     """Get Census/ACS data."""
-    try:
-        validated = CensusDataInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     api_key = settings.census_api_key
     if not api_key:
-        return mcp_error(
+        raise ToolError(
             "Census API key not configured. "
             "Set CENSUS_API_KEY (free at https://api.census.gov/data/key_signup.html)."
         )
 
     cutoff = retrodict_cutoff.get()
-    year = validated.year
+    year = params.year
     if cutoff:
         cap = cutoff.year
         if year is None or year > cap:
             year = cap
 
-    try:
-        from census import Census
+    from census import Census
 
-        c = Census(api_key, year=year) if year else Census(api_key)
+    c = Census(api_key, year=year) if year else Census(api_key)
 
-        dataset = getattr(c, validated.dataset, None)
-        if dataset is None:
-            return mcp_error(
-                f"Unknown dataset '{validated.dataset}'. Use 'acs5' or 'acs1'."
-            )
+    dataset = getattr(c, params.dataset, None)
+    if dataset is None:
+        raise ToolError(f"Unknown dataset '{params.dataset}'. Use 'acs5' or 'acs1'.")
 
-        fields = ("NAME", *validated.variables)
+    fields = ("NAME", *params.variables)
 
-        state_fips = _resolve_state_fips(validated.state) if validated.state else None
+    state_fips = _resolve_state_fips(params.state) if params.state else None
 
-        if validated.geography == "state":
-            target = state_fips or "*"
-            data = dataset.state(fields, target)
+    if params.geography == "state":
+        target = state_fips or "*"
+        data = dataset.state(fields, target)
 
-        elif validated.geography == "county":
-            if not state_fips:
-                return mcp_error("State is required for county-level queries.")
-            county = validated.county or "*"
-            data = dataset.state_county(fields, state_fips, county)
+    elif params.geography == "county":
+        if not state_fips:
+            raise ToolError("State is required for county-level queries.")
+        county = params.county or "*"
+        data = dataset.state_county(fields, state_fips, county)
 
-        elif validated.geography == "tract":
-            if not state_fips or not validated.county:
-                return mcp_error(
-                    "State and county are required for tract-level queries."
-                )
-            data = dataset.state_county_tract(fields, state_fips, validated.county, "*")
+    elif params.geography == "tract":
+        if not state_fips or not params.county:
+            raise ToolError("State and county are required for tract-level queries.")
+        data = dataset.state_county_tract(fields, state_fips, params.county, "*")
 
-        elif validated.geography == "place":
-            if not state_fips:
-                return mcp_error("State is required for place-level queries.")
-            data = dataset.state_place(fields, state_fips, "*")
+    elif params.geography == "place":
+        if not state_fips:
+            raise ToolError("State is required for place-level queries.")
+        data = dataset.state_place(fields, state_fips, "*")
 
-        elif validated.geography == "congressional_district":
-            if not state_fips:
-                return mcp_error(
-                    "State is required for congressional district queries."
-                )
-            data = dataset.state_congressional_district(fields, state_fips, "*")
+    elif params.geography == "congressional_district":
+        if not state_fips:
+            raise ToolError("State is required for congressional district queries.")
+        data = dataset.state_congressional_district(fields, state_fips, "*")
 
-        else:
-            return mcp_error(
-                f"Unknown geography '{validated.geography}'. "
-                "Use: state, county, tract, place, congressional_district."
-            )
+    else:
+        raise ToolError(
+            f"Unknown geography '{params.geography}'. "
+            "Use: state, county, tract, place, congressional_district."
+        )
 
-        records: list[CensusRecord] = []
-        for row in data[:100]:
-            records.append(
-                {
-                    "NAME": row.get("NAME", ""),
-                    "state": row.get("state", ""),
-                    "values": {var: row.get(var) for var in validated.variables},
-                }
-            )
-
-        return mcp_success(
+    records: list[CensusRecord] = []
+    for row in data[:100]:
+        records.append(
             {
-                "dataset": validated.dataset,
-                "year": year or "latest",
-                "geography": validated.geography,
-                "variables": validated.variables,
-                "record_count": len(records),
-                "records": records,
+                "NAME": row.get("NAME", ""),
+                "state": row.get("state", ""),
+                "values": {var: row.get(var) for var in params.variables},
             }
         )
 
-    except Exception as e:
-        logger.exception("Census data fetch failed")
-        return mcp_error(f"Census data fetch failed: {e}")
-
-
-# --- MCP Server ---
-
-
-def create_government_server():
-    """Create MCP server with US government data tools (BLS + Census)."""
-    tools = [bls_series]
-
-    if settings.census_api_key:
-        tools.append(census_data)
-    else:
-        logger.info("Census tools disabled: CENSUS_API_KEY not configured")
-
-    return create_mcp_server(
-        name="government",
-        version="1.0.0",
-        tools=tools,
-    )
+    return {
+        "dataset": params.dataset,
+        "year": year or "latest",
+        "geography": params.geography,
+        "variables": params.variables,
+        "record_count": len(records),
+        "records": records,
+    }

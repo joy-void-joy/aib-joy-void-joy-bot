@@ -26,7 +26,6 @@ from claude_agent_sdk import (
     UserMessage,
 )
 
-from pydantic import BaseModel, Field
 
 from aib.agent.client import build_client
 from aib.agent.display import (
@@ -50,6 +49,7 @@ from aib.agent.models import (
     Forecast,
     ForecastMeta,
     ForecastOutput,
+    ForecastSummary,
     MultipleChoiceForecast,
     NumericForecast,
     TokenUsage,
@@ -63,10 +63,7 @@ from aib.agent.numeric import (
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.config import settings
-from aib.tools.composition import (
-    composition_server,
-    set_run_forecast_fn,
-)
+from aib.agent.session import ForecastSession, reset_session, set_session
 from aib.paths import (
     RUNTIME_LOGS_PATH,
     TRACES_PATH,
@@ -74,7 +71,7 @@ from aib.paths import (
     sessions_dir,
     trace_logs_dir,
 )
-from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
+from aib.tools.metrics import get_metrics_summary, log_metrics_summary
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
@@ -88,6 +85,7 @@ def _build_system_prompt(
     tool_docs: str | None,
     sandbox_shared_dir: str,
     session_dir: str,
+    question_type: str = "binary",
 ) -> str:
     """Build full system prompt from template + forecasting prompt.
 
@@ -106,6 +104,7 @@ def _build_system_prompt(
             retrodict=cutoff is not None,
             sandbox_shared_dir=sandbox_shared_dir,
             session_dir=session_dir,
+            question_type=question_type,
         )
     )
 
@@ -628,29 +627,64 @@ def build_trace(
     return "\n".join(rl.lines)
 
 
-class CondensedReasoning(BaseModel):
-    """Structured output for condensed forecast narratives."""
+REVIEWER_SYSTEM_PROMPT = textwrap.dedent("""\
+    You are reviewing a forecasting agent's trace. Produce a structured review
+    covering tool usage, workflow quality, reasoning quality, and a condensed
+    narrative suitable for posting as a Metaculus comment.
 
-    narrative: str = Field(
-        description=(
-            "Cover everything: what research was done, "
-            "key evidence found, and how the conclusion was reached. "
-            "First-person voice (e.g., 'I researched...', "
-            "'I found...', 'I concluded...')."
-        )
-    )
+    ## condensed_reasoning
+
+    Write a clear, well-structured narrative covering everything: what research
+    was done, key evidence found, and how the conclusion was reached.
+    Use markdown: **bold** for key figures, bullet lists for evidence,
+    `inline code` for tickers/identifiers. Use ## subtitles (## Research,
+    ## Key Evidence, ## Conclusion) but no top-level # title.
+    First-person voice: 'I researched...', 'I found...', 'I concluded...'.
+
+    ## tool_audit
+
+    For each tool the agent used, write a compact one-line assessment in
+    by_tool. Format: "N calls, M errors (cause), impact: none/minor/significant,
+    value: high/medium/low/wasted, [notes]". Keep each entry to one line —
+    these get aggregated across many forecasts.
+
+    Also note capability_gaps (tools the agent needed but didn't have)
+    and subtle_bugs (tools that didn't error but produced misleading results).
+
+    ## workflow
+
+    Assess information gathering strategy, structured reasoning quality,
+    self-correction ability, and efficiency.
+
+    ## reasoning
+
+    Rate evidence quality, logical coherence, and calibration sense (1-5 each).
+    List strengths and weaknesses.
+
+    ## pipeline
+
+    Note any MCP errors, sandbox issues, token waste, or prompt problems.
+
+    ## future_leak (retrodict only)
+
+    If the trace is from a retrodict session, check whether the agent accessed
+    information from after the retrodict cutoff date. Verdict: CLEAN, SUSPECT,
+    or LEAKED with specific evidence.
+""")
 
 
-async def condense_reasoning(
+async def review_forecast_trace(
     trace: str,
     question_title: str,
     session_dir: Path,
     structured_output: dict[str, Any] | None = None,
-) -> str | None:
-    """Condense a full forecast trace into a readable narrative using Sonnet.
+    is_retrodict: bool = False,
+) -> ForecastSummary | None:
+    """Review a forecast trace with Opus, producing a ForecastSummary.
 
-    Writes the trace to a file and gives Sonnet the Read tool so it can
-    access the full trace without truncation.
+    Writes the trace to a file and gives Opus the Read tool so it can
+    access the full trace without truncation. Saves summary.json to
+    the session directory.
     """
     trace_file = session_dir / "trace_for_condensation.md"
     session_dir.mkdir(parents=True, exist_ok=True)
@@ -661,38 +695,37 @@ async def condense_reasoning(
         forecast_block = (
             "\n\nThe agent's final submitted forecast:\n"
             f"```json\n{json.dumps(structured_output, indent=2)}\n```\n"
-            "Your narrative MUST match this forecast. Do not infer a different "
-            "conclusion — report what the agent actually concluded."
+            "Your condensed_reasoning narrative MUST match this forecast. "
+            "Do not infer a different conclusion — report what the agent "
+            "actually concluded."
         )
 
-    system_prompt = (
-        "Condense the forecast trace into a clear, well-structured narrative. "
-        "Cover everything: what research was done, key evidence found, "
-        "and how the conclusion was reached. "
-        "Use markdown formatting extensively: **bold** for key figures and "
-        "data points, bullet lists for evidence, `inline code` for tickers "
-        "and identifiers. Use ## subtitles to organize sections (e.g., "
-        "## Research, ## Key Evidence, ## Conclusion) but no top-level # title. "
-        "Write in first-person voice throughout — use constructions like "
-        "'I researched...', 'I found...', 'I concluded...'. "
-    )
+    retrodict_instruction = ""
+    if is_retrodict:
+        retrodict_instruction = (
+            "\n\nThis is a RETRODICT trace. You MUST populate the future_leak "
+            "field. Check whether the agent accessed any information from "
+            "after the retrodict cutoff date."
+        )
+
     prompt = (
         f"Question: {question_title}\n\n"
         f"Read the full forecast trace from: {trace_file}\n"
-        f"Then produce the condensed narrative.{forecast_block}"
+        f"Then produce the structured review.{forecast_block}"
+        f"{retrodict_instruction}"
     )
 
     try:
         result_output: dict[str, Any] | None = None
         async with build_client(
-            model="sonnet",
-            system_prompt=system_prompt,
+            model="opus",
+            system_prompt=REVIEWER_SYSTEM_PROMPT,
             allowed_tools=["Read"],
             permission_mode="bypassPermissions",
             max_turns=10,
             output_format={
                 "type": "json_schema",
-                "schema": CondensedReasoning.model_json_schema(),
+                "schema": ForecastSummary.model_json_schema(),
             },
         ) as client:
             await client.query(prompt)
@@ -700,13 +733,15 @@ async def condense_reasoning(
                 if isinstance(message, ResultMessage):
                     result_output = message.structured_output
         if result_output:
-            return CondensedReasoning.model_validate(result_output).narrative
+            summary = ForecastSummary.model_validate(result_output)
+            summary_file = session_dir / "summary.json"
+            summary_file.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
+            logger.info("Saved forecast summary to %s", summary_file)
+            return summary
         return None
     except Exception:
-        logger.exception("Reasoning condensation failed")
+        logger.exception("Forecast review failed")
         return None
-    finally:
-        pass
 
 
 async def run_forecast(
@@ -739,8 +774,9 @@ async def run_forecast(
         # Sub-forecasts use timestamp-based ID since they don't have a real question_id
         session_id = f"sub_{timestamp}"
 
-    # Reset metrics for this forecast session
-    reset_metrics()
+    # Create session-scoped state (metrics, run_forecast_fn, modified_inputs)
+    session = ForecastSession(run_forecast_fn=run_forecast)
+    set_session(session)
 
     # Either fetch question or use provided context
     # Note: question_id arg is actually the post_id from the URL
@@ -873,7 +909,6 @@ async def run_forecast(
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
             sandbox,
-            composition_server,
             session_dir=notes.session,
             question_type=question_type,
             get_sources=lambda: extract_sources(all_messages),
@@ -897,6 +932,7 @@ async def run_forecast(
                     ),
                     sandbox_shared_dir=str(sandbox_shared_dir),
                     session_dir=str(notes.session),
+                    question_type=question_type,
                 ),
                 max_thinking_tokens=128_000 - 1,
                 permission_mode="bypassPermissions",
@@ -974,15 +1010,41 @@ async def run_forecast(
                             logger.debug(
                                 "Unhandled message type: %s", type(message).__name__
                             )
-        except Exception:
+        except Exception as exc:
+            if post_id > 0 and (collected_text or all_messages):
+                try:
+                    save_forecast(
+                        question_id=actual_question_id,
+                        post_id=post_id,
+                        question_title=question_title,
+                        question_type=question_type,
+                        summary=f"PARTIAL: {type(exc).__name__}: {exc}",
+                        factors=[],
+                        reasoning="\n".join(collected_text),
+                        sources_consulted=extract_sources(all_messages),
+                        partial=True,
+                        retrodict_date=cutoff.isoformat() if cutoff else None,
+                    )
+                except Exception:
+                    logger.warning("Failed to save partial forecast")
             logging.getLogger().removeHandler(_log_handler)
             _log_handler.close()
             raise
         finally:
             downloads_dir.reset(downloads_token)
+            reset_session()
 
     if result is None:
         raise RuntimeError("No result received from agent")
+
+    # Post-session Opus review (replaces Sonnet condensation)
+    forecast_summary = await review_forecast_trace(
+        build_trace(all_messages, question_title),
+        question_title,
+        notes.session,
+        structured_output=result.structured_output,
+        is_retrodict=cutoff is not None,
+    )
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
@@ -1004,11 +1066,8 @@ async def run_forecast(
             ),
             "",
         ),
-        condensed_reasoning=await condense_reasoning(
-            build_trace(all_messages, question_title),
-            question_title,
-            notes.session,
-            structured_output=result.structured_output,
+        condensed_reasoning=(
+            forecast_summary.condensed_reasoning if forecast_summary else None
         ),
         sources_consulted=extract_sources(all_messages),
         duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
@@ -1211,7 +1270,3 @@ async def run_forecast(
     _log_handler.close()
 
     return output
-
-
-# Wire up spawn_subquestions to use run_forecast recursively
-set_run_forecast_fn(run_forecast)

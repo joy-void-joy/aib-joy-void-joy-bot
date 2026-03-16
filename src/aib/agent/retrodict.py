@@ -25,15 +25,17 @@ from claude_agent_sdk.types import HookContext
 from aib.agent.hooks import HooksConfig
 from aib.retrodict_context import retrodict_cutoff
 
-logger = logging.getLogger(__name__)
+from aib.agent.session import get_session
 
-# Track hook modifications so display code can show actual tool params
-_modified_inputs: dict[str, dict[str, Any]] = {}
+logger = logging.getLogger(__name__)
 
 
 def get_modified_input(tool_use_id: str) -> dict[str, Any] | None:
     """Look up the post-hook input for a tool call, if modified by retrodict."""
-    return _modified_inputs.get(tool_use_id)
+    try:
+        return get_session().modified_inputs.get(tool_use_id)
+    except RuntimeError:
+        return None
 
 
 _DENIED_TOOLS = frozenset(

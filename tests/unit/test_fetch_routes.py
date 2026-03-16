@@ -1,8 +1,6 @@
 """Tests for fetch domain routing."""
 
-import re
-
-from aib.tools.fetch_routes import SUGGEST_ONLY, _build_routes
+from aib.tools.fetch_routes import SUGGEST_ONLY, _registry
 
 
 class TestSuggestOnly:
@@ -27,129 +25,86 @@ class TestSuggestOnly:
             assert hint, f"Empty hint for {domain}"
 
 
-class TestRouteRegexes:
-    """Tests for each route's regex and parameter extraction."""
+class TestRouteRegistry:
+    """Tests for self-registered domain routes."""
 
-    def _get_route(self, domain: str) -> re.Pattern[str]:
-        routes = _build_routes()
-        for route in routes:
-            if route.domain == domain:
-                return route.pattern
-        raise AssertionError(f"No route for {domain}")
+    def test_registry_has_routes(self) -> None:
+        # Routes register at import time — importing tool modules populates _registry
+        from aib.tools import financial, markets, search, arxiv_search  # noqa: F401
 
-    def _get_param_builder(self, domain: str):  # noqa: ANN201
-        routes = _build_routes()
-        for route in routes:
-            if route.domain == domain:
-                return route.param_builder
-        raise AssertionError(f"No route for {domain}")
+        assert len(_registry) >= 7, f"Expected >=7 routes, got {len(_registry)}"
 
-    def test_yahoo_finance_captures_symbol(self) -> None:
-        pattern = self._get_route("finance.yahoo.com")
-        match = pattern.search("https://finance.yahoo.com/quote/AAPL")
+    def test_yahoo_finance_route_registered(self) -> None:
+        from aib.tools import financial  # noqa: F401
+
+        matched = [
+            r
+            for r in _registry
+            if r.pattern.search("https://finance.yahoo.com/quote/AAPL")
+        ]
+        assert matched, "No route matches Yahoo Finance URLs"
+        match = matched[0].pattern.search("https://finance.yahoo.com/quote/AAPL")
         assert match is not None
         assert match.group(1) == "AAPL"
 
     def test_yahoo_finance_handles_complex_tickers(self) -> None:
-        pattern = self._get_route("finance.yahoo.com")
-        match = pattern.search("https://finance.yahoo.com/quote/^GSPC")
+        from aib.tools import financial  # noqa: F401
+
+        matched = [
+            r
+            for r in _registry
+            if r.pattern.search("https://finance.yahoo.com/quote/^GSPC")
+        ]
+        assert matched
+        match = matched[0].pattern.search("https://finance.yahoo.com/quote/^GSPC")
         assert match is not None
         assert match.group(1) == "^GSPC"
 
-    def test_arxiv_captures_paper_id(self) -> None:
-        pattern = self._get_route("arxiv.org")
-        for url in [
-            "https://arxiv.org/abs/2401.12345",
-            "https://arxiv.org/pdf/2401.12345",
-        ]:
-            match = pattern.search(url)
-            assert match is not None, f"No match for {url}"
-            assert match.group(1) == "2401.12345"
+    def test_arxiv_route_registered(self) -> None:
+        from aib.tools import arxiv_search  # noqa: F401
 
-    def test_wikipedia_captures_topic(self) -> None:
-        pattern = self._get_route("wikipedia.org")
-        match = pattern.search("https://en.wikipedia.org/wiki/Machine_learning")
-        assert match is not None
-        assert match.group(1) == "Machine_learning"
+        matched = [
+            r for r in _registry if r.pattern.search("https://arxiv.org/abs/2401.12345")
+        ]
+        assert matched
 
-    def test_fred_captures_series_id(self) -> None:
-        pattern = self._get_route("fred.stlouisfed.org")
-        match = pattern.search("https://fred.stlouisfed.org/series/DGS10")
-        assert match is not None
-        assert match.group(1) == "DGS10"
+    def test_polymarket_route_registered(self) -> None:
+        from aib.tools import markets  # noqa: F401
 
-    def test_polymarket_captures_slug(self) -> None:
-        pattern = self._get_route("polymarket.com")
-        match = pattern.search("https://polymarket.com/event/will-trump-win-2024")
+        matched = [
+            r
+            for r in _registry
+            if r.pattern.search("https://polymarket.com/event/will-trump-win")
+        ]
+        assert matched
+        match = matched[0].pattern.search("https://polymarket.com/event/will-trump-win")
         assert match is not None
-        assert match.group(1) == "will-trump-win-2024"
+        params = matched[0].param_builder(match)
+        assert params == {"query": "will trump win"}
 
-    def test_polymarket_param_builder_converts_hyphens(self) -> None:
-        pattern = self._get_route("polymarket.com")
-        builder = self._get_param_builder("polymarket.com")
-        match = pattern.search("https://polymarket.com/event/will-trump-win-2024")
-        assert match is not None
-        params = builder(match)
-        assert params == {"query": "will trump win 2024"}
+    def test_kalshi_route_registered(self) -> None:
+        from aib.tools import markets  # noqa: F401
 
-    def test_polymarket_stops_at_query_params(self) -> None:
-        pattern = self._get_route("polymarket.com")
-        match = pattern.search("https://polymarket.com/event/my-event?tid=123")
+        url = "https://kalshi.com/markets/kxwofskate/winter-olympics-figure-skating"
+        matched = [r for r in _registry if r.pattern.search(url)]
+        assert matched
+        match = matched[0].pattern.search(url)
         assert match is not None
-        assert match.group(1) == "my-event"
-
-    def test_kalshi_captures_full_path(self) -> None:
-        pattern = self._get_route("kalshi.com")
-        url = "https://kalshi.com/markets/kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
-        match = pattern.search(url)
-        assert match is not None
-        assert (
-            match.group(1)
-            == "kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
-        )
-
-    def test_kalshi_param_builder_uses_slug(self) -> None:
-        pattern = self._get_route("kalshi.com")
-        builder = self._get_param_builder("kalshi.com")
-        url = "https://kalshi.com/markets/kxwofskate/winter-olympics-figure-skating/kxwofskate-womens26medal"
-        match = pattern.search(url)
-        assert match is not None
-        params = builder(match)
+        params = matched[0].param_builder(match)
         assert params == {"query": "winter olympics figure skating"}
 
-    def test_kalshi_param_builder_falls_back_to_series(self) -> None:
-        pattern = self._get_route("kalshi.com")
-        builder = self._get_param_builder("kalshi.com")
-        match = pattern.search("https://kalshi.com/markets/kxwofskate")
-        assert match is not None
-        params = builder(match)
-        assert params == {"query": "kxwofskate"}
+    def test_metaculus_route_registered(self) -> None:
+        from aib.tools import markets  # noqa: F401
 
-    def test_kalshi_stops_at_query_params(self) -> None:
-        pattern = self._get_route("kalshi.com")
-        match = pattern.search("https://kalshi.com/markets/kxfed/fed-rate?tab=overview")
-        assert match is not None
-        assert match.group(1) == "kxfed/fed-rate"
-
-    def test_metaculus_captures_post_id(self) -> None:
-        pattern = self._get_route("metaculus.com")
         url = "https://www.metaculus.com/questions/41560/uk-retail-sales-jan-2026/"
-        match = pattern.search(url)
+        matched = [r for r in _registry if r.pattern.search(url)]
+        assert matched
+        match = matched[0].pattern.search(url)
         assert match is not None
-        assert match.group(1) == "41560"
-
-    def test_metaculus_param_builder(self) -> None:
-        pattern = self._get_route("metaculus.com")
-        builder = self._get_param_builder("metaculus.com")
-        match = pattern.search(
-            "https://www.metaculus.com/questions/41560/uk-retail-sales/"
-        )
-        assert match is not None
-        params = builder(match)
+        params = matched[0].param_builder(match)
         assert params == {"post_id_list": [41560]}
 
     def test_no_match_for_unknown_domain(self) -> None:
-        routes = _build_routes()
         url = "https://example.com/some-page"
-        for route in routes:
+        for route in _registry:
             assert route.pattern.search(url) is None

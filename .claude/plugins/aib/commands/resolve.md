@@ -24,13 +24,13 @@ Based on user direction, run the resolver with appropriate flags:
 
 ```bash
 # Dry run all unresolved (recommended first step)
-uv run aib-devtools resolution resolve --dry-run
+uv run aib-devtools resolution tentative --dry-run
 
 # Resolve specific posts
-uv run aib-devtools resolution resolve 42115 42395 --dry-run
+uv run aib-devtools resolution tentative 42115 42395 --dry-run
 
 # Apply with custom confidence threshold
-uv run aib-devtools resolution resolve --min-confidence 0.8
+uv run aib-devtools resolution tentative --min-confidence 0.8
 ```
 
 **Default workflow:**
@@ -51,12 +51,12 @@ For any questionable results, investigate further:
 - Web search for the specific resolution event
 - Check `uv run aib-devtools api post <post_id>` for API-level details
 
-### Phase 4: Official resolution check
+### Phase 4: Official resolution sync
 
 After applying tentative resolutions, run the official check to ensure authoritative resolutions override any tentative ones:
 
 ```bash
-uv run aib-devtools resolution check
+uv run aib-devtools resolution sync
 ```
 
 This scrapes the user's Metaculus profile page for resolutions and scores. Profile-sourced resolutions (source=scrape) always take precedence over tentative ones.
@@ -75,8 +75,8 @@ Resolutions are tracked with a `resolution_source` field:
 
 | Source | Priority | Set by |
 |--------|----------|--------|
-| `scrape` | Highest | `resolution check` / `scores scrape` (from track record page) |
+| `scrape` | Highest | `resolution sync` / `scores scrape` (from track record page) |
 | `manual` | Medium | `resolution set` (human override) |
-| `tentative` | Low | `resolution resolve` (AI agent check) |
+| `tentative` | Low | `resolution tentative` (AI agent check) |
 
 Higher-priority sources always overwrite lower ones.

@@ -20,6 +20,10 @@ Gather metadata for each post ID and group by version.
 
 ### 1a. Metadata collection
 
+```bash
+uv run aib-devtools analysis dashboard
+```
+
 For each post ID:
 ```bash
 uv run aib-devtools trace show <post_id>
@@ -55,7 +59,7 @@ For each **resolved** question, investigate the real-world outcome by looking at
 
 ```bash
 # Update forecast JSONs with any new resolutions first
-uv run aib-devtools resolution check
+uv run aib-devtools resolution sync
 
 # Then inspect the full API data for each resolved question
 uv run aib-devtools api post <post_id>
@@ -115,32 +119,21 @@ Options: "Proceed to trace analysis" / "Investigate [post] deeper first"
 
 **Do NOT launch subagents until the user confirms.** The trace explorer needs this resolution context — rushing past it produces shallow analysis.
 
-## Phase 3: Parallel Subagent Analysis
+## Phase 3: Analysis
 
-Launch both subagents simultaneously — they are independent.
+### 3a. Read summary.json files
 
-### 3a. Trace Explorer
+For each post ID, find and read the summary.json from the session directory. Extract:
+- `tool_audit.by_tool` — per-tool qualitative assessment
+- `tool_audit.capability_gaps` and `subtle_bugs`
+- `reasoning` — evidence quality, logical coherence, calibration sense
+- `workflow` — info gathering, structured reasoning, self-correction, efficiency
+- `future_leak` — for retrodict traces
+- `notable_observations` and `actionable_improvements`
 
-```
-Task(subagent_type="aib-workflow:trace-explorer", prompt="""
-Analyze traces for these post IDs: [list all IDs with traces]
+Cross-reference with Phase 2 resolution investigation — where does the summary align or disagree with what actually happened?
 
-Context:
-- Version grouping: [from Phase 1c]
-- Current agent version: [from Phase 1b]
-- Score data: [from Phase 1a]
-- Resolution investigation: [Phase 2 results — actual outcome, error classification, counterfactual per resolved question]
-
-Focus areas:
-- Reasoning quality per forecast — strengths and weaknesses
-- Tool use patterns and failures
-- For resolved questions: where reasoning diverged from reality
-- Capability requests from meta-reflections
-- Per forecast: 1-2 most notable observations
-
-Return the standard pattern report.
-""")
-```
+If summary.json is missing for any post, note it. If needed for deeper investigation, use `uv run aib-devtools trace log <post_id>`.
 
 ### 3b. Version Explorer
 
@@ -174,7 +167,7 @@ Cross-reference trace findings with version diffs and resolution investigation. 
 
 ### 4a. Map issues to version changes
 
-For each issue the trace-explorer found:
+For each issue found in summary.json or trace analysis:
 
 1. Check the version diff — is the cause in scaffolding that changed?
 2. Classify:
@@ -184,7 +177,7 @@ For each issue the trace-explorer found:
 
 ### 4b. Map strengths to version changes
 
-For each strength the trace-explorer found:
+For each strength found in summary.json or trace analysis:
 
 1. Check the version diff — is the enabling scaffolding still present?
 2. Classify:
@@ -271,3 +264,4 @@ Options: "Write the report" / "Investigate [issue] further" / "Adjust recommenda
 - **Quote both sides.** Cite trace evidence AND version diff evidence for each finding.
 - **Strengths matter as much as weaknesses.** Confirming what works prevents regressions.
 - **Be honest about coverage.** If all forecasts are current-version, say so — the audit becomes a trace analysis without version comparison.
+- **Mark analyzed.** After the report: `uv run aib-devtools analysis mark <post_ids>`

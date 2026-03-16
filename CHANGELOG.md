@@ -2,9 +2,35 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v4.0.0 (2026-03-16)
+
+Unified @mcp_tool decorator; session-scoped state; Opus reviewer with ForecastSummary; feedback loop decomposition
+- tools: @mcp_tool decorator unifies @tool + @tracked + validation + error handling + url_route registration
+- tools: all 30+ tools migrated from manual MCP response handling to @mcp_tool
+- tools: new search_markets unifies Polymarket/Manifold/Kalshi search with LLM relevance filtering
+- agent: ForecastSession replaces module-level globals with ContextVar-based session state
+- agent: Opus reviewer replaces Sonnet condenser — produces structured ForecastSummary (tool audit, workflow assessment, reasoning review, pipeline health)
+- agent: partial forecast recovery saves reasoning on agent crash
+- agent: question-type conditional prompts (numeric/discrete skip meta-prediction sections)
+- models: flexible percentile_values dict replaces fixed percentile_10..percentile_90 fields
+- prompts: Threshold Questions subsection, sensitivity testing, factor-as-scaffolding reframe
+- prompts: reflection restructured — tool_audit and process_reflection moved to Opus reviewer
+- devtools: analysis.py replaces feedback.py + metrics.py + track_record.py (dashboard, tool-health, tool-needs, prompt-health, review)
+- devtools: resolution commands renamed (check→sync, resolve→tentative, +set)
+- commands: monolithic feedback-loop.md decomposed into fb-status, fb-investigate, fb-analyze, fb-reflect, fb-implement, fb-retrodict
+
 ## v3.6.0 (2026-03-11)
 
-add MC reflection, file-based trace condensation, save CDF/scores in output
+Unified market search; reflection and prompt quality improvements; reviewer adversarial check
+- prompts: reframe factors as scaffolding — agent owns its probability, factors organize evidence
+- prompts: rewrite reflection guidance as prose (adversarial reasoning, calibration check, tool audit, update triggers)
+- prompts: add Threshold Questions guidance (model continuous quantity first, derive crossing probability)
+- prompts: add sensitivity testing guidance for numeric questions
+- prompts: soften "trust your computation" to encourage distributional variants via additional simulations
+- prompts: add small-CP-sample warning to meta-predictions section
+- tools: add unified prediction market search across Polymarket, Manifold, and Kalshi with relevance filtering
+- tools: fix Wikipedia URL-encoding bug in direct article handler (unquote titles)
+- reviewer: add adversarial reasoning check (warn when assessment lacks counterarguments)
 - MC question reflection with softmax gap metrics
 - file-based trace reading for reasoning condensation
 - CDF + numeric bounds + score fields in forecast output

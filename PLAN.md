@@ -1,8 +1,10 @@
-# Implementation Plan: Feedback Loop & Devtools Overhaul
+# Feedback Loop & Devtools Architecture
 
-## Overview
+## Current Status
 
-Decompose the monolithic `/feedback-loop` (850 lines) into focused subcommands, each backed by purpose-built devtools. Add a post-session Opus reviewer that produces structured `summary.json` files alongside each forecast, replacing the trace-explorer subagent and Sonnet condensation step. Kill overlapping devtools (`feedback collect`, `metrics`). Rename confusing commands (`resolution check` → `resolution sync`, `resolution resolve` → `resolution tentative`).
+The feedback loop is decomposed into 6 focused subcommands (`/fb-status`, `/fb-investigate`, `/fb-analyze`, `/fb-reflect`, `/fb-implement`, `/fb-retrodict`), orchestrated by `/feedback-loop`. Each subcommand is independently invocable and backed by purpose-built devtools in `src/aib/devtools/analysis.py`.
+
+A post-session Opus reviewer produces structured `summary.json` files alongside each forecast trace. These are the central data source for downstream analysis — devtools aggregate them rather than re-interpreting traces with LLMs.
 
 ## Design Decisions
 
@@ -10,344 +12,474 @@ Decompose the monolithic `/feedback-loop` (850 lines) into focused subcommands, 
 |----------|--------|-----------|
 | Subcommand structure | Separate .md files | Each invocable independently; orchestrator calls in sequence |
 | Post-session reviewer | Opus, combined with condensation | Replaces trace-explorer + Sonnet condensation in one pass |
-| Summary storage | `summary.json` alongside forecast JSON | Easy iteration for devtools; separate from forecast data |
-| Tool audit structure | `by_tool: dict[str, PerToolReview]` | Mirrors tool_metrics; trivial to aggregate across forecasts |
+| Summary storage | `summary.json` in session directory | Easy iteration for devtools; separate from forecast data |
+| Tool audit structure | `by_tool: dict[str, str]` (compact one-line format) | Structured PerToolReview was too complex for LLM output; one-line format with consistent keywords enables grep-based aggregation |
 | Trace-explorer | Removed | summary.json + devtools aggregation replaces it |
-| Version-explorer | Kept, available to both audit and feedback-loop | Code diffs still need LLM; CHANGELOG handles the overview |
+| Version-explorer | Kept | Code diffs still need LLM; CHANGELOG handles the overview |
 | Resolution naming | `sync` + `tentative` | `check`/`resolve` were near-synonymous |
 | Dashboard | Fast by default, `--refresh` flag | Don't block on API calls; opt-in sync |
-| Feedback-loop principles | Stay in `feedback-loop.md` | In scope when running full loop; subcommands are standalone |
-| Analysis doc template | Orchestrator prescribes structure | Ensures consistency; each subcommand fills its section |
 | Done marking | Orchestrator-level, after full session | Subcommands don't mark; orchestrator marks at the end |
-| CP comparison | Move to `scores cp` | Low priority; peer_score already embeds CP performance |
 | Condensed reasoning | Separate field in summary.json | Short `summary` for review; longer `condensed_reasoning` for Metaculus comments |
 
----
+## Architecture
 
-## Step 1: Post-Session Opus Reviewer
+```
+/feedback-loop (orchestrator)
+  ├── /fb-status        → analysis dashboard, analysis status, scores show
+  ├── /fb-investigate   → scores show, summary.json, web search, error classification
+  ├── /fb-analyze       → analysis tool-health, analysis tool-needs, version-diff
+  ├── /fb-reflect       → analysis tracking-gaps, prompt-health, process assessment
+  ├── /fb-implement     → code changes, version bump, commit
+  └── /fb-retrodict     → queue missed, candidate selection
 
-> Central to the entire design. Without summary.json, the devtools have nothing to aggregate.
+Post-session reviewer (core.py:review_forecast_trace)
+  → ForecastSummary structured output → summary.json
 
-### 1a. ForecastSummary Pydantic Model
-
-Create in `src/aib/agent/models.py`:
-
-```python
-class PerToolReview(BaseModel):
-    calls: int
-    errors: int
-    error_messages: list[str]
-    impact: str                     # "none" / "minor" / "significant"
-    recovery: str | None
-    value: str                      # "high" / "medium" / "low" / "wasted"
-    missing_calls: str | None       # should have been called but wasn't
-    notes: str
-
-class ToolAudit(BaseModel):
-    total_calls: int
-    total_errors: int
-    by_tool: dict[str, PerToolReview]
-    capability_gaps: list[str]
-    subtle_bugs: list[str]
-
-class WorkflowAssessment(BaseModel):
-    info_gathering: str
-    structured_reasoning: str
-    self_correction: str
-    efficiency: str
-
-class ReasoningReview(BaseModel):
-    evidence_quality: int           # 1-5
-    evidence_notes: str
-    logical_coherence: int          # 1-5
-    logical_notes: str
-    calibration_sense: int          # 1-5
-    calibration_notes: str
-    strengths: list[str]
-    weaknesses: list[str]
-
-class PipelineHealth(BaseModel):
-    issues: list[str]
-    clean: bool
-
-class FutureLeak(BaseModel):
-    verdict: str                    # "CLEAN" / "SUSPECT" / "LEAKED"
-    evidence: list[str]
-
-class ForecastSummary(BaseModel):
-    """Post-session structured review of a forecast trace."""
-    summary: str                    # 2-3 sentence review summary
-    condensed_reasoning: str        # Full narrative for Metaculus comments
-    tool_audit: ToolAudit
-    workflow: WorkflowAssessment
-    reasoning: ReasoningReview
-    pipeline: PipelineHealth
-    future_leak: FutureLeak | None  # only for retrodict traces
-    notable_observations: list[str]
-    actionable_improvements: list[str]
+Analysis devtools (analysis.py)
+  dashboard, tool-health, tool-needs, tracking-gaps, prompt-health,
+  version-diff, mark/unmark, status, review
 ```
 
-### 1b. Replace `condense_reasoning()` in core.py
+## Data Flow
 
-Replace the Sonnet `condense_reasoning()` function with an Opus reviewer that:
-1. Writes trace to `trace_for_condensation.md` (same as current)
-2. Runs Opus with `Read` tool access + `ForecastSummary` StructuredOutput
-3. Saves output to `summary.json` alongside the forecast JSON
-4. Returns `condensed_reasoning` string for `ForecastOutput`
+```
+Forecast run
+  → trace_for_condensation.md (session dir)
+  → Opus reviewer → summary.json (session dir)
+  → condensed_reasoning → ForecastOutput → Metaculus comment
 
-Location: `src/aib/agent/core.py` lines 644-709 (replace `condense_reasoning`) and line 1007 (call site)
+Feedback loop
+  → analysis devtools read summary.json files
+  → aggregate tool health, capability gaps, reasoning patterns
+  → inform implementation priorities
+```
 
-Output path: `notes/traces/<version>/forecasts/<post_id>/<timestamp>_summary.json`
+## Remaining Work
 
-The Opus reviewer prompt should cover everything from `/review`:
-- Tool use audit (errors, recovery, subtle bugs, missing calls)
-- Workflow assessment (info gathering, structure, self-correction, efficiency)
-- Reasoning quality (evidence, logic, calibration)
-- Pipeline health (MCP, sandbox, tokens, prompt issues)
-- Future-leak detection (for retrodict traces — check retrodict_date)
-- Condensed reasoning narrative (first-person, markdown, matches the forecast)
+- [ ] Validate by running `/feedback-loop` end-to-end with the new subcommands
+- [ ] After first session: assess whether `by_tool` one-line format is aggregatable enough
+- [ ] After first session: assess whether subcommand gates and scoped `allowed-tools` work well in practice
+=======
+**Phase**: Feedback Loop & Devtools Overhaul (Phase 8)
 
-### 1c. CLI Backfill Command
+---
 
-Add `analysis review` command to `src/aib/devtools/analysis.py`:
+## Important Distinction
+
+**.claude/ directory** is for **Claude Code** (the development assistant working on this codebase). It contains settings, plugins, and instructions for the IDE-based Claude.
+
+**The forecaster agent** (built with Claude Agent SDK) is a separate runtime that will have its own tools configured via `allowed_tools` and `mcp_servers` in `ClaudeAgentOptions`. It does NOT use `.claude/` settings.
+
+---
+
+## Phase 8: Feedback Loop & Devtools Overhaul
+
+> Goal: Decompose the monolithic `/feedback-loop` (850 lines) into focused subcommands, each backed by purpose-built devtools. Kill overlapping devtools (`feedback collect`, `metrics`). Preserve every concern from the original without dropping any.
+
+### Problem
+
+1. `/feedback-loop` is 850 lines mixing workflow, reference material, and process guidance
+2. `/audit` duplicates 40% of feedback-loop (resolution investigation, trace-explorer launch, error classification)
+3. `feedback collect` mashes resolution matching, CP comparison, retrodict collection, and state tracking into one blob
+4. `metrics` group overlaps with `scores` and has no tool-error focus
+5. Tool errors, capability requests, and tracking quality have no dedicated devtools — they require launching the trace-explorer (expensive) or manual reading
+6. No way to mark forecasts as "analyzed" outside of the now-deprecated `feedback collect`
+7. Changes get written but never committed (noted as #1 process failure across 4 sessions)
+
+### Concern Inventory
+
+Every concern from the original `/feedback-loop` command, mapped to where it lives in the new design:
+
+| # | Concern | Current Location | New Location |
+|---|---------|-----------------|--------------|
+| 1 | Three-level framework (object/meta/meta-meta) | Preamble | Orchestrator preamble + `/fb-reflect` |
+| 2 | Input handling (post IDs or auto-discover) | Input section | Orchestrator |
+| 3 | CP visibility constraint | Preamble | CLAUDE.md (already partially there) |
+| 4 | Bitter Lesson guiding principle | Preamble | CLAUDE.md |
+| 5 | Offline mode handling | Preamble | Devtools handle gracefully; orchestrator note |
+| 6 | Previous session continuity | Phase 0 | `/fb-status` |
+| 7 | "Done" marking / analyzed items | Phase 0 | `analysis mark/unmark/status` |
+| 8 | Current version identification | Phase 1a | `analysis dashboard` |
+| 9 | Resolution checking/updating | Phase 1a | `resolution check` (exists) |
+| 10 | Tentative AI resolutions | Phase 1a | `resolution resolve` (exists) |
+| 11 | Scores collection | Phase 1a | `scores show` (exists) |
+| 12 | Version/type/resolution grouping | Phase 1a | `analysis dashboard` |
+| 13 | Per-forecast resolution investigation | Phase 1b | `/fb-investigate` |
+| 14 | Error classification (9 types) | Phase 1b | `/fb-investigate` |
+| 15 | Counterfactual analysis | Phase 1b | `/fb-investigate` |
+| 16 | Calibration aggregate view | Phase 1c | `calibration summary` (exists) |
+| 17 | Pattern verification vs individual cases | Phase 1c | `/fb-investigate` |
+| 18 | Missed question identification | Phase 1d | `queue missed` (exists) |
+| 19 | Retrodiction execution | Phase 1d | `/fb-retrodict` |
+| 20 | Blind mode documentation | Phase 1d | `/fb-retrodict` (condensed) |
+| 21 | Future-leak detection (tool-level) | Phase 1d | trace-explorer (exists) |
+| 22 | Future-leak detection (LLM training) | Phase 1d | trace-explorer (exists) |
+| 23 | Known leak vectors | Phase 1d | `/fb-retrodict` reference |
+| 24 | Retrodiction result collection | Phase 1e | `scores show --source retrodict` |
+| 25 | Retrodiction accuracy evaluation | Phase 1e | `/fb-investigate` |
+| 26 | Retrodiction airtightness evaluation | Phase 1e | trace-explorer (exists) |
+| 27 | Tool effectiveness under blind mode | Phase 1e | `/fb-traces` |
+| 28 | CP divergence interpretation | Phase 1f | CLAUDE.md |
+| 29 | Gate: post-mortem presentation | Phase 1 gate | `/fb-investigate` gate |
+| 30 | Version scoping (auto-scope) | Phase 2 | CLAUDE.md devtools section |
+| 31 | Trace-explorer launch | Phase 2a | `/fb-traces` |
+| 32 | Version reviewer usage | Phase 2a | `/fb-traces` |
+| 33 | Version explorer usage | Phase 2a | `/fb-traces` |
+| 34 | Deep-dive on flagged traces | Phase 2b | `/fb-traces` |
+| 35 | Tool failure evaluation | Phase 2c | `analysis tool-health` + `/fb-traces` |
+| 36 | Capability request evaluation | Phase 2c | `analysis tool-needs` + `/fb-traces` |
+| 37 | Reasoning quality evaluation | Phase 2c | `/fb-traces` |
+| 38 | Tool value assessment | Phase 2c | `analysis tool-health` |
+| 39 | Meta: actionable insight self-check | Phase 3a | `/fb-reflect` |
+| 40 | Meta: tracking data quality | Phase 3b | `analysis tracking-gaps` + `/fb-reflect` |
+| 41 | Meta: missing data identification | Phase 3c | `/fb-reflect` |
+| 42 | Gate: approved priority list | Phase 2+3 gate | `/fb-implement` gate |
+| 43 | Prompt health (rewrite vs patch) | Phase 4 P0 | `analysis prompt-health` + `/fb-implement` |
+| 44 | Fix failing tools | Phase 4 P1 | `/fb-implement` |
+| 45 | Build requested tools | Phase 4 P2 | `/fb-implement` |
+| 46 | Improve subagents | Phase 4 P3 | `/fb-implement` |
+| 47 | Simplify prompts | Phase 4 P4 | `/fb-implement` |
+| 48 | Patch count tracking | Phase 4 | `analysis prompt-health` |
+| 49 | Version bumps | Phase 4 | `/fb-implement` |
+| 50 | Change verification (git diff) | Phase 4 | `/fb-implement` |
+| 51 | Change logging in analysis doc | Phase 4 | `/fb-implement` |
+| 52 | Meta-meta: document self-evaluation | Phase 5a | `/fb-reflect` |
+| 53 | Meta-meta: build missing scripts | Phase 5b | `/fb-reflect` |
+| 54 | Meta-meta: improve data collection | Phase 5c | `/fb-reflect` |
+| 55 | Meta-meta: update this document | Phase 5d | `/fb-reflect` |
+| 56-59 | Anti-patterns (4 types) | Anti-patterns | CLAUDE.md |
+| 60 | Analysis document template | Template section | Orchestrator |
+| 61 | Command reference | Commands Available | CLAUDE.md devtools section |
+| 62-66 | Periodic maintenance (5 items) | Periodic section | `/fb-reflect` |
+| 67 | Key questions checklist (11 items) | Key Questions | Distributed across subcommands |
+| 68 | Retrodiction queue selection | Phase 6 | `/fb-retrodict` |
+| 69 | Selection criteria | Phase 6 | `/fb-retrodict` |
+| 70 | Output format | Phase 6 | `/fb-retrodict` |
+| 71 | Feedback cycle description | Phase 6 | `/fb-retrodict` |
+| 72 | Completion checklist | Checklist | Orchestrator |
+| 73 | Anti-skip guards | Checklist | Orchestrator |
+
+### Step 1: New Devtools — `analysis` Group
+
+Create `src/aib/devtools/analysis.py` with these commands:
+
+#### `analysis dashboard`
+
+One-screen health check replacing the first 30% of every feedback session.
+
+```
+=== Feedback Dashboard (v3.6.0) ===
+
+Resolution Pipeline:
+  Last scrape: 2026-03-15 16:21:36
+  Resolved (all): 121 binary, 63 numeric
+  Resolved (v3.6.0): 1
+  Unanalyzed: 14 forecasts
+
+Calibration (all-versions):
+  Binary: Brier 0.200, ECE 0.13 (n=121)
+  Numeric: 79% CI coverage (n=63)
+
+Tool Health (v3.6.0, 15 forecasts):
+  ⚠ search_exa:      7/7 errors (100%)
+  ⚠ get_cp_history:   6/6 errors (100%)
+  ⚠ polymarket_price: 6/6 junk (100%)
+  ⚠ fetch_url:        11/78 errors (14.1%)
+    reflection:       3/18 errors (16.7%)
+    web_search:       6/86 errors (7.0%)
+
+Uncommitted Changes: 14 files modified (git diff --stat)
+
+Previous Session: 20260316_analysis.md
+  Key finding: CDF pipeline tail distortion
+  Changes: 1 committed (cdf-fix), 14 still uncommitted
+```
+
+Data sources:
+- `tool_metrics.by_tool` from all forecast JSONs
+- `scores show --resolved` summary
+- `calibration summary` headline
+- `git diff --stat` for uncommitted changes
+- Most recent `*_analysis.md` for previous session
+- `analysis status` for unanalyzed count
+
+Flags: `--version V`, `--all-versions`
+
+#### `analysis tool-health`
+
+Replaces `metrics tools` + `metrics errors`. Focused on actionable tool health.
+
+```
+=== Tool Health (v3.6.0, 15 forecasts) ===
+
+Tool               Calls  Errors  Rate    Avg ms  Status
+─────────────────────────────────────────────────────────
+web_search           86       6   7.0%    15056   OK
+fetch_url            78      11  14.1%    11025   ⚠ FAILING
+wikipedia            45       0   0.0%      216   OK
+reflection           18       3  16.7%   140165   ⚠ FAILING
+get_metaculus_q       8       0   0.0%      431   OK
+search_exa            7       7 100.0%     5098   ✗ BROKEN
+get_cp_history        6       6 100.0%      312   ✗ BROKEN (by design)
+polymarket_price      6       0   0.0%     2341   OK (but 6 junk results)
+
+⚠ Flagged tools (>10% error rate):
+  search_exa: 400 Bad Request (all 7 calls) — posts: 42510-42516
+  fetch_url: 403 on congress.gov(3), bls.gov(4), oscars.org(2), hockey-reference(2)
+  reflection: StructuredOutput parse failures — posts: 42513, 42514, 42632
+```
+
+Data sources: `tool_metrics.by_tool` from forecast JSONs
+Flags: `--version V`, `--since TIMESTAMP`, `--threshold N` (error rate threshold, default 10%)
+
+#### `analysis tool-needs`
+
+Extracts capability requests from `reflection.yaml` files.
+
+```
+=== Agent Capability Requests (v3.6.0, 15 reflections) ===
+
+Frequency  Request                                    Posts
+─────────────────────────────────────────────────────────────
+  3/15     Sports/standings API for structured data   42562, 42510, 42511
+  2/15     Wayback Machine page revision history      42511, 42636
+  1/15     MarketWatch data format verification       42561
+
+Source fields: tool_audit, process_reflection
+```
+
+Data sources: `reflection.yaml` files under `sessions/*/`
+Parses `tool_audit` and `process_reflection` for capability request patterns
+Flags: `--version V`
+
+#### `analysis tracking-gaps`
+
+Meta-level: is the agent emitting enough data for analysis?
+
+```
+=== Tracking Gaps (v3.6.0) ===
+
+Forecasts: 15 total
+  With tool_metrics: 15/15 ✓
+  With reflection.yaml: 15/15 ✓
+  With trace.md: 15/15 ✓
+  With token_usage: 15/15 ✓
+  With sources_consulted: 15/15 ✓
+  With factors: 14/15 (missing: 42512 — event already happened, no factors needed)
+
+Field Coverage:
+  resolution: 1/15 (14 pending)
+  peer_score: 1/15
+  submitted_at: 15/15
+```
+
+Data sources: forecast JSONs + session directories
+Flags: `--version V`
+
+#### `analysis prompt-health`
+
+Automated prompt health check.
+
+```
+=== Prompt Health ===
+
+File: src/aib/agent/prompts.py
+  Total lines: 426
+  Sections: 11
+  Growth since v3.4.0: +43 lines (+11.2%)
+
+Patch indicators:
+  "if ... fails" clauses: 2
+  "Exception:" patterns: 0
+  "Note:" annotations: 3
+  Conditional rules: 4
+
+Patches since last rewrite (v3.0.0):
+  v3.4.0: "already happened" trap hardening
+  v3.5.0: MC reflection metrics
+  v3.6.0: macro context principle, breaking news guidance, reviewer escape hatch
+
+Patch count: 5 (threshold: 3)
+⚠ Consider structural rewrite evaluation
+```
+
+Data sources: `src/aib/agent/prompts.py`, git log for version tags
+Flags: `--since-version V` (count patches since that version)
+
+#### `analysis mark` / `analysis unmark` / `analysis status`
+
+"Done" marking for feedback loop.
 
 ```bash
-# Review a specific forecast (reads saved trace)
-uv run aib-devtools analysis review 42510
+# Mark forecasts as analyzed
+uv run aib-devtools analysis mark 42510 42511 42512
 
-# Review all forecasts missing summary.json
-uv run aib-devtools analysis review --backfill
+# Unmark
+uv run aib-devtools analysis unmark 42510
 
-# Review with a specific version filter
-uv run aib-devtools analysis review --version 3.6.0 --backfill
+# Show status
+uv run aib-devtools analysis status
+# Analyzed: 42 forecasts
+# Unanalyzed: 14 forecasts (v3.6.0: 14)
+# Last marked: 2026-03-16 (session: 20260316_analysis.md)
 ```
 
-Reads `trace_for_condensation.md` from `sessions/<post_id>/<timestamp>/`.
+State stored in `notes/feedback_loop/analyzed.json`:
+```json
+{
+  "analyzed": {
+    "42510": {"session": "20260316_analysis.md", "marked_at": "2026-03-16T12:00:00"},
+    "42511": {"session": "20260316_analysis.md", "marked_at": "2026-03-16T12:00:00"}
+  }
+}
+```
 
-### 1d. Update submission.py
+- [x] Design complete
+- [ ] Implement `analysis.py` with all 7 commands
+- [ ] Register in `main.py`
+- [ ] Add to CLAUDE.md devtools section
 
-Change `submission.py` to read `condensed_reasoning` from:
-1. `ForecastOutput.condensed_reasoning` (same field name, now produced by Opus)
-2. No structural change needed — just the source of the data changes
+### Step 2: Kill/Merge Existing Devtools
 
-### 1e. Trim reflection.py
+#### Kill `feedback collect`
 
-Drop these fields from the reflection prompt and schema:
-- `tool_audit` — now in summary.json
-- `process_reflection` — now in summary.json
+`feedback.py` currently does:
+1. Fetch resolved questions from API → already done by `resolution check`
+2. Match forecasts to resolutions → already done by `scores show`
+3. CP comparison → move to `scores cp`
+4. Retrodict collection → move to `scores show --source retrodict`
+5. State tracking → replaced by `analysis mark/status`
 
-Reflection keeps: factors, tentative_estimate, assessment, calibration_notes, key_uncertainties, update_triggers, reviewer_critique.
+Actions:
+- [ ] Move CP comparison logic to `scores cp` command
+- [ ] Delete `feedback.py`
+- [ ] Remove from `main.py`
+- [ ] Update CLAUDE.md
 
-**Files modified:**
-- `src/aib/agent/models.py` — add ForecastSummary and related models
-- `src/aib/agent/core.py` — replace condense_reasoning with Opus reviewer
-- `src/aib/agent/reflection.py` — drop tool_audit and process_reflection
-- `src/aib/submission.py` — no change needed (reads same field)
-
----
-
-## Step 2: New Devtools — `analysis` Group
-
-Create `src/aib/devtools/analysis.py`.
-
-### `analysis dashboard [--refresh]`
-
-One-screen health check. Fast by default (reads local data only). `--refresh` runs `resolution sync` + `resolution tentative --all` first.
-
-Shows:
-- Current agent version
-- Resolution pipeline: last sync, resolved counts (all vs current version)
-- Unanalyzed forecast count (from `analyzed.json`)
-- Calibration headline (Brier, ECE, CI coverage)
-- Tool health summary (flagged tools from summary.json aggregation)
-- Uncommitted changes (`git diff --stat`)
-- Previous session summary (last `*_analysis.md`)
-
-Data sources: forecast JSONs, summary.json files, `analyzed.json`, `git diff`, `calibration summary`
-
-### `analysis tool-health [--version V] [--since T] [--threshold N]`
-
-Aggregates `tool_audit.by_tool` from all summary.json files.
-
-Shows per-tool: calls, errors, error rate, avg time, common error messages, affected posts. Flags tools above threshold (default 10%). Shows capability gaps aggregated across all summaries.
-
-### `analysis tool-needs [--version V]`
-
-Aggregates `tool_audit.capability_gaps` from all summary.json files. Groups by similarity, counts frequency, lists affected posts.
-
-### `analysis tracking-gaps [--version V]`
-
-Checks data completeness: which forecasts have summary.json, reflection.yaml, trace.md, tool_metrics, token_usage, factors, resolution, peer_score.
-
-### `analysis prompt-health [--since-version V]`
-
-Reads `src/aib/agent/prompts.py`. Counts lines, sections, growth since specified version. Scans for patch indicators ("if...fails", "Exception:", "Note:"). Counts patches since last rewrite from CHANGELOG.md.
-
-### `analysis version-diff <v1> <v2>`
-
-Reads CHANGELOG.md entries between two versions. Shows compact delta without needing LLM or git diffs. For code-level diffs, use version-explorer subagent.
-
-### `analysis mark <post_id>...` / `analysis unmark <post_id>...` / `analysis status`
-
-"Done" marking for feedback loop. State stored in `notes/feedback_loop/analyzed.json`.
-
-### `analysis review <post_id> [--backfill] [--version V]`
-
-CLI backfill: reads saved trace, runs Opus reviewer, writes summary.json. See Step 1c.
-
----
-
-## Step 3: Kill/Merge Existing Devtools
-
-### Rename resolution commands
-
-- `resolution check` → `resolution sync` (scrapes Metaculus profile via Playwright)
-- `resolution resolve` → `resolution tentative` (AI-powered early resolution)
-
-Update: `src/aib/devtools/resolution.py` command names, `/resolve` slash command references, `feedback-loop.md`, CLAUDE.md.
-
-### Kill `feedback collect`
-
-Its functionality is split:
-- Resolution matching → `scores show` (exists)
-- CP comparison → `scores cp` (new, see below)
-- Retrodict collection → `scores show --source retrodict` (exists or add flag)
-- State tracking → `analysis mark/status` (new)
-
-Delete `src/aib/devtools/feedback.py`. Remove from `main.py`.
-
-### Kill `metrics` group
+#### Kill `metrics` group
 
 | metrics command | Replacement |
 |----------------|-------------|
-| `summary` | `analysis dashboard` (cost/token summary) |
-| `tools` | `analysis tool-health` (reads summary.json, richer) |
-| `by-type` | `scores summary --by-type` (add flag) |
-| `errors` | `analysis tool-health` |
+| `metrics summary` | `analysis dashboard` |
+| `metrics tools` | `analysis tool-health` |
+| `metrics by-type` | `scores summary --by-type` |
+| `metrics errors` | `analysis tool-health` |
 
-Delete `src/aib/devtools/metrics.py`. Remove from `main.py`.
+Actions:
+- [ ] Add `--by-type` flag to `scores summary` (port `metrics by-type` logic)
+- [ ] Port cost/token summary from `metrics summary` into `analysis dashboard`
+- [ ] Delete `metrics.py`
+- [ ] Remove from `main.py`
+- [ ] Update CLAUDE.md
 
-### Add `scores cp`
+### Step 3: Command Decomposition — `/feedback-loop`
 
-Move CP comparison logic from `feedback.py` to `scores.py`. Shows our forecast vs community prediction for all binary forecasts, sorted by divergence.
+Split into 6 focused subcommand files + 1 thin orchestrator.
 
-### Add `--by-type` to `scores summary`
-
-Port the question-type grouping from `metrics by-type`.
-
-### Merge `track_record` into `scores`
-
-Move `track_record show` → `scores track-record` (or merge into `scores show` display).
-Move `track_record backfill-cdf` → `scores backfill-cdf`.
-Delete `src/aib/devtools/track_record.py`. Remove from `main.py`.
-
-### Update `/resolve` command
-
-Update to call `resolution tentative` instead of `resolution resolve`.
-
----
-
-## Step 4: Command Decomposition — `/feedback-loop`
-
-### `/fb-status` (~60 lines)
+#### `/fb-status` (~60 lines)
 
 **Replaces**: Phase 0 + Phase 1a
+**Concerns covered**: 6, 7, 8, 9, 10, 11, 12
 
 ```
-1. Run `analysis dashboard` — one-screen health check
-2. Run `analysis status` — unanalyzed forecast count
+1. Run `analysis dashboard` — see current state at a glance
+2. Run `analysis status` — how many unanalyzed forecasts?
 3. Read most recent *_analysis.md — what was done last time?
-4. If --refresh: run `resolution sync` + `resolution tentative --all`
+4. Run `resolution check` + `resolution resolve --all` — update resolution data
 5. If post IDs provided, use them; otherwise use unanalyzed forecasts
-6. Run `scores show <target_ids>` — scores for targets
-   Gate: present status + targets, ask what to focus on
+6. Present: status summary + target forecasts
+   Gate: "These N forecasts are the targets. Proceed?"
 ```
 
-### `/fb-investigate` (~80 lines)
+#### `/fb-investigate` (~80 lines)
 
 **Replaces**: Phase 1b + 1c + 1e
+**Concerns covered**: 13, 14, 15, 16, 17, 24, 25, 26, 27, 28, 29
 
 ```
-For each resolved target forecast:
-  1. Run `scores show <id>` — score, resolution value
-  2. Read summary.json — tool audit, reasoning review, workflow assessment
-  3. Investigate real-world outcome (web search, data APIs)
-  4. Classify error (9-type table, included as compact reference)
-  5. Build counterfactual
-
-For retrodictions: note airtightness from summary.json future_leak field
-
-Cross-reference with calibration:
-  Run `calibration summary` — aggregate patterns
-  Verify: does calibration confirm or contradict individual findings?
-
-Gate: present post-mortem table + error summary + calibration headline + counterfactuals
+1. For each resolved target forecast:
+   a. Run `scores show <id>` — get score, resolution
+   b. Investigate the real-world outcome (web search, data sources)
+   c. Classify error (9-type table)
+   d. Build counterfactual
+2. For retrodictions: evaluate accuracy + note airtightness (trace-explorer handles later)
+3. Run `calibration summary` — check aggregate patterns
+4. Cross-reference: does calibration confirm or contradict individual findings?
+   Gate: present post-mortem table + error summary + calibration headline + counterfactuals
 ```
 
-### `/fb-analyze` (~50 lines)
+The error classification table and CP divergence guidance live in this file as compact reference (not the 60-line treatise from the original).
 
-**Replaces**: Phase 2 (trace analysis via trace-explorer)
+#### `/fb-traces` (~50 lines)
+
+**Replaces**: Phase 2
+**Concerns covered**: 31, 32, 33, 34, 35, 36, 37, 38
 
 ```
-1. Run `analysis tool-health` — aggregated tool errors from summary.json
-2. Run `analysis tool-needs` — capability gaps from summary.json
-3. Summarize: which tools fail, what the agent needs, reasoning quality patterns
-4. For version comparison context: run `analysis version-diff`
-5. For code-level diffs (if needed): launch version-explorer subagent
-6. Flag 1-2 worst forecasts for manual trace reading if summary.json raises questions
+1. Run `analysis tool-health` — quick pre-check before launching subagent
+2. Run `analysis tool-needs` — quick pre-check
+3. Launch trace-explorer with:
+   - Target post IDs
+   - Resolution context from /fb-investigate
+   - Calibration patterns
+   - Tool health flags
+4. Optionally launch version-reviewer or version-explorer
+5. Evaluate: tool failures, capability requests, reasoning quality, tool value
 ```
 
-No subagent required in the standard flow. If deeper trace reading needed, use `trace log <id>`.
+#### `/fb-reflect` (~70 lines)
 
-### `/fb-reflect` (~50 lines, guided reflection)
-
-**Replaces**: Phase 3 (meta) + Phase 5 (meta-meta)
+**Replaces**: Phase 3 + Phase 5 + Periodic Maintenance
+**Concerns covered**: 1, 39, 40, 41, 52, 53, 54, 55, 62-66
 
 ```
 Meta level:
-  1. Run `analysis tracking-gaps` — is the agent emitting enough data?
-  2. Review summary.json schema — is it capturing what we need?
-  3. Did this session surface actionable insights? If circular → schema or reviewer prompt needs improvement
+1. Run `analysis tracking-gaps` — is the agent emitting enough data?
+2. Did this session surface actionable insights? If not, why?
+3. Can we correlate tool usage with forecast quality? What data is missing?
 
 Meta-meta level:
-  4. Run `analysis prompt-health` — is the prompt accumulating patches?
-  5. Were the subcommands helpful? Anything confusing or missing?
-  6. Any repetitive analysis that should be a devtools command?
-  7. Any fields missing from summary.json or reflection.yaml?
-  8. Update subcommand files with learnings
+4. Run `analysis prompt-health` — is the prompt accumulating patches?
+5. Were the subcommands helpful? Anything confusing or missing?
+6. Any repetitive manual analysis that should be a devtools command?
+7. Any fields missing from forecast JSON or reflection.yaml?
+8. Update subcommand files with what was learned
 
 Periodic (every 3rd session):
-  9. Reread all subcommand files
-  10. Prompt health audit — read full prompts.py
-  11. Clean up notes/
-  12. Sync learnings to CLAUDE.md
+9. Reread all subcommand files — still accurate?
+10. Prompt health audit — read full prompts.py with fresh eyes
+11. Clean up notes/ — archive old analysis files
+12. Sync learnings to CLAUDE.md
 ```
 
-### `/fb-implement` (~80 lines)
+#### `/fb-implement` (~80 lines)
 
 **Replaces**: Phase 4
+**Concerns covered**: 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
 
 ```
-Gate (entry): Present prioritized changes with Bitter Lesson classification.
+Gate (entry): Present prioritized changes list with Bitter Lesson classification.
   User must approve before implementation.
 
 Priority order:
-  P0: Prompt health (rewrite vs patch — use analysis prompt-health data)
-  P1: Fix failing tools (from analysis tool-health flags)
-  P2: Build requested tools (from analysis tool-needs, discuss with user)
-  P3: Improve subagents (from summary.json workflow assessments)
-  P4: Simplify prompts (remove rules, add principles)
+  P0: Prompt health evaluation (rewrite vs patch) — use `analysis prompt-health`
+  P1: Fix failing tools — from `analysis tool-health` flags
+  P2: Build requested tools — from `analysis tool-needs`, discuss with user
+  P3: Improve subagents — from trace-explorer findings
+  P4: Simplify prompts — remove rules, add principles
 
 After implementation:
   1. Version bump: `uv run aib-devtools version bump <level> "<summary>"`
-  2. Commit changes
-  3. Verify: `git diff --stat` confirms each change
-  4. Log changes in analysis doc (COMMITTED / PROPOSED / DEFERRED)
+  2. Commit changes (the missing step!)
+  3. Verify: `git diff --stat` confirms each change exists
+  4. Log changes in analysis document with COMMITTED/PROPOSED/DEFERRED status
+  5. Mark analyzed forecasts: `uv run aib-devtools analysis mark <ids>`
 ```
 
-### `/fb-retrodict` (~50 lines)
+#### `/fb-retrodict` (~50 lines)
 
 **Replaces**: Phase 1d + Phase 6
+**Concerns covered**: 18, 19, 20, 23, 68, 69, 70, 71
 
 ```
 1. Find candidates: `uv run aib-devtools queue missed aib --days 14`
@@ -358,175 +490,212 @@ After implementation:
 Reference (condensed):
 - Blind mode restricts to historical data
 - Known leak vectors
-- Future-leak detection now handled by post-session reviewer (summary.json)
 - Retrodict → calibration feedback cycle
 ```
 
-### `/feedback-loop` — Orchestrator (~150 lines)
+Future-leak detection stays in trace-explorer (concerns 21, 22, 26) — it's already there and works well.
+
+#### `/feedback-loop` — Orchestrator (~60 lines)
+
+**Replaces**: The 850-line monolith
+**Concerns covered**: 1, 2, 5, 29, 42, 60, 72, 73
 
 ```
-Orchestrator (~60 lines):
-  1. /fb-status          → State + targets
-     Gate: confirm targets
-  2. /fb-investigate     → Resolution investigation (skip if no resolved)
-     Gate: confirm post-mortem
-  3. /fb-analyze         → Tool health + capability gaps + patterns
-  4. /fb-reflect         → Meta + meta-meta reflection
-     Gate: confirm priority list
-  5. /fb-implement       → Make changes, commit, bump version
-  6. /fb-retrodict       → Queue next retrodictions
-  7. Mark analyzed forecasts: `uv run aib-devtools analysis mark <ids>`
-  8. Write analysis doc to notes/feedback_loop/<branch>/<timestamp>_analysis.md
+# Feedback Loop: Orchestrator
 
-Analysis doc template (~20 lines)
-Principles section (~70 lines): Bitter Lesson, anti-patterns, CP guidance, offline mode
+Calls subcommands in sequence with gates between them.
+
+## Sequence
+
+1. /fb-status          → State + targets
+   Gate: confirm targets
+2. /fb-investigate     → Resolution investigation (skip if no resolved forecasts)
+   Gate: confirm post-mortem
+3. /fb-traces          → Trace analysis
+4. /fb-reflect         → Meta + meta-meta reflection
+   Gate: confirm priority list
+5. /fb-implement       → Make changes, commit, bump version
+6. /fb-retrodict       → Queue next retrodictions
+
+## Analysis Document
+
+Write to notes/feedback_loop/<branch>/<timestamp>_analysis.md
+using the standard template (sections contributed by each subcommand).
+
+## Completion Checklist
+[Condensed from the original — one line per subcommand]
+
+## Offline Mode
+If API rate-limited, skip steps that hit the API.
+All analysis commands work offline.
 ```
 
----
+### Step 4: Move Reference Material
 
-## Step 5: Update `/audit`
+These sections from the original feedback-loop.md move to CLAUDE.md (or are already there):
 
-Keep audit's structure (it works). Update to use new devtools:
+| Section | Destination |
+|---------|-------------|
+| CP visibility constraint | CLAUDE.md (already present) |
+| Bitter Lesson philosophy | CLAUDE.md (new section under Development Workflow) |
+| Anti-patterns (4 types) | CLAUDE.md (new section under Development Workflow) |
+| CP divergence interpretation | CLAUDE.md |
+| Version scoping (auto-scope) | CLAUDE.md devtools section |
+| Commands Available reference | CLAUDE.md devtools section (already there) |
 
-- Phase 1a: use `analysis dashboard` instead of manual metadata collection
-- Phase 1a: `analysis version-diff` for quick CHANGELOG delta between versions
-- Phase 2: reference summary.json for resolution investigation context
-- Phase 3: read summary.json files instead of launching trace-explorer
-  - For version comparison: version-explorer subagent stays (code diffs)
-- Phase 4: synthesis maps findings to version changes (audit's unique value)
-- After audit: `analysis mark <ids>`
-- Update `/resolve` to call `resolution tentative`
+### Step 5: Update `/audit`
 
----
+Keep audit's structure (it works) but use new devtools:
 
-## Step 6: Delete/Update Supporting Files
+- [ ] Phase 1a: use `analysis dashboard` instead of manual `grep AGENT_VERSION` + `scores show`
+- [ ] Phase 1a: use `analysis status` for "done" marking context
+- [ ] Phase 2: reference `analysis tool-health` and `analysis tool-needs` in the synthesis phase
+- [ ] After audit: `analysis mark <ids>` to mark audited forecasts
 
-- [ ] Delete `.claude/plugins/aib/agents/trace-explorer.md`
-- [ ] Update CLAUDE.md: devtools section, add Bitter Lesson reference, remove trace-explorer references
-- [ ] Update `feedback-loop.md` references in CLAUDE.md
-- [ ] Update any commands that reference `resolution check` or `resolution resolve`
+### Step 6: Update CLAUDE.md Devtools Section
 
----
+Reflect the new devtools structure:
 
-## Concern Inventory
+```
+aib-devtools
+├── analysis           Cross-forecast pattern extraction
+│   ├── dashboard      One-screen health check
+│   ├── tool-health    Tool error rates and usage patterns
+│   ├── tool-needs     Agent capability requests from reflections
+│   ├── tracking-gaps  Check data completeness across forecasts
+│   ├── prompt-health  Prompt patch count and growth metrics
+│   ├── mark           Mark forecasts as feedback-loop-analyzed
+│   ├── unmark         Remove analyzed mark
+│   └── status         Show analyzed vs unanalyzed counts
+│
+├── scores             Unified scores table (unchanged + additions)
+│   ├── show           Show scores table
+│   ├── summary        Aggregate statistics (+ --by-type from metrics)
+│   ├── compare        Compare two agent versions
+│   ├── regression     Regression suite results
+│   ├── extremes       Best/worst forecasts
+│   └── cp             Community prediction comparison (from feedback collect)
+│
+├── calibration        (unchanged)
+├── queue              (unchanged)
+├── resolution         (unchanged)
+├── trace              (unchanged)
+├── api                (unchanged)
+├── dev                (unchanged)
+├── version            (unchanged)
+├── git                (unchanged)
+└── health             (unchanged)
 
-Every concern from the original 850-line `/feedback-loop`, mapped to its new home:
+REMOVED:
+├── feedback           → replaced by analysis group
+└── metrics            → merged into analysis + scores
+```
 
-| # | Concern | New Location |
-|---|---------|-------------|
-| 1 | Three-level framework | Orchestrator preamble + `/fb-reflect` |
-| 2 | Input handling | Orchestrator |
-| 3 | CP visibility constraint | Orchestrator principles |
-| 4 | Bitter Lesson | Orchestrator principles |
-| 5 | Offline mode | Orchestrator principles + devtools handle gracefully |
-| 6 | Previous session continuity | `/fb-status` |
-| 7 | Done marking | `analysis mark/status` (orchestrator-level) |
-| 8 | Version identification | `analysis dashboard` |
-| 9 | Resolution updating | `resolution sync` (renamed) |
-| 10 | Tentative AI resolutions | `resolution tentative` (renamed) |
-| 11 | Scores | `scores show` (exists) |
-| 12 | Grouping by version/type | `analysis dashboard` |
-| 13 | Per-forecast investigation | `/fb-investigate` |
-| 14 | Error classification | `/fb-investigate` |
-| 15 | Counterfactual analysis | `/fb-investigate` |
-| 16 | Calibration aggregate | `calibration summary` (exists) |
-| 17 | Pattern verification | `/fb-investigate` |
-| 18 | Missed questions | `queue missed` (exists) |
-| 19 | Retrodiction execution | `/fb-retrodict` |
-| 20 | Blind mode docs | `/fb-retrodict` (condensed) |
-| 21 | Future-leak (tool) | Post-session reviewer → summary.json |
-| 22 | Future-leak (LLM) | Post-session reviewer → summary.json |
-| 23 | Known leak vectors | `/fb-retrodict` reference |
-| 24 | Retrodict collection | `scores show --source retrodict` |
-| 25 | Retrodict accuracy | `/fb-investigate` |
-| 26 | Retrodict airtightness | summary.json `future_leak` field |
-| 27 | Tool effectiveness (blind) | `/fb-analyze` via summary.json |
-| 28 | CP divergence guidance | Orchestrator principles |
-| 29 | Gate: post-mortem | `/fb-investigate` gate |
-| 30 | Version scoping | CLAUDE.md |
-| 31 | Trace-explorer launch | Removed — replaced by summary.json + devtools |
-| 32 | Version reviewer | Available to both `/fb-analyze` and `/audit` |
-| 33 | Version explorer | Available to both `/fb-analyze` and `/audit` |
-| 34 | Deep-dive on flagged traces | Manual `trace log <id>` for 1-2 worst |
-| 35 | Tool failure evaluation | `analysis tool-health` |
-| 36 | Capability requests | `analysis tool-needs` |
-| 37 | Reasoning quality | summary.json `reasoning` field |
-| 38 | Tool value assessment | `analysis tool-health` |
-| 39 | Meta: actionable insight check | `/fb-reflect` |
-| 40 | Meta: tracking data quality | `analysis tracking-gaps` + `/fb-reflect` |
-| 41 | Meta: missing data | `/fb-reflect` |
-| 42 | Gate: priority list | `/fb-implement` gate |
-| 43 | Prompt health | `analysis prompt-health` + `/fb-implement` |
-| 44 | Fix failing tools | `/fb-implement` P1 |
-| 45 | Build requested tools | `/fb-implement` P2 |
-| 46 | Improve subagents | `/fb-implement` P3 |
-| 47 | Simplify prompts | `/fb-implement` P4 |
-| 48 | Patch count tracking | `analysis prompt-health` |
-| 49 | Version bumps | `/fb-implement` |
-| 50 | Change verification | `/fb-implement` (git diff) |
-| 51 | Change logging | `/fb-implement` (analysis doc) |
-| 52 | Meta-meta: document eval | `/fb-reflect` |
-| 53 | Meta-meta: build scripts | `/fb-reflect` |
-| 54 | Meta-meta: improve data | `/fb-reflect` |
-| 55 | Meta-meta: update docs | `/fb-reflect` |
-| 56-59 | Anti-patterns | Orchestrator principles |
-| 60 | Analysis doc template | Orchestrator |
-| 61 | Command reference | CLAUDE.md |
-| 62-66 | Periodic maintenance | `/fb-reflect` (every 3rd session) |
-| 67 | Key questions checklist | Distributed across subcommands |
-| 68 | Retrodict queue | `/fb-retrodict` |
-| 69 | Selection criteria | `/fb-retrodict` |
-| 70 | Output format | `/fb-retrodict` |
-| 71 | Feedback cycle | `/fb-retrodict` |
-| 72 | Completion checklist | Orchestrator |
-| 73 | Anti-skip guards | Orchestrator |
+### Implementation Order
 
----
+1. **Create `analysis.py`** with all 7 commands — this is the foundation everything else depends on
+2. **Move CP comparison** to `scores cp` — preserves the feature before killing feedback.py
+3. **Add `--by-type`** to `scores summary` — preserves metrics by-type before killing metrics.py
+4. **Kill `feedback.py` and `metrics.py`** — remove from main.py, delete files
+5. **Write subcommand files** — `/fb-status`, `/fb-investigate`, `/fb-traces`, `/fb-reflect`, `/fb-implement`, `/fb-retrodict`
+6. **Rewrite `/feedback-loop`** as thin orchestrator
+7. **Update `/audit`** to use new devtools
+8. **Move reference material** to CLAUDE.md
+9. **Update CLAUDE.md** devtools section
 
-## Implementation Order
-
-| Step | Description | Files | Depends On |
-|------|-------------|-------|------------|
-| 1a | ForecastSummary Pydantic model | `models.py` | — |
-| 1b | Opus reviewer (replace condense_reasoning) | `core.py` | 1a |
-| 1e | Trim reflection (drop tool_audit, process_reflection) | `reflection.py` | 1b |
-| 2 | New `analysis.py` devtools (dashboard, tool-health, tool-needs, tracking-gaps, prompt-health, version-diff, mark/unmark/status, review) | `analysis.py`, `main.py` | 1a (reads summary.json) |
-| 3a | Rename resolution commands | `resolution.py` | — |
-| 3b | Move CP comparison to `scores cp` | `scores.py` | — |
-| 3c | Add `--by-type` to `scores summary` | `scores.py` | — |
-| 3d | Merge `track_record` into `scores` | `scores.py`, `track_record.py` | — |
-| 3e | Kill `feedback.py` and `metrics.py` | `feedback.py`, `metrics.py`, `main.py` | 2, 3b |
-| 4 | Write subcommand files | `commands/fb-*.md` | 2 |
-| 4o | Rewrite `/feedback-loop` orchestrator | `commands/feedback-loop.md` | 4 |
-| 5 | Update `/audit` to use new devtools | `commands/audit.md` | 2 |
-| 5b | Update `/resolve` to use `resolution tentative` | `commands/resolve.md` | 3a |
-| 6a | Delete trace-explorer | `agents/trace-explorer.md` | 4 |
-| 6b | Update CLAUDE.md | `.claude/CLAUDE.md` | all |
-
----
-
-## Files Modified
+### Files Modified
 
 | File | Action |
 |------|--------|
-| `src/aib/agent/models.py` | EDIT — add ForecastSummary + related models |
-| `src/aib/agent/core.py` | EDIT — replace condense_reasoning with Opus reviewer |
-| `src/aib/agent/reflection.py` | EDIT — drop tool_audit and process_reflection |
-| `src/aib/devtools/analysis.py` | CREATE — new analysis group (8 commands) |
-| `src/aib/devtools/main.py` | EDIT — add analysis, remove feedback + metrics + track_record |
-| `src/aib/devtools/resolution.py` | EDIT — rename check→sync, resolve→tentative |
-| `src/aib/devtools/scores.py` | EDIT — add `cp` command, `--by-type`, merge track_record |
+| `src/aib/devtools/analysis.py` | CREATE — new analysis group |
+| `src/aib/devtools/main.py` | EDIT — add analysis, remove feedback + metrics |
+| `src/aib/devtools/scores.py` | EDIT — add `cp` command, `--by-type` to summary |
 | `src/aib/devtools/feedback.py` | DELETE |
 | `src/aib/devtools/metrics.py` | DELETE |
-| `src/aib/devtools/track_record.py` | DELETE |
 | `.claude/plugins/aib/commands/fb-status.md` | CREATE |
 | `.claude/plugins/aib/commands/fb-investigate.md` | CREATE |
-| `.claude/plugins/aib/commands/fb-analyze.md` | CREATE |
+| `.claude/plugins/aib/commands/fb-traces.md` | CREATE |
 | `.claude/plugins/aib/commands/fb-reflect.md` | CREATE |
 | `.claude/plugins/aib/commands/fb-implement.md` | CREATE |
 | `.claude/plugins/aib/commands/fb-retrodict.md` | CREATE |
-| `.claude/plugins/aib/commands/feedback-loop.md` | REWRITE — thin orchestrator + principles |
+| `.claude/plugins/aib/commands/feedback-loop.md` | REWRITE — thin orchestrator |
 | `.claude/plugins/aib/commands/audit.md` | EDIT — use new devtools |
-| `.claude/plugins/aib/commands/resolve.md` | EDIT — resolution tentative |
-| `.claude/plugins/aib/agents/trace-explorer.md` | DELETE |
-| `.claude/CLAUDE.md` | EDIT — update devtools section, add references |
+| `.claude/CLAUDE.md` | EDIT — update devtools section, add reference material |
+
+---
+
+## Completed Phases (1-7)
+
+### Phase 1: Foundation [x]
+### Phase 2: Metaculus Integration [x]
+### Phase 3: MCP Servers [x]
+### Phase 4: Agent Setup [x]
+### Phase 5: CLI & Submission [x]
+### Phase 6: Robustness (partial)
+### Phase 7: Feedback Loop [x] (being overhauled in Phase 8)
+
+---
+
+## Project Structure
+
+```
+src/
+└── aib/
+    ├── __init__.py
+    ├── cli.py                    # Typer CLI entry point
+    ├── agent/
+    │   ├── __init__.py
+    │   ├── core.py               # Claude Agent SDK + MCP config
+    │   ├── models.py             # Forecast + subagent output models
+    │   ├── prompts.py            # System prompts (lighter workflow)
+    │   └── subagents.py          # Subagent definitions
+    ├── tools/
+    │   ├── __init__.py
+    │   ├── forecasting.py        # In-process MCP: forecasting-tools
+    │   ├── sandbox.py            # In-process MCP: Docker sandbox
+    │   ├── composition.py        # In-process MCP: parallel_research, spawn_subquestions
+    │   └── markets.py            # In-process MCP: Polymarket, Manifold
+    └── devtools/
+        ├── __init__.py
+        ├── main.py               # Root CLI app composing all sub-apps
+        ├── analysis.py           # NEW: cross-forecast pattern extraction
+        ├── scores.py             # Unified scores table
+        ├── calibration.py        # Calibration analysis
+        ├── queue.py              # Forecasting queue
+        ├── resolution.py         # Resolution updates
+        ├── trace.py              # Forecast tracing
+        ├── api.py                # API inspection
+        ├── dev.py                # Development tools
+        ├── version.py            # Version management
+        ├── git.py                # Git operations
+        └── health.py             # Service health checks
+
+notes/
+├── traces/<version>/
+│   ├── forecasts/<post_id>/      # Forecast JSONs
+│   ├── sessions/<post_id>/<ts>/  # Session working notes + reflection.yaml
+│   ├── retrodict/<post_id>/      # Retrodict forecast JSONs
+│   └── logs/<post_id>_<ts>.md    # Agent reasoning logs
+├── feedback_loop/                # Analysis outputs
+│   ├── <branch>/                 # Per-worktree analysis
+│   │   ├── <timestamp>_analysis.md
+│   │   └── ...
+│   └── analyzed.json             # "Done" marking state
+└── regression_suite.json
+```
+
+---
+
+## Key Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Package layout | src/ layout | Standard Python packaging |
+| MCP integration | `ClaudeAgentOptions.mcp_servers` | Direct SDK integration, no separate processes |
+| Subagent structure | 5 flexible agents | Fewer agents, more autonomy |
+| Notes structure | Timestamped folders | RW for current session, RO for history |
+| Market tools | Real API calls | Polymarket + Manifold provide market signals |
+| Feedback loop | Decomposed subcommands | Each concern gets focused attention |
+| Devtools | Concern-based extraction | Data one command away, not buried in LLM analysis |
+| "Done" marking | Simple JSON state file | Replaces feedback_state.json's overloaded tracking |
+>>>>>>> feedback-loop-03-16

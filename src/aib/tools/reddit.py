@@ -4,19 +4,13 @@ These tools fetch Reddit posts to provide signal for questions about
 public sentiment, community reactions, and social trends.
 """
 
-import logging
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.config import settings
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
-
-logger = logging.getLogger(__name__)
+from aib.tools.decorator import ToolError, mcp_tool
 
 
 # --- Input Schemas ---
@@ -108,127 +102,80 @@ async def _get_reddit() -> Any:
     )
 
 
-@tool(
+@mcp_tool(
     "reddit_search",
-    (
-        "Search Reddit for posts matching a query. "
-        "Returns post titles, scores, comment counts, and text snippets. "
-        "Useful for gauging public sentiment, finding community discussions, "
-        "and understanding reactions to events. "
-        "Search all of Reddit or within a specific subreddit. "
-        "Common subreddits: economics, worldnews, technology, politics, science, "
-        "AskReddit, dataisbeautiful, geopolitics."
-    ),
-    RedditSearchInput.model_json_schema(),
+    "Search Reddit for posts matching a query. "
+    "Returns post titles, scores, comment counts, and text snippets. "
+    "Useful for gauging public sentiment, finding community discussions, "
+    "and understanding reactions to events. "
+    "Search all of Reddit or within a specific subreddit. "
+    "Common subreddits: economics, worldnews, technology, politics, science, "
+    "AskReddit, dataisbeautiful, geopolitics.",
 )
-@tracked("reddit_search")
-async def reddit_search(args: dict[str, Any]) -> dict[str, Any]:
+async def reddit_search(args: RedditSearchInput) -> dict[str, Any]:
     """Search Reddit posts."""
-    try:
-        validated = RedditSearchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     if not settings.reddit_client_id or not settings.reddit_client_secret:
-        return mcp_error(
+        raise ToolError(
             "Reddit API credentials not configured. "
             "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET."
         )
 
+    reddit = await _get_reddit()
     try:
-        reddit = await _get_reddit()
-        try:
-            if validated.subreddit:
-                subreddit = await reddit.subreddit(validated.subreddit)
-            else:
-                subreddit = await reddit.subreddit("all")
+        if args.subreddit:
+            subreddit = await reddit.subreddit(args.subreddit)
+        else:
+            subreddit = await reddit.subreddit("all")
 
-            posts: list[RedditPost] = []
-            async for submission in subreddit.search(
-                validated.query,
-                sort=validated.sort,
-                time_filter=validated.time_filter,
-                limit=validated.limit,
-            ):
-                posts.append(_format_post(submission))
-        finally:
-            await reddit.close()
+        posts: list[RedditPost] = []
+        async for submission in subreddit.search(
+            args.query,
+            sort=args.sort,
+            time_filter=args.time_filter,
+            limit=args.limit,
+        ):
+            posts.append(_format_post(submission))
+    finally:
+        await reddit.close()
 
-        return mcp_success(
-            {
-                "query": validated.query,
-                "subreddit": validated.subreddit or "all",
-                "sort": validated.sort,
-                "time_filter": validated.time_filter,
-                "result_count": len(posts),
-                "posts": posts,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Reddit search failed")
-        return mcp_error(f"Reddit search failed for '{validated.query}': {e}")
+    return {
+        "query": args.query,
+        "subreddit": args.subreddit or "all",
+        "sort": args.sort,
+        "time_filter": args.time_filter,
+        "result_count": len(posts),
+        "posts": posts,
+    }
 
 
-@tool(
+@mcp_tool(
     "reddit_hot",
-    (
-        "Get hot/trending posts from a subreddit. "
-        "Returns the most active current discussions. "
-        "Useful for understanding what topics are driving conversation right now. "
-        "Common subreddits: economics, worldnews, technology, politics, science, "
-        "AskReddit, dataisbeautiful, geopolitics, wallstreetbets, Futurology."
-    ),
-    RedditHotInput.model_json_schema(),
+    "Get hot/trending posts from a subreddit. "
+    "Returns the most active current discussions. "
+    "Useful for understanding what topics are driving conversation right now. "
+    "Common subreddits: economics, worldnews, technology, politics, science, "
+    "AskReddit, dataisbeautiful, geopolitics, wallstreetbets, Futurology.",
 )
-@tracked("reddit_hot")
-async def reddit_hot(args: dict[str, Any]) -> dict[str, Any]:
+async def reddit_hot(args: RedditHotInput) -> dict[str, Any]:
     """Get hot posts from a subreddit."""
-    try:
-        validated = RedditHotInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
     if not settings.reddit_client_id or not settings.reddit_client_secret:
-        return mcp_error(
+        raise ToolError(
             "Reddit API credentials not configured. "
             "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET."
         )
 
+    reddit = await _get_reddit()
     try:
-        reddit = await _get_reddit()
-        try:
-            subreddit = await reddit.subreddit(validated.subreddit)
+        subreddit = await reddit.subreddit(args.subreddit)
 
-            posts: list[RedditPost] = []
-            async for submission in subreddit.hot(limit=validated.limit):
-                posts.append(_format_post(submission))
-        finally:
-            await reddit.close()
+        posts: list[RedditPost] = []
+        async for submission in subreddit.hot(limit=args.limit):
+            posts.append(_format_post(submission))
+    finally:
+        await reddit.close()
 
-        return mcp_success(
-            {
-                "subreddit": validated.subreddit,
-                "result_count": len(posts),
-                "posts": posts,
-            }
-        )
-
-    except Exception as e:
-        logger.exception("Reddit hot posts failed")
-        return mcp_error(f"Reddit hot posts failed for r/{validated.subreddit}: {e}")
-
-
-# --- MCP Server ---
-
-
-def create_reddit_server():
-    """Create MCP server with Reddit tools."""
-    return create_mcp_server(
-        name="reddit",
-        version="1.0.0",
-        tools=[
-            reddit_search,
-            reddit_hot,
-        ],
-    )
+    return {
+        "subreddit": args.subreddit,
+        "result_count": len(posts),
+        "posts": posts,
+    }

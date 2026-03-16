@@ -224,10 +224,9 @@ class TestToolPolicyMcpServers:
         """Should include core MCP servers."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox, composition_server)
+        servers = policy.get_mcp_servers(sandbox)
 
         assert "financial" in servers
         assert "sandbox" in servers
@@ -242,12 +241,11 @@ class TestToolPolicyMcpServers:
         """Should add date-filtered search server in retrodict mode."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         token = retrodict_cutoff.set(date(2026, 1, 15))
         try:
             policy = ToolPolicy()
-            servers = policy.get_mcp_servers(sandbox, composition_server)
+            servers = policy.get_mcp_servers(sandbox)
             assert "search" in servers
         finally:
             retrodict_cutoff.reset(token)
@@ -256,35 +254,32 @@ class TestToolPolicyMcpServers:
         """Search server should be present in normal mode too."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox, composition_server)
+        servers = policy.get_mcp_servers(sandbox)
         assert "search" in servers
 
     def test_includes_asknews_server_with_api_key(self) -> None:
-        """Should register AskNews HTTP server when api_key is set."""
+        """Should register throttled AskNews proxy server when api_key is set."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         policy = ToolPolicy(asknews_api_key="test-key")
-        servers = policy.get_mcp_servers(sandbox, composition_server)
+        servers = policy.get_mcp_servers(sandbox)
 
         assert "asknews" in servers
         asknews = servers["asknews"]
         assert isinstance(asknews, dict)
-        assert asknews.get("type") == "http"
-        assert asknews.get("url") == "https://mcp.asknews.app"
+        assert asknews.get("type") == "sdk"
+        assert asknews.get("name") == "asknews"
 
     def test_excludes_asknews_server_without_api_key(self) -> None:
         """Should not register AskNews server without api_key."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox, composition_server)
+        servers = policy.get_mcp_servers(sandbox)
 
         assert "asknews" not in servers
 
@@ -292,12 +287,11 @@ class TestToolPolicyMcpServers:
         """Should not register AskNews server in retrodict mode."""
         sandbox = MagicMock()
         sandbox.create_mcp_server.return_value = MagicMock()
-        composition_server = MagicMock()
 
         token = retrodict_cutoff.set(date(2026, 1, 15))
         try:
             policy = ToolPolicy(asknews_api_key="test-key")
-            servers = policy.get_mcp_servers(sandbox, composition_server)
+            servers = policy.get_mcp_servers(sandbox)
             assert "asknews" not in servers
         finally:
             retrodict_cutoff.reset(token)

@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 from typing import Any, Literal, TypedDict
+from urllib.parse import unquote
 
 import httpx
 from claude_agent_sdk import (
@@ -21,8 +22,6 @@ from claude_agent_sdk import (
     HookJSONOutput,
     HookMatcher,
     ResultMessage,
-    SdkMcpTool,
-    tool,
 )
 from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
@@ -30,13 +29,11 @@ from pydantic import BaseModel, Field
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
+from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
 from aib.tools.fetch_routes import domain_dispatch
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
 from aib.tools.throttle import exa_throttle, wikipedia_throttle
 from aib.tools.wayback import (
@@ -337,9 +334,7 @@ async def _augment_with_api_data(
     Matching URLs have their specialized tool handler called in parallel.
     SUGGEST_ONLY domains get a hint string instead.
     """
-    from aib.tools.fetch_routes import SUGGEST_ONLY, get_routes
-
-    routes = get_routes()
+    from aib.tools.fetch_routes import SUGGEST_ONLY, domain_dispatch as _dispatch
 
     async def _augment_one(result: SearchResult) -> AugmentedSearchResult:
         url = result["url"]
@@ -356,17 +351,12 @@ async def _augment_with_api_data(
                 augmented["hint"] = hint
                 return augmented
 
-        for route in routes:
-            match = route.pattern.search(url)
-            if match:
-                params = route.param_builder(match)
-                try:
-                    api_result = await route.handler(params)
-                    if not api_result.get("is_error"):
-                        augmented["api_data"] = api_result
-                except Exception as e:
-                    logger.warning("API augmentation failed for %s: %s", url, e)
-                return augmented
+        try:
+            api_result = await _dispatch(url)
+            if api_result is not None and not api_result.get("is_error"):
+                augmented["api_data"] = api_result
+        except Exception as e:
+            logger.warning("API augmentation failed for %s: %s", url, e)
 
         return augmented
 
@@ -374,7 +364,7 @@ async def _augment_with_api_data(
     return list(augmented)
 
 
-@tool(
+@mcp_tool(
     "web_search",
     (
         "Search the web for information. Returns titles, URLs, and snippets. "
@@ -383,23 +373,16 @@ async def _augment_with_api_data(
         "Supports allowed_domains/blocked_domains for domain filtering. "
         "Prefer this over WebSearch."
     ),
-    WebSearchInput.model_json_schema(),
 )
-@tracked("web_search")
-async def web_search(args: dict[str, Any]) -> dict[str, Any]:
+async def web_search(params: WebSearchInput) -> dict[str, Any]:
     """Perform web search via SDK sub-agent with API augmentation.
 
     Augments all results first, then in retrodict mode applies Wayback
     validation only to results that lack API data (API-augmented results
     are safe since specialized handlers manage time-appropriateness).
     """
-    try:
-        validated = WebSearchInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    if validated.allowed_domains and validated.blocked_domains:
-        return mcp_error("Cannot use both allowed_domains and blocked_domains.")
+    if params.allowed_domains and params.blocked_domains:
+        raise ToolError("Cannot use both allowed_domains and blocked_domains.")
 
     cutoff = retrodict_cutoff.get()
     cutoff_date = cutoff.isoformat() if cutoff else None
@@ -407,16 +390,16 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
     try:
         logger.info(
             "[WebSearch] query=%s cutoff=%s domains=%s",
-            validated.query,
+            params.query,
             cutoff_date,
-            validated.allowed_domains or validated.blocked_domains,
+            params.allowed_domains or params.blocked_domains,
         )
 
         results = await _raw_web_search(
-            validated.query,
+            params.query,
             cutoff_date,
-            validated.allowed_domains,
-            validated.blocked_domains,
+            params.allowed_domains,
+            params.blocked_domains,
         )
 
         augmented = await _augment_with_api_data(results)
@@ -430,17 +413,17 @@ async def web_search(args: dict[str, Any]) -> dict[str, Any]:
             augmented = await _fetch_live_snippets(augmented)
 
         logger.info("[WebSearch] Returning %d results", len(augmented))
-        return mcp_success({"query": validated.query, "results": augmented})
+        return {"query": params.query, "results": augmented}
 
     except BaseException as e:
         cause = e
         if isinstance(e, BaseExceptionGroup):
             cause = e.exceptions[0] if e.exceptions else e
         logger.exception("Web search failed: %s", cause)
-        return mcp_error(
+        raise ToolError(
             "Web search is temporarily unavailable. "
             "Try again with a different query, or use alternative tools."
-        )
+        ) from e
 
 
 # --- Exa Search Tool ---
@@ -459,7 +442,7 @@ class SearchExaInput(BaseModel):
     )
 
 
-@tool(
+@mcp_tool(
     "search_exa",
     (
         "Search the web using Exa AI-powered search. Returns raw results with titles, URLs, and snippets. "
@@ -470,23 +453,14 @@ class SearchExaInput(BaseModel):
         '  search_exa(query="Germany coalition government formation", published_before="2026-01-15")\n'
         "Use diverse query formulations — the same topic found with different keywords produces richer results."
     ),
-    SearchExaInput.model_json_schema(),
 )
-@tracked("search_exa")
-async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
+async def search_exa(params: SearchExaInput) -> Any:
     """Search using Exa and return raw results (cached)."""
-    try:
-        validated = SearchExaInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    num_results = validated.num_results
     cutoff = retrodict_cutoff.get()
     published_before = (
-        cutoff.isoformat() if cutoff is not None else validated.published_before
+        cutoff.isoformat() if cutoff is not None else params.published_before
     )
-    livecrawl = "never" if cutoff is not None else validated.livecrawl
+    livecrawl = "never" if cutoff is not None else params.livecrawl
 
     logger.info(
         "search_exa actual params: published_before=%s, livecrawl=%s",
@@ -494,18 +468,14 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
         livecrawl,
     )
 
-    try:
-        async with exa_throttle:
-            formatted = await exa_search(
-                query,
-                num_results,
-                published_before=published_before,
-                livecrawl=livecrawl,
-            )
-        return mcp_success(formatted)
-    except Exception as e:
-        logger.exception("Exa search failed")
-        return mcp_error(f"Search failed: {e}")
+    async with exa_throttle:
+        formatted = await exa_search(
+            params.query,
+            params.num_results,
+            published_before=published_before,
+            livecrawl=livecrawl,
+        )
+    return formatted
 
 
 # --- Wikipedia Tool ---
@@ -584,31 +554,30 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
         return []
 
     try:
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamable_http_client
+        from aib.tools.asknews import _call_remote
 
-        http_client = httpx.AsyncClient(
-            timeout=15,
-            headers={"x-api-key": api_key},
-        )
-        async with streamable_http_client(
-            url="https://mcp.asknews.app",
-            http_client=http_client,
-        ) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.call_tool("search_wikipedia", {"query": query})
-
-                if result.isError:
-                    return []
-
-                return _parse_asknews_articles(result)
+        text = await _call_remote(api_key, "search_wikipedia", {"query": query})
+        data = json.loads(text)
+        items: list[dict[str, str]] = []
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            for key in ("results", "articles", "data"):
+                candidate = data.get(key)
+                if isinstance(candidate, list):
+                    items = candidate
+                    break
+        return [
+            {"title": a["title"], "snippet": a.get("snippet", ""), "url": a.get("url", "")}
+            for a in items
+            if isinstance(a, dict) and "title" in a
+        ]
     except Exception:
         logger.debug("AskNews Wikipedia search failed", exc_info=True)
         return []
 
 
-@tool(
+@mcp_tool(
     "wikipedia",
     (
         "Search Wikipedia or fetch article content. "
@@ -625,19 +594,16 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
         "Two-step workflow: search first to find the right article title, then summary/full to read it. "
         "Optional 'prompt' extracts specific information via Haiku (summary/full modes only)."
     ),
-    WikipediaInput.model_json_schema(),
+    url_route=(
+        r"wikipedia\.org/wiki/(?!Special:|Wikipedia:)([^#?]+)",
+        lambda m: {"query": unquote(m.group(1)).replace("_", " "), "mode": "full"},
+    ),
 )
-@tracked("wikipedia")
-async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
+async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
     """Unified Wikipedia search and article fetching."""
-    try:
-        validated = WikipediaInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    query = validated.query
-    mode = validated.mode
-    num_results = validated.num_results
+    query = params.query
+    mode = params.mode
+    num_results = params.num_results
     cutoff = retrodict_cutoff.get()
     cutoff_date = cutoff.isoformat() if cutoff is not None else None
 
@@ -681,89 +647,79 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
 
                 return results
 
-        try:
-            if not cutoff_date and settings.asknews_api_key:
-                async with wikipedia_throttle:
-                    wiki_results, asknews_results = await asyncio.gather(
-                        _search(),
-                        _asknews_wikipedia_search(query),
+        if not cutoff_date and settings.asknews_api_key:
+            async with wikipedia_throttle:
+                wiki_results, asknews_results = await asyncio.gather(
+                    _search(),
+                    _asknews_wikipedia_search(query),
+                )
+            seen_titles = {r["title"].lower().strip() for r in wiki_results}
+            for ar in asknews_results:
+                if ar["title"].lower().strip() not in seen_titles:
+                    seen_titles.add(ar["title"].lower().strip())
+                    wiki_results.append(
+                        {
+                            "title": ar["title"],
+                            "snippet": ar.get("snippet", ""),
+                            "url": ar["url"],
+                            "word_count": 0,
+                            "source": "semantic",
+                        }
                     )
-                seen_titles = {r["title"].lower().strip() for r in wiki_results}
-                for ar in asknews_results:
-                    if ar["title"].lower().strip() not in seen_titles:
-                        seen_titles.add(ar["title"].lower().strip())
-                        wiki_results.append(
-                            {
-                                "title": ar["title"],
-                                "snippet": ar.get("snippet", ""),
-                                "url": ar["url"],
-                                "word_count": 0,
-                                "source": "semantic",
-                            }
-                        )
-                results = wiki_results
-            else:
-                async with wikipedia_throttle:
-                    results = await _search()
+            results = wiki_results
+        else:
+            async with wikipedia_throttle:
+                results = await _search()
 
-            if cutoff_date and results:
-                historical_results = []
-                for result in results:
-                    try:
-                        historical = await _fetch_wikipedia_historical_content(
-                            result["title"], cutoff_date
-                        )
-                        snippet = _extract_intro(historical["extract"])[:500]
-                        if len(snippet) == 500:
-                            snippet = snippet.rsplit(" ", 1)[0] + "..."
-                        historical_results.append(
-                            {
-                                "title": historical["title"],
-                                "snippet": snippet,
-                                "url": historical["url"],
-                                "revision_timestamp": historical["revision_timestamp"],
-                            }
-                        )
-                    except ValueError as e:
-                        logger.debug("Skipping %s: %s", result["title"], e)
-                        continue
-                if not historical_results and results:
-                    return mcp_error(f"No Wikipedia articles found for '{query}'.")
-                results = historical_results
+        if cutoff_date and results:
+            historical_results = []
+            for result in results:
+                try:
+                    historical = await _fetch_wikipedia_historical_content(
+                        result["title"], cutoff_date
+                    )
+                    snippet = _extract_intro(historical["extract"])[:500]
+                    if len(snippet) == 500:
+                        snippet = snippet.rsplit(" ", 1)[0] + "..."
+                    historical_results.append(
+                        {
+                            "title": historical["title"],
+                            "snippet": snippet,
+                            "url": historical["url"],
+                            "revision_timestamp": historical["revision_timestamp"],
+                        }
+                    )
+                except ValueError as e:
+                    logger.debug("Skipping %s: %s", result["title"], e)
+                    continue
+            if not historical_results and results:
+                raise ToolError(f"No Wikipedia articles found for '{query}'.")
+            results = historical_results
 
-            return mcp_success({"query": query, "mode": mode, "results": results})
-        except Exception as e:
-            logger.exception("Wikipedia search failed")
-            return mcp_error(f"Wikipedia search failed: {e}")
+        return {"query": query, "mode": mode, "results": results}
 
     else:
         if cutoff_date:
-            try:
-                async with wikipedia_throttle:
-                    historical = await _fetch_wikipedia_historical_content(
-                        query, cutoff_date
-                    )
-                extract = historical["extract"]
-                if mode == "summary":
-                    extract = _extract_intro(extract)
-                if validated.prompt:
-                    extract = await extract_with_prompt(
-                        extract, validated.prompt, historical["url"]
-                    )
-                return mcp_success(
-                    {
-                        "title": historical["title"],
-                        "url": historical["url"],
-                        "extract": extract,
-                        "mode": mode,
-                        "revision_id": historical["revision_id"],
-                        "revision_timestamp": historical["revision_timestamp"],
-                        "revision_date": historical["revision_timestamp"][:10],
-                    }
+            async with wikipedia_throttle:
+                historical = await _fetch_wikipedia_historical_content(
+                    query, cutoff_date
                 )
-            except Exception as e:
-                logger.exception("Wikipedia historical fetch failed")
-                return mcp_error(f"Wikipedia historical fetch failed: {e}")
+            extract = historical["extract"]
+            if mode == "summary":
+                extract = _extract_intro(extract)
+            if params.prompt:
+                extract = await extract_with_prompt(
+                    extract, params.prompt, historical["url"]
+                )
+            return {
+                "title": historical["title"],
+                "url": historical["url"],
+                "extract": extract,
+                "mode": mode,
+                "revision_id": historical["revision_id"],
+                "revision_timestamp": historical["revision_timestamp"],
+                "revision_date": historical["revision_timestamp"][:10],
+            }
 
         @with_retry(max_attempts=3)
         async def _fetch() -> dict[str, Any]:
@@ -775,7 +731,7 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                     WIKIPEDIA_API_URL,
                     params={
                         "action": "query",
-                        "titles": query,
+                        "titles": unquote(query),
                         "prop": "extracts|info",
                         "exintro": mode == "summary",
                         "explaintext": True,
@@ -810,17 +766,13 @@ async def wikipedia(args: dict[str, Any]) -> dict[str, Any]:
                     "mode": mode,
                 }
 
-        try:
-            async with wikipedia_throttle:
-                result = await _fetch()
-            if validated.prompt:
-                result["extract"] = await extract_with_prompt(
-                    result["extract"], validated.prompt, result["url"]
-                )
-            return mcp_success(result)
-        except Exception as e:
-            logger.exception("Wikipedia article fetch failed")
-            return mcp_error(f"Wikipedia article fetch failed: {e}")
+        async with wikipedia_throttle:
+            result = await _fetch()
+        if params.prompt:
+            result["extract"] = await extract_with_prompt(
+                result["extract"], params.prompt, result["url"]
+            )
+        return result
 
 
 # --- Fetch URL Tool ---
@@ -836,7 +788,20 @@ class FetchUrlInput(BaseModel):
     )
 
 
-@tool(
+def _unwrap_mcp_response(response: dict[str, Any]) -> dict[str, Any]:
+    """Extract raw data from an MCP-formatted response.
+
+    Route handlers return MCP-formatted dicts (from mcp_success/mcp_error).
+    This unwraps them so @mcp_tool can re-wrap consistently.
+    """
+    if response.get("is_error"):
+        text = response.get("content", [{}])[0].get("text", "Unknown error")
+        raise ToolError(text)
+    text = response.get("content", [{}])[0].get("text", "{}")
+    return json.loads(text)
+
+
+@mcp_tool(
     "fetch_url",
     (
         "Fetch and extract content from a URL. "
@@ -848,21 +813,14 @@ class FetchUrlInput(BaseModel):
         "and surfaces relevant links for follow-up research. "
         "Prefer this over WebFetch for URL fetching."
     ),
-    FetchUrlInput.model_json_schema(),
 )
-@tracked("fetch_url")
-async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
-    """Unified fetch: domain dispatch → http/wayback → trafilatura → playwright → prompt."""
-    try:
-        inp = FetchUrlInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    url, prompt = inp.url, inp.prompt
+async def fetch_url(params: FetchUrlInput) -> dict[str, Any]:
+    """Unified fetch: domain dispatch -> http/wayback -> trafilatura -> playwright -> prompt."""
+    url, prompt = params.url, params.prompt
 
     dispatched = await domain_dispatch(url)
     if dispatched is not None:
-        return dispatched
+        return _unwrap_mcp_response(dispatched)
 
     if retrodict_cutoff.get() is not None:
         result = await _fetch_retrodict(url)
@@ -870,7 +828,7 @@ async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
         result = await fetch_live(url)
 
     if isinstance(result, dict):
-        return result
+        return _unwrap_mcp_response(result)
 
     if isinstance(result, FetchResult):
         text, title = result.text, result.title
@@ -889,10 +847,10 @@ async def fetch_url(args: dict[str, Any]) -> dict[str, Any]:
         response["title"] = title
     if isinstance(result, FetchResult) and result.data:
         response["structured_data"] = result.data
-    return mcp_success(response)
+    return response
 
 
-async def _fetch_retrodict(url: str) -> dict[str, Any] | str:
+async def _fetch_retrodict(url: str) -> FetchResult | str:
     """Fetch in retrodict mode via Wayback Machine."""
     cutoff = retrodict_cutoff.get()
     assert cutoff is not None
@@ -905,21 +863,21 @@ async def _fetch_retrodict(url: str) -> dict[str, Any] | str:
             validate_before_cutoff=True,
             raise_on_rate_limit=True,
         )
-    except WaybackRateLimitError:
-        return mcp_error(
+    except WaybackRateLimitError as e:
+        raise ToolError(
             f"Wayback rate limited for {url}. Try again shortly, "
             "or use web_search to find alternative sources."
-        )
+        ) from e
 
     if snapshot is None:
-        return mcp_error(
+        raise ToolError(
             f"No archived snapshot for {url}. "
             "Try web_search to find alternative sources."
         )
 
     content = await fetch_wayback_content(url, ts)
     if content is None:
-        return mcp_error(
+        raise ToolError(
             f"Content extraction failed for {url}. "
             "May be a PDF, image, or JS-rendered page. "
             "Try web_search for alternative sources."
@@ -928,9 +886,9 @@ async def _fetch_retrodict(url: str) -> dict[str, Any] | str:
     return content
 
 
-# --- MCP Server ---
+# --- Exported tool lists (for server construction) ---
 
-_BASE_SEARCH_TOOLS = [
+BASE_SEARCH_TOOLS = [
     web_search,
     wikipedia,
     fetch_url,
@@ -938,30 +896,7 @@ _BASE_SEARCH_TOOLS = [
     fetch_arxiv,
 ]
 
-_OPTIONAL_SEARCH_TOOLS: list[SdkMcpTool[Any]] = []
+OPTIONAL_SEARCH_TOOLS = [search_exa] if settings.exa_api_key else []
 
-if settings.exa_api_key:
-    _OPTIONAL_SEARCH_TOOLS.append(search_exa)
-else:
+if not settings.exa_api_key:
     logger.info("search_exa tool disabled: EXA_API_KEY not configured")
-
-
-def create_search_server() -> Any:
-    """Create MCP server with all search and content retrieval tools.
-
-    In retrodict mode, excludes search_exa.
-    """
-    tools = list(_BASE_SEARCH_TOOLS)
-    is_retrodict = retrodict_cutoff.get() is not None
-    excluded_in_retrodict = (search_exa,)
-    for t in _OPTIONAL_SEARCH_TOOLS:
-        if is_retrodict and t in excluded_in_retrodict:
-            logger.info("%s excluded in retrodict mode", t.name)
-            continue
-        tools.append(t)
-
-    return create_mcp_server(
-        "search",
-        version="2.0.0",
-        tools=tools,
-    )

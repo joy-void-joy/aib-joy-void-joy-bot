@@ -12,6 +12,7 @@ import statistics
 import sys
 import termios
 import tty
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -20,6 +21,7 @@ import typer
 
 from aib.paths import (
     load_all_forecast_jsons,
+    load_all_retrodict_jsons,
     parse_semver,
     parse_timestamp,
     resolve_version,
@@ -282,7 +284,9 @@ def show(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
     ),
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show the scores table (formatted)."""
     all_post_ids = list(post_id) + (post_ids or [])
@@ -351,7 +355,9 @@ def summary(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Aggregate statistics by type, source, and version."""
     if not no_refresh:
@@ -409,7 +415,9 @@ def summary(
 def compare(
     version_a: str = typer.Argument(help="First version to compare"),
     version_b: str = typer.Argument(help="Second version to compare"),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Compare scores between two agent versions on overlapping questions."""
     if not no_refresh:
@@ -489,7 +497,9 @@ def regression(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show latest scores for curated regression suite questions."""
     if not no_refresh:
@@ -570,7 +580,9 @@ def extremes(
     qtype: str | None = typer.Option(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
-    no_refresh: bool = typer.Option(False, "--no-refresh", help="Skip track-record scrape"),
+    no_refresh: bool = typer.Option(
+        False, "--no-refresh", help="Skip track-record scrape"
+    ),
 ) -> None:
     """Show best and worst forecasts."""
     if not no_refresh:
@@ -1218,67 +1230,20 @@ def _sleep_or_keypress(seconds: int) -> str | None:
     return None
 
 
-@app.command()
-def strip(
-    min_n: int = typer.Option(
-        0, "--min-n", help="Minimum scored forecasts to include a version"
-    ),
-    no_watch: bool = typer.Option(
-        False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
-    ),
-    interval: int = typer.Option(
-        600, "--interval", "-i", help="Watch refresh interval in seconds"
-    ),
+def _watch_loop(
+    build_output: Callable[[], str],
+    interval: int,
+    mode_ref: list[ScoreMode],
 ) -> None:
-    """Strip plot of scores by agent version (from track record)."""
-    from datetime import datetime
-
+    """Shared watch-mode loop for strip and trend commands."""
     from rich.console import Console, Group
     from rich.live import Live
     from rich.text import Text
 
-    from aib.devtools.version import load_version_dates
-
     console = Console()
-    watch = not no_watch
-    version_dates = load_version_dates()
-    mode: ScoreMode = "baseline"
-
-    def build_output() -> str:
-        by_version = _load_strip_data(min_n, mode) or {}
-        cmap, totals = _version_color_map_and_totals()
-        if not by_version and not totals:
-            return f"No versions with >= {min_n} scored forecasts."
-        return _build_strip(
-            by_version,
-            version_dates,
-            console.width,
-            cmap,
-            totals,
-            mode,
-        )
-
-    if not watch:
-        refresh_scrape()
-        by_version = _load_strip_data(min_n, mode) or {}
-        cmap, totals = _version_color_map_and_totals()
-        if not by_version and not totals:
-            typer.echo("No track record data.")
-            raise typer.Exit(1)
-        output = _build_strip(
-            by_version,
-            version_dates,
-            console.width,
-            cmap,
-            totals,
-            mode,
-        )
-        print()
-        print(output)
-        return
-
     refresh_scrape()
     output = build_output()
+    mode = mode_ref[0]
     timestamp = Text(
         f"  updated {datetime.now().strftime('%H:%M:%S')}"
         f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
@@ -1297,19 +1262,64 @@ def strip(
                 if key == "\x1b":
                     break
                 if key == "s":
-                    mode = "peer" if mode == "baseline" else "baseline"
+                    mode_ref[0] = "peer" if mode_ref[0] == "baseline" else "baseline"
                     output = build_output()
                 else:
                     refresh_scrape()
                     output = build_output()
             except KeyboardInterrupt:
                 break
+            mode = mode_ref[0]
             timestamp = Text(
                 f"  updated {datetime.now().strftime('%H:%M:%S')}"
                 f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
                 style="dim",
             )
             live.update(Group(Text.from_ansi(output), timestamp))
+
+
+@app.command()
+def strip(
+    min_n: int = typer.Option(
+        0, "--min-n", help="Minimum scored forecasts to include a version"
+    ),
+    no_watch: bool = typer.Option(
+        False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
+    ),
+    interval: int = typer.Option(
+        600, "--interval", "-i", help="Watch refresh interval in seconds"
+    ),
+) -> None:
+    """Strip plot of scores by agent version (from track record)."""
+    from rich.console import Console
+
+    from aib.devtools.version import load_version_dates
+
+    console = Console()
+    version_dates = load_version_dates()
+    mode_ref: list[ScoreMode] = ["baseline"]
+
+    def build_output() -> str:
+        by_version = _load_strip_data(min_n, mode_ref[0]) or {}
+        cmap, totals = _version_color_map_and_totals()
+        if not by_version and not totals:
+            return f"No versions with >= {min_n} scored forecasts."
+        return _build_strip(
+            by_version,
+            version_dates,
+            console.width,
+            cmap,
+            totals,
+            mode_ref[0],
+        )
+
+    if no_watch:
+        refresh_scrape()
+        print()
+        print(build_output())
+        return
+
+    _watch_loop(build_output, interval, mode_ref)
 
 
 @app.command()
@@ -1325,16 +1335,10 @@ def trend(
     ),
 ) -> None:
     """Scatter plot of peer scores over time, colored by agent version."""
-    from datetime import datetime
-
-    from rich.console import Console, Group
-    from rich.live import Live
-    from rich.text import Text
+    from rich.console import Console
 
     console = Console()
-    watch = not no_watch
-
-    mode: ScoreMode = "baseline"
+    mode_ref: list[ScoreMode] = ["baseline"]
 
     def build_output() -> str:
         result = _load_trend_data()
@@ -1347,45 +1351,204 @@ def trend(
             console.width,
             console.height,
             min_n,
-            mode,
+            mode_ref[0],
         )
 
-    if not watch:
+    if no_watch:
         refresh_scrape()
         print()
         print(build_output())
         return
 
-    refresh_scrape()
-    output = build_output()
-    timestamp = Text(
-        f"  updated {datetime.now().strftime('%H:%M:%S')}"
-        f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
-        style="dim",
+    _watch_loop(build_output, interval, mode_ref)
+
+
+@app.command("track-record")
+def track_record_cmd(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+    all_versions: bool = typer.Option(
+        False, "--all-versions", help="Include all versions"
+    ),
+) -> None:
+    """Display peer and baseline scores from forecast JSONs."""
+    effective_version = version if version is not None else AGENT_VERSION
+    effective, warning = resolve_version(effective_version, all_versions)
+    if warning:
+        typer.echo(warning)
+
+    forecasts: list[dict[str, object]] = []
+    for d in load_all_forecast_jsons(versions=effective):
+        if d.get("peer_score") is not None:
+            forecasts.append(d)
+    for d in load_all_retrodict_jsons(versions=effective):
+        if d.get("peer_score") is not None:
+            forecasts.append(d)
+
+    if not forecasts:
+        typer.echo("No scored forecasts found. Run 'scores scrape' first.")
+        return
+
+    typer.echo(f"\n{'ID':<8} {'Peer':>8} {'Base':>8} {'Res':<10} {'Title'}")
+    typer.echo("-" * 95)
+
+    peer_scores_list: list[float] = []
+    baseline_scores_list: list[float] = []
+
+    def by_post_id(d: dict[str, object]) -> int:
+        pid = d.get("post_id")
+        return pid if isinstance(pid, int) else 0
+
+    for fc in sorted(forecasts, key=by_post_id):
+        pid = fc.get("post_id", "")
+        peer = fc.get("peer_score")
+        resolution = fc.get("resolution", "")
+        title = str(fc.get("question_title", ""))[:55]
+
+        peer_str = f"{peer:+.1f}" if isinstance(peer, (int, float)) else "-"
+        res_str = str(resolution)[:10] if resolution else "-"
+
+        baseline = fc.get("baseline_score")
+        base_str = f"{baseline:+.1f}" if isinstance(baseline, (int, float)) else "-"
+
+        if isinstance(peer, (int, float)):
+            peer_scores_list.append(float(peer))
+        if isinstance(baseline, (int, float)):
+            baseline_scores_list.append(float(baseline))
+
+        typer.echo(f"{pid:<8} {peer_str:>8} {base_str:>8} {res_str:<10} {title}")
+
+    typer.echo(f"\n{'=' * 40}")
+    typer.echo(f"Total scored:      {len(forecasts)}")
+
+    if peer_scores_list:
+        avg = sum(peer_scores_list) / len(peer_scores_list)
+        typer.echo(f"Avg peer score:    {avg:>+8.2f}")
+    if baseline_scores_list:
+        avg = sum(baseline_scores_list) / len(baseline_scores_list)
+        typer.echo(f"Avg baseline score:{avg:>+8.2f}")
+
+
+def _fetch_cdf(post_id: int, client: object) -> dict[str, object]:
+    """Fetch CDF and scaling data for a post from the Metaculus API."""
+    import time
+
+    resp = client.get(f"https://www.metaculus.com/api/posts/{post_id}/")  # type: ignore[union-attr]
+    for _attempt in range(5):
+        if resp.status_code != 429:
+            break
+        wait = 2 ** (_attempt + 1)
+        time.sleep(wait)
+        resp = client.get(f"https://www.metaculus.com/api/posts/{post_id}/")  # type: ignore[union-attr]
+
+    resp.raise_for_status()
+    data = resp.json()
+    question = data.get("question") or {}
+
+    my_forecasts = question.get("my_forecasts") or {}
+    latest = my_forecasts.get("latest")
+    if not latest:
+        raise RuntimeError("no forecast submitted")
+
+    cdf_vals = latest.get("forecast_values", [])
+    if not cdf_vals:
+        raise RuntimeError("empty forecast_values")
+
+    scaling = question.get("scaling") or {}
+    result: dict[str, object] = {"cdf": list(cdf_vals)}
+    if scaling.get("range_min") is not None:
+        result["numeric_bounds"] = {
+            "range_min": scaling["range_min"],
+            "range_max": scaling["range_max"],
+            "open_lower_bound": question.get("open_lower_bound"),
+            "open_upper_bound": question.get("open_upper_bound"),
+            "zero_point": scaling.get("zero_point"),
+        }
+    return result
+
+
+@app.command("backfill-cdf")
+def backfill_cdf_cmd(
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Don't update files"),
+    limit: int = typer.Option(
+        0, "--limit", "-l", help="Max questions to process (0=all)"
+    ),
+) -> None:
+    """Backfill CDF and numeric_bounds into forecast JSONs via Metaculus API."""
+    import time
+
+    import httpx
+
+    from aib.agent.history import _update_forecast_json
+    from aib.config import settings
+    from aib.paths import iter_forecast_files, iter_retrodict_files
+
+    needs_backfill: dict[int, list[Path]] = {}
+    skipped_retrodict = 0
+    for f in list(iter_forecast_files()) + list(iter_retrodict_files()):
+        data = json.loads(f.read_text())
+        if data.get("question_type") not in ("numeric", "discrete"):
+            continue
+        if data.get("cdf") is not None:
+            continue
+        if data.get("submitted_at") is None:
+            skipped_retrodict += 1
+            continue
+        pid = data.get("post_id")
+        if isinstance(pid, int):
+            needs_backfill.setdefault(pid, []).append(f)
+
+    if not needs_backfill:
+        typer.echo("All numeric/discrete forecasts already have CDF data.")
+        return
+
+    if skipped_retrodict:
+        typer.echo(f"Skipped {skipped_retrodict} unsubmitted files (retrodictions)")
+    typer.echo(f"Found {len(needs_backfill)} questions needing CDF backfill")
+
+    post_ids_list = sorted(needs_backfill.keys())
+    if limit > 0:
+        post_ids_list = post_ids_list[:limit]
+
+    client = httpx.Client(
+        headers={"Authorization": f"Token {settings.metaculus_token}"},
+        timeout=30,
     )
 
-    with Live(
-        Group(Text.from_ansi(output), timestamp),
-        console=console,
-        refresh_per_second=1,
-        screen=True,
-    ) as live:
-        while True:
-            try:
-                key = _sleep_or_keypress(interval)
-                if key == "\x1b":
-                    break
-                if key == "s":
-                    mode = "peer" if mode == "baseline" else "baseline"
-                    output = build_output()
-                else:
-                    refresh_scrape()
-                    output = build_output()
-            except KeyboardInterrupt:
-                break
-            timestamp = Text(
-                f"  updated {datetime.now().strftime('%H:%M:%S')}"
-                f"  ·  [{mode}]  ·  s to toggle  ·  esc to quit",
-                style="dim",
+    from tqdm import tqdm
+
+    updated = 0
+    failed = 0
+    for pid in tqdm(post_ids_list, desc="Backfilling CDFs", unit="q"):
+        try:
+            cdf_result = _fetch_cdf(pid, client)
+        except Exception as e:
+            tqdm.write(f"  {pid}: FAILED ({e})")
+            failed += 1
+            time.sleep(10)
+            continue
+
+        cdf = cdf_result["cdf"]
+        bounds = cdf_result.get("numeric_bounds")
+        assert isinstance(cdf, list)
+
+        if dry_run:
+            tqdm.write(f"  {pid}: {len(cdf)} points (dry run)")
+        else:
+            for f in needs_backfill[pid]:
+                updates: dict[str, object] = {"cdf": cdf}
+                if bounds:
+                    updates["numeric_bounds"] = bounds
+                _update_forecast_json(f, **updates)
+            tqdm.write(
+                f"  {pid}: {len(cdf)} points -> {len(needs_backfill[pid])} files"
             )
-            live.update(Group(Text.from_ansi(output), timestamp))
+
+        updated += 1
+        time.sleep(10)
+
+    client.close()
+    typer.echo(f"\nUpdated: {updated}, Failed: {failed}")
+    if dry_run:
+        typer.echo("(dry run)")

@@ -100,7 +100,9 @@ async def exa_search(
         if response.status_code != 200:
             logger.error("Exa API error %d: %s", response.status_code, response.text)
         if 400 <= response.status_code < 500:
-            raise ValueError(f"Exa API client error {response.status_code}: {response.text[:200]}")
+            raise ValueError(
+                f"Exa API client error {response.status_code}: {response.text[:200]}"
+            )
         response.raise_for_status()
         data = response.json()
 

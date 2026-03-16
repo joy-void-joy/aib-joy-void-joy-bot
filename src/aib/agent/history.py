@@ -181,6 +181,7 @@ def save_forecast(
     retrodict_date: str | None = None,
     resolution_criteria: str | None = None,
     fine_print: str | None = None,
+    partial: bool = False,
 ) -> Path:
     """Save a forecast to disk.
 
@@ -230,8 +231,11 @@ def save_forecast(
         agent_version=AGENT_VERSION,
     )
 
+    prefix = "PARTIAL_" if partial else ""
     filename = (
-        f"{retrodict_date}_{timestamp}.json" if retrodict_date else f"{timestamp}.json"
+        f"{prefix}{retrodict_date}_{timestamp}.json"
+        if retrodict_date
+        else f"{prefix}{timestamp}.json"
     )
     filepath = question_dir / filename
     filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")

@@ -8,13 +8,10 @@ import logging
 import statistics
 from typing import Any, TypedDict
 
-from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.decorator import ToolError, mcp_tool
 
 logger = logging.getLogger(__name__)
 
@@ -355,7 +352,7 @@ async def _fetch_recent_news(
         return None
 
 
-@tool(
+@mcp_tool(
     "google_trends",
     (
         "Get Google Trends interest over time for a search term. "
@@ -367,20 +364,13 @@ async def _fetch_recent_news(
         "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide. "
         "Tz: timezone offset in minutes (default 360=CST). Use tz=0 to match SerpAPI resolution scripts."
     ),
-    TrendsQueryInput.model_json_schema(),
 )
-@tracked("google_trends")
-async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
+async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
     """Get Google Trends interest over time for a keyword."""
-    try:
-        validated = TrendsQueryInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    keyword = validated.keyword
-    timeframe = validated.timeframe
-    geo = validated.geo
-    tz = validated.tz
+    keyword = params.keyword
+    timeframe = params.timeframe
+    geo = params.geo
+    tz = params.tz
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -400,20 +390,18 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
         df = pytrends.interest_over_time()
 
         if df.empty:
-            return mcp_success(
-                {
-                    "keyword": keyword,
-                    "timeframe": timeframe,
-                    "geo": geo or "worldwide",
-                    "data_points": 0,
-                    "message": "No data available for this query",
-                    "history": [],
-                }
-            )
+            return {
+                "keyword": keyword,
+                "timeframe": timeframe,
+                "geo": geo or "worldwide",
+                "data_points": 0,
+                "message": "No data available for this query",
+                "history": [],
+            }
 
         # Extract values (exclude isPartial column)
         if keyword not in df.columns:
-            return mcp_error(f"Keyword '{keyword}' not found in response")
+            raise ToolError(f"Keyword '{keyword}' not found in response")
 
         import pandas as pd
 
@@ -431,10 +419,10 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
 
         # Fetch related queries on the same session (no extra payload needed)
         related: RelatedQueries | None = None
-        if validated.include_related:
+        if params.include_related:
             related = _fetch_related_queries(pytrends, keyword)
 
-        result: TrendsResult = {
+        result: dict[str, Any] = {
             "keyword": keyword,
             "timeframe": timeframe,
             "geo": geo or "worldwide",
@@ -458,14 +446,16 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
             if recent_news:
                 result["recent_news"] = recent_news
 
-        return mcp_success(result)
+        return result
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Google Trends lookup failed")
-        return mcp_error(f"Google Trends lookup failed for '{keyword}': {e}")
+        raise ToolError(f"Google Trends lookup failed for '{keyword}': {e}") from e
 
 
-@tool(
+@mcp_tool(
     "google_trends_compare",
     (
         "Compare Google Trends interest for multiple search terms. "
@@ -473,20 +463,13 @@ async def google_trends(args: dict[str, Any]) -> dict[str, Any]:
         "Values are relative to each other within the comparison. "
         "Useful for comparing popularity of different topics or candidates."
     ),
-    TrendsCompareInput.model_json_schema(),
 )
-@tracked("google_trends_compare")
-async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
+async def google_trends_compare(params: TrendsCompareInput) -> dict[str, Any]:
     """Compare Google Trends interest for multiple keywords."""
-    try:
-        validated = TrendsCompareInput.model_validate(args)
-    except Exception as e:
-        return mcp_error(f"Invalid input: {e}")
-
-    keywords = validated.keywords
-    timeframe = validated.timeframe
-    geo = validated.geo
-    tz = validated.tz
+    keywords = params.keywords
+    timeframe = params.timeframe
+    geo = params.geo
+    tz = params.tz
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -506,15 +489,13 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
         df = pytrends.interest_over_time()
 
         if df.empty:
-            return mcp_success(
-                {
-                    "keywords": keywords,
-                    "timeframe": timeframe,
-                    "geo": geo or "worldwide",
-                    "message": "No data available for this query",
-                    "comparison": {},
-                }
-            )
+            return {
+                "keywords": keywords,
+                "timeframe": timeframe,
+                "geo": geo or "worldwide",
+                "message": "No data available for this query",
+                "comparison": {},
+            }
 
         # Build comparison results
         comparison: dict[str, dict[str, Any]] = {}
@@ -540,32 +521,17 @@ async def google_trends_compare(args: dict[str, Any]) -> dict[str, Any]:
         else:
             winner = None
 
-        return mcp_success(
-            {
-                "keywords": keywords,
-                "timeframe": timeframe,
-                "geo": geo or "worldwide",
-                "data_points": len(df) if not df.empty else 0,
-                "comparison": comparison,
-                "highest_average": winner,
-            }
-        )
+        return {
+            "keywords": keywords,
+            "timeframe": timeframe,
+            "geo": geo or "worldwide",
+            "data_points": len(df) if not df.empty else 0,
+            "comparison": comparison,
+            "highest_average": winner,
+        }
 
+    except ToolError:
+        raise
     except Exception as e:
         logger.exception("Google Trends comparison failed")
-        return mcp_error(f"Google Trends comparison failed: {e}")
-
-
-# --- MCP Server ---
-
-
-def create_trends_server():
-    """Create MCP server with Google Trends tools."""
-    return create_mcp_server(
-        name="trends",
-        version="1.0.0",
-        tools=[
-            google_trends,
-            google_trends_compare,
-        ],
-    )
+        raise ToolError(f"Google Trends comparison failed: {e}") from e
