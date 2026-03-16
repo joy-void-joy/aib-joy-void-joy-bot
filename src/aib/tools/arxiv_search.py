@@ -20,6 +20,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import downloads_dir
+from aib.tools.throttle import arxiv_throttle
 
 logger = logging.getLogger(__name__)
 
@@ -97,15 +98,16 @@ async def search_arxiv(params: SearchArxivInput) -> dict[str, Any]:
         sort_by=arxiv.SortCriterion.Relevance,
     )
 
-    client = arxiv.Client()
-    results: list[dict[str, Any]] = []
+    async with arxiv_throttle:
+        client = arxiv.Client()
+        results: list[dict[str, Any]] = []
 
-    for result in client.results(search):
-        paper = _result_to_dict(result, cutoff)
-        if paper:
-            results.append(paper)
-            if len(results) >= params.max_results:
-                break
+        for result in client.results(search):
+            paper = _result_to_dict(result, cutoff)
+            if paper:
+                results.append(paper)
+                if len(results) >= params.max_results:
+                    break
 
     return {"query": params.query, "results": results, "count": len(results)}
 
@@ -175,9 +177,8 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
         except Exception as e:
             logger.warning("arXiv metadata check failed for %s: %s", paper_id, e)
 
-    # Step 1: Try HTML version
     html_url = f"https://arxiv.org/html/{paper_id}"
-    async with httpx.AsyncClient(
+    async with arxiv_throttle, httpx.AsyncClient(
         timeout=_ARXIV_TIMEOUT, follow_redirects=True
     ) as client:
         try:

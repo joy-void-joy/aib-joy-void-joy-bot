@@ -6,12 +6,17 @@ about search interest, trending topics, and relative popularity.
 
 import logging
 import statistics
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
+import pandas as pd
 from pydantic import BaseModel, Field
+from pytrends.exceptions import TooManyRequestsError
+from pytrends.request import TrendReq
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
+from aib.tools.throttle import trends_throttle
 
 logger = logging.getLogger(__name__)
 
@@ -282,6 +287,22 @@ def _compute_tail_stats(
     return stats
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=30, max=120),
+    retry=retry_if_exception_type(TooManyRequestsError),
+    reraise=True,
+)
+def _fetch_trends_data(
+    keywords: list[str], timeframe: str, geo: str, tz: int
+) -> tuple[TrendReq, pd.DataFrame]:
+    """Fetch Google Trends data with retry on rate limits."""
+    pytrends = TrendReq(hl="en-US", tz=tz)
+    pytrends.build_payload(keywords, timeframe=timeframe, geo=geo)
+    df = cast(pd.DataFrame, pytrends.interest_over_time())
+    return pytrends, df
+
+
 def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
     """Fetch related queries using an existing pytrends session."""
     try:
@@ -379,15 +400,8 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        from pytrends.request import TrendReq
-
-        pytrends = TrendReq(hl="en-US", tz=tz)
-
-        # Build payload
-        pytrends.build_payload([keyword], timeframe=timeframe, geo=geo)
-
-        # Get interest over time
-        df = pytrends.interest_over_time()
+        async with trends_throttle:
+            pytrends, df = _fetch_trends_data([keyword], timeframe, geo, tz)
 
         if df.empty:
             return {
@@ -399,11 +413,8 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
                 "history": [],
             }
 
-        # Extract values (exclude isPartial column)
         if keyword not in df.columns:
             raise ToolError(f"Keyword '{keyword}' not found in response")
-
-        import pandas as pd
 
         values = df[keyword].tolist()
         dates = [d.strftime("%Y-%m-%d") for d in pd.DatetimeIndex(df.index)]
@@ -478,15 +489,8 @@ async def google_trends_compare(params: TrendsCompareInput) -> dict[str, Any]:
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        from pytrends.request import TrendReq
-
-        pytrends = TrendReq(hl="en-US", tz=tz)
-
-        # Build payload with all keywords
-        pytrends.build_payload(keywords, timeframe=timeframe, geo=geo)
-
-        # Get interest over time
-        df = pytrends.interest_over_time()
+        async with trends_throttle:
+            _, df = _fetch_trends_data(keywords, timeframe, geo, tz)
 
         if df.empty:
             return {

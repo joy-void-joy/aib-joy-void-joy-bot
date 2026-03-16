@@ -83,3 +83,13 @@ asknews_throttle = Throttle(
     max_concurrent=settings.asknews_max_concurrent,
     min_interval=settings.asknews_min_interval,
 )
+trends_throttle = Throttle(
+    max_concurrent=settings.trends_max_concurrent,
+    min_interval=settings.trends_min_interval,
+)
+fred_throttle = Throttle(max_concurrent=settings.fred_max_concurrent)
+arxiv_throttle = Throttle(
+    max_concurrent=settings.arxiv_max_concurrent,
+    min_interval=settings.arxiv_min_interval,
+)
+markets_throttle = Throttle(max_concurrent=settings.markets_max_concurrent)
