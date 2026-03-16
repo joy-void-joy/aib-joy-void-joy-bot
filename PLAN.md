@@ -1,7 +1,65 @@
-# Implementation Plan: Metaculus Forecasting Bot
+# Feedback Loop & Devtools Architecture
 
 ## Current Status
 
+The feedback loop is decomposed into 6 focused subcommands (`/fb-status`, `/fb-investigate`, `/fb-analyze`, `/fb-reflect`, `/fb-implement`, `/fb-retrodict`), orchestrated by `/feedback-loop`. Each subcommand is independently invocable and backed by purpose-built devtools in `src/aib/devtools/analysis.py`.
+
+A post-session Opus reviewer produces structured `summary.json` files alongside each forecast trace. These are the central data source for downstream analysis — devtools aggregate them rather than re-interpreting traces with LLMs.
+
+## Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Subcommand structure | Separate .md files | Each invocable independently; orchestrator calls in sequence |
+| Post-session reviewer | Opus, combined with condensation | Replaces trace-explorer + Sonnet condensation in one pass |
+| Summary storage | `summary.json` in session directory | Easy iteration for devtools; separate from forecast data |
+| Tool audit structure | `by_tool: dict[str, str]` (compact one-line format) | Structured PerToolReview was too complex for LLM output; one-line format with consistent keywords enables grep-based aggregation |
+| Trace-explorer | Removed | summary.json + devtools aggregation replaces it |
+| Version-explorer | Kept | Code diffs still need LLM; CHANGELOG handles the overview |
+| Resolution naming | `sync` + `tentative` | `check`/`resolve` were near-synonymous |
+| Dashboard | Fast by default, `--refresh` flag | Don't block on API calls; opt-in sync |
+| Done marking | Orchestrator-level, after full session | Subcommands don't mark; orchestrator marks at the end |
+| Condensed reasoning | Separate field in summary.json | Short `summary` for review; longer `condensed_reasoning` for Metaculus comments |
+
+## Architecture
+
+```
+/feedback-loop (orchestrator)
+  ├── /fb-status        → analysis dashboard, analysis status, scores show
+  ├── /fb-investigate   → scores show, summary.json, web search, error classification
+  ├── /fb-analyze       → analysis tool-health, analysis tool-needs, version-diff
+  ├── /fb-reflect       → analysis tracking-gaps, prompt-health, process assessment
+  ├── /fb-implement     → code changes, version bump, commit
+  └── /fb-retrodict     → queue missed, candidate selection
+
+Post-session reviewer (core.py:review_forecast_trace)
+  → ForecastSummary structured output → summary.json
+
+Analysis devtools (analysis.py)
+  dashboard, tool-health, tool-needs, tracking-gaps, prompt-health,
+  version-diff, mark/unmark, status, review
+```
+
+## Data Flow
+
+```
+Forecast run
+  → trace_for_condensation.md (session dir)
+  → Opus reviewer → summary.json (session dir)
+  → condensed_reasoning → ForecastOutput → Metaculus comment
+
+Feedback loop
+  → analysis devtools read summary.json files
+  → aggregate tool health, capability gaps, reasoning patterns
+  → inform implementation priorities
+```
+
+## Remaining Work
+
+- [ ] Validate by running `/feedback-loop` end-to-end with the new subcommands
+- [ ] After first session: assess whether `by_tool` one-line format is aggregatable enough
+- [ ] After first session: assess whether subcommand gates and scoped `allowed-tools` work well in practice
+=======
 **Phase**: Feedback Loop & Devtools Overhaul (Phase 8)
 
 ---
@@ -640,3 +698,4 @@ notes/
 | Feedback loop | Decomposed subcommands | Each concern gets focused attention |
 | Devtools | Concern-based extraction | Data one command away, not buried in LLM analysis |
 | "Done" marking | Simple JSON state file | Replaces feedback_state.json's overloaded tracking |
+>>>>>>> feedback-loop-03-16
