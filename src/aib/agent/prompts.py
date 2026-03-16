@@ -303,8 +303,10 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 - **factors** — your current evidence list (description, logit, confidence, supports, conditional). Same factors as your final output.
 - **tentative_estimate** — Binary: `{logit, probability}`. Numeric/discrete: `{center, low, high}`. MC: `{probabilities: {option: probability}}`.
 - **assessment** — freeform narrative. Pro/con for binary, scenario analysis for numeric, key tensions.
-- **tool_audit** — which tools provided useful data, which had failures, and any capability gaps.
-- **process_reflection** — how the forecasting system supported or hindered you. What tools are missing? Did the prompt guide you well for this question type?
+**Optional:**
+- **calibration_notes** — base rates, status quo assessment, hedging check
+- **key_uncertainties** — what you're most uncertain about and what would change your mind
+- **update_triggers** — events that would move your forecast significantly
 
 ### Gate behavior
 
@@ -330,28 +332,34 @@ Provide your actual evidence and genuine assessment — vague placeholders produ
 # Section assembly
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT_SECTIONS: list[str] = [
-    _CORE_PRINCIPLES,
-    _OUTPUT_FORMAT,
-    _STEP1_PARSE,
-    _STEP2_CLASSIFY,
-    _STEP3_RESEARCH,
-    _STEP4_CALIBRATION,
-    _DEFINITIONAL_QUESTIONS,
-    _META_PREDICTIONS,
-    _MARKET_INTEGRATION,
-    _REFLECTION,
-]
+_SECTIONS: dict[str, str] = {
+    "core_principles": _CORE_PRINCIPLES,
+    "output_format": _OUTPUT_FORMAT,
+    "step1_parse": _STEP1_PARSE,
+    "step2_classify": _STEP2_CLASSIFY,
+    "step3_research": _STEP3_RESEARCH,
+    "step4_calibration": _STEP4_CALIBRATION,
+    "definitional": _DEFINITIONAL_QUESTIONS,
+    "meta_predictions": _META_PREDICTIONS,
+    "market_integration": _MARKET_INTEGRATION,
+    "reflection": _REFLECTION,
+}
+
+_WORKSPACE_AFTER = "step3_research"
+
+_SKIP_FOR_NUMERIC: frozenset[str] = frozenset({"definitional", "meta_predictions"})
 
 
 def _format_system_prompt(
     *,
     sandbox_shared_dir: str,
     session_dir: str,
+    question_type: str = "binary",
 ) -> str:
-    """Assemble the forecasting system prompt from its sections.
+    """Assemble the forecasting system prompt from named sections.
 
-    Injects runtime paths into the appropriate placeholders.
+    Numeric/discrete questions omit the Definitional Questions and
+    Meta-Predictions sections (they never apply to measurement questions).
     """
     header = (
         "You are an expert forecaster participating in the "
@@ -373,10 +381,17 @@ def _format_system_prompt(
         "using `Glob` and `Read`."
     )
 
+    skip = (
+        _SKIP_FOR_NUMERIC if question_type in ("numeric", "discrete") else frozenset()
+    )
+
     parts: list[str] = [header, workspace, ""]
-    parts.extend(_SYSTEM_PROMPT_SECTIONS[:5])  # Core through Step 3
-    parts.append(workspace_section)
-    parts.extend(_SYSTEM_PROMPT_SECTIONS[5:])  # Step 4 through Reflection
+    for name, text in _SECTIONS.items():
+        if name in skip:
+            continue
+        parts.append(text)
+        if name == _WORKSPACE_AFTER:
+            parts.append(workspace_section)
 
     return "\n\n---\n\n".join(parts)
 
@@ -607,6 +622,7 @@ def get_forecasting_system_prompt(
     retrodict: bool = False,
     sandbox_shared_dir: str = "./tmp/sandbox-shared",
     session_dir: str = "",
+    question_type: str = "binary",
 ) -> str:
     """Generate the forecasting system prompt.
 
@@ -615,6 +631,7 @@ def get_forecasting_system_prompt(
         retrodict: Unused — kept for interface compatibility.
         sandbox_shared_dir: Host path for sandbox file exchange (mounted at /shared).
         session_dir: Session workspace directory path for the agent.
+        question_type: Question type — numeric/discrete omit irrelevant sections.
 
     Returns:
         The assembled system prompt.
@@ -622,6 +639,7 @@ def get_forecasting_system_prompt(
     prompt = _format_system_prompt(
         sandbox_shared_dir=sandbox_shared_dir,
         session_dir=session_dir,
+        question_type=question_type,
     )
 
     if tool_docs:

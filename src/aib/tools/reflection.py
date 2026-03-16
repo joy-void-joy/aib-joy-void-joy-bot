@@ -79,26 +79,9 @@ class ReflectionInput(BaseModel):
         default=None,
         description="What you're most uncertain about and what would change your mind.",
     )
-    tool_audit: str = Field(
-        description=(
-            "Which tools provided useful information, which returned "
-            "empty results, and which had actual failures."
-        ),
-    )
     update_triggers: str | None = Field(
         default=None,
         description="Events that would move your forecast significantly.",
-    )
-    process_reflection: str = Field(
-        description=(
-            "How did the forecasting system feel to use — not what you "
-            "did, but how the scaffolding supported you. What felt rigid "
-            "or lacking, what felt smooth? What tools are missing that "
-            "would have helped? What subagents would have been useful? "
-            "Did the prompt guide you well or lead you astray for this "
-            "question type? Where did you hit friction — a tool returning "
-            "junk, a forced workaround, a missing capability?"
-        ),
     )
 
 
