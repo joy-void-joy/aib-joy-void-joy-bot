@@ -389,11 +389,16 @@ aib-devtools
 │   └── cdf            CDF sharpness analysis
 │
 ├── scores             Unified scores table (wraps aib.scoring)
+│   ├── scrape         Scrape track record, update forecast JSONs with peer scores
 │   ├── show           Show scores table (--post-id, --version, --source, --resolved)
 │   ├── summary        Aggregate statistics by type, source, version
 │   ├── compare        Compare two agent versions on overlapping questions
 │   ├── regression     Regression suite results
-│   └── extremes       Best/worst forecasts (--non-meta, --version, --type, -n)
+│   ├── extremes       Best/worst forecasts (--non-meta, --version, --type, -n)
+│   ├── strip          Strip plot of scores by agent version (watch mode)
+│   ├── trend          Scatter plot of peer scores over time (watch mode)
+│   ├── track-record   Peer and baseline scores from forecast JSONs
+│   └── backfill-cdf   Backfill CDF/numeric_bounds via Metaculus API
 │
 ├── queue              Forecasting queue and priorities
 │   ├── status         Tournament status overview
@@ -401,14 +406,22 @@ aib-devtools
 │   ├── missed         Recently closed without forecast (--days N)
 │   └── search         Search questions (--type, --limit, --resolved/--open)
 │
+├── analysis           Forecast analysis and feedback loop
+│   ├── dashboard      One-screen health check (--refresh)
+│   ├── tool-health    Aggregate tool errors from forecasts + summary.json
+│   ├── tool-needs     Capability gaps from summary.json reviews
+│   ├── tracking-gaps  Data completeness check
+│   ├── prompt-health  Prompt size and patch accumulation
+│   ├── version-diff   CHANGELOG entries between two versions
+│   ├── mark/unmark    Mark forecasts as analyzed
+│   ├── status         Show analysis state
+│   └── review         Run Opus reviewer on a trace (--backfill)
+│
 ├── resolution         Resolution updates
-│   ├── check          Scrape profile page for resolutions and scores (--backfill, --dry-run)
-│   ├── resolve        AI-powered early resolution (--post-id, --max, --dry-run)
+│   ├── sync           Scrape profile page for resolutions and scores (--backfill, --dry-run)
+│   ├── tentative      AI-powered early resolution (--post-id, --max, --dry-run)
 │   ├── status         Show resolution status of all forecasts
 │   └── set            Manually set resolution for a post
-│
-├── feedback           Feedback collection
-│   └── collect        Collect metrics from resolved forecasts
 │
 ├── trace              Forecast tracing and log analysis
 │   ├── show           Show forecast trace for a post ID (--verbose)
@@ -416,12 +429,6 @@ aib-devtools
 │   ├── errors         Show forecasts with errors
 │   ├── log            Extract agent reasoning from forecast log
 │   └── logs           List available forecast logs
-│
-├── metrics            Aggregate metrics
-│   ├── summary        Overall metrics summary
-│   ├── tools          Tool usage statistics
-│   ├── by-type        Metrics by question type
-│   └── errors         Error summary
 │
 ├── api                API inspection and debugging
 │   ├── inspect        Explore package APIs (replaces python -c "import ...")
