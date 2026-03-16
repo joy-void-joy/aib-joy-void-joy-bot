@@ -5,8 +5,10 @@ employment, inflation, demographics, and housing.
 """
 
 import logging
+from datetime import date
 from typing import Any, TypedDict
 
+import httpx
 from claude_agent_sdk import tool
 from pydantic import BaseModel, Field
 
@@ -15,6 +17,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +134,88 @@ class CensusRecord(TypedDict):
 
 # --- BLS Tools ---
 
+BLS_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
+
+MONTH_NAMES = [
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+]
+
+
+@with_retry(max_attempts=3)
+async def fetch_bls_series(
+    series_ids: list[str],
+    start_year: int,
+    end_year: int,
+    api_key: str | None = None,
+) -> dict[str, list[BLSObservation]]:
+    """Fetch raw BLS time series data via the public API.
+
+    Returns a dict mapping series_id to a sorted list of observations.
+    Handles the BLS 20-year-per-request limit by chunking.
+    """
+    all_observations: dict[str, list[BLSObservation]] = {
+        sid: [] for sid in series_ids
+    }
+
+    chunk_start = start_year
+    while chunk_start <= end_year:
+        chunk_end = min(chunk_start + 19, end_year)
+
+        payload: dict[str, Any] = {
+            "seriesid": series_ids,
+            "startyear": str(chunk_start),
+            "endyear": str(chunk_end),
+        }
+        if api_key:
+            payload["registrationkey"] = api_key
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(BLS_API_URL, json=payload)
+            response.raise_for_status()
+            data = response.json()
+
+        if data.get("status") != "REQUEST_SUCCEEDED":
+            for msg in data.get("message", []):
+                logger.warning("BLS API: %s", msg)
+            raise RuntimeError(f"BLS API status: {data.get('status')}")
+
+        for series in data.get("Results", {}).get("series", []):
+            sid = series["seriesID"]
+            if sid not in all_observations:
+                continue
+            for item in series.get("data", []):
+                period = item.get("period", "")
+                if period == "M13":
+                    continue
+                value = item.get("value", "")
+                if value in ("-", ""):
+                    continue
+                try:
+                    float(value)
+                except ValueError:
+                    continue
+                year = item.get("year", "")
+                month_num = int(period[1:]) if period.startswith("M") else 0
+                all_observations[sid].append(
+                    BLSObservation(
+                        year=year,
+                        period=period,
+                        period_name=(
+                            MONTH_NAMES[month_num] if 1 <= month_num <= 12
+                            else item.get("periodName", period)
+                        ),
+                        value=value,
+                    )
+                )
+
+        chunk_start = chunk_end + 1
+
+    for sid in all_observations:
+        all_observations[sid].sort(key=lambda o: (o["year"], o["period"]))
+
+    return all_observations
+
 
 @tool(
     "bls_series",
@@ -152,8 +237,6 @@ async def bls_series(args: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         return mcp_error(f"Invalid input: {e}")
 
-    from datetime import date
-
     cutoff = retrodict_cutoff.get()
     reference_year = cutoff.year if cutoff else date.today().year
     start_year = validated.start_year or (reference_year - 5)
@@ -163,72 +246,39 @@ async def bls_series(args: dict[str, Any]) -> dict[str, Any]:
         end_year = cutoff.year
 
     try:
-        import bls
-
-        api_key = settings.bls_api_key
-        kwargs: dict[str, Any] = {
-            "startyear": start_year,
-            "endyear": end_year,
-        }
-        if api_key:
-            kwargs["key"] = api_key
-
-        df = bls.get_series(validated.series_ids, **kwargs)
-
-        # Client-side date filter: BLS API returns full years, so in retrodict
-        # mode we must drop observations after the cutoff month.
-        if cutoff is not None and df is not None and not df.empty:
-            df = df[df.index <= cutoff.isoformat()]
+        all_obs = await fetch_bls_series(
+            validated.series_ids,
+            start_year,
+            end_year,
+            settings.bls_api_key,
+        )
 
         results: list[BLSSeriesResult] = []
+        for series_id in validated.series_ids:
+            observations = all_obs.get(series_id, [])
 
-        if df is not None and not df.empty:
-            for series_id in validated.series_ids:
-                if series_id in df.columns:
-                    series_data = df[series_id].dropna()
-                    observations: list[BLSObservation] = []
-                    for idx, value in series_data.items():
-                        observations.append(
-                            {
-                                "year": str(idx.year),
-                                "period": f"M{idx.month:02d}",
-                                "period_name": idx.strftime("%B"),
-                                "value": str(value),
-                            }
-                        )
+            if cutoff is not None:
+                cutoff_period = f"M{cutoff.month:02d}"
+                cutoff_year = str(cutoff.year)
+                observations = [
+                    o for o in observations
+                    if (o["year"], o["period"]) <= (cutoff_year, cutoff_period)
+                ]
 
-                    latest = observations[-1] if observations else None
-                    results.append(
-                        {
-                            "series_id": series_id,
-                            "observations": observations[-60:],
-                            "latest_value": latest["value"] if latest else None,
-                            "latest_period": (
-                                f"{latest['year']}-{latest['period']}"
-                                if latest
-                                else None
-                            ),
-                        }
-                    )
-                else:
-                    results.append(
-                        {
-                            "series_id": series_id,
-                            "observations": [],
-                            "latest_value": None,
-                            "latest_period": None,
-                        }
-                    )
-        else:
-            for series_id in validated.series_ids:
-                results.append(
-                    {
-                        "series_id": series_id,
-                        "observations": [],
-                        "latest_value": None,
-                        "latest_period": None,
-                    }
+            observations = observations[-60:]
+            latest = observations[-1] if observations else None
+            results.append(
+                BLSSeriesResult(
+                    series_id=series_id,
+                    observations=observations,
+                    latest_value=latest["value"] if latest else None,
+                    latest_period=(
+                        f"{latest['year']}-{latest['period']}"
+                        if latest
+                        else None
+                    ),
                 )
+            )
 
         return mcp_success(
             {
