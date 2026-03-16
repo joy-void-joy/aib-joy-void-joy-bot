@@ -241,3 +241,10 @@ for env_name, value in _ENV_EXPORTS:
 
 if settings.openrouter_api_key:
     logger.info("OpenRouter enabled — routing API calls through openrouter.ai")
+
+
+TOURNAMENTS: dict[str, int | str] = {
+    "aib": "spring-aib-2026",
+    "minibench": "minibench",
+    "cup": 32921,
+}

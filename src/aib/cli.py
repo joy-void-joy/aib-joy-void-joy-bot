@@ -13,6 +13,7 @@ import httpx
 import typer
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
+from aib.config import TOURNAMENTS as TOURNAMENT_IDS
 from aib.agent.history import (
     RetrodictComparison,
     commit_forecast,
@@ -988,14 +989,6 @@ def submit(
             print(f"✅ Comment posted on post {output.post_id}")
         except Exception as e:
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
-
-
-# Known tournament IDs
-TOURNAMENT_IDS = {
-    "aib": "spring-aib-2026",
-    "minibench": "minibench",
-    "cup": 32921,
-}
 
 
 @app.command()

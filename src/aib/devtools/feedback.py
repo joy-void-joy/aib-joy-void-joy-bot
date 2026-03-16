@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 FEEDBACK_BASE_PATH = Path("./notes/feedback_loop")
 
-TOURNAMENTS = {
-    "spring-aib-2026": 32916,
+TOURNAMENTS: dict[str, int | str] = {
+    "spring-aib-2026": "spring-aib-2026",
     "fall-aib-2025": "fall-aib-2025",
     "metaculus-cup": 32921,
 }

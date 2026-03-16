@@ -17,6 +17,7 @@ from aib.paths import (
     get_all_forecasted_post_ids,
     iter_retrodict_dirs,
 )
+from aib.config import TOURNAMENTS
 from aib.scoring import build_score_row
 
 T = TypeVar("T")
@@ -35,12 +36,6 @@ def run_async(coro: Coroutine[object, object, T]) -> T:
 
 
 app = typer.Typer(no_args_is_help=True)
-
-TOURNAMENTS = {
-    "aib": 32916,
-    "minibench": 32715,
-    "cup": 32585,
-}
 
 
 def get_forecasted_post_ids() -> set[int]:
@@ -95,7 +90,7 @@ def _load_scores_for_posts(post_ids: set[int]) -> dict[int, dict[str, str]]:
     return scores
 
 
-async def fetch_tournament_questions(tournament_id: int) -> list[dict]:
+async def fetch_tournament_questions(tournament_id: int | str) -> list[dict]:
     """Fetch open questions from a tournament."""
     questions: list[dict] = []
     offset = 0
@@ -145,7 +140,7 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
     return results
 
 
-async def _fetch_resolved(tournament_ids: list[int], limit: int = 50) -> list[dict]:
+async def _fetch_resolved(tournament_ids: list[int | str], limit: int = 50) -> list[dict]:
     """Fetch resolved questions from one or more tournaments."""
     all_questions: list[dict] = []
 
