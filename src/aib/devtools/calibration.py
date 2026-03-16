@@ -529,7 +529,7 @@ def binary_cmd(
     if not data:
         typer.echo("No resolved binary forecasts found.")
         typer.echo(
-            "Run 'aib-devtools resolution check' or retrodict some questions first."
+            "Run 'aib-devtools resolution sync' or retrodict some questions first."
         )
         raise typer.Exit(1)
 
