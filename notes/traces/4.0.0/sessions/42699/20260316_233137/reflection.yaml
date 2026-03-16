@@ -1,0 +1,307 @@
+---
+timestamp: 2026-03-16 23:37:40 UTC
+question_type: multiple_choice
+factors:
+- description: 'Tournament ended Sunday March 15 (peak=100). March 17 is peak+2 (Tuesday).
+    Historical peak+2 values: 2024=4, 2025=7. With March 16=19 (peak+1), March 17
+    likely 3-5.'
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: March 27 is 12 days post-tournament. Historical data shows values drop
+    to 0-2 within 4-5 days of peak, and stay there through day 12+. March 27 virtually
+    certain to be 0-2.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Critical boundary: if March 17 = 3, then with March 27 = 0-1, the
+    difference is only -2 to -3, which resolves as Doesn''t Change. The 2025 decay
+    ratio (peak+2/peak+1 = 7/50 = 0.14) applied to 2026 gives 19*0.14 = 2.7, which
+    rounds to 3.'
+  supports: Doesn't change
+  logit: 0.7
+  confidence: 0.6
+  effective_logit: 0.42
+- description: The 2024 analogy (more similar peak+1 of 17 vs 2026's 19) gives peak+2
+    = 4, which would resolve as Decreases with March 27 at 0-1.
+  supports: Decreases
+  logit: 0.6
+  confidence: 0.7
+  effective_logit: 0.42
+- description: SerpAPI may differ from pytrends by ±2-3 points, adding measurement
+    uncertainty. At these low values (3-5), a ±2 shift could flip the outcome.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: No upcoming golf events or Players Championship news expected by March
+    27 that would increase interest. P(Increases) is near-zero.
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+tentative_estimate:
+  probabilities:
+    Increases: 0.01
+    Doesn't change: 0.44
+    Decreases: 0.55
+assessment: 'This question hinges on a narrow quantitative boundary. The Players Championship
+  2026 ended Sunday March 15 (peak interest = 100). March 17 (the start date) is just
+  2 days post-peak, when interest is still decaying rapidly. March 27 (the end date)
+  is 12 days post-peak, when interest has fully returned to baseline (0-2).
+
+
+  The critical question is whether March 17''s value rounds to 3 or 4+. If 4+, the
+  difference with March 27 exceeds the ±3 threshold → Decreases. If 3 or below, the
+  difference stays within ±3 → Doesn''t Change.
+
+
+  Historical analogies give conflicting signals:
+
+  - 2024 (peak+1=17, very similar to 2026''s 19): peak+2 = 4 → supports Decreases
+
+  - 2025 (peak+1=50, less comparable): applying the decay ratio gives ~3 → supports
+  Doesn''t Change
+
+
+  The 2024 analogy is arguably better matched (similar peak+1 magnitude), slightly
+  favoring Decreases. But there''s genuine uncertainty about this single integer value,
+  compounded by SerpAPI measurement differences.
+
+
+  P(Increases) is negligible - there''s no plausible mechanism for renewed interest
+  in a completed golf tournament 12 days later.'
+calibration_notes: 'Base rates from change_stats in the resolution date range (Feb
+  25-Mar 27): increases=31.6%, decreases=10.5%, no_change=57.9%. But these base rates
+  reflect all consecutive day pairs in the range, most of which are low-value baseline
+  days. They don''t capture the specific dynamics of a post-tournament decay period.
+  The question specifically asks about March 17 vs March 27, which is in the post-tournament
+  decay window - a non-representative period. My estimate of ~55% Decreases / 44%
+  Doesn''t Change reflects the genuine boundary uncertainty.'
+key_uncertainties: 'The single biggest uncertainty is whether Google Trends reports
+  March 17 as 3 or 4+ in the resolution date range. This is a one-integer difference
+  that flips the outcome. Secondary uncertainty: SerpAPI vs pytrends measurement differences
+  at low values.'
+tool_audit: google_trends tool worked well, providing exact data with tz=0 matching
+  resolution parameters. Historical years (2024, 2025) provided crucial analogies.
+  web_search confirmed tournament dates and that Cameron Young won (March 15 final
+  round). Monte Carlo simulation was useful for combining distributions. No tool failures.
+update_triggers: If March 17 Google Trends value becomes observable (it should by
+  March 18), that would definitively resolve most uncertainty. If it's 5+, Decreases
+  becomes near-certain. If it's 3 or below, Doesn't Change becomes dominant.
+process_reflection: The google_trends tool's change_stats and tail_stats were helpful
+  for initial calibration but the base rates aren't directly applicable here since
+  this is a specific post-event decay question, not a random day-pair comparison.
+  The core analysis required manual comparison of historical year patterns, which
+  worked well. The main limitation is that we can't yet observe March 17's value since
+  the question closes right at the boundary. The ±3 threshold creates a genuine knife-edge
+  scenario when the start value is in the 3-5 range.
+computed:
+  factor_count: 6
+  factor_sum: 3.425
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Tournament ended Sunday March 15 (peak=100). March 17 is peak+2
+      (Tuesday). Historical peak+2 values: 2024=4, 2025=7. With March 16=19 (peak+1),
+      March 17 likely 3-5.'
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: March 27 is 12 days post-tournament. Historical data shows values
+      drop to 0-2 within 4-5 days of peak, and stay there through day 12+. March 27
+      virtually certain to be 0-2.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Critical boundary: if March 17 = 3, then with March 27 = 0-1, the
+      difference is only -2 to -3, which resolves as Doesn''t Change. The 2025 decay
+      ratio (peak+2/peak+1 = 7/50 = 0.14) applied to 2026 gives 19*0.14 = 2.7, which
+      rounds to 3.'
+    supports: Doesn't change
+    logit: 0.7
+    confidence: 0.6
+    effective_logit: 0.42
+  - description: The 2024 analogy (more similar peak+1 of 17 vs 2026's 19) gives peak+2
+      = 4, which would resolve as Decreases with March 27 at 0-1.
+    supports: Decreases
+    logit: 0.6
+    confidence: 0.7
+    effective_logit: 0.42
+  - description: SerpAPI may differ from pytrends by ±2-3 points, adding measurement
+      uncertainty. At these low values (3-5), a ±2 shift could flip the outcome.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: No upcoming golf events or Players Championship news expected by
+      March 27 that would increase interest. P(Increases) is near-zero.
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  dominant_factor: March 27 is 12 days post-tournament. Historical data shows values
+    drop to 0-2 within 4-5 days of peak, and stay there through day 12+. March 27
+    virtually certain to be 0-2.
+  dominant_effective_logit: 1.4249999999999998
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 2.8549999999999995
+    factors:
+    - description: 'Tournament ended Sunday March 15 (peak=100). March 17 is peak+2
+        (Tuesday). Historical peak+2 values: 2024=4, 2025=7. With March 16=19 (peak+1),
+        March 17 likely 3-5.'
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+    - description: March 27 is 12 days post-tournament. Historical data shows values
+        drop to 0-2 within 4-5 days of peak, and stay there through day 12+. March
+        27 virtually certain to be 0-2.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.95
+      effective_logit: 1.4249999999999998
+    - description: The 2024 analogy (more similar peak+1 of 17 vs 2026's 19) gives
+        peak+2 = 4, which would resolve as Decreases with March 27 at 0-1.
+      supports: Decreases
+      logit: 0.6
+      confidence: 0.7
+      effective_logit: 0.42
+    - description: No upcoming golf events or Players Championship news expected by
+        March 27 that would increase interest. P(Increases) is near-zero.
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.9
+      effective_logit: 0.45
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.57
+    factors:
+    - description: 'Critical boundary: if March 17 = 3, then with March 27 = 0-1,
+        the difference is only -2 to -3, which resolves as Doesn''t Change. The 2025
+        decay ratio (peak+2/peak+1 = 7/50 = 0.14) applied to 2026 gives 19*0.14 =
+        2.7, which rounds to 3.'
+      supports: Doesn't change
+      logit: 0.7
+      confidence: 0.6
+      effective_logit: 0.42
+    - description: SerpAPI may differ from pytrends by ±2-3 points, adding measurement
+        uncertainty. At these low values (3-5), a ±2 shift could flip the outcome.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Decreases: 0.8625672593001273
+      Increases: 0.049645766881014526
+      Doesn't change: 0.08778697381885814
+    tentative_probabilities:
+      Increases: 0.01
+      Doesn't change: 0.44
+      Decreases: 0.55
+    per_option_gap_pp:
+      Decreases: -31.25672593001273
+      Increases: -3.9645766881014524
+      Doesn't change: 35.22130261811419
+    max_gap_pp: 35.22130261811419
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) the players championship](https://trends.google.com/trends/explore?q=the
+    players championship)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 6 factors against the research trace. All core claims are well-grounded
+    in the tool results.
+
+
+    **Factor 1 (Decreases):** Claims tournament peaked Sunday March 15 at 100, March
+    16=19 (peak+1), and historical peak+2 values were 2024=4 and 2025=7. Trace confirms:
+    2026 Google Trends data shows March 15=100, March 16=19. 2025 data shows peak
+    March 16=100, March 18=7 (peak+2). 2024 data shows peak March 17=100, March 19=4
+    (peak+2). ✓
+
+
+    **Factor 2 (Decreases):** Claims values drop to 0-2 within 4-5 days of peak. Trace
+    confirms: 2025 data shows March 20 (day 4)=1, March 21-27=0-1. 2024 data shows
+    March 21 (day 4)=2, March 22+=0-2. ✓
+
+
+    **Factor 3 (Doesn''t change):** Claims 2025 decay ratio of 7/50=0.14 applied to
+    2026''s 19 gives 2.7≈3. Trace shows explicit calculation: "Applying: 19 * 0.14
+    = 2.66 → likely 3". The threshold math (March 17=3, March 27=0-1, diff=-2 to -3)
+    is correct for "Doesn''t change". ✓
+
+
+    **Factor 4 (Decreases):** Claims 2024 analogy (peak+1=17, similar to 2026''s 19)
+    gives peak+2=4. Trace confirms 2024 data: March 17=100, March 18=17, March 19=4.
+    ✓
+
+
+    **Factor 5 (Doesn''t change):** SerpAPI measurement uncertainty mentioned in question
+    fine print and acknowledged in trace. ✓
+
+
+    **Factor 6 (Decreases):** No upcoming events claim is reasonable inference from
+    news search showing tournament concluded. ✓
+
+
+    **Double-counting:** Factors 1 and 4 both reference 2024 historical data, but
+    make different arguments (one as data point, one as specific analogy). Minor overlap,
+    not concerning.
+
+
+    **Wrong-direction factors:** None found. All logit signs align with descriptions.
+
+
+    **Resolution criteria:** Correctly engaged. The ±3 threshold is properly applied
+    and the boundary case (March 17=3 vs 4+) is identified as critical.
+
+
+    **Adversarial reasoning:** Assessment engages with the main uncertainty (conflicting
+    2024 vs 2025 analogies) and correctly identifies this as a knife-edge forecast.
+
+
+    **Probability assessment:** The agent''s 55%/44%/1% estimate aligns well with
+    the Monte Carlo results in the trace (53-54%/46-47%/~0%). The characterization
+    of this as a near-coin-flip is appropriate given the genuine uncertainty about
+    whether March 17 rounds to 3 or 4+. I find no basis to significantly adjust the
+    probability.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42699
+- **Question ID**: 42644
+- **Session Duration**: 379.2s (6.3 min)
+- **Cost**: $3.3829
+- **Tokens**: 10,777 total (22 in, 10,755 out)
+  - Cache: 775,175 read, 75,369 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42699_20260316_233137/20260316-233137.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 265ms |
+| fred_series | 1 | 0 | 341ms |
+| google_trends | 4 | 0 | 16555ms |
+| reflection | 2 | 0 | 75526ms |
+| stock_price | 2 | 0 | 473ms |
+| web_search | 1 | 0 | 12111ms |
+
+### Sources Consulted
+
+- [(Google Trends) the players championship](https://trends.google.com/trends/e...
