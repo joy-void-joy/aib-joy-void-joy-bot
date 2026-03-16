@@ -421,30 +421,16 @@ class NumericForecast(BaseModel):
         description="Key pieces of evidence that influenced the estimate.",
     )
 
-    # Percentile mode fields (traditional approach)
-    percentile_10: float | None = Field(
+    # Percentile mode: flexible dict of percentile level → value
+    percentile_values: dict[str, float] | None = Field(
         default=None,
-        description="10th percentile estimate: 90% chance the outcome is above this value.",
-    )
-    percentile_20: float | None = Field(
-        default=None,
-        description="20th percentile estimate: 80% chance the outcome is above this value.",
-    )
-    percentile_40: float | None = Field(
-        default=None,
-        description="40th percentile estimate: 60% chance the outcome is above this value.",
-    )
-    percentile_60: float | None = Field(
-        default=None,
-        description="60th percentile estimate: 40% chance the outcome is above this value.",
-    )
-    percentile_80: float | None = Field(
-        default=None,
-        description="80th percentile estimate: 20% chance the outcome is above this value.",
-    )
-    percentile_90: float | None = Field(
-        default=None,
-        description="90th percentile estimate: 10% chance the outcome is above this value.",
+        description=(
+            "Percentile estimates mapping percentile level to value. "
+            "Minimum required: '10', '20', '40', '60', '80', '90'. "
+            "For better tail accuracy, include more: '1', '5', '25', '50', '75', '95', '99'. "
+            "When you have Monte Carlo simulation output, provide many percentiles. "
+            "Values must be non-decreasing by percentile level."
+        ),
     )
 
     # Mixture mode fields (scenario-based approach)
@@ -459,43 +445,38 @@ class NumericForecast(BaseModel):
 
     @model_validator(mode="after")
     def validate_has_distribution(self) -> Self:
-        """Ensure either all percentiles OR components are provided."""
+        """Ensure either percentiles OR components are provided."""
         has_components = self.components is not None and len(self.components) > 0
-        has_all_percentiles = all(
-            p is not None
-            for p in [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
+        has_percentiles = (
+            self.percentile_values is not None and len(self.percentile_values) >= 6
         )
 
-        if not has_components and not has_all_percentiles:
+        if not has_components and not has_percentiles:
             raise ValueError(
-                "NumericForecast requires either all 6 percentiles "
-                "(percentile_10, percentile_20, percentile_40, percentile_60, "
-                "percentile_80, percentile_90) OR components for mixture mode. "
-                "Percentiles must be non-decreasing values."
+                "NumericForecast requires either percentile_values (at least "
+                "keys '10','20','40','60','80','90') OR components for mixture mode."
             )
 
-        # Validate percentiles are non-decreasing if all provided
-        if has_all_percentiles:
-            percentiles = [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
-            for i in range(len(percentiles) - 1):
-                if percentiles[i] > percentiles[i + 1]:  # type: ignore[operator]
+        if has_percentiles:
+            assert self.percentile_values is not None
+            required = {"10", "20", "40", "60", "80", "90"}
+            missing = required - set(self.percentile_values.keys())
+            if missing:
+                raise ValueError(
+                    f"Missing required percentiles: {sorted(missing)}. "
+                    f"Got: {sorted(self.percentile_values.keys())}"
+                )
+            sorted_items = sorted(
+                ((int(k), v) for k, v in self.percentile_values.items()),
+                key=lambda x: x[0],
+            )
+            for i in range(len(sorted_items) - 1):
+                pct_a, val_a = sorted_items[i]
+                pct_b, val_b = sorted_items[i + 1]
+                if val_a > val_b:
                     raise ValueError(
                         f"Percentiles must be non-decreasing. "
-                        f"Got {percentiles[i]} > {percentiles[i + 1]} at indices {i} and {i + 1}."
+                        f"Got P{pct_a}={val_a} > P{pct_b}={val_b}."
                     )
 
         return self
@@ -510,12 +491,14 @@ class NumericForecast(BaseModel):
     def median(self) -> float | None:
         """Estimated median (interpolated from 40th and 60th percentiles)."""
         if self.uses_mixture_mode:
-            # For mixture mode, compute weighted average of component modes
             if self.components:
                 return sum(c.mode * c.weight for c in self.components)
             return None
-        if self.percentile_40 is not None and self.percentile_60 is not None:
-            return (self.percentile_40 + self.percentile_60) / 2
+        if self.percentile_values:
+            if "50" in self.percentile_values:
+                return self.percentile_values["50"]
+            if "40" in self.percentile_values and "60" in self.percentile_values:
+                return (self.percentile_values["40"] + self.percentile_values["60"]) / 2
         return None
 
     @computed_field
@@ -523,44 +506,30 @@ class NumericForecast(BaseModel):
     def confidence_interval(self) -> tuple[float, float] | None:
         """90% confidence interval (10th to 90th percentile)."""
         if self.uses_mixture_mode:
-            # For mixture mode, use min lower and max upper across components
             if self.components:
                 return (
                     min(c.lower_bound for c in self.components),
                     max(c.upper_bound for c in self.components),
                 )
             return None
-        if self.percentile_10 is not None and self.percentile_90 is not None:
-            return (self.percentile_10, self.percentile_90)
+        if (
+            self.percentile_values
+            and "10" in self.percentile_values
+            and "90" in self.percentile_values
+        ):
+            return (self.percentile_values["10"], self.percentile_values["90"])
         return None
 
     def get_percentile_dict(self) -> dict[int, float] | None:
-        """Return percentiles as a dict for CDF generation.
+        """Return percentiles as int-keyed dict for CDF generation.
 
         Returns None if using mixture mode (use components instead).
         """
         if self.uses_mixture_mode:
             return None
-        if any(
-            p is None
-            for p in [
-                self.percentile_10,
-                self.percentile_20,
-                self.percentile_40,
-                self.percentile_60,
-                self.percentile_80,
-                self.percentile_90,
-            ]
-        ):
+        if not self.percentile_values:
             return None
-        return {
-            10: self.percentile_10,  # type: ignore[dict-item]
-            20: self.percentile_20,  # type: ignore[dict-item]
-            40: self.percentile_40,  # type: ignore[dict-item]
-            60: self.percentile_60,  # type: ignore[dict-item]
-            80: self.percentile_80,  # type: ignore[dict-item]
-            90: self.percentile_90,  # type: ignore[dict-item]
-        }
+        return {int(k): v for k, v in self.percentile_values.items()}
 
 
 class ForecastMeta(BaseModel):

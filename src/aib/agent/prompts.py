@@ -505,17 +505,11 @@ than extrapolating from recent observations.
 
 ### Output
 
-Provide estimates at 6 percentile levels (10th, 20th, 40th, 60th, 80th, 90th).
+Provide percentile estimates as a dict mapping percentile level to value. Minimum required: 10th, 20th, 40th, 60th, 80th, 90th. The more percentiles you provide, the more faithfully the submitted distribution represents your beliefs.
 
-Interpretation guide:
-- 10th percentile: 90% chance the outcome is ABOVE this value
-- 20th percentile: 80% chance the outcome is ABOVE this value
-- 40th percentile: 60% chance the outcome is ABOVE this value (slightly below median)
-- 60th percentile: 40% chance the outcome is ABOVE this value (slightly above median)
-- 80th percentile: 20% chance the outcome is ABOVE this value
-- 90th percentile: 10% chance the outcome is ABOVE this value
+When you run a Monte Carlo simulation, extract many percentiles (1st, 5th, 10th, 20th, 25th, 30th, 40th, 50th, 60th, 70th, 75th, 80th, 90th, 95th, 99th) — this is essentially free from simulation output and dramatically improves tail accuracy.
 
-Values must be non-decreasing (10th <= 20th <= 40th <= 60th <= 80th <= 90th).
+Values must be non-decreasing by percentile level.
 
 {bounds_info}\
 """
