@@ -492,6 +492,13 @@ independently — you work from the agent's trace and factors.
   this is a **warn** — the drift estimate is contaminated by the \
   regime transition, not representative of current dynamics.
 
+- **Missing adversarial reasoning** — The assessment should engage \
+  with the strongest counterargument, not just the supporting \
+  evidence. If the assessment doesn't address what a smart \
+  disagreer would say or what scenario makes the forecast most \
+  wrong, this is a **warn** — one-sided assessments are a \
+  calibration risk.
+
 - **Probability assessment** — After reviewing the factors and \
   trace, form your own independent probability estimate based on \
   the evidence. If your estimate meaningfully differs from the \
