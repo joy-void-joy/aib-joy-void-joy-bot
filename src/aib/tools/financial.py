@@ -1314,16 +1314,39 @@ async def stock_history(args: dict[str, Any]) -> dict[str, Any]:
             for r in records[-30:]
         ]
 
-        return mcp_success(
-            {
-                "symbol": symbol,
-                "period": period,
-                "data_points": len(records),
-                "first_date": formatted[0]["date"] if formatted else None,
-                "last_date": formatted[-1]["date"] if formatted else None,
-                "history": formatted,
-            }
-        )
+        closes = hist["Close"].tolist()
+        result_data: dict[str, object] = {
+            "symbol": symbol,
+            "period": period,
+            "data_points": len(records),
+            "first_date": records[0]["Date"] if records else None,
+            "last_date": records[-1]["Date"] if records else None,
+            "history": formatted,
+        }
+
+        if len(closes) >= 2:
+            returns = [
+                (closes[i] - closes[i - 1]) / closes[i - 1]
+                for i in range(1, len(closes))
+                if closes[i - 1] != 0
+            ]
+            if returns:
+                mean_ret = sum(returns) / len(returns)
+                var_ret = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
+                daily_vol = var_ret**0.5
+                result_data["full_period_stats"] = {
+                    "daily_volatility": round(daily_vol, 6),
+                    "annualized_volatility": round(daily_vol * (252**0.5), 4),
+                    "daily_mean_return": round(mean_ret, 6),
+                    "total_return_pct": round(
+                        (closes[-1] - closes[0]) / closes[0] * 100, 2
+                    ),
+                    "trading_days": len(closes),
+                    "high": round(max(closes), 4),
+                    "low": round(min(closes), 4),
+                }
+
+        return mcp_success(result_data)
 
     except Exception as e:
         logger.exception("Yahoo Finance history lookup failed")
