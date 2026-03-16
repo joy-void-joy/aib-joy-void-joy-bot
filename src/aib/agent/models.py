@@ -677,6 +677,10 @@ class ForecastOutput(BaseModel):
         default=None,
         description="If set, forecast was made in retrodict mode with data restricted to before this date.",
     )
+    revision_history: list[dict[str, object]] | None = Field(
+        default=None,
+        description="Reviewer revision history: list of {probability/center, verdict} per reflection call.",
+    )
 
     @staticmethod
     def classify_category(title: str, question_type: str) -> str:

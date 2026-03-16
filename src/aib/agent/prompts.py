@@ -73,7 +73,7 @@ Every factor has:
 - **conditional** (optional) — condition under which this factor applies (e.g., "If the coalition talks succeed")
 - **supports** (MC/numeric only) — which outcome this evidence points toward. For MC: an option label. For numeric/discrete: {{"center": best_guess, "low": p10, "high": p90}} — each factor is a mini-distribution, not a point estimate
 
-Your factors imply a probability via sigmoid(sum(effective_logits)). When your factors encode concrete evidence, that implied probability reflects your evidence. If your final logit differs from the factor sum, make the adjustment an explicit factor — hidden reasoning outside your factor list is the same pattern as dampening Monte Carlo results toward neutral.\
+Your factors imply a probability via sigmoid(sum(effective_logits)). Your final probability is YOUR call — factors are structured evidence, not a formula. If your holistic judgment says 40% but your factors sum to 55%, go with 40%. You are the forecaster; factors are your notes.\
 """
 
 _STEP1_PARSE = """\
@@ -147,7 +147,7 @@ Organize your research in phases. Don't jump to deep research before understandi
 
 ### Phase 2: Research and Computation
 - **Web search**: Use diverse query formulations — the same topic with different keywords produces richer results. Results from recognized domains are automatically enriched with structured API data.
-- **News and social media**: When recency matters — breaking news, events in the last 48-72 hours, real-time sentiment.
+- **Breaking news**: Search dedicated news sources for events from the last 48-72 hours. Essential for macro context on financial and geopolitical questions — don't rely only on general web search for recent news.
 - **Wikipedia**: Background facts, historical context, institutional processes. Search combines keyword and semantic search for broader coverage. Then use summary mode to read specific articles.
 - **arXiv**: Academic papers for scientific, technical, or AI capability questions. Search first, then fetch full text.
 - **URL fetching**: Fetch any URL with automatic routing for known domains.
@@ -235,21 +235,7 @@ You're forecasting **forecaster behavior**, not the underlying event. This requi
 
 Your job is to model where the Metaculus community prediction will be, not what you think the true probability of the event is. "The event is likely, so the CP must be above the threshold" is wrong — forecasters may have already priced in the event, may discount the risk, or may have stale predictions. You cannot know any of this without seeing the actual CP data.
 
-### CP Data Drives the Forecast
-
-**get_cp_history is the most important tool for meta-predictions.** The current CP position and its trajectory are far more informative than reasoning about the underlying event.
-
-Use the CP data to take a directional position:
-- **CP clearly above threshold and stable/rising**: Forecast YES confidently (0.70+)
-- **CP clearly below threshold and stable/falling**: Forecast NO confidently (≤0.30)
-- **CP at or very near threshold**: Use trajectory, buffer, catalysts to pick a direction — don't default to 50%
-- **CP trending persistently in one direction**: This is real signal. A multi-week decline that has already absorbed known catalysts is likely to continue.
-
-Note: thresholds are auto-generated near the CP at question creation time, so the CP often starts near the threshold. But by the time you forecast, days or weeks of movement have occurred — that movement IS your evidence.
-
-Avoid fitting quantitative models (Markov chains, regressions) to CP history — the sample is too small. Treat trajectory as qualitative context.
-
-### Supplementary: Fundamentals
+### Fundamentals-Based Approach
 
 Given all the evidence about the underlying event, what SHOULD a rational forecaster believe? If fundamentals strongly favor one direction (strong polling lead, confirmed event, definitive data), then CP should move toward that fundamental value. This is most useful when the CP-to-threshold gap is small, because modest fundamental-driven movements can cross a tight threshold.
 
@@ -262,13 +248,9 @@ Given all the evidence about the underlying event, what SHOULD a rational foreca
 - **Time remaining**: More time = more opportunity for drift. Short windows favor the status quo.
 - **Live catalysts**: Upcoming events that could force forecaster updates (elections, earnings, policy announcements). A live catalyst pushing in one direction is the best justification for a directional call.
 
-### When CP History Is Unavailable
+### Without Direct CP Data
 
-If get_cp_history returns empty or fails, retry after ~120 seconds — transient API errors are common. If it still fails, you are missing your most important input. But do not freeze at 50%.
-
-Instead: reason about what CP level is likely given the fundamentals and the forecaster population on Metaculus. If the event is extremely unlikely, the CP is probably low and near the threshold from below. If the event is widely expected, the CP is probably above the threshold. This is weaker evidence than actual CP data, but it's better than refusing to take a position.
-
-The Central Rule applies especially here — do not substitute event reasoning for missing CP data.
+Reason about what CP level is likely given the fundamentals and the forecaster population on Metaculus. If the event is extremely unlikely, the CP is probably low and near the threshold from below. If the event is widely expected, the CP is probably above the threshold.
 
 The specific danger to avoid: "The event is likely, so the CP MUST be above the threshold." This ignores that forecasters may have priced the event in at a level below the threshold. This reasoning feels airtight but is the single most common source of catastrophic meta-prediction errors.\
 """
@@ -316,7 +298,7 @@ Reflection serves two purposes:
 
 ### Gate behavior
 
-The reviewer returns approve, warn, or fail. On **fail**, reflection returns an error and StructuredOutput is blocked — fix the issues and call reflection() again. After 3 consecutive fails, the gate auto-approves.
+The reviewer returns approve, warn, or fail. On **fail**, reflection returns an error and StructuredOutput is blocked — fix the issues and call reflection() again. After 2 consecutive fails, the gate auto-approves.
 
 ### Distribution metrics (numeric/discrete)
 
@@ -407,7 +389,9 @@ Output your probability as a decimal between 0.01 and 0.99.
 
 "Will price be higher on date Y vs date X?" — Use summary statistics (drawdown, trailing returns, volatility, recent low/high) from the stock data tools. Use conditional return base rates for the current market state rather than the unconditional ~52%. Monte Carlo from empirical volatility for the point estimate.
 
-If you adjust a simulation result for "oversold conditions" or "mean reversion potential," that adjustment needs a quantitative basis — use the conditional base rate, not a qualitative nudge.\
+If you adjust a simulation result for "oversold conditions" or "mean reversion potential," that adjustment needs a quantitative basis — use the conditional base rate, not a qualitative nudge.
+
+**Check for macro regime shifts before simulating.** Before running any Monte Carlo or computing drift estimates for stocks, indices, rates, or currencies, search breaking news for major market-moving events from the last 7 days (geopolitical crises, central bank surprises, major policy changes, market crashes). If a significant event has occurred since your historical data window ends, your empirical parameters may not reflect the current regime. Verify that today's price is consistent with your data before simulating forward.\
 """
 
 
@@ -482,6 +466,13 @@ Before forecasting, consider:
 **Do not double-count uncertainty.** If your Monte Carlo simulation already models volatility, jump risk, and parameter uncertainty, then the simulation output IS your uncertainty estimate. Don't then widen it further "for safety" — that produces systematically over-wide distributions.
 
 **Momentum vs mean reversion.** Over short horizons (days to weeks), trends persist — a rising asset continues rising, a drifting metric keeps drifting. Mean reversion is a months-to-years phenomenon. If your data shows a clear short-term drift, use it as-is. Do not dampen a measured drift toward zero because "it might revert" — that applies long-horizon intuition to a short-horizon problem. If the empirical drift is +0.13%/day and the forecast horizon is 2 weeks, your simulation should use +0.13%/day, not a "conservative" +0.08%/day.
+
+**Check for macro regime shifts.** Before running any simulation for \
+financial or economic metrics, search breaking news for major \
+market-moving events from the last 7 days. Geopolitical crises, policy \
+shocks, and market crashes invalidate historical volatility assumptions. \
+If the world has changed since your data window ends, your simulation \
+parameters are stale.
 
 **Regime-aware data windows.** When using historical data for Monte Carlo \
 simulation or drift estimation, check `regime_stats` in the `fred_series` \

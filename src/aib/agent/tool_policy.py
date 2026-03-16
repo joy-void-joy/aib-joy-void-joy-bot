@@ -54,7 +54,6 @@ METACULUS_TOOLS: frozenset[str] = frozenset(
         "mcp__markets__list_tournament_questions",
         "mcp__markets__search_metaculus",
         "mcp__markets__get_coherence_links",
-        "mcp__markets__get_cp_history",
     }
 )
 
@@ -371,7 +370,7 @@ class ToolPolicy:
             servers["asknews"] = McpHttpServerConfig(
                 type="http",
                 url="https://mcp.asknews.app",
-                headers={"Authorization": f"Bearer {self.asknews_api_key}"},
+                headers={"x-api-key": self.asknews_api_key},
             )
 
         return cast(dict[str, McpServerConfig], servers)

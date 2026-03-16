@@ -497,8 +497,16 @@ async def polymarket_price(args: dict[str, Any]) -> dict[str, Any]:
         if not events:
             return mcp_success({"markets": [], "query": query})
 
+        query_words = {w.lower() for w in query.split() if len(w) > 2}
+        relevant_events = [
+            e for e in events
+            if query_words & {w.lower() for w in e.title.split() if len(w) > 2}
+        ]
+        if not relevant_events:
+            return mcp_success({"markets": [], "query": query})
+
         results: list[MarketPrice] = []
-        for event in events[:limit]:
+        for event in relevant_events[:limit]:
             if cutoff is not None:
                 parsed = await _polymarket_event_at_cutoff(event, cutoff)
             else:
@@ -1711,7 +1719,9 @@ async def get_coherence_links(args: dict[str, Any]) -> dict[str, Any]:
         "shows CP trajectory over time to predict future movements. "
         "Also useful for checking consensus shifts on any question. "
         "Pass the post_id (the number in the Metaculus URL). "
-        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP.\n\n"
+        "Note: Returns the UNDERLYING question's CP, not the meta-question's own CP. "
+        "WARNING: Returns 403 for questions in the AIB tournament — "
+        "CP for the question you are currently forecasting is not available.\n\n"
         "Examples:\n"
         "  get_cp_history(post_id=42135) → last 30 days of CP\n"
         "  get_cp_history(post_id=42135, days=90) → last 90 days\n"
@@ -1769,7 +1779,6 @@ _METACULUS_TOOLS = [
     list_tournament_questions,
     search_metaculus,
     get_coherence_links,
-    get_cp_history,
 ]
 
 

@@ -13,7 +13,7 @@ forecasts, and web search.
 import logging
 import math
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
@@ -205,6 +205,7 @@ class ReviewState:
     consecutive_fails: int = 0
     last_verdict: ReviewVerdict | None = None
     last_review: ReviewResult | None = None
+    history: list[dict[str, object]] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
@@ -212,15 +213,26 @@ class ReviewState:
             return False
         if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
             return True
-        return self.consecutive_fails >= 3
+        return self.consecutive_fails >= 2
 
-    def record(self, result: ReviewResult) -> None:
+    def record(
+        self,
+        result: ReviewResult,
+        reflection_input: ReflectionInput | None = None,
+    ) -> None:
         self.last_verdict = result.verdict
         self.last_review = result
         if result.verdict == ReviewVerdict.fail:
             self.consecutive_fails += 1
         else:
             self.consecutive_fails = 0
+
+        entry: dict[str, object] = {"verdict": result.verdict.value}
+        if reflection_input is not None:
+            entry["input"] = reflection_input.model_dump(mode="json")
+        if result.assessment:
+            entry["reviewer_assessment"] = result.assessment
+        self.history.append(entry)
 
 
 # --- Computation ---
@@ -778,7 +790,7 @@ verdict.
 **Gate behavior:** An independent reviewer checks your evidence chain and
 returns approve, warn, or fail. On fail, this tool returns an error — fix the
 issues and call reflection() again. StructuredOutput is blocked until the
-reviewer approves. After 3 consecutive fails, the gate auto-approves.
+reviewer approves. After 2 consecutive fails, the gate auto-approves.
 
 Binary example:
   reflection(
@@ -871,12 +883,13 @@ def _create_reflection_tool(
                 ReviewResult(
                     verdict=ReviewVerdict.approve,
                     assessment="Auto-approved (retrodict mode).",
-                )
+                ),
+                reflection_input=validated,
             )
 
         # Record verdict for StructuredOutput gate
         if review_result and review_state is not None:
-            review_state.record(review_result)
+            review_state.record(review_result, reflection_input=validated)
             logger.info(
                 "Reviewer verdict: %s (consecutive_fails=%d)",
                 review_result.verdict,
@@ -894,7 +907,8 @@ def _create_reflection_tool(
                 ReviewResult(
                     verdict=ReviewVerdict.approve,
                     assessment="Reviewer unavailable; auto-approved.",
-                )
+                ),
+                reflection_input=validated,
             )
 
         # Always write reflection.yaml (even on fail) for logging
