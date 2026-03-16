@@ -15,7 +15,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import TextContent
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from aib.tools.responses import mcp_error, mcp_success
 from aib.tools.retry import with_retry
@@ -28,6 +28,11 @@ class FetchResult(BaseModel):
     text: str
     title: str = ""
     data: list[str] = []
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def coerce_title(cls, v: object) -> str:
+        return v if isinstance(v, str) else ""
 
 
 _USER_AGENT = (

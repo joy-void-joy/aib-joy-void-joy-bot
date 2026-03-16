@@ -497,7 +497,10 @@ async def search_exa(args: dict[str, Any]) -> dict[str, Any]:
     try:
         async with exa_throttle:
             formatted = await exa_search(
-                query, num_results, published_before, livecrawl
+                query,
+                num_results,
+                published_before=published_before,
+                livecrawl=livecrawl,
             )
         return mcp_success(formatted)
     except Exception as e:
@@ -586,7 +589,7 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
 
         http_client = httpx.AsyncClient(
             timeout=15,
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"x-api-key": api_key},
         )
         async with streamable_http_client(
             url="https://mcp.asknews.app",

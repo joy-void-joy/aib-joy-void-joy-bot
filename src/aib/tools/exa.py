@@ -41,7 +41,7 @@ async def exa_search(
     """Execute an Exa search (cached for 5 minutes).
 
     When published_before is set, applies client-side date filtering as a
-    defense against Exa's unreliable server-side publishedBefore filter
+    defense against Exa's unreliable server-side endPublishedDate filter
     (which fails for static files like PDFs and investor relations pages).
 
     Args:
@@ -87,7 +87,7 @@ async def exa_search(
     }
 
     if published_before:
-        payload["publishedBefore"] = f"{published_before}T23:59:59.999Z"
+        payload["endPublishedDate"] = f"{published_before}T23:59:59.999Z"
     if published_after:
         payload["startPublishedDate"] = f"{published_after}T00:00:00.000Z"
     if include_domains:
@@ -97,6 +97,10 @@ async def exa_search(
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(url, json=payload, headers=headers)
+        if response.status_code != 200:
+            logger.error("Exa API error %d: %s", response.status_code, response.text)
+        if 400 <= response.status_code < 500:
+            raise ValueError(f"Exa API client error {response.status_code}: {response.text[:200]}")
         response.raise_for_status()
         data = response.json()
 
