@@ -108,8 +108,8 @@ def _baseline_numeric(data: dict[str, object]) -> float | None:
 def resolve_binary(data: dict[str, object]) -> str | None:
     """Extract binary resolution from forecast data, checking both fields."""
     resolution = data.get("resolution")
-    if resolution in ("yes", "no"):
-        return str(resolution)
+    if isinstance(resolution, str) and resolution.lower() in ("yes", "no"):
+        return resolution.lower()
     comp = data.get("comparison")
     if not isinstance(comp, dict):
         return None

@@ -1192,6 +1192,8 @@ async def run_forecast(
                 ),
                 "reasoning": output.reasoning,
                 "sources_consulted": output.sources_consulted,
+                "resolution_criteria": context.get("resolution_criteria"),
+                "fine_print": context.get("fine_print"),
             }
 
             save_forecast(
@@ -1200,6 +1202,10 @@ async def run_forecast(
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
+
+    # Record revision history from reviewer interactions
+    if review_state and review_state.history:
+        output.revision_history = review_state.history
 
     logging.getLogger().removeHandler(_log_handler)
     _log_handler.close()

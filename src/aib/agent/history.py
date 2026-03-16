@@ -149,6 +149,9 @@ class SavedForecast(BaseModel):
     score_timestamp: float | None = None
     resolution_source: str | None = None
     resolution_reason: str | None = None
+    resolution_criteria: str | None = None
+    fine_print: str | None = None
+    background_info: str | None = None
 
 
 def save_forecast(
@@ -176,6 +179,8 @@ def save_forecast(
     reasoning: str = "",
     sources_consulted: list[str] | None = None,
     retrodict_date: str | None = None,
+    resolution_criteria: str | None = None,
+    fine_print: str | None = None,
 ) -> Path:
     """Save a forecast to disk.
 
@@ -220,6 +225,8 @@ def save_forecast(
         reasoning=reasoning,
         sources_consulted=sources_consulted or [],
         retrodict_date=retrodict_date,
+        resolution_criteria=resolution_criteria,
+        fine_print=fine_print,
         agent_version=AGENT_VERSION,
     )
 
@@ -258,6 +265,8 @@ def update_forecast_file(
     reason: str | None = None,
 ) -> bool:
     """Update a single forecast file with resolution data."""
+    if isinstance(resolution, str) and resolution.lower() in ("yes", "no"):
+        resolution = resolution.lower()
     updates: dict[str, str | float | None] = {"resolution": resolution}
     if source is not None:
         updates["resolution_source"] = source
