@@ -1,0 +1,246 @@
+---
+timestamp: 2026-03-16 01:52:56 UTC
+question_type: numeric
+factors:
+- description: Current SOFR30DAYAVG is 3.67223 (Mar 13). The Mar 26 window shifts
+    forward, dropping the Feb 12-24 period (which included the Feb 17-18 spike of
+    3.71-3.73) and adding Mar 13-26 days at ~3.65. This mechanically pulls the average
+    down to ~3.663.
+  supports:
+    center: 3.663
+    low: 3.66
+    high: 3.668
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: FOMC meeting Mar 17-18 with 92%+ probability of rate hold at 3.50-3.75%.
+    Daily SOFR will remain pinned near 3.64-3.65 in hold scenario, keeping the 30-day
+    average stable.
+  supports:
+    center: 3.663
+    low: 3.658
+    high: 3.668
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: ~8% probability of 25bp rate cut at FOMC meeting. If cut occurs, daily
+    SOFR drops to ~3.40, pulling the 30-day average down to ~3.597 (only 8 of 14 future
+    calendar days affected).
+  supports:
+    center: 3.597
+    low: 3.593
+    high: 3.601
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 16 of 30 calendar days in the window are already fixed with known SOFR
+    values. This severely constrains the possible range of the 30-day average, making
+    the distribution very tight in the hold scenario (std ~0.002).
+  supports:
+    center: 3.663
+    low: 3.659
+    high: 3.668
+  logit: 1.0
+  confidence: 0.95
+  effective_logit: 0.95
+- description: Possible minor quarter-end effects as Mar 26 is 5 days before quarter-end.
+    Pre-quarter-end SOFR could be slightly elevated on Mar 25-26, adding small upward
+    bias.
+  supports:
+    center: 3.665
+    low: 3.663
+    high: 3.67
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  center: 3.663
+  low: 3.598
+  high: 3.668
+assessment: 'The 30-Day Average SOFR on March 26 is highly constrained by: (1) 16
+  of 30 calendar days already having fixed SOFR values, and (2) the FOMC almost certainly
+  holding rates. The distribution is bimodal: ~92% probability clustered tightly around
+  3.660-3.668 (hold scenario), and ~8% probability around 3.594-3.601 (25bp cut scenario).
+  Monte Carlo simulation with compound interest methodology (verified against published
+  values) produces median of ~3.664 with very narrow uncertainty in the hold scenario.
+  The key uncertainty is whether the FOMC cuts rates, which would shift the result
+  down by ~6.5 basis points in the 30-day average.'
+calibration_notes: The distribution is dominated by the hold scenario (92%). In the
+  hold case, the 30-day average is mechanically determined by known data + projected
+  SOFR near 3.65, giving a very tight range. The 8% cut tail creates a secondary mode
+  ~6.5bp lower. P10 through P90 all fall within the hold cluster since the cut probability
+  is below 10%.
+key_uncertainties: '1. FOMC decision: 92% hold vs 8% cut is the main driver of tail
+  risk. 2. Daily SOFR noise: typically 1-2bp std, but month-end/quarter-end can cause
+  3-6bp spikes. 3. The exact SOFR for Mar 13 (not yet published) - likely 3.65 based
+  on recent pattern.'
+tool_audit: '- fred_series (SOFR30DAYAVG, SOFR, FEDFUNDS): All returned excellent
+  data. The regime_stats were helpful for identifying the stable period. SOFR30DAYAVG
+  data through Mar 13 and daily SOFR through Mar 12 provided the foundation for the
+  simulation.
+
+  - web_search (FOMC March 2026): Returned multiple confirming sources that FOMC meets
+  Mar 17-18 with 92%+ hold probability per CME FedWatch. Critical for parameterizing
+  the rate cut scenario.
+
+  - kalshi_price (Fed rate March 2026): Returned empty results - no matching markets
+  found. Not a tool failure, just no matching Kalshi markets.
+
+  - execute_code: Successful Monte Carlo simulation with 500K simulations. Verified
+  compound interest methodology against published SOFR30DAYAVG values (3.67242 computed
+  vs 3.67223 published - very close match).'
+process_reflection: This question was well-suited to the available tools. FRED data
+  provided the exact series needed, and the compound interest verification gave confidence
+  in the simulation methodology. The main challenge was understanding the NY Fed's
+  exact computation methodology for the 30-day average - I verified by computing from
+  daily SOFR and matching the published value. The web search for FOMC expectations
+  was critical for parameterizing the rate cut scenario. The bimodal nature of this
+  forecast (hold vs cut) is well-captured by the Monte Carlo approach.
+computed:
+  factor_count: 5
+  factor_sum: 4.62
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current SOFR30DAYAVG is 3.67223 (Mar 13). The Mar 26 window shifts
+      forward, dropping the Feb 12-24 period (which included the Feb 17-18 spike of
+      3.71-3.73) and adding Mar 13-26 days at ~3.65. This mechanically pulls the average
+      down to ~3.663.
+    supports:
+      center: 3.663
+      low: 3.66
+      high: 3.668
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: FOMC meeting Mar 17-18 with 92%+ probability of rate hold at 3.50-3.75%.
+      Daily SOFR will remain pinned near 3.64-3.65 in hold scenario, keeping the 30-day
+      average stable.
+    supports:
+      center: 3.663
+      low: 3.658
+      high: 3.668
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: ~8% probability of 25bp rate cut at FOMC meeting. If cut occurs,
+      daily SOFR drops to ~3.40, pulling the 30-day average down to ~3.597 (only 8
+      of 14 future calendar days affected).
+    supports:
+      center: 3.597
+      low: 3.593
+      high: 3.601
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 16 of 30 calendar days in the window are already fixed with known
+      SOFR values. This severely constrains the possible range of the 30-day average,
+      making the distribution very tight in the hold scenario (std ~0.002).
+    supports:
+      center: 3.663
+      low: 3.659
+      high: 3.668
+    logit: 1.0
+    confidence: 0.95
+    effective_logit: 0.95
+  - description: Possible minor quarter-end effects as Mar 26 is 5 days before quarter-end.
+      Pre-quarter-end SOFR could be slightly elevated on Mar 25-26, adding small upward
+      bias.
+    supports:
+      center: 3.665
+      low: 3.663
+      high: 3.67
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: Current SOFR30DAYAVG is 3.67223 (Mar 13). The Mar 26 window shifts
+    forward, dropping the Feb 12-24 period (which included the Feb 17-18 spike of
+    3.71-3.73) and adding Mar 13-26 days at ~3.65. This mechanically pulls the average
+    down to ~3.663.
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 3.658766233766233
+    implied_p10: 3.654937229437229
+    implied_p90: 3.663701298701299
+    median_gap: 0.004233766233766811
+    median_gap_pct: 48.30822425290555
+    spread_ratio: 7.98715732279529
+    precision: 0.019110019110019187
+  sources:
+  - '[(FRED) SOFR30DAYAVG](https://fred.stlouisfed.org/series/SOFR30DAYAVG)'
+  - '[(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  reviewer_critique: 'I verified all five factors against the research trace:
+
+
+    **Factor 1 (Current SOFR30DAYAVG 3.67223, dropping Feb 17-18 spike):** Confirmed.
+    Trace shows `"latest_value": 3.67223, "latest_date": "2026-03-13"` from FRED API.
+    The Feb 17=3.71 and Feb 18=3.73 spike values are confirmed in the daily SOFR data.
+
+
+    **Factor 2 (FOMC Mar 17-18, 92%+ hold probability):** Confirmed. Web search results
+    include: "CME FedWatch shows a 92%+ probability that the Fed holds rates at 3.50%
+    to 3.75%" and confirm FOMC dates of March 17-18, 2026.
+
+
+    **Factor 3 (8% cut scenario, daily SOFR ~3.40):** Confirmed. The Monte Carlo code
+    uses `current_sofr = 3.65` and `base = current_sofr - 0.25` for cut scenario =
+    3.40. Cut scenario simulation output shows mean 3.59687, consistent with factor''s
+    3.597 claim.
+
+
+    **Factor 4 (16 of 30 days fixed):** Confirmed. Trace output: "Known calendar days:
+    16" and "Future calendar days: 14".
+
+
+    **Factor 5 (Quarter-end effects):** Confirmed. Trace discusses "Quarter-end is
+    Mar 31, which is 5 days AFTER our target date" and simulation includes "slight
+    quarter-end effect for last 2 business days."
+
+
+    **Resolution criteria:** Agent correctly identified SOFR30DAYAVG series on FRED
+    API, verified compound interest methodology against published value (3.67242 calculated
+    vs 3.67223 published - close match), and used appropriate window mechanics.
+
+
+    **Probability check:** Monte Carlo results (500K simulations) show hold scenario
+    (92%) mean 3.66373 with very tight std 0.00170, and cut scenario (8%) mean 3.59687.
+    Agent''s estimate (Center: 3.663, Range: 3.598-3.668) correctly captures the bimodal
+    distribution - center in hold cluster, lower bound captures cut scenario, upper
+    bound captures hold scenario P95+.
+
+
+    No hallucinations, double-counting, wrong-direction factors, or resolution misalignment
+    found. The forecast is well-grounded in the simulation evidence.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42670
+- **Question ID**: 42615
+- **Session Duration**: 501.3s (8.4 min)
+- **Cost**: $4.5933
+- **Tokens**: 19,467 total (46 in, 19,421 out)
+  - Cache: 1,252,948 read, 67,022 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42670_20260316_014501/20260316-014501.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 14 | 0 | 1378ms |
+| fred_series | 3 | 0 | 611ms |
+| kalshi_price | 1 | 0 | 1004ms |
+| reflection | 1 | 0 | 101498ms |
+| web_search | 1 | 0 | 21660ms |
+
+### Sources Consulted
+
+- [(FRED) SOFR30DAYAVG](https://fred.stlouisfed.org/series/SOFR30DAYAVG)
+- [(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)
