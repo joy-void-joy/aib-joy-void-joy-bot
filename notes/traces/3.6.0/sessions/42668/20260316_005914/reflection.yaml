@@ -1,0 +1,234 @@
+---
+timestamp: 2026-03-16 01:02:27 UTC
+question_type: binary
+factors:
+- description: 'Unconditional base rate: stocks are up over a 6-trading-day window
+    roughly 52% of the time'
+  logit: 0.08
+  confidence: 0.9
+  effective_logit: 0.07200000000000001
+- description: PPL has strong recent positive momentum (rose from ~35 to 38.51 over
+    past ~30 trading days, near 52-week high at -1.5% drawdown)
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: PPL is a defensive utility (beta 0.69) and has shown near-zero correlation
+    (-0.008) with S&P 500 during the recent market selloff - insulated from broader
+    decline
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: 'Solid fundamentals: 7.1% EPS growth in 2025, guidance of 6-8% growth
+    through 2029, pending $275M rate increase petition'
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+- description: 'Broader market headwind: S&P 500 has declined ~4.5% over past 2.5
+    weeks and may continue declining'
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+- description: Near 52-week high (-1.5%) creates potential resistance; limited upside
+    momentum
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+tentative_estimate:
+  logit: 0.16
+  probability: 0.54
+assessment: 'PPL is a defensive utility stock near its 52-week high that has been
+  essentially uncorrelated with the recent S&P 500 decline. The question asks about
+  6 trading days of price movement. Monte Carlo simulations range from 50% (zero drift)
+  to 64% (recent trend drift), with a moderate drift giving ~58%. The empirical 6-day
+  up rate from recent data is 71% but that''s from a small sample during a strong
+  rally period. The conditional base rate for 5-day returns when PPL is in a drawdown
+  is 54%.
+
+
+  Key tension: The recent strong uptrend suggests positive drift, but this drift rate
+  (~0.24%/day) is unsustainably high and likely to mean-revert. The broader market
+  weakness is a headwind, but PPL''s near-zero recent correlation mitigates this.
+  Being near the 52-week high creates potential resistance.
+
+
+  Balancing these factors, I estimate about 54% probability. The positive drift over
+  6 days is modest enough that it doesn''t move far from the ~52% base rate. PPL''s
+  defensive characteristics and positive fundamentals provide a slight upward bias.'
+calibration_notes: The unconditional base rate for a stock being up over ~1 week is
+  roughly 52%. PPL's specific circumstances (defensive utility, strong trend, near
+  52-week high) create mild positive bias but not dramatically so. The Monte Carlo
+  results span 50-64% depending on drift assumptions, with the truth likely in the
+  lower half of that range given mean-reversion tendencies in short-term drift estimates.
+key_uncertainties: 1. Whether the broader market decline accelerates and eventually
+  drags down even defensive utilities. 2. Whether PPL's proximity to 52-week high
+  leads to resistance. 3. Whether any macro events (Fed, tariffs, geopolitical) in
+  the next week create volatility that affects utilities.
+tool_audit: 'stock_price: Returned current price, 52-week range, and 20-day summary
+  stats - very useful. stock_history: Returned 3 months of OHLCV data for both PPL
+  and S&P 500 - useful for correlation analysis and empirical return computation.
+  stock_conditional_returns: Returned base rates for PPL 5-day forward returns from
+  drawdown conditions - useful reference. web_search: Found recent earnings news,
+  rate petition, and market outlook - provided good context. execute_code: Monte Carlo
+  simulation worked well for generating probability estimates under different drift
+  assumptions.'
+process_reflection: The stock direction question workflow worked well. The stock data
+  tools provided comprehensive summary stats and history. The Monte Carlo framework
+  is straightforward for this type of question. One challenge is calibrating the drift
+  parameter - using recent trend drift overestimates (it captures a specific rally
+  period), while zero drift ignores real momentum. The moderate drift approach is
+  a reasonable compromise. The conditional returns tool was less useful here since
+  PPL isn't in a significant drawdown state.
+computed:
+  factor_count: 6
+  factor_sum: 0.41200000000000003
+  tentative_logit: 0.16
+  logit_gap: -0.252
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Unconditional base rate: stocks are up over a 6-trading-day window
+      roughly 52% of the time'
+    logit: 0.08
+    confidence: 0.9
+    effective_logit: 0.07200000000000001
+  - description: PPL has strong recent positive momentum (rose from ~35 to 38.51 over
+      past ~30 trading days, near 52-week high at -1.5% drawdown)
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: PPL is a defensive utility (beta 0.69) and has shown near-zero correlation
+      (-0.008) with S&P 500 during the recent market selloff - insulated from broader
+      decline
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: 'Solid fundamentals: 7.1% EPS growth in 2025, guidance of 6-8% growth
+      through 2029, pending $275M rate increase petition'
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  - description: 'Broader market headwind: S&P 500 has declined ~4.5% over past 2.5
+      weeks and may continue declining'
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  - description: Near 52-week high (-1.5%) creates potential resistance; limited upside
+      momentum
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  dominant_factor: PPL is a defensive utility (beta 0.69) and has shown near-zero
+    correlation (-0.008) with S&P 500 during the recent market selloff - insulated
+    from broader decline
+  dominant_effective_logit: 0.21
+  factor_implied_probability: 0.6015673442337703
+  tentative_probability: 0.54
+  gap_pp: -6.1567344233770305
+  sources:
+  - '[(yfinance) PPL](https://finance.yahoo.com/quote/PPL)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[PPL Corporation (PPL) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/PPL/)'
+  - '[PPL Corporation (PPL) Latest Press Releases & Corporate News - Yahoo Finance](https://finance.yahoo.com/quote/PPL/press-releases/)'
+  - '[S&P 500 (SP500) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/SP500)'
+  reviewer_critique: '**Evidence Verification:**
+
+
+    All six factors are well-grounded in the research trace:
+
+
+    1. **Base rate (52%)** - Reasonable heuristic, supported indirectly by conditional
+    returns tool showing 54% for 5-day returns.
+
+
+    2. **Momentum claim** - Verified: trace shows PPL history from 35.98 (Jan 30)
+    to 38.51 (Mar 13), and `drawdown_from_52w_high_pct: -1.483755436172948` confirms
+    the -1.5% figure.
+
+
+    3. **Defensive utility (beta 0.69, correlation -0.008)** - Verified: CNBC search
+    result shows "Beta 0.69"; Monte Carlo code computed "Recent PPL-SPX correlation
+    (last month): -0.0084".
+
+
+    4. **Fundamentals** - Verified: PRNewswire search result states "7.1% growth over
+    2024" and "6% to 8% through at least 2029"; Benzinga mentions "$275 million increase
+    in annual base distribution revenues".
+
+
+    5. **S&P decline** - Verified: simulation output shows "S&P 500 recent decline:
+    -4.52%".
+
+
+    6. **Near 52-week high resistance** - Same verification as Factor 2.
+
+
+    **No Structural Issues:**
+
+    - No hallucinations - all claims traced to tool outputs
+
+    - No double-counting - factors address distinct aspects (base rates, momentum,
+    defensive characteristics, fundamentals, market headwind, technical levels)
+
+    - No wrong-direction factors - all logit signs align with descriptions
+
+    - Assessment is consistent with factor ensemble
+
+
+    **Resolution Criteria Engagement:**
+
+    The agent correctly understood the question compares close prices on 2026-03-24
+    vs 2026-03-16 (6 trading days), pulled relevant price data from financial APIs,
+    and ran Monte Carlo simulations for the appropriate horizon.
+
+
+    **Probability Assessment:**
+
+    The 54% estimate is reasonable given the Monte Carlo results:
+
+    - Zero drift: ~50%
+
+    - Moderate drift: ~58%
+
+    - Empirical 6-day (small sample): ~71%
+
+
+    The agent appropriately settled between zero-drift and moderate-drift, accounting
+    for PPL''s defensive characteristics providing modest positive bias while acknowledging
+    resistance near the 52-week high. The probability is consistent with the factor
+    weights and properly incorporates the uncertainty around drift estimation.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42668
+- **Question ID**: 42613
+- **Session Duration**: 196.4s (3.3 min)
+- **Cost**: $2.2043
+- **Tokens**: 6,476 total (25 in, 6,451 out)
+  - Cache: 335,798 read, 64,875 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42668_20260316_005914/20260316-005914.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 217ms |
+| fred_series | 1 | 0 | 555ms |
+| reflection | 1 | 0 | 42841ms |
+| stock_conditional_returns | 1 | 0 | 336ms |
+| stock_history | 2 | 0 | 75ms |
+| stock_price | 3 | 0 | 377ms |
+| web_search | 2 | 0 | 17343ms |
+
+### Sources Consulted
+
+- [(yfinance) PPL](https://finance.yahoo.com/quote/PPL)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [PPL Corporation (PPL) Stock Price, News, Quote & History - Yahoo Finance](ht...
+- [PPL Corporation (PPL) Latest Press Releases & Corporate News - Yahoo Finance...
+- [S&P 500 (SP500) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/S...
