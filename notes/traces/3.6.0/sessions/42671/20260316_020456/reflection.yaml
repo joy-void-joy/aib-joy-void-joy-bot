@@ -1,0 +1,246 @@
+---
+timestamp: 2026-03-16 02:09:57 UTC
+question_type: numeric
+factors:
+- description: CME FedWatch shows 96% probability Fed holds rates at 3.50-3.75% at
+    March 18 meeting. SOFR closely tracks Fed Funds rate, so no rate change means
+    SOFR stays near current ~3.65%
+  supports:
+    center: 3.65
+    low: 3.62
+    high: 3.69
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: 'SOFR has been extremely stable in current regime (since Dec 2025 cut):
+    mean 3.648, std 0.007. Last 6 values all 3.64-3.65. Very low daily volatility.'
+  supports:
+    center: 3.65
+    low: 3.63
+    high: 3.67
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: 'Quarter-end proximity effect: March 25 is 4 business days before March
+    31. Historical data shows small premium of 0.03-0.09% at this distance. Slight
+    upward pressure possible.'
+  supports:
+    center: 3.68
+    low: 3.65
+    high: 3.73
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Small (4%) chance of 25bp rate cut at March 18 FOMC. If cut occurs,
+    SOFR would drop to ~3.39-3.40%.
+  supports:
+    center: 3.4
+    low: 3.38
+    high: 3.42
+  logit: 0.5
+  confidence: 0.3
+  conditional: If Fed cuts 25bp
+  effective_logit: 0.15
+- description: Geopolitical stress (US-Israel attacks on Iran, oil at $100) could
+    cause repo market stress, pushing SOFR slightly higher than normal, but Fed standing
+    repo facility limits upside.
+  supports:
+    center: 3.68
+    low: 3.65
+    high: 3.75
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  center: 3.65
+  low: 3.4
+  high: 3.69
+assessment: 'SOFR on March 25, 2026 is almost entirely determined by the Fed Funds
+  target rate. The FOMC meets March 17-18 with a 96% probability of holding at 3.50-3.75%.
+  If held, SOFR should remain near its current stable level of 3.64-3.65%. The main
+  sources of uncertainty are: (1) a small chance of a 25bp cut (4%) which would move
+  SOFR to ~3.40, (2) quarter-end proximity effects which could add 0.02-0.08% to normal
+  levels, and (3) repo market stress from geopolitical events. The distribution is
+  heavily concentrated around 3.65 with a small left tail for the cut scenario and
+  a slight right tail for quarter-end effects.'
+calibration_notes: The p10 of 3.40 reflects the ~4% cut scenario. The p90 of 3.69
+  reflects quarter-end effects. The distribution is very tight because SOFR is policy-determined,
+  not market-determined. Under the dominant hold scenario, SOFR has basically zero
+  drift and very low volatility (daily std of 0.007 in the stable regime).
+key_uncertainties: 1. Whether the FOMC will surprise with a rate cut (currently 4%
+  probability). 2. Magnitude of quarter-end repo market effects on March 25 (4 business
+  days before quarter-end). 3. Whether geopolitical stress (Iran, oil) causes unusual
+  repo market dynamics.
+tool_audit: '- fred_series (SOFR): Provided excellent recent data with regime stats.
+  The stable regime since March 5 shows mean 3.648, std 0.007. Very useful.
+
+  - fred_series (FEDFUNDS): Confirmed Fed Funds effective rate at 3.64% in Feb, consistent
+  with 3.50-3.75% target range.
+
+  - kalshi_price: No results for Fed rate March 2026 query.
+
+  - web_search: Found critical information about FOMC meeting timing (March 17-18)
+  and CME FedWatch 96% hold probability.
+
+  - search_news: Provided rich context about geopolitical situation (Iran conflict,
+  oil at $100) and global central bank expectations.
+
+  - fetch_url: Confirmed rate hold expectations and current target range details.'
+update_triggers: 1. FOMC decision on March 18 - if they cut, SOFR drops ~25bp immediately.
+  2. Major repo market disruption or emergency Fed actions. 3. Significant change
+  in quarter-end funding conditions.
+process_reflection: This is a well-suited question for the numeric forecast pipeline.
+  The SOFR rate is tightly coupled to Fed policy, making the FOMC decision the dominant
+  factor. The tools worked well together - FRED data gave precise recent history with
+  regime detection, and news search confirmed market expectations. The main challenge
+  was modeling the quarter-end proximity effect, which required manual analysis of
+  historical seasonal patterns. A tool that automatically identifies calendar effects
+  in daily financial data would be helpful. The simulation approach works well but
+  the key insight is that SOFR is not a random walk - it's essentially pinned near
+  the policy rate with small noise, so a distributional model is more appropriate
+  than a path simulation.
+computed:
+  factor_count: 5
+  factor_sum: 4.745
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: CME FedWatch shows 96% probability Fed holds rates at 3.50-3.75%
+      at March 18 meeting. SOFR closely tracks Fed Funds rate, so no rate change means
+      SOFR stays near current ~3.65%
+    supports:
+      center: 3.65
+      low: 3.62
+      high: 3.69
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: 'SOFR has been extremely stable in current regime (since Dec 2025
+      cut): mean 3.648, std 0.007. Last 6 values all 3.64-3.65. Very low daily volatility.'
+    supports:
+      center: 3.65
+      low: 3.63
+      high: 3.67
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: 'Quarter-end proximity effect: March 25 is 4 business days before
+      March 31. Historical data shows small premium of 0.03-0.09% at this distance.
+      Slight upward pressure possible.'
+    supports:
+      center: 3.68
+      low: 3.65
+      high: 3.73
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Small (4%) chance of 25bp rate cut at March 18 FOMC. If cut occurs,
+      SOFR would drop to ~3.39-3.40%.
+    supports:
+      center: 3.4
+      low: 3.38
+      high: 3.42
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+    conditional: If Fed cuts 25bp
+  - description: Geopolitical stress (US-Israel attacks on Iran, oil at $100) could
+      cause repo market stress, pushing SOFR slightly higher than normal, but Fed
+      standing repo facility limits upside.
+    supports:
+      center: 3.68
+      low: 3.65
+      high: 3.75
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: CME FedWatch shows 96% probability Fed holds rates at 3.50-3.75%
+    at March 18 meeting. SOFR closely tracks Fed Funds rate, so no rate change means
+    SOFR stays near current ~3.65%
+  dominant_effective_logit: 2.375
+  distribution_metrics:
+    implied_median: 3.6447523709167546
+    implied_p10: 3.61886195995785
+    implied_p90: 3.6779241306638566
+    median_gap: 0.0052476290832452754
+    median_gap_pct: 8.88492417484343
+    spread_ratio: 4.9100802854593875
+    precision: 0.07945205479452055
+  sources:
+  - '[(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  - '[FOMC Meeting In March 2026: Fed Rate Decision, Dot Plot, And What It Means For
+    Bitcoin | MEXC](https://blog.mexc.com/news/fomc-meeting-in-march-2026-fed-rate-decision-dot-plot-and-what-it-means-for-bitcoin/)'
+  - '[(Metaculus) What will be the value of "Secured Overnight Financing Rate" on
+    2026-03-25?](https://www.metaculus.com/questions/42671)'
+  reviewer_critique: "## Verification of Evidence Chain\n\n### Factor 1: CME FedWatch\
+    \ 96% hold probability\n**VERIFIED** — The trace contains multiple confirming\
+    \ sources:\n- KuCoin: \"probability of maintaining rates unchanged is 96.0%\"\n\
+    - Phemex: \"96% probability that the Federal Reserve will maintain current interest\
+    \ rates\"\n- MEXC blog: \"92%+ probability\" (slightly lower but consistent)\n\
+    \n### Factor 2: SOFR stability (mean 3.648, std 0.007)\n**VERIFIED** — FRED data\
+    \ in trace shows `\"regime_stats\": {\"stable_mean\": 3.648333, \"stable_std\"\
+    : 0.006872}` which matches the factor's claims exactly.\n\n### Factor 3: Quarter-end\
+    \ proximity premium (0.03-0.09%)\n**VERIFIED** — The trace shows historical quarter-end\
+    \ data and the agent's analysis calculates:\n- Dec 26 (4 days before Dec 31):\
+    \ +0.09 premium\n- Sept 25 (4 days before Sept 30): +0.04 premium  \n- June 25\
+    \ (4 days before June 30): +0.07 premium\nThis supports the 0.03-0.09% range claimed.\n\
+    \n### Factor 4: 4% probability of 25bp cut\n**VERIFIED** — KuCoin trace: \"The\
+    \ probability of the Fed cutting rates by 25 basis points by March is 4.0%\"\n\
+    \n### Factor 5: Geopolitical stress (Iran, oil at $100)\n**VERIFIED** — CNBC article\
+    \ in trace: \"U.S.-Israel attacks on Iran and a burst in oil prices to around\
+    \ $100 a barrel\" — confirmed by multiple international news sources in the trace.\n\
+    \n### Resolution Criteria\n**PROPERLY ENGAGED** — The question clearly specifies\
+    \ FRED API SOFR series on 2026-03-25. The agent retrieved actual SOFR data from\
+    \ FRED and built the forecast around this data source.\n\n### Double-counting\
+    \ Check\n**NO ISSUES** — Factor 1 (Fed decision probability) and Factor 2 (observed\
+    \ SOFR behavior) provide complementary information: one is forward-looking market\
+    \ expectations, the other is realized volatility characteristics. Not duplicative.\n\
+    \n### Wrong-direction Check\n**ALL CORRECT** — Hold → SOFR ~3.65, Cut → SOFR ~3.40,\
+    \ Quarter-end proximity → slight upward bias, Geopolitical stress → potential\
+    \ upward pressure (correctly noted Fed repo facility limits upside).\n\n### Probability\
+    \ Assessment\nThe agent's estimate (Center: 3.65, Range: 3.4–3.69) is well-supported:\n\
+    - Monte Carlo with 96% hold centered at 3.66, P10=3.62, P90=3.69\n- 4% cut scenario\
+    \ creates left tail to ~3.40\n- The distribution appropriately reflects the FOMC\
+    \ meeting timing (March 18) and rate decision uncertainty\n\nThe forecast correctly\
+    \ identifies that SOFR is essentially pinned by Fed policy, with minimal variance\
+    \ in the hold scenario and a discrete jump down in the cut scenario. No evidence\
+    \ of over- or under-weighting.\n\n### Data Regime Check\n**APPROPRIATE** — The\
+    \ agent correctly identified a regime shift after the December 2025 rate cut and\
+    \ limited the Monte Carlo analysis to post-cut data (stable since Dec 11, 2025),\
+    \ avoiding regime-spanning contamination."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42671
+- **Question ID**: 42616
+- **Session Duration**: 319.9s (5.3 min)
+- **Cost**: $2.9701
+- **Tokens**: 9,206 total (29 in, 9,177 out)
+  - Cache: 713,015 read, 64,635 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42671_20260316_020456/20260316-020456.log`
+
+### Tool Calls
+
+- **Total**: 14 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 307ms |
+| fetch_url | 1 | 0 | 18440ms |
+| fred_series | 3 | 0 | 736ms |
+| get_metaculus_questions | 1 | 0 | 433ms |
+| kalshi_price | 2 | 0 | 271ms |
+| reflection | 1 | 0 | 59771ms |
+| web_search | 2 | 0 | 28311ms |
+
+### Sources Consulted
+
+- [(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)
+- [FOMC Meeting In March 2026: Fed Rate Decision, Dot Plot, And What It Means F...
+- [(Metaculus) What will be the value of "Secured Overnight Financing Rate" on ...
