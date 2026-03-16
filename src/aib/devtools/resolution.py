@@ -426,8 +426,8 @@ def _count_tentative_resolutions() -> dict[int, str]:
     return tentative
 
 
-@app.command("check")
-def check(
+@app.command("sync")
+def sync(
     user_id: int = typer.Option(DEFAULT_USER_ID, "--user-id", help="Metaculus user ID"),
     version: str | None = typer.Option(
         None, "--version", "-v", help="Scope to agent version"
@@ -551,8 +551,8 @@ def is_due_within(
     return resolve_time <= cutoff
 
 
-@app.command("resolve")
-def resolve(
+@app.command("tentative")
+def tentative(
     post_ids: list[int] = typer.Argument(
         None, help="Post IDs to resolve (all unresolved if omitted)"
     ),
@@ -601,7 +601,7 @@ def resolve(
             )
             if no_time:
                 typer.echo(
-                    "  Tip: run 'aib-devtools resolution check --backfill' to backfill resolve times"
+                    "  Tip: run 'aib-devtools resolution sync --backfill' to backfill resolve times"
                 )
         unresolved = due
 
