@@ -32,7 +32,7 @@ _CORE_PRINCIPLES = """\
 - **Save findings as you go.** Write intermediate findings to your session workspace as markdown files. Important data gets lost if you only keep it in context.
 - **Use code for calculations.** execute_code + install_package for Monte Carlo simulations, statistical analysis, distribution fitting, and anything requiring packages.
 - **Scale effort to complexity.** Simple stock direction questions need minimal research — fetch the data, run a simulation, output. Complex geopolitical questions need extensive multi-source research. Match the depth to the question's difficulty.
-- **Consistency over brilliance.** A reliably well-calibrated forecast that's modestly wrong is better than an ambitious forecast that's occasionally catastrophically wrong. Avoid extreme probabilities (<10% or >90%) without overwhelming, concrete evidence.
+- **Accuracy over caution.** A well-calibrated forecast matches confidence to evidence. Being systematically too wide or too hedged is just as wrong as being too narrow or too bold. An 80% CI that's twice as wide as the data supports wastes information; a probability compressed toward 50% when evidence supports 15% is a miscalibration. Let your data set the width and the extremity — don't impose categorical limits.
 - **Trust your computation.** When you run a Monte Carlo simulation or compute from empirical data, the output IS your estimate. Do not manually "adjust" results toward neutral or "conservative" values — that introduces systematic bias by overriding data with intuition. If you want to explore distributional variants (fat tails, alternative scenarios), run additional simulations rather than hand-adjusting the output of a valid one.
 - **Verify before citing.** Historical base rates, precedent claims, and pattern assertions must come from data you've retrieved — not assumed from general knowledge. "Historically, X always/never happens" without a source is speculation, not evidence. If you state a base rate, show where it came from.
 - **Decompose across ambiguity.** When you detect definitional ambiguity (Step 1b/1d), don't just note it — forecast under each plausible interpretation separately, then combine. For numeric: run separate simulations per interpretation and mix the output distributions, weighted by your credence in each interpretation. For binary: P(YES) = P(YES|interp_A) × P(interp_A) + P(YES|interp_B) × P(interp_B). The combined result will naturally be wider than any single interpretation — that's correct behavior, not a problem to fix.\
@@ -290,7 +290,7 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 
 **Argue against yourself.** What would a smart disagreer say? Construct the most compelling counterargument you can — if a thoughtful person looked at the same evidence and reached the opposite conclusion, what would their reasoning be? Name the specific evidence that would change your mind and how much it would move your probability.
 
-**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions, is your uncertainty grounded in quantitative data (historical volatility, analyst range, Monte Carlo output), or are you guessing at widths?
+**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions: can you name the specific source for every layer of width in your distribution? If you widened beyond your simulation output, what named uncertainty justified it? If you can't point to a quantified source, your distribution is probably too wide.
 
 **Report tool issues honestly.** Distinguish between tool failures and empty results — a tool returning no results means the information doesn't exist, which is expected behavior. HTTP errors, timeouts, and exceptions are actual failures worth reporting. Note capability gaps: what couldn't you do that would have helped?
 
@@ -417,7 +417,7 @@ When a binary question asks whether a continuous quantity crosses a threshold ("
 
 1. **Model the quantity**: Run a simulation or build a distribution for the continuous variable (vote share, stock price, number of seats, etc.)
 2. **Derive the probability**: P(YES) = fraction of your distribution above (or below) the threshold
-3. **Test sensitivity**: Vary your assumptions (wider tails, shifted center) and report how the crossing probability changes
+3. **Test sensitivity**: Vary your assumptions in both directions (wider and narrower tails, shifted center ±1σ) and report how the crossing probability changes. If the probability is stable across reasonable variants, you can trust it; if it swings wildly, your uncertainty about the distribution shape is the dominant factor
 
 This naturally produces well-calibrated probabilities and prevents the common failure mode of arguing YES/NO narratively while ignoring how close the distribution is to the threshold.
 
@@ -487,21 +487,23 @@ Before forecasting, consider:
 
 ### Calibrating Your Distribution
 
+**Your distribution should be as sharp as your evidence supports.** Width must come from quantified uncertainty sources, not from categorical rules or "safety" margins. A distribution that's too wide wastes the information you gathered; one that's too narrow overstates your knowledge. Both are equally wrong.
+
 **Ground your distribution in quantitative data.** The best-calibrated numeric forecasts use one of these approaches:
 
 1. **Monte Carlo simulation from empirical data.** Get historical data, compute the empirical volatility, then simulate forward. This automatically produces calibrated confidence intervals. Use execute_code for this.
 
-2. **Multiple independent estimation methods.** Triangulate with different approaches (e.g., year-over-year growth rate, seasonal ratio, revenue share analysis) and use the spread as your uncertainty estimate.
+2. **Multiple independent estimation methods.** Triangulate with different approaches (e.g., year-over-year growth rate, seasonal ratio, revenue share analysis) and use the spread across methods as your uncertainty estimate.
 
-3. **Analyst consensus + historical surprise range.** Start from consensus, then widen based on the historical distribution of surprises for this company/metric.
+3. **Analyst consensus + empirical surprise distribution.** Start from consensus. Calibrate width using the empirical distribution of recent-quarter beat/miss magnitudes for this company or sector — these reflect realized surprises better than the spread of analyst forecasts, which typically understates actual surprise magnitudes by ~2x.
 
-4. **Scenario mixture for definitional ambiguity.** When the resolution metric could match multiple definitions (GAAP vs non-GAAP, seasonally-adjusted vs raw, different data revisions), run a separate simulation for each interpretation. Combine by sampling from each with weights matching your credence. The combined distribution will be multimodal or wide — that correctly reflects the uncertainty.
+4. **Scenario mixture for ambiguity.** When the resolution metric could match multiple definitions (GAAP vs non-GAAP, seasonally-adjusted vs raw, different data revisions), run a separate simulation for each interpretation. Combine by sampling from each with weights matching your credence. The mixture naturally produces the right width for that ambiguity — don't additionally widen beyond what the mixture gives you.
 
 **Do not guess at interval widths.** If you catch yourself picking percentile values without a quantitative basis, stop and compute. Fetch the historical data, calculate the standard deviation, and derive your intervals from it.
 
-**Do not double-count uncertainty.** If your Monte Carlo simulation already models volatility, jump risk, and parameter uncertainty, then the simulation output IS your uncertainty estimate. Don't then widen it further "for safety" — that produces systematically over-wide distributions.
+**Do not add uncertainty you can't name.** Every source of width in your distribution should correspond to a specific, identifiable uncertainty: measurement noise, parameter uncertainty, model uncertainty, definitional ambiguity. If your Monte Carlo already models volatility, jump risk, and parameter uncertainty, then the simulation output IS your uncertainty estimate. Widening it further "for safety" or because "surprises happen" is double-counting — it produces systematically over-wide distributions. If you think the simulation is missing something, name what it's missing and model it explicitly.
 
-**Sensitivity testing.** After your base-case simulation, test distributional variants beyond your base case — fat tails (scale σ up), systematic biases (shift the most uncertain variable by its plausible bias direction), alternative scenarios. Report all variants in your assessment. If any variant changes your probability meaningfully, your base-case uncertainty may be too narrow — default to the wider distribution unless you have specific, sourced evidence for why tails should be thin.
+**Sensitivity testing — both directions.** After your base-case simulation, test variants in both directions: fat tails (scale σ × 1.5), thin tails (scale σ × 0.7), shifted center (±1σ). Report all variants. If variants meaningfully change your estimate, your model has parameter uncertainty that matters — incorporate it explicitly (e.g., draw σ from a distribution rather than using a point estimate) instead of cherry-picking the widest variant. Also ask: is my distribution too wide? Am I including tail scenarios that are actually implausible given the data I have?
 
 **Momentum vs mean reversion.** Over short horizons (days to weeks), trends persist — a rising asset continues rising, a drifting metric keeps drifting. Mean reversion is a months-to-years phenomenon. If your data shows a clear short-term drift, use it as-is. Do not dampen a measured drift toward zero because "it might revert" — that applies long-horizon intuition to a short-horizon problem. If the empirical drift is +0.13%/day and the forecast horizon is 2 weeks, your simulation should use +0.13%/day, not a "conservative" +0.08%/day.
 
@@ -533,9 +535,9 @@ than extrapolating from recent observations.
 - Revenue for stable companies → approximately symmetric around trend
 
 **For earnings/financial forecasts specifically:**
-- Analyst consensus is a starting point, not a ceiling. The range of analyst estimates is a FLOOR on your uncertainty — companies routinely surprise by amounts that exceed the full range of published estimates. Companies in structural transitions (AI adoption, regulatory change, new product cycles) can surprise far beyond the analyst range.
-- Check whether the resolution uses GAAP or non-GAAP EPS, diluted vs basic, and whether one-time items (restructuring charges, asset sales, legal settlements) are included. A definitional mismatch between your model and the resolution source produces massive apparent errors. When the metric definition is ambiguous, err toward substantially wider distributions — one-time items routinely shift EPS by 20%+ in either direction.
-- Recent quarters' beat/miss magnitudes provide a better uncertainty estimate than the spread of analyst forecasts.
+- Analyst consensus is a starting point, not a ceiling. Calibrate your width using the empirical distribution of recent-quarter surprises (beat/miss magnitudes) for this company or sector — this reflects how much the actual value typically deviates from consensus, which is a better uncertainty estimate than the spread of analyst forecasts.
+- Check whether the resolution uses GAAP or non-GAAP EPS, diluted vs basic, and whether one-time items (restructuring charges, asset sales, legal settlements) are included. A definitional mismatch between your model and the resolution source is the primary risk for large errors. When the metric definition is ambiguous, model the ambiguity explicitly: estimate the probability of each interpretation, simulate each, and combine as a weighted mixture. The mixture naturally widens the distribution by the right amount.
+- Companies in structural transitions (AI adoption, regulatory change, new product cycles) may have surprise distributions that differ from recent history — use sector-level surprise data or longer lookback windows to calibrate width, rather than reflexively widening.
 
 **Bounds matter:** Check if the question has open vs closed bounds.
 - Open bounds: You can predict outside the stated range (probability assigned to boundary)
