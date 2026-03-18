@@ -1,0 +1,332 @@
+---
+timestamp: 2026-03-18 18:52:29 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay dynamics: Value spiked to 100 on Mar 15 (India Today
+    Conclave), decayed to 61 by Mar 18. Still well above pre-spike baseline of ~25.
+    Classic post-spike decay pattern over 9 days strongly favors returning toward
+    baseline, which means Decreases.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'Threshold arithmetic: Starting at 61, ''Doesn''t change'' requires
+    end value in [58,64] - a narrow 7-point window. Given the high volatility (trailing_volatility=25.5),
+    landing in this narrow band is unlikely.'
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: 'Ongoing news coverage: Laura Loomer''s India trip, CAIR legal case
+    ruling (Mar 18), Pentagon press pass, and Trump connections provide continued
+    story lines. The story has multiple ongoing threads, not just a single event.'
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Decay stalled at 61 (same value Mar 17 and Mar 18), suggesting the
+    story might have longer legs than typical news spikes. Could indicate sustained
+    interest rather than simple exponential decay.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: Pre-spike baseline of ~25 is far below the 58 threshold for 'Decreases'.
+    Even slow decay over 9 days from 61 toward 25 will likely cross below 58 well
+    before Mar 27.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Monte Carlo simulations across multiple decay scenarios consistently
+    show Decreases as dominant outcome (85% across weighted scenarios), with median
+    end values in 30-50 range.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.07
+    Decreases: 0.83
+assessment: 'The core story: Laura Loomer''s interest spiked dramatically due to her
+  appearance at the India Today Conclave (Mar 14-15), peaking at 100 on Mar 15. By
+  Mar 18, it had decayed to 61 — still 2.4x the pre-spike baseline of ~25.
+
+
+  The question asks whether the value on Mar 27 will be higher, lower, or within ±3
+  of the Mar 18 value (61). For ''Decreases'', we need end value < 58.
+
+
+  The strongest argument for Decreases: Classic post-news-spike decay. The India Conclave
+  event is over. The story cycle (confrontation by journalist, reading racist tweets
+  back, Taj Mahal irony) has played out. Even with some sustained coverage of ongoing
+  legal issues (CAIR settlement) and political connections, the initial spike driver
+  is done. Historical decay patterns for news-driven search spikes show values returning
+  toward baseline within 1-2 weeks.
+
+
+  Counterargument for sustained interest: Loomer is not a one-off topic — she''s a
+  recurring political figure with Trump ties, Pentagon press pass, legal battles,
+  and ongoing controversies. The plateau at 61 (Mar 17-18) suggests the decay may
+  be slowing. However, even a ''slow decay'' scenario with daily decay rate of 0.92
+  projects to ~50 by Mar 27, which is still below 58.
+
+
+  For ''Increases'' (>64): Would require a new major spike — perhaps a Trump endorsement/appointment,
+  another viral controversy, or major legal development. Possible but needs a specific
+  catalyst. The CAIR ruling on Mar 18 (no contempt sanctions) is already baked in.
+
+
+  For ''Doesn''t change'' (58-64): Very narrow window given the distance from baseline
+  and the volatility of this search term. Unlikely to land exactly in this range.
+
+
+  Key risk: If Loomer generates a new major controversy in the next 9 days. She''s
+  visiting India and has a pattern of generating outrage. But even so, this would
+  need to match or exceed the Conclave spike to push above 64.'
+calibration_notes: 'Base rates from change_stats: Increases 38%, Decreases 33%, No
+  change 29%. But these are unconditional rates across the full date range. The current
+  context (post-spike, elevated starting value well above baseline) shifts the conditional
+  probability heavily toward Decreases. The 38% unconditional increase rate reflects
+  the spike period itself, not forward-looking from a post-spike position.'
+key_uncertainties: 1. Whether Loomer generates another viral controversy during Mar
+  18-27 that spikes interest again. 2. Whether the Google Trends API (SerpAPI) values
+  will differ meaningfully from pytrends values, especially if there's recalibration
+  when adding the final days of data. 3. Whether the plateau at 61 indicates a new
+  sustained interest level or just noise.
+tool_audit: Google Trends tool returned good data with change_stats, tail_stats, and
+  recent_news. AskNews search_news returned comprehensive coverage. Web search confirmed
+  ongoing story. Polymarket had no markets on this topic. Monte Carlo simulations
+  executed successfully in sandbox. All key tools performed well.
+update_triggers: A new major Laura Loomer controversy (viral moment, Trump appointment/endorsement,
+  legal ruling) would shift probability toward Increases. Conversely, if she drops
+  out of the news entirely, the decay accelerates and Decreases probability approaches
+  90%+.
+process_reflection: 'The workflow was smooth for this question type. The Google Trends
+  tool with tz=0 and exact date range was essential. The news search tools provided
+  excellent context for understanding the spike driver. The sandbox for Monte Carlo
+  simulation was valuable for converting qualitative decay analysis into quantitative
+  probabilities. One gap: I couldn''t verify what the SerpAPI specifically would return
+  vs pytrends, which introduces some measurement uncertainty. The structured guidance
+  on post-spike dynamics was helpful for framing the analysis.'
+computed:
+  factor_count: 6
+  factor_sum: 5.15
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay dynamics: Value spiked to 100 on Mar 15 (India
+      Today Conclave), decayed to 61 by Mar 18. Still well above pre-spike baseline
+      of ~25. Classic post-spike decay pattern over 9 days strongly favors returning
+      toward baseline, which means Decreases.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'Threshold arithmetic: Starting at 61, ''Doesn''t change'' requires
+      end value in [58,64] - a narrow 7-point window. Given the high volatility (trailing_volatility=25.5),
+      landing in this narrow band is unlikely.'
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: 'Ongoing news coverage: Laura Loomer''s India trip, CAIR legal case
+      ruling (Mar 18), Pentagon press pass, and Trump connections provide continued
+      story lines. The story has multiple ongoing threads, not just a single event.'
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Decay stalled at 61 (same value Mar 17 and Mar 18), suggesting the
+      story might have longer legs than typical news spikes. Could indicate sustained
+      interest rather than simple exponential decay.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: Pre-spike baseline of ~25 is far below the 58 threshold for 'Decreases'.
+      Even slow decay over 9 days from 61 toward 25 will likely cross below 58 well
+      before Mar 27.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Monte Carlo simulations across multiple decay scenarios consistently
+      show Decreases as dominant outcome (85% across weighted scenarios), with median
+      end values in 30-50 range.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  dominant_factor: 'Post-spike decay dynamics: Value spiked to 100 on Mar 15 (India
+    Today Conclave), decayed to 61 by Mar 18. Still well above pre-spike baseline
+    of ~25. Classic post-spike decay pattern over 9 days strongly favors returning
+    toward baseline, which means Decreases.'
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 4.550000000000001
+    factors:
+    - description: 'Post-spike decay dynamics: Value spiked to 100 on Mar 15 (India
+        Today Conclave), decayed to 61 by Mar 18. Still well above pre-spike baseline
+        of ~25. Classic post-spike decay pattern over 9 days strongly favors returning
+        toward baseline, which means Decreases.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'Threshold arithmetic: Starting at 61, ''Doesn''t change'' requires
+        end value in [58,64] - a narrow 7-point window. Given the high volatility
+        (trailing_volatility=25.5), landing in this narrow band is unlikely.'
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.9
+      effective_logit: 0.45
+    - description: Pre-spike baseline of ~25 is far below the 58 threshold for 'Decreases'.
+        Even slow decay over 9 days from 61 toward 25 will likely cross below 58 well
+        before Mar 27.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: Monte Carlo simulations across multiple decay scenarios consistently
+        show Decreases as dominant outcome (85% across weighted scenarios), with median
+        end values in 30-50 range.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.4
+    factors:
+    - description: 'Ongoing news coverage: Laura Loomer''s India trip, CAIR legal
+        case ruling (Mar 18), Pentagon press pass, and Trump connections provide continued
+        story lines. The story has multiple ongoing threads, not just a single event.'
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.2
+    factors:
+    - description: Decay stalled at 61 (same value Mar 17 and Mar 18), suggesting
+        the story might have longer legs than typical news spikes. Could indicate
+        sustained interest rather than simple exponential decay.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.012547072588204086
+      Increases: 0.015325029066068334
+      Decreases: 0.9721278983457275
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.07
+      Decreases: 0.83
+    per_option_gap_pp:
+      Doesn't change: 5.7452927411795915
+      Increases: 8.467497093393167
+      Decreases: -14.212789834572758
+    max_gap_pp: -14.212789834572758
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) laura loomer](https://trends.google.com/trends/explore?q=laura
+    loomer)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all factual claims in the factors against the research trace:
+
+
+    1. **Factor 1 (Post-spike decay)**: Confirmed - Trace shows Google Trends data
+    with peak of 100 on Mar 15, decay to 61 by Mar 18. News articles confirm India
+    Today Conclave as the spike cause.
+
+
+    2. **Factor 2 (Threshold arithmetic)**: Confirmed - Trace shows trailing_volatility=25.51,
+    and the ±3 threshold from 61 creates the [58,64] window.
+
+
+    3. **Factor 3 (Ongoing news)**: Confirmed - Trace documents the CAIR ruling on
+    Mar 18 (lines 121-131), Pentagon press pass (lines 309-312), and extensive India
+    trip coverage.
+
+
+    4. **Factor 4 (Decay stalled at 61)**: Confirmed - Trace shows identical values
+    for Mar 17 and Mar 18.
+
+
+    5. **Factor 5 (Pre-spike baseline ~25)**: Confirmed - Code output shows "Pre-spike
+    baseline (Mar 1-13): mean=25.5, median=26".
+
+
+    6. **Factor 6 (Monte Carlo results)**: Confirmed - Simulation outputs show 84.5%
+    Decreases with median end values in 30-50 range across scenarios.
+
+
+    **Resolution Criteria**: Properly engaged. The agent correctly identifies the
+    API-based resolution, the ±3 threshold, and UTC dates.
+
+
+    **No double-counting**: While factors 1, 5, and 6 relate to decay, they serve
+    different purposes (empirical observation, threshold math, probabilistic integration).
+
+
+    **Adversarial reasoning**: Present - assessment addresses plateau at 61 as counter-evidence
+    and scenarios requiring new catalysts for Increases.
+
+
+    **Probability check**: The 83% Decreases estimate is well-supported by the Monte
+    Carlo analysis (84.5% weighted average) and the fundamental dynamics: starting
+    36 points above a baseline of 25, needing only to drop below 58 over 9 days of
+    expected decay. My independent estimate would be similar (perhaps 85-87%), well
+    within reasonable calibration bounds.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42717
+- **Question ID**: 42662
+- **Session Duration**: 314.5s (5.2 min)
+- **Cost**: $2.6588
+- **Tokens**: 7,662 total (26 in, 7,636 out)
+  - Cache: 452,782 read, 75,013 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42717_20260318_184721/20260318-184721.log`
+
+### Tool Calls
+
+- **Total**: 133 calls
+- **Errors**: 4 (3.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 38 | 0 | 851ms |
+| fetch_url | 22 | 1 ⚠️ | 7688ms |
+| fred_series | 2 | 0 | 390ms |
+| get_coherence_links | 1 | 0 | 409ms |
+| get_cp_history | 3 | 3 ⚠️ | 1233ms |
+| get_metaculus_questions | 7 | 0 | 2095ms |
+| google_trends | 1 | 0 | 62581ms |
+| kalshi_price | 1 | 0 | 964ms |
+| manifold_price | 3 | 0 | 593ms |
+| polymarket_price | 5 | 0 | 77ms |
+| reflection | 11 | 0 | 106114ms |
+| search_exa | 4 | 0 | 1991ms |
+| stock_conditional_returns | 2 | 0 | 344ms |
+| stock_history | 4 | 0 | 83ms |
+| stock_price | 2 | 0 | 776ms |
+| web_search | 20 | 0 | 19823ms |
+| wikipedia | 7 | 0 | 1278ms |
+
+### Sources Consulted
+
+- [(Google Trends) laura loomer](https://trends.google.com/trends/explore?q=lau...
