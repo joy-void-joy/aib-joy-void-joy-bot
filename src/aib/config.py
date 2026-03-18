@@ -234,16 +234,6 @@ class Settings(BaseSettings):
         validation_alias="AIB_MAX_BUDGET_USD",
         description="Maximum budget in USD for a single forecast (None = unlimited)",
     )
-    max_turns: int | None = Field(
-        default=None,
-        validation_alias="AIB_MAX_TURNS",
-        description="Maximum agent turns for a single forecast (None = unlimited)",
-    )
-    subforecast_max_turns: int = Field(
-        default=50,
-        validation_alias="AIB_SUBFORECAST_MAX_TURNS",
-        description="Maximum turns for sub-forecasts spawned by spawn_subquestions",
-    )
     subforecast_max_budget_usd: float = Field(
         default=5.0,
         validation_alias="AIB_SUBFORECAST_MAX_BUDGET_USD",

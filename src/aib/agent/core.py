@@ -722,7 +722,6 @@ async def review_forecast_trace(
             system_prompt=REVIEWER_SYSTEM_PROMPT,
             allowed_tools=["Read"],
             permission_mode="bypassPermissions",
-            max_turns=10,
             output_format={
                 "type": "json_schema",
                 "schema": ForecastSummary.model_json_schema(),

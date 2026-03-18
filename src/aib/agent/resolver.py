@@ -26,7 +26,6 @@ from aib.tools.mcp_server import create_mcp_server
 logger = logging.getLogger(__name__)
 
 MAX_CONCURRENT = 5
-MAX_TURNS = 30
 
 
 class ResolutionVerdict(BaseModel):
@@ -220,7 +219,6 @@ async def resolve_question(
         mcp_servers=servers,
         allowed_tools=tools,
         permission_mode="bypassPermissions",
-        max_turns=MAX_TURNS,
         output_format={
             "type": "json_schema",
             "schema": ResolutionVerdict.model_json_schema(),
