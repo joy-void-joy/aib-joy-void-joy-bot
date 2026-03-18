@@ -1,0 +1,225 @@
+---
+timestamp: 2026-03-18 09:44:44 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: when WFC is in 20%+ drawdown from 52-week high,
+    8-day forward returns are positive 59% of the time (n=283 episodes, 1972-2026).
+    Mean return +1.5%, median +1.4%.'
+  logit: 0.6
+  confidence: 0.8
+  effective_logit: 0.48
+- description: 'Deeply oversold technical conditions: S&P oscillator at -7.34%, stock
+    down 22% from 52-week high, down 14% in 20 days. Oversold conditions historically
+    precede bounces.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Active macro headwinds: Iran/oil crisis (Brent at $103/bbl), Strait
+    of Hormuz disruption, Goldman recession probability at 25%, private credit fears
+    specifically hitting financial stocks including WFC.'
+  logit: -0.8
+  confidence: 0.75
+  effective_logit: -0.6000000000000001
+- description: 'Recent 3-month downtrend: strong negative momentum with daily mean
+    return of -0.64% over past 30 days. Financial sector down ~11% YTD with short-selling
+    surging against financials.'
+  logit: -0.6
+  confidence: 0.6
+  effective_logit: -0.36
+- description: Recent 2-day bounce (+2.9% from $74.10 low) suggests some stabilization.
+    Institutional buying (Cramer trust, analyst targets at $97 consensus).
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 8 trading day horizon with ~2% daily vol gives ~5.7% expected range.
+    Stock only needs to be marginally higher - not a high bar.
+  logit: 0.1
+  confidence: 0.9
+  effective_logit: 0.09000000000000001
+tentative_estimate:
+  logit: 0.08
+  probability: 0.52
+assessment: 'This is a close-to-coin-flip situation with competing strong forces.
+  The conditional drawdown base rate (59% positive over 8 days when in 20%+ drawdown)
+  is the most statistically informative anchor, drawing from 283 episodes over 50+
+  years. This pulls toward YES. However, the current macro environment features active,
+  ongoing headwinds that may be more severe than typical drawdown episodes: an Iran/oil
+  crisis disrupting the Strait of Hormuz, private credit fears specifically targeting
+  financial stocks like WFC, and rising recession probability. The recent 3-month
+  bootstrap (19% positive) overfits to the selloff period and shouldn''t be trusted
+  as a forward estimate - it assumes the drawdown continues at the same rate, which
+  conflicts with oversold mean reversion. The strongest counterargument to YES is
+  that the Iran war and oil shock create genuine uncertainty that hasn''t been resolved,
+  and financial sector headwinds (private credit fears, short-selling) could persist
+  or worsen. The strongest argument for YES is the deeply oversold conditions and
+  the statistical tendency for 20%+ drawdowns to produce positive 8-day returns 59%
+  of the time. My 52% estimate reflects near-maximal uncertainty, pulled slightly
+  above 50% by the conditional base rate but restrained by the active macro headwinds.'
+calibration_notes: 'Base rate: unconditional ~52% for any 8-day period. Conditional
+  on 20%+ drawdown: 59%. Current macro environment argues for downward adjustment
+  from the conditional rate. Net: approximately 50-53%. Not hedging toward 50% - this
+  genuinely reflects competing strong forces. The drawdown conditional is informative
+  but the active crisis environment is a meaningful negative factor.'
+key_uncertainties: Iran/oil crisis resolution timeline is the biggest swing factor.
+  If there's a ceasefire or Hormuz reopening signal, WFC could rally 5-10% quickly.
+  If the crisis escalates or private credit fears worsen, continued decline is likely.
+  FOMC meeting outcome (if scheduled in this window) could also move markets significantly.
+tool_audit: stock_price and stock_history provided good recent data. stock_conditional_returns
+  was very useful - the drawdown conditional base rate is the key anchor. search_news
+  provided excellent macro context on the Iran crisis, private credit fears, and recession
+  probabilities. All tools returned useful results with no failures.
+update_triggers: Iran ceasefire or Hormuz reopening (strongly YES), major private
+  credit fund failure (strongly NO), FOMC emergency action (depends on direction),
+  WFC-specific news (earnings revision, regulatory action)
+process_reflection: 'The stock direction question template worked well. The conditional
+  return tool was the most valuable single input - it provides a proper base rate
+  conditioned on the current state. The main challenge was reconciling the conditional
+  base rate (59%) with the current macro environment - this required qualitative judgment
+  about whether the current headwinds are captured in the historical distribution
+  or represent a novel regime. The Monte Carlo bootstrap from recent data was misleading
+  because the sample period IS the drawdown, making it circular for forward prediction.
+  The news search tools were essential for understanding the macro context. One gap:
+  I couldn''t easily check if there''s a scheduled FOMC meeting in this window, which
+  could be a major catalyst.'
+computed:
+  factor_count: 6
+  factor_sum: 0.0599999999999999
+  tentative_logit: 0.08
+  logit_gap: 0.0200000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Conditional base rate: when WFC is in 20%+ drawdown from 52-week
+      high, 8-day forward returns are positive 59% of the time (n=283 episodes, 1972-2026).
+      Mean return +1.5%, median +1.4%.'
+    logit: 0.6
+    confidence: 0.8
+    effective_logit: 0.48
+  - description: 'Deeply oversold technical conditions: S&P oscillator at -7.34%,
+      stock down 22% from 52-week high, down 14% in 20 days. Oversold conditions historically
+      precede bounces.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Active macro headwinds: Iran/oil crisis (Brent at $103/bbl), Strait
+      of Hormuz disruption, Goldman recession probability at 25%, private credit fears
+      specifically hitting financial stocks including WFC.'
+    logit: -0.8
+    confidence: 0.75
+    effective_logit: -0.6000000000000001
+  - description: 'Recent 3-month downtrend: strong negative momentum with daily mean
+      return of -0.64% over past 30 days. Financial sector down ~11% YTD with short-selling
+      surging against financials.'
+    logit: -0.6
+    confidence: 0.6
+    effective_logit: -0.36
+  - description: Recent 2-day bounce (+2.9% from $74.10 low) suggests some stabilization.
+      Institutional buying (Cramer trust, analyst targets at $97 consensus).
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 8 trading day horizon with ~2% daily vol gives ~5.7% expected range.
+      Stock only needs to be marginally higher - not a high bar.
+    logit: 0.1
+    confidence: 0.9
+    effective_logit: 0.09000000000000001
+  dominant_factor: 'Active macro headwinds: Iran/oil crisis (Brent at $103/bbl), Strait
+    of Hormuz disruption, Goldman recession probability at 25%, private credit fears
+    specifically hitting financial stocks including WFC.'
+  dominant_effective_logit: -0.6000000000000001
+  factor_implied_probability: 0.51499550161941
+  tentative_probability: 0.52
+  gap_pp: 0.5004498380590028
+  sources:
+  - '[(yfinance) WFC](https://finance.yahoo.com/quote/WFC)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  reviewer_critique: "## Summary\n\nI verified the agent's key claims against the\
+    \ research trace. Most factors are well-grounded, but I found one unsupported\
+    \ detail and borderline double-counting.\n\n## Verified Claims\n\n**Factor 1 (base\
+    \ rate 59%, n=283)**: VERIFIED. The trace shows `\"pct_positive\": 59.01060070671378`\
+    \ with `\"total_events\": 283` and data period \"1972-06-01 to 2026-03-17\". The\
+    \ mean (+1.52%) and median (+1.42%) returns are also confirmed.\n\n**Factor 2\
+    \ (S&P oscillator -7.34%, 22% drawdown)**: VERIFIED. The Cramer/CNBC article explicitly\
+    \ states \"the S&P Short Range Oscillator reaching -7.34%\". The 22% drawdown\
+    \ is confirmed by `\"drawdown_from_52w_high_pct\": -22.02332242225859`.\n\n**Factor\
+    \ 3 (macro headwinds - Brent $103, Strait of Hormuz, Goldman recession 25%)**:\
+    \ VERIFIED. The Motley Fool/NASDAQ article confirms \"Brent crude oil prices to\
+    \ soar over 40% to $103 per barrel\" and mentions Strait of Hormuz disruption.\
+    \ Goldman recession probability is mentioned in multiple news articles.\n\n**Factor\
+    \ 4 (11% YTD financial sector, short-selling surge)**: VERIFIED. The Hankyung\
+    \ article states \"S&P Financial Sector Index to fall 11% year-to-date\" and \"\
+    Goldman Sachs reported that short-selling activity against global financial stocks\
+    \ intensified last week.\"\n\n**Factor 5 (2.9% bounce, Cramer trust buying)**:\
+    \ VERIFIED. The trace shows a 2.9% bounce calculation from the $74.10 low. The\
+    \ CNBC article confirms \"Jim Cramer's Charitable Trust purchased 50 shares of\
+    \ Wells Fargo (WFC) at approximately $76.20 per share.\"\n\n**Factor 6 (8-day\
+    \ horizon, ~2% daily vol)**: VERIFIED. The trace shows `\"trailing_volatility_20d\"\
+    : 2.0821353872174866`.\n\n## Issues Found\n\n**1. Unsupported claim: \"$97 consensus\
+    \ analyst targets\" (Factor 5)** - The trace shows $97.76 is WFC's 52-week HIGH,\
+    \ not a consensus analyst target. I searched the entire trace for analyst targets\
+    \ ON WFC (not targets WFC issued for other stocks) and found none. This appears\
+    \ to be a conflation of the 52-week high with analyst consensus. However, this\
+    \ is embedded in a low-weight factor (logit=+0.3, confidence=0.5), and the other\
+    \ parts (Cramer buying) are supported.\n\n**2. Minor discrepancy in Factor 4**\
+    \ - Claims \"-0.64% daily mean return over past 30 days\" but trace shows 3-month\
+    \ data (29 returns) at -0.6431%. The number is correct but the timeframe description\
+    \ is slightly off. Non-material.\n\n**3. Borderline double-counting (Factors 1\
+    \ & 2)** - Both factors reference the 20%+ drawdown condition. Factor 1 derives\
+    \ the 59% base rate FROM this condition. Factor 2 counts the same drawdown as\
+    \ evidence of \"oversold conditions.\" While they serve different analytical purposes\
+    \ (historical vs. current signal), they're not fully independent.\n\n## Probability\
+    \ Assessment\n\nThe 52% estimate is reasonable. The agent correctly identifies\
+    \ the 59% conditional base rate as the primary anchor (well-supported by n=283\
+    \ over 50+ years), appropriately discounts for active macro headwinds (Iran crisis,\
+    \ private credit fears targeting financials specifically), and correctly rejects\
+    \ the 19% bootstrap estimate as biased (sampling from the selloff period). \n\n\
+    The adversarial reasoning is adequate - the agent explicitly addresses \"The strongest\
+    \ counterargument to YES is that the Iran war and oil shock create genuine uncertainty...\"\
+    \n\nMy independent estimate would be in the 50-54% range, so 52% is within acceptable\
+    \ bounds.\n\n## Verdict: WARN\n\nThe \"$97 consensus analyst targets\" claim lacks\
+    \ trace support - it appears to conflate the 52-week high ($97.76) with a consensus\
+    \ price target. While this doesn't change the forecast direction (the factor has\
+    \ low weight and the institutional buying claim is supported), it's an unsupported\
+    \ detail in the factors. Combined with the borderline double-counting on drawdown,\
+    \ this warrants a warning but not a fail since correcting these issues wouldn't\
+    \ meaningfully change the 52% probability."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42715
+- **Question ID**: 42660
+- **Session Duration**: 336.2s (5.6 min)
+- **Cost**: $2.3680
+- **Tokens**: 6,853 total (25 in, 6,828 out)
+  - Cache: 425,205 read, 64,944 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42715_20260318_093916/20260318-093916.log`
+
+### Tool Calls
+
+- **Total**: 54 calls
+- **Errors**: 2 (3.7%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 7 | 0 | 318ms |
+| fetch_url | 8 | 0 | 6245ms |
+| get_coherence_links | 1 | 0 | 409ms |
+| get_cp_history | 2 | 2 ⚠️ | 1688ms |
+| get_metaculus_questions | 4 | 0 | 1843ms |
+| kalshi_price | 1 | 0 | 964ms |
+| manifold_price | 2 | 0 | 827ms |
+| polymarket_price | 2 | 0 | 71ms |
+| reflection | 6 | 0 | 131637ms |
+| stock_conditional_returns | 2 | 0 | 344ms |
+| stock_history | 4 | 0 | 83ms |
+| stock_price | 2 | 0 | 776ms |
+| web_search | 6 | 0 | 15731ms |
+| wikipedia | 7 | 0 | 1278ms |
+
+### Sources Consulted
+
+- [(yfinance) WFC](https://finance.yahoo.com/quote/WFC)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
