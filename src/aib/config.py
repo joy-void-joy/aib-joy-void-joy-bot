@@ -176,7 +176,7 @@ class Settings(BaseSettings):
         description="Max concurrent Google Trends requests",
     )
     trends_min_interval: float = Field(
-        default=5.0,
+        default=30.0,
         validation_alias="AIB_TRENDS_MIN_INTERVAL",
         description="Minimum seconds between Google Trends requests",
     )

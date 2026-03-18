@@ -288,8 +288,8 @@ def _compute_tail_stats(
 
 
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=30, max=120),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=60, min=60, max=300),
     retry=retry_if_exception_type(TooManyRequestsError),
     reraise=True,
 )
