@@ -1,0 +1,64 @@
+{
+  "summary": "Solid forecasting trace on ICJ decision count. Agent systematically researched historical decision rates (2023: 26, 2024: 27, 2025: ~21 entries/year), confirmed one decision in window (March 19, 2026 Guatemala intervention judgment), and applied appropriate Poisson modeling. Strong methodology with Monte Carlo simulation yielding median 4, P10=2, P90=6. Minor weakness: ICJ website rendering issues limited data extraction, but agent adapted well by triangulating press releases and homepage data.",
+  "condensed_reasoning": "## Research\n\nI researched ICJ decision patterns by examining the official ICJ Decisions page at icj-cij.org/decisions, along with press releases, the ICJ homepage, and Wikipedia for context. The ICJ website rendered dynamically, limiting direct date extraction from the decisions page, so I triangulated from multiple sources.\n\n## Key Evidence\n\n**Historical base rates from decisions page:**\n- **2023**: ~26 entries\n- **2024**: ~27 entries  \n- **2025**: ~21 entries (notably lower)\n- **Average**: ~24.7 entries/year = **~2.06/month** = **~0.068/day**\n\n**Confirmed entry in window:**\n- **March 19, 2026**: Judgment granting Guatemala permission to intervene in `Belize v. Honduras` (Sovereignty over the Sapodilla Cayes/Cayos Zapotillos)\n\n**Pending activity that could generate entries:**\n- Multiple Article 63 intervention declarations filed in `South Africa v. Israel` (March 3, 11, 12, 2026 by Paraguay, Netherlands, Iceland, Namibia, USA, Hungary, Fiji) - Court may issue admissibility decision(s)\n- Various cases in written proceedings could produce time-limit fixing orders\n- `Gambia v. Myanmar` merits judgment **unlikely** by April 30 - hearings only concluded January 29, 2026\n\n**ICJ decision clustering patterns:**\n- February 25, 2026: 3 orders issued same day\n- December 17, 2025: 2 orders issued same day\n- This clustering increases variance beyond standard Poisson\n\n## Conclusion\n\nI applied a Poisson model with λ = 2.77 for the remaining 41 days (March 20 - April 30), conditioned on the 1 known entry. The model fit was validated: P(0 entries in March 5-18) = 38%, which is consistent with the observed 0 entries in that period.\n\n**Distribution from Monte Carlo simulation (n=1,000,000):**\n- Median: **4**\n- P10: 2, P25: 3, P75: 5, P90: 6, P99: 8\n- Mean: 3.77\n\nThe 2025 lower rate (~21 vs ~26-27) suggests possible secular decrease in procedural activity, which could pull distribution slightly left. However, multiple pending intervention declarations in `South Africa v. Israel` create upside potential.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__web_search": "4 calls, 0 errors, impact: none, value: high — located ICJ homepage with March 19 judgment confirmation and intervention declarations",
+      "mcp__search__fetch_url": "10 calls, 0 errors, impact: minor (JS rendering limited extraction), value: high — obtained historical decision counts from 2023-2025",
+      "mcp__sandbox__execute_code": "5 calls, 0 errors, impact: none, value: high — Poisson modeling and Monte Carlo simulation worked correctly",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed question bounds (0.5-11.5)",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor analysis with reviewer verification",
+      "TodoWrite": "5 calls, 0 errors, impact: none, value: low — standard task tracking"
+    },
+    "capability_gaps": [
+      "JavaScript-rendering web scraper would have extracted ICJ decisions page with dates attached to entries",
+      "Direct API access to ICJ structured data would have provided precise historical counts by date"
+    ],
+    "subtle_bugs": [
+      "ICJ decisions page URL parameters (type=1, from=, to=) may have filtered results unexpectedly - agent noted ~22 entries for 2025-2026 combined but was uncertain about filtering logic"
+    ]
+  },
+  "workflow": {
+    "info_gathering": "Excellent strategy: started with direct ICJ website, then triangulated via press releases, homepage, and Wikipedia. Recognized web scraping limitations and adapted by using multiple data sources. Systematically covered historical rates (3 years), confirmed entries in window, pending cases, and clustering patterns.",
+    "structured_reasoning": "Strong factor construction with 6 distinct factors, appropriate logit weights (ranging from -0.4 to +1.5), and confidence ratings. Clear separation between base rate evidence, confirmed observations, and forward-looking indicators. Properly engaged with counterarguments (2025 lower rate).",
+    "self_correction": "Agent caught and corrected interpolation issue in percentile calculation (recognized P1=0.7 was below floor of 1 confirmed decision, switched to direct Monte Carlo percentiles). Also recognized that adjusted model with missed-entry uncertainty inflated estimates inappropriately.",
+    "efficiency": "Good efficiency with parallel tool calls where applicable. Some redundant web searches (multiple queries for same ICJ decisions page), but overall reasonable given dynamic rendering challenges. ~5 code executions were well-targeted."
+  },
+  "reasoning": {
+    "evidence_quality": 4,
+    "evidence_notes": "Historical decision counts (2023: 26, 2024: 27, 2025: ~21) were well-sourced from ICJ website with appropriate caveats about scraping limitations. March 19, 2026 judgment confirmed from multiple sources. Intervention declarations verified via press releases. Minor gap: couldn't verify exact counts per month within years.",
+    "logical_coherence": 5,
+    "logical_notes": "Poisson model is appropriate for count data with known rate. Conditioning on 1 confirmed entry is correct. λ=2.77 for 41 days derived properly from yearly average. Factor structure is internally consistent with no contradictions.",
+    "calibration_sense": 4,
+    "calibration_notes": "Distribution appropriately wide (P10=2, P90=6 for median=4). Agent explicitly noted that 0 entries in March 5-18 was 38% probability under model, providing good calibration check. Acknowledged uncertainty about 2025 lower rate significance.",
+    "strengths": [
+      "Systematic base rate research across 3 years",
+      "Appropriate Poisson modeling for rare-event count data",
+      "Good uncertainty quantification with Monte Carlo simulation",
+      "Self-correction on interpolation methodology",
+      "Engagement with counterarguments (2025 lower rate)"
+    ],
+    "weaknesses": [
+      "Couldn't extract precise dates for individual decisions from ICJ website",
+      "Uncertainty about whether web scraping captured all decision types (advisory opinions may have been missed)",
+      "No explicit consideration of seasonal patterns in ICJ activity"
+    ]
+  },
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "notable_observations": [
+    "ICJ decisions page renders dynamically, limiting automated extraction — future forecasts may need specialized scraping",
+    "ICJ decisions cluster temporally (2-3 orders same day is common), suggesting Poisson may underestimate variance",
+    "2025 decision count (~21) notably lower than 2023-2024 (~26-27) — unclear if temporary or structural change",
+    "Article 63 intervention declarations generate press releases but unclear if/when they produce decisions page entries"
+  ],
+  "actionable_improvements": [
+    "Use archived/cached versions of ICJ decisions page (Wayback Machine) to get precise historical counts with dates",
+    "Develop heuristic for ICJ decision timing based on case stage (written proceedings → time-limit orders, post-hearings → judgment timing)",
+    "Consider overdispersed count model (negative binomial) to account for clustering pattern",
+    "Cross-reference with UN Journal announcements for more complete decision tracking"
+  ]
+}

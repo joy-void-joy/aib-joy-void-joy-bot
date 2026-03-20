@@ -1,0 +1,324 @@
+---
+timestamp: 2026-03-20 09:15:58 UTC
+question_type: discrete
+factors:
+- description: 'Historical base rate: ICJ issues ~22-27 decisions per year (2023:
+    26, 2024: 27, 2025: ~21), averaging ~2.06/month or ~0.068/day. Over 57-day window,
+    expected ~3.85 entries.'
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 6.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: 'One entry already confirmed: March 19, 2026 Judgment on Guatemala''s
+    intervention in Belize v. Honduras. This sets a floor of 1.'
+  supports:
+    center: 4.0
+    low: 1.0
+    high: 4.0
+  logit: 1.0
+  confidence: 1.0
+  effective_logit: 1.0
+- description: Multiple Article 63 intervention declarations filed in S. Africa v.
+    Israel case (March 3, 11, 12, 2026). Court may issue admissibility decision(s),
+    adding 1+ entry.
+  supports:
+    center: 5.0
+    low: 4.0
+    high: 6.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'ICJ decisions are clustered/lumpy: batches of 2-3 procedural orders
+    often issued same day (e.g., Feb 25, 2026: 3 orders; Dec 17, 2025: 2 orders).
+    Increases variance.'
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 7.0
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: Gambia v. Myanmar merits judgment unlikely before April 30 - hearings
+    only concluded Jan 29, 2026. Major judgments typically take 6+ months after hearings.
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 4.0
+  logit: -0.3
+  confidence: 0.8
+  effective_logit: -0.24
+- description: March 5-18 period had 0 entries despite 14 days elapsed. Consistent
+    with Poisson model (P=38%) but suggests current period may be quieter than average.
+  supports:
+    center: 3.0
+    low: 2.0
+    high: 5.0
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 4.0
+  low: 2.0
+  high: 6.0
+assessment: 'The ICJ decisions page includes all judgments, advisory opinions, and
+  orders (including routine procedural orders like time-limit fixings). Historical
+  data shows ~22-27 entries per year on this page, averaging about 2 per month. For
+  the 57-day window from March 5 to April 30, 2026, the Poisson model with λ≈3.8 (conditioned
+  on 1 known entry) gives a median of 4, P10=2, P90=6.
+
+
+  The main tension is between the base rate (~4 expected) and the fact that the first
+  15 days of the window yielded only 1 entry, suggesting the current period might
+  be slightly quieter. However, ICJ decisions are lumpy - a batch of 3+ procedural
+  orders could appear on any given day.
+
+
+  Key upcoming events that could generate entries: intervention admissibility decisions
+  for S. Africa v. Israel, time-limit fixings for pending cases in written proceedings,
+  and potentially new provisional measures requests. The Gambia v. Myanmar merits
+  judgment is very unlikely before April 30.
+
+
+  Counterargument: The 2025 annual count (~21) was notably lower than 2023-2024 (~26-27),
+  possibly indicating a secular decrease in procedural activity. Using only 2025 rates
+  would give λ≈3.3 instead of 3.8. This would shift the distribution slightly left
+  (median 3-4 instead of 4).'
+calibration_notes: 'Base rate: ~2.06 decisions/month from 3-year average. The Poisson
+  model is appropriate for rare events. The underdispersion observed in yearly data
+  (variance < mean) suggests the Poisson model may slightly overestimate variance,
+  which is conservative.
+
+
+  Status quo: The ICJ will continue issuing procedural orders at its historical rate.
+  No unusual disruptions expected.'
+key_uncertainties: '1. Whether the 2025 lower rate (~21/year) represents a temporary
+  dip or new normal
+
+  2. Whether the S. Africa v. Israel intervention declarations will generate decision
+  page entries
+
+  3. Whether a batch of procedural orders could significantly boost the count
+
+  4. Whether I''ve accurately captured the historical base rate (web scraping may
+  have missed some entries)'
+tool_audit: 'Useful: web_search found ICJ homepage with recent decisions; fetch_url
+  extracted decision lists from ICJ decisions page (with limitations). The ICJ website''s
+  JavaScript rendering limited the amount of structured data available from scraping.
+  Historical annual counts were obtained but without precise dates for individual
+  entries. The decisions page didn''t render fully, so I had to piece together rates
+  from multiple sources.'
+process_reflection: The main challenge was that the ICJ decisions page renders dynamically
+  and the scraper couldn't extract dates or case names from the entries - only the
+  decision type labels. This made it impossible to map specific decisions to specific
+  dates. I had to infer monthly rates from annual totals. A tool that could render
+  JavaScript-heavy pages and extract structured data would have helped. The Wikipedia
+  and press release data provided good cross-checks. The Poisson model is a natural
+  fit for this type of count data and the simulation was straightforward.
+computed:
+  factor_count: 6
+  factor_sum: 2.24
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: ICJ issues ~22-27 decisions per year (2023:
+      26, 2024: 27, 2025: ~21), averaging ~2.06/month or ~0.068/day. Over 57-day window,
+      expected ~3.85 entries.'
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 6.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: 'One entry already confirmed: March 19, 2026 Judgment on Guatemala''s
+      intervention in Belize v. Honduras. This sets a floor of 1.'
+    supports:
+      center: 4.0
+      low: 1.0
+      high: 4.0
+    logit: 1.0
+    confidence: 1.0
+    effective_logit: 1.0
+  - description: Multiple Article 63 intervention declarations filed in S. Africa
+      v. Israel case (March 3, 11, 12, 2026). Court may issue admissibility decision(s),
+      adding 1+ entry.
+    supports:
+      center: 5.0
+      low: 4.0
+      high: 6.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'ICJ decisions are clustered/lumpy: batches of 2-3 procedural orders
+      often issued same day (e.g., Feb 25, 2026: 3 orders; Dec 17, 2025: 2 orders).
+      Increases variance.'
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 7.0
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: Gambia v. Myanmar merits judgment unlikely before April 30 - hearings
+      only concluded Jan 29, 2026. Major judgments typically take 6+ months after
+      hearings.
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 4.0
+    logit: -0.3
+    confidence: 0.8
+    effective_logit: -0.24
+  - description: March 5-18 period had 0 entries despite 14 days elapsed. Consistent
+      with Poisson model (P=38%) but suggests current period may be quieter than average.
+    supports:
+      center: 3.0
+      low: 2.0
+      high: 5.0
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: 'Historical base rate: ICJ issues ~22-27 decisions per year (2023:
+    26, 2024: 27, 2025: ~21), averaging ~2.06/month or ~0.068/day. Over 57-day window,
+    expected ~3.85 entries.'
+  dominant_effective_logit: 1.2000000000000002
+  distribution_metrics:
+    implied_median: 4.033112582781457
+    implied_p10: 1.913907284768212
+    implied_p90: 5.1887417218543055
+    median_gap: -0.0331125827814569
+    median_gap_pct: -1.0111223458038403
+    spread_ratio: 1.2214357937310412
+    precision: 1.0
+  sources:
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions)'
+  - '[South Africa''s genocide case against Israel - Wikipedia](https://en.wikipedia.org/wiki/South_Africa''s_genocide_case_against_Israel)'
+  - '[International Court of Justice - Wikipedia](https://en.wikipedia.org/wiki/International_Court_of_Justice)'
+  - '[Calendar of hearings and events](https://www.icj-cij.org/calendar)'
+  - '[Home](https://www.icj-cij.org/home)'
+  - '[List of International Court of Justice cases - Wikipedia](https://en.wikipedia.org/wiki/List_of_International_Court_of_Justice_cases)'
+  - '[Rohingya genocide case - Wikipedia](https://en.wikipedia.org/wiki/Rohingya_genocide_case)'
+  - '[Press releases](https://www.icj-cij.org/press-releases)'
+  - '[Pending cases](https://www.icj-cij.org/pending-cases)'
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?type=1&from=2025&to=2026&sort_bef_combine=order_DESC)'
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?from=2024&to=2025&sort_bef_combine=order_DESC)'
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?from=2025&to=2026&sort_bef_combine=order_DESC)'
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?from=2024&to=2024&sort_bef_combine=order_DESC)'
+  - '[Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?from=2023&to=2023&sort_bef_combine=order_DESC)'
+  - '[(Metaculus) How many ICJ judgments, advisory opinions, and orders dated from
+    March 5, 2026 through April 30, 2026 inclusive will appear on the ICJ Decisions
+    page before April 30, 2026?](https://www.metaculus.com/questions/42648)'
+  reviewer_critique: '## Verification Summary
+
+
+    I reviewed the agent''s full research trace against the six factors and the probability
+    estimate.
+
+
+    **Factor-by-Factor Verification:**
+
+
+    1. **Historical base rate (logit=+1.5)**: ✓ VERIFIED. The trace shows the agent
+    fetched ICJ decisions pages for 2023 (26 entries), 2024 (27 entries), and 2025-2026
+    (~22 entries). The calculation of ~2.06/month and ~0.068/day is mathematically
+    correct.
+
+
+    2. **One entry confirmed (logit=+1.0)**: ✓ VERIFIED. Multiple web search results
+    confirm: "By a Judgment dated 19 March 2026, the Court granted Guatemala permission
+    to intervene as a non-party in the case concerning Sovereignty over the Sapodilla
+    Cayes/Cayos Zapotillos (Belize v. Honduras)."
+
+
+    3. **Article 63 intervention declarations (logit=+0.5)**: ✓ VERIFIED. Trace confirms
+    declarations filed on March 3, 11, and 12, 2026 by Paraguay, Netherlands, Iceland,
+    Namibia, USA, Hungary, and Fiji in the S. Africa v. Israel case.
+
+
+    4. **ICJ decisions clustering (logit=+0.3)**: ✓ VERIFIED. Trace shows ICJ homepage
+    confirmed Feb 25, 2026 had 3 orders and Dec 17, 2025 had 2 orders issued same
+    day.
+
+
+    5. **Gambia v. Myanmar unlikely (logit=-0.3)**: ✓ VERIFIED. Trace confirms hearings
+    concluded January 29, 2026. The claim that major judgments take 6+ months is reasonable
+    institutional knowledge.
+
+
+    6. **March 5-18 had 0 entries (logit=-0.3)**: ✓ VERIFIED. Agent searched ICJ homepage
+    and press releases, finding only the March 19 judgment in the window. Poisson
+    P(0 in 14 days) = 38% correctly computed.
+
+
+    **Resolution Criteria Engagement**: The agent properly engaged with the specific
+    resolution criteria - counting entries on the ICJ Decisions page at the specified
+    URL, dated within the March 5 to April 30, 2026 window.
+
+
+    **Probability Assessment**: The agent ran Monte Carlo simulations with the Poisson
+    model, yielding median=4, P10=2, P90=6. The tentative estimate (Center: 4.0, Range:
+    2.0-6.0) exactly matches the simulation output. The methodology is sound: base
+    rate of ~0.068 decisions/day × 57 days = λ≈3.85, conditioned on 1 known entry.
+
+
+    **Adversarial Reasoning**: The assessment engages with counterarguments, noting
+    that 2025 rates were lower (~21 vs ~26-27 in 2023-2024), which would shift the
+    distribution left (λ≈3.3 vs 3.8). This demonstrates appropriate consideration
+    of what could make the forecast wrong.
+
+
+    **No errors found**: All factual claims are grounded in trace evidence. No hallucination,
+    double-counting, wrong-direction factors, or contradictory assessment. The probability
+    estimate is well-supported by the historical data and simulation methodology.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42648
+- **Question ID**: 42593
+- **Session Duration**: 852.9s (14.2 min)
+- **Cost**: $6.3705
+- **Tokens**: 22,180 total (41 in, 22,139 out)
+  - Cache: 1,808,317 read, 106,508 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42648_20260320_090317/20260320-090317.log`
+
+### Tool Calls
+
+- **Total**: 66 calls
+- **Errors**: 5 (7.6%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 13 | 0 | 260ms |
+| fetch_url | 19 | 5 ⚠️ | 6722ms |
+| get_metaculus_questions | 2 | 0 | 348ms |
+| reflection | 3 | 0 | 81097ms |
+| search_exa | 3 | 0 | 1995ms |
+| stock_conditional_returns | 1 | 0 | 401ms |
+| stock_history | 2 | 0 | 87ms |
+| stock_price | 1 | 0 | 711ms |
+| web_search | 13 | 0 | 18366ms |
+| wikipedia | 9 | 0 | 195ms |
+
+### Sources Consulted
+
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions)
+- [South Africa's genocide case against Israel - Wikipedia](https://en.wikipedi...
+- [International Court of Justice - Wikipedia](https://en.wikipedia.org/wiki/In...
+- [Calendar of hearings and events](https://www.icj-cij.org/calendar)
+- [Home](https://www.icj-cij.org/home)
+- [List of International Court of Justice cases - Wikipedia](https://en.wikiped...
+- [Rohingya genocide case - Wikipedia](https://en.wikipedia.org/wiki/Rohingya_g...
+- [Press releases](https://www.icj-cij.org/press-releases)
+- [Pending cases](https://www.icj-cij.org/pending-cases)
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?t...
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?f...
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?f...
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?f...
+- [Judgments, Advisory Opinions and Orders](https://www.icj-cij.org/decisions?f...
+- [(Metaculus) How many ICJ judgments, advisory opinions, and orders dated from...
