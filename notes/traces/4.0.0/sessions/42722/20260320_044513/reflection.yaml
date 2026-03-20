@@ -1,0 +1,223 @@
+---
+timestamp: 2026-03-20 04:48:50 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: when CLX is down >=25% from 52-week high, 5-day
+    forward returns are positive 58% of the time (n=255 events, 1973-2026). Mean return
+    +1.19%, median +1.34%.'
+  logit: 0.35
+  confidence: 0.85
+  effective_logit: 0.2975
+- description: 'Strong recent negative momentum: stock down 12.8% over 20 days, -6.2%
+    over 10 days, -1.9% over 5 days. Recent daily mean return -0.68%. This suggests
+    selling pressure may continue.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Broader market weakness: S&P 500 down ~4.4% over past month, overall
+    risk-off environment creating headwinds for equities generally.'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: GOJO/Purell acquisition announced - largest ever for CLX. Skepticism
+    from analysts ('lost decade' narrative, previous acquisitions underperformed).
+    Creates uncertainty and potential selling pressure.
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: 'Insider buying: two senior executives bought shares at ~$109 on March
+    13. Mild positive signal about management''s view of value.'
+  logit: 0.15
+  confidence: 0.5
+  effective_logit: 0.075
+- description: Analyst consensus is 'Reduce' with average target of $118.73 (above
+    current price). This is mixed - target is above current price but rating is negative.
+  logit: 0.05
+  confidence: 0.3
+  effective_logit: 0.015
+tentative_estimate:
+  logit: 0.02
+  probability: 0.5
+assessment: "The key tension is between the drawdown mean-reversion signal (58% historical\
+  \ base rate for 5-day positive returns when down 25%+ from 52-week high) and the\
+  \ strong recent negative momentum plus weak macro environment. \n\nThe conditional\
+  \ base rate is the strongest evidence - 255 historical events show a tilt toward\
+  \ positive returns from these levels. However, this base rate already partially\
+  \ captures negative momentum contexts since drawdowns by definition involve prior\
+  \ declines.\n\nThe specific headwinds for CLX right now include: the GOJO acquisition\
+  \ creating uncertainty (previous M&A track record poor), the broader market selloff,\
+  \ and the velocity of the recent decline (-20 points in 3 weeks). Against this,\
+  \ insider buying provides a small positive signal.\n\nThe Monte Carlo simulations\
+  \ under different assumptions give a range of 20-61% depending on drift assumption,\
+  \ with the conditional drawdown scenario at ~58-61% and recent momentum scenario\
+  \ at ~20%. The weighted blend comes out around 47-51%.\n\nI'm settling near 50%\
+  \ as the evidence roughly balances out. The drawdown base rate pulls upward, but\
+  \ the specific negative factors (momentum, macro, acquisition uncertainty) offset\
+  \ most of that advantage. This is genuinely close to a coin flip for a 5-day horizon."
+calibration_notes: Unconditional base rate for any stock over 5 trading days is ~50%.
+  The conditional drawdown rate of 58% provides mild upward adjustment. Strong recent
+  momentum creates downward pressure. Net effect is close to the unconditional rate.
+key_uncertainties: 1. Whether the broad market selloff continues or reverses next
+  week - this could swing CLX either way by several percentage points. 2. Whether
+  the GOJO acquisition news is fully priced in. 3. The exact close price on 3/20 (today)
+  which sets the reference point - if CLX drops further today, the bar for resolution
+  YES is lower.
+tool_audit: 'stock_price: Excellent - provided current price, 60-day history, and
+  summary stats. stock_history: Good - 1-year OHLCV data for volatility computation.
+  stock_conditional_returns: Very useful - provided the drawdown conditional base
+  rate (n=255). search_news: Good - found relevant recent news about GOJO acquisition,
+  insider buying, and analyst ratings. S&P 500 history provided good macro context.'
+update_triggers: Major market rally or crash next week; CLX-specific news (earnings
+  revision, analyst upgrade/downgrade, GOJO deal details); Fed announcement or major
+  macro data release
+process_reflection: The stock direction question framework worked well here. Having
+  conditional return base rates was the most valuable input. The Monte Carlo simulation
+  under multiple drift scenarios gave a useful range. The main challenge is appropriately
+  weighting the conditional base rate against recent specific factors. The system
+  handles this question type efficiently.
+computed:
+  factor_count: 6
+  factor_sum: -0.2425
+  tentative_logit: 0.02
+  logit_gap: 0.2625
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Conditional base rate: when CLX is down >=25% from 52-week high,
+      5-day forward returns are positive 58% of the time (n=255 events, 1973-2026).
+      Mean return +1.19%, median +1.34%.'
+    logit: 0.35
+    confidence: 0.85
+    effective_logit: 0.2975
+  - description: 'Strong recent negative momentum: stock down 12.8% over 20 days,
+      -6.2% over 10 days, -1.9% over 5 days. Recent daily mean return -0.68%. This
+      suggests selling pressure may continue.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Broader market weakness: S&P 500 down ~4.4% over past month, overall
+      risk-off environment creating headwinds for equities generally.'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: GOJO/Purell acquisition announced - largest ever for CLX. Skepticism
+      from analysts ('lost decade' narrative, previous acquisitions underperformed).
+      Creates uncertainty and potential selling pressure.
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: 'Insider buying: two senior executives bought shares at ~$109 on
+      March 13. Mild positive signal about management''s view of value.'
+    logit: 0.15
+    confidence: 0.5
+    effective_logit: 0.075
+  - description: Analyst consensus is 'Reduce' with average target of $118.73 (above
+      current price). This is mixed - target is above current price but rating is
+      negative.
+    logit: 0.05
+    confidence: 0.3
+    effective_logit: 0.015
+  dominant_factor: 'Strong recent negative momentum: stock down 12.8% over 20 days,
+    -6.2% over 10 days, -1.9% over 5 days. Recent daily mean return -0.68%. This suggests
+    selling pressure may continue.'
+  dominant_effective_logit: -0.35
+  factor_implied_probability: 0.4396703573114467
+  tentative_probability: 0.5
+  gap_pp: 6.032964268855329
+  sources:
+  - '[(yfinance) CLX](https://finance.yahoo.com/quote/CLX)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all six factors against the research trace:
+
+
+    1. **Conditional base rate (58% positive, n=255, 1973-2026)**: Trace confirms
+    `stock_conditional_returns` returned exactly `pct_positive: 58.04%`, mean +1.19%,
+    median +1.34%. ✓
+
+
+    2. **Momentum stats (-12.8% 20d, -6.2% 10d, -1.9% 5d, mean daily -0.68%)**: Trace
+    confirms `stock_price` returned `trailing_returns` matching these figures precisely.
+    ✓
+
+
+    3. **S&P 500 down ~4.4% over past month**: Trace confirms `total_return_pct: -4.39`
+    for 1-month S&P history. ✓
+
+
+    4. **GOJO/Purell acquisition, "lost decade" narrative, previous M&A failures**:
+    Trace news articles [citations 6, 12, 13] confirm the acquisition announcement,
+    the "lost decade" framing, and that Nutranext and Renewlife "failed to deliver
+    expected results." ✓
+
+
+    5. **Insider buying at ~$109 on March 13 by two senior executives**: Trace news
+    [citations 1, 2] confirms SEC Form 4 filings by two senior executives. ✓
+
+
+    6. **Analyst consensus "Reduce" with $118.73 target**: Trace news [citation 11]
+    confirms this from MarketBeat data. ✓
+
+
+    **No issues found:**
+
+
+    - **No hallucinations**: All factual claims are grounded in trace data.
+
+    - **No double-counting**: Assessment explicitly acknowledges partial overlap between
+    base rate and momentum factors.
+
+    - **No wrong-direction factors**: All logit signs consistent with descriptions.
+
+    - **Resolution criteria present and addressed**: The factors directly engage with
+    whether the price will be higher on 3/28 vs 3/20.
+
+    - **Adversarial reasoning present**: Assessment discusses the tension between
+    mean-reversion and momentum/macro headwinds, engaging with why the stock might
+    decline.
+
+
+    **Probability assessment**: The agent''s Monte Carlo simulations produced ~61%
+    (conditional), ~20% (momentum), ~50% (unconditional), with weighted blends in
+    the 47-51% range. Final estimate of 50% is slightly rounded but within the reasonable
+    range. The assessment correctly notes this is "genuinely close to a coin flip."
+    I don''t have a meaningfully different probability estimate - the evidence legitimately
+    pulls in both directions and 50% is defensible.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42722
+- **Question ID**: 42667
+- **Session Duration**: 225.4s (3.8 min)
+- **Cost**: $2.3519
+- **Tokens**: 6,376 total (27 in, 6,349 out)
+  - Cache: 534,001 read, 57,299 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42722_20260320_044513/20260320-044513.log`
+
+### Tool Calls
+
+- **Total**: 31 calls
+- **Errors**: 5 (16.1%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 7 | 0 | 241ms |
+| fetch_url | 8 | 5 ⚠️ | 1129ms |
+| get_metaculus_questions | 1 | 0 | 431ms |
+| reflection | 2 | 0 | 82846ms |
+| search_exa | 3 | 0 | 1995ms |
+| stock_conditional_returns | 1 | 0 | 401ms |
+| stock_history | 2 | 0 | 87ms |
+| stock_price | 1 | 0 | 711ms |
+| web_search | 4 | 0 | 21767ms |
+| wikipedia | 2 | 0 | 193ms |
+
+### Sources Consulted
+
+- [(yfinance) CLX](https://finance.yahoo.com/quote/CLX)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
