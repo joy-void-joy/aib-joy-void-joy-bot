@@ -1,0 +1,317 @@
+---
+timestamp: 2026-03-20 09:48:39 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: value dropped from 100 to 26 and stabilized
+    for 2 days, suggesting near-equilibrium. But pre-spike conflict baseline was 17-19,
+    which is below the 23 threshold, meaning further decay is plausible.'
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: Active Israel-Iran war ongoing since Feb 28 keeps baseline interest
+    elevated above historical norms. War-related news (Netanyahu claims about Iran,
+    threats from IRGC) generates ongoing search interest.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: The specific catalyst for the Mar 14-15 spike (death rumors, deepfake
+    controversy) has been largely debunked. This driver should fade, pulling interest
+    down.
+  supports: Decreases
+  logit: 0.6
+  confidence: 0.8
+  effective_logit: 0.48
+- description: 'Google Trends change_stats base rates: Increases 27%, Decreases 23%,
+    No change 50% over the full series. Trailing stats show more decreases (50% rate)
+    as post-spike decay dominated.'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Monte Carlo simulations across 3 models average: Increases 41%, Doesn''t
+    change 21%, Decreases 38%. High variance due to 8-day horizon and spike risk from
+    active war.'
+  supports: Increases
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: The ±3 threshold around value 26 means 'Doesn't change' covers only
+    [23-29], a narrow 7-point band over 8 days. With daily volatility of ~3-5 points,
+    staying in this band is difficult.
+  supports: Increases
+  logit: 0.4
+  confidence: 0.8
+  conditional: When volatility is high relative to threshold band
+  effective_logit: 0.32000000000000006
+tentative_estimate:
+  probabilities:
+    Increases: 0.4
+    Doesn't change: 0.22
+    Decreases: 0.38
+assessment: "This is a genuinely uncertain three-way outcome. The value of 26 on Mar\
+  \ 20 sits in a transitional zone — it has stabilized from the Mar 15 spike but is\
+  \ still elevated above the pre-spike \"active conflict\" baseline of ~17-19. \n\n\
+  Arguments for Decreases (~38%): The post-spike decay pattern from the first spike\
+  \ (Feb 28-Mar 8: 28→5) shows full reversion is normal. The specific driver of the\
+  \ latest spike (death rumors) is debunked. Continued decay to the 17-20 range (below\
+  \ the 23 threshold) would resolve as Decreases.\n\nArguments for Increases (~40%):\
+  \ There is an active Israel-Iran war generating continuous news. Netanyahu is making\
+  \ major statements about Iran. The IRGC has made threats. Any escalation, military\
+  \ event, or new controversy could spike interest above 29. Over 8 days, the probability\
+  \ of at least one significant news event is non-trivial (~40-50%).\n\nArguments\
+  \ for Doesn't change (~22%): The band [23-29] is narrow. While the value has stabilized\
+  \ at 26, maintaining exact stability for 8 more days during an active conflict is\
+  \ unlikely. This outcome requires both no further decay AND no new spike — the least\
+  \ likely scenario.\n\nThe roughly even split between Increases and Decreases reflects\
+  \ genuine uncertainty about whether the post-spike decay continues vs whether new\
+  \ war developments re-spike interest. The narrow \"Doesn't change\" band makes that\
+  \ outcome the least probable."
+calibration_notes: Base rates from change_stats favor no-change (50%) but those are
+  computed from day-to-day transitions, not 8-day horizons. Over 8 days, more movement
+  is expected. The trailing stats (50% decrease rate) better reflect current dynamics.
+  Monte Carlo models consistently give Doesn't Change the lowest probability (~15-27%)
+  due to the narrow band.
+key_uncertainties: The biggest uncertainty is whether the Israel-Iran war will produce
+  a major escalation or news event in the next 8 days. A ceasefire negotiation, major
+  military operation, or new controversy would dramatically shift the outcome. Without
+  such an event, continued decay toward 17-20 is the most natural path.
+tool_audit: Google Trends tool worked well, providing both the exact resolution date
+  range data and trailing stats. AskNews search_news returned rich relevant results
+  about the death rumor saga and Iran war context. Monte Carlo simulation via execute_code
+  was useful for quantifying uncertainty. All tools performed as expected with no
+  failures.
+update_triggers: Major Israel-Iran military escalation (strong Increases), ceasefire
+  announcement (could go either way — initial spike then decay), new Netanyahu health/death
+  rumors resurfacing (Increases), quiet news week with no major developments (Decreases
+  as decay continues)
+process_reflection: The forecasting tools worked well here. Google Trends with tz=0
+  matched the resolution parameters exactly. The change_stats and tail_stats were
+  helpful priors. The news search gave excellent context on why the spike happened
+  and whether it's likely to persist. The Monte Carlo simulation was useful but model
+  specification is always subjective — the results varied meaningfully across models
+  (15-27% for Doesn't Change, 31-48% for each directional outcome), which is itself
+  informative about genuine uncertainty. The three-model average is probably the most
+  robust estimate.
+computed:
+  factor_count: 6
+  factor_sum: 2.1799999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: value dropped from 100 to 26 and stabilized
+      for 2 days, suggesting near-equilibrium. But pre-spike conflict baseline was
+      17-19, which is below the 23 threshold, meaning further decay is plausible.'
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: Active Israel-Iran war ongoing since Feb 28 keeps baseline interest
+      elevated above historical norms. War-related news (Netanyahu claims about Iran,
+      threats from IRGC) generates ongoing search interest.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: The specific catalyst for the Mar 14-15 spike (death rumors, deepfake
+      controversy) has been largely debunked. This driver should fade, pulling interest
+      down.
+    supports: Decreases
+    logit: 0.6
+    confidence: 0.8
+    effective_logit: 0.48
+  - description: 'Google Trends change_stats base rates: Increases 27%, Decreases
+      23%, No change 50% over the full series. Trailing stats show more decreases
+      (50% rate) as post-spike decay dominated.'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Monte Carlo simulations across 3 models average: Increases 41%,
+      Doesn''t change 21%, Decreases 38%. High variance due to 8-day horizon and spike
+      risk from active war.'
+    supports: Increases
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: The ±3 threshold around value 26 means 'Doesn't change' covers only
+      [23-29], a narrow 7-point band over 8 days. With daily volatility of ~3-5 points,
+      staying in this band is difficult.
+    supports: Increases
+    logit: 0.4
+    confidence: 0.8
+    effective_logit: 0.32000000000000006
+    conditional: When volatility is high relative to threshold band
+  dominant_factor: Active Israel-Iran war ongoing since Feb 28 keeps baseline interest
+    elevated above historical norms. War-related news (Netanyahu claims about Iran,
+    threats from IRGC) generates ongoing search interest.
+  dominant_effective_logit: 0.5599999999999999
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 0.97
+    factors:
+    - description: 'Post-spike decay pattern: value dropped from 100 to 26 and stabilized
+        for 2 days, suggesting near-equilibrium. But pre-spike conflict baseline was
+        17-19, which is below the 23 threshold, meaning further decay is plausible.'
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.7
+      effective_logit: 0.48999999999999994
+    - description: The specific catalyst for the Mar 14-15 spike (death rumors, deepfake
+        controversy) has been largely debunked. This driver should fade, pulling interest
+        down.
+      supports: Decreases
+      logit: 0.6
+      confidence: 0.8
+      effective_logit: 0.48
+  - outcome: Increases
+    factor_count: 3
+    logit_sum: 1.06
+    factors:
+    - description: Active Israel-Iran war ongoing since Feb 28 keeps baseline interest
+        elevated above historical norms. War-related news (Netanyahu claims about
+        Iran, threats from IRGC) generates ongoing search interest.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+    - description: 'Monte Carlo simulations across 3 models average: Increases 41%,
+        Doesn''t change 21%, Decreases 38%. High variance due to 8-day horizon and
+        spike risk from active war.'
+      supports: Increases
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+    - description: The ±3 threshold around value 26 means 'Doesn't change' covers
+        only [23-29], a narrow 7-point band over 8 days. With daily volatility of
+        ~3-5 points, staying in this band is difficult.
+      supports: Increases
+      logit: 0.4
+      confidence: 0.8
+      effective_logit: 0.32000000000000006
+      conditional: When volatility is high relative to threshold band
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: 'Google Trends change_stats base rates: Increases 27%, Decreases
+        23%, No change 50% over the full series. Trailing stats show more decreases
+        (50% rate) as post-spike decay dominated.'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.17376730949223315
+      Decreases: 0.3945386479705586
+      Increases: 0.43169404253720817
+    tentative_probabilities:
+      Increases: 0.4
+      Doesn't change: 0.22
+      Decreases: 0.38
+    per_option_gap_pp:
+      Doesn't change: 4.623269050776685
+      Decreases: -1.4538647970558594
+      Increases: -3.1694042537208142
+    max_gap_pp: 4.623269050776685
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) netanyahu](https://trends.google.com/trends/explore?q=netanyahu)'
+  reviewer_critique: '**Verified all 6 factors against the research trace:**
+
+
+    1. **Post-spike decay pattern (Factor 1):** Confirmed. Trace lines 82-95 show
+    exact values: 100→52→39→28→26→26. Pre-spike baseline of 17-19 verified from Mar
+    10-13 values.
+
+
+    2. **Active Israel-Iran war (Factor 2):** Confirmed. News summaries (lines 160-327)
+    document war start Feb 28, Netanyahu''s Iran statements, and IRGC threats.
+
+
+    3. **Death rumors debunked (Factor 3):** Confirmed. Multiple news articles detail
+    the six-finger AI controversy and Netanyahu''s café video refutation.
+
+
+    4. **Base rates (Factor 4):** Confirmed. Trace line 83-84 shows change_stats matching
+    claimed percentages exactly.
+
+
+    5. **Monte Carlo results (Factor 5):** Confirmed. Lines 419-422 show model averages
+    of 40.9% Increases, 20.9% Doesn''t change, 38.2% Decreases.
+
+
+    6. **Narrow threshold band (Factor 6):** Confirmed. Trace line 383-384 explicitly
+    shows [23, 29] band.
+
+
+    **No issues found:**
+
+    - No hallucinated evidence — all claims grounded in trace
+
+    - No problematic double-counting — Factors 1 and 3 capture different aspects (decay
+    dynamics vs. catalyst fading)
+
+    - No wrong-direction factors — all logit signs align with descriptions
+
+    - Resolution criteria properly addressed — agent engaged with ±3 threshold and
+    8-day window
+
+    - Assessment properly addresses adversarial view — explicitly acknowledges tension
+    between decay continuation vs. war-driven re-spike
+
+    - Monte Carlo methodology appropriately uses conflict-era baseline (17-20) rather
+    than pre-war baseline (3-7)
+
+
+    **Probability assessment:** The 40%/22%/38% split for Increases/Doesn''t change/Decreases
+    is well-supported by:
+
+    - Monte Carlo averages (41%/21%/38%)
+
+    - The narrow 7-point [23-29] band making "Doesn''t change" genuinely unlikely
+
+    - Symmetric uncertainty from active war dynamics
+
+
+    The forecast appropriately reflects genuine three-way uncertainty given an elevated
+    but stabilizing value during an active conflict.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42724
+- **Question ID**: 42669
+- **Session Duration**: 292.5s (4.9 min)
+- **Cost**: $2.7929
+- **Tokens**: 8,631 total (20 in, 8,611 out)
+  - Cache: 678,894 read, 60,181 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42724_20260320_094407/20260320-094407.log`
+
+### Tool Calls
+
+- **Total**: 76 calls
+- **Errors**: 5 (6.6%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 17 | 0 | 382ms |
+| fetch_url | 19 | 5 ⚠️ | 6722ms |
+| get_metaculus_questions | 3 | 0 | 375ms |
+| google_trends | 3 | 0 | 11568ms |
+| reflection | 5 | 0 | 76232ms |
+| search_exa | 3 | 0 | 1995ms |
+| stock_conditional_returns | 1 | 0 | 401ms |
+| stock_history | 2 | 0 | 87ms |
+| stock_price | 1 | 0 | 711ms |
+| web_search | 13 | 0 | 18366ms |
+| wikipedia | 9 | 0 | 195ms |
+
+### Sources Consulted
+
+- [(Google Trends) netanyahu](https://trends.google.com/trends/explore?q=netany...
