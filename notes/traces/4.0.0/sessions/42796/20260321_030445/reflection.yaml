@@ -1,0 +1,542 @@
+---
+timestamp: 2026-03-21 03:16:08 UTC
+question_type: binary
+factors:
+- description: Consensus forecast of ~60,141 is barely above the 60,000 threshold
+    - only 141 above, essentially on the knife edge
+  logit: 0.15
+  confidence: 0.8
+  effective_logit: 0.12
+- description: MQL5 economic calendar appears to show 60,141 as either actual released
+    data or market consensus for February 2026, suggesting the value will be right
+    at or slightly above threshold
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999) -
+    5,900 decline over 4 months suggesting continued weakness
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: 'Jan→Feb seasonal pattern shows potential for bounce: Feb 2024 was
+    +4,300 from Jan, though Feb 2025 was -600 from Jan'
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+- description: January 2026 missed consensus significantly (59,999 vs 62,000 expected),
+    suggesting forecasters have been overly optimistic about this series
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Pre-conflict conditions in February 2026 were positive: mortgage rates
+    declining, rate cut expectations, broker optimism for H1 2026 uptick'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Iran conflict started Feb 28 - minimal impact on February approvals
+    data since it's at very end of month
+  logit: 0.1
+  confidence: 0.8
+  effective_logit: 0.08000000000000002
+- description: 6-month trailing average of 64,100 is well above 60,000, suggesting
+    January's 59,999 may be a trough rather than new normal
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+assessment: 'This is a threshold question where the consensus forecast (~60,141) sits
+  almost exactly on the 60,000 threshold. The underlying distribution for February
+  2026 UK mortgage approvals is centered around 60,000-60,200 with a standard deviation
+  of roughly 2,000 based on recent monthly volatility.
+
+
+  Pro-YES factors:
+
+  - Consensus forecast is slightly above threshold (60,141 vs 60,000)
+
+  - Seasonal Jan→Feb pattern can be positive (Feb 2024 showed +4,300 bounce)
+
+  - Pre-conflict conditions in February were favorable (declining rates, optimism)
+
+  - 6-month average of 64,100 suggests current levels are depressed
+
+
+  Pro-NO factors:
+
+  - Strong downward trend from 65,900 (Sep) to 59,999 (Jan) - a 5,900 decline
+
+  - January missed consensus by 2,000 suggesting systematic optimism in forecasts
+
+  - With consensus at 60,141 and SD ~2,000, the threshold is essentially at the center
+
+  - The housing market was cooling due to tax changes and budget uncertainty
+
+
+  The MQL5 site appears to show 60,141 as either the actual released value or a forecast.
+  If it''s the actual, the question resolves YES. If it''s a forecast, P(YES) ≈ 53%.
+  Weighting these possibilities (80% forecast, 20% actual), I get P(YES) ≈ 55-58%.
+
+
+  The key counterargument to my estimate: if I''m wrong about 60,141 being a forecast
+  and it''s actually already the released value, then my probability should be much
+  higher (~95%). But the BoE page title saying ''to be published at 9.30am'' and the
+  typical ~30 day release lag strongly suggest the data hasn''t been released yet.'
+calibration_notes: 'Base rate: Looking at months where the previous month was in the
+  58,000-62,000 range, subsequent months have been > 60,000 about 60-70% of the time
+  historically. But the recent trend is bearish. Status quo: January was 59,999 -
+  just below threshold. The status quo persistence would push toward NO. The hedging
+  check: 55% is close to 50% but the slight lean toward YES is driven by the consensus
+  forecast being above threshold and the seasonal pattern. This is genuine uncertainty,
+  not evasion.'
+key_uncertainties: 1. Whether the 60,141 figure from MQL5 is the actual released value
+  or a consensus forecast - this is the single largest source of uncertainty. 2. Whether
+  January's weakness was a one-off dip or the start of further decline. 3. The magnitude
+  of forecast error for this series (recent miss was 2,000).
+tool_audit: 'web_search: Very useful - provided historical data, news context, and
+  MQL5 data. search_news: Provided critical context about Iran conflict and mortgage
+  market turmoil. fetch_url: Partially useful - BoE pages returned cookie banners
+  instead of data content, but other sites worked. execute_code: Essential for Monte
+  Carlo simulation. investing.com economic calendar: Failed to return data (only showed
+  disclaimers). MQL5 page: Returned the critical 60,141 figure but with ambiguous
+  formatting. search_google (AskNews): Had server errors on two attempts.'
+update_triggers: 1. Official BoE publication of February 2026 Money and Credit data
+  - this would resolve the question definitively. 2. Confirmation from any credible
+  source of the actual February figure. 3. Any revision to January 2026 data that
+  changes the baseline.
+process_reflection: This question is a challenging threshold question where the distribution
+  center sits almost exactly on the threshold. The tools worked reasonably well for
+  gathering historical data, but I couldn't access the actual BoE spreadsheet data
+  or the full economic calendar tables, which made reconstructing the complete monthly
+  series difficult. The MQL5 data parsing was ambiguous - I couldn't tell whether
+  60,141 was an actual or forecast, which is a major limitation. I would have benefited
+  from a tool that could directly access the BoE's statistical database or download
+  their Excel files. The AskNews google search tool had server errors twice which
+  was frustrating. Overall, the forecasting scaffold guided me well for this type
+  of threshold question.
+computed:
+  factor_count: 8
+  factor_sum: 0.10000000000000012
+  tentative_logit: 0.2
+  logit_gap: 0.0999999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Consensus forecast of ~60,141 is barely above the 60,000 threshold
+      - only 141 above, essentially on the knife edge
+    logit: 0.15
+    confidence: 0.8
+    effective_logit: 0.12
+  - description: MQL5 economic calendar appears to show 60,141 as either actual released
+      data or market consensus for February 2026, suggesting the value will be right
+      at or slightly above threshold
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999)
+      - 5,900 decline over 4 months suggesting continued weakness
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: 'Jan→Feb seasonal pattern shows potential for bounce: Feb 2024 was
+      +4,300 from Jan, though Feb 2025 was -600 from Jan'
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  - description: January 2026 missed consensus significantly (59,999 vs 62,000 expected),
+      suggesting forecasters have been overly optimistic about this series
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Pre-conflict conditions in February 2026 were positive: mortgage
+      rates declining, rate cut expectations, broker optimism for H1 2026 uptick'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Iran conflict started Feb 28 - minimal impact on February approvals
+      data since it's at very end of month
+    logit: 0.1
+    confidence: 0.8
+    effective_logit: 0.08000000000000002
+  - description: 6-month trailing average of 64,100 is well above 60,000, suggesting
+      January's 59,999 may be a trough rather than new normal
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999)
+    - 5,900 decline over 4 months suggesting continued weakness
+  dominant_effective_logit: -0.5599999999999999
+  factor_implied_probability: 0.52497918747894
+  tentative_probability: 0.55
+  gap_pp: 2.502081252106003
+  sources:
+  - '[Money and Credit - February 2026 (to be published at 9.30am](https://www.bankofengland.co.uk/statistics/money-and-credit/2026/february-2026)'
+  - '[United Kingdom Mortgage Approvals](https://tradingeconomics.com/united-kingdom/mortgage-approvals)'
+  - '[bankofengland.co.uk](https://www.bankofengland.co.uk/statistics/money-and-credit/2025/january-2026)'
+  - '[Bank of England Money and Credit Report - January 2026 | Estate Agent Networking](https://estateagentnetworking.co.uk/bank-of-england-money-and-credit-report-january-2026)'
+  - '[BoE Mortgage Approvals 2026 - economic index from the United Kingdom](https://www.mql5.com/en/economic-calendar/united-kingdom/boe-mortgage-approvals)'
+  - '[United Kingdom Mortgage Approvals](https://uk.investing.com/economic-calendar/mortgage-approvals-211)'
+  reviewer_critique: '## Verification Summary
+
+
+    All eight factors are grounded in the research trace. No hallucinated evidence
+    found.
+
+
+    **Verified Claims:**
+
+    1. Consensus ~60,141: MQL5 fetch shows this exact figure
+
+    2. MQL5 data: Trace confirms "60.141 K" in Last release section
+
+    3. Downward trend: Trace shows Sep 65,900 → Jan 59,999 decline
+
+    4. Jan→Feb seasonal: Feb 2024 +4,300, Feb 2025 -600 confirmed
+
+    5. January miss: TradingEconomics confirms 59,999 vs 62,000 expected
+
+    6. Pre-conflict conditions: Feb 27 broker article confirms optimism
+
+    7. Iran conflict timing: Multiple news sources confirm Feb 28 start
+
+    8. 6-month average 64,100: estateagenttoday.co.uk confirms this figure
+
+
+    **No double-counting detected.** The factors draw on distinct evidence types (consensus
+    forecasts, historical trends, seasonal patterns, economic conditions).
+
+
+    **No wrong-direction factors.** All logit signs match their descriptions.
+
+
+    **Resolution criteria properly engaged.** The agent correctly identified that
+    the BoE page says "to be published at 9.30am" and that the data will be released
+    before the April 4 resolution date.
+
+
+    ## Concern: Missing Adversarial Reasoning
+
+
+    The assessment identifies "the strongest counterargument to my estimate" but frames
+    it incorrectly. The assessment says: "if I''m wrong about 60,141 being a forecast
+    and it''s actually already the released value, then my probability should be much
+    higher (~95%)."
+
+
+    This is not adversarial reasoning—it''s upside risk. The actual strongest counterargument
+    would be: "What if the downward trend continues and the consensus is systematically
+    optimistic, as it was for January?" The agent''s own Factor 5 notes January missed
+    by 2,000 on the downside. If February follows that pattern, the actual could be
+    ~58,000-59,000, clearly below threshold.
+
+
+    The assessment mentions the downward trend but doesn''t fully grapple with the
+    implication that if forecasters are systematically overoptimistic (as January
+    suggests), the probability should be lower than 50%, not higher.
+
+
+    ## Probability Assessment
+
+
+    The agent''s 55% estimate is reasonable but may be slightly high given:
+
+    - The consensus sits only 141 above threshold (essentially at the boundary)
+
+    - January''s 2,000 miss suggests possible systematic optimism
+
+    - Strong downward trend (nearly 6,000 decline over 4 months)
+
+
+    A more skeptical estimate might be 48-52%. However, the seasonal bounce potential
+    and pre-conflict positive conditions provide some offset. I would estimate **50-53%**
+    rather than 55%, but this is not a meaningful difference that would change the
+    forecast direction.
+
+
+    **Verdict: WARN** - The probability is within a reasonable range, but the assessment
+    lacks proper adversarial engagement with the downside scenario. The agent should
+    have more explicitly considered that if the January forecasting error pattern
+    continues, the actual could come in ~2,000 below consensus (~58,000), making the
+    probability closer to 40-45% rather than 55%.'
+---
+timestamp: 2026-03-21 03:18:52 UTC
+question_type: binary
+factors:
+- description: Consensus forecast of ~60,141 is barely above the 60,000 threshold
+    - only 141 above, essentially on the knife edge
+  logit: 0.15
+  confidence: 0.8
+  effective_logit: 0.12
+- description: MQL5 economic calendar shows 60,141 as 'Last release Actual' with Previous=59,999
+    - could be the actual released February value OR a forecast estimate
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999) -
+    5,900 decline over 4 months suggesting continued weakness
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: 'Jan→Feb seasonal pattern shows potential for bounce: Feb 2024 was
+    +4,300 from Jan, though Feb 2025 was -600 from Jan'
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+- description: January 2026 missed consensus by 2,000 (59,999 vs 62,000), but September
+    2025 beat consensus by 1,900 (65,900 vs 64,000) - no clear systematic optimism
+    bias
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Pre-conflict conditions in February 2026 were positive: mortgage rates
+    declining, rate cut expectations, broker optimism for H1 2026 uptick'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Iran conflict started Feb 28 - minimal impact on February approvals
+    data since it's at very end of month
+  logit: 0.1
+  confidence: 0.8
+  effective_logit: 0.08000000000000002
+- description: 6-month trailing average of 64,100 is well above 60,000, suggesting
+    January's 59,999 may be a trough rather than new normal
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+assessment: 'REVISED assessment addressing reviewer''s concerns:
+
+
+  The strongest counterargument to YES: If the downward trend from Sep (65,900) →
+  Jan (59,999) continues even partially, February could easily land at ~58,000-59,000.
+  January''s 2,000 miss below consensus suggests forecasters may be anchored too high.
+  If the actual center is ~59,200 (rather than the consensus 60,141), P(YES) drops
+  to ~34%.
+
+
+  The strongest counterargument to NO: January''s weakness may have been seasonal
+  (New Year effect), and the typical Jan→Feb pattern shows recovery potential (+4,300
+  in 2024). Pre-conflict conditions in February were favorable (declining mortgage
+  rates, rate cut expectations). The 6-month average of 64,100 suggests the current
+  level is depressed.
+
+
+  My model: Three scenarios weighted 40%/30%/30% (consensus correct / optimism bias
+  / seasonal bounce) yields P(>60,000) ≈ 51%. Adding ~15% probability that the MQL5
+  data IS the actual released value (60,141 > 60,000) gives final P(YES) ≈ 55%.
+
+
+  I settle on 55% because: the distribution center is essentially right at the threshold,
+  making this close to a coin flip. The slight lean toward YES comes from (a) the
+  consensus being marginally above threshold and (b) the small probability the data
+  has already been released at 60,141. The lean toward NO from the downward trend
+  is offset by the seasonal bounce potential and favorable pre-conflict conditions.'
+calibration_notes: 'Base rate consideration: Of months where the previous month was
+  near 60,000, how often was the subsequent month above 60,000? Looking at 2024-2025:
+  after Jan 2024 (56,100), Feb was 60,400 (above). After Apr 2025 (60,500), May was
+  63,032 (above). This suggests some tendency to recover from lows, but sample is
+  very small. The hedging check: 55% is genuinely close to 50% and reflects true uncertainty
+  about a distribution centered near the threshold. Not hedging toward 50% - the computation
+  supports this range (51-58% across reasonable models).'
+key_uncertainties: '1. Whether MQL5''s 60,141 is actual released data (resolves YES)
+  or forecast (keeps uncertainty open). 2. Whether the downward trend will produce
+  another below-consensus result. 3. The magnitude of Feb seasonal effect (highly
+  variable: +4,300 vs -600).'
+tool_audit: 'web_search: Useful for historical data and news context. search_news
+  (AskNews): Excellent for Iran conflict context and mortgage market news. fetch_url:
+  BoE pages returned cookie banners only; other sites worked better. execute_code:
+  Essential for simulation. search_google (AskNews): Had 2 server errors. MQL5 page
+  data was ambiguous but informative.'
+update_triggers: Official BoE Money and Credit release for February 2026 would resolve
+  this definitively.
+process_reflection: The threshold sits almost exactly at the distribution center,
+  which makes this inherently close to 50%. The scaffolding worked well for this type
+  of question. The main friction was inability to access the BoE's actual data tables
+  (cookies/JavaScript blocked content) and the ambiguous MQL5 data formatting. A direct
+  API to BoE statistical data would have been very valuable. The AskNews Google search
+  errors also limited research. Overall the process was smooth - the threshold question
+  guidance in the prompt was helpful for structuring the analysis.
+computed:
+  factor_count: 8
+  factor_sum: 0.2500000000000001
+  tentative_logit: 0.2
+  logit_gap: -0.0500000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Consensus forecast of ~60,141 is barely above the 60,000 threshold
+      - only 141 above, essentially on the knife edge
+    logit: 0.15
+    confidence: 0.8
+    effective_logit: 0.12
+  - description: MQL5 economic calendar shows 60,141 as 'Last release Actual' with
+      Previous=59,999 - could be the actual released February value OR a forecast
+      estimate
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999)
+      - 5,900 decline over 4 months suggesting continued weakness
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: 'Jan→Feb seasonal pattern shows potential for bounce: Feb 2024 was
+      +4,300 from Jan, though Feb 2025 was -600 from Jan'
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  - description: January 2026 missed consensus by 2,000 (59,999 vs 62,000), but September
+      2025 beat consensus by 1,900 (65,900 vs 64,000) - no clear systematic optimism
+      bias
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Pre-conflict conditions in February 2026 were positive: mortgage
+      rates declining, rate cut expectations, broker optimism for H1 2026 uptick'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Iran conflict started Feb 28 - minimal impact on February approvals
+      data since it's at very end of month
+    logit: 0.1
+    confidence: 0.8
+    effective_logit: 0.08000000000000002
+  - description: 6-month trailing average of 64,100 is well above 60,000, suggesting
+      January's 59,999 may be a trough rather than new normal
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Clear downward trend from Sep 2025 (65,900) to Jan 2026 (59,999)
+    - 5,900 decline over 4 months suggesting continued weakness
+  dominant_effective_logit: -0.5599999999999999
+  factor_implied_probability: 0.5621765008857982
+  tentative_probability: 0.55
+  gap_pp: -1.2176500885798136
+  sources:
+  - '[Money and Credit - February 2026 (to be published at 9.30am](https://www.bankofengland.co.uk/statistics/money-and-credit/2026/february-2026)'
+  - '[United Kingdom Mortgage Approvals](https://tradingeconomics.com/united-kingdom/mortgage-approvals)'
+  - '[bankofengland.co.uk](https://www.bankofengland.co.uk/statistics/money-and-credit/2025/january-2026)'
+  - '[Bank of England Money and Credit Report - January 2026 | Estate Agent Networking](https://estateagentnetworking.co.uk/bank-of-england-money-and-credit-report-january-2026)'
+  - '[BoE Mortgage Approvals 2026 - economic index from the United Kingdom](https://www.mql5.com/en/economic-calendar/united-kingdom/boe-mortgage-approvals)'
+  - '[United Kingdom Mortgage Approvals](https://uk.investing.com/economic-calendar/mortgage-approvals-211)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified all 8 factors against the research trace:
+
+
+    **Factor 1 (Consensus ~60,141)**: VERIFIED. The MQL5 data showing "60.141K" appears
+    throughout the trace (lines 106-107, 590-593), and the agent correctly identifies
+    this as the consensus/market estimate.
+
+
+    **Factor 2 (MQL5 ambiguity)**: VERIFIED. The trace shows the agent explicitly
+    wrestling with whether 60,141 is "actual" or "forecast" (lines 673-684, 953, 975).
+    The BoE page title "Money and Credit - February 2026 (to be published at 9.30am)"
+    supports the conclusion that data hasn''t been released yet.
+
+
+    **Factor 3 (Downward trend Sep 65,900 → Jan 59,999)**: VERIFIED. Sep 2025 at 65,900
+    is shown at lines 552, 611 with the news headline "UK Mortgage Approvals Rise
+    to 9-Month High...increased by 1,000, to 65,900 in September 2025." Jan 2026 at
+    59,999 is confirmed at lines 114-116, 530-532.
+
+
+    **Factor 4 (Jan→Feb seasonal pattern)**: VERIFIED. Feb 2024 was 60,400 vs Jan
+    2024''s 56,100 (+4,300) per BoE release (lines 454-456). Feb 2025 was 65,500 vs
+    ~66,100 Jan 2025 (-600) per line 452. Agent''s simulation confirms: "Jan→Feb seasonal
+    changes: [4300, -600]" (line 1052).
+
+
+    **Factor 5 (Forecast misses)**: VERIFIED. Jan 2026: forecast 62,000, actual 59,999
+    (-2,000 miss) per line 116. Sep 2025: forecast 64,000, actual 65,900 (+1,900 beat)
+    per line 552.
+
+
+    **Factor 6 (Pre-conflict conditions)**: VERIFIED. Broker optimism for H1 2026
+    uptick at lines 164-167. Rate cut expectations shown in news summaries.
+
+
+    **Factor 7 (Iran conflict Feb 28)**: VERIFIED. Multiple sources confirm: "conflict,
+    which began in late February" (line 206), "war between Iran and the UK, which
+    began on February 28, 2026" (line 214).
+
+
+    **Factor 8 (6-month average 64,100)**: VERIFIED. Explicitly stated: "below an
+    average of around 64,100 over the previous six months" (lines 87-88, 514-515).
+
+
+    ## Other Checks
+
+
+    **Resolution criteria**: Clearly stated and agent fetched BoE page to verify status.
+    No issue.
+
+
+    **Missing adversarial reasoning**: The assessment explicitly addresses strongest
+    counterarguments in both directions.
+
+
+    **Double-counting**: Factors 1 and 2 both reference MQL5 60,141, but make different
+    claims (level vs. ambiguous status). Acceptable.
+
+
+    **Factor signs**: All logit signs are directionally correct.
+
+
+    **Probability assessment**: The agent''s Monte Carlo simulation shows Normal(60141,
+    2000) gives P(>60k) = 52.8%. The mixed model with trend/seasonal scenarios yields
+    ~51%. With 15% probability data already released at 60,141, the final estimate
+    of 55% is reasonable. My independent estimate would be 52-56%, so no meaningful
+    disagreement.
+
+
+    No hallucinations, no wrong-direction factors, no contradictory assessment.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42796
+- **Question ID**: 42736
+- **Session Duration**: 860.3s (14.3 min)
+- **Cost**: $6.6868
+- **Tokens**: 27,700 total (40 in, 27,660 out)
+  - Cache: 1,730,069 read, 107,553 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42796_20260321_030445/20260321-030445.log`
+
+### Tool Calls
+
+- **Total**: 145 calls
+- **Errors**: 8 (5.5%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 33 | 0 | 478ms |
+| fetch_url | 34 | 7 ⚠️ | 8017ms |
+| get_coherence_links | 1 | 0 | 433ms |
+| get_cp_history | 1 | 1 ⚠️ | 3040ms |
+| get_metaculus_questions | 6 | 0 | 2820ms |
+| google_trends | 3 | 0 | 11568ms |
+| kalshi_price | 2 | 0 | 550ms |
+| manifold_price | 3 | 0 | 1992ms |
+| polymarket_price | 4 | 0 | 81ms |
+| reflection | 11 | 0 | 98687ms |
+| search_exa | 3 | 0 | 1995ms |
+| stock_conditional_returns | 1 | 0 | 401ms |
+| stock_history | 3 | 0 | 92ms |
+| stock_price | 3 | 0 | 508ms |
+| web_search | 24 | 0 | 18996ms |
+| wikipedia | 13 | 0 | 218ms |
+
+### Sources Consulted
+
+- [Money and Credit - February 2026 (to be published at 9.30am](https://www.ban...
+- [United Kingdom Mortgage Approvals](https://tradingeconomics.com/united-kingd...
+- [bankofengland.co.uk](https://www.bankofengland.co.uk/statistics/money-and-cr...
+- [Bank of England Money and Credit Report - January 2026 | Estate Agent Networ...
+- [BoE Mortgage Approvals 2026 - economic index from the United Kingdom](https:...
+- [United Kingdom Mortgage Approvals](https://uk.investing.com/economic-calenda...
