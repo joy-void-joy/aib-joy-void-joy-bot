@@ -1,0 +1,346 @@
+---
+timestamp: 2026-03-22 01:44:06 UTC
+question_type: numeric
+factors:
+- description: 'Local council elections baseline turnout (2021: 68%): establishes
+    floor since referendum is held same day'
+  supports:
+    center: 68.0
+    low: 64.0
+    high: 72.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Only modern Maldives referendum (2003) had 77.5% turnout, suggesting
+    referendums generate moderate-to-high engagement
+  supports:
+    center: 77.0
+    low: 73.0
+    high: 82.0
+  logit: 0.8
+  confidence: 0.6
+  conditional: If referendum dynamics are comparable to 2003
+  effective_logit: 0.48
+- description: Opposition MDP actively campaigning 'No' (not boycotting) should boost
+    turnout above what a one-sided referendum would get
+  supports:
+    center: 76.0
+    low: 72.0
+    high: 82.0
+  logit: 0.7
+  confidence: 0.75
+  effective_logit: 0.5249999999999999
+- description: Smaller registered voter roll (227,695 vs usual ~284k) could mechanically
+    inflate turnout percentage if similar absolute number vote
+  supports:
+    center: 78.0
+    low: 72.0
+    high: 85.0
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: Rushed process and MDP complaints about lack of public awareness could
+    depress turnout relative to well-planned elections
+  supports:
+    center: 70.0
+    low: 64.0
+    high: 76.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Maldives historically has very high electoral participation (76-91%
+    across all election types except local)
+  supports:
+    center: 78.0
+    low: 74.0
+    high: 84.0
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+tentative_estimate:
+  center: 75.0
+  low: 66.0
+  high: 83.0
+assessment: 'The 2026 Maldives referendum is scheduled for April 4, held alongside
+  local elections. Key dynamics:
+
+
+  **For higher turnout (~75-85%):**
+
+  - Simultaneous local elections guarantee a baseline voter flow
+
+  - Opposition MDP is actively campaigning for ''No'' (not boycotting), creating genuine
+  political competition
+
+  - The 2003 referendum had 77.5% turnout
+
+  - Maldives has historically high civic participation
+
+  - Smaller voter roll (227,695 vs ~284k) could mechanically inflate turnout %
+
+
+  **For lower turnout (~65-72%):**
+
+  - Local elections alone only drew 68% in 2021
+
+  - Rushed process with MDP complaints about insufficient public awareness
+
+  - Referendum question is procedural (election timing), not existential
+
+  - Elections Commission reportedly unable to create adequate voter education
+
+
+  **Central estimate: ~75%**
+
+  This reflects the local election floor (~68%) boosted by the referendum''s political
+  controversy and active opposition campaigning. The 2003 referendum (77.5%) and typical
+  parliamentary turnout (76-81%) serve as reasonable comparables.
+
+
+  The distribution is moderately wide (p10=66, p90=83) reflecting genuine uncertainty
+  about whether the referendum engages voters beyond those already coming for local
+  elections.'
+calibration_notes: 'Base rates: Local elections 68%, parliamentary 76-81%, referendums
+  77.5% (one data point only). The question hasn''t happened yet (April 4, 2026).
+  Status quo interpretation: if similar engagement to local elections alone, turnout
+  would be ~68%; the referendum debate should push this higher. Hedging check: centered
+  at 75% seems justified by the data - not hedging toward 50%, not overly confident.'
+key_uncertainties: 1. How much does the referendum debate actually mobilize voters
+  beyond local election turnout? 2. Does the smaller voter roll (227,695 vs usual
+  ~284k) represent a genuine difference in eligible population or a registration artifact
+  that inflates turnout? 3. Will the rushed process and PSM media imbalance depress
+  or inflame participation?
+tool_audit: 'Useful: web_search (found historical turnout data, opposition stance,
+  referendum details), wikipedia (referendum article, election data), fetch_url (MDP
+  stance, Maldives Independent article, IFES election guide with historical turnout).
+  The IFES election guide was the single most valuable source with structured turnout
+  data across elections. News search found no Maldives-specific results but confirmed
+  this is not a heavily covered global topic. No tool failures.'
+update_triggers: 1. Reports of boycott by MDP or other parties would significantly
+  shift downward 2. High-profile campaign events or rallies could signal higher engagement
+  3. News about voter registration issues or eligibility changes would affect the
+  denominator and thus turnout %
+process_reflection: 'The forecasting system worked well for this question. The combination
+  of web_search, wikipedia, and fetch_url allowed me to build a comprehensive picture
+  of Maldives electoral turnout history. The IFES election guide was an excellent
+  structured data source. One gap: I couldn''t find turnout for the 2007 Maldivian
+  referendum, which would have been another useful data point. The Monte Carlo approach
+  with scenario mixture was appropriate for this type of question. The prompt guidance
+  on not over-widening distributions was helpful - the 10th-90th range of 66-83 reflects
+  genuine uncertainty without being artificially wide.'
+computed:
+  factor_count: 6
+  factor_sum: 2.495
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Local council elections baseline turnout (2021: 68%): establishes
+      floor since referendum is held same day'
+    supports:
+      center: 68.0
+      low: 64.0
+      high: 72.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Only modern Maldives referendum (2003) had 77.5% turnout, suggesting
+      referendums generate moderate-to-high engagement
+    supports:
+      center: 77.0
+      low: 73.0
+      high: 82.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+    conditional: If referendum dynamics are comparable to 2003
+  - description: Opposition MDP actively campaigning 'No' (not boycotting) should
+      boost turnout above what a one-sided referendum would get
+    supports:
+      center: 76.0
+      low: 72.0
+      high: 82.0
+    logit: 0.7
+    confidence: 0.75
+    effective_logit: 0.5249999999999999
+  - description: Smaller registered voter roll (227,695 vs usual ~284k) could mechanically
+      inflate turnout percentage if similar absolute number vote
+    supports:
+      center: 78.0
+      low: 72.0
+      high: 85.0
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: Rushed process and MDP complaints about lack of public awareness
+      could depress turnout relative to well-planned elections
+    supports:
+      center: 70.0
+      low: 64.0
+      high: 76.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Maldives historically has very high electoral participation (76-91%
+      across all election types except local)
+    supports:
+      center: 78.0
+      low: 74.0
+      high: 84.0
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  dominant_factor: 'Local council elections baseline turnout (2021: 68%): establishes
+    floor since referendum is held same day'
+  dominant_effective_logit: 0.85
+  distribution_metrics:
+    implied_median: 73.98384491114702
+    implied_p10: 69.5961227786753
+    implied_p90: 79.37641357027464
+    median_gap: 1.0161550888529831
+    median_gap_pct: 10.389824909150931
+    spread_ratio: 1.7381896266930976
+    precision: 0.22666666666666666
+  sources:
+  - '[(Metaculus) What official nationwide turnout percentage will be reported for
+    the 2026 Maldives constitutional referendum?](https://www.metaculus.com/questions/42799)'
+  - '[2026 Thai constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/2026_Thai_constitutional_referendum)'
+  - '[Elections in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Elections_in_the_Maldives)'
+  - '[2026 national electoral calendar - Wikipedia](https://en.wikipedia.org/wiki/2026_national_electoral_calendar)'
+  - '[2026 Bangladeshi constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/2026_Bangladeshi_constitutional_referendum)'
+  - '[(Wikipedia) 2026 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/2026_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 1952 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/1952_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 2026 in the Maldives](https://en.wikipedia.org/wiki/2026_in_the_Maldives)'
+  - '[(Wikipedia) 2007 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/2007_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 1953 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/1953_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 1968 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/1968_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 2026 Bangladeshi general election](https://en.wikipedia.org/wiki/2026_Bangladeshi_general_election)'
+  - '[(Wikipedia) Constitution of the Maldives](https://en.wikipedia.org/wiki/Constitution_of_the_Maldives)'
+  - '[(Wikipedia) 1973 Maldivian presidential election](https://en.wikipedia.org/wiki/1973_Maldivian_presidential_election)'
+  - '[(Wikipedia) Maumoon Abdul Gayoom](https://en.wikipedia.org/wiki/Maumoon_Abdul_Gayoom)'
+  - '[2023 Maldivian presidential election - Wikipedia](https://en.wikipedia.org/wiki/2023_Maldivian_presidential_election)'
+  - '[2024 Maldivian parliamentary election - Wikipedia](https://en.wikipedia.org/wiki/2024_Maldivian_parliamentary_election)'
+  - '[2007 Maldivian constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/Maldivian_constitutional_referendum,_2007)'
+  - '[2007 Malagasy constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/Malagasy_constitutional_referendum,_2007)'
+  - '[Politics of the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Politics_of_the_Maldives)'
+  - '[Maldivian Democratic Party - Wikipedia](https://en.wikipedia.org/wiki/Maldivian_Democratic_Party)'
+  - '[IFES Election Guide](https://www.electionguide.org/countries/id/132/)'
+  - '[MDP slams govt for rushing referendum, urges international scrutiny](https://see.mv/103900)'
+  - '[Referendum battle lines drawn as opposition launches "no" campaign - Maldives
+    Independent](https://maldivesindependent.com/politics/referendum-battle-lines-drawn-as-opposition-launches-no-campaign-dd5e)'
+  - '[2026 Maldivian local elections - Wikipedia](https://en.wikipedia.org/wiki/2026_Maldivian_local_elections)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I checked all six factors against the research trace:
+
+
+    **Factor 1 (68% local council baseline)**: VERIFIED. Trace confirms "68% of the
+    eligible voting populations turned up to vote" from multiple sources for 2021
+    local elections.
+
+
+    **Factor 2 (2003 referendum 77.5% turnout)**: MINOR INACCURACY. The trace shows
+    the actual figure was 77.46%, not 77.5% as stated. This is a trivial rounding
+    difference that doesn''t affect the forecast.
+
+
+    **Factor 3 (MDP actively campaigning ''No'', not boycotting)**: VERIFIED. Maldives
+    Independent article explicitly states: "The opposition is calling for a ''No''
+    vote, NOT a boycott. The main opposition Maldivian Democratic Party (MDP) voted
+    to campaign against the amendments on February 19, launching pickup rallies, press
+    conferences, and banner campaigns."
+
+
+    **Factor 4 (Smaller voter roll 227,695 vs ~284k)**: VERIFIED. IFES Election Guide
+    shows 227,695 registered for 2026 referendum vs 284,663 for 2024 parliamentary
+    elections.
+
+
+    **Factor 5 (Rushed process, MDP complaints)**: VERIFIED. MDP statement from see.mv
+    quotes: "Rushed implementation with minimal parliamentary scrutiny" and "Elections
+    Commission unable to create required public awareness."
+
+
+    **Factor 6 (76-91% turnout except local)**: VERIFIED. Trace shows Presidential
+    elections ranging 79-91%, Parliamentary elections 76-81%, consistent with the
+    claimed "very high electoral participation."
+
+
+    **Double-counting check**: No problematic double-counting found. Factors 3 and
+    5 both cite MDP stance but use it for opposite-direction effects (campaigning
+    boosts turnout vs rushed process depresses it), which is appropriate.
+
+
+    **Resolution criteria check**: The question resolves to "official nationwide turnout
+    percentage" from Wikipedia or Elections Commission. The factors appropriately
+    target this metric (turnout percentage), not other outcomes.
+
+
+    **Probability assessment**: The estimate of 75.0 (range 66-83) is well-supported
+    by the evidence. The Monte Carlo simulation in the trace yields Mean 74.6%, p10=66.1%,
+    p90=83.1%, and the final estimate aligns with this. The 75% center reasonably
+    balances the 68% local election floor against the referendum engagement boost
+    and 2003 referendum precedent (77.46%). I see no reason to adjust the probability
+    meaningfully.
+
+
+    **Adversarial reasoning**: The assessment engages with counterarguments (rushed
+    process, procedural nature of referendum question, uncertainty about voter engagement
+    beyond local election participants). The distribution appropriately reflects genuine
+    uncertainty.
+
+
+    No material errors found.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42799
+- **Question ID**: 42739
+- **Session Duration**: 501.9s (8.4 min)
+- **Cost**: $4.0652
+- **Tokens**: 7,082 total (25 in, 7,057 out)
+  - Cache: 1,148,588 read, 96,676 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42799_20260322_013600/20260322-013600.log`
+
+### Tool Calls
+
+- **Total**: 63 calls
+- **Errors**: 2 (3.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 84ms |
+| fetch_url | 11 | 2 ⚠️ | 20662ms |
+| get_metaculus_questions | 3 | 0 | 2367ms |
+| manifold_price | 1 | 0 | 164ms |
+| polymarket_price | 1 | 0 | 90ms |
+| reflection | 3 | 0 | 111974ms |
+| web_search | 14 | 0 | 26979ms |
+| wikipedia | 27 | 0 | 948ms |
+
+### Sources Consulted
+
+- [(Metaculus) What official nationwide turnout percentage will be reported for...
+- [2026 Thai constitutional referendum - Wikipedia](https://en.wikipedia.org/wi...
+- [Elections in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Electio...
+- [2026 national electoral calendar - Wikipedia](https://en.wikipedia.org/wiki/...
+- [2026 Bangladeshi constitutional referendum - Wikipedia](https://en.wikipedia...
+- [(Wikipedia) 2026 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 1952 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 2026 in the Maldives](https://en.wikipedia.org/wiki/2026_in_the_...
+- [(Wikipedia) 2007 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 1953 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 1968 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 2026 Bangladeshi general election](https://en.wikipedia.org/wiki...
+- [(Wikipedia) Constitution of the Maldives](https://en.wikipedia.org/wiki/Cons...
+- [(Wikipedia) 1973 Maldivian presidential election](https://en.wikipedia.org/w...
+- [(Wikipedia) Maumoon Abdul Gayoom](https://en.wikipedia.org/wiki/Maumoon_Abdu...
+- [2023 Maldivian presidential election - Wikipedia](https://en.wikipedia.org/w...
+- [2024 Maldivian parliamentary election - Wikipedia](https://en.wikipedia.org/...
+- [2007 Maldivian constitutional referendum - Wikipedia](https://en.wikipedia.o...
+- [2007 Malagasy constitutional referendum - Wikipedia](https://en.wikipedia.or...
+- [Politics of the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Politics...
+- ... and 5 more
