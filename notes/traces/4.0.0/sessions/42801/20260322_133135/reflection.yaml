@@ -1,0 +1,291 @@
+---
+timestamp: 2026-03-22 13:37:38 UTC
+question_type: binary
+factors:
+- description: PNC supermajority (75/93 seats) and 2024 landslide (66 seats alone)
+    demonstrates massive ruling party support among voters
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Parliamentary vote was 72/73 in favor - near-unanimous among those
+    who voted, showing cross-party legislative support
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Proposal is framed as cost-saving efficiency measure (combining elections),
+    which polls well universally. Government claims 90% survey support (biased source
+    but directionally informative)
+  logit: 1.0
+  confidence: 0.5
+  effective_logit: 0.5
+- description: Government controls state media, institutional advantages, and is running
+    combined with local elections where PNC will mobilize voters
+  logit: 0.7
+  confidence: 0.75
+  effective_logit: 0.5249999999999999
+- description: '2007 Maldives referendum precedent: presidential system won ''over
+    60%'' when government backed it, showing government-backed referendums can clear
+    60% threshold'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Opposition MDP actively campaigning No, former presidents Nasheed and
+    Solih opposing, framing as 'constitutional coup' and power grab
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Referendums can surprise - voters sometimes reject government proposals
+    even with strong parliamentary support (Brexit inverse, Italian referendums, etc.)
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Economic stress (fuel crisis, debt, IMF warnings) may reduce government
+    credibility and hurt Yes vote
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+- description: No independent polling data available - all survey claims come from
+    ruling party, creating high uncertainty about true public sentiment
+  logit: -0.3
+  confidence: 0.8
+  effective_logit: -0.24
+- description: Small probability (~2%) referendum is delayed/cancelled via legal challenge,
+    which would resolve No
+  logit: -0.1
+  confidence: 0.9
+  effective_logit: -0.09000000000000001
+tentative_estimate:
+  logit: 0.7
+  probability: 0.67
+assessment: 'This is a threshold question: will Yes vote share exceed 60%? I modeled
+  the underlying Yes vote share as a Beta distribution centered around 65% with ~8%
+  standard deviation, reflecting strong government support but significant uncertainty
+  due to absence of independent polling.
+
+
+  PRO (Yes > 60%): The ruling PNC has overwhelming institutional power - 75/93 parliamentary
+  seats, control of state media, and the proposal was passed 72-73 in parliament.
+  The proposal itself (combining elections for cost savings) is inherently popular.
+  The referendum is combined with local elections where PNC will mobilize voters.
+  Government survey claims 90% support (inflated but directionally positive). Multiple
+  parties (MDA, JDP) support Yes alongside PNC.
+
+
+  CON (Yes ≤ 60%): Opposition MDP is actively campaigning No with ''constitutional
+  coup'' framing. Former presidents Nasheed and Solih have significant personal followings.
+  Referendum dynamics differ from parliamentary elections - voters may use referendums
+  as protest votes. Economic stress (fuel crisis, IMF warnings) could dampen government
+  credibility. Elections Commission admitted it hasn''t been able to create adequate
+  public awareness. No independent polls exist.
+
+
+  Key tension: PNC''s electoral dominance suggests high Yes vote, but seat share overstates
+  vote share in FPTP systems. PNC won 66/93 seats (71%) but likely received ~50-55%
+  of votes. The 60% threshold is meaningful - it''s higher than a simple majority
+  pass. However, the coalition of parties supporting Yes (PNC + MDA + JDP) collectively
+  represents well over 60% of parliamentary seats.
+
+
+  Monte Carlo simulation results: P(Yes > 60%) ranges from ~50% (conservative center
+  at 60%) to ~92% (optimistic center at 70%). Base case (65% center, 8% std) gives
+  P ≈ 70%. Accounting for ~2% cancellation risk, overall P ≈ 67%.'
+calibration_notes: 'Base rate: Government-backed referendums in countries with supermajorities
+  generally pass, but the margin varies. The 2007 Maldives referendum gave >60% for
+  the government-backed option. However, counter-examples exist (Italian constitutional
+  referendums rejected despite government support). The 60% threshold is not trivial
+  - it requires substantial margin beyond simple majority. Status quo if nothing changes:
+  the referendum happens April 4 and voters decide. Given PNC''s dominance, Yes passing
+  seems likely, but clearing 60% is the specific question.'
+key_uncertainties: '1. True public sentiment is unknown - no independent polls exist.
+  Government''s 90% claim is unreliable. 2. Referendum vs election dynamics: voters
+  behave differently in referendums. 3. Turnout effects: combined with local elections
+  could boost or confuse. 4. Whether opposition framing of ''power grab'' resonates
+  with swing voters. 5. Impact of economic stress on government credibility.'
+tool_audit: 'Useful: Wikipedia (referendum details, context), Exa search (found crucial
+  articles from Maldives Independent, MMTV, Standard Maldives with detailed political
+  analysis), web_search (2024 election data). Partially useful: AskNews search_news
+  (mostly returned irrelevant Italian/Kazakhstan referendum news, only tangentially
+  Maldives). Failed: Polymarket (no market found for this question), AskNews do_news_research
+  (403 error - model restriction). Missing: No independent polling data exists for
+  this referendum.'
+update_triggers: 1. Independent polling showing Yes below 55% (would move to ~40%).
+  2. Court ruling blocking the referendum (resolves No). 3. Major opposition defection
+  or boycott (could push Yes higher if opposition stays home). 4. Significant political
+  crisis or government scandal before April 4.
+process_reflection: 'The scaffolding worked reasonably well for this question type.
+  The main challenge was the absence of independent polling data for a small-country
+  referendum, which makes the distribution center highly uncertain. The Exa search
+  tool was particularly valuable in finding Maldivian English-language news sources.
+  The Monte Carlo simulation framework worked well for a threshold question. One gap:
+  there''s no good way to get vote share data from historical elections (PNC''s actual
+  vote % vs seat %) without more granular election data tools. The AskNews news research
+  tool being restricted to ''deepseek-basic'' was an annoying limitation. I would
+  have benefited from a tool that could pull structured election result data from
+  IFES or similar databases.'
+computed:
+  factor_count: 10
+  factor_sum: 1.7199999999999998
+  tentative_logit: 0.7
+  logit_gap: -1.0199999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: PNC supermajority (75/93 seats) and 2024 landslide (66 seats alone)
+      demonstrates massive ruling party support among voters
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Parliamentary vote was 72/73 in favor - near-unanimous among those
+      who voted, showing cross-party legislative support
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Proposal is framed as cost-saving efficiency measure (combining elections),
+      which polls well universally. Government claims 90% survey support (biased source
+      but directionally informative)
+    logit: 1.0
+    confidence: 0.5
+    effective_logit: 0.5
+  - description: Government controls state media, institutional advantages, and is
+      running combined with local elections where PNC will mobilize voters
+    logit: 0.7
+    confidence: 0.75
+    effective_logit: 0.5249999999999999
+  - description: '2007 Maldives referendum precedent: presidential system won ''over
+      60%'' when government backed it, showing government-backed referendums can clear
+      60% threshold'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Opposition MDP actively campaigning No, former presidents Nasheed
+      and Solih opposing, framing as 'constitutional coup' and power grab
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Referendums can surprise - voters sometimes reject government proposals
+      even with strong parliamentary support (Brexit inverse, Italian referendums,
+      etc.)
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Economic stress (fuel crisis, debt, IMF warnings) may reduce government
+      credibility and hurt Yes vote
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  - description: No independent polling data available - all survey claims come from
+      ruling party, creating high uncertainty about true public sentiment
+    logit: -0.3
+    confidence: 0.8
+    effective_logit: -0.24
+  - description: Small probability (~2%) referendum is delayed/cancelled via legal
+      challenge, which would resolve No
+    logit: -0.1
+    confidence: 0.9
+    effective_logit: -0.09000000000000001
+  dominant_factor: PNC supermajority (75/93 seats) and 2024 landslide (66 seats alone)
+    demonstrates massive ruling party support among voters
+  dominant_effective_logit: 1.275
+  factor_implied_probability: 0.8481288363433407
+  tentative_probability: 0.67
+  gap_pp: -17.812883634334064
+  sources:
+  - '[(Wikipedia) 2026 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/2026_Maldivian_constitutional_referendum)'
+  - '[2026 Thai constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/2026_Thai_constitutional_referendum)'
+  - '[Elections in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Elections_in_the_Maldives)'
+  - '[2026 Bangladeshi constitutional referendum - Wikipedia](https://en.wikipedia.org/wiki/2026_Bangladeshi_constitutional_referendum)'
+  - '[In the Maldives, referendum set for constitutional amendment on simultaneous
+    elections](https://constitutionnet.org/news/maldives-referendum-set-constitutional-amendment-simultaneous-elections)'
+  - '[(Metaculus) Will the “Yes” side receive strictly more than 60.0% of valid votes
+    in the 2026 Maldives constitutional referendum?](https://www.metaculus.com/questions/42801)'
+  - '[(Wikipedia) 2007 Maldivian constitutional referendum](https://en.wikipedia.org/wiki/2007_Maldivian_constitutional_referendum)'
+  - '[(Wikipedia) 2024 Maldivian parliamentary election](https://en.wikipedia.org/wiki/2024_Maldivian_parliamentary_election)'
+  - '[Human rights in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Human_rights_in_the_Maldives)'
+  reviewer_critique: "## Verification Summary\n\nI verified the key factual claims\
+    \ in the factors against the research trace:\n\n**Factor 1 - PNC supermajority\
+    \ (75/93 seats) and 2024 landslide (66 seats):** \n- VERIFIED at trace lines 351,\
+    \ 1085 (\"PNC's 75-seat supermajority in the 93-member Parliament\"), and lines\
+    \ 1030, 1043 (\"winning a supermajority of 66 seats\", \"winning 66 seats out\
+    \ of 93 seats\")\n\n**Factor 2 - Parliamentary vote 72/73 in favor:**\n- VERIFIED\
+    \ at trace line 216 (\"Parliament passed the amendment bill in February 2026 with\
+    \ broad support, including 72 out of 73 MPs voting in favor\")\n\n**Factor 3 -\
+    \ Government claims 90% survey support (biased source):**\n- VERIFIED at trace\
+    \ lines 688-699 (PNC Parliamentary Group Leader Ibrahim Falah said \"surveys conducted\
+    \ in the Maldives indicate that 90 per cent of the public supports the proposal\"\
+    ). Agent correctly flags this as biased source.\n\n**Factor 4 - Government controls\
+    \ state media:**\n- VERIFIED at trace line 755 (MDP complaint that \"the public\
+    \ broadcaster, Public Service Maldives (PSM)... have consistently failed to afford\
+    \ 'No' campaign the same platform\")\n\n**Factor 5 - 2007 referendum precedent\
+    \ \"over 60%\":**\n- VERIFIED at trace lines 930, 988 (\"Official results showed\
+    \ the presidential system winning over 60% support\")\n\n**Factor 6 - Opposition\
+    \ MDP campaigning No, former presidents opposing:**\n- VERIFIED at trace lines\
+    \ 193-196 (Solih \"called the referendum a 'constitutional coup'\"), lines 226,\
+    \ 299-319 (Nasheed and Solih opposing)\n\n**Factor 8 - Economic stress (fuel crisis,\
+    \ debt, IMF warnings):**\n- VERIFIED at trace lines 304, 516 (Nasheed citing \"\
+    current economic instability\"), line 844 (\"IMF last year urged stronger consolidation\
+    \ measures\")\n\n**Factor 9 - No independent polling:**\n- VERIFIED implicitly\
+    \ - all survey claims in trace come from ruling party sources\n\n**Factor 10 -\
+    \ Legal challenge filed (~2% cancellation risk):**\n- VERIFIED at trace line 230\
+    \ (\"MDP files petition with Civil Court to halt elections merger referendum\"\
+    )\n\n## No Double-Counting Detected\n- Factors 1 and 2 measure different things\
+    \ (seat composition vs specific bill vote)\n- Factors 3 and 4 measure different\
+    \ government advantages (polling claims vs media control)\n\n## No Wrong-Direction\
+    \ Factors\nAll logit signs are consistent with their descriptions (positive for\
+    \ pro-Yes factors, negative for con factors).\n\n## Resolution Criteria Engagement\n\
+    The question asks about >60% of valid votes. The agent correctly models this as\
+    \ a threshold question, centering the vote share estimate around 65% with ~8%\
+    \ standard deviation, and calculates P(>60%) from the resulting distribution.\n\
+    \n## Adversarial Reasoning\nThe assessment engages with counterarguments: referendum\
+    \ dynamics differ from regular elections, opposition campaign with \"constitutional\
+    \ coup\" framing, economic stress reducing government credibility, no independent\
+    \ polling. This is adequate.\n\n## Probability Assessment\nThe agent's 67% probability\
+    \ is well-grounded:\n- Monte Carlo with Beta(65%, 8% std) yields P(>60%) ≈ 70%\n\
+    - After ~2% cancellation discount: ~68%\n- Agent settles on 67%\n\nThis is reasonable\
+    \ given:\n- Strong evidence of government dominance (75/93 seats, 72/73 vote)\n\
+    - Benign proposal framing (cost savings, efficiency)\n- But genuine uncertainty\
+    \ from lack of independent polling and active opposition\n\nMy independent estimate\
+    \ would fall in the 60-72% range, making 67% defensible. The agent is not over-\
+    \ or under-weighting any obvious evidence."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42801
+- **Question ID**: 42741
+- **Session Duration**: 376.0s (6.3 min)
+- **Cost**: $4.2857
+- **Tokens**: 7,888 total (34 in, 7,854 out)
+  - Cache: 1,217,477 read, 99,703 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42801_20260322_133135/20260322-133135.log`
+
+### Tool Calls
+
+- **Total**: 101 calls
+- **Errors**: 3 (3.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 12 | 0 | 71ms |
+| fetch_url | 15 | 2 ⚠️ | 16095ms |
+| get_metaculus_questions | 4 | 0 | 1837ms |
+| manifold_price | 1 | 0 | 164ms |
+| polymarket_price | 2 | 0 | 86ms |
+| reflection | 5 | 0 | 108422ms |
+| search_exa | 2 | 0 | 1427ms |
+| stock_price | 1 | 1 ⚠️ | 569ms |
+| web_search | 20 | 0 | 23662ms |
+| wikipedia | 39 | 0 | 1004ms |
+
+### Sources Consulted
+
+- [(Wikipedia) 2026 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [2026 Thai constitutional referendum - Wikipedia](https://en.wikipedia.org/wi...
+- [Elections in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Electio...
+- [2026 Bangladeshi constitutional referendum - Wikipedia](https://en.wikipedia...
+- [In the Maldives, referendum set for constitutional amendment on simultaneous...
+- [(Metaculus) Will the “Yes” side receive strictly more than 60.0% of valid vo...
+- [(Wikipedia) 2007 Maldivian constitutional referendum](https://en.wikipedia.o...
+- [(Wikipedia) 2024 Maldivian parliamentary election](https://en.wikipedia.org/...
+- [Human rights in the Maldives - Wikipedia](https://en.wikipedia.org/wiki/Huma...

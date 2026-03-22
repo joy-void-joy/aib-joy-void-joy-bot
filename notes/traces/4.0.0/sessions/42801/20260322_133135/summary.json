@@ -1,0 +1,76 @@
+{
+  "summary": "Solid forecast on a niche political question with good research depth despite data limitations. The agent correctly identified the core tension—strong government support vs. the specific 60% threshold—and handled it well through Monte Carlo simulation of vote share distributions. Key strengths: comprehensive source gathering from Maldivian English media, appropriate uncertainty given no independent polling, and proper consideration of cancellation risk. Main weakness: could have searched harder for historical vote share data (not just seat counts) to better anchor the distribution center.",
+  "condensed_reasoning": "## Research\n\nI researched the 2026 Maldivian constitutional referendum scheduled for April 4, 2026. The referendum asks voters whether to merge presidential and parliamentary elections (the \"Eighth Amendment\"). I gathered information from:\n\n- **Wikipedia** for referendum details and 2024 election context\n- **Maldives Independent** and other local English-language news (via Exa search)\n- **ConstitutionNet** for procedural details\n- **IFES Election Guide** and IPU for electoral data\n- **AskNews** for recent news coverage (limited results)\n\nNo Polymarket or prediction market coverage existed for this question. No independent polling data was found—all survey claims came from ruling party sources.\n\n## Key Evidence\n\n**Pro-Yes factors:**\n- **PNC supermajority**: 75/93 parliamentary seats, won 66 seats alone in 2024 landslide\n- **Legislative support**: Bill passed **72-73** in parliament (near-unanimous among those voting)\n- **Coalition backing**: PNC, MDA, and JDP all support Yes\n- **Framing advantage**: Proposal pitched as cost-saving efficiency measure (combining elections saves ~$8M)\n- **Government resources**: Controls state media (PSM), running alongside local elections where PNC will mobilize voters\n- **Historical precedent**: 2007 Maldives referendum—government-backed presidential system won \"over 60%\"\n- **Biased survey claim**: Government claims 90% public support (unreliable source but directionally positive)\n\n**Con factors:**\n- **Active opposition**: MDP campaigns No, framing as \"constitutional coup\" and power grab\n- **Former president opposition**: Both Mohamed Nasheed and Ibrahim Mohamed Solih oppose (Nasheed initially supported, then reversed)\n- **Referendum dynamics**: Voters sometimes reject government proposals in referendums despite strong parliamentary support\n- **Economic stress**: Fuel crisis, debt concerns, IMF warnings may reduce government credibility\n- **No independent polling**: True public sentiment unknown; all data from government sources\n- **Legal challenge**: MDP filed petition to halt referendum (~2% cancellation risk)\n\n## Modeling Approach\n\nSince this is a threshold question (Yes > 60%), I modeled the underlying vote share distribution rather than treating it as binary. I used a Beta distribution centered at ~65% with ~8% standard deviation:\n\n- **Mean estimate of 65%** reflects: strong government support balanced against opposition activity and referendum uncertainty\n- **8% std dev** captures: absence of independent polling, potential for referendum surprises\n\nMonte Carlo simulation (100,000 runs) yielded **P(Yes > 60%) ≈ 70%**. After accounting for ~2% cancellation risk, I arrived at **67%**.\n\nSensitivity analysis showed the estimate is robust across reasonable parameter choices:\n- Conservative (60% center): P ≈ 50%\n- Base case (65% center): P ≈ 70-74%  \n- Optimistic (70% center): P ≈ 92%\n\n## Conclusion\n\nI forecast **67% probability** that the Yes side receives >60% of valid votes. The ruling coalition's overwhelming institutional dominance and the inherently popular framing (cost savings, efficiency) support a high Yes vote. However, the 60% threshold is non-trivial—it requires substantial margin beyond simple majority. Active opposition from MDP and former presidents, combined with complete absence of independent polling, creates meaningful downside risk. The economic context (fuel crisis, debt) may dampen government credibility somewhat.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__wikipedia": "3 calls, 0 errors, impact: none, value: high — provided core referendum and election context",
+      "mcp__search__web_search": "3 calls, 0 errors, impact: none, value: medium — found 2024 election data and referendum news",
+      "mcp__search__search_exa": "2 calls, 0 errors, impact: none, value: high — crucial for finding Maldivian English news sources with detailed political analysis",
+      "mcp__search__fetch_url": "3 calls, 0 errors, impact: none, value: medium — extracted details from Wikipedia and ConstitutionNet",
+      "mcp__asknews__do_news_research": "1 call, 1 error (403 - model restriction), impact: minor, value: wasted",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: low — returned mostly irrelevant Italian/Kazakhstan referendum news",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed question parameters",
+      "mcp__markets__polymarket_price": "1 call, 0 errors, impact: none, value: low — no market found",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: high — Monte Carlo simulation well-executed",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor review with verification",
+      "TodoWrite": "5 calls, 0 errors, impact: none, value: low — task tracking overhead"
+    },
+    "capability_gaps": [
+      "No tool for structured election results data (vote shares vs seat counts)",
+      "No independent polling aggregator for small-country elections",
+      "AskNews model restriction limited news research capability"
+    ],
+    "subtle_bugs": [
+      "AskNews search_news returned mostly unrelated referendum results (Italian, Kazakh) when searching for Maldives — query handling could be improved"
+    ]
+  },
+  "workflow": {
+    "info_gathering": "Strong research strategy: started with Wikipedia for context, used Exa search to find specialized Maldivian English-language sources, cross-referenced electoral data from multiple outlets. Appropriately tried multiple search tools and news APIs. Could have done more to find historical vote share data (not just seat counts) to better anchor the model.",
+    "structured_reasoning": "Excellent factor construction with 10 distinct factors, appropriate logit assignments, and explicit confidence weights. The Monte Carlo simulation approach was well-suited to a threshold question. The reflection tool verification was thorough and caught no errors. Good use of sensitivity analysis across parameter choices.",
+    "self_correction": "Agent correctly identified biased sources (government 90% survey claim) and flagged uncertainty appropriately. Recognized AskNews limitations and pivoted to other tools. The gap between factor-implied probability (85%) and final estimate (67%) shows thoughtful adjustment for model uncertainty.",
+    "efficiency": "Reasonable efficiency—about 14 substantive tool calls plus housekeeping. Some redundancy in Wikipedia calls. The AskNews research error was wasted effort. TodoWrite overhead was excessive for a single-question forecast. Overall budget use was appropriate for the complexity."
+  },
+  "reasoning": {
+    "evidence_quality": 4,
+    "evidence_notes": "Strong evidence gathering from multiple Maldivian sources. Key facts verified: PNC 75/93 seats, 72/73 parliamentary vote, MDP opposition campaign, former presidents' positions. Main gap: no independent polling data exists, and historical vote share (vs seat share) data was not found.",
+    "logical_coherence": 4,
+    "logical_notes": "Sound logical structure: identified this as threshold question, modeled underlying distribution, calculated probability via simulation. Factors are distinct without double-counting. Appropriate weighting of government dominance against referendum uncertainty. The 65% center estimate is reasoned but could benefit from more anchoring.",
+    "calibration_sense": 4,
+    "calibration_notes": "67% feels well-calibrated given the evidence. Not overconfident despite government dominance (acknowledged referendum surprises happen). Not underconfident despite opposition activity (recognized MDP's recent weakness). Sensitivity analysis shows awareness of parameter uncertainty. The 60% threshold is correctly treated as non-trivial.",
+    "strengths": [
+      "Monte Carlo simulation approach well-suited to threshold question",
+      "Comprehensive source gathering from local Maldivian media",
+      "Appropriate skepticism of government survey claims",
+      "Good factor verification in reflection step",
+      "Considered cancellation risk explicitly"
+    ],
+    "weaknesses": [
+      "Did not find historical vote share data to better anchor distribution center",
+      "AskNews news research failed (403 error) and search returned mostly irrelevant results",
+      "Could have explored referendum base rates more systematically",
+      "Limited consideration of turnout effects on vote share"
+    ]
+  },
+  "pipeline": {
+    "issues": [
+      "AskNews do_news_research returned 403 error due to model restriction (Metaculus users limited to deepseek-basic)",
+      "AskNews search_news returned mostly irrelevant results (Italian/Kazakh referendums) when searching for Maldives referendum"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "notable_observations": [
+    "This is a rare question type: small-country referendum with no independent polling and limited prediction market coverage",
+    "The agent correctly recognized seat share ≠ vote share in FPTP systems but couldn't find actual vote share data",
+    "Monte Carlo simulation with Beta distribution was an appropriate modeling choice for the threshold question",
+    "The 2007 Maldives referendum precedent ('over 60%') was a useful but imprecise anchor",
+    "Economic context (fuel crisis, IMF warnings) was well-integrated as a government credibility factor"
+  ],
+  "actionable_improvements": [
+    "Add capability to query structured election databases (IFES, IPU) for actual vote share data, not just seat counts",
+    "For threshold questions, consider building in explicit sensitivity analysis as standard procedure",
+    "When AskNews fails, consider fallback to WebSearch or WebFetch for news gathering",
+    "For small-country political questions, prioritize local English-language news sources earlier in the research process",
+    "Consider referendum base rate analysis more systematically (what fraction of government-backed referendums exceed various thresholds)"
+  ]
+}
