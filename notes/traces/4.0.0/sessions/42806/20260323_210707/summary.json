@@ -1,0 +1,62 @@
+{
+  "summary": "This was a well-executed forecast on Bulgaria's 2026 election turnout. The agent efficiently gathered historical turnout data (IFES Election Guide) and recent survey projections (Sova Harris, Trend, ANSA), properly reconciling the tension between the strong below-45% historical base rate (6/7 recent elections) and survey evidence suggesting higher mobilization (45-47% implied by absolute voter projections). The Monte Carlo simulation was a useful formalization, though the key insight—that survey headline percentages (55-59%) overstated actual turnout projections (45-47%)—came from careful arithmetic rather than modeling.",
+  "condensed_reasoning": "## Research\n\nI investigated Bulgaria's April 19, 2026 parliamentary election—the country's 8th snap election since 2021—by gathering historical turnout data and recent survey projections.\n\n**Historical turnout data (IFES Election Guide, 2021-2024):**\n- April 2021: **49.1%** (highest—first snap election during anti-corruption protests)\n- July 2021: **40.4%**\n- November 2021: **40.1%**\n- October 2022: **38.0%**\n- April 2023: **39.1%**\n- June 2024: **33.4%** (lowest since end of communism)\n- October 2024: **38.8%**\n\n**Mean: 39.8%**, with 6 of 7 elections below 45%.\n\n**Recent survey projections for April 2026:**\n- Sova Harris (Mar 7-12): 55% stated intention, ~3.0M voters projected\n- Trend (Feb 12-18): 59% stated intention, ~3.1M voters projected\n- ANSA (Mar 20): >50% expected\n\nI identified a critical discrepancy: the absolute voter projections (~3.0-3.1M) against **6.64M eligible voters** imply only **45-47% actual turnout**—not the 55-59% headline figures. This gap confirms typical survey overestimation of turnout intention.\n\n## Key Evidence\n\n**Factors supporting higher turnout (45%+):**\n- Former President Rumen Radev resigned January 2026 and entered politics with \"Bulgaria Progressista,\" an anti-corruption party leading polls at 25-33%—a genuinely unprecedented dynamic\n- December 2025 mass protests over corruption led to the Zhelyazkov government's resignation, similar to the 2021 protest energy that produced 49.1% turnout\n- Pre-2020 Bulgarian elections regularly achieved 50-60% turnout; surveys suggest potential return to these levels\n\n**Factors supporting lower turnout (<45%):**\n- Strong historical base rate: 6/7 recent elections below 45%\n- Voter fatigue from 8th election in 5 years\n- Parliament overrode presidential veto on Electoral Code amendments reducing overseas polling stations in non-EU countries\n- Gap between survey headlines and absolute projections confirms overestimation\n\n## Conclusion\n\nI assigned the 45-55% range as modal (43%) given the credible survey evidence, while keeping substantial probability (35%) on below 45% due to the strong historical pull. The 55-65% range (19%) captures the scenario where political dynamics truly break recent patterns, while 65%+ (3%) reflects that this hasn't occurred since 2001.\n\n**Final distribution:**\n- Below 45.0%: **35%**\n- 45.0%–54.9%: **43%**\n- 55.0%–64.9%: **19%**\n- 65.0% or above: **3%**",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — retrieved question details and resolution criteria",
+      "mcp__search__wikipedia": "3 calls, 1 error (article not found for April 2023), impact: minor, value: medium — provided some election context",
+      "mcp__search__web_search": "6 calls, 0 errors, impact: none, value: high — key source for historical turnout and survey data",
+      "mcp__search__fetch_url": "5 calls, 0 errors, impact: none, value: high — retrieved survey details from Novinite, Sofia Globe, IFES Election Guide",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: high — found ANSA article with turnout projection and Radev party details",
+      "mcp__sandbox__execute_code": "4 calls, 0 errors, impact: none, value: medium — Monte Carlo useful but arithmetic insights were more valuable",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — reviewer caught unsupported quantitative claims"
+    },
+    "capability_gaps": [
+      "No access to Bulgarian-language sources which would have more detailed polling methodology",
+      "No systematic data on Bulgarian turnout intention survey accuracy vs actual turnout"
+    ],
+    "subtle_bugs": [
+      "Wikipedia API returned no turnout figure for October 2024 election despite the data existing on the page—required IPU Parline fetch as backup"
+    ]
+  },
+  "workflow": {
+    "info_gathering": "Excellent strategy: started with Metaculus question details, then Wikipedia for election context, then targeted web searches for historical turnout (found IFES Election Guide with complete data), then fetched specific survey articles. The sequential approach efficiently built comprehensive understanding.",
+    "structured_reasoning": "Strong: agent identified the key tension (historical base rate vs survey evidence) early and maintained focus throughout. The arithmetic insight about survey headline percentages vs absolute projections was particularly valuable and came from careful reading rather than modeling.",
+    "self_correction": "Good: the reflection checkpoint caught unsupported quantitative claims (1-3pp diaspora impact, 10-20pp systematic overestimation) and the agent acknowledged these in the final factors. However, the final forecast kept similar probability assignments—appropriate since the directional claims were sound.",
+    "efficiency": "Efficient overall. The Monte Carlo simulation was somewhat redundant given the qualitative reasoning already captured the key dynamics, but it didn't consume excessive tokens. Multiple parallel searches early on were well-organized."
+  },
+  "reasoning": {
+    "evidence_quality": 4,
+    "evidence_notes": "High-quality evidence from authoritative sources (IFES Election Guide for historical turnout, three recent Bulgarian polling agencies for projections). Minor gap: pre-2020 turnout figures mentioned in thinking but not sourced. The survey discrepancy insight (headline % vs absolute numbers) was well-documented.",
+    "logical_coherence": 5,
+    "logical_notes": "Clear logical structure: established base rate, identified novel factors, weighted competing signals appropriately. The agent explicitly reasoned through why 45-55% should be modal despite historical base rate favoring <45%. No contradictions.",
+    "calibration_sense": 4,
+    "calibration_notes": "Good calibration against historical reference class. The 35%/<45% assignment appropriately reflects that 6/7 elections fell in this range. The 43%/45-55% captures survey evidence while accounting for overestimation. The 19%/55-65% and 3%/65%+ reflect that these outcomes require breaking recent patterns significantly.",
+    "strengths": [
+      "Identified key discrepancy between survey headline percentages (55-59%) and implied actual turnout from absolute projections (45-47%)",
+      "Properly anchored on strong historical base rate while updating on credible new evidence",
+      "Used appropriate reference class (April 2021 at 49.1% during similar protest dynamics)",
+      "Reflection checkpoint improved factor quality by flagging unsupported claims"
+    ],
+    "weaknesses": [
+      "Pre-2020 turnout figures cited without sourcing",
+      "Monte Carlo simulation added limited value over qualitative reasoning",
+      "Could have searched for data on Bulgarian diaspora voting patterns to assess reduced polling station impact"
+    ]
+  },
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "notable_observations": [
+    "Survey headline percentages often dramatically overstate actual turnout projections—the absolute voter counts translated to ~10pp lower turnout than stated intention",
+    "Bulgaria's voter fatigue from 8 elections in 5 years creates a unique baseline that may not apply in other contexts",
+    "Former president directly entering parliamentary politics is genuinely unprecedented in recent Bulgarian history and appropriately weighted as a mobilization factor"
+  ],
+  "actionable_improvements": [
+    "When surveys report both headline percentages and absolute voter projections, always calculate the implied turnout against eligible voter count—this arithmetic often reveals overestimation",
+    "For election turnout forecasts, explicitly search for data on historical gap between stated voting intention and actual turnout in the specific country",
+    "Monte Carlo simulations are most valuable when there's genuine model uncertainty; for questions where qualitative reasoning dominates, simple scenario weighting may suffice"
+  ]
+}
