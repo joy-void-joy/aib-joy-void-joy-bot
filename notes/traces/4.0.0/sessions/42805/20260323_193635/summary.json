@@ -1,0 +1,66 @@
+{
+  "summary": "Solid forecasting session on Bulgaria's 2026 parliamentary election. The agent correctly identified that Progressive Bulgaria (a new coalition led by former President Radev, polling at 29-33%) is not among the named options, making \"Other or tie\" the appropriate resolution for a PB victory. Research was thorough with 7+ independent Bulgarian pollsters consulted. Monte Carlo simulations with stress testing for new-party uncertainty produced well-calibrated probabilities. Minor inefficiency in Wikipedia fetching (got minimal content) was compensated by effective use of news sources.",
+  "condensed_reasoning": "## Research\n\nI researched Bulgaria's April 19, 2026 parliamentary election, starting with Metaculus question details and Wikipedia background. The key discovery was that **Progressive Bulgaria** (Prezaredete Balgariya), a brand-new coalition formed on March 2, 2026 by former President **Rumen Radev**, is leading all polls but is **not one of the named options** (GERB-SDS, PP-DB, Revival, Other or tie).\n\nI consulted multiple Bulgarian polling sources:\n- **Trend** (March 13-19): PB 31.1%, GERB 19.7%, PP-DB 11.8%, Revival 7.9%\n- **Sova Harris** (March 16): PB 30.9%, GERB 19.3%, PP-DB 12.2%\n- **Alpha Research**: PB 32.6%, GERB ~20%\n- **Gallup International**: PB ~31%, GERB 19-20%\n- **Myara**: PB 33%\n- **PolitPro Election Trend**: PB 26.3%, GERB 20.2%\n- **CAM and Market Links** polls also confirmed PB's lead\n\n## Key Evidence\n\n- **Progressive Bulgaria polls at 29-33%** across all major Bulgarian pollsters, with a massive **10-11 point lead** over GERB-SDS at 19-21%\n- **PP-DB** (We Continue the Change–Democratic Bulgaria) polls at 11-13%, **Revival** (Vazrazhdane) at 6-8% — both distant from first place\n- **PB formed March 2, 2026** — a brand-new coalition, though led by the well-known former president\n- Election is **~4 weeks away** (April 19); official campaign began March 20\n- **GERB-SDS has won the most seats in every Bulgarian election since 2021** (6 consecutive first-place finishes)\n- Bulgaria uses **D'Hondt proportional representation** with 240 seats and a 4% threshold\n\nI ran Monte Carlo simulations:\n- Base case (standard uncertainty): **99.5%** probability for \"Other or tie\"\n- Stress test (30% chance of 3-10 point new-party poll overestimation): **88.8%** probability for \"Other or tie\"\n\nThreshold analysis showed PB would need to **drop from ~31% to below ~20%** for GERB to overtake them — an 11-point polling miss unprecedented in Bulgarian elections.\n\n## Conclusion\n\nSince Progressive Bulgaria is not a named option, a PB victory resolves as **\"Other or tie\"**. I assigned:\n- **Other or tie: 86%** — Progressive Bulgaria wins most seats\n- **GERB-SDS: 12%** — requires unprecedented polling miss\n- **PP-DB: 1%** — distant third\n- **Revival: 1%** — distant fifth\n\nThe 86% reflects appropriate skepticism for a brand-new party (conservative markdown from the 89% stress-test result), while the 12% for GERB captures the tail risk of new-party underperformance.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — retrieved question details and resolution criteria",
+      "mcp__search__web_search": "5 calls, 0 errors, impact: none, value: high — found election date, polling sources, party information",
+      "mcp__search__wikipedia": "3 calls, 0 errors, impact: none, value: medium — provided background context on election and Progressive Bulgaria",
+      "mcp__search__fetch_url": "8 calls, 0 errors, impact: none, value: high — extracted detailed polling data from PolitPro, Novinite, Balkan Insight, EUAlive",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: high — Monte Carlo simulations and threshold analysis for probability calibration",
+      "mcp__markets__polymarket_price": "1 call, 0 errors, impact: none, value: low — no markets found (expected for Bulgarian election)",
+      "mcp__markets__manifold_price": "1 call, 0 errors, impact: none, value: low — no markets found (expected for Bulgarian election)",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor analysis with reviewer critique"
+    },
+    "capability_gaps": [
+      "Bulgarian Central Election Commission API access would provide official candidate lists and historical results",
+      "Bulgarian language news sources could provide deeper local coverage"
+    ],
+    "subtle_bugs": [
+      "Wikipedia fetch_url returned minimal content (just 811 words) for the 2026 election article despite it existing — agent compensated by using news sources"
+    ]
+  },
+  "workflow": {
+    "info_gathering": "Excellent. Agent systematically gathered polling data from 7+ independent Bulgarian pollsters (Trend, Sova Harris, Alpha Research, Gallup International, Myara, CAM, Market Links, PolitPro). Cross-referenced multiple news sources (Novinite, Balkan Insight, EUAlive, Sofia Globe) when Wikipedia provided limited content. Correctly identified the critical insight that Progressive Bulgaria is not a named option.",
+    "structured_reasoning": "Strong. Agent built well-structured factors capturing both supporting evidence (polling lead, lead magnitude, Radev's popularity) and counterarguments (new party risk, GERB's historical dominance, time remaining). Used Monte Carlo simulations with stress testing to quantify probability ranges. Threshold analysis clearly showed the polling miss required for GERB to win.",
+    "self_correction": "Good. Agent recognized initial simulation was too confident (99.5%) and ran stress test with wider uncertainty for new-party effect. Conservatively marked down from 89% stress-test result to 86% final probability. Applied appropriate skepticism to brand-new party.",
+    "efficiency": "Good overall. Minor inefficiency: tried prediction markets (Polymarket, Manifold) which were unlikely to cover Bulgarian election. Wikipedia fetch returned minimal content requiring additional news source lookups. But these were compensated quickly and didn't waste significant budget."
+  },
+  "reasoning": {
+    "evidence_quality": 5,
+    "evidence_notes": "Exceptional evidence gathering — consulted 7+ independent Bulgarian pollsters all showing consistent 10-11 point PB lead. Cross-referenced dates, party compositions, and coalition structures. All key claims verified against trace sources.",
+    "logical_coherence": 5,
+    "logical_notes": "Flawless logical structure. Correctly identified that PB not being a named option means PB victory = 'Other or tie'. Built coherent factor framework balancing poll evidence against new-party uncertainty. Monte Carlo simulations properly stress-tested the conclusion.",
+    "calibration_sense": 4,
+    "calibration_notes": "Good calibration. Agent appropriately discounted from 99.5% base simulation to 89% stress test to 86% final. Applied new-party skepticism without overcorrecting. The 12% GERB probability reasonably captures tail risk. Minor concern: could have explored more historical Bulgarian polling accuracy data.",
+    "strengths": [
+      "Correctly identified the critical resolution criteria insight (PB not a named option)",
+      "Consulted 7+ independent pollsters for robust polling average",
+      "Used Monte Carlo simulations with stress testing for probability calibration",
+      "Built balanced factor framework with appropriate counterarguments",
+      "Conservative markdown from simulation results showed good calibration instincts"
+    ],
+    "weaknesses": [
+      "Limited exploration of historical Bulgarian polling accuracy for base rates",
+      "Checked prediction markets unlikely to cover Bulgarian elections",
+      "Wikipedia fetch inefficiency required compensating with news sources"
+    ]
+  },
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "notable_observations": [
+    "Agent identified the key resolution criteria insight (Progressive Bulgaria not being a named option) that determines the correct forecast framing",
+    "Seven independent Bulgarian pollsters all showed consistent 10-11 point Progressive Bulgaria lead — exceptional polling consensus",
+    "Monte Carlo stress testing with 30% chance of 3-10 point new-party overestimation still yielded 89% for 'Other or tie' — robust to aggressive uncertainty assumptions",
+    "Threshold analysis showed PB would need to drop from 31% to below 20% for GERB to win — an 11-point miss unprecedented in Bulgarian elections"
+  ],
+  "actionable_improvements": [
+    "For elections, prioritize checking if frontrunner is actually among named options early in research — this was the critical insight here",
+    "Consider adding Bulgarian language news sources or official CEC data for deeper election coverage",
+    "Skip prediction markets for non-US/major elections where coverage is unlikely",
+    "When Wikipedia fetch returns minimal content, immediately pivot to news aggregators rather than trying multiple Wikipedia queries"
+  ]
+}
