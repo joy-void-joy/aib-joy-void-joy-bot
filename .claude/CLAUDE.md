@@ -15,6 +15,7 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 - **Submission is handled separately** — This codebase generates forecasts; a separate system handles submission to Metaculus
 - **No CP during live forecasting** — The agent cannot see the community prediction for the question it is currently forecasting (tournament rule). CP data is available post-hoc via individual API fetches for calibration analysis.
 - **CDF required for numeric questions** — Numeric and discrete questions require a 201-point CDF (cumulative distribution function), not just point estimates
+- **Version scope** — When analyzing forecasts, traces, or calibration data, determine which versions are relevant from context (user's question, current version, task at hand). Don't default to scanning all versions — earlier versions had different architectures and their data is rarely comparable. When in doubt, ask.
 
 ---
 
