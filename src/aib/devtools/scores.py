@@ -775,7 +775,7 @@ def _build_strip(
         zero_pos = to_pos(0.0)
 
     if color_map is None:
-        colors = _pick_colors(len(versions_sorted))
+        colors = _pick_colors_hierarchical(versions_sorted)
         color_map = dict(zip(versions_sorted, colors))
 
     BOLD = "\033[1m"
@@ -1016,15 +1016,49 @@ SATURATED_RING = [
 ]
 
 
-def _pick_colors(n: int) -> list[int]:
-    """Pick *n* maximally-spaced colors from the saturated 256-color ring."""
+def _pick_colors_hierarchical(
+    versions: list[str],
+) -> list[int]:
+    """Pick colors for *versions* using hierarchical major→minor→patch spacing.
+
+    Major versions get equal arcs of the color ring, minor versions subdivide
+    each major arc, and patches subdivide each minor sub-arc.  This keeps
+    versions within the same major visually related while still distinct.
+    """
     ring = SATURATED_RING
-    if n <= 0:
+    n = len(ring)
+    if not versions:
         return []
-    if n >= len(ring):
-        return list(ring[:n])
-    step = len(ring) / n
-    return [ring[int(i * step) % len(ring)] for i in range(n)]
+
+    semvers = [parse_semver(v) or (0, 0, 0) for v in versions]
+
+    majors: dict[int, dict[int, list[int]]] = {}
+    for i, (ma, mi, _pa) in enumerate(semvers):
+        majors.setdefault(ma, {}).setdefault(mi, []).append(i)
+
+    sorted_majors = sorted(majors)
+    n_majors = len(sorted_majors)
+    major_arc = n / n_majors
+
+    colors = [0] * len(versions)
+    for maj_idx, ma in enumerate(sorted_majors):
+        arc_start = maj_idx * major_arc
+        minors = majors[ma]
+        sorted_minors = sorted(minors)
+        n_minors = len(sorted_minors)
+        minor_arc = major_arc / n_minors
+
+        for min_idx, mi in enumerate(sorted_minors):
+            sub_start = arc_start + min_idx * minor_arc
+            patches = minors[mi]
+            n_patches = len(patches)
+            patch_step = minor_arc / n_patches
+
+            for p_idx, orig_idx in enumerate(patches):
+                pos = sub_start + p_idx * patch_step + patch_step / 2
+                colors[orig_idx] = ring[int(pos) % n]
+
+    return colors
 
 
 def _version_color_map_and_totals() -> tuple[dict[str, int], dict[str, int]]:
@@ -1043,7 +1077,7 @@ def _version_color_map_and_totals() -> tuple[dict[str, int], dict[str, int]]:
         totals[v] = totals.get(v, 0) + 1
 
     all_versions = sorted(totals, key=lambda v: parse_semver(v) or (0, 0, 0))
-    colors = _pick_colors(len(all_versions))
+    colors = _pick_colors_hierarchical(all_versions)
     return dict(zip(all_versions, colors)), totals
 
 
@@ -1086,7 +1120,7 @@ def _build_scatter(
             continue
         plt.scatter(
             [p[0] for p in vp],
-            [p[1] for p in vp],
+            [max(y_lo, min(y_hi, p[1])) for p in vp],
             marker="dot",
             color=color,
         )
