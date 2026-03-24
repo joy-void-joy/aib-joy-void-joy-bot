@@ -84,12 +84,15 @@ def create_forecast_payload(output: ForecastOutput) -> dict:
     if question_type == "binary":
         if output.probability is None:
             raise SubmissionError("Binary forecast missing probability")
-        return {"probability_yes": output.probability}
+        return {"probability_yes": max(0.001, min(0.999, output.probability))}
 
     if question_type == "multiple_choice":
         if not output.probabilities:
             raise SubmissionError("Multiple choice forecast missing probabilities")
-        return {"probability_yes_per_category": output.probabilities}
+        clamped = {k: max(0.001, min(0.999, v)) for k, v in output.probabilities.items()}
+        total = sum(clamped.values())
+        normalized = {k: v / total for k, v in clamped.items()}
+        return {"probability_yes_per_category": normalized}
 
     if question_type in ("numeric", "discrete"):
         if not output.cdf:

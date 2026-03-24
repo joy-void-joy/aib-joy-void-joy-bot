@@ -396,7 +396,7 @@ class NumericDistribution(BaseModel):
         # Handle upper bound
         if self.open_upper_bound:
             if range_max > return_percentiles[percentile_max]:
-                halfway = 100 - (0.5 * (100 - percentile_max))
+                halfway = 100 - (0.01 * (100 - percentile_max))
                 return_percentiles[halfway] = range_max
         else:
             return_percentiles[100] = range_max
@@ -404,7 +404,7 @@ class NumericDistribution(BaseModel):
         # Handle lower bound
         if self.open_lower_bound:
             if range_min < return_percentiles[percentile_min]:
-                halfway = 0.5 * percentile_min
+                halfway = 0.01 * percentile_min
                 return_percentiles[halfway] = range_min
         else:
             return_percentiles[0] = range_min
@@ -525,35 +525,12 @@ class NumericDistribution(BaseModel):
         for i in range(len(cdf_array)):
             cdf_array[i] = apply_minimum(cdf_array[i], i / (len(cdf_array) - 1))
 
-        # Apply PMF cap in PMF space
+        # Apply PMF cap via outward redistribution from peaks
         pmf = np.diff(cdf_array, prepend=0, append=1)
         cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
+        pmf = redistribute_capped_pmf(pmf, cap)
 
-        def cap_pmf(scale: float) -> np.ndarray:
-            return np.concatenate(
-                [pmf[:1], np.minimum(cap, scale * pmf[1:-1]), pmf[-1:]]
-            )
-
-        def capped_sum(scale: float) -> float:
-            return float(cap_pmf(scale).sum())
-
-        # Binary search for scale that makes capped sum = 1
-        lo = hi = scale = 1.0
-        while capped_sum(hi) < 1.0:
-            hi *= 1.2
-
-        for _ in range(100):
-            scale = 0.5 * (lo + hi)
-            s = capped_sum(scale)
-            if s < 1.0:
-                lo = scale
-            else:
-                hi = scale
-            if s == 1.0 or (hi - lo) < 2e-5:
-                break
-
-        # Apply scale and renormalize
-        pmf = cap_pmf(scale)
+        # Defensive renormalize to preserve exact tail mass
         inner_sum = pmf[1:-1].sum()
         if inner_sum > 0:
             pmf[1:-1] *= (cdf_array[-1] - cdf_array[0]) / inner_sum
@@ -564,6 +541,64 @@ class NumericDistribution(BaseModel):
         # Round to minimize floating point errors
         cdf_array = np.round(cdf_array, 10)
         return cdf_array.tolist()
+
+
+def redistribute_capped_pmf(pmf: np.ndarray, cap: float) -> np.ndarray:
+    """Redistribute excess mass from capped PMF bins to adjacent bins.
+
+    Instead of uniformly scaling all bins (which amplifies the noise floor
+    into a dominant signal), this redistributes excess mass outward from
+    peak bins, filling each neighbor up to the cap before moving further.
+
+    The result is a flat-topped plateau centered on the peak with steep
+    drop-offs — maximum mass concentration that respects the PMF cap.
+
+    For bimodal distributions, each peak's excess flows to its own
+    neighbors (distance is measured to the nearest capped bin).
+
+    Args:
+        pmf: PMF array of length cdf_size + 1. pmf[0] is lower tail mass,
+             pmf[-1] is upper tail mass, pmf[1:-1] are inner bins.
+        cap: Maximum allowed PMF value per inner bin.
+
+    Returns:
+        New PMF array with same total sum, all inner bins <= cap.
+    """
+    result = pmf.copy()
+    inner = result[1:-1]
+
+    excess_indices = np.where(inner > cap)[0]
+    if len(excess_indices) == 0:
+        return result
+
+    total_excess = 0.0
+    for idx in excess_indices:
+        total_excess += inner[idx] - cap
+        inner[idx] = cap
+
+    capped_set = set(excess_indices.tolist())
+    non_capped = [(i, inner[i]) for i in range(len(inner)) if i not in capped_set]
+
+    if not non_capped:
+        return result
+
+    def distance_to_nearest_capped(idx: int) -> int:
+        return min(abs(idx - c) for c in excess_indices)
+
+    non_capped.sort(key=lambda x: distance_to_nearest_capped(x[0]))
+
+    remaining = total_excess
+    for idx, current_val in non_capped:
+        if remaining <= 1e-12:
+            break
+        headroom = cap - current_val
+        if headroom <= 0:
+            continue
+        add = min(headroom, remaining)
+        inner[idx] += add
+        remaining -= add
+
+    return result
 
 
 def standardize_cdf(
@@ -609,28 +644,8 @@ def standardize_cdf(
 
     pmf = np.diff(cdf_array, prepend=0, append=1)
     cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
+    pmf = redistribute_capped_pmf(pmf, cap)
 
-    def cap_pmf(scale: float) -> np.ndarray:
-        return np.concatenate([pmf[:1], np.minimum(cap, scale * pmf[1:-1]), pmf[-1:]])
-
-    def capped_sum(scale: float) -> float:
-        return float(cap_pmf(scale).sum())
-
-    lo = hi = scale = 1.0
-    while capped_sum(hi) < 1.0:
-        hi *= 1.2
-
-    for _ in range(100):
-        scale = 0.5 * (lo + hi)
-        s = capped_sum(scale)
-        if s < 1.0:
-            lo = scale
-        else:
-            hi = scale
-        if s == 1.0 or (hi - lo) < 2e-5:
-            break
-
-    pmf = cap_pmf(scale)
     inner_sum = pmf[1:-1].sum()
     if inner_sum > 0:
         pmf[1:-1] *= (cdf_array[-1] - cdf_array[0]) / inner_sum
