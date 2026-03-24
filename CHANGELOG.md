@@ -2,6 +2,10 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v4.0.1 (2026-03-24)
+
+Fix CDF sharpness: outward PMF redistribution and reduced tail mass
+
 ## v4.0.0 (2026-03-16)
 
 Unified @mcp_tool decorator; session-scoped state; Opus reviewer with ForecastSummary; feedback loop decomposition
