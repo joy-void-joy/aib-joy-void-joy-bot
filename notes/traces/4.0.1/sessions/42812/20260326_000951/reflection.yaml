@@ -1,0 +1,264 @@
+---
+timestamp: 2026-03-26 00:13:31 UTC
+question_type: discrete
+factors:
+- description: 2 items already published in resolution window (Mar 16 and Mar 23)
+  supports:
+    center: 2.0
+    low: 2.0
+    high: 2.0
+  logit: 2.0
+  confidence: 1.0
+  effective_logit: 2.0
+- description: Q1 2026 publication rate is 0.061/day (lower than 2025 average of 0.088/day),
+    suggesting some slowdown
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 5.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: April 2025 had zero publications, suggesting April may be a slow month
+  supports:
+    center: 3.0
+    low: 2.0
+    high: 5.0
+  logit: -0.5
+  confidence: 0.4
+  effective_logit: -0.2
+- description: AISI launched major Alignment Project in Feb 2026 (£27M, 60+ projects),
+    which could increase output over time
+  supports:
+    center: 5.0
+    low: 4.0
+    high: 7.0
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: Historical overall rate across all data (0.074/day) projects 4.2 items
+    for 57-day window
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 6.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Publication rate is lumpy (ranges from 0-7 items/month), creating significant
+    count uncertainty
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 8.0
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+tentative_estimate:
+  center: 4.0
+  low: 2.0
+  high: 7.0
+assessment: The AISI research page shows a pattern of ~2-4 publications per month
+  on average, with significant variance (0-7 per month in 2025). Two items are already
+  in the resolution window. The remaining 36 days (Mar 26 - Apr 30) need to be estimated.
+  The Q1 2026 rate appears slightly lower than the 2025 average, and April 2025 had
+  zero publications which is a cautionary data point. However, with only one year
+  of data, the April signal is weak. The Monte Carlo simulation, accounting for rate
+  uncertainty and possible April seasonality, centers around 4 items total with a
+  spread of 2-7 (10th-90th). The new Alignment Project could increase output but new
+  projects typically take months to produce publications.
+calibration_notes: 'Base rate: ~2 items/month at the recent Q1 2026 rate, or ~2.6/month
+  at the 2025 average rate. Over 57 days (about 1.9 months), this gives 3.8-5.0 items
+  as a base expectation. Two items already posted narrows the downside. The distribution
+  is appropriately right-skewed given the count nature and lumpiness of publications.'
+key_uncertainties: 1) Whether April 2026 will be similarly quiet to April 2025 (0
+  items). 2) Whether the new Alignment Project will accelerate publication pace. 3)
+  Whether the lower Q1 2026 rate represents a real trend or just noise. 4) Whether
+  blog posts or other items might be added that aren't currently visible.
+tool_audit: 'fetch_url on aisi.gov.uk/research: Successful, returned 39 items with
+  dates. web_search: Successful, confirmed the page structure. search_news: Returned
+  contextual news but nothing directly about upcoming AISI publications. All tools
+  worked as expected. Missing: no way to check if AISI has announced upcoming publications
+  or has items in review.'
+process_reflection: The forecasting process worked well for this question. The fetch_url
+  tool successfully extracted the publication dates from the AISI research page, which
+  was the critical data source. The Monte Carlo simulation approach was appropriate
+  for a count-based question with a Poisson-like process. One limitation is having
+  only ~17 months of data to estimate seasonality patterns. The April 2025 zero-count
+  is notable but hard to weight with just one observation.
+computed:
+  factor_count: 6
+  factor_sum: 3.66
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 2 items already published in resolution window (Mar 16 and Mar 23)
+    supports:
+      center: 2.0
+      low: 2.0
+      high: 2.0
+    logit: 2.0
+    confidence: 1.0
+    effective_logit: 2.0
+  - description: Q1 2026 publication rate is 0.061/day (lower than 2025 average of
+      0.088/day), suggesting some slowdown
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 5.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: April 2025 had zero publications, suggesting April may be a slow
+      month
+    supports:
+      center: 3.0
+      low: 2.0
+      high: 5.0
+    logit: -0.5
+    confidence: 0.4
+    effective_logit: -0.2
+  - description: AISI launched major Alignment Project in Feb 2026 (£27M, 60+ projects),
+      which could increase output over time
+    supports:
+      center: 5.0
+      low: 4.0
+      high: 7.0
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: Historical overall rate across all data (0.074/day) projects 4.2
+      items for 57-day window
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 6.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Publication rate is lumpy (ranges from 0-7 items/month), creating
+      significant count uncertainty
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 8.0
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  dominant_factor: 2 items already published in resolution window (Mar 16 and Mar
+    23)
+  dominant_effective_logit: 2.0
+  distribution_metrics:
+    implied_median: 3.002463054187192
+    implied_p10: 2.4433497536945814
+    implied_p90: 3.948275862068966
+    median_gap: 0.9975369458128078
+    median_gap_pct: 66.28477905073647
+    spread_ratio: 3.32242225859247
+    precision: 1.25
+  sources:
+  - '[AISI Research & Publications | The AI Security Institute](https://www.aisi.gov.uk/research)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 6 factors against the research trace:
+
+
+    **Factor 1 (2 items already in window)**: Confirmed at trace line 47-48 and 341.
+    The fetch_url call to aisi.gov.uk/research returned "Mar 23, 2026 - Core Technology"
+    and "Mar 16, 2026 - Cyber & Autonomous Systems", and the code confirmed "Items
+    already in the resolution window (Mar 5 - Apr 30, 2026): 2". ✅
+
+
+    **Factor 2 (Q1 2026 rate 0.061/day vs 2025 0.088/day)**: Confirmed at trace line
+    345-346. The execute_code output shows "Q1 2026 so far: 5 items in 82 days, Rate:
+    0.0610/day" and "2025 full year: 32 items in 365 days, Rate: 0.0877/day". ✅
+
+
+    **Factor 3 (April 2025 had zero publications)**: Confirmed at trace line 379 showing
+    "Apr: 0" in monthly pattern analysis. ✅
+
+
+    **Factor 4 (AISI Alignment Project £27M, 60+ projects)**: Confirmed from news
+    search results at trace line 246-247 citing "launched the Alignment Project in
+    February 2026 to award over £27 million to 60+ projects". ✅
+
+
+    **Factor 5 (Historical rate 0.074/day projects 4.2 items)**: Confirmed at trace
+    line 344: "Full history (Oct 2024 - Mar 2026): 39 items in 529 days, Rate: 0.0737/day,
+    projected for 57 days: 4.2". ✅
+
+
+    **Factor 6 (Lumpy 0-7 items/month)**: Confirmed at trace line 342 showing monthly
+    counts ranging from 0 (April, November) to 7 (July). ✅
+
+
+    **Resolution Criteria Check**: The agent fetched the AISI research page directly
+    and correctly counted items within the March 5 - April 30, 2026 window per the
+    resolution criteria.
+
+
+    **Pre-publication Event Check**: Resolution window starts March 5, 2026 while
+    question published March 26, 2026. This is Case 1 (explicit start date before
+    published_at), making the 2 pre-publication items legitimate per the stated criteria.
+
+
+    **No Double-counting**: Factors 2 and 5 use different time periods (Q1 2026 vs.
+    full history) intentionally to capture rate uncertainty, not the same underlying
+    evidence.
+
+
+    **No Wrong-direction Factors**: All logit signs are consistent with descriptions.
+
+
+    **Adversarial Reasoning Present**: Assessment acknowledges weak April signal (only
+    1 year data), notes Q1 slowdown, and tempers Alignment Project impact by noting
+    "new projects typically take months to produce publications."
+
+
+    **Probability Assessment**: The Monte Carlo simulation centered at 4.2-4.7 with
+    refined seasonality model at 4.2. The estimate of center 4.0, range 2.0-7.0 is
+    well-supported by the simulation output showing p10=2.0, p50=4.0, p90=7.0. My
+    independent estimate (2 confirmed + ~2.2-2.5 expected in 36 remaining days ≈ 4-4.5
+    total) aligns with the agent''s forecast.
+
+
+    **No issues found.** All claims are grounded in trace evidence, the methodology
+    is sound, and the estimate is reasonable given the data.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42812
+- **Question ID**: 42752
+- **Session Duration**: 232.4s (3.9 min)
+- **Cost**: $2.6159
+- **Tokens**: 6,842 total (26 in, 6,816 out)
+  - Cache: 468,713 read, 74,732 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42812_20260326_000951/20260326-000951.log`
+
+### Tool Calls
+
+- **Total**: 71 calls
+- **Errors**: 2 (2.8%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| company_financials | 1 | 0 | 846ms |
+| execute_code | 9 | 0 | 655ms |
+| fetch_url | 21 | 2 ⚠️ | 8363ms |
+| get_coherence_links | 1 | 0 | 418ms |
+| get_metaculus_questions | 4 | 0 | 381ms |
+| kalshi_price | 2 | 0 | 670ms |
+| manifold_price | 3 | 0 | 362ms |
+| polymarket_price | 3 | 0 | 64ms |
+| reflection | 6 | 0 | 109431ms |
+| search_exa | 5 | 0 | 1514ms |
+| web_search | 12 | 0 | 17120ms |
+| wikipedia | 4 | 0 | 196ms |
+
+### Sources Consulted
+
+- [AISI Research & Publications | The AI Security Institute](https://www.aisi.g...
