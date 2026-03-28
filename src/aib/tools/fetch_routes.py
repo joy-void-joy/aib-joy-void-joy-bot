@@ -36,6 +36,9 @@ SUGGEST_ONLY: dict[str, str] = {
     "manifold.markets": "Use manifold_price for market data, or manifold_history for historical prices.",
     "data.worldbank.org": "Use world_bank_indicator for data, or world_bank_search to find indicator codes.",
     "scholar.google.com": "Use search_arxiv for academic paper search.",
+    "congress.gov": "Use search_exa for cached content, or web_search for legislative information.",
+    "echr.coe.int": "Use search_exa for cached content, or web_search for ECHR case information.",
+    "missingmigrants.iom.int": "Use search_exa for cached content, or web_search for migration data.",
 }
 
 _registry: list[DomainRoute] = []
