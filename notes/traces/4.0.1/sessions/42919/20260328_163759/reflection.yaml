@@ -1,0 +1,283 @@
+---
+timestamp: 2026-03-28 16:47:52 UTC
+question_type: binary
+factors:
+- description: India's low base rate of filing new WTO complaints as complainant —
+    approximately 1 new dispute every 2-3 years historically. The last new complaint
+    was DS547 in May 2018, which was resolved in 2023. In a ~7 week window, the probability
+    of a brand new filing is very low.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: No evidence of any India-as-complainant dispute news item from March
+    10-28, 2026 (18 days into the resolution window already). The WTO India dispute
+    settlement news archive page appears empty. All 2026 WTO news items involving
+    India show India as respondent, not complainant.
+  logit: -2.0
+  confidence: 0.8
+  effective_logit: -1.6
+- description: The US-India trade deal announced Feb 2, 2026 (tariffs cut from 50%
+    to 18%) suggests de-escalation of trade tensions, making new Indian complaints
+    against the US less likely. India-US relations are in a more cooperative phase.
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: India proposed retaliatory duties via WTO on US steel/aluminum (May
+    2025) and auto tariffs (July 2025). These are suspension of concessions proceedings,
+    not new dispute filings. However, if any procedural step occurs in the resolution
+    window, it could generate a WTO news item naming India as complainant. India's
+    existing retaliation proposals could advance.
+  logit: 0.5
+  confidence: 0.5
+  conditional: If India's suspension of concessions proposals advance to a WTO decision/arbitration
+    step
+  effective_logit: 0.25
+- description: India is actively engaged at WTO MC14 (March 26-28, 2026) and pushing
+    for dispute settlement reform. While this shows engagement, it's about systemic
+    reform not filing new complaints. The WTO Appellate Body remains non-functional
+    since 2019, which generally discourages new dispute filings.
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: There are still 33 days remaining in the resolution window (March 28
+    to April 30). Events could occur that trigger India to file a new complaint or
+    advance an existing case. However, no signals of imminent filings have been found.
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  logit: -2.0
+  probability: 0.12
+assessment: "The question asks whether the WTO will post a new dispute-settlement\
+  \ news item naming India as COMPLAINANT in the period March 10 - April 30, 2026.\
+  \ \n\nAgainst YES:\n- India has not filed a new WTO complaint since 2018 (DS547,\
+  \ now resolved). The base rate of new filings is very low (~1 every 2-3 years).\n\
+  - 18 days into the resolution window, no qualifying news items have appeared. All\
+  \ 2026 WTO dispute news items involving India show India as RESPONDENT (China's\
+  \ complaints DS642, DS644).\n- The February 2026 US-India trade deal indicates de-escalation,\
+  \ reducing the likelihood of new complaints against the US.\n- The WTO Appellate\
+  \ Body is non-functional since 2019, generally discouraging new dispute filings.\n\
+  - The India dispute settlement news archive page at the resolution source appears\
+  \ empty.\n\nFor YES:\n- India has proposed retaliatory duties on US goods via WTO\
+  \ mechanisms in 2025. If these proceedings advance (e.g., arbitration under WTO\
+  \ safeguard rules), this could generate a news item where India is referenced as\
+  \ complainant.\n- 33 days remain in the resolution window, so something could happen.\n\
+  - There's ongoing US-India trade friction despite the deal, and new tariff actions\
+  \ could prompt a complaint.\n\nHowever, the retaliatory duty proposals are typically\
+  \ under the safeguard agreement's rebalancing mechanism, and it's unclear whether\
+  \ WTO news items about these would name India as 'complainant' in the dispute settlement\
+  \ sense. The question requires items on the India dispute settlement news archive.\n\
+  \nOverall assessment: Very unlikely but not impossible. The main risk is from existing\
+  \ retaliatory duty proceedings advancing, not new complaint filings."
+calibration_notes: 'Base rate: India files ~1 new WTO complaint every 2-3 years, so
+  ~0.05-0.08 per 7-week period. But the question also includes advances in existing
+  disputes where India is complainant — however, DS547 (the only recent one) is resolved.
+  The retaliatory duty mechanism is a separate pathway. Status quo: NO resolution
+  (no items posted yet after 18 days). Hedging check: 12% is not near 50%, and reflects
+  genuine low probability based on multiple converging negative signals.'
+key_uncertainties: 1. Whether India's retaliatory duty proposals (steel/aluminum,
+  auto) could generate WTO news items naming India as complainant on the specific
+  resolution source page. 2. Whether the ongoing MC14 discussions or US trade tensions
+  could trigger a sudden new complaint filing. 3. Whether any existing India-as-complainant
+  cases I haven't found could have procedural steps upcoming.
+tool_audit: 'Useful: web_search provided good coverage of India''s WTO activity and
+  recent trade developments. The Wikipedia article on US-India trade crisis was informative.
+  fetch_url worked for the DS547 case page. Empty/broken: The WTO India dispute settlement
+  news archive page (resolution source) wouldn''t render — it''s JavaScript-dependent.
+  The WTO 2026 news page also didn''t render. The WTO dispute chronological list and
+  by-country pages all require JS. This is a significant limitation. Failures: No
+  actual tool failures, but the WTO website is heavily JS-dependent which limits direct
+  verification of the resolution source.'
+update_triggers: '- India filing a new WTO request for consultations against any country.
+  - India''s retaliatory tariff proposals advancing to WTO arbitration/decision. -
+  A significant trade policy shock (e.g., new US tariffs on India) that triggers responsive
+  action. - WTO DSB meeting agenda including India-as-complainant items.'
+process_reflection: 'The WTO website being heavily JavaScript-dependent was a major
+  friction point — the resolution source page itself couldn''t be read. This is a
+  common issue with institutional websites. The web search tools compensated well
+  by finding WTO news items indexed by search engines. The multi-search approach (different
+  query formulations) was essential for building a complete picture. The distinction
+  between India as complainant vs respondent was crucial and required careful parsing
+  of each search result. One frustration: I couldn''t directly query the WTO dispute
+  database to get a definitive list of all India-as-complainant cases and their current
+  status.'
+computed:
+  factor_count: 6
+  factor_sum: -3.3649999999999998
+  tentative_logit: -2.0
+  logit_gap: 1.3649999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: India's low base rate of filing new WTO complaints as complainant
+      — approximately 1 new dispute every 2-3 years historically. The last new complaint
+      was DS547 in May 2018, which was resolved in 2023. In a ~7 week window, the
+      probability of a brand new filing is very low.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: No evidence of any India-as-complainant dispute news item from March
+      10-28, 2026 (18 days into the resolution window already). The WTO India dispute
+      settlement news archive page appears empty. All 2026 WTO news items involving
+      India show India as respondent, not complainant.
+    logit: -2.0
+    confidence: 0.8
+    effective_logit: -1.6
+  - description: The US-India trade deal announced Feb 2, 2026 (tariffs cut from 50%
+      to 18%) suggests de-escalation of trade tensions, making new Indian complaints
+      against the US less likely. India-US relations are in a more cooperative phase.
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: India proposed retaliatory duties via WTO on US steel/aluminum (May
+      2025) and auto tariffs (July 2025). These are suspension of concessions proceedings,
+      not new dispute filings. However, if any procedural step occurs in the resolution
+      window, it could generate a WTO news item naming India as complainant. India's
+      existing retaliation proposals could advance.
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+    conditional: If India's suspension of concessions proposals advance to a WTO decision/arbitration
+      step
+  - description: India is actively engaged at WTO MC14 (March 26-28, 2026) and pushing
+      for dispute settlement reform. While this shows engagement, it's about systemic
+      reform not filing new complaints. The WTO Appellate Body remains non-functional
+      since 2019, which generally discourages new dispute filings.
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: There are still 33 days remaining in the resolution window (March
+      28 to April 30). Events could occur that trigger India to file a new complaint
+      or advance an existing case. However, no signals of imminent filings have been
+      found.
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: No evidence of any India-as-complainant dispute news item from
+    March 10-28, 2026 (18 days into the resolution window already). The WTO India
+    dispute settlement news archive page appears empty. All 2026 WTO news items involving
+    India show India as respondent, not complainant.
+  dominant_effective_logit: -1.6
+  factor_implied_probability: 0.0334073893875318
+  tentative_probability: 0.12
+  gap_pp: 8.65926106124682
+  sources:
+  - '[WORLD TRADE ORGANIZATION](https://www.wto.org/english/news_e/archive_e/country_subj_arc_e.htm?country1=IND&subject1=DISP)'
+  - '[WTO | dispute settlement](https://www.wto.org/english/tratop_e/dispu_e/dispu_by_country_e.htm)'
+  - '[WTO | dispute settlement - chronological list of disputes cases](https://www.wto.org/english/tratop_e/dispu_e/dispu_status_e.htm)'
+  - '[WTO](https://www.wto.org/english/tratop_e/dispu_e/dispu_e.htm)'
+  - '[2025 United States–India diplomatic and trade crisis - Wikipedia](https://en.wikipedia.org/wiki/2025_United_States%E2%80%93India_diplomatic_and_trade_crisis)'
+  - '[India’s surprise tariff move on US goods suggests tougher stance on trade talks](https://www.scmp.com/week-asia/politics/article/3310343/does-indias-surprise-tariff-move-us-signal-tougher-stance-trade-or-just-symbolism)'
+  - '[WTO | dispute settlement - DS547: United States � Certain Measures on Steel
+    and Aluminium Products](https://www.wto.org/english/tratop_e/dispu_e/cases_e/ds547_e.htm)'
+  - '[WTO | 2026 News items](https://www.wto.org/english/news_e/news26_e/news26_e.htm)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I reviewed the agent''s trace against each factor and the assessment. All core
+    factual claims are well-grounded in the research trace.
+
+
+    **Factor-by-factor verification:**
+
+
+    1. **Base rate claim (logit=-1.5)**: Trace confirms DS547 (May 2018) was India''s
+    last new complaint, resolved July 2023, with DS510 (2016) before that. The "~1
+    every 2-3 years" estimate is supported by the search results showing India''s
+    complainant history.
+
+
+    2. **No India-as-complainant news in window (logit=-2.0)**: Trace shows multiple
+    attempts to access the WTO India dispute settlement archive page (country_subj_arc_e.htm?country1=IND&subject1=DISP),
+    which returned error messages each time. Comprehensive searches for India-as-complainant
+    2026 items found only India-as-respondent cases (DS642 - batteries/EVs, DS644
+    - solar/IT goods). Well-supported.
+
+
+    3. **US-India trade deal (logit=-0.8)**: Trace contains cleartax.in search result:
+    "US President Donald Trump announced a new bilateral trade deal with India on
+    February 2, 2026, effective immediately, slashing tariffs on most Indian goods
+    from the previous 50% to just 18%." Directly confirmed.
+
+
+    4. **Retaliatory duty proposals (logit=+0.5)**: Multiple trace sources confirm
+    India proposed retaliatory duties via WTO on steel/aluminum (May 9, 2025) and
+    auto tariffs (July 2025) as "suspension of concessions" - correctly characterized
+    as distinct from new dispute filings. The agent appropriately notes uncertainty
+    about whether these generate "complainant" news items.
+
+
+    5. **MC14 and Appellate Body (logit=-0.5)**: Trace contains news from theprint.in
+    and orissapost.com about MC14 (March 26-28, 2026 in Cameroon) and quotes Minister
+    Goyal calling for "functional dispute settlement system" because "the current
+    dysfunctional mechanism has deprived countries of effective redressal." Supported.
+
+
+    6. **Remaining time (logit=+0.3)**: Simple calculation - 33 days from March 28
+    to April 30 is correct.
+
+
+    **Resolution criteria alignment**: The agent correctly engaged with the specific
+    resolution criteria - checking the WTO India dispute-settlement news archive and
+    distinguishing between India-as-complainant vs India-as-respondent items.
+
+
+    **No double-counting detected**: Each factor draws on distinct evidence (base
+    rate history, current news search, trade deal announcement, retaliatory proceedings,
+    MC14 context).
+
+
+    **No wrong-direction factors**: All logit signs are consistent with their descriptions.
+
+
+    **Probability assessment**: 12% is reasonable given the strong negative evidence
+    (no filings in 18 days, very low base rate, de-escalation signals, all 2026 India
+    news shows India as respondent) balanced against modest upside from remaining
+    time and possible suspension-of-concessions developments. I see no basis to meaningfully
+    adjust this estimate.
+
+
+    **Adversarial reasoning**: The assessment does engage with the main counterargument
+    - that retaliatory duty proceedings could advance and generate news items - and
+    appropriately notes uncertainty about whether such proceedings would name India
+    as "complainant" on the specified archive page.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42919
+- **Question ID**: 42857
+- **Session Duration**: 607.9s (10.1 min)
+- **Cost**: $3.6665
+- **Tokens**: 7,598 total (38 in, 7,560 out)
+  - Cache: 1,047,244 read, 81,495 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42919_20260328_163759/20260328-163759.log`
+
+### Tool Calls
+
+- **Total**: 85 calls
+- **Errors**: 1 (1.2%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 11 | 0 | 327ms |
+| fetch_url | 21 | 0 | 6398ms |
+| fred_series | 1 | 0 | 450ms |
+| get_metaculus_questions | 1 | 0 | 12436ms |
+| reflection | 3 | 0 | 118314ms |
+| search_exa | 1 | 0 | 1414ms |
+| web_search | 23 | 0 | 32595ms |
+| wikipedia | 24 | 1 ⚠️ | 392ms |
+
+### Sources Consulted
+
+- [WORLD TRADE ORGANIZATION](https://www.wto.org/english/news_e/archive_e/count...
+- [WTO | dispute settlement](https://www.wto.org/english/tratop_e/dispu_e/dispu...
+- [WTO | dispute settlement - chronological list of disputes cases](https://www...
+- [WTO](https://www.wto.org/english/tratop_e/dispu_e/dispu_e.htm)
+- [2025 United States–India diplomatic and trade crisis - Wikipedia](https://en...
+- [India’s surprise tariff move on US goods suggests tougher stance on trade ta...
+- [WTO | dispute settlement - DS547: United States � Certain Measures on Steel ...
+- [WTO | 2026 News items](https://www.wto.org/english/news_e/news26_e/news26_e....
