@@ -32,6 +32,8 @@ ASKNEWS_MCP_URL = "https://mcp.asknews.app"
 MAX_RETRIES = 3
 RETRY_BASE_WAIT = 15.0
 
+HIDDEN_TOOLS: set[str] = {"search_google"}
+
 
 class AskNewsRateLimitError(Exception):
     """Raised when AskNews returns a rate limit error, enabling retry."""
@@ -109,10 +111,15 @@ def create_asknews_server(api_key: str) -> McpSdkServerConfig:
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result = await session.list_tools()
-                return list(result.tools)
+                return [t for t in result.tools if t.name not in HIDDEN_TOOLS]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
+        if name in HIDDEN_TOOLS:
+            return CallToolResult(
+                content=_to_content(f"AskNews tool {name} is not available."),
+                isError=True,
+            )
         try:
             text = await _call_remote(api_key, name, arguments)
             return CallToolResult(content=_to_content(text), isError=False)
