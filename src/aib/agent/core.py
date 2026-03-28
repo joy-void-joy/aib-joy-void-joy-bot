@@ -71,7 +71,7 @@ from aib.paths import (
     sessions_dir,
     trace_logs_dir,
 )
-from aib.tools.metrics import get_metrics_summary, log_metrics_summary
+from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
@@ -776,6 +776,7 @@ async def run_forecast(
     # Create session-scoped state (metrics, run_forecast_fn, modified_inputs)
     session = ForecastSession(run_forecast_fn=run_forecast)
     set_session(session)
+    reset_metrics()
 
     # Either fetch question or use provided context
     # Note: question_id arg is actually the post_id from the URL
