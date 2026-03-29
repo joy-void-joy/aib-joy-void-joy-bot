@@ -130,6 +130,7 @@ STOCK_TOOLS: frozenset[str] = frozenset(
         "mcp__financial__stock_price",
         "mcp__financial__stock_history",
         "mcp__financial__stock_conditional_returns",
+        "mcp__financial__options_iv",
     }
 )
 
@@ -336,6 +337,7 @@ class ToolPolicy:
             company_financials,
             fred_search,
             fred_series,
+            options_iv,
             stock_conditional_returns,
             stock_history,
             stock_price,
@@ -371,6 +373,7 @@ class ToolPolicy:
                     stock_price,
                     stock_history,
                     stock_conditional_returns,
+                    options_iv,
                     world_bank_indicator,
                     world_bank_search,
                 ],

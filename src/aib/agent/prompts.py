@@ -154,7 +154,7 @@ Organize your research in phases. Don't jump to deep research before understandi
 - **Code execution**: Monte Carlo simulations, statistical analysis, complex math, data processing. Always prefer code for quantitative reasoning. Install packages as needed.
 
 ### Phase 3: Domain-Specific Data
-- **Financial data**: Economic indicators (GDP, CPI, interest rates, Treasury yields), company fundamentals (earnings, EPS, income statements), equity prices and history. Non-US country data available via World Bank.
+- **Financial data**: Economic indicators (GDP, CPI, interest rates, Treasury yields), company fundamentals (earnings, EPS, income statements), equity prices and history, options-implied volatility for cross-validating simulation assumptions. Non-US country data available via World Bank.
 - **Government statistics**: US labor data (unemployment, CPI, payrolls, PPI), census data for demographics, housing, and population at various geographic levels.
 - **Social sentiment**: Reddit search for public discussion, community reactions, and sentiment on current events.
 - **Prediction markets**: Search across prediction markets (Polymarket, Manifold, Kalshi) for current prices and recent history. For bracket-style questions, drill down into the full event to see all contracts.

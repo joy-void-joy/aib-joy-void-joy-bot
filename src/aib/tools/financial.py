@@ -1535,6 +1535,188 @@ async def stock_conditional_returns(params: StockConditionalReturnsInput) -> Any
         raise ToolError(f"Conditional return analysis failed: {e}")
 
 
+# --- Options / Implied Volatility ---
+
+
+class OptionsIVInput(BaseModel):
+    """Input for options implied volatility lookup."""
+
+    symbol: str = Field(
+        min_length=1,
+        max_length=10,
+        description="Ticker symbol (e.g. SPY, GLD, AAPL, ^VIX). Use ETFs for broad indices.",
+    )
+    expiration_index: int = Field(
+        default=2,
+        ge=0,
+        le=10,
+        description="Which expiration to use (0=nearest, 1=next, 2=third). Default: 2 (gives more time value).",
+    )
+
+
+class OptionsIVStrike(TypedDict):
+    """A single strike's implied volatility data."""
+
+    strike: float
+    iv: float
+    bid: float | None
+    ask: float | None
+    volume: int | None
+    open_interest: int | None
+    in_the_money: bool
+
+
+class OptionsIVResult(TypedDict, total=False):
+    """Options implied volatility summary."""
+
+    symbol: str
+    current_price: float | None
+    expiration: str
+    days_to_expiry: int
+    atm_call_iv: float
+    atm_put_iv: float
+    avg_atm_iv: float
+    annualized_iv_pct: float
+    daily_iv_pct: float
+    iv_skew: list[OptionsIVStrike]
+    put_call_skew: float
+
+
+@mcp_tool(
+    "options_iv",
+    (
+        "Get options-implied volatility for a ticker. Returns ATM implied "
+        "volatility (annualized and daily), put-call skew, and the volatility "
+        "smile across strikes. Use this to cross-validate your Monte Carlo "
+        "volatility assumptions — if your empirical vol is 2% daily but "
+        "options-implied vol is 4%, the market expects larger moves than "
+        "recent history suggests.\n\n"
+        "Examples:\n"
+        '  options_iv(symbol="GLD") → gold ETF implied vol for CDF width calibration\n'
+        '  options_iv(symbol="SPY") → S&P 500 implied vol for market regime assessment\n'
+        '  options_iv(symbol="AAPL") → Apple stock implied vol before earnings\n\n'
+        "The daily_iv_pct field is directly comparable to your Monte Carlo daily "
+        "volatility parameter. If daily_iv_pct >> your simulation vol, your CDF "
+        "is probably too narrow."
+    ),
+)
+async def options_iv(params: OptionsIVInput) -> OptionsIVResult:
+    """Get options implied volatility from Yahoo Finance."""
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        raise ToolError("Options data not available in retrodict mode.")
+
+    try:
+        import yfinance as yf
+
+        symbol = params.symbol.upper()
+        ticker = yf.Ticker(symbol)
+
+        expirations = ticker.options
+        if not expirations:
+            raise ToolError(f"No options available for {symbol}")
+
+        exp_idx = min(params.expiration_index, len(expirations) - 1)
+        expiration = expirations[exp_idx]
+
+        chain = ticker.option_chain(expiration)
+        calls = chain.calls
+        puts = chain.puts
+
+        if calls.empty:
+            raise ToolError(f"No options chain data for {symbol} at {expiration}")
+
+        info = ticker.info or {}
+        price = info.get("regularMarketPrice") or info.get("previousClose")
+        if price is None:
+            raise ToolError(f"Cannot determine current price for {symbol}")
+
+        price = float(price)
+
+        # Days to expiry
+        exp_date = datetime.strptime(expiration, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        dte = max((exp_date - today).days, 1)
+
+        # Find ATM options (closest to current price)
+        calls_copy = calls.copy()
+        calls_copy["distance"] = abs(calls_copy["strike"] - price)
+        atm_call = calls_copy.loc[calls_copy["distance"].idxmin()]
+        atm_call_iv = float(atm_call["impliedVolatility"])
+
+        puts_copy = puts.copy()
+        puts_copy["distance"] = abs(puts_copy["strike"] - price)
+        atm_put = puts_copy.loc[puts_copy["distance"].idxmin()]
+        atm_put_iv = float(atm_put["impliedVolatility"])
+
+        avg_iv = (atm_call_iv + atm_put_iv) / 2
+        daily_iv = avg_iv / math.sqrt(252)
+
+        # Build IV skew (calls around ATM ± 10%)
+        lower = price * 0.9
+        upper = price * 1.1
+        skew_calls = calls[
+            (calls["strike"] >= lower)
+            & (calls["strike"] <= upper)
+            & (calls["impliedVolatility"] > 0)
+        ].copy()
+
+        skew: list[OptionsIVStrike] = []
+        for _, row in skew_calls.iterrows():
+            skew.append(
+                {
+                    "strike": float(row["strike"]),
+                    "iv": float(row["impliedVolatility"]),
+                    "bid": float(row["bid"]) if row.get("bid") else None,
+                    "ask": float(row["ask"]) if row.get("ask") else None,
+                    "volume": int(row["volume"]) if row.get("volume") else None,
+                    "open_interest": int(row["openInterest"])
+                    if row.get("openInterest")
+                    else None,
+                    "in_the_money": bool(row.get("inTheMoney", False)),
+                }
+            )
+
+        # Put-call skew: OTM put IV vs OTM call IV (positive = more downside fear)
+        otm_puts = puts[
+            (puts["strike"] < price * 0.95)
+            & (puts["impliedVolatility"] > 0)
+        ]
+        otm_calls = calls[
+            (calls["strike"] > price * 1.05)
+            & (calls["impliedVolatility"] > 0)
+        ]
+        pc_skew: float | None = None
+        if not otm_puts.empty and not otm_calls.empty:
+            pc_skew = float(
+                otm_puts["impliedVolatility"].mean()
+                - otm_calls["impliedVolatility"].mean()
+            )
+
+        result: OptionsIVResult = {
+            "symbol": symbol,
+            "current_price": price,
+            "expiration": expiration,
+            "days_to_expiry": dte,
+            "atm_call_iv": round(atm_call_iv, 4),
+            "atm_put_iv": round(atm_put_iv, 4),
+            "avg_atm_iv": round(avg_iv, 4),
+            "annualized_iv_pct": round(avg_iv * 100, 2),
+            "daily_iv_pct": round(daily_iv * 100, 4),
+            "iv_skew": skew[:15],
+        }
+        if pc_skew is not None:
+            result["put_call_skew"] = round(pc_skew, 4)
+
+        return result
+
+    except ToolError:
+        raise
+    except Exception as e:
+        logger.exception("Options IV lookup failed")
+        raise ToolError(f"Options IV lookup failed for {params.symbol}: {e}")
+
+
 # --- World Bank Tools ---
 
 
