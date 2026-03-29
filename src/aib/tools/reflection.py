@@ -10,6 +10,7 @@ reviews the forecast with access to the full reasoning trace, past
 forecasts, and web search.
 """
 
+import json
 import logging
 import math
 from collections.abc import Callable
@@ -20,7 +21,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import aiofiles
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from claude_agent_sdk import ToolUseBlock, tool
 
@@ -64,6 +65,16 @@ class ReflectionInput(BaseModel):
             ),
         )
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def deserialize_tentative_estimate(cls, data: dict) -> dict:  # type: ignore[type-arg]
+        """Deserialize tentative_estimate if passed as a JSON string."""
+        if isinstance(data, dict):
+            te = data.get("tentative_estimate")
+            if isinstance(te, str):
+                data = {**data, "tentative_estimate": json.loads(te)}
+        return data
     assessment: str = Field(
         description=(
             "Freeform narrative assessment of the evidence. Structure however "

@@ -628,9 +628,9 @@ def build_trace(
 
 
 REVIEWER_SYSTEM_PROMPT = textwrap.dedent("""\
-    You are reviewing a forecasting agent's trace. Produce a structured review
-    covering tool usage, workflow quality, reasoning quality, and a condensed
-    narrative suitable for posting as a Metaculus comment.
+    You are reviewing a forecasting agent's trace. Produce structured observations
+    — describe what happened factually, flag specific concerns, and form your own
+    independent estimate.
 
     ## condensed_reasoning
 
@@ -651,15 +651,37 @@ REVIEWER_SYSTEM_PROMPT = textwrap.dedent("""\
     Also note capability_gaps (tools the agent needed but didn't have)
     and subtle_bugs (tools that didn't error but produced misleading results).
 
-    ## workflow
+    ## classification
 
-    Assess information gathering strategy, structured reasoning quality,
-    self-correction ability, and efficiency.
+    Factual metadata about the forecast. Classify the question domain, describe
+    the approach in one sentence, assess data availability, and note whether
+    the agent used quantitative modeling, prediction markets, and base rates.
+    Identify the key uncertainty in one sentence.
 
-    ## reasoning
+    ## risk_flags
 
-    Rate evidence quality, logical coherence, and calibration sense (1-5 each).
-    List strengths and weaknesses.
+    List specific, falsifiable concerns about the forecast. Each flag must cite
+    concrete evidence from the trace — not vague criticisms.
+
+    Categories: stale_data, contradicting_evidence_ignored, resolution_criteria_misread,
+    overconfidence, underconfidence, missing_data_source, wrong_base_rate, computation_error.
+
+    An EMPTY list is the correct output when no concerns are found. Do not
+    manufacture issues to fill this field.
+
+    ## reviewer_estimate
+
+    BEFORE reading the agent's final estimate, form your own independent view
+    based on the evidence in the trace. Then compare:
+    - If you agree: set agrees_with_agent=true, divergence_reason=null
+    - If you disagree: explain what evidence you weight differently
+
+    ## strengths / weaknesses
+
+    Be specific, not generic. "Used Monte Carlo with 100K samples for tight
+    distribution" is a strength. "Good research" is not. "Didn't check betting
+    odds for a sports question" is a weakness. "Could have done more research"
+    is not.
 
     ## pipeline
 

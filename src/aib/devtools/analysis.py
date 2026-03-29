@@ -321,6 +321,94 @@ def tool_needs(
             typer.echo(f"     Posts: {', '.join(posts)}")
 
 
+@app.command("flags")
+def flags(
+    version: str | None = typer.Option(
+        None, "--version", "-v", help="Filter by agent version"
+    ),
+) -> None:
+    """Aggregate risk flags from summary.json reviews."""
+    summaries = load_summaries(version=version)
+    if not summaries:
+        typer.echo("No summary.json files found")
+        raise typer.Exit(1)
+
+    # Count summaries with new-schema risk_flags
+    has_flags_schema = [
+        (s, d) for s, d in summaries if s.classification is not None
+    ]
+    old_schema = len(summaries) - len(has_flags_schema)
+
+    if old_schema:
+        typer.echo(f"({old_schema} old-schema summaries skipped)\n")
+
+    if not has_flags_schema:
+        typer.echo("No summaries with risk_flags (all old schema)")
+        return
+
+    # Aggregate by category
+    category_posts: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
+    flagged_count = 0
+    for summary, session_dir in has_flags_schema:
+        post_id = _post_id_for_session(session_dir)
+        if summary.risk_flags:
+            flagged_count += 1
+        for flag in summary.risk_flags:
+            category_posts[flag.category].append(
+                (post_id, flag.severity, flag.evidence[:80])
+            )
+
+    typer.echo(f"=== Risk Flags ({len(has_flags_schema)} summaries) ===\n")
+    typer.echo(
+        f"Flagged: {flagged_count}/{len(has_flags_schema)} "
+        f"({100 * flagged_count / len(has_flags_schema):.0f}%)\n"
+    )
+
+    if not category_posts:
+        typer.echo("No risk flags found.")
+        return
+
+    for category in sorted(category_posts, key=lambda c: -len(category_posts[c])):
+        entries = category_posts[category]
+        major = sum(1 for _, sev, _ in entries if sev == "major")
+        typer.echo(
+            f"  {category}: {len(entries)} "
+            f"({major} major, {len(entries) - major} minor)"
+        )
+        for post_id, severity, evidence in entries[:5]:
+            typer.echo(f"    [{severity}] {post_id}: {evidence}")
+        if len(entries) > 5:
+            typer.echo(f"    ... and {len(entries) - 5} more")
+
+    # Reviewer agreement
+    agree_count = 0
+    disagree_count = 0
+    for summary, _ in has_flags_schema:
+        if summary.reviewer_estimate:
+            if summary.reviewer_estimate.agrees_with_agent:
+                agree_count += 1
+            else:
+                disagree_count += 1
+    total_estimates = agree_count + disagree_count
+    if total_estimates:
+        typer.echo(
+            f"\nReviewer agreement: {agree_count}/{total_estimates} "
+            f"({100 * agree_count / total_estimates:.0f}%)"
+        )
+        if disagree_count:
+            typer.echo("Disagreements:")
+            for summary, session_dir in has_flags_schema:
+                if (
+                    summary.reviewer_estimate
+                    and not summary.reviewer_estimate.agrees_with_agent
+                    and summary.reviewer_estimate.divergence_reason
+                ):
+                    post_id = _post_id_for_session(session_dir)
+                    typer.echo(
+                        f"  {post_id}: {summary.reviewer_estimate.divergence_reason}"
+                    )
+
+
 @app.command("tracking-gaps")
 def tracking_gaps(
     version: str | None = typer.Option(

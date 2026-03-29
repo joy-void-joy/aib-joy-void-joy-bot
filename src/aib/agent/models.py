@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Self, TypedDict, cast
 
-from pydantic import BaseModel, Field, computed_field, create_model, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, create_model, model_validator
 import zoneinfo
 
 
@@ -126,40 +126,95 @@ class ToolAudit(BaseModel):
     )
 
 
-class WorkflowAssessment(BaseModel):
-    """Assessment of the agent's workflow quality."""
+class ForecastClassification(BaseModel):
+    """Structured metadata about the forecast — factual, aggregatable."""
 
-    info_gathering: str = Field(
-        description="Quality of research strategy and source selection."
+    question_domain: str = Field(
+        description=(
+            "Domain of the question. Use a slash-separated hierarchy: "
+            "finance/equity, finance/bonds, finance/commodities, finance/macro, "
+            "politics/election, politics/policy, politics/geopolitics, "
+            "science/climate, science/health, science/space, "
+            "sports, technology, culture, meta."
+        )
     )
-    structured_reasoning: str = Field(
-        description="Quality of evidence organization and factor construction."
+    approach: str = Field(
+        description=(
+            "One sentence describing the methodology. "
+            "Examples: 'Monte Carlo simulation from historical standings data', "
+            "'Base rate from FRED time series with regime adjustment', "
+            "'Qualitative analysis of news sources and expert statements'."
+        )
     )
-    self_correction: str = Field(
-        description="How well the agent caught and corrected its own mistakes."
+    data_availability: str = Field(
+        description=(
+            "How much relevant data the agent found. "
+            "abundant = multiple authoritative sources with historical data. "
+            "adequate = enough to form a view but gaps exist. "
+            "scarce = limited data, mostly qualitative."
+        )
     )
-    efficiency: str = Field(
-        description="Whether the agent used its budget wisely or wasted effort."
+    used_quantitative_model: bool = Field(
+        description="Whether the agent used execute_code for modeling (Monte Carlo, Poisson, regression, etc.)."
+    )
+    used_prediction_markets: bool = Field(
+        description="Whether the agent checked Polymarket, Kalshi, or Manifold for a relevant market."
+    )
+    used_base_rates: bool = Field(
+        description="Whether the agent established a historical base rate."
+    )
+    key_uncertainty: str = Field(
+        description="One sentence: the main source of uncertainty in this forecast."
     )
 
 
-class ReasoningReview(BaseModel):
-    """Review of the agent's reasoning quality."""
+class RiskFlag(BaseModel):
+    """A specific, falsifiable concern about the forecast.
 
-    evidence_quality: int = Field(
-        ge=1, le=5, description="1-5 rating of evidence quality."
+    Each flag must cite concrete evidence from the trace. Don't manufacture
+    issues — an empty risk_flags list is the correct output when no concerns
+    are found.
+    """
+
+    category: str = Field(
+        description=(
+            "Error category. Use one of: "
+            "stale_data (used outdated info when fresher was available), "
+            "contradicting_evidence_ignored (found conflicting data but dismissed it without justification), "
+            "resolution_criteria_misread (misinterpreted what the question is asking), "
+            "overconfidence (estimate more extreme than evidence supports), "
+            "underconfidence (estimate less decisive than evidence supports), "
+            "missing_data_source (a well-known authoritative source was not consulted), "
+            "wrong_base_rate (reference class or historical rate is incorrect), "
+            "computation_error (math or code error in modeling)."
+        )
     )
-    evidence_notes: str
-    logical_coherence: int = Field(
-        ge=1, le=5, description="1-5 rating of logical coherence."
+    evidence: str = Field(
+        description="Concrete evidence from the trace supporting this flag."
     )
-    logical_notes: str
-    calibration_sense: int = Field(
-        ge=1, le=5, description="1-5 rating of calibration awareness."
+    severity: str = Field(
+        description="minor = unlikely to change the forecast direction. major = could change the forecast."
     )
-    calibration_notes: str
-    strengths: list[str]
-    weaknesses: list[str]
+
+
+class ReviewerEstimate(BaseModel):
+    """The reviewer's independent probability or range estimate."""
+
+    estimate: str = Field(
+        description=(
+            "The reviewer's own estimate. "
+            "For binary: a probability like '72%'. "
+            "For numeric: a range like '115-125'. "
+            "For MC: the most likely option and rough probability like 'Services PMI higher, ~85%'."
+        )
+    )
+    agrees_with_agent: bool = Field(
+        description="True if the reviewer's estimate is directionally consistent with the agent's."
+    )
+    divergence_reason: str | None = Field(
+        default=None,
+        description="If disagrees: one sentence explaining what evidence the reviewer weights differently.",
+    )
 
 
 class PipelineHealth(BaseModel):
@@ -179,22 +234,47 @@ class FutureLeak(BaseModel):
 
 
 class ForecastSummary(BaseModel):
-    """Post-session structured review of a forecast trace."""
+    """Post-session structured review of a forecast trace.
 
-    summary: str = Field(description="2-3 sentence review summary.")
+    Uses extra="ignore" so old summary.json files with removed fields
+    (summary, workflow, reasoning) load without errors.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
     condensed_reasoning: str = Field(
         description="Full narrative for Metaculus comments."
     )
     tool_audit: ToolAudit
-    workflow: WorkflowAssessment
-    reasoning: ReasoningReview
+    classification: ForecastClassification | None = Field(
+        default=None,
+        description="Structured metadata. None for old summaries.",
+    )
+    risk_flags: list[RiskFlag] = Field(
+        default_factory=list,
+        description=(
+            "Specific, falsifiable concerns about the forecast. "
+            "Empty list means no concerns found — don't manufacture issues."
+        ),
+    )
+    reviewer_estimate: ReviewerEstimate | None = Field(
+        default=None,
+        description="Reviewer's independent estimate. None for old summaries.",
+    )
+    strengths: list[str] = Field(
+        default_factory=list,
+        description="What the agent did well — specific, not generic praise.",
+    )
+    weaknesses: list[str] = Field(
+        default_factory=list,
+        description="What the agent missed or got wrong — specific, actionable.",
+    )
     pipeline: PipelineHealth
     future_leak: FutureLeak | None = Field(
         default=None,
         description="Only populated for retrodict traces.",
     )
-    notable_observations: list[str]
-    actionable_improvements: list[str]
+    actionable_improvements: list[str] = Field(default_factory=list)
 
 
 class BinaryEstimate(BaseModel):

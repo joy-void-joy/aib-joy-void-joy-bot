@@ -39,6 +39,8 @@ def _make_binary_input(
             probability=tentative_probability,
         ),
         assessment="Test assessment.",
+        tool_audit="Test tool audit.",
+        process_reflection="Test process reflection.",
     )
 
 
@@ -53,6 +55,8 @@ def _make_numeric_input(
         factors=factors or [],
         tentative_estimate=NumericEstimate(center=center, low=low, high=high),
         assessment="Test assessment.",
+        tool_audit="Test tool audit.",
+        process_reflection="Test process reflection.",
     )
 
 
@@ -398,6 +402,8 @@ class TestFileWriting:
             assessment="Strong positive evidence outweighs base rate concerns.",
             calibration_notes="Base rate is 30% for similar events",
             key_uncertainties="Whether the trend persists past Q1",
+            tool_audit="Test tool audit.",
+            process_reflection="Test process reflection.",
         )
         computed = compute_reflection(inp, "binary")
 
@@ -564,6 +570,8 @@ def _make_mc_input(
             probabilities=probabilities or {"A": 0.5, "B": 0.3, "C": 0.2},
         ),
         assessment="Test assessment.",
+        tool_audit="Test tool audit.",
+        process_reflection="Test process reflection.",
     )
 
 
