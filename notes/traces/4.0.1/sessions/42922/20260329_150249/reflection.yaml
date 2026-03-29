@@ -1,0 +1,335 @@
+---
+timestamp: 2026-03-29 15:10:54 UTC
+question_type: discrete
+factors:
+- description: 9 confirmed completed SpaceX launches from March 10-26 on spacex.com/launches.
+    This is a hard floor for the total.
+  supports:
+    center: 9.0
+    low: 9.0
+    high: 9.0
+  logit: 3.0
+  confidence: 1.0
+  effective_logit: 3.0
+- description: 'SpaceX 2026 Falcon 9 cadence: 38 launches in 85 days (0.447/day),
+    matching 2025''s pace of 167/year. Implies ~15-16 more F9 launches in remaining
+    35 days.'
+  supports:
+    center: 25.0
+    low: 21.0
+    high: 29.0
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Recent March 2026 cadence is higher at ~0.53/day (14 launches in 26
+    days), suggesting momentum toward higher end.
+  supports:
+    center: 28.0
+    low: 24.0
+    high: 32.0
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Gwynne Shotwell stated target of 140-145 Falcon 9 launches in 2026,
+    slightly below 2025 pace. This could push the rate slightly lower going forward.
+  supports:
+    center: 24.0
+    low: 20.0
+    high: 28.0
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: Starship Flight 12 (V3 maiden) targeting ~April 9, would be an additional
+    orbital launch listed on spacex.com. Estimated 45% probability of launching in
+    window.
+  supports:
+    center: 26.0
+    low: 25.0
+    high: 27.0
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Falcon Heavy rideshare mission targeting late April 2026, ~25% chance
+    it launches in window.
+  supports:
+    center: 26.0
+    low: 25.0
+    high: 26.0
+  logit: 0.2
+  confidence: 0.4
+  effective_logit: 0.08000000000000002
+- description: 'Falcon 9 grounding risk: ~5% chance of multi-week grounding due to
+    anomaly, which would reduce count by 7-10 launches.'
+  supports:
+    center: 18.0
+    low: 14.0
+    high: 22.0
+  logit: -0.3
+  confidence: 0.3
+  conditional: If a Falcon 9 anomaly occurs
+  effective_logit: -0.09
+- description: 'Multiple confirmed upcoming launches: Transporter-16 (Mar 30), Starlink
+    10-44, multiple Starlink in April, NG-24, GPS III SV-10. Strong pipeline of missions.'
+  supports:
+    center: 26.0
+    low: 22.0
+    high: 30.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+tentative_estimate:
+  center: 25.0
+  low: 20.0
+  high: 32.0
+assessment: 'The forecast is grounded in three converging data sources: (1) confirmed
+  launch count from spacex.com showing 9 completed missions in March 10-26, (2) SpaceX''s
+  2026 daily launch rate of ~0.45/day, and (3) specific scheduled missions for the
+  remaining window. Monte Carlo simulations across multiple models consistently produce
+  a median of ~25 launches with a P10-P90 range of 20-32. The key tension is between
+  the recent higher March cadence (~0.53/day) and the stated company target of 140-145
+  Falcon 9 launches for 2026 (which would be ~0.40/day). The simulation incorporates
+  rate uncertainty, grounding risk (5%), and bonus launches from Starship V3 (45%)
+  and Falcon Heavy (25%). A smart disagreer might argue: (a) the distribution should
+  be wider due to possible multi-week groundings, or (b) that I''m overweighting recent
+  cadence since SpaceX may slow down for Starship prep. Counterpoint: The confirmed
+  pipeline of missions (Transporter-16, NG-24, GPS III SV-10) plus continuous Starlink
+  demand makes very low counts (<18) unlikely absent a grounding event.'
+calibration_notes: 'Base rate: 2025 saw 167 SpaceX launches total. For our 52-day
+  window (March 10-April 30), proportional share would be 167*52/365 ≈ 23.8 launches.
+  Our median of 25 is slightly above this, reflecting the slightly higher-than-average
+  recent pace and additional non-F9 vehicles (Starship, possibly FH). Status quo:
+  9 launches already completed is a guaranteed floor. Hedging check: My median of
+  25 is not at 50% or at a round number for hedging reasons - it directly reflects
+  the simulation output.'
+key_uncertainties: 1. Whether the Starship Flight 12 happens within the window (adds
+  ~1 launch if yes). 2. Whether SpaceX maintains the recent ~0.53/day pace or reverts
+  to ~0.45/day average. 3. Grounding risk - a Falcon 9 anomaly would sharply reduce
+  the count. 4. Whether Falcon Heavy launches in late April. 5. Exact count of March
+  27-29 launches that are still uncertain.
+tool_audit: 'Useful: AskNews search_news provided excellent coverage of recent SpaceX
+  launches. Exa search extracted actual spacex.com/launches data including dates and
+  upcoming schedule. Web search found Wikipedia data on launch counts (38 F9 launches
+  through March 26). SpaceXNow stats confirmed 38 launches. Twitter/X search showed
+  Starlink 10-44 delay info. Empty/limited: The direct spacex.com/launches fetch returned
+  empty due to dynamic JS content, but Exa search compensated well. The Wikipedia
+  full article fetch didn''t return the table data I wanted (just the article extract),
+  but other sources filled this gap. No actual tool failures.'
+update_triggers: 1. Falcon 9 anomaly/grounding would drop forecast by 7-10 launches.
+  2. Confirmation of Starship Flight 12 date would add 1 to the expected value. 3.
+  Any major weather disruptions at Cape Canaveral or Vandenberg. 4. Additional non-Starlink
+  commercial payloads being manifested.
+process_reflection: 'The forecasting system worked well for this question. The news
+  search tools were excellent for establishing the current state of SpaceX launches.
+  The code sandbox was essential for running Monte Carlo simulations. One friction
+  point: I couldn''t directly scrape the spacex.com/launches page because it''s a
+  JavaScript-heavy SPA, but the Exa search tool compensated by extracting data from
+  the page''s rendered content. I would have benefited from a dedicated space launch
+  database API (like the Launch Library 2 API) for more structured historical data.
+  The Wikipedia article fetch only returned the extract rather than the full table
+  data, which limited my ability to get a complete list of launches. Overall the multi-source
+  approach (news, web search, Exa, Twitter) provided sufficient data to build a well-grounded
+  estimate.'
+computed:
+  factor_count: 8
+  factor_sum: 5.525
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 9 confirmed completed SpaceX launches from March 10-26 on spacex.com/launches.
+      This is a hard floor for the total.
+    supports:
+      center: 9.0
+      low: 9.0
+      high: 9.0
+    logit: 3.0
+    confidence: 1.0
+    effective_logit: 3.0
+  - description: 'SpaceX 2026 Falcon 9 cadence: 38 launches in 85 days (0.447/day),
+      matching 2025''s pace of 167/year. Implies ~15-16 more F9 launches in remaining
+      35 days.'
+    supports:
+      center: 25.0
+      low: 21.0
+      high: 29.0
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Recent March 2026 cadence is higher at ~0.53/day (14 launches in
+      26 days), suggesting momentum toward higher end.
+    supports:
+      center: 28.0
+      low: 24.0
+      high: 32.0
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Gwynne Shotwell stated target of 140-145 Falcon 9 launches in 2026,
+      slightly below 2025 pace. This could push the rate slightly lower going forward.
+    supports:
+      center: 24.0
+      low: 20.0
+      high: 28.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: Starship Flight 12 (V3 maiden) targeting ~April 9, would be an additional
+      orbital launch listed on spacex.com. Estimated 45% probability of launching
+      in window.
+    supports:
+      center: 26.0
+      low: 25.0
+      high: 27.0
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Falcon Heavy rideshare mission targeting late April 2026, ~25% chance
+      it launches in window.
+    supports:
+      center: 26.0
+      low: 25.0
+      high: 26.0
+    logit: 0.2
+    confidence: 0.4
+    effective_logit: 0.08000000000000002
+  - description: 'Falcon 9 grounding risk: ~5% chance of multi-week grounding due
+      to anomaly, which would reduce count by 7-10 launches.'
+    supports:
+      center: 18.0
+      low: 14.0
+      high: 22.0
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+    conditional: If a Falcon 9 anomaly occurs
+  - description: 'Multiple confirmed upcoming launches: Transporter-16 (Mar 30), Starlink
+      10-44, multiple Starlink in April, NG-24, GPS III SV-10. Strong pipeline of
+      missions.'
+    supports:
+      center: 26.0
+      low: 22.0
+      high: 30.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  dominant_factor: 9 confirmed completed SpaceX launches from March 10-26 on spacex.com/launches.
+    This is a hard floor for the total.
+  dominant_effective_logit: 3.0
+  distribution_metrics:
+    implied_median: 17.559226430298146
+    implied_p10: 15.604351329572925
+    implied_p90: 19.501208702659145
+    median_gap: 7.440773569701854
+    median_gap_pct: 190.94292803970228
+    spread_ratio: 3.079404466501241
+    precision: 0.48
+  sources:
+  - '[List of Falcon 9 and Falcon Heavy launches - Wikipedia](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_Heavy_launches)'
+  - '[List of spaceflight launches in January–March 2026 - Wikipedia](https://en.wikipedia.org/wiki/List_of_spaceflight_launches_in_January%E2%80%93March_2026)'
+  - '[SpaceX - Wikipedia](https://en.wikipedia.org/wiki/SpaceX)'
+  - '[SpaceX](https://www.spacex.com/launches)'
+  - '[(Metaculus) How many orbital launches will SpaceX list as completed from March
+    10, 2026 through April 30, 2026?](https://www.metaculus.com/questions/42922)'
+  - '[Launch Schedule](https://spaceflightnow.com/launch-schedule/)'
+  - '[Statistics](https://spacexnow.com/stats)'
+  reviewer_critique: '## Verification Complete
+
+
+    I verified all 8 factors against the research trace:
+
+
+    **Factor 1 (9 confirmed launches March 10-26)**: ✅ VERIFIED - Trace shows extraction
+    from spacex.com/launches listing 9 launches on dates March 10, 13, 14, 16, 17,
+    19, 20, 22, 26 (lines 893-906).
+
+
+    **Factor 2 (38 launches in 85 days, 0.447/day, 167 in 2025)**: ✅ VERIFIED - SpaceXNow
+    data shows "2026 | 38" and Wikipedia confirms "38 Falcon family vehicle launches"
+    through March 26. The 167/year figure is also in the trace.
+
+
+    **Factor 3 (March cadence ~0.53/day)**: ✅ VERIFIED - Trace calculates 14 launches
+    in March through March 26 = 0.538/day, consistent with stated ~0.53.
+
+
+    **Factor 4 (Gwynne Shotwell 140-145)**: ✅ VERIFIED - Trace line 581 quotes: "SpaceX
+    President Gwynne Shotwell stated in time magazine they are expecting ''maybe 140,
+    145-ish'' Falcon 9 launches in 2026."
+
+
+    **Factor 5 (Starship Flight 12 ~April 9)**: ✅ VERIFIED - Trace lines 272-273 confirm
+    Elon Musk targeting "approximately April 9" for Starship V3 maiden flight.
+
+
+    **Factor 6 (Falcon Heavy late April)**: ✅ VERIFIED - Trace line 583 shows "Late
+    April 2026 | Falcon Heavy B5 smallsat rideshare."
+
+
+    **Factor 7 (5% grounding risk)**: ✅ VERIFIED - Trace discusses Vulcan anomaly
+    context (lines 1078-1086) and explicitly models 5% grounding risk in Monte Carlo.
+
+
+    **Factor 8 (Confirmed upcoming launches)**: ✅ VERIFIED - Transporter-16, NG-24,
+    GPS III SV-10, multiple Starlink missions all confirmed in news articles.
+
+
+    **Resolution Criteria**: ✅ Clear criteria (spacex.com/launches for completed orbital
+    launches). Agent accessed primary source via Exa search.
+
+
+    **Double-counting check**: No issues. The Monte Carlo properly uses F9 cadence
+    for base projections and adds Starship/FH as separate bonuses (since they aren''t
+    part of regular F9 cadence).
+
+
+    **Adversarial reasoning**: ✅ Present. Assessment explicitly addresses counterarguments
+    about grounding risk and potential cadence slowdown for Starship prep.
+
+
+    **Probability assessment**: The Monte Carlo consistently produces median ~25,
+    P10=20, P90=32. My independent calculation: 9 (confirmed) + 15.8 (35 days × 0.45/day)
+    + 0.45 (Starship) + 0.25 (FH) ≈ 25.5. This matches the agent''s center estimate
+    of 25 with range 20-32. The methodology is sound and the estimate is well-supported.
+
+
+    No hallucinated evidence, no wrong-direction factors, no contradictory assessment.
+    All claims are grounded in the trace.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42922
+- **Question ID**: 42860
+- **Session Duration**: 492.5s (8.2 min)
+- **Cost**: $5.8692
+- **Tokens**: 15,206 total (33 in, 15,173 out)
+  - Cache: 1,818,811 read, 106,775 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42922_20260329_150249/20260329-150249.log`
+
+### Tool Calls
+
+- **Total**: 134 calls
+- **Errors**: 1 (0.7%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 20 | 0 | 493ms |
+| fetch_url | 32 | 0 | 6764ms |
+| fred_series | 1 | 0 | 450ms |
+| get_metaculus_questions | 3 | 0 | 6438ms |
+| reflection | 6 | 0 | 117939ms |
+| search_exa | 6 | 0 | 1341ms |
+| search_metaculus | 1 | 0 | 3001ms |
+| web_search | 35 | 0 | 26355ms |
+| wikipedia | 30 | 1 ⚠️ | 357ms |
+
+### Sources Consulted
+
+- [List of Falcon 9 and Falcon Heavy launches - Wikipedia](https://en.wikipedia...
+- [List of spaceflight launches in January–March 2026 - Wikipedia](https://en.w...
+- [SpaceX - Wikipedia](https://en.wikipedia.org/wiki/SpaceX)
+- [SpaceX](https://www.spacex.com/launches)
+- [(Metaculus) How many orbital launches will SpaceX list as completed from Mar...
+- [Launch Schedule](https://spaceflightnow.com/launch-schedule/)
+- [Statistics](https://spacexnow.com/stats)
