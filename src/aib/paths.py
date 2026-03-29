@@ -291,6 +291,12 @@ def _count_forecasts_for_versions(versions: list[str]) -> int:
     return sum(sum(1 for _ in iter_forecast_files(version=v)) for v in versions)
 
 
+def match_versions(prefix: str) -> list[str]:
+    """Return version directory names matching a prefix (e.g. '4.0' matches '4.0.0', '4.0.1')."""
+    available = [d.name for d in _version_dirs()]
+    return [v for v in available if v == prefix or v.startswith(prefix + ".")]
+
+
 def resolve_version(
     version: str | None,
     all_versions: bool = False,

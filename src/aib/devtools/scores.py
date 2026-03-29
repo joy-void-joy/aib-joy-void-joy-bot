@@ -22,6 +22,7 @@ import typer
 from aib.paths import (
     load_all_forecast_jsons,
     load_all_retrodict_jsons,
+    match_versions,
     parse_semver,
     parse_timestamp,
     resolve_version,
@@ -293,10 +294,18 @@ def show(
     if not no_refresh:
         refresh_scrape()
     widen = all_versions or len(all_post_ids) > 0
-    effective, warning = resolve_version(version, widen)
-    if warning:
-        typer.echo(warning)
-    rows = load_all_score_rows(versions=effective)
+    if widen:
+        versions_filter: list[str] | None = None
+    elif version is not None:
+        versions_filter = match_versions(version)
+        if not versions_filter:
+            typer.echo(f"No version directories match '{version}'.")
+            raise typer.Exit(1)
+    else:
+        versions_filter = match_versions(AGENT_VERSION)
+        if not versions_filter:
+            versions_filter = None
+    rows = load_all_score_rows(versions=versions_filter)
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
