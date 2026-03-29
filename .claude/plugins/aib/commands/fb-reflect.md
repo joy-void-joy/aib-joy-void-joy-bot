@@ -1,51 +1,61 @@
 ---
 allowed-tools: Bash(uv run aib-devtools:*), Read, Grep, Glob, Edit, Write, AskUserQuestion
-description: Meta and meta-meta reflection on the feedback loop process itself
+description: Collaborative discussion about findings, process quality, and what to change
 ---
 
-# Reflect: Process Quality Assessment
+# Reflect: Collaborative Discussion
 
-Two levels of reflection: is the agent tracking enough data (meta), and is the feedback loop itself working (meta-meta)?
+This is a conversation, not a checklist. You have the analysis doc and investigation findings. Now discuss what they mean with the user before deciding what to implement.
 
-## Meta Level
+## How to Run This Phase
 
-### 1. Tracking data quality
+Use AskUserQuestion throughout. Share your observations, then ask genuinely — don't present conclusions as questions. The goal is to surface things neither of you would notice alone.
 
-```bash
-uv run aib-devtools analysis tracking-gaps
-```
+## Discussion Topics
 
-Is the agent emitting enough data? Check coverage of: summary.json, reflection.yaml, tool_metrics, token_usage.
+Pick what's relevant from this session's findings. Don't cover everything mechanically.
 
-### 2. Summary.json schema review
+### What surprised us?
 
-Is the ForecastSummary schema capturing what we need? Are the tool assessments useful? Is anything consistently missing?
+Start here. What in the data was unexpected? Examples:
+- A forecast scored much better/worse than the trace suggested
+- A tool that "works fine" caused a real forecast error
+- The reviewer flagged something (or missed something) interesting
+- A version change had unexpected effects
 
-### 3. Actionable insight check
+Share the surprise, then ask the user if it matches their intuition.
 
-Did this session surface specific, actionable improvements? If findings are circular ("agent should be better at X" without a concrete tool/capability to build), the schema or reviewer prompt needs improvement.
+### What are we not measuring?
 
-## Meta-Meta Level
+Look at what was hard to analyze in this session:
+- Did a devtools command fail to surface data we needed? → Fix the command
+- Is summary.json missing a field that would have helped? → Restructure the schema
+- Did we want to answer a question but couldn't with current tools? → Build the tool
 
-### 4. Prompt health
+### What assumptions are we making?
 
-```bash
-uv run aib-devtools analysis prompt-health
-```
+Challenge the loop's own assumptions:
+- Are we analyzing the right forecasts? (selection bias)
+- Is the error taxonomy capturing what actually goes wrong?
+- Are the devtools showing us what matters or just what's easy to compute?
+- Is the calibration data sufficient to draw conclusions?
 
-Is the forecasting prompt accumulating patches? Check line count and section count trends.
+### Process quality
 
-### 5. Subcommand assessment
+Reflect on how this specific session went — not abstractly, but concretely:
+- Which phases were useful vs mechanical?
+- Where did we waste time?
+- What would have made the session more productive?
+- Should any subcommand files be updated based on how they were actually used?
 
-Were the `/fb-*` subcommands helpful? Anything confusing, missing, or redundant? Update the subcommand files with learnings.
+## Output
 
-### 6. Devtools assessment
-
-Any repetitive analysis that should be automated as a devtools command? Any fields missing from summary.json or reflection.yaml?
+End with a concrete proposal using AskUserQuestion:
+- What changes to make (with Bitter Lesson classification)
+- What to defer
+- What to investigate further next session
+- Any process/command changes
 
 ## Periodic (every 3rd session)
 
-7. Reread all subcommand files (`/fb-status`, `/fb-investigate`, `/fb-analyze`, `/fb-reflect`, `/fb-implement`, `/fb-retrodict`)
-8. Prompt health audit — read the full `src/aib/agent/prompts.py`
-9. Clean up `notes/` — archive old files, ensure consistent naming
-10. Sync learnings to CLAUDE.md
+Reread all `/fb-*` subcommand files and the full forecasting prompt (`src/aib/agent/prompts.py`). Check for accumulated patches, stale guidance, and commands that don't match how they're actually used.

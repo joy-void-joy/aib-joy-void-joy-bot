@@ -10,20 +10,22 @@ Build first-hand understanding of what happened with each resolved forecast.
 
 ## Per-Forecast Investigation
 
-For each resolved target forecast:
+For each resolved target forecast, annotate the version that produced it.
 
 ### 1. Get score and resolution
 
 ```bash
-uv run aib-devtools scores show <id> --no-refresh
+uv run aib-devtools scores show --post-id <id>
 ```
+
+Note the version in the output — this tells us which code to credit or blame.
 
 ### 2. Read summary.json
 
 Find and read the summary.json from the session directory for this post. It contains:
 - `tool_audit.by_tool` — per-tool qualitative assessment
-- `reasoning` — evidence quality, logical coherence, calibration sense ratings
-- `workflow` — info gathering, structured reasoning, self-correction, efficiency
+- `tool_audit.capability_gaps` — what the agent needed but didn't have
+- `tool_audit.subtle_bugs` — tools that didn't error but produced misleading results
 - `future_leak` — for retrodict traces only
 
 ### 3. Investigate the real-world outcome
@@ -72,4 +74,4 @@ Use AskUserQuestion to present:
 3. Calibration headline (Brier, ECE, coverage)
 4. Key counterfactuals for 2-3 worst forecasts
 
-Options: "Proceed to analysis" / "Dig deeper on specific posts" / "Skip to implementation"
+Options: "Proceed to analysis" / "Dig deeper on specific posts" / "Skip to analysis"
