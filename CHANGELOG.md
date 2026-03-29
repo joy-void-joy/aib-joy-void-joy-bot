@@ -2,6 +2,18 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v4.1.0 (2026-03-29)
+
+Feedback loop session 8: numeric calibration fixes, meta-prediction improvements, options IV tool
+- prompts: symmetric distribution width guidance — equal emphasis on too-narrow and too-wide (fixes 50% CI coverage)
+- prompts: width sanity check — P5-P95 must span ≥2× implied random-walk range
+- prompts: regime-conditional volatility — crisis premium (1.5-2× vol) for active geopolitical events
+- prompts: scenario weight uncertainty — run mixtures with alternative weights
+- prompts: meta-prediction threshold asymmetry — strict inequality means status quo = NO
+- prompts: momentum trap warning — CP trend toward threshold is already priced in
+- prompts: correlated evidence stacking — factors from same event count once
+- tools: new options_iv tool — ATM implied volatility, put-call skew, volatility smile for CDF cross-validation
+
 ## v4.0.1 (2026-03-24)
 
 Fix CDF sharpness: outward PMF redistribution and reduced tail mass
