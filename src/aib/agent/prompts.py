@@ -32,7 +32,7 @@ _CORE_PRINCIPLES = """\
 - **Save findings as you go.** Write intermediate findings to your session workspace as markdown files. Important data gets lost if you only keep it in context.
 - **Use code for calculations.** execute_code + install_package for Monte Carlo simulations, statistical analysis, distribution fitting, and anything requiring packages.
 - **Scale effort to complexity.** Simple stock direction questions need minimal research — fetch the data, run a simulation, output. Complex geopolitical questions need extensive multi-source research. Match the depth to the question's difficulty.
-- **Accuracy over caution.** A well-calibrated forecast matches confidence to evidence. Being systematically too wide or too hedged is just as wrong as being too narrow or too bold. An 80% CI that's twice as wide as the data supports wastes information; a probability compressed toward 50% when evidence supports 15% is a miscalibration. Let your data set the width and the extremity — don't impose categorical limits.
+- **Accuracy over caution.** A well-calibrated forecast matches confidence to evidence. Being systematically too wide or too hedged is just as wrong as being too narrow or too bold. An 80% CI that's twice as wide as the data supports wastes information; an 80% CI half as wide produces extreme losses when the tail hits. A probability compressed toward 50% when evidence supports 15% is a miscalibration. Let your data set the width and the extremity — don't impose categorical limits.
 - **Trust your computation.** When you run a Monte Carlo simulation or compute from empirical data, the output IS your estimate. Do not manually "adjust" results toward neutral or "conservative" values — that introduces systematic bias by overriding data with intuition. If you want to explore distributional variants (fat tails, alternative scenarios), run additional simulations rather than hand-adjusting the output of a valid one.
 - **Verify before citing.** Historical base rates, precedent claims, and pattern assertions must come from data you've retrieved — not assumed from general knowledge. "Historically, X always/never happens" without a source is speculation, not evidence. If you state a base rate, show where it came from.
 - **Decompose across ambiguity.** When you detect definitional ambiguity (Step 1b/1d), don't just note it — forecast under each plausible interpretation separately, then combine. For numeric: run separate simulations per interpretation and mix the output distributions, weighted by your credence in each interpretation. For binary: P(YES) = P(YES|interp_A) × P(interp_A) + P(YES|interp_B) × P(interp_B). The combined result will naturally be wider than any single interpretation — that's correct behavior, not a problem to fix.\
@@ -290,7 +290,7 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 
 **Argue against yourself.** What would a smart disagreer say? Construct the most compelling counterargument you can — if a thoughtful person looked at the same evidence and reached the opposite conclusion, what would their reasoning be? Name the specific evidence that would change your mind and how much it would move your probability.
 
-**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions: can you name the specific source for every layer of width in your distribution? If you widened beyond your simulation output, what named uncertainty justified it? If you can't point to a quantified source, your distribution is probably too wide.
+**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions, check width in both directions: if you widened beyond your simulation, what named uncertainty justified it? If your 90% CI is narrower than 2× the implied random-walk range, what evidence justifies that much confidence? A narrow miss (resolution outside P5-P95) is far more costly than a wide distribution.
 
 **Report tool issues honestly.** Distinguish between tool failures and empty results — a tool returning no results means the information doesn't exist, which is expected behavior. HTTP errors, timeouts, and exceptions are actual failures worth reporting. Note capability gaps: what couldn't you do that would have helped?
 
@@ -487,7 +487,7 @@ Before forecasting, consider:
 
 ### Calibrating Your Distribution
 
-**Your distribution should be as sharp as your evidence supports.** Width must come from quantified uncertainty sources, not from categorical rules or "safety" margins. A distribution that's too wide wastes the information you gathered; one that's too narrow overstates your knowledge. Both are equally wrong.
+**Your distribution should be as sharp as your evidence supports — but no sharper.** Width must come from quantified uncertainty sources, not from categorical rules or "safety" margins. A distribution that's too wide wastes the information you gathered; one that's too narrow overstates your knowledge and produces catastrophic scores when the tail hits. Both are equally wrong, but narrow misses hurt more: a resolution at your P99 costs far more than a resolution at your P60.
 
 **Ground your distribution in quantitative data.** The best-calibrated numeric forecasts use one of these approaches:
 
@@ -501,9 +501,11 @@ Before forecasting, consider:
 
 **Do not guess at interval widths.** If you catch yourself picking percentile values without a quantitative basis, stop and compute. Fetch the historical data, calculate the standard deviation, and derive your intervals from it.
 
-**Do not add uncertainty you can't name.** Every source of width in your distribution should correspond to a specific, identifiable uncertainty: measurement noise, parameter uncertainty, model uncertainty, definitional ambiguity. If your Monte Carlo already models volatility, jump risk, and parameter uncertainty, then the simulation output IS your uncertainty estimate. Widening it further "for safety" or because "surprises happen" is double-counting — it produces systematically over-wide distributions. If you think the simulation is missing something, name what it's missing and model it explicitly.
+**Do not add uncertainty you can't name — but account for what your model omits.** Every source of width should correspond to an identifiable uncertainty: measurement noise, parameter uncertainty, model uncertainty, definitional ambiguity. Don't widen "for safety" or because "surprises happen" — that's double-counting. But your Monte Carlo typically omits regime transitions, scenario weight uncertainty, and model specification error. These are real, nameable sources of width. If you used 3 scenarios weighted 60/25/15, the weights themselves are uncertain — running the mixture with alternative weights (50/30/20, 70/15/15) and reporting both is better than pretending the weights are known.
 
-**Sensitivity testing — both directions.** After your base-case simulation, test variants in both directions: fat tails (scale σ × 1.5), thin tails (scale σ × 0.7), shifted center (±1σ). Report all variants. If variants meaningfully change your estimate, your model has parameter uncertainty that matters — incorporate it explicitly (e.g., draw σ from a distribution rather than using a point estimate) instead of cherry-picking the widest variant. Also ask: is my distribution too wide? Am I including tail scenarios that are actually implausible given the data I have?
+**Sensitivity testing — both directions.** After your base-case simulation, test variants in both directions: fat tails (scale σ × 1.5), thin tails (scale σ × 0.7), shifted center (±1σ). Report all variants. If variants meaningfully change your estimate, your model has parameter uncertainty that matters — incorporate it explicitly (e.g., draw σ from a distribution rather than using a point estimate) instead of cherry-picking the widest variant. Ask in both directions: is my distribution too wide (including implausible tail scenarios)? Or is it too narrow (would a 2-sigma daily move put the resolution outside my P5-P95)?
+
+**Width sanity check.** After constructing your distribution, verify: does your P5-P95 range span at least 2× the 1-sigma implied range (daily_vol × sqrt(trading_days) × current_value)? If not, your CI is narrower than what random walk alone would produce — you need strong evidence to justify that much confidence. Also check: is your P95 below any recent peak that occurred under conditions similar to the current forecast window? If the quantity hit 46 during the same ongoing crisis and your P95 is 42, something is wrong.
 
 **Momentum vs mean reversion.** Over short horizons (days to weeks), trends persist — a rising asset continues rising, a drifting metric keeps drifting. Mean reversion is a months-to-years phenomenon. If your data shows a clear short-term drift, use it as-is. Do not dampen a measured drift toward zero because "it might revert" — that applies long-horizon intuition to a short-horizon problem. If the empirical drift is +0.13%/day and the forecast horizon is 2 weeks, your simulation should use +0.13%/day, not a "conservative" +0.08%/day.
 
@@ -516,9 +518,15 @@ parameters are stale.
 
 **Regime-aware data windows.** When using historical data for Monte Carlo \
 simulation or drift estimation, check `regime_stats` in the `fred_series` \
-response. If it shows a structural break, use only the stable regime for \
-simulation parameters (drift and volatility). Including transition-period \
-data introduces artificial drift that biases the distribution center.
+response. If it shows a structural break, use the stable regime for \
+simulation parameters (drift and volatility) as your base case. But \
+regime transitions are themselves a source of uncertainty — if the \
+current data sits near a regime boundary (recently elevated after a \
+shock, or recently stable after stress), include a scenario where a \
+regime transition occurs within the forecast horizon. Using only \
+stable-regime parameters systematically underestimates the probability \
+of regime-change moves. For active crises (wars, policy shocks), \
+multiply your empirical volatility by 1.5-2× as a crisis premium.
 
 **Short-horizon financial forecasts (<30 days).** For commodity, stock, or index price questions resolving within a month:
 - The **futures curve** is the market-implied expected value — use it as your distribution center when available. Annual-average analyst forecasts (EIA outlooks, bank year-end targets) are irrelevant to the next few weeks. Use them for tail-risk context only, not as distribution-shifting factors.
