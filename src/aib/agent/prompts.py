@@ -235,6 +235,21 @@ You're forecasting **forecaster behavior**, not the underlying event. This requi
 
 Your job is to model where the Metaculus community prediction will be, not what you think the true probability of the event is. "The event is likely, so the CP must be above the threshold" is wrong — forecasters may have already priced in the event, may discount the risk, or may have stale predictions. You cannot know any of this without seeing the actual CP data.
 
+### Threshold Asymmetry
+
+These questions use **strict inequality** ("higher than X%"). When CP is at or near the threshold, the status quo resolves NO — the CP must actively move above the threshold for YES. This creates a structural asymmetry: drift, stagnation, or any downward movement all resolve NO. Only sustained upward movement resolves YES. When CP is within 1-2pp of the threshold, default to below 50% YES unless you have strong evidence of upward catalysts.
+
+### The Momentum Trap
+
+The most dangerous situation: CP has been trending toward the threshold and sits right at it. The forces that pushed CP to the threshold are **already priced in** — they are the same events and evidence that forecasters already reacted to. Treating fundamentals that explain the recent CP trend as *additional* upward force is double-counting.
+
+**Three cases for CP near threshold:**
+1. **CP trending strongly away from threshold** (e.g., dropping from 85% to 65% when threshold is 65%): Strong, unbroken directional trend. Lean into it — low YES probability.
+2. **CP stable near threshold** (oscillating ±1-2pp): Use noise/volatility estimates. Moderate probability, tilted toward NO by the strict inequality.
+3. **CP trending toward threshold** (e.g., rising from 24% to 30% when threshold is 30%): **Most dangerous case.** The trend that brought CP here is likely to stall or revert, not continue. The news driving the trend is already reflected in the current CP. Do NOT extrapolate. Only go above 50% if you can identify specific *new catalysts* that have occurred since the last CP reading and will force additional forecaster updates.
+
+**Correlated evidence stacking.** If you list "upward momentum," "ongoing crisis," "recession estimates," and "weak jobs data" as separate factors, ask: are these really independent, or are they all aspects of the same shock that already drove the CP trend? Evidence that explains *why* the CP moved is not independent evidence that it will *continue* to move. Count it once.
+
 ### Fundamentals-Based Approach
 
 Given all the evidence about the underlying event, what SHOULD a rational forecaster believe? If fundamentals strongly favor one direction (strong polling lead, confirmed event, definitive data), then CP should move toward that fundamental value. This is most useful when the CP-to-threshold gap is small, because modest fundamental-driven movements can cross a tight threshold.
@@ -246,7 +261,7 @@ Given all the evidence about the underlying event, what SHOULD a rational foreca
 - **Buffer size**: How far is current CP from the threshold? This is the most predictive variable. A CP that needs to move many percentage points to cross is much more likely to stay on its current side.
 - **Forecaster count**: Small forecaster bases are volatile. Large bases are more stable but also harder to move.
 - **Time remaining**: More time = more opportunity for drift. Short windows favor the status quo.
-- **Live catalysts**: Upcoming events that could force forecaster updates (elections, earnings, policy announcements). A live catalyst pushing in one direction is the best justification for a directional call.
+- **Live catalysts**: Upcoming events that could force forecaster updates (elections, earnings, policy announcements). A *specific, concrete new catalyst* (not "the situation could escalate") is the best justification for going above 50% YES when CP is at threshold.
 
 ### Without Direct CP Data
 
