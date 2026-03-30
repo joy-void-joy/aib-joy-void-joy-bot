@@ -6,7 +6,14 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Self, TypedDict, cast
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, create_model, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    create_model,
+    model_validator,
+)
 import zoneinfo
 
 
@@ -441,14 +448,23 @@ def create_forecast_model(
 class Forecast(BaseModel):
     """Forecast for binary questions. Used as structured output schema."""
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting probability "
+            "before question-specific analysis. E.g. 'Historical base rate: 15% "
+            "(3 of 20 similar bills passed committee in the last decade)'"
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
         description=(
-            "Key pieces of evidence with their directional strength. "
-            "Each factor should have a description and a logit value."
+            "Reasons the answer might differ from your anchor, each with "
+            "directional strength. Each factor should have a description "
+            "and a logit value."
         ),
     )
     logit: float = Field(
@@ -536,12 +552,19 @@ class Forecast(BaseModel):
 class MultipleChoiceForecast(BaseModel):
     """Forecast for multiple choice questions."""
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting distribution "
+            "before question-specific analysis."
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
-        description="Key pieces of evidence that influenced the probability distribution.",
+        description="Reasons the distribution might differ from your anchor.",
     )
     probabilities: dict[str, float] = Field(
         description=(
@@ -585,12 +608,19 @@ class NumericForecast(BaseModel):
     If components are provided, they take precedence over percentiles.
     """
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting distribution "
+            "before question-specific analysis."
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
-        description="Key pieces of evidence that influenced the estimate.",
+        description="Reasons the distribution might differ from your anchor.",
     )
 
     # Percentile mode: flexible dict of percentile level → value
