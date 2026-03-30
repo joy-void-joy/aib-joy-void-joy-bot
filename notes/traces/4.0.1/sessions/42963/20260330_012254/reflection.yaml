@@ -1,0 +1,260 @@
+---
+timestamp: 2026-03-30 01:29:42 UTC
+question_type: numeric
+factors:
+- description: Current 90-day avg SOFR is 3.68416 (Mar 27), with steady declining
+    trend as elevated Dec/early-Jan rates leave the 90-day window and lower current
+    rates (~3.63-3.65) enter
+  supports:
+    center: 3.671
+    low: 3.668
+    high: 3.674
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: The Dec 31 year-end SOFR spike (3.87) and Jan 1 holiday carry drop
+    out of the window around Apr 1-2, causing a notable decline in the average around
+    those dates
+  supports:
+    center: 3.669
+    low: 3.667
+    high: 3.672
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: No FOMC meeting before April 9 (next is April 29). Fed funds rate stable
+    at 3.50-3.75%. Only ~4% probability of emergency rate action at April meeting
+    per CME FedWatch
+  supports:
+    center: 3.671
+    low: 3.668
+    high: 3.675
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Geopolitical tension (US-Iran conflict, Strait of Hormuz), traders
+    hedging emergency rate hike (12% prob of 25bp at April FOMC). Could cause repo
+    market stress pushing SOFR higher temporarily
+  supports:
+    center: 3.675
+    low: 3.67
+    high: 3.71
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Quarter-end (Mar 31) repo market dynamics could briefly spike SOFR,
+    but the 90-day average smooths this out (1/90th impact per day)
+  supports:
+    center: 3.672
+    low: 3.67
+    high: 3.678
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  center: 3.671
+  low: 3.668
+  high: 3.682
+assessment: 'The 90-day average SOFR is a very slow-moving, mechanically determined
+  quantity. It''s a compound rolling average over 90 calendar days, meaning each day''s
+  SOFR only has ~1/90th weight. The current value (3.68416 on Mar 27) has been steadily
+  declining since early January as elevated rates from late 2025 (when the Fed was
+  still cutting from 4.33%) leave the window.
+
+
+  From Mar 28 to Apr 9, the specific rates leaving the window are known: Dec 28-Jan
+  9 values including the Dec 31 year-end spike (3.87) and Jan 2 elevated rate (3.75).
+  These are being replaced by current SOFR rates around 3.62-3.65. The deterministic
+  estimate (assuming SOFR stays at 3.64) gives approximately 3.671.
+
+
+  The main uncertainty sources are:
+
+  1. Daily SOFR variation (very small when divided by 90)
+
+  2. Quarter-end repo pressure (Mar 31) - could briefly spike SOFR but has minimal
+  90-day avg impact
+
+  3. Geopolitical stress could disrupt repo markets - but even a 30bp spike for 2
+  days only moves the avg by ~0.007
+
+  4. Emergency Fed rate hike - extremely unlikely before Apr 9 (~2% probability),
+  would shift SOFR up ~25bp
+
+
+  The distribution is rightfully tight - the 90-day rolling average mechanism provides
+  enormous smoothing. Even extreme scenarios barely move the needle. My Monte Carlo
+  with tail scenarios produces a median of 3.671 with 90% CI of [3.668, 3.682].'
+calibration_notes: 'Base rate: The 90-day average has changed by about -0.013 over
+  the past 13 calendar days (Mar 14-27), and I project about -0.013 for the next 13
+  days. This is consistent with the rolling window mechanics. Status quo (no rate
+  change, no crisis) strongly favors a value around 3.671. The right tail from geopolitical
+  scenarios is real but small.'
+key_uncertainties: 1. Could daily SOFR spike significantly due to repo market stress
+  from geopolitical events + quarter-end? Even so, impact on 90-day average is small.
+  2. Could there be an emergency intermeeting rate hike? Extremely unlikely before
+  Apr 9 and would need to happen several days before to meaningfully affect the 90-day
+  average. 3. Model error in our rolling average approximation (validated at ~0.001
+  over 7 days).
+tool_audit: 'FRED data for SOFR90DAYAVG: excellent, provided full history and regime
+  stats. FRED data for SOFR: excellent, gave daily rates. FRED FEDFUNDS: good, confirmed
+  rate level. Kalshi/Polymarket: no markets found for Fed rate. News search: very
+  informative, revealed US-Iran conflict and some traders hedging emergency rate hike.
+  The data quality was high and sufficient for this forecast.'
+process_reflection: This question type (mechanically-determined rolling average) is
+  well-suited to the available tools. FRED data + Monte Carlo simulation provides
+  a strong quantitative foundation. The news search was valuable for identifying the
+  geopolitical risk factor that could push SOFR higher. The main limitation was not
+  having a Kalshi/Polymarket market for the exact SOFR level, which would have been
+  useful as a sanity check. The simulation approach works well because the mechanics
+  are transparent and the uncertainty is genuinely small for a 90-day rolling average
+  over a 13-day horizon.
+computed:
+  factor_count: 5
+  factor_sum: 4.53
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current 90-day avg SOFR is 3.68416 (Mar 27), with steady declining
+      trend as elevated Dec/early-Jan rates leave the 90-day window and lower current
+      rates (~3.63-3.65) enter
+    supports:
+      center: 3.671
+      low: 3.668
+      high: 3.674
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: The Dec 31 year-end SOFR spike (3.87) and Jan 1 holiday carry drop
+      out of the window around Apr 1-2, causing a notable decline in the average around
+      those dates
+    supports:
+      center: 3.669
+      low: 3.667
+      high: 3.672
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: No FOMC meeting before April 9 (next is April 29). Fed funds rate
+      stable at 3.50-3.75%. Only ~4% probability of emergency rate action at April
+      meeting per CME FedWatch
+    supports:
+      center: 3.671
+      low: 3.668
+      high: 3.675
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Geopolitical tension (US-Iran conflict, Strait of Hormuz), traders
+      hedging emergency rate hike (12% prob of 25bp at April FOMC). Could cause repo
+      market stress pushing SOFR higher temporarily
+    supports:
+      center: 3.675
+      low: 3.67
+      high: 3.71
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Quarter-end (Mar 31) repo market dynamics could briefly spike SOFR,
+      but the 90-day average smooths this out (1/90th impact per day)
+    supports:
+      center: 3.672
+      low: 3.67
+      high: 3.678
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: Current 90-day avg SOFR is 3.68416 (Mar 27), with steady declining
+    trend as elevated Dec/early-Jan rates leave the 90-day window and lower current
+    rates (~3.63-3.65) enter
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 3.6706644591611477
+    implied_p10: 3.66789183222958
+    implied_p90: 3.675737306843267
+    median_gap: 0.00033554083885212194
+    median_gap_pct: 4.2768711311198615
+    spread_ratio: 1.7844682048394573
+    precision: 0.0038136747480250043
+  sources:
+  - '[(FRED) SOFR90DAYAVG](https://fred.stlouisfed.org/series/SOFR90DAYAVG)'
+  - '[(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  reviewer_critique: "## Summary\n\nI verified the agent's factors against the research\
+    \ trace for this 90-Day Average SOFR forecast (resolution date April 9, 2026).\n\
+    \n## Factor-by-Factor Verification\n\n**Factor 1 (Current 90-day avg SOFR is 3.68416,\
+    \ Mar 27):** ✓ VERIFIED\n- Trace line 34: `\"latest_value\": 3.68416, \"latest_date\"\
+    : \"2026-03-27\"`\n- The declining trend claim is supported by the observations\
+    \ data showing steady decreases from January (4.00346 on Jan 2) to March.\n\n\
+    **Factor 2 (Dec 31 year-end SOFR spike 3.87 drops out around Apr 1-2):** ✓ VERIFIED\n\
+    - Trace line 191: `{\"date\": \"2025-12-31\", \"value\": 3.87}`\n- Trace line\
+    \ 244 confirms: `2025-12-31 | 3.87 | 2026-03-31 | 3.64` and `2026-01-01 | 3.87\
+    \ | 2026-04-01 | 3.64`\n- The agent correctly identified that Jan 1 carries the\
+    \ Dec 31 rate (null for holiday in raw data, trace shows 3.87 in calculations).\n\
+    \n**Factor 3 (No FOMC meeting before April 9, Fed funds rate 3.50-3.75%, ~4% probability\
+    \ of emergency rate action):** ✓ VERIFIED\n- Trace line 370: \"CME Fedwatch Tool\
+    \ projects only a 4% chance of a rate increase at the April 29th meeting\"\n-\
+    \ Trace line 385: \"US Federal Reserve holding rates between 3.50% and 3.75%\"\
+    \n- Trace line 393: \"4.1% probability of a rate hike by April 2026 according\
+    \ to CME FedWatch data\"\n\n**Factor 4 (Geopolitical tension, 12% prob of 25bp\
+    \ hike at April FOMC):** ✓ VERIFIED\n- Trace lines 346-354: Confirms US-Iran conflict,\
+    \ Strait of Hormuz closure, Brent crude >$110/barrel\n- Trace line 459: \"12%\
+    \ probability of a 25 basis point hike\" at April meeting\n- Trace line 479: \"\
+    interest rate swap market prices a 3 basis point hike for the April policy meeting,\
+    \ implying only a 12% probability of a 25 basis point increase\"\n\n**Factor 5\
+    \ (Quarter-end Mar 31 repo dynamics):** ✓ VERIFIED\n- Trace line 283: Simulation\
+    \ tested \"Quarter-end spike (3.80 for 2d): avg = 3.67438\" showing minimal 90-day\
+    \ avg impact\n- Trace line 394 confirms \"quarter-end\" timing context\n\n## Monte\
+    \ Carlo / Probability Assessment\n\nThe agent's final estimate (Center: 3.671,\
+    \ Range: 3.668–3.682) is well-grounded:\n- The final Monte Carlo with geopolitical\
+    \ scenarios (200,000 sims) produced:\n  - Median: 3.67102\n  - 90% CI: [3.66796,\
+    \ 3.68177]\n- The stated range [3.668, 3.682] is slightly tighter than the MC\
+    \ 90% CI but reasonably aligned.\n- The assessment correctly notes the estimate\
+    \ is \"rightfully tight\" due to the 90-day rolling average mechanism.\n\n## Resolution\
+    \ Criteria Check\nThe resolution criteria are clear (FRED API SOFR90DAYAVG series,\
+    \ datapoint for 2026-04-09). The agent directly fetched this series and modeled\
+    \ its behavior mechanically.\n\n## Potential Issues Checked\n\n- **No hallucinated\
+    \ evidence found** - all factor claims are grounded in trace\n- **No double-counting**\
+    \ - factors address distinct mechanisms (current level, year-end spike drop-out,\
+    \ Fed policy stability, geopolitical tail risk, quarter-end dynamics)\n- **No\
+    \ wrong-direction factors** - all logit signs are consistent with descriptions\n\
+    - **No contradictory assessment** - narrative aligns with factors\n- **Adversarial\
+    \ reasoning present** - assessment addresses uncertainty sources including geopolitical\
+    \ stress scenarios and emergency rate hikes\n- **Probability appears reasonable**\
+    \ - the tight range is appropriate for a mechanically-computed 90-day rolling\
+    \ average with known inputs\n\n## Verdict: APPROVE\n\nThe forecast is well-researched\
+    \ with all claims grounded in trace evidence. The Monte Carlo methodology appropriately\
+    \ captures the mechanical nature of the 90-day average while accounting for tail\
+    \ scenarios."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42963
+- **Question ID**: 42899
+- **Session Duration**: 420.6s (7.0 min)
+- **Cost**: $4.2353
+- **Tokens**: 17,006 total (41 in, 16,965 out)
+  - Cache: 884,078 read, 87,261 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42963_20260330_012254/20260330-012254.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 9 | 0 | 1933ms |
+| fred_series | 4 | 0 | 552ms |
+| kalshi_price | 2 | 0 | 649ms |
+| polymarket_price | 1 | 0 | 60ms |
+| reflection | 1 | 0 | 90399ms |
+
+### Sources Consulted
+
+- [(FRED) SOFR90DAYAVG](https://fred.stlouisfed.org/series/SOFR90DAYAVG)
+- [(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)

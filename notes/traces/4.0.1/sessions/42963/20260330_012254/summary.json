@@ -1,0 +1,60 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed the agent's trace for forecasting the 90-Day Average SOFR (`SOFR90DAYAVG`) on 2026-04-09.\n\nThe agent systematically gathered:\n- **FRED SOFR90DAYAVG data**: Current value **3.68416%** as of 2026-03-27, with a clear declining trend from 4.00346% (Jan 2) \n- **Daily SOFR rates**: Recent stable regime around **3.62-3.65%** (mean ~3.635, std 0.013)\n- **Late Dec 2025 SOFR values**: Including the Dec 31 year-end spike of **3.87%** and Jan 2 elevated rate of **3.75%**\n- **Fed funds rate**: Stable at **3.50-3.75%** (FEDFUNDS = 3.64)\n- **News search**: Revealed US-Iran conflict context, Strait of Hormuz closure, oil >$110/barrel, traders hedging emergency Fed hike\n\n## Key Evidence\n\n- **Mechanical structure**: The 90-day average is a rolling compound average where each day contributes ~1/90th weight, creating high smoothing\n- **Window shift from Mar 28 to Apr 9**:\n  - **Dropping out**: Dec 28 – Jan 9 rates including the Dec 31 spike (3.87%) and Jan 2 (3.75%)\n  - **Entering**: Current SOFR rates (~3.62-3.65%)\n- **Daily change analysis**: Recent daily changes ranged from -0.003 to +0.0001, with average of -0.00094/day\n- **Deterministic projection**: Using SOFR = 3.64 flat yields projected value of **~3.671%**\n- **CME FedWatch**: Only **4% probability** of rate increase at April 29 meeting; no FOMC before April 9\n- **Geopolitical risk**: ~12% probability of 25bp emergency hike priced in interest rate swaps, though extremely unlikely before resolution date\n\n## Monte Carlo Methodology\n\nThe agent ran multiple Monte Carlo simulations:\n\n1. **Initial MC (50K sims)**: Mean 3.67069, std 0.00216\n2. **With model error (100K sims)**: Mean 3.67074, std 0.00143  \n3. **With fat tails (100K sims)**: Mean 3.67074, std 0.00207\n4. **Final geopolitical scenarios (200K sims)**:\n   - 85% base case (SOFR ~3.635)\n   - 10% moderate quarter-end pressure\n   - 3% significant repo stress\n   - 2% emergency rate hike scenario\n   - **Result**: Median 3.67102, std 0.00634, 90% CI [3.668, 3.682]\n\nThe agent validated the model by checking predicted vs actual changes from Mar 20 to Mar 27: predicted -0.00456, actual -0.00381, error ~0.00075.\n\n## Conclusion\n\nThe agent concluded with a **median estimate of 3.671%** and very tight distribution (P5=3.668, P95=3.682). The reasoning is sound: the 90-day rolling average mechanism inherently provides enormous smoothing, so even extreme daily SOFR movements have minimal impact. The right tail at P99=3.7084 captures emergency scenarios.\n\nThe final percentile values appear to be slightly adjusted from the raw MC output (which had P50=3.67102, P99=3.70842), smoothed to round numbers.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__fred_series": "4 calls, 0 errors, impact: none, value: high — primary data source for SOFR and SOFR90DAYAVG historical values",
+      "mcp__sandbox__execute_code": "6 calls, 0 errors, impact: none, value: high — used for MC simulations and deterministic projections",
+      "mcp__markets__kalshi_price": "2 calls, 0 errors (empty results), impact: none, value: low — no relevant markets found",
+      "mcp__markets__polymarket_price": "2 calls, 0 errors (empty results), impact: none, value: low — no relevant markets found",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: medium — revealed geopolitical context and CME FedWatch data",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — factor verification passed"
+    },
+    "capability_gaps": [
+      "No direct access to CME FedWatch tool — relied on news search for Fed futures probabilities",
+      "No SOFR futures market data — would have been useful for forward curve expectations"
+    ],
+    "subtle_bugs": [
+      "Initial compound average formula didn't match FRED methodology (0.05 systematic offset), but agent correctly pivoted to extrapolation approach"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/macro",
+    "approach": "Monte Carlo simulation with deterministic rolling window mechanics and scenario weighting for tail events",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether geopolitical stress causes repo market disruption or emergency Fed action before April 9, though even extreme scenarios have limited impact on the 90-day average"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "3.670–3.672 (median ~3.671)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the mechanical nature of the 90-day rolling average and its high inertia (1/90th weight per day)",
+    "Fetched and used actual late-Dec 2025 SOFR values to model the specific rates dropping out of the window",
+    "Validated model against actual Mar 20-27 changes (predicted -0.00456 vs actual -0.00381)",
+    "Appropriately tight distribution — recognized that even extreme daily SOFR spikes barely move the 90-day average",
+    "Progressive scenario modeling: started deterministic, added model error, added quarter-end effects, added geopolitical tail scenarios",
+    "Correctly identified the Dec 31 year-end spike (3.87%) as the key elevated rate dropping out around Apr 1-2",
+    "Used 200K simulations for final estimate to get stable percentile estimates"
+  ],
+  "weaknesses": [
+    "Initial compound average formula had systematic offset (~0.05) vs FRED values — agent noted this but didn't fully explain why",
+    "Did not find any prediction market prices to cross-check the estimate",
+    "Quarter-end spike modeling used somewhat arbitrary 25-30% probability without citing historical quarter-end repo data",
+    "Final percentile values appear slightly rounded/adjusted from raw MC output without explicit justification"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Include historical quarter-end SOFR spike data to calibrate the probability and magnitude of Mar 31 effects",
+    "Document the discrepancy between the compound average formula and FRED methodology more thoroughly",
+    "Consider adding a sanity check by comparing to analyst forecasts or interest rate futures if available"
+  ]
+}
