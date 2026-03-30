@@ -1,0 +1,67 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a forecasting trace for the question \"How many charges will the ICC confirm against Rodrigo Duterte before May 2026?\" The agent conducted thorough research on:\n\n1. **Question context**: Retrieved Metaculus question details confirming Duterte faces **3 counts of crimes against humanity** for murders during his mayoral tenure (DDS 2013-2016) and presidential drug war (2016-2018). The confirmation hearing concluded **February 27, 2026**, with a **60-day statutory deadline** (April 28, 2026).\n\n2. **News and current status**: Used AskNews to find recent Filipino media coverage showing:\n   - Deputy Prosecutor Mame Mandiaye Niang expressed confidence the case will proceed to trial\n   - Defense withdrew appeal on victim lawyers\n   - Appeals Chamber rejected detention review appeal (March 6, 2026)\n   - 539 victims authorized to participate\n\n3. **ICC base rates**: Agent compiled historical data on 17 ICC confirmation hearings and calculated:\n   - **88.2%** of cases have at least some charges confirmed\n   - **58.8%** have ALL charges confirmed\n   - Only 2 cases (Abu Garda, Mbarushimana) had all charges declined\n\n4. **Recent precedent**: The **Kony case** (most recent, November 2025) saw all 39 charges confirmed within 57 days. Critically, **Judge Iulia Motoc** sat on both the Kony Pre-Trial Chamber III and presides over Duterte's Pre-Trial Chamber I.\n\n5. **Timeline analysis**: Agent correctly calculated:\n   - Feb 27 + 60 days = **April 28, 2026**\n   - Question deadline: \"before May 2026\" = **May 1, 2026**\n   - Buffer: **3 days**\n\n## Key Evidence\n\n- **Strong prosecution case**: 5+ years investigation (since 2021), thousands of evidence items, Duterte's own speeches/videos/policy documents as direct evidence\n- **Defense setbacks**: Fitness challenge rejected after independent medical panel assessment, jurisdictional appeal pending but ICC already ruled jurisdiction exists\n- **ICC track record**: Historically reliable on 60-day deadline (Kony: 57 days)\n- **Judge overlap**: Motoc's presence on both chambers suggests procedural consistency with recent Kony full-confirmation outcome\n\n**Potential weakness identified**: Count 1 (DDS mayoral killings 2013-2016) may face evidentiary challenges as older indirect evidence, potentially leading to partial rather than full confirmation.\n\n## Conclusion\n\nThe agent concluded with probabilities:\n- **0 charges**: 4%\n- **1 charge**: 4%  \n- **2 charges**: 12%\n- **3 charges (all confirmed)**: **72%**\n- **No Decision**: 8%\n\nThis reflects the ~59% historical base rate for full confirmation, adjusted upward for case-specific strength (prosecution confidence, extensive evidence, defense setbacks). The 8% for No Decision accounts for the unlikely scenario of exceptional circumstances extending the deadline past April 30.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high - retrieved question context and resolution criteria",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: high - found detailed Filipino media coverage with hearing outcomes and prosecution statements",
+      "mcp__search__web_search": "5 calls, 0 errors, impact: none, value: high - found ICC official pages, Kony precedent, HRW analysis",
+      "mcp__search__fetch_url": "2 calls, 0 errors, impact: none, value: medium - retrieved ICC case page and Q&A PDF",
+      "Read": "1 call, 0 errors, impact: none, value: medium - read downloaded ICC PDF",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: high - calculated base rates from historical data and timeline analysis",
+      "mcp__markets__polymarket_price": "1 call, 0 errors, impact: none, value: low - no markets found on topic",
+      "mcp__markets__get_coherence_links": "1 call, 0 errors, impact: none, value: low - no linked questions found",
+      "mcp__search__wikipedia": "2 calls, 1 partial failure (article not found), impact: minor, value: low - didn't return useful ICC case statistics",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high - reviewer critique validated approach with minor caveats"
+    },
+    "capability_gaps": [
+      "ICC legal database tool for systematic case outcome statistics would have helped vs manual compilation",
+      "No community prediction available for calibration (question had 0 forecasters)"
+    ],
+    "subtle_bugs": [
+      "Wikipedia search with compound query returned article-not-found instead of suggesting simpler query"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Base rate analysis from 17 historical ICC confirmation hearings adjusted for case-specific evidence strength and timeline constraints.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the older DDS-era (mayoral period) count has sufficient indirect co-perpetrator evidence, potentially leading to partial rather than full confirmation."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "Agent assigns 72% to full 3-charge confirmation vs 59% historical base rate. While adjustment for case strength is reasonable, the 13pp uplift may be aggressive given ICC judges' independent assessment could differ from prosecution confidence.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "68% for 3 charges, 15% for 2, 5% for 1, 4% for 0, 8% No Decision",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Compiled comprehensive ICC historical base rates from 17 cases rather than relying on general intuition",
+    "Identified Judge Motoc overlap between Kony and Duterte chambers - relevant recent precedent with same decision-maker",
+    "Correctly calculated 60-day timeline showing 3-day buffer before question deadline",
+    "Found and cited specific prosecution confidence statement from Deputy Prosecutor Niang",
+    "Addressed adversarial scenario (DDS-era count evidentiary weakness) with explicit probability allocation to partial confirmation"
+  ],
+  "weaknesses": [
+    "Did not find community prediction for calibration (question had forecasters on original Q42665)",
+    "Wikipedia tool failures led to manual case compilation that may have gaps",
+    "Could have explored what specific evidence exists for each of the 3 counts individually to assess differential confirmation probability"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For ICC questions, try fetching the official case information sheet PDF which often contains detailed charge breakdowns",
+    "When Wikipedia compound queries fail, retry with simpler single-concept queries",
+    "Consider explicitly modeling the joint probability distribution (e.g., P(Count1 confirmed) × P(Count2|Count1) × P(Count3|Count1,Count2)) for multi-count questions"
+  ]
+}
