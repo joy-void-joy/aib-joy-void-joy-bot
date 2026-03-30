@@ -334,9 +334,7 @@ def flags(
         raise typer.Exit(1)
 
     # Count summaries with new-schema risk_flags
-    has_flags_schema = [
-        (s, d) for s, d in summaries if s.classification is not None
-    ]
+    has_flags_schema = [(s, d) for s, d in summaries if s.classification is not None]
     old_schema = len(summaries) - len(has_flags_schema)
 
     if old_schema:

@@ -144,7 +144,10 @@ POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
 @with_retry(max_attempts=3)
 async def _search_polymarket(query: str) -> list[PolymarketEventData]:
     """Search Polymarket for markets matching query."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{POLYMARKET_GAMMA_API}/events",
             params={
@@ -560,7 +563,10 @@ MANIFOLD_API = "https://api.manifold.markets/v0"
 @with_retry(max_attempts=3)
 async def _search_manifold(query: str) -> list[ManifoldMarketData]:
     """Search Manifold Markets for markets matching query."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{MANIFOLD_API}/search-markets",
             params={
@@ -692,7 +698,10 @@ async def _fetch_polymarket_history(
     token_id: str, start_ts: int, end_ts: int
 ) -> list[PolymarketPricePoint]:
     """Fetch price history from Polymarket CLOB API."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{POLYMARKET_CLOB_API}/prices-history",
             params={
@@ -767,7 +776,10 @@ async def _fetch_manifold_bets(
     contract_id: str, before_time: int, limit: int = 1000
 ) -> list[ManifoldBet]:
     """Fetch bets from Manifold to reconstruct historical prices."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{MANIFOLD_API}/bets",
             params={
@@ -867,7 +879,10 @@ async def _fetch_kalshi_events(
     }
     if status is not None:
         params["status"] = status
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/events",
             params=params,
@@ -883,7 +898,10 @@ async def _fetch_kalshi_events(
 @with_retry(max_attempts=3)
 async def _fetch_kalshi_event(event_ticker: str) -> KalshiEventData:
     """Fetch a single Kalshi event with all its markets."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/events/{event_ticker}",
             params={"with_nested_markets": "true"},
@@ -900,7 +918,10 @@ async def _fetch_kalshi_candlestick(
     end_ts: int,
 ) -> list[KalshiCandlestick]:
     """Fetch candlestick data for a Kalshi market."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/series/{series_ticker}/markets/{market_ticker}/candlesticks",
             params={
