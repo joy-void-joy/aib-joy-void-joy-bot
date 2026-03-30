@@ -1,0 +1,255 @@
+---
+timestamp: 2026-03-30 22:57:46 UTC
+question_type: binary
+factors:
+- description: 'Conditional base rate: when NOC is in 10%+ drawdown from 52w high,
+    53.5% of 8-day periods are positive (N=570 historical events since 1981)'
+  logit: 0.14
+  confidence: 0.85
+  effective_logit: 0.11900000000000001
+- description: 'Strong negative momentum: NOC down 12.6% in 20 trading days, S&P down
+    7.8%. Trailing 20-day daily mean return is -0.67%/day - unusually bearish'
+  logit: -0.8
+  confidence: 0.65
+  effective_logit: -0.52
+- description: 'Macro deterioration: active tariff threats (200% on French wine),
+    rising unemployment (4.6%), broad market selloff continuing. S&P at 20-day lows'
+  logit: -0.6
+  confidence: 0.6
+  effective_logit: -0.36
+- description: 'Oversold conditions: NOC at 20-day low, 13.2% off 52-week high. Historical
+    mean-reversion tendency for stocks in drawdowns'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Defense sector tailwinds: US-Israel-Iran military operations, elevated
+    geopolitical tensions support defense spending and contractor valuations'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Supreme Court struck down Liberation Day tariffs in Feb 2026, partially
+    limiting tariff escalation tools, but administration finding other avenues
+  logit: 0.1
+  confidence: 0.4
+  effective_logit: 0.04000000000000001
+tentative_estimate:
+  logit: -0.12
+  probability: 0.47
+assessment: 'This is a stock direction question over ~7 trading days for NOC (Northrop
+  Grumman), a defense contractor currently in a significant drawdown.
+
+
+  The key tension is between: (1) strong recent negative momentum suggesting continued
+  downside, and (2) historical conditional base rates showing that stocks in this
+  type of drawdown are roughly coin-flip to recover over 8 days.
+
+
+  The macro environment is actively bearish - ongoing tariff threats, rising unemployment,
+  broad market selloff. NOC has sold off harder than the broader market (-12.6% vs
+  -7.8% over 20 days), suggesting the defense sector rally from late Feb (US-Israel-Iran
+  strikes) has fully reversed.
+
+
+  Monte Carlo sensitivity shows the probability is highly sensitive to the assumed
+  drift: ranging from ~20% (if recent extreme bearish drift continues) to ~55% (if
+  conditional mean-reversion kicks in). The central case with modest negative drift
+  gives ~37-43%.
+
+
+  I anchor on the conditional base rate of 53.5% and adjust down for the active macro
+  deterioration and momentum, arriving at ~47%. The defense sector fundamentals and
+  oversold bounce potential partially offset but don''t fully compensate.
+
+
+  The counterargument for higher: oversold bounce, defense fundamentals, SCOTUS limiting
+  tariff tools. The counterargument for lower: momentum tends to persist, macro headwinds
+  are strengthening, the selloff could accelerate around Liberation Day anniversary
+  (April 2).'
+calibration_notes: 'Conditional base rate anchor: 53.5% (NOC in 10%+ drawdown, 8-day
+  horizon). S&P equivalent: 52.5%. Unconditional base rate for stock direction over
+  any 7-day period is approximately 52-53% positive. The current environment pushes
+  below unconditional. Not hedging toward 50% - genuinely uncertain with slight lean
+  toward NO based on momentum.'
+key_uncertainties: 1. Whether the March selloff accelerates or reverses - this is
+  the dominant uncertainty. 2. Whether any specific catalyst (tariff announcement,
+  economic data) hits during April 1-10. 3. Whether defense sector diverges from broader
+  market (it often does during geopolitical stress). 4. Liberation Day anniversary
+  coverage could spook or reassure markets depending on framing.
+tool_audit: 'stock_price and stock_history: useful, returned current data. stock_conditional_returns:
+  very useful, gave historical base rates. web_search: useful for macro context. asknews
+  search_news: FAILED (403 rate limit exceeded). Monte Carlo simulation: useful for
+  sensitivity analysis.'
+update_triggers: Major tariff announcement, economic data release (jobs, CPI), Fed
+  statement, escalation/de-escalation of geopolitical conflicts, NOC-specific news
+  (contract award, earnings guidance change)
+process_reflection: The stock direction question framework worked well. The conditional
+  returns tool was the most valuable single input. The asknews rate limit was a minor
+  hindrance but web_search compensated. The Monte Carlo sensitivity table was essential
+  for understanding how sensitive the answer is to drift assumptions. The main challenge
+  was determining the appropriate drift - the answer ranges from 20% to 55% depending
+  on assumed daily drift, so this is genuinely a hard calibration problem. The conditional
+  base rate provides the best empirical anchor.
+computed:
+  factor_count: 6
+  factor_sum: -0.421
+  tentative_logit: -0.12
+  logit_gap: 0.301
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Conditional base rate: when NOC is in 10%+ drawdown from 52w high,
+      53.5% of 8-day periods are positive (N=570 historical events since 1981)'
+    logit: 0.14
+    confidence: 0.85
+    effective_logit: 0.11900000000000001
+  - description: 'Strong negative momentum: NOC down 12.6% in 20 trading days, S&P
+      down 7.8%. Trailing 20-day daily mean return is -0.67%/day - unusually bearish'
+    logit: -0.8
+    confidence: 0.65
+    effective_logit: -0.52
+  - description: 'Macro deterioration: active tariff threats (200% on French wine),
+      rising unemployment (4.6%), broad market selloff continuing. S&P at 20-day lows'
+    logit: -0.6
+    confidence: 0.6
+    effective_logit: -0.36
+  - description: 'Oversold conditions: NOC at 20-day low, 13.2% off 52-week high.
+      Historical mean-reversion tendency for stocks in drawdowns'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Defense sector tailwinds: US-Israel-Iran military operations, elevated
+      geopolitical tensions support defense spending and contractor valuations'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Supreme Court struck down Liberation Day tariffs in Feb 2026, partially
+      limiting tariff escalation tools, but administration finding other avenues
+    logit: 0.1
+    confidence: 0.4
+    effective_logit: 0.04000000000000001
+  dominant_factor: 'Strong negative momentum: NOC down 12.6% in 20 trading days, S&P
+    down 7.8%. Trailing 20-day daily mean return is -0.67%/day - unusually bearish'
+  dominant_effective_logit: -0.52
+  factor_implied_probability: 0.39627748369828364
+  tentative_probability: 0.47
+  gap_pp: 7.372251630171633
+  sources:
+  - '[(yfinance) NOC](https://finance.yahoo.com/quote/NOC)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stock_market_crash)'
+  - '[Northrop Grumman Corporation (NOC) Stock Price, News, Quote & History - Yahoo
+    Finance](https://finance.yahoo.com/quote/NOC/)'
+  - '[Liberation Day tariffs - Wikipedia](https://en.wikipedia.org/wiki/Liberation_Day_tariffs)'
+  reviewer_critique: '## Verification Summary
+
+
+    **All factual claims in factors are grounded in the trace:**
+
+
+    1. **Factor 1 (Conditional base rate: 53.5%, N=570)**: Trace line 164-166 confirms
+    `"pct_positive": 53.50877192982456`, `"total_events": 570`, data period 1981-2026.
+    **VERIFIED**
+
+
+    2. **Factor 2 (NOC -12.6%/20d, S&P -7.8%/20d, mean -0.67%/day)**: Trace line 46-47
+    shows `"twenty_day": -12.555662612952782` and `"trailing_mean_return_20d": -0.6708386959904764`.
+    Trace line 106 shows S&P `"twenty_day": -7.816473446659357`. **VERIFIED**
+
+
+    3. **Factor 3 (200% French wine tariff, 4.6% unemployment)**: Trace line 228-230
+    shows CNBC article on 200% levy on French wine. Trace line 218 shows unemployment
+    4.6%. S&P at 20-day low confirmed in trace. **VERIFIED**
+
+
+    4. **Factor 4 (20-day low, 13.2% off 52w high)**: Trace line 47-48 shows `"recent_low":
+    {"date": "2026-03-30", "close": 671.59, "days_ago": 0}` and `"drawdown_from_52w_high_pct":
+    -13.231266149870796`. **VERIFIED**
+
+
+    5. **Factor 5 (US-Israel-Iran military operations)**: Trace line 279 mentions
+    Feb 28 US-Israel strikes on Iran. Trace line 282-283 confirms defense sector rally.
+    **VERIFIED**
+
+
+    6. **Factor 6 (SCOTUS struck down Liberation Day tariffs)**: Trace line 363-365
+    confirms Supreme Court in February 2026 affirmed that Trump''s use of emergency
+    powers for tariffs was not legal. **VERIFIED**
+
+
+    **No double-counting identified**: Factor 1 (empirical base rate) and Factor 4
+    (current oversold state) both reference drawdowns but serve different purposes
+    - one is quantitative historical frequency, the other is qualitative current condition.
+    The logits are different (+0.1 vs +0.3) and the reasoning is complementary rather
+    than duplicative.
+
+
+    **No wrong-direction factors**: All logit signs match their descriptions (negative
+    momentum → negative logit, positive base rate → positive logit, etc.)
+
+
+    **Resolution criteria check**: The agent correctly understood the resolution criteria
+    (April 11 close vs March 31 close from Yahoo Finance) and used the appropriate
+    data source.
+
+
+    **Probability assessment**: The 47% estimate is reasonable given:
+
+    - Conditional base rate anchor: 53.5%
+
+    - Monte Carlo with moderate negative drift: 37-43%
+
+    - Adjustments for active macro deterioration and momentum partially offset by
+    oversold conditions
+
+    - The agent explicitly shows sensitivity analysis ranging from ~20% (extreme bearish)
+    to ~55% (mean-reversion)
+
+    - Final estimate of 47% is a defensible blend of these inputs
+
+
+    **Adversarial reasoning**: The assessment explicitly addresses counterarguments
+    in both directions, including the Liberation Day anniversary catalyst risk.
+
+
+    **No regime-spanning data issues**: The conditional return data is used for conditional
+    analysis (drawdown periods only), and Monte Carlo drift estimates use recent 20-day
+    and 3-month data within the current market regime.
+
+
+    **No issues found** with the forecast methodology or factual claims.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42990
+- **Question ID**: 42926
+- **Session Duration**: 373.4s (6.2 min)
+- **Cost**: $2.4778
+- **Tokens**: 8,232 total (27 in, 8,205 out)
+  - Cache: 517,695 read, 57,893 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42990_20260330_225147/20260330-225147.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 218ms |
+| reflection | 1 | 0 | 84207ms |
+| stock_conditional_returns | 2 | 0 | 408ms |
+| stock_history | 1 | 0 | 168ms |
+| stock_price | 3 | 0 | 448ms |
+| web_search | 3 | 0 | 38184ms |
+| wikipedia | 2 | 0 | 193ms |
+
+### Sources Consulted
+
+- [(yfinance) NOC](https://finance.yahoo.com/quote/NOC)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stoc...
+- [Northrop Grumman Corporation (NOC) Stock Price, News, Quote & History - Yaho...
+- [Liberation Day tariffs - Wikipedia](https://en.wikipedia.org/wiki/Liberation...
