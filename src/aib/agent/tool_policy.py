@@ -142,6 +142,13 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Weather tools (no API key required, uses Open-Meteo)
+WEATHER_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__weather__weather_forecast",
+    }
+)
+
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
@@ -270,6 +277,7 @@ class ToolPolicy:
         if self.is_retrodict:
             excluded.update(ASKNEWS_TOOLS)
             excluded.update(REDDIT_TOOLS)
+            excluded.update(WEATHER_TOOLS)
 
         self._excluded_tools = frozenset(excluded)
 
@@ -362,6 +370,7 @@ class ToolPolicy:
         from aib.tools.reddit import reddit_hot, reddit_search
         from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
         from aib.tools.trends import google_trends, google_trends_compare
+        from aib.tools.weather import weather_forecast
 
         servers: dict[str, McpServerConfig] = {
             "financial": create_mcp_server(
@@ -433,6 +442,13 @@ class ToolPolicy:
             ),
         }
 
+        # Weather server (excluded in retrodict — no historical forecasts)
+        if not self.is_retrodict:
+            servers["weather"] = create_mcp_server(
+                "weather",
+                tools=[weather_forecast],
+            )
+
         # Reddit MCP server (excluded in retrodict — no exact date cutoff)
         if (
             self.reddit_client_id
@@ -496,6 +512,9 @@ class ToolPolicy:
 
         # Trends tools
         tools.update(TRENDS_TOOLS)
+
+        # Weather tools (no API key needed)
+        tools.update(WEATHER_TOOLS)
 
         # Notes tools
         tools.update(NOTES_TOOLS)
