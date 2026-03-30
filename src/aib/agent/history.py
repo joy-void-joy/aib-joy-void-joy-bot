@@ -152,6 +152,7 @@ class SavedForecast(BaseModel):
     resolution_criteria: str | None = None
     fine_print: str | None = None
     background_info: str | None = None
+    revision_history: list[dict[str, object]] | None = None
 
 
 def save_forecast(
@@ -181,6 +182,7 @@ def save_forecast(
     retrodict_date: str | None = None,
     resolution_criteria: str | None = None,
     fine_print: str | None = None,
+    revision_history: list[dict[str, object]] | None = None,
     partial: bool = False,
 ) -> Path:
     """Save a forecast to disk.
@@ -228,6 +230,7 @@ def save_forecast(
         retrodict_date=retrodict_date,
         resolution_criteria=resolution_criteria,
         fine_print=fine_print,
+        revision_history=revision_history,
         agent_version=AGENT_VERSION,
     )
 

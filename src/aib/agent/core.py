@@ -1245,6 +1245,10 @@ async def run_forecast(
                 subagents_used=subagents_used,
             )
 
+    # Record revision history from reviewer interactions (before save)
+    if review_state and review_state.history:
+        output.revision_history = review_state.history
+
     # Auto-save forecast to history (for top-level forecasts only)
     if post_id > 0 and actual_question_id > 0:
         try:
@@ -1275,6 +1279,7 @@ async def run_forecast(
                 "sources_consulted": output.sources_consulted,
                 "resolution_criteria": context.get("resolution_criteria"),
                 "fine_print": context.get("fine_print"),
+                "revision_history": output.revision_history,
             }
 
             save_forecast(
@@ -1283,10 +1288,6 @@ async def run_forecast(
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
-
-    # Record revision history from reviewer interactions
-    if review_state and review_state.history:
-        output.revision_history = review_state.history
 
     logging.getLogger().removeHandler(_log_handler)
     _log_handler.close()

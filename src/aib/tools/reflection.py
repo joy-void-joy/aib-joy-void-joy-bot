@@ -234,7 +234,7 @@ class ReviewState:
             return False
         if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
             return True
-        return self.consecutive_fails >= 2
+        return self.consecutive_fails >= 3
 
     def record(
         self,
@@ -832,7 +832,7 @@ verdict.
 **Gate behavior:** An independent reviewer checks your evidence chain and
 returns approve, warn, or fail. On fail, this tool returns an error — fix the
 issues and call reflection() again. StructuredOutput is blocked until the
-reviewer approves. After 2 consecutive fails, the gate auto-approves.
+reviewer approves. After 3 consecutive fails, the gate auto-approves.
 
 Binary example:
   reflection(

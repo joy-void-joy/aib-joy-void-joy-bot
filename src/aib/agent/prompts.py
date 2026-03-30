@@ -345,7 +345,7 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 
 ### Gate behavior
 
-The reviewer returns approve, warn, or fail. On **fail**, reflection returns an error and StructuredOutput is blocked — fix the issues and call reflection() again. After 2 consecutive fails, the gate auto-approves.
+The reviewer returns approve, warn, or fail. On **fail**, reflection returns an error and StructuredOutput is blocked — fix the issues and call reflection() again. After 3 consecutive fails, the gate auto-approves.
 
 ### Distribution metrics (numeric/discrete)
 
