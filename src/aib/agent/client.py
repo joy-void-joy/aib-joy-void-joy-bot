@@ -38,6 +38,7 @@ async def build_client(**kwargs: Any) -> AsyncIterator[ClaudeSDKClient]:
     options = ClaudeAgentOptions(
         extra_args=merged_extra,
         env=merged_env,
+        max_buffer_size=500 * 1024 * 1024,
         **kwargs,
     )
     async with ClaudeSDKClient(options=options) as client:
