@@ -1,0 +1,335 @@
+---
+timestamp: 2026-03-30 12:51:31 UTC
+question_type: numeric
+factors:
+- description: Current yield at 4.37% (TNX March 30 close), down from 4.44 peak on
+    March 27. Last FRED value 4.42 on March 26. Starting point anchors forecast center.
+  supports:
+    center: 4.37
+    low: 4.37
+    high: 4.37
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: US-Iran conflict with Strait of Hormuz closure driving yields higher.
+    Oil at ~$115/bbl Brent (up 60% in March). Markets shifting from rate-cut to rate-hike
+    expectations. Upward pressure on yields.
+  supports:
+    center: 4.45
+    low: 4.35
+    high: 4.6
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: April 6 deadline for Trump strike pause on Iranian energy infrastructure.
+    Key binary event within forecast window. If no deal, strikes may resume and yields
+    could spike above 4.5%. If deal, yields drop sharply.
+  supports:
+    center: 4.4
+    low: 4.1
+    high: 4.65
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Ceasefire negotiations showing some progress - Trump says Iran agreed
+    to 'most' of 15-point plan, Pakistan mediating. If ceasefire reached before April
+    9, yields could drop 15-25 bps rapidly.
+  supports:
+    center: 4.15
+    low: 4.0
+    high: 4.3
+  logit: -0.8
+  confidence: 0.4
+  conditional: If ceasefire is reached before April 9
+  effective_logit: -0.32000000000000006
+- description: 'Historical daily volatility of 10yr yield: ~5.2 bps/day over last
+    20 trading days. Over 8 trading days, this implies ~14.7 bps of random walk uncertainty
+    (sqrt(8) * 5.2).'
+  supports:
+    center: 4.37
+    low: 4.22
+    high: 4.52
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: 'Regime shift detected in FRED data: stable since March 20 at mean
+    4.374 with shift magnitude +0.21 from prior regime. Recent pullback from 4.44
+    to 4.37 on March 30 suggests some mean reversion within new regime.'
+  supports:
+    center: 4.38
+    low: 4.25
+    high: 4.5
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: 4.5% yield seen as critical threshold (4.52% triggered Trump tariff
+    reversal in April 2025). Political pressure to keep yields below this level provides
+    soft ceiling, but escalation scenario could breach it.
+  supports:
+    center: 4.42
+    low: 4.3
+    high: 4.52
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 4.39
+  low: 4.15
+  high: 4.6
+assessment: 'The 10-year Treasury yield is in a heightened volatility regime driven
+  by the US-Iran conflict and oil price shock. The yield reached 4.46% on March 27
+  before pulling back to 4.37% on March 30. The April 6 deadline for Trump''s strike
+  pause creates a key binary event within the forecast window (resolution April 9).
+
+
+  Three simulation approaches converge on a median around 4.37-4.41:
+
+  - Scenario-based MC (ceasefire/status quo/escalation): median 4.39
+
+  - Simple drift random walk: median 4.41
+
+  - No-drift random walk: median 4.37
+
+
+  The distribution is right-skewed because escalation scenarios (strikes resuming,
+  oil above $150) push yields higher with greater magnitude than ceasefire scenarios
+  push them lower. Ceasefire would likely return yields to ~4.15-4.25 range, while
+  escalation could push above 4.50-4.70.
+
+
+  Key asymmetry: Trump''s statements about Iran agreeing to ''most'' points of the
+  plan suggest ceasefire is possible but Iran''s counter-demands (sovereignty over
+  Hormuz) make it far from certain. The probability of ceasefire before April 9 is
+  ~20-25%.
+
+
+  Counterargument: The pullback from 4.44 to 4.37 today suggests some ceasefire optimism
+  may already be building, or that the 4.45-4.50 zone is a natural resistance. If
+  this pullback continues, yields could stabilize in the 4.30-4.40 range even without
+  a ceasefire.'
+calibration_notes: 'Base rate: Over the last 4 months, the 10yr yield has ranged from
+  3.97 to 4.42. The current elevated regime (since March 20) centers around 4.37.
+  The 8-day forward uncertainty from empirical daily vol alone gives a ~15 bps standard
+  deviation. The scenario mixture adds fat tails from binary geopolitical events,
+  widening the 10-90 range to about 45 bps (4.15-4.60).'
+key_uncertainties: '1. Will the April 6 deadline result in escalation or de-escalation?
+  This is the dominant uncertainty driver.
+
+  2. Even without formal ceasefire, could oil prices stabilize enough to reduce inflation
+  fears?
+
+  3. How hawkish will the Fed signal in early April statements?
+
+  4. Could an unexpected shock (e.g., Hormuz reopening partially) cause a sharp drop?'
+tool_audit: 'FRED series: Excellent, returned full historical data with regime stats.
+  Stock price/history: Good, gave real-time TNX data showing today''s pullback. AskNews
+  search: Very useful for understanding the geopolitical context and identifying the
+  April 6 deadline. Kalshi: No markets found for 10yr yield specifically. All tools
+  functioned properly.'
+update_triggers: '- Ceasefire announcement: would move forecast center down to ~4.15-4.20
+
+  - Strikes resume after April 6: would move forecast center up to ~4.50-4.55
+
+  - Oil price spike above $130: would push yields toward 4.55+
+
+  - Fed emergency statement or rate hike signal: would push yields above 4.50'
+process_reflection: 'The scenario-based Monte Carlo approach felt appropriate for
+  this question given the dominant binary geopolitical risk. A pure random walk would
+  miss the fat tails from the April 6 deadline. The news search was essential for
+  understanding the ceasefire dynamics and calibrating scenario probabilities. One
+  limitation: I couldn''t find active prediction markets for the 10yr yield itself,
+  which would have been a useful calibration anchor. The FRED regime_stats were helpful
+  for confirming the structural break on March 20.'
+computed:
+  factor_count: 7
+  factor_sum: 2.715
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current yield at 4.37% (TNX March 30 close), down from 4.44 peak
+      on March 27. Last FRED value 4.42 on March 26. Starting point anchors forecast
+      center.
+    supports:
+      center: 4.37
+      low: 4.37
+      high: 4.37
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: US-Iran conflict with Strait of Hormuz closure driving yields higher.
+      Oil at ~$115/bbl Brent (up 60% in March). Markets shifting from rate-cut to
+      rate-hike expectations. Upward pressure on yields.
+    supports:
+      center: 4.45
+      low: 4.35
+      high: 4.6
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: April 6 deadline for Trump strike pause on Iranian energy infrastructure.
+      Key binary event within forecast window. If no deal, strikes may resume and
+      yields could spike above 4.5%. If deal, yields drop sharply.
+    supports:
+      center: 4.4
+      low: 4.1
+      high: 4.65
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Ceasefire negotiations showing some progress - Trump says Iran agreed
+      to 'most' of 15-point plan, Pakistan mediating. If ceasefire reached before
+      April 9, yields could drop 15-25 bps rapidly.
+    supports:
+      center: 4.15
+      low: 4.0
+      high: 4.3
+    logit: -0.8
+    confidence: 0.4
+    effective_logit: -0.32000000000000006
+    conditional: If ceasefire is reached before April 9
+  - description: 'Historical daily volatility of 10yr yield: ~5.2 bps/day over last
+      20 trading days. Over 8 trading days, this implies ~14.7 bps of random walk
+      uncertainty (sqrt(8) * 5.2).'
+    supports:
+      center: 4.37
+      low: 4.22
+      high: 4.52
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: 'Regime shift detected in FRED data: stable since March 20 at mean
+      4.374 with shift magnitude +0.21 from prior regime. Recent pullback from 4.44
+      to 4.37 on March 30 suggests some mean reversion within new regime.'
+    supports:
+      center: 4.38
+      low: 4.25
+      high: 4.5
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: 4.5% yield seen as critical threshold (4.52% triggered Trump tariff
+      reversal in April 2025). Political pressure to keep yields below this level
+      provides soft ceiling, but escalation scenario could breach it.
+    supports:
+      center: 4.42
+      low: 4.3
+      high: 4.52
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: Current yield at 4.37% (TNX March 30 close), down from 4.44 peak
+    on March 27. Last FRED value 4.42 on March 26. Starting point anchors forecast
+    center.
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 4.373337893296854
+    implied_p10: 4.282831737346101
+    implied_p90: 4.469288645690835
+    median_gap: 0.01666210670314605
+    median_gap_pct: 8.936170212765777
+    spread_ratio: 2.413426265590603
+    precision: 0.10250569476081989
+  sources:
+  - '[(FRED) DGS10](https://fred.stlouisfed.org/series/DGS10)'
+  - '[(yfinance) ^TNX](https://finance.yahoo.com/quote/^TNX)'
+  reviewer_critique: '**Verification of Factor Claims Against Trace:**
+
+
+    1. **Factor 1 (Current yield 4.37%)**: Verified. Trace shows TNX `current_price:
+    4.372` on March 30, previous close 4.44. FRED last value 4.42 on March 26. ✓
+
+
+    2. **Factor 2 (Oil at ~$115/bbl, Strait of Hormuz)**: Verified. News article [1]
+    states "benchmark Brent crude contract traded around $115 per barrel, up 60% in
+    March." Multiple articles confirm Hormuz closure. ✓
+
+
+    3. **Factor 3 (April 6 deadline)**: Verified. News article [5] confirms "Trump
+    extended the deadline...to April 6, 2026, at 20:00 Eastern Time." ✓
+
+
+    4. **Factor 4 (Iran agreed to ''most'' of 15-point plan, Pakistan mediating)**:
+    Verified. News article [1] confirms "Iran has agreed to ''most'' of the 15-point
+    U.S. plan" and "Pakistan''s Foreign Minister Ishaq Dar confirmed...his country
+    is prepared to facilitate." ✓
+
+
+    5. **Factor 5 (Historical volatility ~5.2 bps/day)**: Verified. Simulation code
+    output shows "Last 20 trading days: Std daily change: 0.05193" ✓
+
+
+    6. **Factor 6 (Regime shift March 20, mean 4.374)**: Verified. FRED API response
+    shows `"stable_since": "2026-03-20", "stable_mean": 4.374, "shift_magnitude":
+    0.210533`. ✓
+
+
+    7. **Factor 7 (4.52% threshold triggered tariff reversal)**: Verified. News article
+    [17] states "when the 10-year yield hit 4.52%, President Trump halted the ''Liberation
+    Day'' tariffs." ✓
+
+
+    **Other Checks:**
+
+
+    - **Double-counting**: Factors 2 and 3 both relate to Iran conflict but capture
+    distinct mechanisms (economic impact vs. binary event timing). Acceptable.
+
+
+    - **Wrong-direction factors**: All factor signs are correct. Conflict/oil → upward
+    (+), ceasefire → downward (-), political ceiling → limits upside (-).
+
+
+    - **Resolution criteria alignment**: Agent correctly used FRED DGS10, forecasted
+    for April 9, understood numeric resolution.
+
+
+    - **Regime-spanning data**: Agent used last 20 trading days for volatility, which
+    spans the March 20 regime shift. However, this affects drift estimation more than
+    volatility. Agent acknowledged this by using conservative drift (0.005 vs observed
+    0.021) and scenario-based modeling.
+
+
+    - **Adversarial reasoning**: Assessment addresses counterargument about pullback
+    suggesting ceasefire optimism or natural resistance.
+
+
+    - **Probability assessment**: Three models converge around 4.37-4.41 median, with
+    4.39 center estimate. This appropriately reflects: current 4.37 anchor, April
+    6 binary event risk, right-skew from escalation, left-tail from ceasefire. The
+    4.15-4.60 range captures reasonable uncertainty. I see no basis to meaningfully
+    disagree with the estimate.
+
+
+    No hallucinated evidence, no material errors that would change the forecast.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42978
+- **Question ID**: 42914
+- **Session Duration**: 251.0s (4.2 min)
+- **Cost**: $2.8606
+- **Tokens**: 7,597 total (27 in, 7,570 out)
+  - Cache: 550,566 read, 78,221 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42978_20260330_124749/20260330-124749.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 422ms |
+| fred_series | 1 | 0 | 482ms |
+| kalshi_price | 1 | 0 | 785ms |
+| reflection | 1 | 0 | 56161ms |
+| stock_history | 1 | 0 | 55ms |
+| stock_price | 1 | 0 | 382ms |
+
+### Sources Consulted
+
+- [(FRED) DGS10](https://fred.stlouisfed.org/series/DGS10)
+- [(yfinance) ^TNX](https://finance.yahoo.com/quote/^TNX)
