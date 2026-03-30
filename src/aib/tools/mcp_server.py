@@ -131,7 +131,7 @@ def create_mcp_server(
                 )
             return tool_list
 
-        @server.call_tool()  # type: ignore[untyped-decorator]
+        @server.call_tool(validate_input=False)  # type: ignore[untyped-decorator]
         async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             """Execute a tool by name with given arguments.
 
