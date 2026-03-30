@@ -1274,7 +1274,9 @@ def loop(
                         print(f"    ⚠️  Comment failed: {e}")
 
         cycle_duration = time.time() - cycle_start
-        print(f"\n✅ Cycle complete in {cycle_duration:.0f}s")
+        mins, secs = divmod(int(cycle_duration), 60)
+        duration_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+        print(f"\n✅ Cycle complete in {duration_str}")
 
         sleep_seconds = interval * 60
         next_run = datetime.now(timezone.utc).timestamp() + sleep_seconds
