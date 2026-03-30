@@ -99,7 +99,7 @@ class TestStripCommand:
         with patch(
             "aib.devtools.scores.load_all_forecast_jsons",
             return_value=mock_forecasts,
-        ):
+        ), patch("aib.devtools.scores.refresh_scrape"):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "1"])
         assert result.exit_code == 0
         assert "v0.3.1" in result.output
@@ -118,7 +118,7 @@ class TestStripCommand:
         with patch(
             "aib.devtools.scores.load_all_forecast_jsons",
             return_value=forecasts,
-        ):
+        ), patch("aib.devtools.scores.refresh_scrape"):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "3"])
         assert result.exit_code == 0
         assert "v1.0.0" in result.output
@@ -126,7 +126,9 @@ class TestStripCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
+        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]), patch(
+            "aib.devtools.scores.refresh_scrape"
+        ):
             result = runner.invoke(app, ["strip", "--no-watch"])
         assert result.exit_code == 0
 
@@ -138,7 +140,7 @@ class TestTrendCommand:
         with patch(
             "aib.devtools.scores.load_all_forecast_jsons",
             return_value=mock_forecasts,
-        ):
+        ), patch("aib.devtools.scores.refresh_scrape"):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
         assert "Baseline score by forecast date" in result.output
@@ -165,7 +167,9 @@ class TestTrendCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
+        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]), patch(
+            "aib.devtools.scores.refresh_scrape"
+        ):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
         assert "No scored forecasts found" in result.output
