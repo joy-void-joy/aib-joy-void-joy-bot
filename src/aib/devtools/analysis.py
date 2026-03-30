@@ -636,9 +636,9 @@ def review(
         typer.echo("No sessions found to review")
         return
 
-    typer.echo(f"Reviewing {len(targets)} session(s)...")
+    from tqdm import tqdm
 
-    for session_dir in targets:
+    for session_dir in tqdm(targets, desc="Reviewing", unit="session"):
         trace_file = session_dir / "trace_for_condensation.md"
         trace = trace_file.read_text(encoding="utf-8")
         pid = _post_id_for_session(session_dir)
@@ -661,7 +661,7 @@ def review(
             for f in iter_forecast_files(post_id=int(pid), version=ver)
         )
 
-        typer.echo(f"  {pid} ({ver}): {question_title[:50]}...")
+        tqdm.write(f"  {pid} ({ver}): {question_title[:50]}...")
         result = asyncio.run(
             review_forecast_trace(
                 trace=trace,
@@ -671,6 +671,6 @@ def review(
             )
         )
         if result:
-            typer.echo("    → summary.json written")
+            tqdm.write("    -> summary.json written")
         else:
-            typer.echo("    → FAILED")
+            tqdm.write("    -> FAILED")

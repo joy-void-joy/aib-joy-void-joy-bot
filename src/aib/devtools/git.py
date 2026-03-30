@@ -70,10 +70,12 @@ def _commit_post(post_id: int, *, dry_run: bool = False) -> bool:
         return False
 
     if dry_run:
+        from tqdm import tqdm
+
         title = _get_question_title(post_id)
-        typer.echo(f"  Would commit {post_id}: {title[:50]}")
+        tqdm.write(f"  Would commit {post_id}: {title[:50]}")
         for p in paths:
-            typer.echo(f"    {p}")
+            tqdm.write(f"    {p}")
         return True
 
     for path in paths:
@@ -88,8 +90,10 @@ def _commit_post(post_id: int, *, dry_run: bool = False) -> bool:
 
     title = _get_question_title(post_id)
     slug = title[:50].strip().rstrip(".")
+    from tqdm import tqdm
+
     git.commit("-m", f"data(forecasts): {slug}")
-    typer.echo(f"  Committed {post_id}: {slug}")
+    tqdm.write(f"  Committed {post_id}: {slug}")
     return True
 
 
@@ -108,13 +112,15 @@ def commit_forecasts(
 
     typer.echo(f"Found {len(post_ids)} post(s) with uncommitted files")
 
+    from tqdm import tqdm
+
     committed = 0
-    for post_id in sorted(post_ids):
+    for post_id in tqdm(sorted(post_ids), desc="Committing", unit="post"):
         try:
             if _commit_post(post_id, dry_run=dry_run):
                 committed += 1
         except sh.ErrorReturnCode as e:
-            typer.echo(f"  Failed {post_id}: {e}")
+            tqdm.write(f"  Failed {post_id}: {e}")
 
     if dry_run:
         typer.echo(f"\nWould commit {committed} question(s)")
@@ -197,13 +203,13 @@ def backfill(
             typer.echo("No forecasts found")
             return
 
-        typer.echo(f"Found {len(post_ids)} questions with local forecasts")
+        from tqdm import tqdm
 
         updated = 0
         already_marked = 0
         not_submitted = 0
 
-        for post_id in sorted(post_ids):
+        for post_id in tqdm(sorted(post_ids), desc="Backfilling", unit="post"):
             forecast = get_latest_forecast(post_id)
             if forecast is None:
                 continue
@@ -222,17 +228,17 @@ def backfill(
                         "%Y%m%d_%H%M%S"
                     )
                     if dry_run:
-                        typer.echo(
+                        tqdm.write(
                             f"  Would mark {post_id} as submitted at {timestamp}"
                         )
                     else:
                         mark_submitted(post_id, timestamp)
-                        typer.echo(f"  Marked {post_id} as submitted at {timestamp}")
+                        tqdm.write(f"  Marked {post_id} as submitted at {timestamp}")
                     updated += 1
                 else:
                     not_submitted += 1
             except (OSError, ValueError, AttributeError) as e:
-                typer.echo(f"  Error checking {post_id}: {e}")
+                tqdm.write(f"  Error checking {post_id}: {e}")
 
         typer.echo(
             f"\nSummary: {updated} updated, {already_marked} already marked, "

@@ -127,9 +127,11 @@ async def fetch_individual_posts(post_ids: list[int]) -> dict[int, dict]:
 
     results: dict[int, dict] = {}
 
+    from tqdm import tqdm
+
     client = get_client()
-    for i, pid in enumerate(post_ids):
-        if i > 0:
+    for pid in tqdm(post_ids, desc="Fetching posts", unit="q"):
+        if results:
             await asyncio.sleep(2.0)
         try:
             data = await client.fetch_post_json(pid)

@@ -314,7 +314,9 @@ async def scrape_questions_batch(
             finally:
                 await page.close()
 
-        for pid in post_ids:
+        from tqdm import tqdm
+
+        for pid in tqdm(post_ids, desc="Scraping questions", unit="q"):
             try:
                 results[pid] = await scrape_with_retry(pid)
                 status = "scraped"
@@ -393,11 +395,8 @@ def backfill_metadata(
             if dry_run or _update_forecast_json(f, **fields):
                 updated_files += 1
 
-    def on_scraped(pid: int, status: str) -> None:
-        typer.echo(f"  {pid}: {status}")
-
     asyncio.run(
-        scrape_questions_batch(targets, on_scraped=on_scraped, on_data=write_scraped)
+        scrape_questions_batch(targets, on_data=write_scraped)
     )
 
     typer.echo(f"Backfilled {updated_files} files")
@@ -470,37 +469,42 @@ def status() -> None:
     tentative_count = 0
     unresolved = 0
 
+    from tqdm import tqdm
+
     seen_posts: set[str] = set()
-    for base in [
+    bases = [
         *(d.parent for d in iter_forecast_dirs()),
         *(d.parent for d in iter_retrodict_dirs()),
-    ]:
-        if not base.exists():
+    ]
+    all_post_dirs = [
+        (base, post_dir)
+        for base in bases
+        if base.exists()
+        for post_dir in base.iterdir()
+        if post_dir.is_dir()
+    ]
+    for base, post_dir in tqdm(all_post_dirs, desc="Scanning", unit="dir"):
+        key = f"{base}:{post_dir.name}"
+        if key in seen_posts:
             continue
-        for post_dir in base.iterdir():
-            if not post_dir.is_dir():
+        seen_posts.add(key)
+        for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
+            try:
+                data = json.loads(forecast_file.read_text())
+                resolution = data.get("resolution")
+                source = data.get("resolution_source")
+                if resolution is None:
+                    unresolved += 1
+                elif source == "tentative":
+                    tentative_count += 1
+                elif str(resolution).lower() == "yes":
+                    resolved_yes += 1
+                elif str(resolution).lower() == "no":
+                    resolved_no += 1
+                else:
+                    resolved_other += 1
+            except (json.JSONDecodeError, OSError):
                 continue
-            key = f"{base}:{post_dir.name}"
-            if key in seen_posts:
-                continue
-            seen_posts.add(key)
-            for forecast_file in sorted(post_dir.glob("*.json"), reverse=True)[:1]:
-                try:
-                    data = json.loads(forecast_file.read_text())
-                    resolution = data.get("resolution")
-                    source = data.get("resolution_source")
-                    if resolution is None:
-                        unresolved += 1
-                    elif source == "tentative":
-                        tentative_count += 1
-                    elif str(resolution).lower() == "yes":
-                        resolved_yes += 1
-                    elif str(resolution).lower() == "no":
-                        resolved_no += 1
-                    else:
-                        resolved_other += 1
-                except (json.JSONDecodeError, OSError):
-                    continue
 
     total = resolved_yes + resolved_no + resolved_other + tentative_count + unresolved
 
@@ -646,11 +650,8 @@ def tentative(
         ]
         typer.echo(f"  Scraping {len(pids_to_scrape)} questions missing criteria...")
 
-        def on_scraped(pid: int, status: str) -> None:
-            typer.echo(f"    {pid}: {status}")
-
         scraped = asyncio.run(
-            scrape_questions_batch(pids_to_scrape, on_scraped=on_scraped)
+            scrape_questions_batch(pids_to_scrape)
         )
 
         items_by_pid = {
@@ -693,14 +694,9 @@ def tentative(
         typer.echo("No questions with resolution criteria to check")
         return
 
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+    from tqdm import tqdm
 
-    progress = Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-    )
+    pbar = tqdm(total=len(questions), desc="Resolving", unit="q")
 
     applied = 0
     skipped = 0
@@ -708,14 +704,14 @@ def tentative(
     def on_complete(pid: int, verdict: ResolutionVerdict) -> None:
         nonlocal applied, skipped
         icon = "Y" if verdict.resolved else "N"
-        progress.console.print(
+        tqdm.write(
             f"  [{icon}] {pid} ({verdict.confidence:.0%}): {verdict.reason[:80]}"
         )
 
         if not verdict.resolved or verdict.resolution is None:
             skipped += 1
         elif verdict.confidence < min_confidence:
-            progress.console.print(
+            tqdm.write(
                 f"  -> Skipped {pid} (confidence {verdict.confidence:.0%} < {min_confidence:.0%})"
             )
             skipped += 1
@@ -729,19 +725,17 @@ def tentative(
                 )
             applied += 1
 
-        progress.advance(task_id)
+        pbar.update(1)
 
-    with progress:
-        task_id = progress.add_task("Resolving...", total=len(questions))
+    async def run() -> list[tuple[int, ResolutionVerdict]]:
+        if len(questions) == 1:
+            v = await resolve_question(questions[0])
+            on_complete(questions[0].post_id, v)
+            return [(questions[0].post_id, v)]
+        return await resolve_batch(questions, on_complete=on_complete)
 
-        async def run() -> list[tuple[int, ResolutionVerdict]]:
-            if len(questions) == 1:
-                v = await resolve_question(questions[0])
-                on_complete(questions[0].post_id, v)
-                return [(questions[0].post_id, v)]
-            return await resolve_batch(questions, on_complete=on_complete)
-
-        asyncio.run(run())
+    asyncio.run(run())
+    pbar.close()
 
     typer.echo(f"\nResults: {applied} applied, {skipped} skipped")
 
@@ -789,8 +783,10 @@ def backfill_criteria(
     from aib.agent.history import _update_forecast_json
     from aib.paths import TRACES_PATH
 
+    from tqdm import tqdm
+
     fields_by_post: dict[int, dict[str, str | None]] = {}
-    for version_dir in sorted(TRACES_PATH.iterdir()):
+    for version_dir in tqdm(sorted(TRACES_PATH.iterdir()), desc="Scanning traces", unit="ver"):
         sessions = version_dir / "sessions"
         if not sessions.is_dir():
             continue
@@ -814,33 +810,35 @@ def backfill_criteria(
     updated = 0
     already_complete = 0
     no_trace = 0
-    for base in {d.parent for d in iter_forecast_dirs()}:
-        if not base.exists():
+    all_forecast_post_dirs = [
+        post_dir
+        for base in {d.parent for d in iter_forecast_dirs()}
+        if base.exists()
+        for post_dir in base.iterdir()
+        if post_dir.is_dir()
+    ]
+    for post_dir in tqdm(all_forecast_post_dirs, desc="Updating forecasts", unit="dir"):
+        try:
+            pid = int(post_dir.name)
+        except ValueError:
             continue
-        for post_dir in base.iterdir():
-            if not post_dir.is_dir():
+        if pid not in fields_by_post:
+            no_trace += 1
+            continue
+        trace_fields = fields_by_post[pid]
+        for forecast_file in post_dir.glob("*.json"):
+            data = json.loads(forecast_file.read_text(encoding="utf-8"))
+            new_fields = {
+                k: v for k, v in trace_fields.items() if v and not data.get(k)
+            }
+            if not new_fields:
+                already_complete += 1
                 continue
-            try:
-                pid = int(post_dir.name)
-            except ValueError:
+            if dry_run:
+                updated += 1
                 continue
-            if pid not in fields_by_post:
-                no_trace += 1
-                continue
-            trace_fields = fields_by_post[pid]
-            for forecast_file in post_dir.glob("*.json"):
-                data = json.loads(forecast_file.read_text(encoding="utf-8"))
-                new_fields = {
-                    k: v for k, v in trace_fields.items() if v and not data.get(k)
-                }
-                if not new_fields:
-                    already_complete += 1
-                    continue
-                if dry_run:
-                    updated += 1
-                    continue
-                if _update_forecast_json(forecast_file, **new_fields):
-                    updated += 1
+            if _update_forecast_json(forecast_file, **new_fields):
+                updated += 1
 
     typer.echo(
         f"Updated: {updated}, Already complete: {already_complete}, No trace data: {no_trace}"

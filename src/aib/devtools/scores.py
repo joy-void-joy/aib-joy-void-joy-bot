@@ -191,10 +191,12 @@ def resolve_scraped(
         if isinstance(pid, int):
             scores_by_post[pid] = rec
 
+    from tqdm import tqdm
+
     updated = 0
     unchanged = 0
 
-    for post_id, rec in sorted(scores_by_post.items()):
+    for post_id, rec in tqdm(sorted(scores_by_post.items()), desc="Updating scores", unit="post"):
         raw_res = rec.get("question_resolution")
         peer = rec.get("score")
         score_ts = rec.get("score_timestamp")
@@ -231,10 +233,10 @@ def resolve_scraped(
                 continue
 
             if dry_run:
-                typer.echo(f"  {post_id}: {updates}")
+                tqdm.write(f"  {post_id}: {updates}")
             else:
                 if _update_forecast_json(f, **updates):
-                    typer.echo(f"  {post_id}: {updates}")
+                    tqdm.write(f"  {post_id}: {updates}")
             updated += 1
 
     return updated, unchanged
