@@ -1,0 +1,342 @@
+---
+timestamp: 2026-03-30 02:29:52 UTC
+question_type: multiple_choice
+factors:
+- description: Start value (44) is below pre-spike baseline mean (~48), so mean reversion
+    favors Increases. The threshold for Increases (>47) is near the baseline mean.
+  supports: Increases
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: 'Active ongoing news catalysts: TPS House vote expected in coming weeks,
+    GSF security transition April 1, Haiti World Cup prep with friendly vs Iceland
+    Mar 31. These maintain elevated interest.'
+  supports: Increases
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Monte Carlo ensemble (3 methods) averages: Increases 54%, DC 29%,
+    Decreases 17%. All methods favor Increases due to starting below baseline.'
+  supports: Increases
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: The DC band [41, 47] is only 7 points wide in a distribution with std
+    ~5.5, making it relatively narrow and harder to land in over a 12-day horizon.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Pre-spike declining trend (56->41 over ~10 days) suggests interest
+    was fading before the spike. If this trend resumes, values could drop below 41.
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.5
+  effective_logit: 0.35
+- description: SerpAPI vs pytrends measurement uncertainty of ±2 points. At boundaries
+    (47 for Increases, 41 for Decreases), this uncertainty could shift outcomes.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: Empirical day-to-day base rates show 50% no-change rate, but these
+    are for consecutive day transitions, not the 12-day gap in this question. Over
+    longer periods, drift accumulates.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  probabilities:
+    Increases: 0.5
+    Doesn't change: 0.3
+    Decreases: 0.2
+assessment: 'The start value on Mar 30 is 44, which sits below the pre-spike baseline
+  mean of ~48. The spike on Mar 29 (100) was driven by converging events: Haiti vs
+  Tunisia friendly, TPS discharge petition reaching 218 signatures, a gang massacre
+  in Jean-Denis, and Mitch Albom coverage. By Mar 30, interest had already collapsed
+  from 100 to 44.
+
+
+  The resolution compares Mar 30 (44) to Apr 11, with Increases requiring >47, DC
+  requiring 41-47, and Decreases requiring <41.
+
+
+  Key asymmetry: the threshold for Increases (>47) is very close to the pre-spike
+  baseline mean (~48). This means if interest simply reverts to its normal level,
+  it crosses into Increases territory. The DC band [41, 47] is centered below baseline
+  and is relatively narrow (7 points) compared to daily volatility (std ~5.5).
+
+
+  Multiple ongoing catalysts support sustained interest: the TPS House vote is imminent
+  after the discharge petition success, the GSF security transition starts April 1,
+  Haiti plays Iceland on March 31, and World Cup interest continues building. However,
+  a pre-spike declining trend (56->41) suggests interest may not fully recover to
+  early-March levels.
+
+
+  Counterargument: The 44 starting value might represent the new baseline after the
+  spike subsides, and without another catalyst, it could drift lower. The pre-spike
+  decline from 56 to 41 over ~10 days shows Haiti interest can fade when not driven
+  by events. If April is a quiet period, values in the 38-43 range are plausible.
+
+
+  The Monte Carlo ensemble consistently favors Increases (~54%), with DC at ~29% and
+  Decreases at ~17%. I''m adjusting slightly toward DC to account for the possibility
+  that 44 is the new normal rather than a temporary dip.'
+calibration_notes: 'Base rates from the google_trends tool show day-to-day no_change
+  rate of 50% (resolution window) and 67% (30-day window). However, these are for
+  consecutive day transitions with ±3 threshold, not 12-day gaps. Over 12 days, drift
+  accumulates significantly. The pre-spike data distribution (mean 48, std 5.5) directly
+  informs the probability: 44 is 0.76 std deviations below the mean, suggesting moderate
+  pull toward higher values.'
+key_uncertainties: 1. Will the TPS House vote occur before April 11? If so, it would
+  be a major catalyst for 'haiti' search interest. 2. Will there be another gang violence
+  escalation or humanitarian crisis event? 3. Whether the Mar 30 value of 44 represents
+  a post-spike dip or a new baseline. 4. SerpAPI measurement differences vs pytrends
+  (±2 points).
+tool_audit: Google Trends tool worked well - returned comprehensive data with change_stats,
+  tail_stats, and related queries. News search provided good context on the spike
+  drivers. Web search confirmed TPS discharge petition and soccer match details. All
+  tools functioned correctly.
+process_reflection: 'The google_trends tool with tz=0 and exact resolution date range
+  was very helpful for getting the actual data points. The change_stats and tail_stats
+  provided good base rate anchors. Running Monte Carlo simulations in the sandbox
+  was effective for quantifying the probability distribution. The main limitation
+  is that simulations depend on assumptions about the volatility model and mean reversion
+  rate. The news search tools provided excellent context for understanding the spike
+  drivers and upcoming catalysts. One gap: I couldn''t access the actual SerpAPI data
+  that will be used for resolution, so there''s inherent measurement uncertainty between
+  pytrends and SerpAPI outputs.'
+computed:
+  factor_count: 7
+  factor_sum: 2.9299999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Start value (44) is below pre-spike baseline mean (~48), so mean
+      reversion favors Increases. The threshold for Increases (>47) is near the baseline
+      mean.
+    supports: Increases
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: 'Active ongoing news catalysts: TPS House vote expected in coming
+      weeks, GSF security transition April 1, Haiti World Cup prep with friendly vs
+      Iceland Mar 31. These maintain elevated interest.'
+    supports: Increases
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Monte Carlo ensemble (3 methods) averages: Increases 54%, DC 29%,
+      Decreases 17%. All methods favor Increases due to starting below baseline.'
+    supports: Increases
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: The DC band [41, 47] is only 7 points wide in a distribution with
+      std ~5.5, making it relatively narrow and harder to land in over a 12-day horizon.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Pre-spike declining trend (56->41 over ~10 days) suggests interest
+      was fading before the spike. If this trend resumes, values could drop below
+      41.
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.5
+    effective_logit: 0.35
+  - description: SerpAPI vs pytrends measurement uncertainty of ±2 points. At boundaries
+      (47 for Increases, 41 for Decreases), this uncertainty could shift outcomes.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: Empirical day-to-day base rates show 50% no-change rate, but these
+      are for consecutive day transitions, not the 12-day gap in this question. Over
+      longer periods, drift accumulates.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: Start value (44) is below pre-spike baseline mean (~48), so mean
+    reversion favors Increases. The threshold for Increases (>47) is near the baseline
+    mean.
+  dominant_effective_logit: 0.75
+  outcome_breakdown:
+  - outcome: Increases
+    factor_count: 4
+    logit_sum: 2.28
+    factors:
+    - description: Start value (44) is below pre-spike baseline mean (~48), so mean
+        reversion favors Increases. The threshold for Increases (>47) is near the
+        baseline mean.
+      supports: Increases
+      logit: 1.0
+      confidence: 0.75
+      effective_logit: 0.75
+    - description: 'Active ongoing news catalysts: TPS House vote expected in coming
+        weeks, GSF security transition April 1, Haiti World Cup prep with friendly
+        vs Iceland Mar 31. These maintain elevated interest.'
+      supports: Increases
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: 'Monte Carlo ensemble (3 methods) averages: Increases 54%, DC 29%,
+        Decreases 17%. All methods favor Increases due to starting below baseline.'
+      supports: Increases
+      logit: 1.0
+      confidence: 0.7
+      effective_logit: 0.7
+    - description: The DC band [41, 47] is only 7 points wide in a distribution with
+        std ~5.5, making it relatively narrow and harder to land in over a 12-day
+        horizon.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: Decreases
+    factor_count: 1
+    logit_sum: 0.35
+    factors:
+    - description: Pre-spike declining trend (56->41 over ~10 days) suggests interest
+        was fading before the spike. If this trend resumes, values could drop below
+        41.
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.5
+      effective_logit: 0.35
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.3
+    factors:
+    - description: SerpAPI vs pytrends measurement uncertainty of ±2 points. At boundaries
+        (47 for Increases, 41 for Decreases), this uncertainty could shift outcomes.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+    - description: Empirical day-to-day base rates show 50% no-change rate, but these
+        are for consecutive day transitions, not the 12-day gap in this question.
+        Over longer periods, drift accumulates.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.4
+      effective_logit: 0.12
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.77929115682631
+      Decreases: 0.11311270750755802
+      Doesn't change: 0.10759613566613202
+    tentative_probabilities:
+      Increases: 0.5
+      Doesn't change: 0.3
+      Decreases: 0.2
+    per_option_gap_pp:
+      Increases: -27.929115682631
+      Decreases: 8.688729249244199
+      Doesn't change: 19.240386433386796
+    max_gap_pp: -27.929115682631
+    max_gap_option: Increases
+  sources:
+  - '[(Metaculus) Will the interest in “haiti” change between 2026-03-30 and 2026-04-11
+    according to Google Trends?](https://www.metaculus.com/questions/42964)'
+  - '[(Google Trends) haiti](https://trends.google.com/trends/explore?q=haiti)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified the key factual claims in the factors against the research trace:
+
+
+    **Factor 1 (Start value below baseline)**: CONFIRMED. The trace shows the Google
+    Trends API returned start value = 44 on Mar 30, and the simulation calculated
+    baseline mean = 48.2 from pre-spike values [56, 55, 47, 56, 57, 47, 46, 46, 42,
+    41, 41, 42, 46, 49, 52].
+
+
+    **Factor 2 (News catalysts)**: CONFIRMED. The trace contains:
+
+    - TPS discharge petition reaching 218 signatures on Mar 28 (Pressley press release,
+    Quiver Quantitative)
+
+    - "vote expected in the coming weeks" (Quiver Quantitative)
+
+    - GSF transition on April 1 (UK government statement at UN Human Rights Council)
+
+    - Haiti vs Iceland friendly (though there''s conflicting info on date - one source
+    says Mar 29, another says Mar 31; this is a minor discrepancy in the source material
+    itself)
+
+
+    **Factor 3 (Monte Carlo ensemble)**: CONFIRMED. The trace shows simulation output:
+    "Increases: 0.535, Doesn''t change: 0.291, Decreases: 0.174" - matching the claimed
+    ~54%/29%/17%.
+
+
+    **Factor 4 (DC band width)**: CONFIRMED. The trace shows std = 5.5, and DC band
+    [41, 47] is indeed 7 points.
+
+
+    **Factor 5 (Pre-spike declining trend)**: APPROXIMATELY CONFIRMED. The trace data
+    shows values went from 56 (Mar 12) → 41 (Mar 21) over 9 days (not exactly 10,
+    but close). The path wasn''t monotonic but the overall trend was downward.
+
+
+    **Factor 6 (Measurement uncertainty)**: PLAUSIBLE. The fine print mentions SerpAPI
+    vs pytrends differences; the ±2 figure isn''t explicitly derived in the trace
+    but is a reasonable assumption.
+
+
+    **Factor 7 (Day-to-day base rates)**: CONFIRMED. The trace shows change_stats
+    with no_change_rate = 0.5.
+
+
+    **Resolution criteria**: Properly engaged - the agent correctly identified the
+    ±3 threshold creating [41, 47] for DC, >47 for Increases, <41 for Decreases.
+
+
+    **Probability assessment**: The agent''s 50%/30%/20% is consistent with but slightly
+    more conservative than the Monte Carlo results (54%/29%/17%). The adjustment is
+    explained in the assessment (uncertainty about whether 44 represents the new baseline).
+    This is a reasonable calibration given the acknowledged uncertainties.
+
+
+    **Adversarial reasoning**: Present - the assessment explicitly addresses the counterargument
+    that "44 might represent the new baseline after the spike subsides."
+
+
+    **No issues found**: No hallucinated evidence, no double-counting, factor directions
+    are correct, assessment is consistent with factors, resolution criteria properly
+    applied.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42964
+- **Question ID**: 42900
+- **Session Duration**: 423.7s (7.1 min)
+- **Cost**: $3.2438
+- **Tokens**: 10,776 total (27 in, 10,749 out)
+  - Cache: 569,692 read, 84,411 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42964_20260330_022257/20260330-022257.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 1952ms |
+| get_metaculus_questions | 1 | 0 | 249ms |
+| google_trends | 2 | 0 | 15843ms |
+| reflection | 1 | 0 | 129225ms |
+| web_search | 2 | 0 | 19632ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “haiti” change between 2026-03-30 and 2026-...
+- [(Google Trends) haiti](https://trends.google.com/trends/explore?q=haiti)
