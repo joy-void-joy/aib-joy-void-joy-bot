@@ -1,0 +1,71 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched this meta-prediction question asking whether the Metaculus community prediction (CP) for \"Will the Iranian government lose power before 2027?\" will exceed **20%** on April 11, 2026.\n\nThe agent gathered substantial evidence:\n- **Current CP**: Exactly **20.00%** as of March 29, 2026\n- **Historical trend**: The CP spiked to **45%** on March 8 following the start of US/Israel military operations on Feb 28, then declined steadily: 45% → 37.5% → 28% → 20% (weekly changes of **-7.5, -9.5, -8.0 pts**)\n- **205 forecasters** have participated\n\nThe agent used `mcp__asknews__search_news` extensively to understand the geopolitical situation:\n- Ali Khamenei was killed in airstrikes, but **Mojtaba Khamenei** replaced him as Supreme Leader\n- **Masoud Pezeshkian** remains President\n- The **Guardian Council** continues to function\n- The **constitution** still refers to the Islamic Republic\n- The **IRGC has consolidated power** according to multiple sources including The Washington Post\n\nKey diplomatic developments:\n- US presented a **15-point plan** via Pakistan that explicitly **excludes regime change**\n- Iran counter-proposed with **5 conditions** including sovereignty over the Strait of Hormuz\n- **Ceasefire window of March 31 - April 7** was identified as possible\n- US intelligence assesses regime change as **\"improbable\"**\n\nEscalation risks noted:\n- Pentagon considering deployment of **10,000 troops**\n- **April 6 deadline** for energy strikes extension\n- Ground invasion remains possible if talks fail\n\n## Key Evidence\n\n- **Strong downward CP momentum**: -8 pts/week average for 3 consecutive weeks\n- **Regime resilience**: Despite a month of heavy bombing, all resolution criteria remain unmet\n- **Resolution criteria extremely demanding**: Requires removal of Khamenei, Pezeshkian, AND Guardian Council, PLUS constitutional change\n- **Ceasefire negotiations progressing**: Multiple mediators involved, potential deal within days\n- **US plan excludes regime change**: Fundamental shift from \"regime change\" rhetoric to realpolitik\n- **Active war volatility**: Real tail risk of escalation that could spike CP\n\n## Conclusion\n\nThe agent ran Monte Carlo simulations that estimated ~**28%** probability of CP exceeding 20% on April 11. After qualitative adjustment for war volatility, the agent settled on **32%**.\n\nThe reasoning was sound: the strong, consistent downward trend (3 weeks of ~8 pts decline) combined with regime survival fundamentals and progressing ceasefire talks strongly favor continued decline. The primary upside scenario—ceasefire collapse followed by major escalation—was appropriately weighted as a minority probability.\n\nThe final estimate of **32%** appropriately reflects ~65-70% probability the trend continues (CP ends at 12-18%), ~25-30% probability war dynamics push CP modestly above 20%, and ~5% probability of dramatic escalation.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — confirmed 205 forecasters and resolution criteria",
+      "mcp__markets__get_cp_history": "1 call, 1 error (403 forbidden due to AIB tournament restrictions), impact: minor (agent used snapshot data from question instead), value: low",
+      "mcp__asknews__search_news": "2 calls, 0 errors, impact: none, value: high — provided comprehensive geopolitical context on Iran situation and ceasefire negotiations",
+      "mcp__markets__polymarket_price": "1 call, 0 matches, impact: none, value: low — no relevant markets found",
+      "mcp__markets__get_coherence_links": "1 call, empty result, impact: none, value: low — no linked questions",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: medium — Monte Carlo simulation provided quantitative grounding for estimate",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — verified all 7 factors against evidence"
+    },
+    "capability_gaps": [
+      "Kalshi/Manifold market lookup for Iran-related betting odds",
+      "Historical CP trend line access blocked by 403 — would have been valuable for more granular trend analysis"
+    ],
+    "subtle_bugs": [
+      "Polymarket search with 'Iran regime change government' returned no markets — broader search terms like 'Iran ceasefire' or 'Iran war' might have found relevant markets"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Trend extrapolation from CP history combined with geopolitical fundamentals analysis and Monte Carlo simulation.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether ceasefire negotiations succeed or fail in the next 12 days — success clearly pushes CP below 20%, failure could stabilize or increase it."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent could not access CP history due to 403 error on Metaculus API, relied only on weekly snapshots from question description. More granular daily data might have revealed volatility patterns relevant to threshold-crossing risk.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "Agent did not establish a base rate for how often meta-predictions at exact threshold resolve YES vs NO. The CP being at exactly 20.00% is a special edge case that may have different dynamics than CPs clearly above or below threshold.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "30-35%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Comprehensive news research covering multiple language sources (French, Spanish, Arabic, Chinese, Hindi, Ukrainian) for global perspective on Iran situation",
+    "Correctly identified the demanding resolution criteria (all three leaders + constitutional change) and verified these against current regime status",
+    "Monte Carlo simulation with explicit scenario modeling (ceasefire, continued war, escalation) provided quantitative grounding rather than pure intuition",
+    "Factor verification through reflection tool systematically checked each claim against trace evidence",
+    "Appropriately weighted the strong downward trend (-8 pts/week for 3 weeks) as dominant factor while acknowledging escalation tail risk"
+  ],
+  "weaknesses": [
+    "Did not search prediction markets beyond Polymarket — Kalshi or Manifold might have had relevant Iran war/ceasefire markets",
+    "No base rate analysis for meta-predictions at exact thresholds — how often does a CP at exactly 20% end up above vs below the threshold?",
+    "Simulation scenario weights (30% ceasefire, 45% continued war, 15% stalemate, 10% escalation) were assigned intuitively without explicit justification"
+  ],
+  "pipeline": {
+    "issues": [
+      "CP history API returned 403 forbidden — expected for AIB tournament questions but forced reliance on less granular weekly snapshot data"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Search multiple prediction market platforms (Polymarket, Kalshi, Manifold) with varied query terms when initial search returns empty",
+    "Establish base rates for meta-predictions at exact thresholds by examining historical Metaculus meta-questions",
+    "Document explicit reasoning for scenario probability weights in Monte Carlo simulations"
+  ]
+}
