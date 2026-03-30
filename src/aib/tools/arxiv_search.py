@@ -178,9 +178,10 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
             logger.warning("arXiv metadata check failed for %s: %s", paper_id, e)
 
     html_url = f"https://arxiv.org/html/{paper_id}"
-    async with arxiv_throttle, httpx.AsyncClient(
-        timeout=_ARXIV_TIMEOUT, follow_redirects=True
-    ) as client:
+    async with (
+        arxiv_throttle,
+        httpx.AsyncClient(timeout=_ARXIV_TIMEOUT, follow_redirects=True) as client,
+    ):
         try:
             resp = await client.get(html_url)
             if resp.status_code == 200 and "text/html" in resp.headers.get(

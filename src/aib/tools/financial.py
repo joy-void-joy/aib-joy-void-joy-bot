@@ -1679,12 +1679,10 @@ async def options_iv(params: OptionsIVInput) -> OptionsIVResult:
 
         # Put-call skew: OTM put IV vs OTM call IV (positive = more downside fear)
         otm_puts = puts[
-            (puts["strike"] < price * 0.95)
-            & (puts["impliedVolatility"] > 0)
+            (puts["strike"] < price * 0.95) & (puts["impliedVolatility"] > 0)
         ]
         otm_calls = calls[
-            (calls["strike"] > price * 1.05)
-            & (calls["impliedVolatility"] > 0)
+            (calls["strike"] > price * 1.05) & (calls["impliedVolatility"] > 0)
         ]
         pc_skew: float | None = None
         if not otm_puts.empty and not otm_calls.empty:

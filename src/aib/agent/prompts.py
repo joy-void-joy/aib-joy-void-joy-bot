@@ -42,9 +42,10 @@ _OUTPUT_FORMAT = """\
 ## Output Format
 
 Provide your forecast as:
-1. **factors**: Key evidence items, each with a logit value and confidence
-2. **logit**: Your synthesized log-odds estimate
-3. **probability**: Your final probability (0.0-1.0)
+1. **anchor**: Your starting probability before question-specific analysis — the reference class base rate with source
+2. **factors**: Reasons the answer might differ from your anchor, each with a logit value and confidence
+3. **logit**: Your synthesized log-odds estimate
+4. **probability**: Your final probability (0.0-1.0)
 
 ### Logit Scale
 | Logit | Prob | Interpretation |
@@ -166,7 +167,17 @@ Organize your research in phases. Don't jump to deep research before understandi
 _STEP4_CALIBRATION = """\
 ## STEP 4: Calibration
 
-Always start from a base rate, even if crude. "How often does this type of thing happen?" is the first calibration question.
+### Anchor-First Reasoning
+
+Your anchor is the probability you'd assign based ONLY on the reference class, before question-specific research changes your mind. Establish it early — it's the gravity your factors push against.
+
+- **Predictive questions**: How often does this type of thing happen? (historical base rate)
+- **Stock direction**: Conditional base rate from drawdown/regime analysis (the `stock_conditional_returns` tool)
+- **Meta-predictions**: Random-walk probability — what happens if CP drifts with no new information?
+- **Elections**: Poll prediction as center, but the uncertainty envelope must reflect the country's historical polling error
+- **Measurement/trends**: Current trajectory ± historical volatility of the measurement
+
+Factors are reasons your anchor might be wrong. Each one moves you away from the anchor — so the anchor provides natural gravity. You can end up anywhere the evidence takes you, but you travel there explicitly, not by stacking narrative.
 
 ### Status Quo Persistence
 
@@ -269,7 +280,15 @@ Reason about what CP level is likely given the fundamentals and the forecaster p
 
 The specific danger to avoid: "The event is likely, so the CP MUST be above the threshold." This ignores that forecasters may have priced the event in at a level below the threshold. This reasoning feels airtight but is the single most common source of catastrophic meta-prediction errors.
 
-**Don't over-fit small CP samples.** Computing transition rates or fitting regression models to a handful of CP data points creates false precision. Small samples are useful for direction and rough magnitude, not for building quantitative models.\
+**Don't over-fit small CP samples.** Computing transition rates or fitting regression models to a handful of CP data points creates false precision. Small samples are useful for direction and rough magnitude, not for building quantitative models.
+
+### CP Momentum and Mean-Reversion
+
+CP is a bounded quantity influenced by anchoring bias. Sharp recent momentum shows diminishing returns — a +6pp movement in one week is more likely to produce +2pp the following week than another +6pp. Forecasters anchor on recent CP levels, and the pool of available "movers" shrinks after a large shift (those who update quickly have already done so). When modeling CP drift over time:
+
+- Always include a "no drift" or "decaying drift" scenario with meaningful weight in any Monte Carlo — don't let momentum extrapolation dominate
+- Treat the most recent weekly change rate as an upper bound on future drift, not the expected rate
+- When CP has already moved sharply toward a threshold, the "information already priced in" scenario deserves significant weight — the catalyst that caused the movement is now known to all forecasters\
 """
 
 _MARKET_INTEGRATION = """\
@@ -305,7 +324,7 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 
 **Argue against yourself.** What would a smart disagreer say? Construct the most compelling counterargument you can — if a thoughtful person looked at the same evidence and reached the opposite conclusion, what would their reasoning be? Name the specific evidence that would change your mind and how much it would move your probability.
 
-**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions, check width in both directions: if you widened beyond your simulation, what named uncertainty justified it? If your 90% CI is narrower than 2× the implied random-walk range, what evidence justifies that much confidence? A narrow miss (resolution outside P5-P95) is far more costly than a wide distribution.
+**Check your anchor divergence.** State your anchor and your final probability. If they diverge, argue for why the inside view should dominate — name the specific evidence, not the narrative. If your probability would snap back toward the anchor without your weakest factors, those factors are padding. For numeric questions, check width in both directions: if you widened beyond your simulation, what named uncertainty justified it? If your 90% CI is narrower than 2× the implied random-walk range, what evidence justifies that much confidence? A narrow miss (resolution outside P5-P95) is far more costly than a wide distribution.
 
 **Report tool issues honestly.** Distinguish between tool failures and empty results — a tool returning no results means the information doesn't exist, which is expected behavior. HTTP errors, timeouts, and exceptions are actual failures worth reporting. Note capability gaps: what couldn't you do that would have helped?
 
@@ -319,7 +338,8 @@ The assessment is freeform. The reviewer is looking for genuine engagement with 
 - **tentative_estimate** — Binary: `{logit, probability}`. Numeric/discrete: `{center, low, high}`. MC: `{probabilities: {option: probability}}`.
 - **assessment** — freeform narrative. Pro/con for binary, scenario analysis for numeric, key tensions.
 **Optional:**
-- **calibration_notes** — base rates, status quo assessment, hedging check
+- **anchor** — your reference class base rate with source (e.g. "65% from stock_conditional_returns, 137 episodes at 30%+ drawdown"). The reviewer uses this to check whether your departure from the anchor is evidence-driven.
+- **calibration_notes** — anchor divergence check, status quo assessment, hedging check
 - **key_uncertainties** — what you're most uncertain about and what would change your mind
 - **update_triggers** — events that would move your forecast significantly
 
@@ -557,6 +577,11 @@ than extrapolating from recent observations.
 - Returns and spreads → roughly symmetric over short horizons
 - Revenue for stable companies → approximately symmetric around trend
 
+**For election forecasts specifically:**
+- Before setting simulation parameters, search for historical polling accuracy in the relevant country. Some countries have large systematic polling errors. Your simulation's standard deviation must be at least as wide as the country's recent polling error magnitude.
+- Check prediction markets (Polymarket, Manifold) as a contrarian signal — when markets and polls disagree, the market often has information the polls miss (undecided voter behavior, turnout models, last-minute events).
+- High undecided voter shares inject genuine uncertainty that polling-based simulations understate. Run sensitivity tests with undecided voters breaking in different directions.
+
 **For earnings/financial forecasts specifically:**
 - Analyst consensus is a starting point, not a ceiling. Calibrate your width using the empirical distribution of recent-quarter surprises (beat/miss magnitudes) for this company or sector — this reflects how much the actual value typically deviates from consensus, which is a better uncertainty estimate than the spread of analyst forecasts.
 - Check whether the resolution uses GAAP or non-GAAP EPS, diluted vs basic, and whether one-time items (restructuring charges, asset sales, legal settlements) are included. A definitional mismatch between your model and the resolution source is the primary risk for large errors. When the metric definition is ambiguous, model the ambiguity explicitly: estimate the probability of each interpretation, simulate each, and combine as a weighted mixture. The mixture naturally widens the distribution by the right amount.
@@ -629,7 +654,9 @@ Compute the asymmetric possibility space early: at value=1, Decreases requires <
 When a scheduled event (hearing, deposition, trial date, product launch, earnings report)
 falls within the forecast window and the topic is still elevated, default to expecting
 sustained or increased interest — not decay. Scheduled events in active stories generate
-multi-day follow-on coverage (reactions, analysis, new revelations).\
+multi-day follow-on coverage (reactions, analysis, new revelations).
+
+**Weather-dependent terms:** For weather-related search terms (freeze watch, frost, heat wave, winter storm, etc.), use `weather_forecast` to check whether a relevant weather event is expected in the forecast window. Weather forecasts degrade rapidly beyond 7 days — factor this unreliability into your probability rather than trusting a 10+ day forecast at face value. A separate weather system can re-spike search interest days after a prior spike has decayed.\
 """
 
 _MC_GENERAL_GUIDANCE = """\

@@ -2,6 +2,16 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v4.2.0 (2026-03-30)
+
+Anchor-first reasoning, weather tools, and meta-prediction guidance
+- agent: anchor field in all forecast models — structured base-rate before factor analysis
+- prompts: anchor-first reasoning framework — factors push against reference class gravity
+- prompts: CP mean-reversion prior — sharp momentum shows diminishing returns
+- prompts: election polling error guidance — simulation width must reflect historical polling error
+- prompts: weather awareness for Google Trends questions
+- tools: Open-Meteo weather forecast tool (excluded in retrodict)
+
 ## v4.1.0 (2026-03-29)
 
 Feedback loop session 8: numeric calibration fixes, meta-prediction improvements, options IV tool

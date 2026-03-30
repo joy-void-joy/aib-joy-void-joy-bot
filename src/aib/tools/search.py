@@ -568,7 +568,11 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
                     items = candidate
                     break
         return [
-            {"title": a["title"], "snippet": a.get("snippet", ""), "url": a.get("url", "")}
+            {
+                "title": a["title"],
+                "snippet": a.get("snippet", ""),
+                "url": a.get("url", ""),
+            }
             for a in items
             if isinstance(a, dict) and "title" in a
         ]

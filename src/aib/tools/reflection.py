@@ -75,6 +75,16 @@ class ReflectionInput(BaseModel):
             if isinstance(te, str):
                 data = {**data, "tentative_estimate": json.loads(te)}
         return data
+
+    anchor: str | None = Field(
+        default=None,
+        description=(
+            "Your reference class base rate with source — the probability "
+            "you'd assign before question-specific analysis. "
+            "E.g. 'Conditional base rate: 65% (stock_conditional_returns, "
+            "137 episodes at 30%+ drawdown)'"
+        ),
+    )
     assessment: str = Field(
         description=(
             "Freeform narrative assessment of the evidence. Structure however "
@@ -84,7 +94,7 @@ class ReflectionInput(BaseModel):
     )
     calibration_notes: str | None = Field(
         default=None,
-        description="Base rates, status quo assessment, hedging check.",
+        description="Base rates, anchor divergence check, hedging check.",
     )
     key_uncertainties: str | None = Field(
         default=None,
@@ -522,6 +532,17 @@ independently — you work from the agent's trace and factors.
   factor confidence values, or ignoring strong evidence that should \
   dominate the estimate.
 
+- **Anchor divergence** — The agent states an anchor (reference \
+  class base rate) and a final probability. If they diverge \
+  significantly, check whether the factors justify the distance. \
+  Large departures from well-sourced anchors need strong, verified \
+  evidence — not an accumulation of mild narrative factors. If the \
+  agent's three weakest factors were removed and the probability \
+  would snap back toward the anchor, the departure may be \
+  narrative-driven rather than evidence-driven. This is a **warn** \
+  if the anchor is well-sourced and the departure exceeds ~20pp \
+  without a single strong factor (|logit| >= 2.0) driving it.
+
 ## What NOT to check
 
 - Whether the agent did enough research (but resolution criteria \
@@ -608,6 +629,9 @@ def _build_reviewer_prompt(
             f"{prefix}{f.description} (logit={f.logit:+.1f}, confidence={f.confidence})"
         )
     sections.append("## Factors\n\n" + "\n".join(factor_lines))
+
+    if inp.anchor:
+        sections.append(f"## Anchor\n\n{inp.anchor}")
 
     sections.append(f"## Assessment\n\n{inp.assessment}")
 

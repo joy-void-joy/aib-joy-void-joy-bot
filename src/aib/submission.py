@@ -89,7 +89,9 @@ def create_forecast_payload(output: ForecastOutput) -> dict:
     if question_type == "multiple_choice":
         if not output.probabilities:
             raise SubmissionError("Multiple choice forecast missing probabilities")
-        clamped = {k: max(0.001, min(0.999, v)) for k, v in output.probabilities.items()}
+        clamped = {
+            k: max(0.001, min(0.999, v)) for k, v in output.probabilities.items()
+        }
         total = sum(clamped.values())
         normalized = {k: v / total for k, v in clamped.items()}
         return {"probability_yes_per_category": normalized}

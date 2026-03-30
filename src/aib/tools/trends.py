@@ -12,7 +12,12 @@ import pandas as pd
 from pydantic import BaseModel, Field
 from pytrends.exceptions import TooManyRequestsError
 from pytrends.request import TrendReq
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
