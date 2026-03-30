@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.extract import extract_with_prompt
-from aib.tools.fetch_http import downloads_dir
+from aib.tools.fetch_http import MAX_PDF_BYTES, downloads_dir
 from aib.tools.throttle import arxiv_throttle
 
 logger = logging.getLogger(__name__)
@@ -209,6 +209,12 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
             resp.raise_for_status()
         except httpx.HTTPError as e:
             raise ToolError(f"Failed to fetch paper {paper_id}: {e}") from e
+
+    if len(resp.content) > MAX_PDF_BYTES:
+        raise ToolError(
+            f"PDF too large to process ({len(resp.content) / 1024 / 1024:.0f} MB). "
+            f"Try the abstract or HTML version instead."
+        )
 
     target = downloads_dir.get() / "arxiv"
     target.mkdir(parents=True, exist_ok=True)

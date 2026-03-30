@@ -174,8 +174,16 @@ _EXTRACT_PAGE_DATA_JS = """() => {
 downloads_dir: ContextVar[Path] = ContextVar("downloads_dir", default=Path("tmp"))
 
 
+MAX_PDF_BYTES = 100 * 1024 * 1024
+
+
 def _save_pdf(url: str, content: bytes) -> dict[str, Any]:
     """Save PDF content to disk and return a path hint for the agent."""
+    if len(content) > MAX_PDF_BYTES:
+        return mcp_error(
+            f"PDF too large to process ({len(content) / 1024 / 1024:.0f} MB). "
+            f"Try finding the information from a different source."
+        )
     target = downloads_dir.get() / "pdf"
     target.mkdir(parents=True, exist_ok=True)
     slug = hashlib.sha256(url.encode()).hexdigest()[:12]
