@@ -16,6 +16,7 @@ from typing import Self
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
 from scipy import stats
+from scipy.ndimage import gaussian_filter1d
 
 logger = logging.getLogger(__name__)
 
@@ -525,8 +526,15 @@ class NumericDistribution(BaseModel):
         for i in range(len(cdf_array)):
             cdf_array[i] = apply_minimum(cdf_array[i], i / (len(cdf_array) - 1))
 
-        # Apply PMF cap via outward redistribution from peaks
+        # Smooth the inner PMF to remove piecewise-linear aliasing artifacts.
+        # Linear interpolation between sparse percentiles creates a step-function
+        # PMF; for discrete questions where control points systematically fall at
+        # half-grid offsets, this produces visible oscillation.
         pmf = np.diff(cdf_array, prepend=0, append=1)
+        if len(pmf) > 3:
+            pmf[1:-1] = gaussian_filter1d(pmf[1:-1], sigma=1.0)
+
+        # Apply PMF cap via outward redistribution from peaks
         cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
         pmf = redistribute_capped_pmf(pmf, cap)
 
