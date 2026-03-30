@@ -1,0 +1,60 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a meta-prediction question asking whether the Metaculus community prediction (CP) for \"Will Benjamin Netanyahu cease to be Prime Minister of Israel during 2026?\" would be **strictly above 25.00%** on April 10, 2026. The forecast date was March 30, 2026, giving approximately 11 days until resolution.\n\nThe agent gathered data from multiple sources:\n- **Metaculus API**: Retrieved question details showing **816 forecasters** and historical CP snapshots showing values of [26, 26, 26, 25, 23, 25]% over 6 weeks\n- **News search (AskNews)**: Found 20 articles covering Israeli politics, with critical breaking news that the Israeli parliament passed the budget on March 30, 2026 with a 62-55 vote\n- **Manifold Markets**: Found two relevant markets showing **39.9%** and **42.1%** probability for the underlying Netanyahu question — significantly higher than Metaculus's 25%\n- **Polymarket**: No relevant markets found\n- **CP History API**: Returned 403 (expected for AIB tournament questions)\n\n## Key Evidence\n\n**Favoring NO (CP stays ≤25%):**\n- CP is currently **exactly at 25.00%** — the strict inequality means status quo resolves NO\n- Budget passage on March 30 removes risk of early elections, stabilizing Netanyahu's position through September/October 2026\n- Slight downward drift in CP observed: 26% → 25% over 6 weeks (mean weekly change: **-0.20pp**)\n- Opposition fragmentation: Former IDF chief Gadi Eisenkot rejected merger with Naftali Bennett, weakening unified opposition\n- High forecaster count (816) creates stability and slow-moving CP\n\n**Favoring YES (CP rises above 25%):**\n- Manifold markets at **40-42%** vs Metaculus's **25%** suggests potential for upward convergence\n- Polls consistently show Netanyahu's coalition losing: **51-53 seats** vs opposition's **59-67 seats**\n- Recent CP bounce from 23% → 25% in the most recent week\n\n## Quantitative Modeling\n\nThe agent ran Monte Carlo simulations with 100,000 samples using observed weekly volatility (std = **1.33pp**):\n\n| Scenario | P(CP > 25%) | Mean Final CP |\n|----------|-------------|---------------|\n| Pure random walk | **42.4%** | 24.68% |\n| Budget pushes CP down ~0.5pp | **31.2%** | 24.18% |\n| Budget pushes CP down ~1pp | **21.5%** | 23.68% |\n| Manifold divergence pulls CP up ~0.5pp | **54.7%** | 25.19% |\n\n## Conclusion\n\nThe agent concluded with **40% probability** that CP > 25.00% on April 10. The reasoning centers on:\n\n1. The CP being exactly at the threshold creates a coin-flip baseline\n2. The strict inequality requirement (must be *higher than* 25%, not equal) means no change = NO\n3. The budget passage provides marginal downward pressure\n4. Monte Carlo with downward drift gives 21-31%, but pure random walk gives 42%\n5. The 40% estimate splits the difference, acknowledging genuine uncertainty while leaning slightly toward NO",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — retrieved question details and 816 forecaster count",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: high — surfaced critical budget passage news from same day",
+      "mcp__markets__get_cp_history": "1 call, 1 error (403 Forbidden for AIB tournament), impact: minor (used weekly snapshots instead), value: medium",
+      "mcp__markets__polymarket_price": "1 call, 0 errors (empty results), impact: none, value: low — no relevant markets found",
+      "mcp__markets__manifold_price": "1 call, 0 errors, impact: none, value: high — found 40-42% market prices for comparison",
+      "mcp__markets__get_coherence_links": "1 call, 0 errors (empty results), impact: none, value: low — no coherence links found",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: high — Monte Carlo simulation with multiple scenarios",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — factor verification and self-review"
+    },
+    "capability_gaps": [
+      "Daily CP history would have improved volatility estimation — only 5 weekly change observations available"
+    ],
+    "subtle_bugs": [
+      "get_cp_history 403 error is expected behavior for AIB tournament but could be better documented in tool response"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Monte Carlo simulation on CP trajectory using observed weekly volatility with scenario analysis for news impact",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the budget passage news will shift forecaster sentiment downward or whether Manifold-Metaculus divergence will narrow upward"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "38-42%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that strict inequality (>25% not ≥25%) means status quo resolves NO — this threshold analysis is crucial for the forecast",
+    "Surfaced same-day breaking news (budget passage) that directly impacts the underlying question probability and thus CP trajectory",
+    "Ran Monte Carlo with multiple scenarios capturing uncertainty about news impact (21-55% range across scenarios)",
+    "Cross-referenced Manifold markets showing 40-42% vs Metaculus 25% — correctly identified this as potential upward pressure while noting the divergence has persisted",
+    "Properly weighted the 816 forecaster count as creating stability/stickiness in CP movement",
+    "Factor analysis was comprehensive with 8 distinct factors drawing on different evidence sources"
+  ],
+  "weaknesses": [
+    "Limited volatility estimation: only 5 weekly change observations (weeks 1-6) provide weak statistical basis for daily std estimation",
+    "Did not explicitly model the asymmetry between upward and downward CP movements — the CP hit 23% recently and bounced back, suggesting possible floor",
+    "Could have searched for additional prediction markets (Kalshi, PredictIt) for more price discovery signals",
+    "The Manifold-Metaculus divergence (40-42% vs 25%) is substantial but the agent didn't fully explore why these communities differ so much"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For meta-predictions on CP movement, request hourly or daily CP history when available to improve volatility estimation",
+    "When prediction market prices diverge significantly from Metaculus CP, investigate community composition differences (retail vs expert, US vs international)",
+    "Consider modeling CP movement as mean-reverting rather than pure random walk, especially when current value is near historical extremes"
+  ]
+}
