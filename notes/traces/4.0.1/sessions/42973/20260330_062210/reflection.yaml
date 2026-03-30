@@ -1,0 +1,232 @@
+---
+timestamp: 2026-03-30 06:25:43 UTC
+question_type: binary
+factors:
+- description: ADM strong recent uptrend (+27% over 3 months) with positive momentum
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: ADM near 52-week high (only 2.6% below), analyst consensus target $58.57
+    well below current price suggesting overextension
+  logit: -0.7
+  confidence: 0.6
+  effective_logit: -0.42
+- description: 'Macro headwinds: US-Iran war, Brent >$110, S&P 500 in -9% drawdown,
+    VIX at 31'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: ADM relative strength vs broader market during selloff; commodity company
+    may benefit from elevated commodity prices
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: 'S&P 500 conditional base rate during 8%+ drawdown: 52.8% positive
+    over 5 days'
+  logit: 0.1
+  confidence: 0.7
+  effective_logit: 0.06999999999999999
+- description: Trump Iran strike deadline is April 6 (resolution date) - massive binary
+    catalyst creating high uncertainty in both directions
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Insider selling (multiple SVPs) and mixed analyst ratings suggest caution
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Monte Carlo simulation with zero drift and historical vol: ~50% chance
+    of increase'
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  logit: -0.05
+  probability: 0.49
+assessment: 'This is a 5-trading-day stock direction question for ADM. The Monte Carlo
+  simulations give a range of 46-59% depending on drift assumptions. The key tension
+  is between ADM''s strong recent momentum (suggesting positive drift) and significant
+  macro headwinds (Iran war, elevated VIX, market selloff, analyst targets well below
+  current price). ADM has shown relative strength in the selloff, likely due to its
+  commodity exposure, but it''s trading near its 52-week high with analyst consensus
+  at $58.57 (19% below current price), suggesting the recent rally may be overextended.
+  The S&P 500 conditional base rate during 8%+ drawdowns shows 52.8% positive over
+  5 days - essentially a coin flip. The Iran strike deadline of April 6 (the exact
+  resolution date) creates a massive binary catalyst that could go either way. Net
+  assessment: approximately 49-50%, very close to a coin flip with slight negative
+  lean due to macro headwinds and overextension risk.'
+calibration_notes: Unconditional base rate for weekly stock increase is ~52%. Given
+  elevated macro uncertainty and ADM trading well above analyst targets, adjusting
+  slightly below the unconditional rate. The Iran deadline on April 6 creates symmetric
+  risk.
+key_uncertainties: 'Iran-US conflict trajectory is the dominant uncertainty. If strikes
+  happen on April 6, market impact is uncertain for ADM specifically (commodity company
+  could go either way). If de-escalation, broad relief rally likely. ADM-specific
+  risk: trading well above all analyst price targets.'
+tool_audit: stock_price and stock_history provided good current and historical data.
+  stock_conditional_returns gave useful S&P 500 base rates. search_news returned relevant
+  macro context about Iran war. All tools worked as expected, no failures.
+update_triggers: Iran ceasefire/de-escalation announcement (would push toward YES).
+  US strikes on Iranian energy infrastructure (uncertain direction for ADM). Broader
+  market crash below S&P 6200 (would push toward NO). ADM-specific news like earnings
+  revision.
+process_reflection: 'The stock direction question framework worked well. The Monte
+  Carlo simulation with different drift assumptions provided a good range. The news
+  search was essential for discovering the Iran war context and the April 6 strike
+  deadline, which is a crucial catalyst for this specific question. The conditional
+  returns tool provided useful base rates. One gap: I didn''t have ADM-specific conditional
+  returns (how does ADM perform when near its 52-week high?), though this could be
+  computed manually from historical data.'
+computed:
+  factor_count: 8
+  factor_sum: -0.39999999999999997
+  tentative_logit: -0.05
+  logit_gap: 0.35
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: ADM strong recent uptrend (+27% over 3 months) with positive momentum
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: ADM near 52-week high (only 2.6% below), analyst consensus target
+      $58.57 well below current price suggesting overextension
+    logit: -0.7
+    confidence: 0.6
+    effective_logit: -0.42
+  - description: 'Macro headwinds: US-Iran war, Brent >$110, S&P 500 in -9% drawdown,
+      VIX at 31'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: ADM relative strength vs broader market during selloff; commodity
+      company may benefit from elevated commodity prices
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: 'S&P 500 conditional base rate during 8%+ drawdown: 52.8% positive
+      over 5 days'
+    logit: 0.1
+    confidence: 0.7
+    effective_logit: 0.06999999999999999
+  - description: Trump Iran strike deadline is April 6 (resolution date) - massive
+      binary catalyst creating high uncertainty in both directions
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Insider selling (multiple SVPs) and mixed analyst ratings suggest
+      caution
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Monte Carlo simulation with zero drift and historical vol: ~50%
+      chance of increase'
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: ADM near 52-week high (only 2.6% below), analyst consensus target
+    $58.57 well below current price suggesting overextension
+  dominant_effective_logit: -0.42
+  factor_implied_probability: 0.401312339887548
+  tentative_probability: 0.49
+  gap_pp: 8.8687660112452
+  sources:
+  - '[(yfinance) ADM](https://finance.yahoo.com/quote/ADM)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 8 factors against the research trace. Each factor''s core claim
+    is well-grounded:
+
+
+    1. **+27% uptrend**: Trace confirms `max_bounce_from_recent_low_pct: 27.06%` from
+    $57 (late Dec) to $72 (late March). ✓
+
+
+    2. **Near 52-week high, analyst target $58.57**: Trace shows `drawdown_from_52w_high_pct:
+    -2.64%` and multiple news articles confirm consensus target "$58.57" with "18.83%
+    downside". ✓
+
+
+    3. **Macro headwinds (Iran war, Brent >$110, S&P -9%, VIX 31)**: S&P data shows
+    `drawdown_from_52w_high_pct: -9.05%`, news confirms "Brent crude...reach $113",
+    "VIX...31.05", and "war in Iran entering its fifth week". ✓
+
+
+    4. **ADM relative strength**: ADM near 52w high while S&P down 9% directly visible
+    in trace data. ✓
+
+
+    5. **S&P conditional base rate 52.8%**: Trace shows `pct_positive: 52.84%` from
+    conditional returns tool. ✓
+
+
+    6. **Trump Iran deadline April 6**: News confirms "Trump extended his deadline
+    to strike Iranian energy infrastructure from March 27 to April 6". ✓
+
+
+    7. **Insider selling**: Multiple news articles document SVP Weber (25k shares),
+    SVP Pinner (34k shares), SVP Morris (50k shares) sales. ✓
+
+
+    8. **Monte Carlo ~50% zero drift**: Trace shows "Zero drift, 6-month vol === P(price
+    increase over 5 days): 49.93%". ✓
+
+
+    **Double-counting check**: No issues found. Factors address distinct aspects:
+    momentum, valuation, macro conditions, relative performance, base rates, catalyst
+    timing, insider activity, and simulation baseline.
+
+
+    **Wrong-direction check**: All logit signs consistent. Positive factors (momentum,
+    relative strength) have positive logits; negative factors (overextension, insider
+    selling, macro) have negative logits; binary catalyst has logit=0.
+
+
+    **Probability assessment**: The agent''s weighted Monte Carlo yielded ~51%, and
+    the final 49% reflects a small adjustment for qualitative headwinds (analyst targets
+    19% below price, multiple insider sales, macro uncertainty). This 2-point adjustment
+    is reasonable and justified by the evidence. I don''t see a meaningful disagreement
+    with the agent''s probability estimate.
+
+
+    **Adversarial reasoning**: The assessment engages with both sides - noting ADM''s
+    relative strength and commodity exposure as potential positives while acknowledging
+    overextension risk and macro headwinds. The Iran deadline is correctly treated
+    as a symmetric uncertainty source.
+
+
+    **Resolution criteria**: Clear and properly addressed - comparing Yahoo Finance
+    close prices on the two dates.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42973
+- **Question ID**: 42909
+- **Session Duration**: 225.7s (3.8 min)
+- **Cost**: $2.7036
+- **Tokens**: 6,197 total (20 in, 6,177 out)
+  - Cache: 714,204 read, 62,332 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42973_20260330_062210/20260330-062210.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 80ms |
+| reflection | 1 | 0 | 57906ms |
+| stock_conditional_returns | 1 | 0 | 478ms |
+| stock_history | 1 | 0 | 102ms |
+| stock_price | 2 | 0 | 633ms |
+
+### Sources Consulted
+
+- [(yfinance) ADM](https://finance.yahoo.com/quote/ADM)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
