@@ -143,6 +143,11 @@ class SavedForecast(BaseModel):
     retrodict_date: str | None = None  # YYYY-MM-DD cutoff date if retrodicted
     # Retrodict comparison (actual vs predicted)
     comparison: RetrodictComparison | None = None
+    # Community prediction data (for local peer score computation)
+    community_mean: float | None = None
+    community_means: list[float] | None = None
+    community_cdf: list[float] | None = None
+    community_scaling: dict[str, object] | None = None
     # Metaculus track record scores (scraped from profile page)
     peer_score: float | None = None
     baseline_score: float | None = None
