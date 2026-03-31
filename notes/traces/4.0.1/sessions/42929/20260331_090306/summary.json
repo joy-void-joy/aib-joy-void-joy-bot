@@ -1,0 +1,67 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed the agent's comprehensive research on WHO Disease Outbreak News (DON) publication patterns for cholera and acute watery diarrhoea. The agent correctly identified the critical distinction between DON items (published at `/emergencies/disease-outbreak-news/item/`) and situation reports/epidemiological updates (published at `/publications/m/item/`), which is central to the resolution criteria.\n\nKey research conducted:\n- Searched WHO Disease Outbreak News page for cholera-related DONs\n- Identified historical cholera DON publications: **2 in 2025** (Angola in March/April `2025-DON562`, Multi-country in August `2025-DON579`), **0 in 2024**, approximately 2-4 in 2023, and ~6 in 2022\n- Found that WHO has shifted cholera reporting to monthly epidemiological updates (#33, #34, #35) published as situation reports, not DONs\n- Discovered epidemiological update #35 was published **March 27, 2026** as a situation report, 4 days before the forecast date\n- Found no cholera DON published since August 29, 2025 (7-month gap)\n- Confirmed no cholera DON in the resolution window (March 17-31, 2026)\n\n## Key Evidence\n\n**Negative factors:**\n- **Base rate**: ~2 cholera DONs in 27 months (2024-2026) yields Poisson P(≥1) of **7-15%** for remaining 30-day window\n- **Structural shift**: WHO transitioned from DONs to monthly situation reports for cholera since ~2023\n- **14 days elapsed**: Resolution window opened March 17, no DON published through March 31\n- **Recent situation report**: Update #35 published March 27 as a situation report (not DON), suggesting WHO continues non-DON approach\n- **2024 precedent**: Zero cholera DONs despite severe global outbreak, showing WHO can go a full year without cholera DONs\n\n**Positive factors:**\n- **Severe ongoing situation**: 18,715 cases in February 2026, 269 deaths (48% increase), 17 countries affected\n- **Southern Africa surge**: 7x increase compared to same period in 2025 due to cyclones/flooding (potential trigger)\n- **DRC epidemic**: Expanding outbreak with DREF activation\n- **7-month gap**: Last cholera DON was August 2025; WHO historically publishes periodic global updates\n\n## Conclusion\n\nThe agent concluded with a **30% probability** estimate. This reflects the tension between:\n1. The low base rate from recent publication patterns (7-15%)\n2. Upward adjustments for outbreak severity and the Southern Africa acute surge\n3. Downward pressure from WHO's clear structural shift to situation reports over DONs\n\nThe estimate appropriately weights the evidence that WHO published update #35 just 4 days prior as a situation report rather than a DON, suggesting continuation of their current communication approach. The 30% probability is above the pure Poisson base rate due to potential triggers (Southern Africa surge, 7-month gap) but well below 50% given the structural shift.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__web_search": "12+ calls, 0 errors, impact: none, value: high — found DON items, situation reports, historical patterns",
+      "mcp__search__fetch_url": "4 calls, 0 errors, impact: none, value: medium — scraped DON details and dates",
+      "mcp__search__search_exa": "2 calls, 0 errors, impact: none, value: high — found critical update #35 and Southern Africa surge news",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: medium — compiled findings and Poisson calculations",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed resolution criteria",
+      "mcp__markets__polymarket_price": "1 call, 0 errors, impact: none, value: low — no relevant markets found",
+      "mcp__markets__manifold_price": "1 call, 0 errors, impact: none, value: low — no relevant markets found",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured verification of factors",
+      "TodoWrite": "7 calls, 0 errors, impact: none, value: low — task management overhead"
+    },
+    "capability_gaps": [
+      "JavaScript-rendered page scraping — WHO DON landing page list couldn't be accessed directly",
+      "WHO API access — could have enumerated DONs more systematically"
+    ],
+    "subtle_bugs": [
+      "fetch_url on WHO DON landing page returned only description text, not the actual DON item list (JS-rendered)"
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Historical base rate from DON publication frequency combined with qualitative assessment of WHO communication patterns and outbreak severity",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether WHO will break from its recent pattern of using situation reports instead of DONs for cholera updates, particularly given the Southern Africa acute surge"
+  },
+  "risk_flags": [
+    {
+      "category": "underconfidence",
+      "evidence": "Agent's Poisson base rate calculation (7-15%) combined with the 2024 precedent (0 DONs) and structural shift to situation reports arguably supports a lower estimate (15-25%) than the 30% submitted. The scenario analysis showed a combined probability of ~17%.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "25%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly distinguished between DON items and situation reports — critical for resolution criteria",
+    "Found the key evidence that update #35 was published March 27 as a situation report (not DON), providing strong recent signal",
+    "Established rigorous historical base rate across 2022-2026 showing declining DON frequency",
+    "Identified the structural shift in WHO communication as the dominant factor",
+    "Computed Poisson probabilities from multiple time periods to bound the estimate",
+    "Checked both Polymarket and Manifold for relevant prediction markets"
+  ],
+  "weaknesses": [
+    "Did not verify the complete list of 2023-2024 cholera DONs — relied on search results which may have missed some",
+    "Scenario analysis suggested 17% probability but final estimate was 30% without clear justification for the uplift",
+    "Did not attempt to access the WHO cholera upsurge page mentioned in fine print as a candidate source"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Implement systematic DON enumeration by iterating through DON ID numbers (e.g., 2024-DON500 through 2024-DON600) to verify no cholera DONs were missed",
+    "When fetch_url fails on JS-rendered pages, explicitly note the limitation and attempt alternative approaches",
+    "When scenario analysis gives substantially different estimate from final forecast, document the reasoning for the divergence"
+  ]
+}
