@@ -1,0 +1,72 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched China's NBS non-manufacturing PMI forecast for April 2026, which resolves YES only if strictly above 50.0.\n\n**Current State**: March 2026 non-manufacturing PMI = **50.1**, providing just a 0.1 buffer above the threshold. The index had been in contraction territory for January-February 2026 (49.4 and 49.5 respectively) before recovering in March.\n\n**Key Data Sources Used**:\n- Trading Economics for recent PMI readings\n- NBS official press releases for historical values\n- Multiple news sources (CNBC, FXStreet, ING) confirming readings\n- Wikipedia for trade war context (145% US tariffs)\n\n## Key Evidence\n\n**Pro-YES factors**:\n- Historical base rate: **85% of months** in 2023-2026 sample above 50.0\n- All three previous Aprils above 50: **56.4** (2023), **51.2** (2024), **50.4** (2025)\n- Conditional analysis: When PMI is between 49.5-51.0, next month above 50 in **79% of cases** (19/24 observations)\n- March 2026 recovery momentum: both manufacturing (50.4) and non-manufacturing (50.1) returned to expansion\n\n**Pro-NO factors**:\n- Seasonal Mar→Apr decline in ALL 3 observed years: **-1.8**, **-1.8**, **-0.4**\n- Even smallest historical decline (-0.4) from 50.1 gives 49.7, which resolves NO\n- Recent weakness: 3 of last 5 months at or below 50.0\n- Trade war headwinds (145% US tariffs), weak property sector (construction subindex 49.3)\n\n**Monte Carlo Analysis**:\n- Using conditional near-50 distribution (mean change +0.121, std 0.587): P(April > 50) = 64.6%\n- With 15% seasonal weight adjustment: P(April > 50) = 50.2%\n- Weighted model combining 4 approaches: 57.2%\n- Sensitivity range across reasonable parameters: 30-65%\n\n## Conclusion\n\nThe agent concluded **55% probability of YES**. The forecast reflects genuine uncertainty: the strong historical base rate and conditional analysis favor YES (~65-79%), but the consistent seasonal Mar→Apr decline pattern and razor-thin 0.1 margin create substantial downside risk. The agent appropriately weighted the limited reliability of the 3-year seasonal sample against the broader historical tendency for readings above 50.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed question details and resolution criteria",
+      "mcp__search__web_search": "7 calls, 0 errors, impact: none, value: high — gathered historical PMI data from multiple sources",
+      "mcp__search__fetch_url": "4 calls, 0 errors, impact: none, value: high — extracted exact readings from NBS and Trading Economics",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor, value: wasted — no news data obtained",
+      "mcp__sandbox__execute_code": "5 calls, 0 errors, impact: none, value: high — critical for conditional analysis and Monte Carlo simulations",
+      "mcp__markets__polymarket_price": "1 call, 0 errors (no markets found), impact: none, value: low — no relevant markets",
+      "mcp__markets__manifold_price": "1 call, 0 errors (no markets found), impact: none, value: low — no relevant markets",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — caught error in Factor 5 (3/5 not 4/5 months)"
+    },
+    "capability_gaps": [
+      "CEIC or Bloomberg API for complete historical PMI time series in structured format",
+      "Limited historical data for seasonal analysis (only 3 April data points available)"
+    ],
+    "subtle_bugs": [
+      "Trading Economics fetch_url only returned 2 most recent months instead of full historical table — agent had to piece together data from multiple sources",
+      "Initial Factor 5 contained an incorrect statistic (4/5 vs 3/5) that was caught by reflection tool but could have been prevented with better data verification"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/macro",
+    "approach": "Conditional probability analysis from historical PMI readings near threshold, combined with Monte Carlo simulation and seasonal pattern adjustment",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the consistent seasonal Mar→Apr decline pattern (based on only 3 data points) will hold, given the razor-thin 0.1 margin above threshold"
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The seasonal Mar→Apr decline analysis uses only 3 data points (2023-2025). The agent weighted this at 15% in the final model, but given the consistent pattern (-1.8, -1.8, -0.4 across all years) and that even the smallest decline breaches the threshold, this may be underweighted.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "50-55%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent conditional analysis: identified 24 historical cases when PMI was near 50 threshold and calculated 79% (19/24) next-month above-50 rate",
+    "Strong Monte Carlo implementation with sensitivity analysis across different mean/sigma assumptions",
+    "Thorough data collection: reconstructed 39-month time series from multiple sources despite no single structured data source",
+    "Appropriate acknowledgment of seasonal pattern limitations (only 3 data points)",
+    "Good use of reflection tool which caught the 4/5 vs 3/5 error in Factor 5",
+    "Weighted multiple model approaches (conditional, seasonal, base rate, fundamentals) rather than relying on single method"
+  ],
+  "weaknesses": [
+    "Made arithmetic error in Factor 5 (claimed 4/5 months below 50 when data shows 3/5) — caught by reflection but shouldn't have occurred",
+    "Some 2024-2025 PMI values appear estimated/interpolated rather than from primary sources — potential small errors in historical series",
+    "Did not explore alternative reference classes (e.g., what happens after 2+ month contraction specifically, or when services subindex is just above 50)",
+    "Could have searched for Chinese-language NBS sources or analyst forecasts for April expectations"
+  ],
+  "pipeline": {
+    "issues": [
+      "asknews search_news hit 403 rate limit error — no news search capability available",
+      "No prediction markets found for this specific question (Polymarket, Manifold searches empty)"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add data verification step before factor formulation to catch arithmetic errors like the 3/5 vs 4/5 mistake",
+    "For PMI threshold questions, explicitly model the 'mean reversion vs momentum' tension when near boundaries",
+    "Consider searching for consensus analyst forecasts (Reuters polls, Bloomberg surveys) as additional calibration",
+    "Build more specific conditional reference classes (e.g., 'April PMI after Jan-Feb contraction' rather than just 'near-50 months')"
+  ]
+}
