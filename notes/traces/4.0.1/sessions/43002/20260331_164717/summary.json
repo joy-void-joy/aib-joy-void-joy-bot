@@ -1,0 +1,67 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a meta-prediction forecast about whether the Metaculus community prediction (CP) on federal judge impeachment would exceed **12.00%** by April 10, 2026. The agent conducted systematic research:\n\n- **Retrieved question metadata**: Target question #36348 has **486 forecasters** with CP at exactly **12.00%** as of March 29\n- **Analyzed CP history**: Weekly snapshots showed progression 9%→10%→10%→9%→10%→12% over 5 weeks\n- **Web searches for political context**: Found Speaker Johnson backing impeachment (January 2026), Senate Judiciary hearings, White House support\n- **Legislative status**: H.Res.229 (Boasberg impeachment) introduced March 2025, still in committee with no scheduled hearings or floor vote\n- **Related votes**: 40+ House Republicans voted against Roy's amendment to slash judges' chambers funding\n\nThe agent correctly distinguished between the federal question (no action) and the Kentucky state judge impeachment (March 20, 2026) which is irrelevant to resolution but may have influenced forecaster attention.\n\n## Key Evidence\n\n**For YES (CP > 12%):**\n- Upward trend: CP moved from 9-10% to 12% over recent weeks (+2pp jump in final week)\n- Continued political rhetoric from Johnson, Cruz, White House\n- Monte Carlo with half-drift: **62.6%** probability of exceeding 12%\n- Only needs marginal movement above 12.00%\n\n**For NO (CP ≤ 12%):**\n- Status quo (exactly 12.00%) resolves NO per \"strictly above\" language\n- Articles in committee since March 2025 with no floor vote commitment\n- 40+ Republicans opposed related measure showing thin margins\n- House focused on other priorities (Iran, tariffs, spending)\n- Zero-drift model: **49.9%** probability\n\n## Conclusion\n\nThe agent ran Monte Carlo simulation using observed weekly volatility (SD **1.14pp**) over ~1.5 weeks remaining. Results:\n- Zero drift: ~50%\n- Half drift: ~63%\n- Full drift: ~74%\n\nWeighted blend (30/50/20) yielded ~61%, shaded down to **55%** for small sample uncertainty. The agent correctly noted the knife-edge nature of this question—CP is precisely at threshold, and the status quo resolves NO.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "2 calls, 0 errors, impact: none, value: high — provided forecaster count and question details",
+      "mcp__markets__get_cp_history": "1 call, 1 error (403 Forbidden), impact: minor (used weekly snapshots from question instead), value: low",
+      "mcp__search__web_search": "6 calls, 0 errors, impact: none, value: high — found political context and legislative status",
+      "mcp__search__search_exa": "3 calls, 0 errors, impact: none, value: high — detailed news on Johnson support",
+      "mcp__search__fetch_url": "2 calls, 2 errors (403 on congress.gov and thehill.com), impact: minor (found same info via web search), value: low",
+      "mcp__asknews__search_news": "2 calls, 2 errors (rate limit exceeded), impact: minor (web search provided adequate coverage), value: wasted",
+      "mcp__sandbox__execute_code": "1 call, 0 errors, impact: none, value: high — Monte Carlo simulation for probability modeling",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — verified all factors and produced critique"
+    },
+    "capability_gaps": [
+      "Fine-grained CP history access (blocked by 403) would have enabled better volatility estimation",
+      "Real-time CP check (as of March 31 vs March 29 snapshot) would confirm current state"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Monte Carlo simulation of CP random walk using observed weekly volatility with drift scenarios",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the recent CP jump from 10% to 12% represents genuine signal from political developments or noise that will revert"
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi, Manifold) for related markets on judicial impeachment that could inform CP expectations",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "53-57%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Used Monte Carlo simulation with 100K samples to quantify probability distribution under different drift scenarios",
+    "Correctly identified the 'strictly above' threshold requirement and its implication that status quo resolves NO",
+    "Distinguished between Kentucky state judge impeachment (irrelevant) and federal question",
+    "Appropriately discounted from full-drift model probability (74%) due to small sample size of trend data (only 5 points)",
+    "Identified specific counter-evidence: 40+ Republicans voting against related measure showing tight margins"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets for related judicial impeachment markets",
+    "Could have quantified downside scenario where Kentucky news caused temporary confusion that will revert",
+    "Small sample size (5 weekly data points) makes drift estimate unreliable — agent acknowledged but could have weighted zero-drift more heavily"
+  ],
+  "pipeline": {
+    "issues": [
+      "CP history API returned 403 Forbidden for AIB tournament questions — expected limitation",
+      "AskNews search_news hit rate limits (403012) — agent worked around with web_search",
+      "fetch_url blocked on congress.gov and thehill.com — agent used search_exa as alternative"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For meta-prediction questions, check if there are prediction markets on the underlying event that could inform CP movement expectations",
+    "When CP is exactly at threshold, explicitly model the probability of staying exactly at threshold vs moving in either direction",
+    "Consider checking if there's a meta-market on the same question to get market-implied probability"
+  ]
+}
