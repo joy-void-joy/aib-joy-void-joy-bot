@@ -1,0 +1,77 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed the forecasting agent's trace for predicting the U.S. Census Bureau's March 2026 advance international trade balance in goods.\n\nThe agent conducted comprehensive research across multiple data sources:\n- **FRED data series**: Retrieved `BOPGTB` (Trade Balance: Goods, BOP Basis) historical data from 2022-2026. The `AITGCBS` and `AITGCBN` series (Census advance balance) returned mostly null values.\n- **Census Bureau sources**: Fetched the advance report PDF, release schedule, and FT900 data\n- **Expert analysis**: KPMG's March 2026 trade analysis, Penn Wharton Budget Model tariff data\n- **Industry forecasts**: NRF Global Port Tracker data on container volumes\n\n## Key Evidence\n\n**Historical regime data:**\n- Post-tariff regime (May 2025-Jan 2026): mean **-$85.7B**, std **$12.5B**\n- Most recent Census SA values: Oct -$58.6B, Nov -$83.6B, Dec -$99.2B, Jan 2026 -$80.8B\n- Extreme volatility in recent months (range -$58.6B to -$99.2B)\n\n**Tariff policy shift:**\n- Supreme Court struck down IEEPA tariffs on Feb 20, 2026\n- Replacement Section 122 tariff at 10% reduces effective tariff rate from **10.3% to 7.7%** (Penn Wharton)\n- Lower tariffs should boost imports and widen deficit\n\n**Forward-looking indicators:**\n- KPMG (March 2026): \"narrowing could be short-lived,\" expects more imports in Feb/March\n- NRF Global Port Tracker: Container volumes expected below 2025 levels in H1 2026 (partial offset)\n- AI data center buildout provides structural tailwind for capital goods imports\n\n**Data gap:** January and February 2026 advance reports were suspended; March will be first since December 2025\n\n## Methodology\n\nThe agent used a **scenario-based Monte Carlo simulation** with 100,000 draws:\n1. **Scenario 1 (50%)**: Tariff reduction boosts imports (center -$94B, σ=$10B)\n2. **Scenario 2 (35%)**: Status quo continuation (center -$87B, σ=$10B)\n3. **Scenario 3 (15%)**: Large import surge (center -$108B, σ=$12B)\n\nApplied Census-BOP basis adjustment (+$0.5-1.2B) since question resolves to Census basis.\n\nSensitivity analysis showed medians stable at **-$91.9 to -$92.9B** across variant scenarios.\n\n## Conclusion\n\nThe agent concluded with:\n- **Median: -$92.1B**\n- **80% CI: [-$108.7, -$77.6]**\n\nThis represents a widening from January 2026's -$80.8B, driven primarily by the tariff reduction hypothesis. The wide confidence interval appropriately reflects the extreme monthly volatility observed in recent data.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — retrieved question details and resolution criteria",
+      "mcp__financial__fred_search": "1 call, 0 errors, impact: none, value: high — found relevant FRED series",
+      "mcp__financial__fred_series": "3 calls, 0 errors, impact: none, value: high — AITGCBS/AITGCBN returned nulls but BOPGTB provided full history",
+      "mcp__search__web_search": "9 calls, 0 errors, impact: none, value: high — found KPMG, Penn Wharton, NRF sources",
+      "mcp__search__fetch_url": "3 calls, 0 errors, impact: none, value: high — Census release schedule, KPMG analysis, Penn Wharton ETR",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor, value: wasted — hit usage limit",
+      "mcp__sandbox__execute_code": "5 calls, 0 errors, impact: none, value: high — Monte Carlo simulation with sensitivity analysis",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor analysis with reviewer critique",
+      "TodoWrite": "6 calls, 0 errors, impact: none, value: low — tracking overhead",
+      "Read": "1 call, 0 errors, impact: none, value: medium — read downloaded PDF"
+    },
+    "capability_gaps": [
+      "February 2026 trade data not yet released — agent correctly identified this gap but had no way to obtain it"
+    ],
+    "subtle_bugs": [
+      "FRED AITGCBS/AITGCBN series returned mostly null values, forcing reliance on BOP basis proxy — not a bug per se but data availability issue"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/macro",
+    "approach": "Monte Carlo simulation with scenario mixture based on post-tariff regime statistics and tariff policy shift analysis",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "How quickly importers respond to lower tariffs from the February 2026 IEEPA ruling"
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi, Manifold) for any existing markets on US trade data or economic indicators",
+      "severity": "minor"
+    },
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The NRF port tracker shows import volumes declining YoY and 'expected to remain below 2025 levels in H1 2026' — this contradicts the tariff-boost hypothesis but was given only 15% weight via the -0.5 logit factor. The simulation's 50% weight on the tariff-boost scenario may be overly aggressive given this counterevidence.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "-88 to -92B, median around -90B",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Comprehensive data gathering across FRED, Census, expert analysis (KPMG), and industry forecasts (NRF)",
+    "Appropriate use of BOP basis data as proxy when Census advance series returned null values",
+    "Monte Carlo simulation with scenario mixture captures regime uncertainty well",
+    "Sensitivity analysis across three variant scenarios showed robust median estimates (-91.9 to -92.9B)",
+    "Correctly identified that advance reports for Jan/Feb were suspended, understanding data availability constraints",
+    "Internal reviewer critique caught a potential issue with unsupported specifics (capital goods numbers), though agent defended with PDF table reference",
+    "Appropriate confidence interval width given observed post-tariff volatility (std 12.5B)"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets for any relevant markets on trade data or economic indicators",
+    "The 50% weight on tariff-boost scenario may be aggressive given NRF port data showing declining volumes",
+    "Could not verify February 2026 data (not yet released) to see initial post-IEEPA tariff response — this is a data availability issue, not agent error",
+    "Capital goods imports claim ($107.3B, up 28.1% YoY) was cited from 'advance report Table 1' but the PDF reading in the trace doesn't show this specific extraction being captured"
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews search_news returned 403 rate limit error — worked around with web_search",
+      "FRED AITGCBS/AITGCBN series returned mostly null values — worked around with BOPGTB series"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks for macro/economic indicator questions as a cross-reference",
+    "When port volume data conflicts with tariff-boost hypothesis, consider weighting scenarios more conservatively",
+    "Ensure PDF table extractions are explicitly logged in trace for verifiability"
+  ]
+}
