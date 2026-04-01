@@ -1,0 +1,377 @@
+---
+timestamp: 2026-04-01 15:45:49 UTC
+question_type: numeric
+factors:
+- description: Starting SPR level of 415,064K barrels (week ending March 27, 2026)
+    - confirmed by EIA weekly data. Very high confidence anchor.
+  supports:
+    center: 415064000.0
+    low: 415064000.0
+    high: 415064000.0
+  logit: 1.0
+  confidence: 1.0
+  effective_logit: 1.0
+- description: 'First tranche of 45.2M barrels contracted for delivery April 1-May
+    31. Pro-rata April portion (~24 days through April 24): ~17.8M barrels if evenly
+    distributed. Exchange mechanism is more complex and slower than direct sales.'
+  supports:
+    center: 397000000.0
+    low: 393000000.0
+    high: 405000000.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: '2022 precedent: April 2022 saw ~23M barrel drawdown (~823K/day) after
+    180M sale announcement. But 2022 used direct sales which are faster than exchanges.
+    Current exchange mechanism prioritizes premium over speed.'
+  supports:
+    center: 395000000.0
+    low: 390000000.0
+    high: 400000000.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Employ America analysis confirms deliveries won't actually begin until
+    April at earliest, and exchange complexity slows execution vs direct sales. Only
+    45.2M of 86M offered was subscribed, showing limited industry appetite for exchange
+    terms.
+  supports:
+    center: 400000000.0
+    low: 395000000.0
+    high: 410000000.0
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: DOE claims 'record speeds' and has political pressure to move fast.
+    Bryan Mound can deliver ~700K bpd. Multiple sites operational. Strong incentive
+    to accelerate.
+  supports:
+    center: 395000000.0
+    low: 385000000.0
+    high: 400000000.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Possibility of conflict de-escalation or ceasefire reducing urgency
+    for drawdown. Contracts already signed would still proceed but pace could slow.
+    Small probability scenario (~3-5%).
+  supports:
+    center: 412000000.0
+    low: 410000000.0
+    high: 415000000.0
+  logit: -0.3
+  confidence: 0.3
+  conditional: If ceasefire or major de-escalation occurs
+  effective_logit: -0.09
+- description: Possible second solicitation or conversion to direct emergency sales
+    if crisis worsens, which would accelerate drawdown beyond the 45.2M first tranche.
+  supports:
+    center: 388000000.0
+    low: 380000000.0
+    high: 393000000.0
+  logit: 0.5
+  confidence: 0.4
+  conditional: If DOE issues additional emergency sales or second exchange solicitation
+  effective_logit: 0.2
+tentative_estimate:
+  center: 399000000.0
+  low: 390000000.0
+  high: 406000000.0
+assessment: 'The SPR was at 415.064M barrels as of week ending March 27, with barely
+  any drawdown despite the March 11 announcement. The first tranche of 45.2M barrels
+  was contracted on March 20 with delivery scheduled April 1-May 31.
+
+
+  The key question is how fast barrels actually leave the SPR during April. The exchange
+  mechanism is more complex than direct sales, the award criteria prioritized premium
+  over speed, and only 45.2M of 86M offered was subscribed.
+
+
+  The 2022 precedent shows ~23M barrels drawn in April 2022 via direct sales. Exchange
+  contracts should be slower. My base case estimate of ~15-17M barrel drawdown over
+  the measurement period (through week ending April 24) produces an SPR level around
+  398-400M.
+
+
+  Arguments for lower (faster drawdown): Political pressure, crisis severity, ''record
+  speed'' claims, possible second solicitation, potential switch to direct sales.
+
+
+  Arguments for higher (slower drawdown): Exchange complexity, limited subscription
+  (only 52% of offered volume), ramp-up period needed, deliveries officially scheduled
+  ''April-May'' with possibility but not guarantee of early delivery.
+
+
+  The distribution is mildly left-skewed (downside tail from accelerated drawdown
+  scenarios is wider than upside from delays).'
+calibration_notes: 'Base rate: The 2022 Biden SPR release saw ~23M barrel drawdown
+  in April 2022 (~823K/day). But that used direct sales which are faster than exchanges.
+  Adjusting downward for exchange complexity and lower subscribed volume.
+
+
+  Status quo: If nothing changed from current trajectory (barely any drawdown as of
+  March 27), SPR would stay near 415M. But contracts are signed and deliveries begin
+  April 1, so status quo does not persist.
+
+
+  The distribution centers around ~399M with 80% CI of [390M, 406M]. This represents
+  a drawdown of ~9-25M barrels with median ~16M.'
+key_uncertainties: '1. How fast do exchange contract deliveries actually begin in
+  April? (Biggest uncertainty)
+
+  2. Will DOE issue a second solicitation or convert to direct emergency sales?
+
+  3. Will the conflict escalate further, increasing pressure for faster drawdown?
+
+  4. Will there be a ceasefire or de-escalation that reduces urgency?
+
+  5. Are there logistical bottlenecks at SPR sites that could slow deliveries?'
+tool_audit: 'EIA weekly data (fetch_url): Excellent - confirmed exact SPR level of
+  415,064K for week ending March 27. Key anchor data.
+
+
+  Exa search: Very useful - found DOE press releases, Argus Media article with detailed
+  contract info (45.2M barrels, April-May delivery), RBN Energy analysis with drawdown
+  projections.
+
+
+  Web search: Good for finding ycharts confirmation and additional sources.
+
+
+  Employ America analysis (fetch_url): Very useful for understanding exchange mechanism
+  constraints.
+
+
+  Kalshi markets: No results for SPR-specific markets. Found an SPR level Kalshi market
+  in Exa search but couldn''t access the actual prices.
+
+
+  AskNews: Failed with 403 (usage limit exceeded). Would have been useful for recent
+  news.
+
+
+  Metaculus questions: Confirmed question details. No community prediction available
+  (AIB tournament).
+
+
+  Execute_code: Essential for 2022 drawdown analysis and Monte Carlo simulation.'
+update_triggers: '- DOE announces second solicitation or switches to direct sales
+  → significant downward move
+
+  - Ceasefire announced → significant upward move (less drawdown)
+
+  - Next EIA weekly report (April 8) showing actual drawdown rate → key calibration
+  point
+
+  - DOE press release on delivery progress → informative'
+process_reflection: The process worked well for this question. Having access to both
+  the EIA data (for the anchor) and Exa search (for the DOE press releases and Employ
+  America analysis) was crucial. The 2022 precedent analysis via code was very informative
+  for calibrating drawdown rates. The main friction point was the AskNews rate limit
+  error, which meant I couldn't access recent news articles. The Kalshi search returned
+  no results for SPR markets, though I know one exists from the Exa results. Would
+  have been useful to check that market price. Overall, the scaffolding worked well
+  for a question that requires combining a known starting point with scenario-based
+  projection.
+computed:
+  factor_count: 7
+  factor_sum: 3.8200000000000003
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Starting SPR level of 415,064K barrels (week ending March 27, 2026)
+      - confirmed by EIA weekly data. Very high confidence anchor.
+    supports:
+      center: 415064000.0
+      low: 415064000.0
+      high: 415064000.0
+    logit: 1.0
+    confidence: 1.0
+    effective_logit: 1.0
+  - description: 'First tranche of 45.2M barrels contracted for delivery April 1-May
+      31. Pro-rata April portion (~24 days through April 24): ~17.8M barrels if evenly
+      distributed. Exchange mechanism is more complex and slower than direct sales.'
+    supports:
+      center: 397000000.0
+      low: 393000000.0
+      high: 405000000.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: '2022 precedent: April 2022 saw ~23M barrel drawdown (~823K/day)
+      after 180M sale announcement. But 2022 used direct sales which are faster than
+      exchanges. Current exchange mechanism prioritizes premium over speed.'
+    supports:
+      center: 395000000.0
+      low: 390000000.0
+      high: 400000000.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Employ America analysis confirms deliveries won't actually begin
+      until April at earliest, and exchange complexity slows execution vs direct sales.
+      Only 45.2M of 86M offered was subscribed, showing limited industry appetite
+      for exchange terms.
+    supports:
+      center: 400000000.0
+      low: 395000000.0
+      high: 410000000.0
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: DOE claims 'record speeds' and has political pressure to move fast.
+      Bryan Mound can deliver ~700K bpd. Multiple sites operational. Strong incentive
+      to accelerate.
+    supports:
+      center: 395000000.0
+      low: 385000000.0
+      high: 400000000.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Possibility of conflict de-escalation or ceasefire reducing urgency
+      for drawdown. Contracts already signed would still proceed but pace could slow.
+      Small probability scenario (~3-5%).
+    supports:
+      center: 412000000.0
+      low: 410000000.0
+      high: 415000000.0
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+    conditional: If ceasefire or major de-escalation occurs
+  - description: Possible second solicitation or conversion to direct emergency sales
+      if crisis worsens, which would accelerate drawdown beyond the 45.2M first tranche.
+    supports:
+      center: 388000000.0
+      low: 380000000.0
+      high: 393000000.0
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+    conditional: If DOE issues additional emergency sales or second exchange solicitation
+  dominant_factor: 'First tranche of 45.2M barrels contracted for delivery April 1-May
+    31. Pro-rata April portion (~24 days through April 24): ~17.8M barrels if evenly
+    distributed. Exchange mechanism is more complex and slower than direct sales.'
+  dominant_effective_logit: 1.2000000000000002
+  distribution_metrics:
+    implied_median: 401348500.0
+    implied_p10: 397503500.0
+    implied_p90: 406653500.0
+    median_gap: -2348500.0
+    median_gap_pct: -25.666666666666664
+    spread_ratio: 1.7486338797814207
+    precision: 0.040100250626566414
+  sources:
+  - '[(Metaculus) How many barrels of crude oil will be in the US Strategic Petroleum
+    Reserve on April 30, 2026?](https://www.metaculus.com/questions/42874)'
+  - '[(Metaculus) How many barrels of crude oil will be in the US Strategic Petroleum
+    Reserve on April 30, 2026?](https://www.metaculus.com/questions/42831)'
+  - '[Weekly U.S. Ending Stocks of Crude Oil in SPR (Thousand Barrels](https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=WCSSTUS1&f=W)'
+  - '[ir.eia.gov](https://ir.eia.gov/wpsr/wpsrsummary.pdf)'
+  - '[Strategic Petroleum Reserve (United States) - Wikipedia](https://en.wikipedia.org/wiki/Strategic_Petroleum_Reserve_(United_States))'
+  - '[Weekly Petroleum Status Report - U.S. Energy Information Administration (EIA](https://www.eia.gov/petroleum/supply/weekly/)'
+  - '[ir.eia.gov](https://ir.eia.gov/wpsr/table1.csv)'
+  - '[A Quick Reaction To The SPR Exchange](https://www.employamerica.org/shortages-and-bottlenecks/a-quick-reaction-to-the-spr-exchange/)'
+  reviewer_critique: '**Verification Complete - No Errors Found**
+
+
+    I thoroughly verified all factual claims in the factors against the research trace:
+
+
+    **Factor 1 (Starting SPR level 415,064K barrels):** ✅ Confirmed by EIA Table 1
+    CSV data fetched in trace showing "Current week''s SPR level: 415.064 million
+    barrels" for week ending 3/27/26.
+
+
+    **Factor 2 (45.2M barrels contracted April 1-May 31):** ✅ Confirmed by multiple
+    sources in trace: Argus Media (21/03/26) and DOE announcement both state "45.2mn
+    bl of sweet and sour crude" with "crude deliveries from 1 April to 31 May."
+
+
+    **Factor 3 (2022 precedent ~23M barrels in April at ~823K/day):** ✅ Agent calculated
+    this directly from historical EIA weekly data. The simulation output shows: "2022
+    April drawdown (4 weeks): 23,030 thousand barrels (23.0M)" and "Daily rate: 822
+    thousand barrels/day."
+
+
+    **Factor 4 (Employ America analysis on exchange complexity):** ✅ Trace shows direct
+    fetch of employamerica.org article which states: "Will NOT reach market until
+    April at earliest" and "Award prioritizes premium payments over delivery speed"
+    and "exchange mechanism itself is ''more complex'' than a straight release."
+
+
+    **Factor 5 (DOE ''record speeds'' and Bryan Mound 700K bpd):** ✅ Argus Media confirms
+    "drawdown began at ''record speeds'', nine days after Trump approved the release"
+    and Employ America analysis states "Bryan Mound: LE2 upgrades nearly complete,
+    can deliver ~700,000 bpd."
+
+
+    **Factor 6 (Ceasefire scenario):** Reasonable scenario analysis with appropriate
+    low probability weight (3-5%).
+
+
+    **Factor 7 (Second solicitation possibility):** Reasonable inference given trace
+    confirms only 45.2M of 86M offered was subscribed.
+
+
+    **Resolution Criteria:** Agent correctly identified the EIA weekly report source
+    and correctly determined April 29 report (covering week ending April 24) would
+    be the determining data point.
+
+
+    **Double-counting:** Factors 2, 3, and 4 draw on distinct evidence types (contract
+    volumes, historical precedent, mechanism analysis) - not double-counting.
+
+
+    **Probability Estimate:** Center ~399M with range 390-406M aligns with Monte Carlo
+    simulation (median ~399M, P10-P90: 390-406M) and is logically consistent with
+    ~15-17M expected drawdown from 415M starting point.
+
+
+    **Adversarial Reasoning:** Assessment explicitly addresses both "Arguments for
+    lower (faster drawdown)" and "Arguments for higher (slower drawdown)."
+
+
+    No hallucinations, no double-counting, no wrong-direction factors, no resolution
+    misalignment. The estimate is well-grounded in the evidence.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42874
+- **Question ID**: 42815
+- **Session Duration**: 593.6s (9.9 min)
+- **Cost**: $5.3625
+- **Tokens**: 16,468 total (45 in, 16,423 out)
+  - Cache: 1,543,954 read, 96,754 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42874_20260401_153613/20260401-153613.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 360ms |
+| fetch_url | 6 | 0 | 15240ms |
+| get_metaculus_questions | 1 | 0 | 6263ms |
+| kalshi_price | 1 | 0 | 811ms |
+| reflection | 1 | 0 | 109298ms |
+| search_exa | 2 | 0 | 1395ms |
+| web_search | 4 | 0 | 19879ms |
+| wikipedia | 1 | 0 | 181ms |
+
+### Sources Consulted
+
+- [(Metaculus) How many barrels of crude oil will be in the US Strategic Petrol...
+- [(Metaculus) How many barrels of crude oil will be in the US Strategic Petrol...
+- [Weekly U.S. Ending Stocks of Crude Oil in SPR (Thousand Barrels](https://www...
+- [ir.eia.gov](https://ir.eia.gov/wpsr/wpsrsummary.pdf)
+- [Strategic Petroleum Reserve (United States) - Wikipedia](https://en.wikipedi...
+- [Weekly Petroleum Status Report - U.S. Energy Information Administration (EIA...
+- [ir.eia.gov](https://ir.eia.gov/wpsr/table1.csv)
+- [A Quick Reaction To The SPR Exchange](https://www.employamerica.org/shortage...

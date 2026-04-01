@@ -1,0 +1,66 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the US Strategic Petroleum Reserve (SPR) levels for forecasting the April 30, 2026 resolution value. The question resolves to the SPR level reported in the most recent EIA weekly report released on or before April 30, 2026.\n\n**Key data sources consulted:**\n- EIA Weekly Petroleum Status Report (direct CSV fetch from ir.eia.gov/wpsr/table1.csv)\n- EIA historical SPR weekly data\n- DOE press releases on the 172M barrel release announcement\n- Argus Media article on contract awards\n- Employ America analysis of exchange mechanism constraints\n- Metaculus question details\n- Kalshi (no relevant markets found)\n\n## Key Evidence\n\n**Starting anchor point:**\n- SPR at **415,064 thousand barrels** as of week ending March 27, 2026 (confirmed via EIA Table 1 CSV)\n- This was essentially unchanged from 415,442K the week prior—only 378K barrel drawdown despite March 11 announcement\n\n**Release program details:**\n- DOE announced 172M barrel release on March 11, 2026 (part of 400M IEA coordinated release)\n- First tranche: **45.2M barrels** contracted on March 20 via exchange contracts\n- Delivery scheduled: April 1 - May 31, 2026\n- Only 52% of offered volume (86M) was subscribed, indicating limited industry appetite\n- Exchange mechanism prioritizes premium over speed (18-22% required return premium)\n\n**2022 precedent analysis:**\n- Agent calculated historical drawdown from EIA data: April 2022 saw **~23M barrel drawdown** (~823K/day) via direct sales\n- Exchange contracts are inherently slower and more complex than direct sales\n\n**Employ America analysis findings:**\n- Deliveries won't actually begin until April at earliest\n- Award criteria prioritized premium payments over delivery speed\n- Exchange complexity makes execution slower than straight releases\n- Bryan Mound can deliver ~700K bpd once operational\n\n**Resolution timing:**\n- EIA reports on Wednesdays; April 29 report covers week ending ~April 24\n- This gives approximately **24 active drawdown days** (April 1-24) for measurement\n\n## Conclusion\n\nThe agent ran a Monte Carlo simulation with 100,000 iterations modeling:\n- Base case (55%): ~15M barrel drawdown, SPR ~399M\n- Slow case (12%): Exchange complexity delays, SPR ~403-408M  \n- Accelerated case (20%): Additional contracts or pressure, SPR ~390-397M\n- Ceasefire case (3%): Minimal drawdown, SPR ~412-415M\n- High acceleration (10%): Second solicitation/direct sales, SPR ~380-393M\n\n**Final forecast:** Median **~399M barrels**, with 80% CI of **[390M, 406M]** barrels. The distribution is mildly left-skewed due to tail scenarios of accelerated drawdown vs. thin right tail from ceasefire scenarios where contracts still proceed.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed question details and resolution criteria",
+      "mcp__search__web_search": "5 calls, 0 errors, impact: none, value: high — found EIA data URLs, DOE announcements, Employ America analysis",
+      "mcp__search__search_exa": "3 calls, 0 errors, impact: none, value: high — found Argus Media article with contract details, DOE press releases, Kalshi market reference",
+      "mcp__asknews__search_news": "1 call, 1 error (403 usage limit exceeded), impact: minor, value: wasted — no news retrieved",
+      "mcp__search__fetch_url": "6 calls, 0 errors, impact: none, value: high — retrieved EIA weekly data, Table 1 CSV with exact SPR level, Employ America analysis",
+      "mcp__markets__kalshi_price": "1 call, 0 errors, impact: none, value: low — no relevant SPR markets found",
+      "mcp__sandbox__execute_code": "4 calls, 0 errors, impact: none, value: high — 2022 drawdown analysis, Monte Carlo simulation with 100K iterations",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor analysis and verification",
+      "Read": "1 call, 0 errors, impact: none, value: medium — read downloaded EIA PDF",
+      "TodoWrite": "6 calls, 0 errors, impact: none, value: low — task tracking overhead"
+    },
+    "capability_gaps": [
+      "Could not access Kalshi SPR market prices (found in Exa search but no direct API access)",
+      "AskNews rate-limited, missing recent news coverage"
+    ],
+    "subtle_bugs": [
+      "Wikipedia SPR page returned stale data (March 7, 2025 inventory of 395.3M) — agent correctly did not rely on this"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Monte Carlo simulation anchored on confirmed EIA weekly SPR level with scenario-weighted drawdown rates calibrated from 2022 precedent",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "How fast will exchange contract deliveries actually begin and proceed in April given mechanism complexity vs political pressure to accelerate"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "398-400M barrels (median ~399M)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Obtained exact EIA anchor point (415.064M barrels for week ending March 27) from authoritative source via direct CSV fetch",
+    "Calculated 2022 April drawdown rate (~823K/day, ~23M total) from historical EIA weekly data to calibrate expectations",
+    "Sourced Employ America expert analysis on exchange mechanism constraints (premium prioritized over speed, complexity vs direct sales)",
+    "Monte Carlo simulation with 100K iterations and well-reasoned scenario weights (base/slow/accelerated/ceasefire)",
+    "Correctly identified resolution timing: April 29 EIA report covering week ending April 24",
+    "Recognized key structural difference: exchange contracts slower than 2022 direct sales, appropriately adjusted drawdown expectations downward"
+  ],
+  "weaknesses": [
+    "Did not successfully access Kalshi SPR market prices despite finding the market existed via Exa search",
+    "AskNews tool failed with rate limit, missing potential recent news on delivery progress",
+    "Did not attempt to find community/expert forecasts beyond the empty Metaculus predictions",
+    "Simulation scenario weights (3%, 12%, 55%, 20%, 10%) not explicitly justified with evidence"
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews rate limit error (403012) — tool unusable for this session"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add explicit check for Kalshi/Polymarket contracts via different query patterns when initial search fails",
+    "Cache/retry AskNews with different time windows when rate limited",
+    "Document scenario weight rationale in simulation code comments",
+    "Consider searching for analyst forecasts or broker reports on SPR drawdown projections"
+  ]
+}
