@@ -1,0 +1,390 @@
+---
+timestamp: 2026-04-01 22:31:16 UTC
+question_type: multiple_choice
+factors:
+- description: 'Value at baseline floor (6): Pre-spike baseline was 6-9, and ''Doesn''t
+    change'' covers [3,9] which encompasses all normal baseline values. ''Decreases''
+    requires <=2 which is near-impossible at this baseline.'
+  supports: Doesn't change
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Congress in recess until April 13: No legislative votes, no floor
+    drama, no new funding bills during the entire Apr 1-9 window. The primary driver
+    of search spikes (legislative action) is completely absent.'
+  supports: Doesn't change
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: 'TSA agents getting paid via Trump executive order: The immediate crisis
+    (unpaid workers, massive airport delays) is easing. PBS reported on Mar 30 that
+    ''airport bottlenecks ease as TSA workers get paid.'' Reduced urgency = less search
+    interest.'
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: 'Post-spike decay complete: Value dropped from 100 (Mar 27) to 6 (Apr
+    1) in just 5 days, returning to pre-spike baseline. The story''s peak intensity
+    has passed.'
+  supports: Doesn't change
+  logit: 0.7
+  confidence: 0.85
+  effective_logit: 0.595
+- description: 'Easter travel (April 5) during ongoing DHS shutdown: Easter is right
+    in the forecast window. Even with TSA getting paid, the shutdown is technically
+    ongoing and could generate Easter-travel-related coverage. However, ''tsa funding''
+    is a political/legislative search term - travelers would more likely search ''TSA
+    wait times'' or ''airport delays''.'
+  supports: Increases
+  logit: 0.7
+  confidence: 0.5
+  effective_logit: 0.35
+- description: 'Legal/political developments around Trump''s executive funding order:
+    The constitutionality of bypassing Congress for spending could generate news coverage
+    and renewed searches. But this is speculative - no specific challenge has been
+    filed.'
+  supports: Increases
+  logit: 0.4
+  confidence: 0.35
+  effective_logit: 0.13999999999999999
+- description: 'SerpAPI vs pytrends measurement uncertainty: Resolution uses SerpAPI
+    which may differ from Google Trends web/pytrends by 1-3 points. At a value of
+    6, this uncertainty is meaningful relative to the ±3 threshold.'
+  supports: Doesn't change
+  logit: 0.2
+  confidence: 0.6
+  effective_logit: 0.12
+- description: 'Decreases requires value <= 2: At current baseline of 6, dropping
+    to 2 or below would mean near-complete disappearance of searches. Even the lowest
+    pre-spike value in this date range was 6. Essentially impossible without the topic
+    ceasing to exist.'
+  supports: Doesn't change
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+tentative_estimate:
+  probabilities:
+    Increases: 0.2
+    Doesn't change: 0.72
+    Decreases: 0.08
+assessment: "The core dynamic is a post-spike return to baseline. \"tsa funding\"\
+  \ spiked to 100 on Mar 27 during peak legislative drama (House rejecting Senate\
+  \ DHS funding bill) and has decayed back to 6 by Apr 1 - right at the pre-spike\
+  \ baseline of 6-9.\n\nFor the Apr 1-9 window:\n- Congress is in recess until Apr\
+  \ 13, removing the primary catalyst for this search term\n- TSA agents are being\
+  \ paid via Trump's executive order, easing the immediate airport crisis  \n- The\
+  \ \"Doesn't change\" band [3,9] covers the entire normal baseline range\n- \"Decreases\"\
+  \ requires <=2, essentially impossible at baseline\n\nThe main risk to \"Doesn't\
+  \ change\" is an increase driven by Easter travel (Apr 5) coinciding with the still-ongoing\
+  \ DHS shutdown. But \"tsa funding\" is a legislative/political term, not a travel\
+  \ planning term. People worried about airport delays search \"TSA wait times\" not\
+  \ \"tsa funding.\" The political angle requires congressional action, which can't\
+  \ happen during recess.\n\nCounterargument: The two-track plan announced Apr 1 could\
+  \ generate follow-up analysis and media coverage. Legal challenges to Trump's executive\
+  \ spending could emerge. But these are speculative catalysts without confirmed developments.\n\
+  \nThe 8% on Decreases reflects that while extremely unlikely, SerpAPI measurement\
+  \ differences could theoretically shift a 6 to a 2 or 3, and weekend/holiday patterns\
+  \ could depress searches slightly."
+calibration_notes: 'Base rates from change_stats: Increases 22.7%, Decreases 31.8%,
+  No change 45.5%. BUT these are from the full Mar 10-Apr 1 series which includes
+  the spike/decay period. The trailing rates (83% decrease) reflect the active decay,
+  not baseline behavior. Pre-spike, 7 consecutive days all stayed in the 6-9 range,
+  which is entirely within ±3 of each other - 100% "doesn''t change" during baseline.
+
+
+  At value=6, the asymmetric possibility space strongly favors Doesn''t change: Decreases
+  needs <=2 (3 integer values, all below historical floor), while Increases needs
+  >=10 (requires active catalyst). The [3,9] band for DC is where the term naturally
+  lives.'
+key_uncertainties: '1. Whether Easter travel generates renewed media coverage of "tsa
+  funding" specifically (vs "TSA delays")
+
+  2. Whether any legal challenge to Trump''s executive spending order emerges in the
+  window
+
+  3. SerpAPI vs pytrends measurement differences at low absolute values'
+tool_audit: 'google_trends: Excellent - returned full time series with change_stats,
+  tail_stats, and related queries. The tz=0 and exact date range match the resolution
+  source.
+
+  web_search: Good - found current news articles establishing Congress recess, two-track
+  plan, and TSA payment status.
+
+  fetch_url: Useful - extracted key timeline details from CNBC article.
+
+  search_news (asknews): Failed with 403 rate limit error. Worked around via web_search.
+
+  No tool failures that impacted analysis quality.'
+update_triggers: '- Filing of a legal challenge to Trump''s executive TSA funding
+  order → P(Increases) rises to ~35%
+
+  - Surprise congressional recall from recess for DHS vote → P(Increases) rises to
+  ~50%
+
+  - Major airport disruption during Easter despite TSA payments → P(Increases) rises
+  to ~30%'
+process_reflection: "The tools worked well for this question. The google_trends tool\
+  \ with tz=0 matching the resolution source is critical for these questions. The\
+  \ change_stats and tail_stats provide good quantitative priors. The web search filled\
+  \ in the news context effectively. \n\nOne gap: I couldn't directly query SerpAPI\
+  \ to see how their values might differ from pytrends, which is a known source of\
+  \ resolution uncertainty. The guidance about ±2 measurement shift is useful but\
+  \ I can't quantify it precisely.\n\nThe prompt guidance about post-spike dynamics\
+  \ and threshold arithmetic was very helpful for structuring the analysis."
+computed:
+  factor_count: 8
+  factor_sum: 5.115
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Value at baseline floor (6): Pre-spike baseline was 6-9, and ''Doesn''t
+      change'' covers [3,9] which encompasses all normal baseline values. ''Decreases''
+      requires <=2 which is near-impossible at this baseline.'
+    supports: Doesn't change
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Congress in recess until April 13: No legislative votes, no floor
+      drama, no new funding bills during the entire Apr 1-9 window. The primary driver
+      of search spikes (legislative action) is completely absent.'
+    supports: Doesn't change
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: 'TSA agents getting paid via Trump executive order: The immediate
+      crisis (unpaid workers, massive airport delays) is easing. PBS reported on Mar
+      30 that ''airport bottlenecks ease as TSA workers get paid.'' Reduced urgency
+      = less search interest.'
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: 'Post-spike decay complete: Value dropped from 100 (Mar 27) to 6
+      (Apr 1) in just 5 days, returning to pre-spike baseline. The story''s peak intensity
+      has passed.'
+    supports: Doesn't change
+    logit: 0.7
+    confidence: 0.85
+    effective_logit: 0.595
+  - description: 'Easter travel (April 5) during ongoing DHS shutdown: Easter is right
+      in the forecast window. Even with TSA getting paid, the shutdown is technically
+      ongoing and could generate Easter-travel-related coverage. However, ''tsa funding''
+      is a political/legislative search term - travelers would more likely search
+      ''TSA wait times'' or ''airport delays''.'
+    supports: Increases
+    logit: 0.7
+    confidence: 0.5
+    effective_logit: 0.35
+  - description: 'Legal/political developments around Trump''s executive funding order:
+      The constitutionality of bypassing Congress for spending could generate news
+      coverage and renewed searches. But this is speculative - no specific challenge
+      has been filed.'
+    supports: Increases
+    logit: 0.4
+    confidence: 0.35
+    effective_logit: 0.13999999999999999
+  - description: 'SerpAPI vs pytrends measurement uncertainty: Resolution uses SerpAPI
+      which may differ from Google Trends web/pytrends by 1-3 points. At a value of
+      6, this uncertainty is meaningful relative to the ±3 threshold.'
+    supports: Doesn't change
+    logit: 0.2
+    confidence: 0.6
+    effective_logit: 0.12
+  - description: 'Decreases requires value <= 2: At current baseline of 6, dropping
+      to 2 or below would mean near-complete disappearance of searches. Even the lowest
+      pre-spike value in this date range was 6. Essentially impossible without the
+      topic ceasing to exist.'
+    supports: Doesn't change
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  dominant_factor: 'Value at baseline floor (6): Pre-spike baseline was 6-9, and ''Doesn''t
+    change'' covers [3,9] which encompasses all normal baseline values. ''Decreases''
+    requires <=2 which is near-impossible at this baseline.'
+  dominant_effective_logit: 1.35
+  outcome_breakdown:
+  - outcome: Doesn't change
+    factor_count: 6
+    logit_sum: 4.625
+    factors:
+    - description: 'Value at baseline floor (6): Pre-spike baseline was 6-9, and ''Doesn''t
+        change'' covers [3,9] which encompasses all normal baseline values. ''Decreases''
+        requires <=2 which is near-impossible at this baseline.'
+      supports: Doesn't change
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+    - description: 'Congress in recess until April 13: No legislative votes, no floor
+        drama, no new funding bills during the entire Apr 1-9 window. The primary
+        driver of search spikes (legislative action) is completely absent.'
+      supports: Doesn't change
+      logit: 1.2
+      confidence: 0.85
+      effective_logit: 1.02
+    - description: 'TSA agents getting paid via Trump executive order: The immediate
+        crisis (unpaid workers, massive airport delays) is easing. PBS reported on
+        Mar 30 that ''airport bottlenecks ease as TSA workers get paid.'' Reduced
+        urgency = less search interest.'
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.8
+      effective_logit: 0.6400000000000001
+    - description: 'Post-spike decay complete: Value dropped from 100 (Mar 27) to
+        6 (Apr 1) in just 5 days, returning to pre-spike baseline. The story''s peak
+        intensity has passed.'
+      supports: Doesn't change
+      logit: 0.7
+      confidence: 0.85
+      effective_logit: 0.595
+    - description: 'SerpAPI vs pytrends measurement uncertainty: Resolution uses SerpAPI
+        which may differ from Google Trends web/pytrends by 1-3 points. At a value
+        of 6, this uncertainty is meaningful relative to the ±3 threshold.'
+      supports: Doesn't change
+      logit: 0.2
+      confidence: 0.6
+      effective_logit: 0.12
+    - description: 'Decreases requires value <= 2: At current baseline of 6, dropping
+        to 2 or below would mean near-complete disappearance of searches. Even the
+        lowest pre-spike value in this date range was 6. Essentially impossible without
+        the topic ceasing to exist.'
+      supports: Doesn't change
+      logit: 1.0
+      confidence: 0.9
+      effective_logit: 0.9
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.49
+    factors:
+    - description: 'Easter travel (April 5) during ongoing DHS shutdown: Easter is
+        right in the forecast window. Even with TSA getting paid, the shutdown is
+        technically ongoing and could generate Easter-travel-related coverage. However,
+        ''tsa funding'' is a political/legislative search term - travelers would more
+        likely search ''TSA wait times'' or ''airport delays''.'
+      supports: Increases
+      logit: 0.7
+      confidence: 0.5
+      effective_logit: 0.35
+    - description: 'Legal/political developments around Trump''s executive funding
+        order: The constitutionality of bypassing Congress for spending could generate
+        news coverage and renewed searches. But this is speculative - no specific
+        challenge has been filed.'
+      supports: Increases
+      logit: 0.4
+      confidence: 0.35
+      effective_logit: 0.13999999999999999
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.015600084358258966
+      Doesn't change: 0.9748428922123681
+      Decreases: 0.009557023429372898
+    tentative_probabilities:
+      Increases: 0.2
+      Doesn't change: 0.72
+      Decreases: 0.08
+    per_option_gap_pp:
+      Increases: 18.439991564174104
+      Doesn't change: -25.48428922123681
+      Decreases: 7.04429765706271
+    max_gap_pp: -25.48428922123681
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) tsa funding](https://trends.google.com/trends/explore?q=tsa
+    funding)'
+  - '[(Metaculus) Will the interest in “tsa funding” change between 2026-04-01 and
+    2026-04-09 according to Google Trends?](https://www.metaculus.com/questions/43016)'
+  - '[TSA shutdown: GOP leaders Thune and Johnson boost two-track approach to funding
+    DHS](https://www.cnbc.com/2026/04/01/tsa-shutdown-dhs-homeland.html)'
+  - '[List of dates for Easter - Wikipedia](https://en.wikipedia.org/wiki/List_of_dates_for_Easter)'
+  reviewer_critique: '## Verification Complete
+
+
+    **Evidence Grounding:** All core factual claims are properly grounded in the research
+    trace:
+
+    - Apr 1 value = 6 (confirmed from Google Trends MCP tool result)
+
+    - Pre-spike baseline 6-9 (data shows Mar 10-16: 7,7,7,6,9,7,9)
+
+    - Congress recess until Apr 13 (confirmed from CNBC article fetch)
+
+    - TSA agents getting paid (PBS article: "airport bottlenecks ease as TSA workers
+    get paid")
+
+    - Peak 100 on Mar 27 (confirmed in trends data)
+
+    - Easter Apr 5 (confirmed via web search)
+
+
+    **Resolution Criteria:** Clearly provided and correctly applied. The agent properly
+    calculated the thresholds: Increases requires ≥10, Doesn''t change covers [3,9],
+    Decreases requires ≤2.
+
+
+    **Factor Quality:**
+
+    - No hallucinations detected
+
+    - No problematic double-counting (factors 1 and 8 use same data point but address
+    different outcomes)
+
+    - All logit signs are correct
+
+    - Factors appropriately distinguish between legislative search term "tsa funding"
+    vs travel planning terms
+
+
+    **Adversarial Reasoning:** The assessment addresses counterarguments including
+    Easter travel, two-track plan follow-up coverage, and potential legal challenges
+    to Trump''s executive order. These are appropriately flagged as speculative.
+
+
+    **Probability Assessment:** The estimates are well-justified:
+
+    - 72% "Doesn''t change" is reasonable given baseline stability, congressional
+    recess, and the [3,9] range encompassing all normal baseline values
+
+    - 8% "Decreases" appropriately reflects near-impossibility (requires ≤2 when baseline
+    is 6-9) while accounting for measurement uncertainty
+
+    - 20% "Increases" appropriately weights Easter travel as a weak catalyst given
+    "tsa funding" is a legislative term, not a travel planning term
+
+
+    No errors found that would change the forecast direction or meaningfully alter
+    the probability estimates.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43016
+- **Question ID**: 42952
+- **Session Duration**: 473.9s (7.9 min)
+- **Cost**: $2.7917
+- **Tokens**: 7,116 total (28 in, 7,088 out)
+  - Cache: 566,360 read, 75,205 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43016_20260401_222327/20260401-222327.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 2ms |
+| fetch_url | 1 | 0 | 12628ms |
+| get_metaculus_questions | 1 | 0 | 423ms |
+| google_trends | 1 | 0 | 1833ms |
+| reflection | 1 | 0 | 44559ms |
+| web_search | 5 | 0 | 52020ms |
+| wikipedia | 1 | 0 | 188ms |
+
+### Sources Consulted
+
+- [(Google Trends) tsa funding](https://trends.google.com/trends/explore?q=tsa ...
+- [(Metaculus) Will the interest in “tsa funding” change between 2026-04-01 and...
+- [TSA shutdown: GOP leaders Thune and Johnson boost two-track approach to fund...
+- [List of dates for Easter - Wikipedia](https://en.wikipedia.org/wiki/List_of_...
