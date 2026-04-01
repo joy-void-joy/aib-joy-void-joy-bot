@@ -1,0 +1,226 @@
+---
+timestamp: 2026-04-01 02:01:49 UTC
+question_type: binary
+factors:
+- description: 'Conditional drawdown base rate: WFC is 18.6% below 52w high. Historical
+    8-day forward returns in 15%+ drawdowns are positive 54.6% of the time (465 events
+    since 1972).'
+  logit: 0.19
+  confidence: 0.8
+  effective_logit: 0.15200000000000002
+- description: 'Recent negative trend: 20-day trailing mean return is -0.18%/day,
+    and WFC has declined from $95.92 to $79.61 over ~2 months. Ongoing selling pressure.'
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Macro uncertainty: Tariff regime ongoing with new Section 122 tariffs
+    at 10%, legal challenges from states. Supreme Court struck down IEEPA tariffs.
+    Elevated market volatility and policy uncertainty.'
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+- description: 'March 31 bounce: WFC rose 3.66% and S&P rose 2.9% on March 31, suggesting
+    possible short-term momentum. But single-day bounces in downtrends are often mean-reverting.'
+  logit: 0.1
+  confidence: 0.4
+  effective_logit: 0.04000000000000001
+- description: 'Pre-earnings positioning: WFC reports Q1 on April 14 (3 days after
+    resolution). Analysts expect EPS of $1.56 (+22.8% YoY). Pre-earnings drift is
+    typically slightly positive, though small.'
+  logit: 0.15
+  confidence: 0.5
+  effective_logit: 0.075
+- description: 'Monte Carlo simulation: Scenario-weighted simulation (30% continued
+    selling, 40% consolidation, 30% recovery) with 1.72% daily vol yields P(higher)
+    = 47.2%'
+  logit: -0.11
+  confidence: 0.7
+  effective_logit: -0.077
+tentative_estimate:
+  logit: 0.0
+  probability: 0.5
+assessment: The question asks whether WFC's close on April 11 will exceed its close
+  on April 1 — an 8 trading day window. WFC is in a significant drawdown (18.6% from
+  52w high) in a volatile macro environment driven by tariff policy uncertainty. The
+  empirical conditional base rate for stocks in 15%+ drawdowns over 8 days is 54.6%
+  positive, providing a slight positive edge. However, the recent trend has been firmly
+  negative (-0.18%/day over 20 days), and the macro environment with ongoing tariff
+  disputes creates asymmetric downside risk. The pre-earnings effect for April 14
+  earnings could provide a slight positive drift, but this is a small effect. Overall,
+  the factors roughly offset each other, pointing toward approximately a coin-flip
+  probability of ~50%.
+calibration_notes: 'Base rate: unconditional 8-day stock returns are positive ~52%
+  of the time. Conditional on 15%+ drawdown: 54.6%. Recent negative drift offsets
+  the drawdown-recovery edge. Not hedging toward 50% out of indecision — the factors
+  genuinely point in opposite directions.'
+key_uncertainties: Main uncertainty is whether the tariff regime produces a new shock
+  (further escalation, new announcements) or stabilizes. A major tariff escalation
+  could push WFC down 5-10%; a resolution or pause could trigger a 5%+ rally. The
+  pre-earnings period also adds some uncertainty about positioning flows.
+tool_audit: stock_price and stock_history returned good data. stock_conditional_returns
+  provided the key empirical base rate. web_search returned useful macro context.
+  asknews search_news failed with rate limit error (403). No tool failures per se,
+  just the rate limit on asknews.
+update_triggers: New tariff announcements or escalation; tariff legal challenge outcomes;
+  major economic data releases; Fed commentary; any WFC-specific news (regulatory,
+  earnings pre-announcement).
+process_reflection: The stock direction question framework worked well — combining
+  conditional returns with Monte Carlo simulation. The asknews rate limit was unfortunate
+  but web_search filled the gap for macro context. The question is straightforward
+  to model since it's a clean price comparison over 8 trading days. The conditional
+  returns tool was particularly valuable.
+computed:
+  factor_count: 6
+  factor_sum: -0.30999999999999994
+  tentative_logit: 0.0
+  logit_gap: 0.30999999999999994
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Conditional drawdown base rate: WFC is 18.6% below 52w high. Historical
+      8-day forward returns in 15%+ drawdowns are positive 54.6% of the time (465
+      events since 1972).'
+    logit: 0.19
+    confidence: 0.8
+    effective_logit: 0.15200000000000002
+  - description: 'Recent negative trend: 20-day trailing mean return is -0.18%/day,
+      and WFC has declined from $95.92 to $79.61 over ~2 months. Ongoing selling pressure.'
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Macro uncertainty: Tariff regime ongoing with new Section 122 tariffs
+      at 10%, legal challenges from states. Supreme Court struck down IEEPA tariffs.
+      Elevated market volatility and policy uncertainty.'
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  - description: 'March 31 bounce: WFC rose 3.66% and S&P rose 2.9% on March 31, suggesting
+      possible short-term momentum. But single-day bounces in downtrends are often
+      mean-reverting.'
+    logit: 0.1
+    confidence: 0.4
+    effective_logit: 0.04000000000000001
+  - description: 'Pre-earnings positioning: WFC reports Q1 on April 14 (3 days after
+      resolution). Analysts expect EPS of $1.56 (+22.8% YoY). Pre-earnings drift is
+      typically slightly positive, though small.'
+    logit: 0.15
+    confidence: 0.5
+    effective_logit: 0.075
+  - description: 'Monte Carlo simulation: Scenario-weighted simulation (30% continued
+      selling, 40% consolidation, 30% recovery) with 1.72% daily vol yields P(higher)
+      = 47.2%'
+    logit: -0.11
+    confidence: 0.7
+    effective_logit: -0.077
+  dominant_factor: 'Recent negative trend: 20-day trailing mean return is -0.18%/day,
+    and WFC has declined from $95.92 to $79.61 over ~2 months. Ongoing selling pressure.'
+  dominant_effective_logit: -0.3
+  factor_implied_probability: 0.42311473886795364
+  tentative_probability: 0.5
+  gap_pp: 7.688526113204635
+  sources:
+  - '[(yfinance) WFC](https://finance.yahoo.com/quote/WFC)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia.org/wiki/Tariffs_in_the_second_Trump_administration)'
+  - '[2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stock_market_crash)'
+  - '[Wells Fargo & Company (WFC) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/WFC/history/)'
+  - '[Wells Fargo & Company (WFC) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/WFC/)'
+  - '[Liberation Day tariffs - Wikipedia](https://en.wikipedia.org/wiki/Liberation_Day_tariffs)'
+  reviewer_critique: '**Evidence Verification:**
+
+
+    All factual claims in the factors are well-grounded in the trace:
+
+
+    1. **Factor 1 (Conditional drawdown base rate)**: The trace confirms WFC''s drawdown
+    at -18.57% (line 45) and the conditional returns tool returned 54.62% positive
+    over 465 events (lines 165-169). ✓
+
+
+    2. **Factor 2 (Recent negative trend)**: Trace confirms trailing_mean_return_20d
+    = -0.18% (line 46), and price decline from $95.92 (Jan 6) to $79.61 (current).
+    ✓
+
+
+    3. **Factor 3 (Macro uncertainty)**: Wikipedia excerpts in the trace (lines 217-230,
+    375-378) confirm IEEPA tariffs struck down by Supreme Court in Feb 2026, new 10%
+    Section 122 tariffs, and state legal challenges. ✓
+
+
+    4. **Factor 4 (March 31 bounce)**: Trace shows WFC change_percent = 3.66% and
+    S&P 500 = 2.91% (lines 32, 103). ✓
+
+
+    5. **Factor 5 (Pre-earnings)**: Yahoo Finance article confirms April 14 earnings
+    date and EPS expectations of $1.56 (+22.8% YoY) (lines 307-309, 537-540). ✓
+
+
+    6. **Factor 6 (Monte Carlo)**: Trace shows simulation results with weighted P(higher)
+    = 47.2% (line 568). ✓
+
+
+    **Resolution Criteria**: The question specifies Yahoo Finance API as the data
+    source; the agent used Yahoo Finance data throughout. No misalignment.
+
+
+    **Double-counting check**: Factors 1 and 6 both use drawdown condition to inform
+    probability, but Factor 1 is empirical base rate while Factor 6 is forward simulation
+    with scenario weighting - they''re complementary rather than pure duplicates.
+    The logits are appropriately sized (+0.2 and -0.1).
+
+
+    **Probability assessment**: The conditional base rate (54.6%) provides a slight
+    positive edge. The 20-day negative drift (-0.18%/day) and macro uncertainty reasonably
+    offset this. The trace''s blended estimate was 51.3%; the final 50% estimate is
+    marginally conservative but within the uncertainty range. Given 8 trading days
+    with 1.72% daily volatility and conflicting signals (base rate positive vs. trend
+    negative), 50% is defensible.
+
+
+    **Adversarial reasoning**: The assessment acknowledges "asymmetric downside risk"
+    from tariff uncertainty but could more explicitly engage with the scenario where
+    tariff escalation or broader market selloff causes another leg down. This is a
+    minor gap - the tension between factors is noted but not deeply developed. Not
+    sufficient to warrant a warn given the overall balance of the assessment.
+
+
+    No hallucinated evidence, no wrong-direction factors, no contradictory assessment.
+    The probability aligns reasonably with the evidence.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43006
+- **Question ID**: 42942
+- **Session Duration**: 344.8s (5.7 min)
+- **Cost**: $2.4824
+- **Tokens**: 6,619 total (27 in, 6,592 out)
+  - Cache: 538,256 read, 62,942 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43006_20260401_015629/20260401-015629.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 161ms |
+| reflection | 1 | 0 | 56551ms |
+| stock_conditional_returns | 1 | 0 | 376ms |
+| stock_history | 1 | 0 | 148ms |
+| stock_price | 4 | 0 | 251ms |
+| web_search | 5 | 0 | 15519ms |
+| wikipedia | 5 | 0 | 190ms |
+
+### Sources Consulted
+
+- [(yfinance) WFC](https://finance.yahoo.com/quote/WFC)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia...
+- [2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stoc...
+- [Wells Fargo & Company (WFC) Stock Historical Prices & Data - Yahoo Finance](...
+- [Wells Fargo & Company (WFC) Stock Price, News, Quote & History - Yahoo Finan...
+- [Liberation Day tariffs - Wikipedia](https://en.wikipedia.org/wiki/Liberation...
