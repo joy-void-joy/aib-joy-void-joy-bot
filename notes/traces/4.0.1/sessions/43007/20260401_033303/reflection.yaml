@@ -1,0 +1,380 @@
+---
+timestamp: 2026-04-01 03:43:57 UTC
+question_type: multiple_choice
+factors:
+- description: UF eliminated from NCAA tournament in Round 2 - biggest search driver
+    removed. No UF basketball games in April 1-9 window.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Non-event weekday baseline for 'uf' in resolution range is ~50-55.
+    Apr 1 at 55 is at upper edge; mean-reversion toward 52-53 expected.
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: ±3 threshold covers 7-point band [52-58] centered near the non-event
+    baseline. This is a relatively wide band given calm-period volatility.
+  supports: Doesn't change
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: Orange & Blue Game (football spring game) is April 11, just 2 days
+    after our window. Pre-event anticipation searches could push Apr 8-9 values up.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: UF baseball has regular games Apr 2-4 and Apr 7. These generate minor
+    search interest but not major spikes.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: SerpAPI vs pytrends measurement uncertainty of ±2 points on both dates.
+    Could shift resolution category either way.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: '2025 same period: Apr 1=43 → Apr 9=46 (change +3, ''Doesn''t change'')
+    BUT that included UF winning the national championship. Without such a catalyst
+    in 2026, less upward pressure.'
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Empirical 8-day change base rates from resolution range show 40% increases,
+    0% doesn't change, 60% decreases - but heavily influenced by post-tournament spike
+    decay, not representative of calm period.
+  supports: Decreases
+  logit: 0.4
+  confidence: 0.3
+  effective_logit: 0.12
+tentative_estimate:
+  probabilities:
+    Increases: 0.25
+    Doesn't change: 0.42
+    Decreases: 0.33
+assessment: 'The search term "uf" is primarily driven by University of Florida interest,
+  with basketball being the dominant search driver. UF was the #1 seed but was upset
+  in the second round of the NCAA tournament. The March 23 spike to 100 was the tournament
+  peak, and values have been declining since.
+
+
+  By April 1, the value settled to 55. The Final Four (April 4-6) does NOT include
+  UF, so there''s no basketball catalyst in our window. UF baseball continues with
+  regular games (Apr 2-4, 7) but these generate modest search interest. The Orange
+  & Blue Game (football spring game) on April 11 is just outside our window and could
+  generate some anticipation searches.
+
+
+  The key tension is between:
+
+  1. "Doesn''t change" being favored by the relatively wide ±3 band covering most
+  of the non-event baseline range
+
+  2. "Decreases" being favored by slight mean-reversion from 55 toward the ~52 non-event
+  baseline
+
+  3. "Increases" getting a small boost from potential Orange & Blue anticipation and
+  any unexpected UF news
+
+
+  The mixture model simulation (85% normal day ~N(53,4), 15% minor event ~N(62,5))
+  gives Increases: 19%, DC: 51%, Decreases: 30%. I''m adjusting slightly from that
+  model to give more weight to the decrease scenario (mean-reversion) and the increase
+  scenario (Orange & Blue anticipation, SerpAPI measurement variance).'
+calibration_notes: The ±3 threshold on a value of 55 creates a 7-point band [52-58].
+  During non-event periods, daily "uf" values cluster around 50-55, so the lower boundary
+  of "Doesn't change" (52) is right at the baseline. This means even normal baseline
+  fluctuation could produce either DC or Decreases. The high volatility during March
+  Madness (std ~15) is NOT representative of the calmer April period we're forecasting
+  into.
+key_uncertainties: '1. Will SerpAPI report a different Apr 1 value than pytrends (55)?
+  A ±2 shift changes the threshold bands significantly.
+
+  2. Will the Orange & Blue Game generate meaningful pre-event search interest on
+  Apr 8-9?
+
+  3. Could any unexpected UF news (coaching, admissions, etc.) create a search spike?
+
+  4. Is the "uf" non-event baseline truly ~52-53 in this scale, or higher?'
+tool_audit: 'google_trends: Returned useful data for both the resolution range and
+  comparison periods. The change_stats and tail_stats were helpful for base rates.
+  web_search: Successfully found NCAA tournament context (UF eliminated, Final Four
+  teams) and Orange & Blue Game date (April 11). fetch_url: Successfully retrieved
+  UF baseball schedule for April. execute_code: Used for Monte Carlo simulations and
+  empirical analysis. All tools worked correctly with no failures.'
+update_triggers: "- UF involved in major news story (scandal, policy change, etc.)\
+  \ → large shift toward Increases\n- Big UF baseball series or upset → moderate shift\
+  \ toward Increases  \n- Complete quiet week with no UF events → shift toward Decreases\n\
+  - SerpAPI reports Apr 1 value significantly different from 55 → recalibrate all\
+  \ probabilities"
+process_reflection: 'The system worked well for this question type. The Google Trends
+  tool with tz=0 parameter was essential for matching the resolution data source.
+  The guidance about threshold arithmetic and change_stats base rates was helpful.
+  One friction point: the random walk models consistently overstated volatility because
+  Google Trends values for a university-related term are event-driven rather than
+  random-walk distributed. I had to manually construct a mixture model to better capture
+  the bimodal nature (event vs non-event days). A tool that could analyze the distribution
+  of Google Trends values (not just changes) would be more useful for this question
+  type.'
+computed:
+  factor_count: 8
+  factor_sum: 3.03
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: UF eliminated from NCAA tournament in Round 2 - biggest search driver
+      removed. No UF basketball games in April 1-9 window.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Non-event weekday baseline for 'uf' in resolution range is ~50-55.
+      Apr 1 at 55 is at upper edge; mean-reversion toward 52-53 expected.
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: ±3 threshold covers 7-point band [52-58] centered near the non-event
+      baseline. This is a relatively wide band given calm-period volatility.
+    supports: Doesn't change
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: Orange & Blue Game (football spring game) is April 11, just 2 days
+      after our window. Pre-event anticipation searches could push Apr 8-9 values
+      up.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: UF baseball has regular games Apr 2-4 and Apr 7. These generate minor
+      search interest but not major spikes.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: SerpAPI vs pytrends measurement uncertainty of ±2 points on both
+      dates. Could shift resolution category either way.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: '2025 same period: Apr 1=43 → Apr 9=46 (change +3, ''Doesn''t change'')
+      BUT that included UF winning the national championship. Without such a catalyst
+      in 2026, less upward pressure.'
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Empirical 8-day change base rates from resolution range show 40%
+      increases, 0% doesn't change, 60% decreases - but heavily influenced by post-tournament
+      spike decay, not representative of calm period.
+    supports: Decreases
+    logit: 0.4
+    confidence: 0.3
+    effective_logit: 0.12
+  dominant_factor: ±3 threshold covers 7-point band [52-58] centered near the non-event
+    baseline. This is a relatively wide band given calm-period volatility.
+  dominant_effective_logit: 0.84
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 1.41
+    factors:
+    - description: UF eliminated from NCAA tournament in Round 2 - biggest search
+        driver removed. No UF basketball games in April 1-9 window.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: Non-event weekday baseline for 'uf' in resolution range is ~50-55.
+        Apr 1 at 55 is at upper edge; mean-reversion toward 52-53 expected.
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.7
+      effective_logit: 0.48999999999999994
+    - description: Empirical 8-day change base rates from resolution range show 40%
+        increases, 0% doesn't change, 60% decreases - but heavily influenced by post-tournament
+        spike decay, not representative of calm period.
+      supports: Decreases
+      logit: 0.4
+      confidence: 0.3
+      effective_logit: 0.12
+  - outcome: Doesn't change
+    factor_count: 4
+    logit_sum: 1.42
+    factors:
+    - description: ±3 threshold covers 7-point band [52-58] centered near the non-event
+        baseline. This is a relatively wide band given calm-period volatility.
+      supports: Doesn't change
+      logit: 1.2
+      confidence: 0.7
+      effective_logit: 0.84
+    - description: UF baseball has regular games Apr 2-4 and Apr 7. These generate
+        minor search interest but not major spikes.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.6
+      effective_logit: 0.18
+    - description: SerpAPI vs pytrends measurement uncertainty of ±2 points on both
+        dates. Could shift resolution category either way.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+    - description: '2025 same period: Apr 1=43 → Apr 9=46 (change +3, ''Doesn''t change'')
+        BUT that included UF winning the national championship. Without such a catalyst
+        in 2026, less upward pressure.'
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.2
+    factors:
+    - description: Orange & Blue Game (football spring game) is April 11, just 2 days
+        after our window. Pre-event anticipation searches could push Apr 8-9 values
+        up.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.12918774366250407
+      Doesn't change: 0.43758314066785114
+      Decreases: 0.4332291156696448
+    tentative_probabilities:
+      Increases: 0.25
+      Doesn't change: 0.42
+      Decreases: 0.33
+    per_option_gap_pp:
+      Increases: 12.081225633749593
+      Doesn't change: -1.758314066785116
+      Decreases: -10.322911566964477
+    max_gap_pp: 12.081225633749593
+    max_gap_option: Increases
+  sources:
+  - '[(Google Trends) uf](https://trends.google.com/trends/explore?q=uf)'
+  - '[(Metaculus) Will the interest in “uf” change between 2026-04-01 and 2026-04-09
+    according to Google Trends?](https://www.metaculus.com/questions/43007)'
+  - '[Florida Gators men''s basketball - Wikipedia](https://en.wikipedia.org/wiki/Florida_Gators_men''s_basketball)'
+  - '[2026 NCAA Division I men''s basketball tournament - Wikipedia](https://en.wikipedia.org/wiki/2026_NCAA_Division_I_men''s_basketball_tournament)'
+  - '[2026 Baseball Schedule - Florida Gators](https://floridagators.com/sports/baseball/schedule)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified all 8 factors against the research trace:
+
+
+    **Factor 1 (UF eliminated in Round 2)**: VERIFIED - Trace line 459 confirms "Florida
+    was eliminated from the NCAA tournament - they were the #1 overall seed but lost
+    in the second round (the CBS article mentions ''Florida becomes first No. 1 seed
+    to fall'')". The Final Four teams (Michigan, Arizona, UConn, Illinois) are confirmed.
+
+
+    **Factor 2 (Non-event baseline ~50-55)**: VERIFIED - Trace line 628 shows "Mid-March
+    non-tournament period (Mar 17-20): Tue=53, Wed=51, Thu=53, Fri=54, Average: 52.75"
+
+
+    **Factor 3 (±3 threshold = 7-point band [52-58])**: VERIFIED - Arithmetic from
+    resolution criteria given Apr 1 = 55.
+
+
+    **Factor 4 (Orange & Blue Game April 11)**: VERIFIED - Trace lines 573-579 show
+    floridagators.com announcement: "Saturday, April 11, at 12 p.m."
+
+
+    **Factor 5 (UF baseball games Apr 2-4, 7)**: VERIFIED - Trace line 698 confirms
+    baseball games during the window.
+
+
+    **Factor 6 (SerpAPI uncertainty ±2)**: PARTIALLY VERIFIED - The trace shows extensive
+    SerpAPI scenario analysis (lines 667-672), though the ±2 figure is inferred from
+    the question''s fine print about API vs browser differences. Reasonable assumption.
+
+
+    **Factor 7 (2025: Apr 1=43 → Apr 9=46)**: VERIFIED - Trace line 627: "2025 comparison:
+    Apr 1: 43, Apr 9: 46, change: 3, Result: Doesnt change"
+
+
+    **Factor 8 (Empirical base rates 40%/0%/60%)**: VERIFIED - Trace lines 159-160:
+    "Of 15 8-day changes: Increases (>3): 6 (40.0%), Doesn''t change (±3): 0 (0.0%),
+    Decreases (<-3): 9 (60.0%)"
+
+
+    ## Issues Checked
+
+
+    **Double-counting**: Factor 1 (tournament elimination) and Factor 8 (empirical
+    base rates) are related - the base rates include the tournament spike decay period.
+    However, the agent explicitly acknowledges this in Factor 8: "heavily influenced
+    by post-tournament spike decay, not representative of calm period" and gives it
+    low confidence (0.3). This is proper disclosure.
+
+
+    **Wrong-direction factors**: All logit signs are consistent with factor descriptions.
+
+
+    **Resolution criteria alignment**: The agent correctly engaged with the ±3 threshold,
+    SerpAPI as authoritative source, and the specific date comparison (Apr 1 vs Apr
+    9).
+
+
+    **Probability assessment**: The Monte Carlo mixture model gave Increases: 18.6%,
+    DC: 51.0%, Decreases: 30.4%. The agent''s final estimate (25%, 42%, 33%) represents
+    reasonable adjustments for Orange & Blue anticipation (increases "Increases")
+    and mean-reversion (increases "Decreases"). These adjustments are within normal
+    modeling uncertainty and are explicitly justified in the trace (lines 706-716).
+
+
+    **Adversarial reasoning**: The assessment explicitly addresses the tension between
+    DC (favored by wide band), Decreases (mean-reversion), and Increases (spring game
+    anticipation). The agent considers measurement uncertainty scenarios and their
+    impact on resolution category.
+
+
+    No hallucinated evidence, no systematic errors affecting the forecast direction
+    or magnitude.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43007
+- **Question ID**: 42943
+- **Session Duration**: 665.9s (11.1 min)
+- **Cost**: $4.4041
+- **Tokens**: 15,962 total (40 in, 15,922 out)
+  - Cache: 927,372 read, 96,975 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43007_20260401_033303/20260401-033303.log`
+
+### Tool Calls
+
+- **Total**: 21 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 567ms |
+| fetch_url | 1 | 0 | 14787ms |
+| get_metaculus_questions | 1 | 0 | 249ms |
+| google_trends | 4 | 0 | 15993ms |
+| reflection | 1 | 0 | 137367ms |
+| web_search | 6 | 0 | 22269ms |
+| wikipedia | 3 | 0 | 203ms |
+
+### Sources Consulted
+
+- [(Google Trends) uf](https://trends.google.com/trends/explore?q=uf)
+- [(Metaculus) Will the interest in “uf” change between 2026-04-01 and 2026-04-...
+- [Florida Gators men's basketball - Wikipedia](https://en.wikipedia.org/wiki/F...
+- [2026 NCAA Division I men's basketball tournament - Wikipedia](https://en.wik...
+- [2026 Baseball Schedule - Florida Gators](https://floridagators.com/sports/ba...
