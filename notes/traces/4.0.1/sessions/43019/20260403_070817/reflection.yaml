@@ -1,0 +1,229 @@
+---
+timestamp: 2026-04-03 07:14:05 UTC
+question_type: binary
+factors:
+- description: 'Negative recent momentum: 20-day return -8%, 5-day return -4.7%, strongly
+    bearish trend'
+  logit: -0.8
+  confidence: 0.8
+  effective_logit: -0.6400000000000001
+- description: 'Post-shock conditional base rate: after >=5% single-day drops, ABNB
+    is positive over next 5 days only 46.3% of the time (n=41)'
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+- description: 'Macro headwinds: tariff uncertainty (Section 122 at 10-15%), trade
+    war legal battles, S&P 500 down 6% from high'
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Airbnb-specific headwinds: $2.5B bond offering increasing cost of
+    capital, inflation/energy costs pressuring travel demand'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Drawdown conditional base rate: when ABNB is >=10% below 52w high,
+    5-day forward returns are positive 54.8% of the time (n=155)'
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: Monte Carlo simulation with 60-day regime parameters gives 44.3% probability
+    of being up over 5 days
+  logit: -0.3
+  confidence: 0.8
+  effective_logit: -0.24
+- description: High daily volatility (2.25%) means wide outcome distribution - close
+    to coin flip territory despite negative drift
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+tentative_estimate:
+  logit: -0.2
+  probability: 0.45
+assessment: 'ABNB is in a clearly negative regime: down 8% over 20 days, experienced
+  a -6.25% shock on Mar 27, and the broader market is weak. The Monte Carlo simulations
+  using recent parameters consistently show sub-50% probability of being up over 5
+  trading days. The 20-day regime MC gives only 34%, while the 60-day gives 44%. Conditional
+  base rates are mixed: post-shock gives 46.3% but drawdown gives 54.8%. The negative
+  drift is the dominant signal, but the high volatility keeps the probability from
+  getting too low — even with strong negative momentum, 5 days is a short enough window
+  that random variation can easily overcome the drift. My estimate of 45% reflects
+  the negative trend tempered by randomness and some mean-reversion potential.'
+calibration_notes: Unconditional 5-day probability of stock being up is ~52-53%. The
+  current conditions (negative momentum, macro headwinds) push this down. The conditional
+  base rates from the shock and drawdown data center around 46-55%. My 45% estimate
+  is modestly below the conditional midpoint, reflecting the particularly negative
+  recent drift and Airbnb-specific headwinds.
+key_uncertainties: The biggest uncertainty is whether the negative momentum persists
+  or mean-reverts. A single positive macro catalyst (trade deal progress, tariff reduction)
+  could push the stock up sharply. Conversely, any escalation of trade tensions or
+  negative Airbnb-specific news could accelerate the decline.
+tool_audit: stock_price and stock_history provided good empirical data. stock_conditional_returns
+  gave useful base rates for both post-shock and drawdown scenarios. Web search found
+  relevant macro context. AskNews search_news failed with 403 rate limit error. Monte
+  Carlo simulation worked well for computing probabilities under different parameter
+  assumptions.
+update_triggers: Tariff policy changes (escalation or de-escalation), major market-moving
+  macro events, Airbnb-specific news (earnings guidance, regulatory changes), significant
+  S&P 500 moves
+process_reflection: 'The stock direction forecasting workflow was smooth: price data
+  → conditional base rates → Monte Carlo → synthesis. The conditional returns tool
+  is very useful for this question type. The AskNews rate limit was a minor annoyance
+  but web_search compensated adequately. One gap: I don''t have a great way to quantify
+  the macro regime''s impact on individual stock probabilities beyond the general
+  S&P 500 condition.'
+computed:
+  factor_count: 7
+  factor_sum: -1.31
+  tentative_logit: -0.2
+  logit_gap: 1.11
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Negative recent momentum: 20-day return -8%, 5-day return -4.7%,
+      strongly bearish trend'
+    logit: -0.8
+    confidence: 0.8
+    effective_logit: -0.6400000000000001
+  - description: 'Post-shock conditional base rate: after >=5% single-day drops, ABNB
+      is positive over next 5 days only 46.3% of the time (n=41)'
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  - description: 'Macro headwinds: tariff uncertainty (Section 122 at 10-15%), trade
+      war legal battles, S&P 500 down 6% from high'
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Airbnb-specific headwinds: $2.5B bond offering increasing cost of
+      capital, inflation/energy costs pressuring travel demand'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Drawdown conditional base rate: when ABNB is >=10% below 52w high,
+      5-day forward returns are positive 54.8% of the time (n=155)'
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: Monte Carlo simulation with 60-day regime parameters gives 44.3%
+      probability of being up over 5 days
+    logit: -0.3
+    confidence: 0.8
+    effective_logit: -0.24
+  - description: High daily volatility (2.25%) means wide outcome distribution - close
+      to coin flip territory despite negative drift
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  dominant_factor: 'Negative recent momentum: 20-day return -8%, 5-day return -4.7%,
+    strongly bearish trend'
+  dominant_effective_logit: -0.6400000000000001
+  factor_implied_probability: 0.21248684412253915
+  tentative_probability: 0.45
+  gap_pp: 23.751315587746085
+  sources:
+  - '[(yfinance) ABNB](https://finance.yahoo.com/quote/ABNB)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Airbnb, Inc. (ABNB) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/ABNB/)'
+  - '[2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stock_market_crash)'
+  - '[Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia.org/wiki/Tariffs_in_the_second_Trump_administration)'
+  - '[Airbnb, Inc. (ABNB) Interactive Stock Chart - Yahoo Finance](https://finance.yahoo.com/quote/ABNB/chart/)'
+  - '[Tariff Turmoil 2.0: Markets Reeling as Global Trade War Enters High-Stakes New
+    Chapter](https://markets.financialcontent.com/stocks/article/marketminute-2026-3-2-tariff-turmoil-20-markets-reeling-as-global-trade-war-enters-high-stakes-new-chapter)'
+  reviewer_critique: '**Verification of all factors:**
+
+
+    1. **Negative recent momentum** (-8% 20-day, -4.7% 5-day): VERIFIED. Trace shows
+    trailing_returns with twenty_day: -8.02% and five_day: -4.66%, matching the factor''s
+    claims.
+
+
+    2. **Post-shock conditional base rate** (46.3%, n=41): VERIFIED. Trace shows stock_conditional_returns
+    output with "pct_positive": 46.34 for the "single-day drop >= 5.0%" condition
+    over 5 days with 41 events.
+
+
+    3. **Macro headwinds** (Section 122 at 10-15%, S&P 500 down 6%): VERIFIED with
+    minor imprecision. Trace shows conflicting tariff info (Wikipedia: "10% ... threatened
+    to increase to 15%"; fetched article: "15% universal global tariff"). The 10-15%
+    range is a reasonable characterization. S&P 500 drawdown shows -5.99% in trace,
+    rounded to 6% in factor.
+
+
+    4. **Airbnb-specific headwinds** ($2.5B bond): VERIFIED. Trace shows CoinCentral
+    article confirming "$2.5 billion bond offering" and Benzinga article about "inflation,
+    energy costs pressure travel outlook."
+
+
+    5. **Drawdown conditional base rate** (54.8%, n=155): VERIFIED. Trace shows stock_conditional_returns
+    with "pct_positive": 54.84 for "52-week drawdown >= 10.0%" condition over 5 days
+    with 155 events.
+
+
+    6. **Monte Carlo simulation** (44.3% for 60-day regime): VERIFIED. Trace shows
+    sandbox code execution output: "60d_regime: 44.3%"
+
+
+    7. **High daily volatility** (2.25%): VERIFIED. Trace shows "trailing_volatility_20d":
+    2.25 in the stock data.
+
+
+    **Double-counting check**: Factors 1 (momentum) and 6 (MC simulation) share underlying
+    data, but serve distinct analytical purposes—one is observation, one is forward
+    projection. Factors 2 and 5 use overlapping conditions but capture different historical
+    patterns. Borderline but defensible.
+
+
+    **Resolution criteria**: Properly engaged. The question asks about close price
+    comparison over 5 trading days, and the agent correctly used 5-day horizon data
+    and simulations.
+
+
+    **Adversarial reasoning**: Present. Assessment acknowledges high volatility limits
+    downside confidence and notes mean-reversion potential.
+
+
+    **Probability assessment**: The 45% estimate is well-supported. The agent considered
+    MC simulations (34-52% depending on regime), conditional base rates (46-55%),
+    and arrived at a weighted blend. The choice of 45% slightly below the 46.9% blend
+    reflects reasonable weighting toward negative drift. No meaningful disagreement
+    with this estimate.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43019
+- **Question ID**: 42955
+- **Session Duration**: 353.8s (5.9 min)
+- **Cost**: $3.1053
+- **Tokens**: 6,926 total (29 in, 6,897 out)
+  - Cache: 687,020 read, 83,041 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43019_20260403_070817/20260403-070817.log`
+
+### Tool Calls
+
+- **Total**: 22 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 131ms |
+| fetch_url | 1 | 0 | 13808ms |
+| reflection | 1 | 0 | 88266ms |
+| stock_conditional_returns | 2 | 0 | 51ms |
+| stock_history | 1 | 0 | 52ms |
+| stock_price | 5 | 0 | 310ms |
+| web_search | 5 | 0 | 19487ms |
+| wikipedia | 4 | 0 | 180ms |
+
+### Sources Consulted
+
+- [(yfinance) ABNB](https://finance.yahoo.com/quote/ABNB)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Airbnb, Inc. (ABNB) Stock Price, News, Quote & History - Yahoo Finance](http...
+- [2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stoc...
+- [Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia...
+- [Airbnb, Inc. (ABNB) Interactive Stock Chart - Yahoo Finance](https://finance...
+- [Tariff Turmoil 2.0: Markets Reeling as Global Trade War Enters High-Stakes N...
