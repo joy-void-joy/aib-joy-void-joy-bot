@@ -1,0 +1,75 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched Bulgaria's April 2026 parliamentary election to assess whether a party other than GERB-SDS or PP-DB would win the most seats. The agent systematically gathered polling data from multiple sources:\n\n- **Web searches** for Bulgaria election polls, returning results from Sofia Globe, IBNA, Novinite, and politpro.eu\n- **Wikipedia** verification that PP-DB (We Continue the Change – Democratic Bulgaria) is distinct from Progressive Bulgaria (PB)\n- **URL fetches** from Sofia Globe, IBNA, Novinite, and politpro.eu for detailed poll numbers\n- **Polymarket check** — no markets found for Bulgaria election\n- **Metaculus question details** — confirmed resolution via CIK.bg official results\n\n## Key Evidence\n\nThe agent compiled polling data from 6 independent agencies:\n\n| Pollster | PB | GERB | Lead | PP-DB |\n|----------|-----|------|------|-------|\n| Alpha Research (Mar 29) | **30.8%** | 21.2% | +9.6pp | 11.1% |\n| Trend (Mar 13-19) | **31.1%** | 19.7% | +11.4pp | 11.8% |\n| Gallup Int'l Balkan | **27.7%** | 22.8% | +4.9pp | 10.6% |\n| Alpha Research (Mar 20) | **29.4%** | 20.7% | +8.7pp | 11.5% |\n| Market Links (Mar 21) | **24.4%** | 18.6% | +5.8pp | 11.1% |\n| PolitPro trend (Apr 4) | **30.1%** | 21.1% | +9.0pp | 7.0% |\n\n**Key findings:**\n- Average PB lead: **8.2 percentage points**\n- Minimum lead (most favorable to GERB): **4.9pp**\n- Seat projections from politpro.eu: **PB 97 seats vs GERB 68 seats** (29-seat gap out of 240)\n- PP-DB at 10-12% — cannot win most seats\n- Progressive Bulgaria is confirmed to be a *new* coalition formed March 2, 2026 by ex-President Rumen Radev — **neither GERB-SDS nor PP-DB**\n\n## Quantitative Analysis\n\nThe agent ran Monte Carlo simulations with **100,000 iterations**:\n- Assumed 3pp systematic error std for PB (new party premium), 2pp for GERB\n- Result: **97.9% probability PB wins most seats**\n\nZ-score analysis:\n- Gap: 8.2pp, combined std: ~4pp → **Z = 2.03** → P(GERB overcomes) = **2.1%**\n- With conservative 6pp combined std: P(GERB overcomes) = **8.6%**\n\nThe agent appropriately tempered the statistical estimate to **94%** to account for new-party risk.\n\n## Conclusion\n\nThe agent concluded with **94% probability (logit 2.8)** that a party other than GERB-SDS or PP-DB (specifically Progressive Bulgaria) wins the most seats. This is well-supported by:\n- Unanimous polling consensus across 6 agencies\n- Large and consistent 8.2pp average lead\n- 29-seat projected gap\n- PP-DB elimination as a contender\n- Quantitative modeling showing GERB needs ~2 sigma polling error to win",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__web_search": "5 calls, 0 errors, impact: none, value: high — found comprehensive polling data from Sofia Globe, IBNA, Novinite, politpro.eu",
+      "mcp__search__fetch_url": "5 calls, 0 errors, impact: none, value: high — extracted detailed poll numbers with party breakdowns",
+      "mcp__search__wikipedia": "3 calls, 1 error (article not found for 'Progressive Bulgaria Rumen Radev party'), impact: minor (alternative query succeeded), value: medium — confirmed party identities",
+      "mcp__markets__polymarket_price": "1 call, 0 errors but no markets found, impact: none, value: low — no prediction market data available for Bulgaria election",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed resolution criteria",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: high — Monte Carlo simulation and z-score analysis provided quantitative backbone",
+      "mcp__asknews__do_news_research": "1 call, 1 error (403 forbidden for Metaculus users), impact: minor (web search compensated), value: wasted",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor analysis with verification",
+      "TodoWrite": "4 calls, 0 errors, impact: none, value: low — task tracking overhead"
+    },
+    "capability_gaps": [
+      "European election polling aggregator tool would have been useful",
+      "No access to Bulgarian-language news sources directly"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Poll aggregation across 6 agencies with Monte Carlo simulation and z-score analysis for probability estimation",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Progressive Bulgaria is a brand-new coalition (formed March 2, 2026) with no electoral track record — new parties historically have higher polling uncertainty and can underperform"
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The Monte Carlo simulation yielded 97.9% but agent correctly tempered to 94% — however, the trace notes GERB has won most seats in ALL 6 elections since 2021, which suggests base rate of incumbent success may be underweighted",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No exit poll history or historical polling error analysis for Bulgarian elections was consulted — agent assumed 2-4pp systematic error without calibrating to Bulgarian-specific polling accuracy",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "92-95%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Comprehensive polling coverage: gathered data from 6 independent agencies (Alpha Research, Trend, Gallup International Balkan, Market Links, Sova Harris, PolitPro)",
+    "Correctly identified party relationships: verified that WCC-DB = PP-DB and that Progressive Bulgaria is a distinct new coalition",
+    "Quantitative rigor: ran Monte Carlo simulation with 100K samples and computed z-scores under multiple uncertainty assumptions",
+    "Appropriate uncertainty adjustment: tempered raw statistical estimate (97.9%) down to 94% to account for new-party risk",
+    "Good adversarial reasoning: explicitly addressed counterarguments (new party risk, Bulgarian political volatility, protest vote enthusiasm)",
+    "Verified seat projections: converted vote share polling to seat estimates using politpro.eu aggregator"
+  ],
+  "weaknesses": [
+    "Did not research historical polling error in Bulgarian elections — assumed standard 2-4pp error without calibration to actual Bulgarian polling accuracy",
+    "Did not explore whether any other 'other' party besides Progressive Bulgaria could plausibly win (e.g., DPS, Revival) — implicitly assumed PB is the only 'YES' scenario",
+    "Did not account for differential turnout effects between new party (PB) and established party (GERB) voter mobilization infrastructure",
+    "Reflection tool's internal reviewer found no errors, which may indicate insufficient adversarial pressure in the verification step"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__asknews__do_news_research returned 403 error for Metaculus users — required fallback to web_search",
+      "Wikipedia search failed for compound query 'Progressive Bulgaria Rumen Radev party' but succeeded with simpler query"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Calibrate polling error assumptions to Bulgarian-specific historical data from the 6 elections since 2021",
+    "Explicitly enumerate all parties that could theoretically win most seats and assign probability to each",
+    "Research GERB's ground game advantages and historical ability to outperform polls on election day",
+    "Consider checking European polling aggregators (e.g., Europe Elects) for additional data points"
+  ]
+}
