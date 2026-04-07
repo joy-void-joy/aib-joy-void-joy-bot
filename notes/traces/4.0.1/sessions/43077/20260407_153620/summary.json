@@ -1,0 +1,62 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the \"Michael\" biopic opening weekend forecast through comprehensive web searches and industry tracking data. The agent gathered projections from multiple authoritative industry sources:\n\n- **Box Office Pro** (March 27): **$80M-$90M** opening based on pre-sale velocity described as \"absolutely killing it\"\n- **Deadline** (April 2, 3-week tracking): **$60M+** floor, advance sales \"north of $50M\" — the most credible industry tracking source\n- **BoxOfficeTheory** (March 27): **$52M-$75M** range, noting first-day general show sales behind blockbusters like Wicked\n- **World of Reel** (March 27): **$80M-$90M+** based on internal tracking\n\n## Key Evidence\n\n**Bullish signals:**\n- Record-breaking trailer views: **116.2 million** views in 24 hours (Lionsgate's largest ever, exceeding Taylor Swift: Eras Tour's 96.1M record)\n- First-choice tracking \"well ahead of\" Bohemian Rhapsody, Elvis, Sinners, and **Oppenheimer** at the same point — a significant benchmark since Oppenheimer opened to $82M\n- Pre-sales described as \"absolutely killing it\" across multiple sources\n- Exhibitors who've seen the film report \"very positive\" reactions\n\n**Conservative anchors:**\n- **No music biopic has ever opened above $60.2M** domestically (Straight Outta Compton, 2015) — genre ceiling creates structural uncertainty\n- BoxOfficeTheory notes first-day general show sales lag blockbusters like Wicked and Devil Wears Prada 2\n- **Leaving Neverland** (2019) controversy could dampen some demographic turnout, though pre-sales suggest minimal impact\n\n**Critical unknown:**\n- Reviews won't drop until the **April 10 Berlin premiere** — 3 days after the question closes. This creates ±$15M symmetric risk that the agent explicitly modeled via scenario mixing.\n\n## Monte Carlo Simulation\n\nThe agent ran a well-structured Monte Carlo simulation with 200,000 iterations using a three-scenario mixture model:\n- **Conservative (20%):** $58M center, σ=$6M — reviews disappoint, genre ceiling holds\n- **Base case (50%):** $75M center, σ=$7M — decent reviews, strong presales translate\n- **Bullish (30%):** $90M center, σ=$8M — great reviews, cultural event status\n\nThe agent also performed sensitivity analysis across four variants (Conservative tilt, Bullish tilt, Bad reviews) to validate robustness.\n\n## Conclusion\n\nThe agent concluded with a **median estimate of $76.2M** (P10: $57.8M, P90: $93.6M). This positions the forecast appropriately between the conservative tracking camp ($55-75M) and the bullish internal tracking camp ($80-90M), weighted slightly bullish given unprecedented pre-sale demand signals. The distribution appropriately captures both downside risk (bad reviews scenario ~$58M) and upside potential (~$94M+).\n\nThe P1-P99 range of **$48.1M to $104.8M** appropriately captures tail risk in both directions given the major unknown of reviews and the fact that we're in uncharted territory for the music biopic genre.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — confirmed question bounds and resolution criteria",
+      "mcp__search__web_search": "4 calls, 0 errors, impact: none, value: high — primary source for industry tracking data from Deadline, Box Office Pro, BoxOfficeTheory",
+      "mcp__search__search_exa": "3 calls, 0 errors, impact: none, value: high — provided detailed article content with publication dates for freshness assessment",
+      "mcp__search__fetch_url": "2 calls, 0 errors, impact: none, value: high — extracted specific projections from Deadline and World of Reel",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor (compensated via web_search), value: low",
+      "mcp__markets__get_coherence_links": "1 call, 0 errors (empty result), impact: none, value: low — no coherence links found",
+      "mcp__markets__polymarket_price": "1 call, 0 errors (empty result), impact: none, value: low — no relevant prediction markets",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: high — Monte Carlo simulation with sensitivity analysis, well-structured",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — comprehensive factor verification and calibration check"
+    },
+    "capability_gaps": [
+      "No access to Rotten Tomatoes critic score (expected — premiere is April 10)",
+      "No real-time pre-sale ticketing data (Fandango, AMC internal numbers)",
+      "AskNews search hit rate limits, though compensated via other search tools"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "culture",
+    "approach": "Monte Carlo simulation with three-scenario mixture model based on industry tracking data synthesis from Deadline, Box Office Pro, and BoxOfficeTheory",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Reviews drop after April 10 Berlin premiere, 3 days after question closes, creating ±$15M symmetric risk"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "$74M-$78M median, with P10 around $55M and P90 around $95M",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Comprehensive sourcing from four distinct industry tracking sources (Deadline, Box Office Pro, BoxOfficeTheory, World of Reel) with clear date stamps for freshness assessment",
+    "Monte Carlo simulation with explicit scenario mixture modeling (conservative/base/bullish) that properly handles the bimodal uncertainty from unknown reviews",
+    "Performed sensitivity analysis across four model variants to validate robustness of the central estimate",
+    "Correctly identified and weighted the tension between bullish pre-sale signals ($80-90M) and conservative genre precedent ($60M ceiling)",
+    "Used the reflection tool to verify all 8 factors against source evidence — all claims verified with specific line references",
+    "Appropriately acknowledged the critical unknown (April 10 reviews) as the key swing factor rather than pretending false precision"
+  ],
+  "weaknesses": [
+    "Did not check betting odds or entertainment-specific prediction markets (PredictIt, entertainment prop bets) — only checked Polymarket which returned empty",
+    "Historical tracking accuracy analysis (Bohemian Rhapsody tracked $35-40M, opened $51M) was asserted in the simulation output but not sourced from external data — these appear to be agent estimates",
+    "Could have more explicitly quantified the 'first-choice metrics ahead of Oppenheimer' signal — if Michael is tracking ahead of a film that opened to $82M, that alone suggests $80M+ base case rather than $75M"
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews search_news returned 403 rate limit error — compensated via web_search"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For entertainment box office questions, search for Hollywood Stock Exchange (HSX) or any entertainment-specific betting markets",
+    "When citing historical tracking vs actual comparisons, source these from industry retrospectives rather than asserting them",
+    "When a major benchmark is cited (first-choice ahead of Oppenheimer), explicitly calculate what that implies for the base case rather than discounting it"
+  ]
+}
