@@ -1,0 +1,256 @@
+---
+timestamp: 2026-04-11 20:51:58 UTC
+question_type: numeric
+factors:
+- description: Recent TSA data (Apr 3-9) shows 17.38M weekly total, essentially flat
+    vs 2024/2025 same-period despite ongoing fuel crisis
+  supports:
+    center: 17380000.0
+    low: 17100000.0
+    high: 17600000.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Jet fuel crisis deepening: prices doubled, 5% route cuts by United,
+    14.6% North American cancellations on peak day. Analysts warn crisis could deepen
+    in coming weeks'
+  supports:
+    center: 16800000.0
+    low: 15500000.0
+    high: 17200000.0
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: US domestic capacity still growing 2.1% (down from 2.3%), not contracting
+    - crisis impact primarily on international routes
+  supports:
+    center: 17300000.0
+    low: 17000000.0
+    high: 17500000.0
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: 2024 Apr 13-19 = 17.32M, 2025 Apr 13-19 = 17.42M (Easter-elevated).
+    Historical baseline for this calendar week is ~17.3M
+  supports:
+    center: 17320000.0
+    low: 17200000.0
+    high: 17450000.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: April 13-19 2026 is 1 week post-Easter, a normal non-holiday week.
+    No spring break or holiday boost expected
+  supports:
+    center: 17200000.0
+    low: 17000000.0
+    high: 17400000.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Tail risk: if Strait of Hormuz closure escalates or new military escalation,
+    could see sharper capacity cuts (5-10%)'
+  supports:
+    center: 16000000.0
+    low: 15000000.0
+    high: 16500000.0
+  logit: 0.5
+  confidence: 0.3
+  conditional: Major escalation in Iran conflict during Apr 10-19
+  effective_logit: 0.15
+tentative_estimate:
+  center: 17100000.0
+  low: 16360000.0
+  high: 17590000.0
+assessment: "The key tension is between the observed stability in TSA data (Apr 3-9\
+  \ at 17.38M, essentially matching 2024/2025 levels) and the clear warning signals\
+  \ from the jet fuel crisis (prices doubled, airlines cutting schedules, 14.6% cancellation\
+  \ rate on one peak day). \n\nThe data through Apr 9 suggests the crisis impact on\
+  \ passenger volumes has been modest so far - the decline relative to trend is about\
+  \ 7 percentage points (was +7% vs 2025 in March, now ~0%), but absolute volumes\
+  \ haven't fallen below historical norms. The US domestic capacity is still growing,\
+  \ just at a slower rate (2.1% vs 2.3% planned).\n\nMy central estimate of ~17.1M\
+  \ represents a slight decline from the most recent week (17.38M), accounting for\
+  \ the deepening crisis. The distribution is moderately left-skewed to capture tail\
+  \ risks from further escalation.\n\nThe main uncertainty is whether the crisis accelerates\
+  \ between Apr 10-19. The articles from Apr 5-9 warn this could happen, but the actual\
+  \ data through Apr 9 doesn't show a collapse. Schedule cuts announced for Q2-Q3\
+  \ would take time to fully manifest in the data."
+calibration_notes: 'Base rate: mid-April weekly TSA volumes have been 17.3-17.4M in
+  2024-2025. The current fuel crisis is the main downside risk. Pre-COVID, mid-April
+  weeks were lower (~16.5-17M), so even with crisis impact, we''re unlikely to go
+  below 16M absent a major escalation. Upper tail bounded by the fact that growth
+  has stalled - unlikely to exceed 17.8M.'
+key_uncertainties: 1. Will the fuel crisis cause additional schedule cuts between
+  now and Apr 19? The articles say it could deepen. 2. How much of the announced 5%
+  route cut by United has already been reflected in Apr 3-9 data? 3. Could there be
+  a ceasefire or diplomatic breakthrough that eases fuel prices? (unlikely in 1 week
+  but possible) 4. The DOW alignment difference between reference weeks and target
+  week introduces noise.
+tool_audit: 'Useful: TSA.gov data fetches (excellent, got full 2024-2026 daily data),
+  web_search for fuel crisis context (good results from CNBC, The Hill, Simple Flying).
+  Not available: prediction markets had no relevant contracts. search_news hit rate
+  limits. Could not get Apr 10+ TSA data (not yet published at time of fetch).'
+update_triggers: 1. TSA data for Apr 10-12 (should show if decline is accelerating)
+  2. New airline schedule cut announcements 3. Any ceasefire or diplomatic developments
+  in Iran conflict 4. Strait of Hormuz status changes
+process_reflection: The forecasting system worked well for this question type. The
+  URL fetch tool was excellent for getting TSA data directly. The code sandbox enabled
+  proper Monte Carlo simulation. The main gap is the inability to get the very latest
+  TSA data (Apr 10-12) which would significantly reduce uncertainty. For questions
+  with a very short forecast horizon like this (resolves in 8 days), having real-time
+  data access is critical. The multi-scenario mixture model approach felt right for
+  capturing the asymmetric downside risk from the crisis.
+computed:
+  factor_count: 6
+  factor_sum: 3.91
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Recent TSA data (Apr 3-9) shows 17.38M weekly total, essentially
+      flat vs 2024/2025 same-period despite ongoing fuel crisis
+    supports:
+      center: 17380000.0
+      low: 17100000.0
+      high: 17600000.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Jet fuel crisis deepening: prices doubled, 5% route cuts by United,
+      14.6% North American cancellations on peak day. Analysts warn crisis could deepen
+      in coming weeks'
+    supports:
+      center: 16800000.0
+      low: 15500000.0
+      high: 17200000.0
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: US domestic capacity still growing 2.1% (down from 2.3%), not contracting
+      - crisis impact primarily on international routes
+    supports:
+      center: 17300000.0
+      low: 17000000.0
+      high: 17500000.0
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: 2024 Apr 13-19 = 17.32M, 2025 Apr 13-19 = 17.42M (Easter-elevated).
+      Historical baseline for this calendar week is ~17.3M
+    supports:
+      center: 17320000.0
+      low: 17200000.0
+      high: 17450000.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: April 13-19 2026 is 1 week post-Easter, a normal non-holiday week.
+      No spring break or holiday boost expected
+    supports:
+      center: 17200000.0
+      low: 17000000.0
+      high: 17400000.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Tail risk: if Strait of Hormuz closure escalates or new military
+      escalation, could see sharper capacity cuts (5-10%)'
+    supports:
+      center: 16000000.0
+      low: 15000000.0
+      high: 16500000.0
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+    conditional: Major escalation in Iran conflict during Apr 10-19
+  dominant_factor: Recent TSA data (Apr 3-9) shows 17.38M weekly total, essentially
+    flat vs 2024/2025 same-period despite ongoing fuel crisis
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 17195140.664961636
+    implied_p10: 16771099.744245524
+    implied_p90: 17429028.132992327
+    median_gap: -95140.66496163607
+    median_gap_pct: -14.460641399416781
+    spread_ratio: 1.869504373177841
+    precision: 0.07192982456140351
+  sources:
+  - '[TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in April
+    2026, according to the TSA? (Apr 13–19, 2026](https://www.metaculus.com/questions/43156)'
+  - '[2025 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[2024 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2024)'
+  - '[Jet fuel supply concerns grow as war with Iran drags on, airlines cut flights](https://www.cnbc.com/2026/04/07/iran-war-jet-fuel-airlines.html)'
+  - '[Global Jet Fuel Crisis 2026: 7% Flights Cancelled & Fares Surge 24%](https://www.traveltourister.com/news/global-jet-fuel-crisis-april-2026-flight-cancellations-fares-surge-uk-australia-us-canada-complete-guide/)'
+  reviewer_critique: "**Verification of Factors:**\n\nAll six factors are well-grounded\
+    \ in the research trace:\n\n1. **Factor 1 (Recent TSA data Apr 3-9 = 17.38M)**:\
+    \ Trace shows exact computation: \"2026 Apr 3-9: 17,378,492\" which rounds to\
+    \ 17.38M. ✓\n\n2. **Factor 2 (Jet fuel crisis claims)**: \n   - \"Prices doubled\"\
+    \ - Trace confirms: \"nearly doubled, going from $2.50 a gallon on Feb. 27 to\
+    \ $4.88 a gallon\"\n   - \"5% route cuts by United\" - Trace confirms: \"United\
+    \ Airlines: Cutting approximately 5% of planned routes during Q2-Q3 2026\"\n \
+    \  - \"14.6% North American cancellations\" - Trace confirms: \"North America\
+    \ peak day: 14.6% of all scheduled departures cancelled\"\n   All claims verified.\
+    \ ✓\n\n3. **Factor 3 (Domestic capacity 2.1%)**: Trace confirms via CNBC fetch:\
+    \ \"Domestic capacity (Q2): U.S. carriers planning 2.1% growth, down from previous\
+    \ 2.3% projection\" ✓\n\n4. **Factor 4 (Historical baseline)**: Trace code output\
+    \ shows exact figures: \"2025 Apr 13-19: 17,422,886\" and \"2024 Apr 13-19: 17,320,786\"\
+    \ ✓\n\n5. **Factor 5 (Post-Easter timing)**: Trace confirms \"2026 Easter: April\
+    \ 5\" and \"2026 Apr 13-19 is 1 week AFTER Easter\" ✓\n\n6. **Factor 6 (Tail risk\
+    \ 5-10%)**: Trace cites \"Ryanair warning: Potential 5-10% of flights through\
+    \ May-July if Strait remains closed\" ✓\n\n**Double-counting check**: No issues\
+    \ found. Factors 1 and 4 use different data (recent week vs. same calendar week\
+    \ in prior years). Factors 2 and 6 appropriately separate current crisis impact\
+    \ from tail-risk escalation.\n\n**Wrong-direction factors**: None. All logit signs\
+    \ align with descriptions.\n\n**Assessment-factor coherence**: The narrative correctly\
+    \ identifies the tension between stable recent data (Factor 1: 17.38M) and crisis\
+    \ warning signs (Factor 2). The central estimate of 17.1M represents a modest\
+    \ decline from recent levels, appropriately weighting both the observed stability\
+    \ and forward-looking risks.\n\n**Probability assessment**: The Monte Carlo simulation\
+    \ shows P50=17.09M, P10=16.22M, P90=17.69M. The agent's estimate (center 17.1M,\
+    \ range 16.36M-17.59M) is well-calibrated to these simulation results. My independent\
+    \ assessment agrees with this range - the recent TSA data showing stability despite\
+    \ weeks of crisis suggests limited near-term impact, while the tail risks from\
+    \ escalation justify the left-skewed distribution.\n\n**Resolution criteria**:\
+    \ Clear and directly addressed (TSA checkpoint data for Apr 13-19, 2026).\n\n\
+    **Adversarial reasoning**: The assessment adequately addresses the main counterargument\
+    \ (crisis could accelerate Apr 10-19) and notes that schedule cuts announced for\
+    \ Q2-Q3 take time to manifest.\n\nNo errors requiring correction."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43156
+- **Question ID**: 43171
+- **Session Duration**: 675.1s (11.3 min)
+- **Cost**: $5.8392
+- **Tokens**: 20,915 total (42 in, 20,873 out)
+  - Cache: 1,708,403 read, 91,226 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43156_20260411_204059/20260411-204059.log`
+
+### Tool Calls
+
+- **Total**: 23 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 346ms |
+| fetch_url | 7 | 0 | 12573ms |
+| get_coherence_links | 1 | 0 | 256ms |
+| get_metaculus_questions | 1 | 0 | 3447ms |
+| kalshi_price | 1 | 0 | 337ms |
+| polymarket_price | 1 | 0 | 106ms |
+| reflection | 1 | 0 | 119067ms |
+| web_search | 3 | 0 | 15769ms |
+
+### Sources Consulted
+
+- [TSA checkpoint travel numbers | Transportation Security Administration](http...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Apri...
+- [2025 TSA checkpoint travel numbers | Transportation Security Administration]...
+- [2024 TSA checkpoint travel numbers | Transportation Security Administration]...
+- [Jet fuel supply concerns grow as war with Iran drags on, airlines cut flight...
+- [Global Jet Fuel Crisis 2026: 7% Flights Cancelled & Fares Surge 24%](https:/...
