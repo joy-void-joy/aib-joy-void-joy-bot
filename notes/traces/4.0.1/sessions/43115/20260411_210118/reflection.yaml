@@ -1,0 +1,425 @@
+---
+timestamp: 2026-04-11 21:10:45 UTC
+question_type: numeric
+factors:
+- description: Early April 2026 TSA data shows +1.69% vs 2025 DOW-matched, indicating
+    resilient passenger volumes despite crisis
+  supports:
+    center: 17950000.0
+    low: 17500000.0
+    high: 18300000.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: United Airlines cutting 5% capacity Q2-Q3, Delta cutting 3.5%, other
+    carriers following with schedule reductions
+  supports:
+    center: 17100000.0
+    low: 16500000.0
+    high: 17500000.0
+  logit: -1.2
+  confidence: 0.8
+  effective_logit: -0.96
+- description: Jet fuel prices doubled ($742->$1710/metric tonne), fares up 12-18%
+    YoY, demand dampening expected
+  supports:
+    center: 16800000.0
+    low: 16000000.0
+    high: 17400000.0
+  logit: -1.0
+  confidence: 0.6
+  effective_logit: -0.6
+- description: 'Late April seasonal uplift: 2025 showed +4% from mid-April to late
+    April Mon-Sun weeks'
+  supports:
+    center: 17800000.0
+    low: 17200000.0
+    high: 18200000.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: US domestic refining capacity provides buffer vs Europe/Asia; North
+    American impact less severe than global
+  supports:
+    center: 17500000.0
+    low: 17000000.0
+    high: 18000000.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Ryanair CEO warned of 5-10% summer flight cuts if conflict continues
+    into May; crisis may deepen
+  supports:
+    center: 16500000.0
+    low: 15500000.0
+    high: 17200000.0
+  logit: -0.8
+  confidence: 0.4
+  conditional: If crisis deepens significantly by late April
+  effective_logit: -0.32000000000000006
+- description: 14.6% N.Am cancellation rate on one day (vs 4.4% prior year) shows
+    volatility in disruptions
+  supports:
+    center: 16800000.0
+    low: 15800000.0
+    high: 17500000.0
+  logit: -0.6
+  confidence: 0.5
+  effective_logit: -0.3
+- description: 'Historical baseline: 2024+2025 average late April Mon-Sun week is
+    17.56M'
+  supports:
+    center: 17565000.0
+    low: 17179000.0
+    high: 17951000.0
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+tentative_estimate:
+  center: 17250000.0
+  low: 16060000.0
+  high: 18110000.0
+assessment: 'The forecast for Apr 27-May 3, 2026 TSA passenger volume centers on ~17.25M,
+  representing a moderate decline from 2025''s late April peak (17.95M) but approximately
+  flat with 2025''s mid-April levels.
+
+
+  KEY TENSION: Early April 2026 data shows resilient volumes (+1.69% vs 2025 DOW-matched),
+  but the jet fuel crisis is actively deepening with major carriers announcing capacity
+  cuts. The question is whether 2.5 more weeks of crisis escalation will meaningfully
+  reduce US domestic passenger volumes below the early-April resilient baseline.
+
+
+  ARGUMENTS FOR HIGHER (~17.5M+):
+
+  - Actual observed 2026 data shows no decline yet
+
+  - US domestic market has refining buffer
+
+  - Late April seasonal uptick is a real pattern
+
+  - Demand may be inelastic to 12-18% fare increases for committed travelers
+
+
+  ARGUMENTS FOR LOWER (~17.0M or below):
+
+  - United''s 5% cuts + Delta''s 3.5% cuts are being phased in through Q2
+
+  - By late April, these cuts will be more fully implemented
+
+  - Consumer price sensitivity may increase with sustained high prices
+
+  - Crisis could deepen: Ryanair warned about May fuel shortages
+
+
+  CONSISTENCY: My Apr 13-19 forecast was 17.1M. This 17.25M median for Apr 27-May
+  3 is slightly higher, which makes sense given late April seasonal uplift partially
+  offsetting additional crisis deepening.
+
+
+  The 80% CI of ~16.1M to 18.1M (12% of median) is appropriate for a situation with
+  genuine uncertainty about crisis trajectory but bounded by the fact that US air
+  travel has strong structural demand.'
+calibration_notes: 'Base rates: Historical April Mon-Sun weekly totals range from
+  17.18M (2024 late Apr) to 17.95M (2025 late Apr). Normal weekly CV is only 1.5%,
+  but crisis adds significant uncertainty about YoY trajectory. Status quo assessment:
+  If nothing changes from early April conditions, volumes would be ~17.95M * 1.017
+  = 18.26M. But cuts are actively being implemented, making a decline the base case.'
+key_uncertainties: 1. How much will announced capacity cuts (United -5%, Delta -3.5%)
+  actually reduce TSA passenger volumes by late April? Cancelled flights don't reduce
+  volumes 1:1 because passengers rebook. 2. Will the fuel crisis deepen or stabilize?
+  The Iran war trajectory is the key driver. 3. Will higher fares (12-18% YoY) materially
+  reduce demand, or will travelers absorb costs?
+tool_audit: 'Useful: TSA website fetch (got current 2026 and historical 2025/2024
+  data), Exa search (excellent detailed news on airline crisis), Metaculus questions
+  (got my own prior forecasts for consistency). Failures: AskNews search_news returned
+  403 rate limit errors. Not needed but would have helped: more detailed data on actual
+  US cancellation rates (vs single-day spike reports).'
+update_triggers: '- Iran ceasefire/peace talks → shift distribution upward significantly
+  (toward 18M+). - Fuel shortages at US airports → shift distribution down sharply
+  (toward 16M or below). - Additional major US carrier capacity cuts beyond United/Delta
+  → shift down by 200-400k. - TSA data for Apr 10-19 showing continued resilience
+  → shift up toward 17.5M median.'
+process_reflection: 'The forecasting scaffolding worked well for this question. Having
+  the TSA data directly from the website was critical and the fetch_url tool handled
+  it well. The Monte Carlo approach was appropriate given the scenario uncertainty.
+  One friction point: the AskNews rate limit blocked news searches, but Exa search
+  compensated with excellent coverage. The consistency check with my prior forecasts
+  (Apr 6-12 and Apr 13-19) was very valuable for calibration. The biggest challenge
+  was modeling the crisis trajectory 2.5 weeks out - this is genuinely uncertain and
+  the scenario-based approach felt appropriate. I would have benefited from a tool
+  that could fetch structured airline schedule/capacity data to quantify the actual
+  scope of announced cuts.'
+computed:
+  factor_count: 8
+  factor_sum: -0.30000000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Early April 2026 TSA data shows +1.69% vs 2025 DOW-matched, indicating
+      resilient passenger volumes despite crisis
+    supports:
+      center: 17950000.0
+      low: 17500000.0
+      high: 18300000.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: United Airlines cutting 5% capacity Q2-Q3, Delta cutting 3.5%, other
+      carriers following with schedule reductions
+    supports:
+      center: 17100000.0
+      low: 16500000.0
+      high: 17500000.0
+    logit: -1.2
+    confidence: 0.8
+    effective_logit: -0.96
+  - description: Jet fuel prices doubled ($742->$1710/metric tonne), fares up 12-18%
+      YoY, demand dampening expected
+    supports:
+      center: 16800000.0
+      low: 16000000.0
+      high: 17400000.0
+    logit: -1.0
+    confidence: 0.6
+    effective_logit: -0.6
+  - description: 'Late April seasonal uplift: 2025 showed +4% from mid-April to late
+      April Mon-Sun weeks'
+    supports:
+      center: 17800000.0
+      low: 17200000.0
+      high: 18200000.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: US domestic refining capacity provides buffer vs Europe/Asia; North
+      American impact less severe than global
+    supports:
+      center: 17500000.0
+      low: 17000000.0
+      high: 18000000.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Ryanair CEO warned of 5-10% summer flight cuts if conflict continues
+      into May; crisis may deepen
+    supports:
+      center: 16500000.0
+      low: 15500000.0
+      high: 17200000.0
+    logit: -0.8
+    confidence: 0.4
+    effective_logit: -0.32000000000000006
+    conditional: If crisis deepens significantly by late April
+  - description: 14.6% N.Am cancellation rate on one day (vs 4.4% prior year) shows
+      volatility in disruptions
+    supports:
+      center: 16800000.0
+      low: 15800000.0
+      high: 17500000.0
+    logit: -0.6
+    confidence: 0.5
+    effective_logit: -0.3
+  - description: 'Historical baseline: 2024+2025 average late April Mon-Sun week is
+      17.56M'
+    supports:
+      center: 17565000.0
+      low: 17179000.0
+      high: 17951000.0
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  dominant_factor: United Airlines cutting 5% capacity Q2-Q3, Delta cutting 3.5%,
+    other carriers following with schedule reductions
+  dominant_effective_logit: -0.96
+  distribution_metrics:
+    implied_median: 17291687.192118227
+    implied_p10: 16656785.714285716
+    implied_p90: 17763041.871921185
+    median_gap: -41687.19211822748
+    median_gap_pct: -3.768312775526638
+    spread_ratio: 1.8530970298793232
+    precision: 0.11884057971014493
+  sources:
+  - '[TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in April
+    2026, according to the TSA? (Apr 27–May 3, 2026](https://www.metaculus.com/questions/43115)'
+  - '[2025 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[2024 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2024)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be less than or equal to 17 million, according to the TSA?](https://www.metaculus.com/questions/31037)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in April
+    2026, according to the TSA? (Apr 13–19, 2026](https://www.metaculus.com/questions/43156)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in April
+    2026, according to the TSA? (Apr 6–12, 2026](https://www.metaculus.com/questions/43116)'
+  - '[(Metaculus) What will be the total passenger volumes reported by the TSA for
+    May 2025?](https://www.metaculus.com/questions/37042)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (Feb 23, 2026-Mar 1, 2026](https://www.metaculus.com/questions/42097)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (February 9, 2026-February 15, 2026](https://www.metaculus.com/questions/42098)'
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in February
+    2026, according to the TSA? (Feb 16, 2026-Feb 22, 2026](https://www.metaculus.com/questions/42099)'
+  - '[(Metaculus) What will US airline passenger volume be for St. Patrick''s Day
+    Weekend (March 14-March 17, 2025), according to the TSA?](https://www.metaculus.com/questions/35678)'
+  - '[(Metaculus) What will US airline passenger volume be for the week of Christmas
+    through New Years Eve 2024, according to the TSA?](https://www.metaculus.com/questions/28860)'
+  - '[(Metaculus) What will US airline passenger volume be for Presidents'' Day Weekend
+    (February 14-17, 2025), according to the TSA?](https://www.metaculus.com/questions/31793)'
+  - '[(Metaculus) What will US airline passenger volume be for Presidents'' Day Weekend
+    (February 14-17, 2025), according to the TSA?](https://www.metaculus.com/questions/31798)'
+  - '[(Metaculus) Will US airline passenger volume for the Tuesday and Wednesday before
+    Thanksgiving 2024 be up year over year, according to the TSA?](https://www.metaculus.com/questions/29593)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than 19 million, according to the TSA?](https://www.metaculus.com/questions/31034)'
+  - '[(Metaculus) Will US airline passenger volume for the week of Christmas through
+    New Years Eve 2024 be up year over year, according to the TSA?](https://www.metaculus.com/questions/30579)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than 17 million and less than 18 million, according
+    to the TSA?](https://www.metaculus.com/questions/31036)'
+  - '[(Metaculus) When will US domestic passenger air travel return to 80% of pre-COVID-19
+    volumes?](https://www.metaculus.com/questions/4719)'
+  - '[(Metaculus) Will US airline passenger volume be for the week of Christmas through
+    New Years Eve 2024 be greater than or equal to 18 million and less than or equal
+    to 19 million, according to the TSA?](https://www.metaculus.com/questions/31035)'
+  - '[(Metaculus) Which airline will have the highest passenger volume in the NY/NJ
+    metropolitan area in April 2025?](https://www.metaculus.com/questions/37448)'
+  - '[(Metaculus) Which airline will have the highest passenger volume in the NY/NJ
+    metropolitan area in April 2025?](https://www.metaculus.com/questions/37503)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 8 factors against the research trace:
+
+
+    1. **Factor 1 (+1.69% DOW-matched):** VERIFIED - Trace shows "2026 Apr 1-9 total:
+    22,449,842\n2025 DOW-matched total: 22,076,602\nChange: +1.69%"
+
+
+    2. **Factor 2 (United 5%, Delta 3.5% cuts):** VERIFIED - Trace shows "United Airlines
+    became the first major U.S. carrier to announce capacity cuts, trimming about
+    5% of planned flights" and "Delta said it would cut capacity by around 3.5 percentage
+    points"
+
+
+    3. **Factor 3 (Jet fuel doubled $742→$1710):** VERIFIED - Trace shows "jet fuel
+    prices have more than doubled, rising from around $742 per metric tonne a year
+    ago to over $1,700"
+
+
+    4. **Factor 4 (Late April +4% uplift):** VERIFIED - Trace shows "2025 weekly progression...
+    Late Apr uplift: +4.0% vs mid-Apr"
+
+
+    5. **Factor 5 (US domestic refining buffer):** VERIFIED - Trace shows "U.S. carriers
+    benefit from greater domestic refining capacity"
+
+
+    6. **Factor 6 (Ryanair 5-10% summer cuts):** VERIFIED - Trace shows "Ryanair CEO
+    Michael O''Leary warned... potentially forcing cancellation of 5% to 10% of summer
+    flights"
+
+
+    7. **Factor 7 (14.6% N.Am cancellation rate):** VERIFIED - Trace shows "North
+    American departures saw cancellation rates spike to 14.6% on that day" and "more
+    than three times the level recorded a year earlier" (~5% prior year, stated as
+    4.4% - minor computational discrepancy but core claim grounded)
+
+
+    8. **Factor 8 (17.56M historical baseline):** VERIFIED - Trace shows "Average
+    late Apr Mon-Sun week (2024+2025): 17,564,733"
+
+
+    **No hallucinated evidence found.**
+
+
+    **Double-counting check:** Factors 2, 3, 6, 7 all relate to the jet fuel crisis
+    but capture different mechanisms (capacity cuts vs demand dampening vs future
+    risk vs disruptions). While related, this isn''t egregious double-counting - they''re
+    measuring different manifestations of the same underlying shock.
+
+
+    **Wrong-direction factors:** All logit signs are correct.
+
+
+    **Resolution criteria:** Resolution criteria are present and clear (TSA passenger
+    volumes for Apr 27-May 3). Factors appropriately engage with this metric.
+
+
+    **Adversarial reasoning:** Assessment explicitly addresses "Arguments for Higher"
+    and "Arguments for Lower" and identifies the key tension between early April resilience
+    and deepening crisis.
+
+
+    **Probability assessment:** The median of 17.25M represents ~4% decline from 2025''s
+    late April peak (17.95M), roughly flat with the 2024/2025 average (17.56M). Given:
+
+    - Early April 2026 showing +1.69% resilience
+
+    - But capacity cuts being phased in (United 5%, Delta 3.5%)
+
+    - Jet fuel prices doubled, fares up 12-18%
+
+    - Late April seasonal uplift providing some offset
+
+
+    A 17.25M median with 80% CI of 16.06M-18.11M appears well-calibrated to the evidence.
+    The estimate is internally consistent with the agent''s prior forecasts (17.92M
+    for Apr 6-12 with locked-in data, 17.10M for Apr 13-19, then 17.25M for Apr 27-May
+    3 reflecting late April uplift against deeper crisis).
+
+
+    No material errors found.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43115
+- **Question ID**: 43129
+- **Session Duration**: 580.9s (9.7 min)
+- **Cost**: $5.8274
+- **Tokens**: 17,762 total (41 in, 17,721 out)
+  - Cache: 1,744,485 read, 100,319 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43115_20260411_210118/20260411-210118.log`
+
+### Tool Calls
+
+- **Total**: 21 calls
+- **Errors**: 1 (4.8%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 9 | 0 | 98ms |
+| fetch_url | 3 | 0 | 12912ms |
+| get_coherence_links | 1 | 0 | 420ms |
+| get_metaculus_questions | 3 | 1 ⚠️ | 1231ms |
+| reflection | 1 | 0 | 133356ms |
+| search_exa | 1 | 0 | 1289ms |
+| search_metaculus | 1 | 0 | 2841ms |
+| web_search | 2 | 0 | 14328ms |
+
+### Sources Consulted
+
+- [TSA checkpoint travel numbers | Transportation Security Administration](http...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Apri...
+- [2025 TSA checkpoint travel numbers | Transportation Security Administration]...
+- [2024 TSA checkpoint travel numbers | Transportation Security Administration]...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Apri...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Apri...
+- [(Metaculus) What will be the total passenger volumes reported by the TSA for...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [(Metaculus) What will US airline passenger volume be for these weeks in Febr...
+- [(Metaculus) What will US airline passenger volume be for St. Patrick's Day W...
+- [(Metaculus) What will US airline passenger volume be for the week of Christm...
+- [(Metaculus) What will US airline passenger volume be for Presidents' Day Wee...
+- [(Metaculus) What will US airline passenger volume be for Presidents' Day Wee...
+- [(Metaculus) Will US airline passenger volume for the Tuesday and Wednesday b...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) Will US airline passenger volume for the week of Christmas throu...
+- [(Metaculus) Will US airline passenger volume be for the week of Christmas th...
+- [(Metaculus) When will US domestic passenger air travel return to 80% of pre-...
+- ... and 3 more
