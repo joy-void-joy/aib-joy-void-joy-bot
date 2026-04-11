@@ -1,0 +1,66 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a comprehensive forecasting trace for the question: \"How many problems solved by AI will the official FrontierMath Open Problems index show on May 1, 2026?\"\n\nThe agent conducted thorough research using multiple tools:\n- Fetched the Metaculus question details (post #43127) establishing the resolution criteria\n- Retrieved the Epoch AI FrontierMath Open Problems pages to determine current status\n- Searched for news about recent AI solves on the benchmark\n- Checked Manifold prediction markets for calibration\n- Searched X/Twitter for breaking news\n- Used web search and Exa for comprehensive coverage\n\n## Key Evidence\n\n**Current State (as of April 11, 2026):**\n- **1 problem solved**: Ramsey Hypergraphs, solved March 23, 2026 by GPT-5.4 Pro (confirmed by problem contributor Will Brian)\n- **15 total problems** across 4 tiers: Moderately interesting (4), Solid result (5), Major advance (3), Breakthrough (3)\n- **1 problem removed** (March 5, 2026) — not counted as solved; didn't meet publishability bar\n\n**Partial Progress:**\n- Small Diophantine problem has **3/9 equations solved** by GPT-5.4 Pro, but Epoch AI explicitly states the remaining 6 \"will require a genuinely new mathematical approach\" — not on track for full solve\n\n**AI Capability Context:**\n- FrontierMath Tiers 1-4 performance improved from ~2% (late 2024) to ~50% (March 2026)\n- Multiple frontier models (GPT-5.4 Pro, Opus 4.6, Gemini 3.1 Pro) can solve the Ramsey problem\n- GPT-5.2 Pro and Gemini 3 Deep Think showed \"little promise\" on the open problems\n\n**Time Constraints:**\n- Only ~20 days until May 1 resolution\n- No new solves in the 19 days since March 23\n- Verification by problem contributors adds friction before website updates\n\n**Market Data:**\n- Manifold market for full-year 2026 gives ~15% to just 1 solve, ~15% to 2, ~16% to 3\n- This implies most traders expect more than 1 by year-end, but May 1 is much sooner\n\n## Conclusion\n\nThe agent computed a Poisson base rate: ~0.1 solves/week × 3 weeks = λ=0.3, giving ~74% probability of no new solve. The final estimate:\n- **\"1 or fewer\": 70%** — Status quo heavily favored\n- **\"2\": 22%** — Requires Small Diophantine completion or another Moderately interesting problem cracked\n- **\"Greater than 2\": 8%** — Would need extraordinary breakthrough or new model release",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high — established resolution criteria and current state",
+      "mcp__search__fetch_url": "5 calls, 0 errors, impact: none, value: high — successfully extracted problem status from Epoch AI pages",
+      "mcp__search__web_search": "4 calls, 0 errors, impact: none, value: high — comprehensive coverage of FrontierMath news and current state",
+      "mcp__markets__manifold_price": "1 call, 0 errors, impact: none, value: medium — provided calibration from full-year market",
+      "mcp__search__search_exa": "1 call, 0 errors, impact: none, value: medium — supplementary articles on Ramsey solve",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor, value: wasted — rate limit prevented news search",
+      "mcp__asknews__search_x_twitter": "1 call, 0 errors, impact: none, value: low — minimal results but confirmed no breaking news",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — comprehensive factor analysis with base rate calculation"
+    },
+    "capability_gaps": [
+      "JavaScript-rendered content extraction — the main FrontierMath Open Problems page likely requires JS to show full problem list"
+    ],
+    "subtle_bugs": [
+      "fetch_url on epoch.ai/frontiermath/open-problems/ returned incomplete content (possibly JS-rendered) — agent worked around by fetching individual problem pages"
+    ]
+  },
+  "classification": {
+    "question_domain": "science/ai",
+    "approach": "Base rate calculation from historical solve rate (Poisson model) combined with status quo analysis and prediction market calibration",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a new frontier AI model will be released before May 1 that exceeds current capabilities enough to crack additional problems"
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "Agent assigns only 8% to '>2' but the trace notes AI math capabilities went from 2% to 50% on FrontierMath Tiers 1-4 in ~18 months. Given this pace of improvement and active testing by multiple labs, a new model release could plausibly crack several problems simultaneously. The 8% may underweight tail risk from discontinuous AI progress.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "\"1 or fewer\": 68%, \"2\": 24%, \"Greater than 2\": 8%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Used Poisson base rate calculation (λ=0.3 for 3 weeks) to anchor status quo probability at ~74%, providing quantitative rigor",
+    "Correctly identified that Small Diophantine's 3/9 progress is not close to a full solve — the explicit Epoch AI statement about 'genuinely new mathematical approach' was key evidence",
+    "Cross-checked with Manifold full-year market and appropriately adjusted for the shorter May 1 timeframe",
+    "Verified no new solves announced since March 23 via multiple sources (web search, X/Twitter, Exa)",
+    "Factor analysis correctly weighted status quo heavily while acknowledging AI capability advancement as countervailing force"
+  ],
+  "weaknesses": [
+    "Did not attempt to estimate verification delay — how long between AI finding a solution and Epoch AI updating the website? This could affect whether a solution found in late April would be counted",
+    "Manifold market interpretation could be more precise — the agent noted '~15% to just 1 solve' but this is P(exactly 1) not P(≤1 by May 1), limiting direct comparability",
+    "No explicit search for upcoming AI model release announcements (GPT-5.5, Claude 5) — the new model risk was treated as speculative when scheduled releases might be findable"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__asknews__search_news hit 403 rate limit (ForbiddenError: 403012 - Usage limit exceeded)"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Search for AI company announcements about upcoming model releases to better assess the 'new model' tail risk",
+    "Attempt to estimate verification/publication delay from the Ramsey Hypergraphs case (solved March 23 by external users, when was it verified and posted?)",
+    "For prediction market calibration, extract implied probability of ≤1 by May 1 from the full-year market structure, not just cite the P(exactly 1 by EOY)"
+  ]
+}

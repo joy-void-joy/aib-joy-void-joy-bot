@@ -1,0 +1,395 @@
+---
+timestamp: 2026-04-11 15:14:59 UTC
+question_type: multiple_choice
+factors:
+- description: 'Status quo: Currently 1 problem solved (Ramsey Hypergraphs). If nothing
+    changes, the count stays at 1.'
+  supports: 1 or fewer
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Small Diophantine has partial progress (3/9 equations) but remaining
+    6 need 'genuinely new mathematical approach' - unlikely to be fully solved in
+    20 days
+  supports: 1 or fewer
+  logit: 0.7
+  confidence: 0.8
+  effective_logit: 0.5599999999999999
+- description: Multiple frontier AI models (GPT-5.4 Pro, Opus 4.6, Gemini 3.1 Pro)
+    are actively being tested on these problems, and AI math capabilities are advancing
+    rapidly (2% to 50% on FrontierMath Tiers 1-4 in ~18 months)
+  supports: '2'
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Most remaining problems are in harder tiers (Solid result, Major advance,
+    Breakthrough) - only 3 unsolved 'Moderately interesting' problems remain, and
+    these already resisted GPT-5.4 Pro attempts
+  supports: 1 or fewer
+  logit: 0.8
+  confidence: 0.75
+  effective_logit: 0.6000000000000001
+- description: 'Short time window: only ~20 days until May 1 resolution. Even if a
+    solution is found, verification by problem contributors and update to the website
+    takes time.'
+  supports: 1 or fewer
+  logit: 0.6
+  confidence: 0.8
+  effective_logit: 0.48
+- description: No new model releases or breakthroughs announced in the last 2-3 weeks.
+    The last solve (Ramsey Hypergraphs) was March 23, nearly 3 weeks ago with no additional
+    solves since.
+  supports: 1 or fewer
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Manifold market for full-year 2026 gives ~15% to just 1 solve and ~15%
+    to 2 solves, meaning cumulative P(<=1 by EOY) is only ~15%. But this question
+    is only about May 1, meaning less time for solves.
+  supports: '2'
+  logit: 0.3
+  confidence: 0.5
+  conditional: If Manifold is well-calibrated for full year
+  effective_logit: 0.15
+- description: Possibility of a new frontier model release (e.g., GPT-5.5, Claude
+    5, Gemini 4) in the next 20 days that could crack additional problems
+  supports: Greater than 2
+  logit: 0.5
+  confidence: 0.25
+  effective_logit: 0.125
+tentative_estimate:
+  probabilities:
+    '2': 0.22
+    1 or fewer: 0.7
+    Greater than 2: 0.08
+assessment: 'The current state is clear: 1 problem solved (Ramsey Hypergraphs), with
+  partial progress on Small Diophantine (3/9 equations). The resolution is in ~20
+  days.
+
+
+  **For "1 or fewer" (status quo):** This is strongly favored. The solved count has
+  been 1 since March 23. No new solves have been announced in the ~19 days since.
+  The Small Diophantine needs 6 more equations solved with "a genuinely new mathematical
+  approach." Most other problems are in harder tiers. Verification and website updates
+  add friction even if a solution is found.
+
+
+  **For "2":** The main pathway is either: (a) Small Diophantine being fully completed
+  (unlikely given 6/9 remaining equations needing new approaches), (b) another Moderately
+  interesting problem being cracked, or (c) a lower-tier problem being surprisingly
+  solved. Multiple strong AI models exist and are being tested. The question description
+  itself flags the second solve as "a live near-term milestone," suggesting it''s
+  plausible but not imminent.
+
+
+  **For ">2":** Would require at least 3 problems solved. Given only 1 has been solved
+  in ~3 months of the benchmark existing, solving 2+ more in 20 days would be extraordinary.
+  The main risk is a step-change in AI capability (new model release) that simultaneously
+  cracks multiple problems, but this is speculative.
+
+
+  **Counterargument against my estimate:** AI capabilities are advancing extremely
+  rapidly. The Ramsey solve showed that once models cross a capability threshold,
+  multiple models can solve the same problem. A new model could potentially solve
+  several problems at once. But: these problems were designed to resist exactly this,
+  and the harder tiers have successfully resisted all attempts so far.
+
+
+  **Base rate check:** 1 problem solved in ~10 weeks of the benchmark existing = ~0.1
+  solves/week. In 3 weeks, expected value is ~0.3, suggesting P(any new solve) ≈ 25-30%,
+  which aligns with my ~30% for 2+.'
+calibration_notes: 'Base rate: ~1 solve in 10 weeks ≈ 0.1/week. In 3 weeks: Poisson
+  λ=0.3 gives P(0 new)=74%, P(1 new)=22%, P(2+ new)=4%. My estimates are slightly
+  more bullish on >2 (8% vs 4%) to account for the possibility of discontinuous AI
+  progress.'
+key_uncertainties: 1. Whether a new frontier AI model will be released before May
+  1 that significantly exceeds current capabilities. 2. Whether the Small Diophantine
+  problem's remaining equations will yield to current approaches or require genuinely
+  new mathematics. 3. Whether solutions found but not yet verified/announced exist
+  in the pipeline.
+tool_audit: 'Useful: web_search returned comprehensive results on the state of FrontierMath.
+  fetch_url successfully extracted problem status details from Epoch AI pages. search_exa
+  provided good supplementary articles. manifold_price confirmed market pricing. Failed:
+  search_news hit rate limits (403). search_x_twitter returned minimal results but
+  no new solve announcements. The fetch_url of the main open problems page didn''t
+  render the full problem list (likely JavaScript-rendered), but individual problem
+  pages worked well.'
+update_triggers: '- Announcement of a new frontier model (GPT-5.5, Claude 5, etc.)
+  would shift probability toward 2 and >2. - Epoch AI announcing another solve would
+  obviously change the count. - Small Diophantine progress announcement (additional
+  equations solved) would increase P(2).'
+process_reflection: The research phase went smoothly for this question. The combination
+  of web_search and fetch_url gave me a clear picture of the current state. The main
+  gap was the inability to see the full rendered page at epoch.ai/frontiermath/open-problems/
+  which likely requires JavaScript rendering - but I was able to piece together the
+  status from individual problem pages and news articles. The Manifold market data
+  for the full-year question was helpful as a calibration anchor, though I had to
+  adjust for the shorter time window. The news search rate limit was a minor inconvenience
+  but web_search compensated. Overall the scaffolding worked well for this type of
+  question.
+computed:
+  factor_count: 8
+  factor_sum: 4.17
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Status quo: Currently 1 problem solved (Ramsey Hypergraphs). If
+      nothing changes, the count stays at 1.'
+    supports: 1 or fewer
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Small Diophantine has partial progress (3/9 equations) but remaining
+      6 need 'genuinely new mathematical approach' - unlikely to be fully solved in
+      20 days
+    supports: 1 or fewer
+    logit: 0.7
+    confidence: 0.8
+    effective_logit: 0.5599999999999999
+  - description: Multiple frontier AI models (GPT-5.4 Pro, Opus 4.6, Gemini 3.1 Pro)
+      are actively being tested on these problems, and AI math capabilities are advancing
+      rapidly (2% to 50% on FrontierMath Tiers 1-4 in ~18 months)
+    supports: '2'
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Most remaining problems are in harder tiers (Solid result, Major
+      advance, Breakthrough) - only 3 unsolved 'Moderately interesting' problems remain,
+      and these already resisted GPT-5.4 Pro attempts
+    supports: 1 or fewer
+    logit: 0.8
+    confidence: 0.75
+    effective_logit: 0.6000000000000001
+  - description: 'Short time window: only ~20 days until May 1 resolution. Even if
+      a solution is found, verification by problem contributors and update to the
+      website takes time.'
+    supports: 1 or fewer
+    logit: 0.6
+    confidence: 0.8
+    effective_logit: 0.48
+  - description: No new model releases or breakthroughs announced in the last 2-3
+      weeks. The last solve (Ramsey Hypergraphs) was March 23, nearly 3 weeks ago
+      with no additional solves since.
+    supports: 1 or fewer
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Manifold market for full-year 2026 gives ~15% to just 1 solve and
+      ~15% to 2 solves, meaning cumulative P(<=1 by EOY) is only ~15%. But this question
+      is only about May 1, meaning less time for solves.
+    supports: '2'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+    conditional: If Manifold is well-calibrated for full year
+  - description: Possibility of a new frontier model release (e.g., GPT-5.5, Claude
+      5, Gemini 4) in the next 20 days that could crack additional problems
+    supports: Greater than 2
+    logit: 0.5
+    confidence: 0.25
+    effective_logit: 0.125
+  dominant_factor: 'Status quo: Currently 1 problem solved (Ramsey Hypergraphs). If
+    nothing changes, the count stays at 1.'
+  dominant_effective_logit: 1.4249999999999998
+  outcome_breakdown:
+  - outcome: 1 or fewer
+    factor_count: 5
+    logit_sum: 3.415
+    factors:
+    - description: 'Status quo: Currently 1 problem solved (Ramsey Hypergraphs). If
+        nothing changes, the count stays at 1.'
+      supports: 1 or fewer
+      logit: 1.5
+      confidence: 0.95
+      effective_logit: 1.4249999999999998
+    - description: Small Diophantine has partial progress (3/9 equations) but remaining
+        6 need 'genuinely new mathematical approach' - unlikely to be fully solved
+        in 20 days
+      supports: 1 or fewer
+      logit: 0.7
+      confidence: 0.8
+      effective_logit: 0.5599999999999999
+    - description: Most remaining problems are in harder tiers (Solid result, Major
+        advance, Breakthrough) - only 3 unsolved 'Moderately interesting' problems
+        remain, and these already resisted GPT-5.4 Pro attempts
+      supports: 1 or fewer
+      logit: 0.8
+      confidence: 0.75
+      effective_logit: 0.6000000000000001
+    - description: 'Short time window: only ~20 days until May 1 resolution. Even
+        if a solution is found, verification by problem contributors and update to
+        the website takes time.'
+      supports: 1 or fewer
+      logit: 0.6
+      confidence: 0.8
+      effective_logit: 0.48
+    - description: No new model releases or breakthroughs announced in the last 2-3
+        weeks. The last solve (Ramsey Hypergraphs) was March 23, nearly 3 weeks ago
+        with no additional solves since.
+      supports: 1 or fewer
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: '2'
+    factor_count: 2
+    logit_sum: 0.63
+    factors:
+    - description: Multiple frontier AI models (GPT-5.4 Pro, Opus 4.6, Gemini 3.1
+        Pro) are actively being tested on these problems, and AI math capabilities
+        are advancing rapidly (2% to 50% on FrontierMath Tiers 1-4 in ~18 months)
+      supports: '2'
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: Manifold market for full-year 2026 gives ~15% to just 1 solve and
+        ~15% to 2 solves, meaning cumulative P(<=1 by EOY) is only ~15%. But this
+        question is only about May 1, meaning less time for solves.
+      supports: '2'
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+      conditional: If Manifold is well-calibrated for full year
+  - outcome: Greater than 2
+    factor_count: 1
+    logit_sum: 0.125
+    factors:
+    - description: Possibility of a new frontier model release (e.g., GPT-5.5, Claude
+        5, Gemini 4) in the next 20 days that could crack additional problems
+      supports: Greater than 2
+      logit: 0.5
+      confidence: 0.25
+      effective_logit: 0.125
+  mc_distribution_metrics:
+    implied_probabilities:
+      1 or fewer: 0.9099322337352794
+      '2': 0.05616928786838427
+      Greater than 2: 0.03389847839633634
+    tentative_probabilities:
+      '2': 0.22
+      1 or fewer: 0.7
+      Greater than 2: 0.08
+    per_option_gap_pp:
+      1 or fewer: -20.993223373527947
+      '2': 16.383071213161575
+      Greater than 2: 4.610152160366366
+    max_gap_pp: -20.993223373527947
+    max_gap_option: 1 or fewer
+  sources:
+  - '[(Metaculus) How many problems solved by AI will the official FrontierMath Open
+    Problems index show on May 1, 2026?](https://www.metaculus.com/questions/43127)'
+  - '[FrontierMath: Open Problems - Unsolved Mathematical Challenges](https://epoch.ai/frontiermath/open-problems/)'
+  - '[A Ramsey-style Problem on Hypergraphs](https://epoch.ai/frontiermath/open-problems/ramsey-hypergraphs/)'
+  - '[Introducing FrontierMath: Open Problems](https://epochai.substack.com/p/introducing-frontiermath-open-problems)'
+  - '[FRONTIERMATH: A BENCHMARK FOR EVALUATING ADVANCED MATHEMATICAL REASONING IN
+    AI](https://arxiv.org/pdf/2411.04872)'
+  - '[On the smallest open Diophantine equations](https://arxiv.org/pdf/2204.11624)'
+  - '[(Manifold) How many FrontierMath Open Problems solved in 2026?](https://manifold.markets/bh/how-many-frontiermath-open-problems)'
+  - '[(Manifold) Will Moltbook solve any open FrontierMath problems in 2026?](https://manifold.markets/ChaosIsALadder/will-moltbook-solve-any-open-proble)'
+  - '[Finiteness Problem for Diophantine Equations](https://epoch.ai/frontiermath/open-problems/small-diophantine)'
+  - '[Benchmarking AI on unsolved math problems](https://epoch.ai/frontiermath/open-problems/about/)'
+  - '[From Erdős to Axiom: 12 Open Problems AI Has Actually Solved](https://www.theneuron.ai/explainer-articles/from-erdos-to-axiom-the-open-problems-ai-has-actually-solved/)'
+  reviewer_critique: '**Evidence Verification:**
+
+
+    All core factual claims in the factors are grounded in the research trace:
+
+
+    1. **Factor 1 (1 problem solved - Ramsey Hypergraphs)**: Verified. Trace confirms
+    via The Neuron article and Epoch AI pages: "Ramsey Hypergraphs - Solved March
+    23, 2026" by GPT-5.4 Pro.
+
+
+    2. **Factor 2 (Small Diophantine 3/9, "genuinely new approach" needed)**: Verified.
+    The fetch_url result for the Small Diophantine page confirms "Partially solved
+    (3 of 9 equations resolved)" and "They believe resolving all 9 equations will
+    require a genuinely new mathematical approach."
+
+
+    3. **Factor 3 (AI math capability advancement)**: Minor imprecision but directionally
+    correct. Trace shows "5% under GPT-4 in 2024 to 50% under GPT-5.4 Pro in March
+    2026" (Winbuzzer article) and "o1 maintained an accuracy rate of roughly 2%" on
+    Tier 4. The factor''s "2% to 50%" conflates these slightly, but the underlying
+    point about rapid capability growth is well-supported.
+
+
+    4. **Factor 4 (3 unsolved Moderately interesting problems)**: Verified. Trace
+    confirms 4 Moderately interesting total, 1 solved = 3 remaining.
+
+
+    5. **Factor 5 (20 days until resolution)**: Verified. Published April 11, resolves
+    May 1.
+
+
+    6. **Factor 6 (March 23 last solve)**: Verified directly from trace.
+
+
+    7. **Factor 7 (Manifold market probabilities)**: Verified. Trace shows "15% 1,
+    15% 2, 16% 3, 14% 4" for the full-year market.
+
+
+    8. **Factor 8 (New model possibility)**: Appropriately speculative with 0.25 confidence.
+
+
+    **Resolution Criteria**: Present and correctly engaged. The agent fetched and
+    analyzed the official index (epoch.ai/frontiermath/open-problems/) that the resolution
+    criteria specify.
+
+
+    **No Double-Counting Issues**: Factors 1 and 6 both reference current state but
+    serve different analytical purposes (baseline vs. momentum).
+
+
+    **No Wrong-Direction Factors**: All logit signs correctly correspond to their
+    outcome labels.
+
+
+    **Adversarial Reasoning Present**: Assessment addresses the counterargument about
+    rapid AI capability advancement.
+
+
+    **Probability Assessment**: The 70/22/8 split is well-calibrated to the evidence.
+    The base rate calculation (1 solve in ~10 weeks → ~25-30% chance of new solve
+    in 3 weeks) supports ~70% for status quo. My independent estimate would be 65-75%
+    for "1 or fewer," consistent with the agent''s 70%.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43127
+- **Question ID**: 43141
+- **Session Duration**: 396.3s (6.6 min)
+- **Cost**: $2.9173
+- **Tokens**: 6,437 total (27 in, 6,410 out)
+  - Cache: 553,863 read, 85,621 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43127_20260411_150842/20260411-150842.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| fetch_arxiv | 2 | 0 | 2327ms |
+| fetch_url | 6 | 0 | 11639ms |
+| get_metaculus_questions | 1 | 0 | 423ms |
+| manifold_price | 1 | 0 | 397ms |
+| reflection | 1 | 0 | 101505ms |
+| search_exa | 1 | 0 | 1128ms |
+| web_search | 4 | 0 | 15022ms |
+
+### Sources Consulted
+
+- [(Metaculus) How many problems solved by AI will the official FrontierMath Op...
+- [FrontierMath: Open Problems - Unsolved Mathematical Challenges](https://epoc...
+- [A Ramsey-style Problem on Hypergraphs](https://epoch.ai/frontiermath/open-pr...
+- [Introducing FrontierMath: Open Problems](https://epochai.substack.com/p/intr...
+- [FRONTIERMATH: A BENCHMARK FOR EVALUATING ADVANCED MATHEMATICAL REASONING IN ...
+- [On the smallest open Diophantine equations](https://arxiv.org/pdf/2204.11624)
+- [(Manifold) How many FrontierMath Open Problems solved in 2026?](https://mani...
+- [(Manifold) Will Moltbook solve any open FrontierMath problems in 2026?](http...
+- [Finiteness Problem for Diophantine Equations](https://epoch.ai/frontiermath/...
+- [Benchmarking AI on unsolved math problems](https://epoch.ai/frontiermath/ope...
+- [From Erdős to Axiom: 12 Open Problems AI Has Actually Solved](https://www.th...
