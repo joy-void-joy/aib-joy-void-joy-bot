@@ -1,0 +1,230 @@
+---
+timestamp: 2026-04-13 06:21:17 UTC
+question_type: binary
+factors:
+- description: Unconditional base rate for 9-day stock direction is ~50-52% positive
+  logit: 0.05
+  confidence: 0.9
+  effective_logit: 0.045000000000000005
+- description: Recent 20-day drift is positive (+0.18%/day), parametric GBM gives
+    57.6% up
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Conditional on 15%+ drawdown from 52w high: 54% positive over 8 days
+    (378 events)'
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+- description: 'Post-spike signal: after +6% single-day move, 10-day forward only
+    47.8% positive (23 events, weak sample)'
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+- description: 'Broader market recovering: S&P 500 up 7.5% from March 30 low, supportive
+    backdrop'
+  logit: 0.15
+  confidence: 0.6
+  effective_logit: 0.09
+- description: Earnings April 29 (after resolution) - pre-earnings drift can be slightly
+    positive but adds uncertainty
+  logit: 0.05
+  confidence: 0.4
+  effective_logit: 0.020000000000000004
+- description: High daily volatility (2.82%) makes direction inherently uncertain
+    over 9 days
+  logit: -0.05
+  confidence: 0.8
+  effective_logit: -0.04000000000000001
+tentative_estimate:
+  logit: 0.12
+  probability: 0.53
+assessment: 'The question asks whether ALGN''s close on April 25 (effectively April
+  24, since the 25th is Saturday) will be higher than its close on April 13. This
+  is a 9-trading-day horizon.
+
+
+  The simulation results cluster around 50-52% with zero/empirical drift, and up to
+  57.6% with recent positive drift. The recent positive drift is likely overfit to
+  a recovery bounce and not a reliable forward indicator.
+
+
+  Two conditional signals partially cancel: the 15%+ drawdown condition is mildly
+  bullish (54% positive) while the post-6%-spike condition is mildly bearish (47.8%
+  positive). The spike signal has a small sample (23 events) so gets lower weight.
+
+
+  The macro environment is mixed but recovering - S&P is up from recent lows. No major
+  catalyst expected before April 24/25 besides pre-earnings positioning (earnings
+  are April 29).
+
+
+  With 39% annualized volatility, the stock is very noisy over 9 days, making any
+  directional forecast inherently uncertain. The evidence tilts very slightly positive
+  but not dramatically so. I estimate ~53% probability of higher close.'
+calibration_notes: Base rate for a random stock going up over 9 trading days is roughly
+  52% (slight positive drift in equities). The conditional signals provide mild directional
+  information but largely wash out. The high volatility means the distribution is
+  wide and the probability stays close to 50%.
+key_uncertainties: 1. Whether the recent market recovery continues or reverses; 2.
+  Any unexpected ALGN-specific news (guidance, FDA actions, competitive developments);
+  3. Tariff/trade policy developments that could swing sentiment; 4. Pre-earnings
+  positioning direction
+tool_audit: 'stock_price and stock_history: excellent data on ALGN and S&P 500. stock_conditional_returns:
+  useful drawdown conditional. web_search: found earnings date (Apr 29) and macro
+  context. asknews search_news: FAILED due to API rate limits, worked around via web_search.
+  Shock alert built into stock_price was very informative.'
+update_triggers: Major tariff announcement, ALGN-specific news (pre-announcement,
+  analyst revision), broader market selloff, or any pre-earnings leaks
+process_reflection: The stock direction question workflow is well-supported by the
+  tools. The shock_alert in stock_price data was a nice bonus. The conditional returns
+  tool provided useful base rates. The main gap was asknews being rate-limited - had
+  to use web_search as fallback which worked fine. The sandbox execution for Monte
+  Carlo was smooth. Overall the scaffolding worked well for this question type.
+computed:
+  factor_count: 7
+  factor_sum: 0.32999999999999996
+  tentative_logit: 0.12
+  logit_gap: -0.20999999999999996
+  neutral_factor_count: 3
+  factor_breakdown:
+  - description: Unconditional base rate for 9-day stock direction is ~50-52% positive
+    logit: 0.05
+    confidence: 0.9
+    effective_logit: 0.045000000000000005
+  - description: Recent 20-day drift is positive (+0.18%/day), parametric GBM gives
+      57.6% up
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Conditional on 15%+ drawdown from 52w high: 54% positive over 8
+      days (378 events)'
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  - description: 'Post-spike signal: after +6% single-day move, 10-day forward only
+      47.8% positive (23 events, weak sample)'
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  - description: 'Broader market recovering: S&P 500 up 7.5% from March 30 low, supportive
+      backdrop'
+    logit: 0.15
+    confidence: 0.6
+    effective_logit: 0.09
+  - description: Earnings April 29 (after resolution) - pre-earnings drift can be
+      slightly positive but adds uncertainty
+    logit: 0.05
+    confidence: 0.4
+    effective_logit: 0.020000000000000004
+  - description: High daily volatility (2.82%) makes direction inherently uncertain
+      over 9 days
+    logit: -0.05
+    confidence: 0.8
+    effective_logit: -0.04000000000000001
+  dominant_factor: Recent 20-day drift is positive (+0.18%/day), parametric GBM gives
+    57.6% up
+  dominant_effective_logit: 0.15
+  factor_implied_probability: 0.5817593768418363
+  tentative_probability: 0.53
+  gap_pp: -5.175937684183629
+  sources:
+  - '[(yfinance) ALGN](https://finance.yahoo.com/quote/ALGN)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  - '[Align Technology, Inc. (ALGN) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/ALGN/)'
+  - '[Align Technology, Inc. (ALGN) Latest Stock News & Headlines - Yahoo Finance](https://finance.yahoo.com/quote/ALGN/news/)'
+  - '[Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia.org/wiki/Tariffs_in_the_second_Trump_administration)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 7 factors against the research trace:
+
+
+    1. **Base rate ~50-52%**: Trace shows zero-drift GBM = 50.3%, bootstrap = 51.2%.
+    ✓
+
+    2. **20-day drift +0.18%/day, parametric GBM 57.6%**: Trace line 46 shows trailing_mean_return_20d:
+    0.1829, line 344 shows parametric result = 0.5760. ✓
+
+    3. **15%+ drawdown → 54% positive over 8 days (378 events)**: Trace lines 168-170
+    show conditional_returns result with pct_positive: 53.97, total_events: 378. ✓
+
+    4. **Post-6% spike → 47.8% positive (23 events)**: Trace lines 48-49 show shock_alert
+    with comparable_events: 23, pct_positive: 47.8. ✓
+
+    5. **S&P 500 up 7.5% from March 30 low**: Trace line 110 shows max_bounce_from_recent_low_pct:
+    7.58. ✓
+
+    6. **Earnings April 29**: Trace lines 205-217 confirm via web search results.
+    ✓
+
+    7. **Daily volatility 2.82%**: Trace line 46 shows trailing_volatility_20d: 2.82.
+    ✓
+
+
+    **Resolution Criteria**: Clearly stated - compare April 25 close vs April 13 close
+    via Yahoo Finance. Agent correctly noted April 25 is Saturday so uses April 24''s
+    close.
+
+
+    **Double-counting**: No issues. The factors represent distinct signals (unconditional
+    base rate, drift-based parametric model, drawdown condition, post-spike condition,
+    macro environment, earnings timing, volatility).
+
+
+    **Logit signs**: All match descriptions. Positive signals (base rate, drift, drawdown,
+    macro, earnings) have positive logits; negative signals (post-spike, volatility)
+    have negative logits.
+
+
+    **Adversarial reasoning**: Present. Assessment acknowledges parametric drift model
+    is "likely overfit to a recovery bounce," notes conditional signals "partially
+    cancel," and emphasizes high volatility makes direction "inherently uncertain."
+
+
+    **Probability assessment**: The 53% estimate is well-supported. The trace''s weighted
+    average was 52.0%, and the agent''s slight upward adjustment to 53% reflects reasonable
+    weighting toward the drawdown conditional (high confidence, 378 events) over the
+    post-spike signal (low confidence, only 23 events). Given the evidence tilts mildly
+    positive without strong directional signals, 53% is appropriate - not anchored
+    on a round number, and within the range the simulation methods produced.
+
+
+    No errors found.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43172
+- **Question ID**: 43187
+- **Session Duration**: 327.5s (5.5 min)
+- **Cost**: $2.5099
+- **Tokens**: 6,849 total (26 in, 6,823 out)
+  - Cache: 435,016 read, 71,747 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43172_20260413_061559/20260413-061559.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 131ms |
+| reflection | 1 | 0 | 65554ms |
+| stock_conditional_returns | 1 | 0 | 295ms |
+| stock_history | 1 | 0 | 59ms |
+| stock_price | 4 | 0 | 321ms |
+| web_search | 2 | 0 | 46877ms |
+| wikipedia | 1 | 0 | 197ms |
+
+### Sources Consulted
+
+- [(yfinance) ALGN](https://finance.yahoo.com/quote/ALGN)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
+- [Align Technology, Inc. (ALGN) Stock Price, News, Quote & History - Yahoo Fin...
+- [Align Technology, Inc. (ALGN) Latest Stock News & Headlines - Yahoo Finance]...
+- [Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia...
