@@ -1,0 +1,379 @@
+---
+timestamp: 2026-04-13 09:23:57 UTC
+question_type: multiple_choice
+factors:
+- description: Apr 13 is at peak value 100, driven by CNN feature story + Trump's
+    blockade announcement. If Apr 13 stays as peak in the resolution window, Decreases
+    is virtually certain and Increases is impossible (can't exceed 100).
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'Post-spike decay: the search term ''u s s gerald r ford'' is very
+    niche. Most searchers about the Iran crisis/Hormuz blockade will use broader terms.
+    Feature stories spike once and decay. By Apr 22, specific interest in the carrier
+    name will likely be well below the Apr 13 peak.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: 'Active military crisis: The Ford is directly involved in the Hormuz
+    blockade starting Apr 13. The Iran war is escalating. There''s a meaningful probability
+    of new dramatic events involving the Ford specifically (confrontation, attack,
+    incident) that could generate even higher search interest than Apr 13.'
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'Rescaling mechanics: If Apr 13 stays as peak (most likely), the ceiling
+    is 100 and Increases is impossible. For DC, Apr 22 must be 97-100, an extremely
+    narrow band. This structural constraint strongly favors Decreases.'
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: If a later day surpasses Apr 13 (e.g., new Ford-specific story), rescaling
+    opens all outcomes. With P(later peak) ≈ 22%, this is the primary path to Increases
+    or Doesn't change.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.06
+    Decreases: 0.84
+assessment: 'The current value of 100 on Apr 13 represents a massive spike from baseline
+  0, driven by a viral CNN feature story about the USS Gerald Ford''s record-breaking
+  deployment and Trump''s simultaneous announcement of a Strait of Hormuz blockade.
+
+
+  The most critical structural factor is Google Trends'' rescaling mechanics. At value
+  100, this IS the peak of the window. In the resolution window (Mar 23 - Apr 22),
+  if Apr 13 remains the peak:
+
+  - Increases is IMPOSSIBLE (can''t exceed 100)
+
+  - Doesn''t change requires Apr 22 = 97-100 (needs almost identical search volume)
+
+  - Decreases is virtually certain
+
+
+  So the only path to Increases or DC is if a later day between Apr 14-22 generates
+  MORE Google searches for this specific term than Apr 13, which would rescale Apr
+  13 down and open all outcomes.
+
+
+  While the ongoing Iran war and Hormuz blockade ensure continued media coverage of
+  the Ford, the specific search term "u s s gerald r ford" is niche - people following
+  the crisis search "Strait of Hormuz," "Iran war," "blockade," etc. The CNN feature
+  story was a one-time publication event. Post-spike decay is the norm for niche military
+  terms.
+
+
+  However, I give ~22% probability to a later day surpassing Apr 13 because:
+
+  - The military situation is actively escalating
+
+  - The Ford is directly involved in enforcing the blockade
+
+  - A specific incident (attack on the Ford, major engagement, return home) could
+  spike the specific carrier search term
+
+
+  Counterargument to my Decreases lean: I might be underweighting the probability
+  of continued/escalating news specifically about the Ford. The blockade just started,
+  and any confrontation with Iranian forces involving the Ford would be a massive
+  news story. But the question is about Google searches for this specific carrier
+  name vs. broader terms.
+
+
+  My assessment: ~84% Decreases, ~10% Increases, ~6% Doesn''t change.'
+calibration_notes: 'Base rate from change_stats: In the 30-day window, increase rate
+  was 6.7%, decrease rate was 0%, no_change rate was 93.3%. But these are dominated
+  by the long baseline period (all 0s). The trailing change stats (last 6 days) show
+  increase_rate 33.3%, which reflects the spike. For the resolution period, I''m forecasting
+  from the PEAK, which means the relevant base rate is "how often does a value stay
+  near peak 9 days later" - very rarely for spike-driven topics.'
+key_uncertainties: '1. Whether a new dramatic event specifically involving the USS
+  Gerald Ford occurs between Apr 14-22
+
+  2. The exact timing and magnitude of any such event
+
+  3. Whether continued blockade coverage generates enough searches for this specific
+  term (vs broader terms) to match or exceed the Apr 13 spike
+
+  4. SerpAPI vs pytrends measurement differences (minor concern here since starting
+  at 100)'
+tool_audit: 'Google Trends tool: Returned comprehensive data with change_stats, tail_stats,
+  and recent_news - very useful. Web search: Found extensive news coverage confirming
+  the spike drivers. AskNews: API quota exceeded (403 error) - had to rely on web
+  search instead. Prediction markets: Not searched as not directly relevant to this
+  specific Google Trends question.'
+update_triggers: "- News of a direct military confrontation involving the USS Gerald\
+  \ Ford → strongly increases P(Increases)\n- Ford attacked or damaged → strongly\
+  \ increases P(Increases)\n- Ford ordered home / deployment ends → increases P(Increases)\
+  \ \n- Ceasefire agreement → increases P(Decreases) as interest fades faster\n- No\
+  \ major Ford-specific news → confirms P(Decreases)"
+process_reflection: The Google Trends tool was very effective here, providing the
+  exact data needed with useful computed statistics. The structural analysis of Google
+  Trends rescaling mechanics was the most important analytical step - recognizing
+  that at value=100, the ceiling constraint makes Increases impossible unless a later
+  day surpasses the current peak. This is a clean application of threshold arithmetic.
+  The asknews tool failure was a minor inconvenience; web search provided adequate
+  news context.
+computed:
+  factor_count: 5
+  factor_sum: 4.9
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Apr 13 is at peak value 100, driven by CNN feature story + Trump's
+      blockade announcement. If Apr 13 stays as peak in the resolution window, Decreases
+      is virtually certain and Increases is impossible (can't exceed 100).
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'Post-spike decay: the search term ''u s s gerald r ford'' is very
+      niche. Most searchers about the Iran crisis/Hormuz blockade will use broader
+      terms. Feature stories spike once and decay. By Apr 22, specific interest in
+      the carrier name will likely be well below the Apr 13 peak.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: 'Active military crisis: The Ford is directly involved in the Hormuz
+      blockade starting Apr 13. The Iran war is escalating. There''s a meaningful
+      probability of new dramatic events involving the Ford specifically (confrontation,
+      attack, incident) that could generate even higher search interest than Apr 13.'
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'Rescaling mechanics: If Apr 13 stays as peak (most likely), the
+      ceiling is 100 and Increases is impossible. For DC, Apr 22 must be 97-100, an
+      extremely narrow band. This structural constraint strongly favors Decreases.'
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: If a later day surpasses Apr 13 (e.g., new Ford-specific story),
+      rescaling opens all outcomes. With P(later peak) ≈ 22%, this is the primary
+      path to Increases or Doesn't change.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: Apr 13 is at peak value 100, driven by CNN feature story + Trump's
+    blockade announcement. If Apr 13 stays as peak in the resolution window, Decreases
+    is virtually certain and Increases is impossible (can't exceed 100).
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 4.25
+    factors:
+    - description: Apr 13 is at peak value 100, driven by CNN feature story + Trump's
+        blockade announcement. If Apr 13 stays as peak in the resolution window, Decreases
+        is virtually certain and Increases is impossible (can't exceed 100).
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'Post-spike decay: the search term ''u s s gerald r ford'' is very
+        niche. Most searchers about the Iran crisis/Hormuz blockade will use broader
+        terms. Feature stories spike once and decay. By Apr 22, specific interest
+        in the carrier name will likely be well below the Apr 13 peak.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: 'Rescaling mechanics: If Apr 13 stays as peak (most likely), the
+        ceiling is 100 and Increases is impossible. For DC, Apr 22 must be 97-100,
+        an extremely narrow band. This structural constraint strongly favors Decreases.'
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.65
+    factors:
+    - description: 'Active military crisis: The Ford is directly involved in the Hormuz
+        blockade starting Apr 13. The Iran war is escalating. There''s a meaningful
+        probability of new dramatic events involving the Ford specifically (confrontation,
+        attack, incident) that could generate even higher search interest than Apr
+        13.'
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: If a later day surpasses Apr 13 (e.g., new Ford-specific story),
+        rescaling opens all outcomes. With P(later peak) ≈ 22%, this is the primary
+        path to Increases or Doesn't change.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  mc_distribution_metrics:
+    implied_probabilities:
+      Decreases: 0.9600725449036721
+      Increases: 0.02623275574621376
+      Doesn't change: 0.01369469935011417
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.06
+      Decreases: 0.84
+    per_option_gap_pp:
+      Decreases: -12.007254490367213
+      Increases: 7.376724425378625
+      Doesn't change: 4.630530064988583
+    max_gap_pp: -12.007254490367213
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) u s s gerald r ford](https://trends.google.com/trends/explore?q=u
+    s s gerald r ford)'
+  - '[(Metaculus) Will the interest in “u s s gerald r ford” change between 2026-04-13
+    and 2026-04-22 according to Google Trends?](https://www.metaculus.com/questions/43176)'
+  - '[2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[2026 Iran war - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_war)'
+  reviewer_critique: '## Verification Checks
+
+
+    ### 1. Hallucinated Evidence
+
+    **No hallucinations found.** All key factual claims are grounded in the trace:
+
+
+    - **Factor 1 (Apr 13 = 100, CNN story + blockade):** Verified. Trace lines 91-109
+    show Google Trends data with Apr 13 = 100. Web search results (lines 208-248,
+    320-359) confirm CNN''s "record-breaking trip" story published Apr 12 and Trump''s
+    Hormuz blockade announcement that same day.
+
+
+    - **Factor 2 (niche term, post-spike decay):** Verified. Trace lines 91-97 show
+    all days from Mar 14 to Apr 11 were at 0, then 43 on Apr 12, then 100 on Apr 13.
+    This confirms extremely niche baseline.
+
+
+    - **Factor 3 (Ford in blockade):** Verified. Washington Times article (lines 371-374)
+    explicitly states "The blockade will rely on two aircraft carriers... The USS
+    Gerald R. Ford."
+
+
+    - **Factors 4 & 5 (rescaling mechanics):** Verified. These are correct descriptions
+    of Google Trends mechanics, and the agent''s reasoning is internally consistent.
+
+
+    ### 2. Double-Counting
+
+    **No double-counting found.** Factors 1 and 4 both mention the peak=100 constraint,
+    but Factor 1 describes *why* it''s at 100 (news events) while Factor 4 describes
+    the *structural constraint* this creates. These are distinct analytical angles.
+
+
+    ### 3. Wrong-Direction Factors
+
+    **None found.** All factor signs are correct.
+
+
+    ### 4. Contradictory Assessment
+
+    **None found.** The assessment correctly derives high Decreases probability from
+    the rescaling constraint.
+
+
+    ### 5. Resolution Criteria
+
+    **Properly engaged.** The agent correctly understood and analyzed the ±3 threshold,
+    the SerpAPI resolution method, and the rescaling mechanics.
+
+
+    ### 6. Missing Adversarial Reasoning
+
+    **Addressed.** The assessment explicitly includes: "Counterargument to my Decreases
+    lean: I might be underweighting the probability of continued/escalating news specifically
+    about the Ford."
+
+
+    ### 7. Probability Assessment
+
+
+    The agent''s estimate: **84% Decreases, 10% Increases, 6% Doesn''t change**
+
+
+    I checked historical forecasts for similar scenarios. The "univision" case (question
+    43010) is instructive: agent predicted 91% Decreases when starting at peak 100,
+    but it resolved "Doesn''t change" — a substantial miss (peer_score = -188).
+
+
+    However, key differences favor the current forecast:
+
+    1. "u s s gerald r ford" is genuinely niche (30 consecutive days at 0 before the
+    spike) vs. "univision" which has regular baseline traffic
+
+    2. The univision peak was a SCOTUS hearing (discrete event) while the Ford peak
+    is driven by an *ongoing* military crisis — meaning there''s real potential for
+    sustained interest or new spikes
+
+    3. The agent already accounts for this with ~22% probability of a later peak
+
+
+    The 84% Decreases estimate seems reasonable given:
+
+    - The extreme spike from 0 to 100 in one day (feature story dynamics)
+
+    - Post-spike decay is typical for specific military asset names
+
+    - BUT the ongoing blockade creates real upside risk the agent acknowledges
+
+
+    My independent estimate would be approximately **78-82% Decreases, 12-15% Increases,
+    6-8% Doesn''t change** — within the range where I wouldn''t call the agent meaningfully
+    wrong. The agent may be slightly over-confident on Decreases given the ongoing
+    crisis, but not by enough to fail.
+
+
+    ### Verdict: APPROVE
+
+
+    The trace supports all factual claims. The probability estimate is defensible
+    given the evidence. The agent correctly identified the structural constraints
+    (rescaling mechanics) and acknowledged the key uncertainty (ongoing military crisis
+    could generate new spikes).'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43176
+- **Question ID**: 43191
+- **Session Duration**: 761.9s (12.7 min)
+- **Cost**: $3.0668
+- **Tokens**: 9,997 total (27 in, 9,970 out)
+  - Cache: 532,394 read, 81,067 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43176_20260413_091122/20260413-091122.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 2 | 0 | 2ms |
+| get_metaculus_questions | 1 | 0 | 447ms |
+| google_trends | 2 | 0 | 212674ms |
+| reflection | 1 | 0 | 62995ms |
+| web_search | 4 | 0 | 15216ms |
+| wikipedia | 2 | 0 | 232ms |
+
+### Sources Consulted
+
+- [(Google Trends) u s s gerald r ford](https://trends.google.com/trends/explor...
+- [(Metaculus) Will the interest in “u s s gerald r ford” change between 2026-0...
+- [2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026...
+- [2026 Iran war - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_war)
