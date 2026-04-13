@@ -1,0 +1,74 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the 30-year Treasury yield (DGS30) forecast for April 23, 2026, starting from April 13, 2026 (8 trading days ahead).\n\n**Data Sources Consulted:**\n- **FRED API** for DGS30 historical data: Retrieved 72 observations from Jan 1, 2026 through Apr 10, 2026. Latest value: **4.91%** (Apr 10)\n- **Yahoo Finance** (`^TYX`): Current close **4.90%** (Apr 13), 52-week range 3.717-5.152\n- **FRED FEDFUNDS**: Fed funds rate stable at **3.64%** (monthly), with futures showing no cuts through August (May-Jul: 3.64%, Aug: 3.62%)\n- **Web search** for macro context on tariffs, trade war, and Fed policy\n\n## Key Evidence\n\n**Stable Regime Identification:**\n- DGS30 has been in a tight, stable regime since March 30, 2026\n- Range: **4.88-4.91%** over 10 observations\n- Stable mean: **4.898%**, stable std: **0.0117%**\n- Prior regime mean was 4.815%, showing an 8bp upward shift\n\n**Volatility Analysis:**\n- 25-day daily change volatility: **0.047** (std of daily moves)\n- 35-day daily change volatility: **0.042**\n- The agent correctly noted the stable regime has essentially zero drift (stable regime changes avg: 0.0000)\n\n**Macro Context:**\n- AskNews API failed with 403 quota error\n- Web search found tariff/trade war tensions elevated but no imminent catalyst\n- FOMC minutes mention two-sided framing and Middle East risks increasing\n- Fed rate stable at 3.50-3.75%, no cuts expected through August\n\n## Quantitative Modeling\n\nThe agent ran Monte Carlo simulations with 500,000 paths using:\n1. **Mean-reverting model**: Reversion speed 0.15 toward 4.90, daily vol 0.042\n2. **Random walk model**: Zero drift, daily vol 0.042\n3. **Blended 50/50**: Combined both approaches\n\nResults (blended model):\n- **Median: 4.90%**\n- **80% CI: 4.82-4.98%**\n- Standard deviation: 0.10%\n\n## Conclusion\n\nThe agent concluded with a distribution centered at **4.90%** with the following percentiles:\n- p10: 4.776%, p50: 4.90%, p90: 5.024%\n- 80% CI: 4.82-4.98%\n\nThe forecast appropriately reflects:\n- Strong anchoring to the current stable regime (~4.90%)\n- Realistic uncertainty from empirical volatility\n- Modest tail risk from geopolitical factors\n- No expected policy shocks from the Fed",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__fred_series": "3 calls, 0 errors, impact: none, value: high — primary data source for DGS30 historical values and regime stats",
+      "mcp__financial__stock_price": "1 call, 0 errors, impact: none, value: high — confirmed current 30-year yield at 4.90%",
+      "mcp__financial__stock_history": "1 call, 0 errors, impact: none, value: medium — provided 1-year history and volatility stats",
+      "mcp__asknews__search_news": "1 call, 1 error (403 quota), impact: minor — web search substituted successfully",
+      "mcp__search__web_search": "3 calls, 0 errors, impact: none, value: medium — provided macro context on tariffs and Fed",
+      "mcp__search__fetch_url": "1 call, 0 errors, impact: none, value: low — fetched Morningstar article but dated from 2025",
+      "mcp__sandbox__execute_code": "4 calls, 0 errors, impact: none, value: high — Monte Carlo simulation core to forecast",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — structured factor verification"
+    },
+    "capability_gaps": [
+      "Treasury futures prices (ZB, UB contracts) for forward yield pricing",
+      "Fed rate futures probability distribution (CME FedWatch data)",
+      "Treasury auction calendar and expected supply"
+    ],
+    "subtle_bugs": [
+      "Morningstar article fetched was dated April 2025, not 2026 — potentially misleading for current macro context"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/bonds",
+    "approach": "Monte Carlo simulation blending mean-reverting and random walk models with empirical daily volatility from FRED time series",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the unusually tight 4.88-4.91% stable regime persists or breaks due to tariff escalation or geopolitical shock"
+  },
+  "risk_flags": [
+    {
+      "category": "stale_data",
+      "evidence": "Morningstar article fetched via fetch_url was dated April 2025 (content says 'timestamped April 10, 2025'), but agent treated it as current macro context for 2026",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "4.88-4.92% median, with 80% CI 4.80-5.00%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Used regime detection from FRED API to identify stable period since March 30 with mean 4.898% and std 0.012%",
+    "Ran 500k Monte Carlo paths blending mean-reverting and random walk models — appropriate for a range-bound yield",
+    "Calculated empirical daily volatility from two different lookback windows (25-day: 0.047, 35-day: 0.042) and used the more conservative figure",
+    "Cross-validated current yield between FRED (4.91% on Apr 10) and Yahoo Finance (4.90% on Apr 13)",
+    "Verified Fed funds rate stable at 3.50-3.75% via futures showing no cuts through August",
+    "Acknowledged stable regime could break and included geopolitical tail risks in factor weighting"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi) for any interest rate or macro event bets",
+    "No Treasury futures prices (ZB, UB) used — these would directly price forward yields",
+    "Morningstar article from 2025 was used uncritically for 2026 macro context",
+    "Did not check Treasury auction calendar — April 23 could coincide with supply that moves yields",
+    "Monte Carlo volatility parameter (0.042) was from a period spanning the regime shift (pre-Mar 30 included) — could overstate uncertainty in stable regime"
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews API returned 403 quota error — had to fall back to web search",
+      "Morningstar article returned content from April 2025 instead of 2026, suggesting URL caching or date confusion"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add Treasury futures (ZB, UB, TN) as a data source for direct forward yield pricing",
+    "Check Polymarket/Kalshi for any relevant macro or policy event markets",
+    "Verify article timestamps before using web content as current macro context",
+    "Check Treasury auction calendar to identify supply events near forecast date",
+    "Consider using only post-regime-shift volatility (0.024) for the stable scenario, reserving broader vol (0.042) for tail scenarios"
+  ]
+}

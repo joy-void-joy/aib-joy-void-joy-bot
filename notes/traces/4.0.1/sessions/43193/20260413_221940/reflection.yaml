@@ -1,0 +1,274 @@
+---
+timestamp: 2026-04-13 22:26:33 UTC
+question_type: numeric
+factors:
+- description: 'Current stable regime: DGS30 has been in a tight range of 4.88-4.91
+    since March 30 (10 observations), with mean 4.898 and std 0.012. Yahoo close on
+    Apr 13 was 4.90.'
+  supports:
+    center: 4.9
+    low: 4.88
+    high: 4.91
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Random walk volatility: Using ~35 trading days of daily changes, daily
+    std is 0.042. Over 8 trading days, this implies ~0.12 std for the endpoint, giving
+    80% CI of roughly 4.75-5.05.'
+  supports:
+    center: 4.9
+    low: 4.75
+    high: 5.05
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Fed rate at 3.50-3.75%, futures show no cuts expected through August.
+    No near-term rate shock expected to move the long end.
+  supports:
+    center: 4.9
+    low: 4.8
+    high: 5.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Tariff/trade war uncertainty remains elevated (ongoing since 2025).
+    FOMC minutes mention Middle East risks and two-sided framing. Geopolitical tensions
+    could cause sudden yield spikes or drops, adding tail risk in both directions.
+  supports:
+    center: 4.9
+    low: 4.7
+    high: 5.15
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 52-week range is 3.72-5.15, with recent high of 4.98 (Mar 27) and current
+    level well within range. No sign of breakout above 5.0 or below 4.85 in near term.
+  supports:
+    center: 4.9
+    low: 4.78
+    high: 5.02
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+tentative_estimate:
+  center: 4.9
+  low: 4.78
+  high: 5.03
+assessment: 'The 30-year Treasury yield has been in a very tight, stable regime since
+  March 30, oscillating between 4.88 and 4.91 with essentially zero drift. The current
+  value (4.90-4.91) is the natural center of the forecast.
+
+
+  Key considerations:
+
+  1. The stable regime suggests mean-reversion toward ~4.90, which narrows the distribution
+  compared to pure random walk.
+
+  2. However, this stability could break — the period from March 9-27 saw a 26bp rise,
+  showing the yield can move meaningfully within weeks.
+
+  3. The broader macro environment has elevated uncertainty: tariff/trade war tensions,
+  Middle East risks, and fiscal concerns could push yields in either direction.
+
+  4. Fed funds rate is stable at 3.50-3.75% with no cuts expected through August,
+  removing one source of long-end yield movement.
+
+  5. Monte Carlo simulation using both mean-reverting and random walk models centered
+  on 4.90, with empirical daily volatility of 0.042, produces reasonable confidence
+  intervals.
+
+
+  The distribution should be centered at 4.90 with moderate width. The 10th percentile
+  around 4.78 and 90th around 5.03 reflects both the tight current regime and the
+  possibility of a breakout event.'
+calibration_notes: 'Base rate: Over the past year, the 30-year yield has moved within
+  a range of ~3.72-5.15. Over any given 8-trading-day window, the typical range of
+  outcomes given daily vol of ~0.042 is roughly ±0.12 (1 std). The current stable
+  regime is unusually tight, so the actual realized vol may be lower than the broader
+  estimate.'
+key_uncertainties: Main uncertainty is whether the current tight regime persists or
+  breaks. A tariff escalation, major economic data release, or geopolitical event
+  could push yields 15-25bp in either direction within days. The period around April
+  23 may include Treasury auction results or economic data that could move yields.
+tool_audit: 'FRED series data: excellent, provided full historical data and regime
+  stats. Yahoo Finance stock price/history: good, confirmed current levels. News search
+  via AskNews: failed (403 quota error). Web search: useful for macro context. Fed
+  funds futures: confirmed stable rate expectations. All critical data was obtainable
+  despite one tool failure.'
+process_reflection: The FRED tool with regime_stats was very helpful for quickly identifying
+  the current stable regime. The stock_history and stock_price tools provided good
+  complementary data. The AskNews quota failure was a minor issue — web_search provided
+  sufficient macro context. For interest rate forecasting, having direct access to
+  Treasury futures (like ZB or UB contracts) would improve the forecast, as these
+  directly price 30-year bonds forward. The current toolset doesn't provide this,
+  so I relied on empirical volatility simulation instead.
+computed:
+  factor_count: 5
+  factor_sum: 3.13
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Current stable regime: DGS30 has been in a tight range of 4.88-4.91
+      since March 30 (10 observations), with mean 4.898 and std 0.012. Yahoo close
+      on Apr 13 was 4.90.'
+    supports:
+      center: 4.9
+      low: 4.88
+      high: 4.91
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Random walk volatility: Using ~35 trading days of daily changes,
+      daily std is 0.042. Over 8 trading days, this implies ~0.12 std for the endpoint,
+      giving 80% CI of roughly 4.75-5.05.'
+    supports:
+      center: 4.9
+      low: 4.75
+      high: 5.05
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Fed rate at 3.50-3.75%, futures show no cuts expected through August.
+      No near-term rate shock expected to move the long end.
+    supports:
+      center: 4.9
+      low: 4.8
+      high: 5.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Tariff/trade war uncertainty remains elevated (ongoing since 2025).
+      FOMC minutes mention Middle East risks and two-sided framing. Geopolitical tensions
+      could cause sudden yield spikes or drops, adding tail risk in both directions.
+    supports:
+      center: 4.9
+      low: 4.7
+      high: 5.15
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 52-week range is 3.72-5.15, with recent high of 4.98 (Mar 27) and
+      current level well within range. No sign of breakout above 5.0 or below 4.85
+      in near term.
+    supports:
+      center: 4.9
+      low: 4.78
+      high: 5.02
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  dominant_factor: 'Current stable regime: DGS30 has been in a tight range of 4.88-4.91
+    since March 30 (10 observations), with mean 4.898 and std 0.012. Yahoo close on
+    Apr 13 was 4.90.'
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 4.9
+    implied_p10: 4.812939297124601
+    implied_p90: 4.985623003194888
+    median_gap: 0.0
+    median_gap_pct: 0.0
+    spread_ratio: 1.4477335800184998
+    precision: 0.0510204081632653
+  sources:
+  - '[(FRED) DGS30](https://fred.stlouisfed.org/series/DGS30)'
+  - '[(yfinance) ^TYX](https://finance.yahoo.com/quote/^TYX)'
+  - '[(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)'
+  - '[What Lies Ahead in Trump’s Trade War After a Week of Market Turmoil](https://www.morningstar.com/markets/what-lies-ahead-trumps-trade-war-after-week-market-turmoil-2)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS10)'
+  - '[Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted
+    on an Investment Basis, Inflation-Indexed (DFII30) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFII30)'
+  reviewer_critique: '**Evidence Verification Complete**
+
+
+    All five factors are well-grounded in the research trace:
+
+
+    **Factor 1 (Current stable regime):** Trace confirms `stable_since: 2026-03-30`,
+    `stable_mean: 4.898`, `stable_std: 0.011662`, `observations_in_regime: 10`. Yahoo
+    close on Apr 13 confirmed at 4.90. The claimed 4.88-4.91 range matches the observed
+    data exactly.
+
+
+    **Factor 2 (Random walk volatility):** Trace shows "Std daily change: 0.0469"
+    (25-day) and "Volatility: 0.0419 per day" (35-day). The factor''s "daily std is
+    0.042" matches the 35-day figure (0.0419 rounds appropriately). The 80% CI calculation
+    (√8 × 0.042 × 1.28 ≈ 0.15) giving 4.75-5.05 is mathematically sound.
+
+
+    **Factor 3 (Fed rate):** Trace confirms Fed funds at 3.50-3.75% via multiple sources
+    (J.P. Morgan, U.S. Bank). Fed futures show May/Jun/Jul at 3.64, Aug at 3.62 -
+    essentially flat rates, consistent with "no cuts expected through August."
+
+
+    **Factor 4 (Tariff/trade war):** Trace contains FOMC minutes snippet: "Some Fed
+    officials favoured a two-sided framing...the majority of participants noted that
+    these risks had increased with developments in the Middle East." Tariff discussions
+    and recession probability (40-50%) are documented.
+
+
+    **Factor 5 (52-week range):** Yahoo data shows `fifty_two_week_high: 5.152, fifty_two_week_low:
+    3.717`, matching the claimed 3.72-5.15. Recent high of 4.98 on Mar 27 is confirmed
+    in trace.
+
+
+    **No double-counting detected:** Factors 1 and 5 reference similar price data
+    but make distinct arguments - Factor 1 focuses on the post-Mar-30 stable regime,
+    Factor 5 on broader range context.
+
+
+    **Regime-spanning data addressed:** The Monte Carlo uses ~35 days spanning the
+    Mar 30 regime shift (prior mean 4.81 → current 4.90). The agent mitigated this
+    by running both mean-reverting and random walk models, then blending them - a
+    reasonable approach.
+
+
+    **Adversarial reasoning present:** Assessment acknowledges "this stability could
+    break" and the Mar 9-27 period saw a 26bp rise. Trade war uncertainty is noted
+    as bidirectional tail risk.
+
+
+    **Probability check:** The final estimate (center 4.90, range 4.78-5.03) aligns
+    closely with the Monte Carlo blended results (p10=4.776, p90=5.025, mean=4.900).
+    No meaningful discrepancy between the evidence and the probability.
+
+
+    **Resolution criteria engagement:** The agent correctly used DGS30 from FRED API
+    as specified in the resolution criteria.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43193
+- **Question ID**: 43208
+- **Session Duration**: 437.0s (7.3 min)
+- **Cost**: $3.2965
+- **Tokens**: 7,488 total (30 in, 7,458 out)
+  - Cache: 769,296 read, 84,416 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43193_20260413_221940/20260413-221940.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 458ms |
+| fetch_url | 1 | 0 | 12376ms |
+| fred_series | 7 | 0 | 486ms |
+| reflection | 1 | 0 | 109807ms |
+| stock_history | 1 | 0 | 65ms |
+| stock_price | 1 | 0 | 750ms |
+| web_search | 4 | 0 | 33086ms |
+
+### Sources Consulted
+
+- [(FRED) DGS30](https://fred.stlouisfed.org/series/DGS30)
+- [(yfinance) ^TYX](https://finance.yahoo.com/quote/^TYX)
+- [(FRED) FEDFUNDS](https://fred.stlouisfed.org/series/FEDFUNDS)
+- [What Lies Ahead in Trump’s Trade War After a Week of Market Turmoil](https:/...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quote...
