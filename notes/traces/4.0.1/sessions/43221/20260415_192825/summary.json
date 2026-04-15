@@ -1,0 +1,62 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a comprehensive forecasting trace for LRCX (Lam Research) stock direction over a 7-trading-day horizon (April 15 close of **$263.15** vs April 24 close, since April 25, 2026 falls on a Saturday).\n\nThe agent systematically gathered:\n- **Price data**: Current price $263.15 (down **3.4%** from previous close of $272.41), 60-day and 1-year historical data showing annualized volatility of ~49%\n- **Market context**: S&P 500 at **7023.84** (52-week high), semiconductor sector at all-time highs\n- **News search**: 10 articles covering LRCX including critical earnings announcement details\n- **Conditional returns**: Historical analysis showing **51.8%** positive returns over 8 days following 5%+ single-day spikes\n- **Polymarket check**: No relevant prediction markets found\n\n## Key Evidence\n\n**Bullish factors:**\n- Earnings report scheduled for **April 22 after close** (within the forecast horizon) — the dominant catalyst\n- Company beat estimates last quarter ($1.27 EPS vs $1.17 consensus, 22.1% YoY revenue growth)\n- **19 analysts** revised earnings estimates upward\n- Consensus targets: **$1.35 EPS**, **$5.70B revenue** for Q3\n- Semiconductor sector at ATH with strong AI infrastructure demand\n- Multiple analyst upgrades with price targets around $270-280\n\n**Bearish factors:**\n- Stretched valuation: **P/E ~50x**, P/S 15.25\n- CFO sold **$11.2M** worth of shares on March 4\n- Stock up **50% YTD** — potential for profit-taking\n- Today's 3.4% pullback from near ATH ($273.50)\n- Conditional returns after 5%+ spikes: only 51.8% positive (essentially random)\n\n## Quantitative Modeling\n\nThe agent ran multiple Monte Carlo simulations:\n1. **Zero-drift baseline** (200K sims): **50.2%** probability of being higher — confirms the random walk baseline\n2. **Earnings-scenario model** (300K sims) with:\n   - 65% beat probability → +4% expected move\n   - 20% meet probability → 0% expected move  \n   - 15% miss probability → -8% expected move\n   - Result: **58.3%** probability of being higher\n3. **Sensitivity analysis**: P(higher) ranges from 53.2% (55% beat prob) to 63.4% (75% beat prob)\n\nThe agent correctly identified a simulation bug in the first attempt (seed causing deterministic output) and fixed it.\n\n## Conclusion\n\nThe agent arrived at **57%** probability, which appropriately:\n- Anchors on the zero-drift baseline (50.2%)\n- Adjusts upward for the positive earnings catalyst (skewing toward 58.3%)\n- Moderates slightly for valuation concerns and insider selling\n\nThis is a well-calibrated estimate that properly weights the dominant earnings catalyst while acknowledging the offsetting factors.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__stock_price": "2 calls, 0 errors, impact: none, value: high — provided current LRCX price and S&P 500 context",
+      "mcp__financial__stock_history": "1 call, 0 errors, impact: none, value: high — provided 1-year volatility stats essential for MC",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: high — discovered critical earnings date catalyst",
+      "mcp__financial__stock_conditional_returns": "1 call, 0 errors, impact: none, value: medium — provided base rate but less useful than earnings model",
+      "mcp__markets__polymarket_price": "1 call, 0 errors, impact: none, value: low — no markets found for LRCX",
+      "mcp__sandbox__execute_code": "4 calls, 1 soft error (simulation bug caught and fixed), impact: minor (self-corrected), value: high — Monte Carlo was core methodology",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — provided structured review and factor verification"
+    },
+    "capability_gaps": [
+      "Historical earnings day moves for LRCX specifically (had to estimate from recent single data point)",
+      "Options-implied volatility or expected move for the earnings event",
+      "Analyst estimate revision details (direction and magnitude)"
+    ],
+    "subtle_bugs": [
+      "First MC simulation produced degenerate results (all 100% or 0%) due to random seed behavior — agent caught and fixed this manually"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Earnings-scenario Monte Carlo simulation with historical volatility calibration and event-driven probability weighting.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Earnings outcome on April 22 — whether LRCX beats, meets, or misses consensus determines the asymmetric distribution."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "56-58%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the earnings catalyst as the dominant factor within the forecast horizon through news search",
+    "Ran multiple Monte Carlo scenarios (zero-drift baseline, earnings-scenario, sensitivity analysis) totaling 700K+ simulations",
+    "Self-corrected a simulation bug when output showed degenerate 100% probabilities",
+    "Appropriately anchored on quantitative base rate (50.2%) before adjusting for catalysts",
+    "Checked both bullish factors (analyst revisions, sector momentum) and bearish factors (insider selling, valuation, post-spike returns)",
+    "Verified April 25 falls on Saturday and correctly used April 24 as the resolution date",
+    "Sensitivity analysis showed reasonable range (53-63%) across beat probability assumptions"
+  ],
+  "weaknesses": [
+    "The 65% beat probability assumption is not well-grounded — derived qualitatively from 'beat last quarter + 19 analysts revised up' but no historical beat rate for LRCX was established",
+    "Did not model the asymmetry of the miss scenario more carefully — -8% expected move for miss vs +4% for beat implies larger downside, but the agent assigned only 15% miss probability",
+    "The conditional returns analysis (51.8% after 5%+ spike) was noted but arguably underweighted given it directly applies to LRCX's recent price action",
+    "No attempt to check options-implied expected move for LRCX earnings, which would provide market-derived estimates"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For earnings-driven forecasts, establish a historical beat/miss rate for the specific company rather than assuming 65% qualitatively",
+    "Consider using options-implied volatility or expected move to calibrate earnings day vol rather than estimating at 5%",
+    "When the conditional base rate (51.8% after spike) closely matches the unconditional rate (50%), weight this evidence more heavily — it suggests the recent rally provides no edge"
+  ]
+}

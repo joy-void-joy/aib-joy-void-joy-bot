@@ -1,0 +1,263 @@
+---
+timestamp: 2026-04-15 19:32:43 UTC
+question_type: binary
+factors:
+- description: 'Zero-drift Monte Carlo baseline with earnings vol: 50.2% - essentially
+    coin flip without directional bias'
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: 'Earnings on April 22 (within horizon): LRCX beat estimates last quarter,
+    analysts project strong Q3, 19 analysts revised upward. Expected positive earnings
+    surprise adds positive drift'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Broad market at 52-week high (S&P at 7024), semiconductor sector hitting
+    all-time highs, bullish macro backdrop
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: Stock dropped 3.4% today from near ATH - starting from a lower comparison
+    price after pullback, slight mean-reversion possible
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+- description: 'Conditional returns after 5%+ single-day spike: only 51.8% positive
+    over 8 days - recent surge may be largely priced in'
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+- description: Insider selling (CFO sold $11M in March), elevated valuation (P/E ~50x),
+    stock up 50% YTD - potential for profit-taking
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Earnings-scenario Monte Carlo with 65% beat probability: 58.3% chance
+    higher'
+  logit: 0.35
+  confidence: 0.8
+  effective_logit: 0.27999999999999997
+tentative_estimate:
+  logit: 0.3
+  probability: 0.57
+assessment: 'This is a 7-trading-day forward stock direction question for LRCX with
+  a critical earnings catalyst on April 22.
+
+
+  Key bullish factors:
+
+  - Earnings report on April 22 (day 5 of 7) with strong expectations. LRCX beat last
+  quarter, analysts are bullish, and 19 analysts have revised estimates upward. Consensus
+  is $1.35 EPS and $5.70B revenue.
+
+  - Semiconductor sector is at all-time highs with strong AI infrastructure demand
+
+  - S&P 500 at 52-week high, broad market momentum is positive
+
+  - Starting from today''s pullback level ($263.15 vs yesterday''s $272.41)
+
+
+  Key bearish factors:
+
+  - Stock is up 50% YTD and near ATH - stretched valuation at P/E ~50x
+
+  - CFO sold $11M worth of shares in March, insider selling activity
+
+  - Conditional return after a big spike: only 51.8% positive over 8 days
+
+  - Today''s 3.4% drop could signal beginning of profit-taking
+
+
+  The earnings event is the dominant factor. My earnings-scenario Monte Carlo with
+  65% probability of beating estimates gives 58.3% chance of being higher. The zero-drift
+  baseline is 50.2%. The truth should be somewhere in between but closer to the earnings
+  model since earnings IS happening within the window.
+
+
+  I''m settling on ~57% which reflects the positive earnings skew while acknowledging
+  the stretched valuation and recent rapid appreciation.'
+calibration_notes: Base rate for 7-day stock direction is ~52% positive unconditionally.
+  The earnings catalyst provides meaningful asymmetric upside potential given LRCX's
+  recent beat history and strong sector dynamics. However, the conditional return
+  data after big spikes suggests the recent rally may already be priced in.
+key_uncertainties: 1. Earnings outcome - this is the single biggest uncertainty. A
+  miss would likely send the stock below $263 easily. 2. Whether the 3.4% drop today
+  is just noise or the start of a larger correction before earnings. 3. Macro environment
+  stability - any geopolitical shock could override fundamentals.
+tool_audit: 'stock_price: Useful, provided current price and 60-day history. stock_history:
+  Useful, provided 1-year data with volatility stats. stock_conditional_returns: Useful,
+  gave base rate after big spike days. search_news: Very useful, revealed earnings
+  date (April 22) which is critical. polymarket_price: No results for LRCX. execute_code:
+  Essential for Monte Carlo simulations.'
+update_triggers: '- LRCX earnings on April 22 (the main catalyst)
+
+  - Any major tariff or trade policy changes affecting semiconductors
+
+  - Broader market correction or rally
+
+  - Pre-earnings guidance leaks or analyst revisions'
+process_reflection: 'The stock direction question framework worked well here. The
+  key insight was discovering the earnings catalyst within the horizon via news search,
+  which fundamentally changed the analysis from a pure random walk to an event-driven
+  forecast. The earnings-scenario Monte Carlo approach appropriately captures the
+  asymmetric payoff structure. One limitation: I couldn''t find LRCX-specific historical
+  earnings day moves easily through the tools - had to estimate from recent data points.
+  A tool that provided historical earnings surprise data and post-earnings moves would
+  be valuable.'
+computed:
+  factor_count: 7
+  factor_sum: 0.6399999999999999
+  tentative_logit: 0.3
+  logit_gap: -0.3399999999999999
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Zero-drift Monte Carlo baseline with earnings vol: 50.2% - essentially
+      coin flip without directional bias'
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: 'Earnings on April 22 (within horizon): LRCX beat estimates last
+      quarter, analysts project strong Q3, 19 analysts revised upward. Expected positive
+      earnings surprise adds positive drift'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Broad market at 52-week high (S&P at 7024), semiconductor sector
+      hitting all-time highs, bullish macro backdrop
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: Stock dropped 3.4% today from near ATH - starting from a lower comparison
+      price after pullback, slight mean-reversion possible
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  - description: 'Conditional returns after 5%+ single-day spike: only 51.8% positive
+      over 8 days - recent surge may be largely priced in'
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  - description: Insider selling (CFO sold $11M in March), elevated valuation (P/E
+      ~50x), stock up 50% YTD - potential for profit-taking
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Earnings-scenario Monte Carlo with 65% beat probability: 58.3% chance
+      higher'
+    logit: 0.35
+    confidence: 0.8
+    effective_logit: 0.27999999999999997
+  dominant_factor: 'Earnings on April 22 (within horizon): LRCX beat estimates last
+    quarter, analysts project strong Q3, 19 analysts revised upward. Expected positive
+    earnings surprise adds positive drift'
+  dominant_effective_logit: 0.35
+  factor_implied_probability: 0.6547534606063191
+  tentative_probability: 0.57
+  gap_pp: -8.475346060631917
+  sources:
+  - '[(yfinance) LRCX](https://finance.yahoo.com/quote/LRCX)'
+  - '[(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)'
+  reviewer_critique: '## Verification Summary
+
+
+    I systematically verified all 7 factors against the research trace:
+
+
+    **Factor 1 (Zero-drift MC 50.2%)**: Confirmed at trace lines 330-333, simulation
+    output shows "P(higher): 0.5018 (50.2%)".
+
+
+    **Factor 2 (Earnings April 22, beat history, 19 analysts revised up)**: Confirmed
+    at trace lines 136-145 (DefenseWorld news article) and lines 165-168 showing "19
+    analysts have revised their earnings estimates upward."
+
+
+    **Factor 3 (S&P at 7024, semiconductor ATH)**: Confirmed at trace lines 110-119
+    showing S&P 500 at 7023.84 (0.001% from 52-week high) and lines 155-163 confirming
+    semiconductor sector at all-time highs.
+
+
+    **Factor 4 (3.4% drop today)**: Confirmed at trace line 41 showing "change_percent":
+    -3.3992913.
+
+
+    **Factor 5 (Conditional 51.8% after 5%+ spike)**: Confirmed at trace lines 250-253
+    showing exact figure from stock_conditional_returns tool.
+
+
+    **Factor 6 (CFO $11M sale, P/E ~50x, up 50% YTD)**: Confirmed at trace lines 140-142
+    (CFO sale $11,214,269.71), lines 215-217 (P/E 50.51), and lines 156-158 (50% YTD
+    gain).
+
+
+    **Factor 7 (Earnings-scenario MC 58.3%)**: Confirmed at trace lines 346-351 showing
+    simulation with P(beat)=0.65 yielding 58.3%.
+
+
+    ## No Issues Found
+
+
+    - **No hallucinations**: All core factual claims are grounded in tool results.
+
+    - **No double-counting**: Factors 2 and 7 serve different purposes (qualitative
+    evidence vs. quantitative simulation input).
+
+    - **No wrong-direction factors**: All logit signs align with factor descriptions.
+
+    - **Resolution criteria engaged**: Agent correctly interprets the comparison (April
+    25 close vs April 15 close of $263.15) and notes April 25 is Saturday.
+
+    - **Adversarial reasoning present**: Assessment addresses stretched valuation,
+    insider selling, and post-spike mean reversion.
+
+
+    ## Probability Assessment
+
+
+    The 57% estimate is well-supported:
+
+    - Zero-drift baseline: 50.2%
+
+    - Earnings-scenario (65% beat): 58.3%
+
+    - Agent''s sensitivity analysis shows 55.7%-60.9% for beat probabilities of 60%-70%
+
+
+    The 65% beat probability is defensible given: LRCX beat last quarter, 19 analysts
+    revised upward, and strong sector momentum. The 57% final estimate appropriately
+    weights the earnings catalyst while acknowledging the stretched valuation and
+    post-spike dynamics. This falls within my independent range of 55-58%.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43221
+- **Question ID**: 43236
+- **Session Duration**: 264.9s (4.4 min)
+- **Cost**: $2.8503
+- **Tokens**: 9,318 total (27 in, 9,291 out)
+  - Cache: 519,035 read, 73,305 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43221_20260415_192825/20260415-192825.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 2553ms |
+| polymarket_price | 1 | 0 | 98ms |
+| reflection | 1 | 0 | 66686ms |
+| stock_conditional_returns | 1 | 0 | 298ms |
+| stock_history | 1 | 0 | 71ms |
+| stock_price | 2 | 0 | 411ms |
+
+### Sources Consulted
+
+- [(yfinance) LRCX](https://finance.yahoo.com/quote/LRCX)
+- [(yfinance) ^GSPC](https://finance.yahoo.com/quote/^GSPC)
