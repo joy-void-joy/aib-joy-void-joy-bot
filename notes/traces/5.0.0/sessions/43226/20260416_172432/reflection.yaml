@@ -1,0 +1,237 @@
+---
+timestamp: 2026-04-16 17:38:18 UTC
+question_type: multiple_choice
+factors:
+- description: Swalwell scandal peaked around Apr 10-14, with value of 100 in the
+    30-day window. Natural decay patterns for political scandal events show 75-80%
+    decline within 24 hours and ~90% within a week. By Apr 23 (10+ days post-peak),
+    interest should be dramatically lower than Apr 16.
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: Resignation already happened (Apr 14), meaning the story's dramatic
+    peak has passed. Post-resignation coverage is in the 'aftermath' phase which decays
+    faster than pre-resolution coverage.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Multiple active investigations (Manhattan DA, LA Sheriff, FBI, DC tip
+    line) could generate new headlines in the Apr 17-23 window, potentially spiking
+    interest. Criminal charges or arrest would be particularly significant.
+  supports: Increases
+  logit: 1.0
+  confidence: 0.3
+  effective_logit: 0.3
+- description: The resolution scale uses a fixed window (Mar 24 - Apr 23). The pre-scandal
+    period (Mar 24 - Apr 9) likely had very low baseline interest (1-5), so the peak
+    around Apr 10-14 sets 100, and both Apr 16 and Apr 23 will be measured relative
+    to that. Apr 16 is still early enough post-peak to have substantial interest (30-60),
+    while Apr 23 will have decayed significantly (5-20).
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Monte Carlo simulations with both aggressive and conservative decay
+    parameters consistently show ~96% probability of Decreases outcome, with only
+    ~2% for Increases and ~2% for Doesn't change.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.75
+  effective_logit: 1.5
+tentative_estimate:
+  probabilities:
+    Increases: 0.07
+    Doesn't change: 0.05
+    Decreases: 0.88
+anchor: 'Base rate for Google Trends decay after political scandal peak: ~90% of interest
+  decays within 1-2 weeks. Based on empirical cases (Trump, Biden, DeSantis), the
+  probability that interest is lower 7 days later vs. 3-5 days post-peak is approximately
+  90-95%.'
+assessment: The Swalwell scandal is a textbook case of a political scandal search
+  interest spike. The story broke Apr 10, reached peak intensity with his resignation
+  Apr 14, and is now in natural decay. Empirical evidence from similar political scandals
+  shows rapid decay (half-life 1-4 days). By Apr 23, interest should be dramatically
+  lower than Apr 16. The only scenarios for "Increases" require a new blockbuster
+  development (arrest, charges) in the final days before Apr 23 that exceeds current
+  coverage intensity - possible but unlikely. "Doesn't change" requires the implausible
+  scenario where Apr 16 and Apr 23 have nearly identical values despite a week of
+  natural decay. I'm slightly pulling back from the 96% simulation result to 88% for
+  Decreases to account for model uncertainty and the chance of unknown developments.
+calibration_notes: 'Simulation results (96% Decreases) may be overconfident due to
+  simplified decay models. Pulling toward 88% for Decreases to account for: (1) ongoing
+  active criminal investigations that could produce headline-making developments,
+  (2) uncertainty about exact values on the Google Trends scale, (3) possible sustained
+  public interest in CA governor race implications. The 3-point threshold for ''Doesn''t
+  change'' is quite narrow on a 0-100 scale, making it hard for this outcome to occur
+  when Apr 16 interest is still substantial.'
+key_uncertainties: 1. What is the actual Google Trends value on Apr 16? If it's already
+  quite low (e.g., 15), the room for further decline narrows. 2. Will there be a major
+  new development (arrest, charges, explosive new evidence) in the Apr 17-23 window?
+  3. How does the specific Google Trends scaling in the Mar 24 - Apr 23 window affect
+  relative values?
+tool_audit: 'Research tool: Excellent results on both queries. Got detailed timeline
+  of the Swalwell scandal and comprehensive Google Trends decay analysis with empirical
+  case studies. fetch_url on Google Trends: Failed to extract data (JS rendering issue).
+  web_search: Useful for confirming the ongoing intensity of coverage. Monte Carlo
+  simulations: Consistent results across models.'
+process_reflection: The research tool was excellent here - it provided thorough, well-sourced
+  analysis. The inability to directly scrape Google Trends data is a known limitation.
+  The empirical decay curves from similar political figures (Trump assassination attempt,
+  Biden dropout, DeSantis) provide strong anchoring data. The main uncertainty is
+  about the specific Apr 16 value, which affects how much room there is for decline.
+computed:
+  factor_count: 5
+  factor_sum: 6.525
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Swalwell scandal peaked around Apr 10-14, with value of 100 in the
+      30-day window. Natural decay patterns for political scandal events show 75-80%
+      decline within 24 hours and ~90% within a week. By Apr 23 (10+ days post-peak),
+      interest should be dramatically lower than Apr 16.
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: Resignation already happened (Apr 14), meaning the story's dramatic
+      peak has passed. Post-resignation coverage is in the 'aftermath' phase which
+      decays faster than pre-resolution coverage.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Multiple active investigations (Manhattan DA, LA Sheriff, FBI, DC
+      tip line) could generate new headlines in the Apr 17-23 window, potentially
+      spiking interest. Criminal charges or arrest would be particularly significant.
+    supports: Increases
+    logit: 1.0
+    confidence: 0.3
+    effective_logit: 0.3
+  - description: The resolution scale uses a fixed window (Mar 24 - Apr 23). The pre-scandal
+      period (Mar 24 - Apr 9) likely had very low baseline interest (1-5), so the
+      peak around Apr 10-14 sets 100, and both Apr 16 and Apr 23 will be measured
+      relative to that. Apr 16 is still early enough post-peak to have substantial
+      interest (30-60), while Apr 23 will have decayed significantly (5-20).
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Monte Carlo simulations with both aggressive and conservative decay
+      parameters consistently show ~96% probability of Decreases outcome, with only
+      ~2% for Increases and ~2% for Doesn't change.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.75
+    effective_logit: 1.5
+  dominant_factor: Swalwell scandal peaked around Apr 10-14, with value of 100 in
+    the 30-day window. Natural decay patterns for political scandal events show 75-80%
+    decline within 24 hours and ~90% within a week. By Apr 23 (10+ days post-peak),
+    interest should be dramatically lower than Apr 16.
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 6.225
+    factors:
+    - description: Swalwell scandal peaked around Apr 10-14, with value of 100 in
+        the 30-day window. Natural decay patterns for political scandal events show
+        75-80% decline within 24 hours and ~90% within a week. By Apr 23 (10+ days
+        post-peak), interest should be dramatically lower than Apr 16.
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: Resignation already happened (Apr 14), meaning the story's dramatic
+        peak has passed. Post-resignation coverage is in the 'aftermath' phase which
+        decays faster than pre-resolution coverage.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: The resolution scale uses a fixed window (Mar 24 - Apr 23). The
+        pre-scandal period (Mar 24 - Apr 9) likely had very low baseline interest
+        (1-5), so the peak around Apr 10-14 sets 100, and both Apr 16 and Apr 23 will
+        be measured relative to that. Apr 16 is still early enough post-peak to have
+        substantial interest (30-60), while Apr 23 will have decayed significantly
+        (5-20).
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: Monte Carlo simulations with both aggressive and conservative decay
+        parameters consistently show ~96% probability of Decreases outcome, with only
+        ~2% for Increases and ~2% for Doesn't change.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.75
+      effective_logit: 1.5
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.3
+    factors:
+    - description: Multiple active investigations (Manhattan DA, LA Sheriff, FBI,
+        DC tip line) could generate new headlines in the Apr 17-23 window, potentially
+        spiking interest. Criminal charges or arrest would be particularly significant.
+      supports: Increases
+      logit: 1.0
+      confidence: 0.3
+      effective_logit: 0.3
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.002659438288004338
+      Decreases: 0.9953704013714635
+      Doesn't change: 0.0019701603405322078
+    tentative_probabilities:
+      Increases: 0.07
+      Doesn't change: 0.05
+      Decreases: 0.88
+    per_option_gap_pp:
+      Increases: 6.734056171199566
+      Decreases: -11.537040137146349
+      Doesn't change: 4.80298396594678
+    max_gap_pp: -11.537040137146349
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “eric swalwell” change between 2026-04-16 and
+    2026-04-23 according to Google Trends?](https://www.metaculus.com/questions/43226)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=eric%20swalwell&date=2026-03-24%202026-04-23)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43226
+- **Question ID**: 43241
+- **Session Duration**: 997.8s (16.6 min)
+- **Cost**: $11.3600 total (orchestrator $2.3777 + sub-agents $8.9823)
+- **Tokens**: 7,781 total (27 in, 7,754 out)
+  - Cache: 421,024 read, 62,090 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43226_20260416_172432/20260416-172432.log`
+
+### Tool Calls
+
+- **Total**: 32 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0613 |
+| execute_code | 5 | 0 | 57ms | — |
+| fetch_arxiv | 1 | 0 | 378ms | — |
+| fetch_url | 1 | 0 | 8621ms | — |
+| get_metaculus_questions | 1 | 0 | 430ms | — |
+| google_trends | 13 | 0 | 27338ms | — |
+| premortem | 1 | 0 | 137748ms | $2.3868 |
+| reflection | 1 | 0 | 18ms | — |
+| research | 1 | 0 | 605225ms | $6.3153 |
+| search_exa | 2 | 0 | 1851ms | — |
+| web_search | 5 | 0 | 56178ms | $0.2188 |
+| wikipedia | 1 | 0 | 191ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “eric swalwell” change between 2026-04-16 a...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=eric%2...
