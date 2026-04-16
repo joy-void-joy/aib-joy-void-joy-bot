@@ -12,6 +12,7 @@ import asyncio
 import re
 import logging
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import PurePosixPath
 from typing import Annotated, Any, TypedDict
 
 import httpx
@@ -144,17 +145,21 @@ POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
 @with_retry(max_attempts=3)
 async def _search_polymarket(query: str) -> list[PolymarketEventData]:
     """Search Polymarket for markets matching query."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
-            f"{POLYMARKET_GAMMA_API}/events",
+            f"{POLYMARKET_GAMMA_API}/public-search",
             params={
-                "title_contains": query,
-                "active": "true",
-                "limit": 10,
+                "q": query,
+                "events_status": "active",
+                "limit_per_type": 10,
             },
         )
         response.raise_for_status()
-        return [PolymarketEventData.model_validate(e) for e in response.json()]
+        events_raw = response.json().get("events", [])
+        return [PolymarketEventData.model_validate(e) for e in events_raw]
 
 
 def _coerce_to_list(value: Any) -> list[Any] | None:
@@ -514,17 +519,8 @@ async def polymarket_price(params: MarketQueryInput) -> dict[str, Any]:
         if not events:
             return {"markets": [], "query": query}
 
-        query_words = {w.lower() for w in query.split() if len(w) > 2}
-        relevant_events = [
-            e
-            for e in events
-            if query_words & {w.lower() for w in e.title.split() if len(w) > 2}
-        ]
-        if not relevant_events:
-            return {"markets": [], "query": query}
-
         results: list[MarketPrice] = []
-        for event in relevant_events[:limit]:
+        for event in events[:limit]:
             if cutoff is not None:
                 parsed = await _polymarket_event_at_cutoff(event, cutoff)
             else:
@@ -560,7 +556,10 @@ MANIFOLD_API = "https://api.manifold.markets/v0"
 @with_retry(max_attempts=3)
 async def _search_manifold(query: str) -> list[ManifoldMarketData]:
     """Search Manifold Markets for markets matching query."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{MANIFOLD_API}/search-markets",
             params={
@@ -692,7 +691,10 @@ async def _fetch_polymarket_history(
     token_id: str, start_ts: int, end_ts: int
 ) -> list[PolymarketPricePoint]:
     """Fetch price history from Polymarket CLOB API."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{POLYMARKET_CLOB_API}/prices-history",
             params={
@@ -767,7 +769,10 @@ async def _fetch_manifold_bets(
     contract_id: str, before_time: int, limit: int = 1000
 ) -> list[ManifoldBet]:
     """Fetch bets from Manifold to reconstruct historical prices."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{MANIFOLD_API}/bets",
             params={
@@ -846,44 +851,91 @@ def _series_ticker_from_market(ticker: str) -> str:
     return ticker.split("-")[0]
 
 
-def _kalshi_matches_query(event: KalshiEventData, query_words: list[str]) -> bool:
-    """Check if a Kalshi event matches all query words (AND logic, case-insensitive)."""
-    text_parts = [event.title, event.sub_title or ""]
-    for m in event.markets:
-        text_parts.append(m.yes_sub_title)
-        text_parts.append(m.title)
-    combined = " ".join(text_parts).lower()
-    return all(w in combined for w in query_words)
-
-
 @with_retry(max_attempts=3)
-async def _fetch_kalshi_events(
-    query: str, *, status: str | None = "open"
-) -> list[KalshiEventData]:
-    """Fetch events from Kalshi API with client-side text filtering."""
+async def _fetch_kalshi_events(*, status: str | None = "open") -> list[KalshiEventData]:
+    """Fetch all events from Kalshi API.
+
+    The Kalshi API has no server-side search. Callers filter results
+    downstream via `_filter_relevant_markets` (LLM relevance judgment).
+    """
     params: dict[str, str | int] = {
         "with_nested_markets": "true",
         "limit": 200,
     }
     if status is not None:
         params["status"] = status
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/events",
             params=params,
         )
         response.raise_for_status()
         data = response.json()
-        events = [KalshiEventData.model_validate(e) for e in data.get("events", [])]
+        return [KalshiEventData.model_validate(e) for e in data.get("events", [])]
 
-    query_words = query.lower().split()
-    return [e for e in events if _kalshi_matches_query(e, query_words)]
+
+async def _filter_relevant_kalshi_events(
+    query: str,
+    events: list[KalshiEventData],
+    max_events: int,
+) -> list[KalshiEventData]:
+    """Pick Kalshi events most relevant to a query using a fast LLM call.
+
+    Kalshi has no server-side search, so we fetch all active events and
+    let the LLM judge relevance against their titles and sub-titles.
+    Falls back to the first max_events if the LLM call fails.
+    """
+    if not events:
+        return []
+    if len(events) <= max_events:
+        return events
+
+    from aib.agent.client import one_shot
+
+    numbered = "\n".join(
+        f"[{i}] {e.title}" + (f" — {e.sub_title}" if e.sub_title else "")
+        for i, e in enumerate(events)
+    )
+    prompt = (
+        f"Query: {query}\n\n"
+        f"Events:\n{numbered}\n\n"
+        f"Which events are relevant to the query? "
+        f"Return the indices of relevant events (at most {max_events}). "
+        "Ignore events about unrelated topics even if they share keywords."
+    )
+
+    try:
+        result = await one_shot(
+            prompt,
+            model="haiku",
+            system_prompt=(
+                "You judge whether prediction market event titles are relevant "
+                "to a search query. Be strict — only include events that "
+                "genuinely address the query topic."
+            ),
+            output_type=RelevanceJudgment,
+        )
+    except Exception:
+        logger.warning("Kalshi event relevance filtering failed")
+        return events[:max_events]
+
+    if result is None:
+        return events[:max_events]
+
+    valid = [events[i] for i in result.relevant_indices if 0 <= i < len(events)]
+    return valid[:max_events]
 
 
 @with_retry(max_attempts=3)
 async def _fetch_kalshi_event(event_ticker: str) -> KalshiEventData:
     """Fetch a single Kalshi event with all its markets."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/events/{event_ticker}",
             params={"with_nested_markets": "true"},
@@ -900,7 +952,10 @@ async def _fetch_kalshi_candlestick(
     end_ts: int,
 ) -> list[KalshiCandlestick]:
     """Fetch candlestick data for a Kalshi market."""
-    async with markets_throttle, httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client:
+    async with (
+        markets_throttle,
+        httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
+    ):
         response = await client.get(
             f"{KALSHI_API}/series/{series_ticker}/markets/{market_ticker}/candlesticks",
             params={
@@ -967,8 +1022,8 @@ def _kalshi_url_params(m: re.Match[str]) -> dict[str, Any]:
     /markets/<series>/<slug>/<market-ticker>.
     Uses the slug (human-readable) when available, falls back to series.
     """
-    segments = m.group(1).rstrip("/").split("/")
-    slug = segments[1] if len(segments) > 1 else segments[0]
+    parts = [p for p in PurePosixPath(m.group(1)).parts if p and p != "/"]
+    slug = parts[1] if len(parts) > 1 else parts[0]
     return {"query": slug.replace("-", " ")}
 
 
@@ -996,15 +1051,19 @@ async def kalshi_price(params: MarketQueryInput) -> dict[str, Any]:
 
     try:
         if cutoff is not None:
-            events = await _fetch_kalshi_events(query, status=None)
+            events = await _fetch_kalshi_events(status=None)
         else:
-            events = await _fetch_kalshi_events(query, status="open")
+            events = await _fetch_kalshi_events(status="open")
 
         if not events:
             return {"markets": [], "query": query}
 
+        relevant_events = await _filter_relevant_kalshi_events(
+            query, events, max_events=limit
+        )
+
         results: list[KalshiMarketPrice] = []
-        for event in events[:limit]:
+        for event in relevant_events:
             for market in event.markets:
                 if cutoff is not None:
                     prob = await _kalshi_market_at_cutoff(market, cutoff)
@@ -1724,9 +1783,23 @@ async def get_cp_history(params: CPHistoryInput) -> dict[str, Any]:
             aggregation, post_id, title, url, days, cutoff_dt
         )
         return response.model_dump()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 403:
+            return {
+                "post_id": post_id,
+                "cp_available": False,
+                "reason": (
+                    "Community prediction data is not accessible for this question. "
+                    "This is expected for questions in the AIB tournament — "
+                    "you cannot see the CP for questions you are forecasting. "
+                    "Use prediction market prices and your own analysis instead."
+                ),
+            }
+        logger.exception("Failed to fetch CP history for post %d", post_id)
+        raise ToolError(f"Failed to fetch CP history: {e}") from e
     except Exception as e:
         logger.exception("Failed to fetch CP history for post %d", post_id)
-        raise ToolError(f"Failed to fetch CP history: {e}")
+        raise ToolError(f"Failed to fetch CP history: {e}") from e
 
 
 # --- Tool Lists ---
@@ -1836,10 +1909,13 @@ async def search_markets(params: SearchMarketsInput) -> dict[str, Any]:
     async def _fetch_kalshi() -> None:
         try:
             if cutoff is not None:
-                events = await _fetch_kalshi_events(query, status=None)
+                events = await _fetch_kalshi_events(status=None)
             else:
-                events = await _fetch_kalshi_events(query, status="open")
-            for event in events[:5]:
+                events = await _fetch_kalshi_events(status="open")
+            relevant_events = await _filter_relevant_kalshi_events(
+                query, events, max_events=5
+            )
+            for event in relevant_events:
                 for market in event.markets:
                     if cutoff is not None:
                         prob = await _kalshi_market_at_cutoff(market, cutoff)
