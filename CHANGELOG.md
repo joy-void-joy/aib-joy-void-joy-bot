@@ -2,6 +2,46 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v5.0.0 (2026-04-08)
+
+Hierarchical sub-agent architecture with persistent worldview store
+- agent: flat ~50-tool surface restructured into orchestrator (~10 tools) + research/subforecast sub-agents
+- tools: research() — Opus sub-agent with ~35 data-gathering tools, parallel execution, resumable sessions
+- tools: subforecast() — replaces spawn_subquestions, worldview persistence, bounded recursion (max_depth)
+- tools: worldview_manager() — dedicated maintenance agent (dedup, cleanup, linking, contradictions, resolution)
+- worldview: persistent store (notes/worldview/) with research and forecast entries, version-independent
+- worldview: entry lifecycle (fresh/stale/superseded/resolved), TTL-based staleness, amend with revision history
+- reviewer: worldview consistency checks (binary/numeric CDF threshold, cross-question, research contradictions)
+- devtools: worldview CLI (list, show, maintain, resolve) and resolution sync integration
+- agent: reflection() is now a fast, cheap checkpoint — factor-consistency metrics and YAML logging only, no reviewer call
+- agent: new premortem() tool runs the Opus reviewer sub-agent with adversarial gate (counterargument, what_would_change_my_mind, confidence_in_estimate)
+- gate: StructuredOutput requires both reflection() and premortem() approval (auto-approve after 3 consecutive fails)
+- session: ReviewState moved to session.py, shared between reflection, premortem, and StructuredOutput hook
+- reviewer: weak-counterargument and overconfident-self-assessment checks for adversarial fields
+- agent: Forecast requires anchor_logit; probability_from_factors uses it as prior instead of implicit 50/50 midpoint
+
+## v4.2.0 (2026-03-30)
+
+Anchor-first reasoning, weather tools, and meta-prediction guidance
+- agent: anchor field in all forecast models — structured base-rate before factor analysis
+- prompts: anchor-first reasoning framework — factors push against reference class gravity
+- prompts: CP mean-reversion prior — sharp momentum shows diminishing returns
+- prompts: election polling error guidance — simulation width must reflect historical polling error
+- prompts: weather awareness for Google Trends questions
+- tools: Open-Meteo weather forecast tool (excluded in retrodict)
+
+## v4.1.0 (2026-03-29)
+
+Feedback loop session 8: numeric calibration fixes, meta-prediction improvements, options IV tool
+- prompts: symmetric distribution width guidance — equal emphasis on too-narrow and too-wide (fixes 50% CI coverage)
+- prompts: width sanity check — P5-P95 must span ≥2× implied random-walk range
+- prompts: regime-conditional volatility — crisis premium (1.5-2× vol) for active geopolitical events
+- prompts: scenario weight uncertainty — run mixtures with alternative weights
+- prompts: meta-prediction threshold asymmetry — strict inequality means status quo = NO
+- prompts: momentum trap warning — CP trend toward threshold is already priced in
+- prompts: correlated evidence stacking — factors from same event count once
+- tools: new options_iv tool — ATM implied volatility, put-call skew, volatility smile for CDF cross-validation
+
 ## v4.0.1 (2026-03-24)
 
 Fix CDF sharpness: outward PMF redistribution and reduced tail mass

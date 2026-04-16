@@ -138,6 +138,7 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
 3. Push the branch when the feature is complete (or periodically for backup)
 4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). See `src/aib/version.py` for bump rules. Data-only or infrastructure changes don't need a bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run aib-devtools version bump` or manually add an entry following the existing format.
+4b. **Bump plugin version** if the branch changes plugin files (commands, hooks, agents, scripts under `.claude/plugins/aib/`). Use `uv run aib-devtools dev plugin-bump <level> "<summary>"`. The `/commit` command auto-detects this and prompts the bump. Plugin versions are cached by Claude Code — without a bump, new/renamed commands won't appear after reinstall. **Worktree caveat:** `claude plugin install` resolves the `marketplace.json` relative path from the main worktree, not the current one. Plugin changes on feature branches don't take effect until merged to main (or manually synced).
 5. **`/rebase`** — Pushes the branch, opens a PR, then cleans up the commit history with `git reset --soft main` and force-pushes.
 6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run `/rebase` (it rebuilds the history and force-pushes, updating the PR).
 7. **`/close`** — Once the PR is approved, merges it and cleans up the branch.
@@ -444,7 +445,9 @@ aib-devtools
 │   └── earnings       Check earnings dates for a ticker
 │
 ├── dev                Development tools
-│   └── worktree       Create a new worktree with plugin refresh
+│   ├── worktree       Create a new worktree with plugin refresh
+│   ├── plugin-bump    Bump plugin version and update plugin changelog
+│   └── plugin-version Display current plugin version
 │
 ├── version            Agent version management
 │   ├── show           Display current AGENT_VERSION

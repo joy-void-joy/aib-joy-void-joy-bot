@@ -12,11 +12,22 @@ Clean up the commit history on the current feature branch, push it, and open (or
 
 ### Base branch (`<base>`)
 
-Auto-detect the base branch — the branch this feature branch diverged from. Use `main` as the default. Verify with:
-```bash
-git merge-base --is-ancestor main HEAD && echo "main is ancestor"
-```
-If `main` is not an ancestor (e.g., branch was created from another feature branch), use `AskUserQuestion` to ask which branch to use as base.
+Auto-detect the base branch — the branch this feature branch diverged from. This is **not always `main`** — worktree branches are often forked from other feature branches.
+
+**Detection strategy:**
+
+1. List all local branches (excluding current) and count how many commits on HEAD are not reachable from each:
+   ```bash
+   git branch --format='%(refname:short)' | while read branch; do
+     [ "$branch" = "$(git branch --show-current)" ] && continue
+     count=$(git rev-list --count "$branch"..HEAD 2>/dev/null) || continue
+     echo "$count $branch"
+   done | sort -n | head -5
+   ```
+
+2. If one branch has a **strictly lower** count than all others, use it as `<base>`.
+
+3. If **multiple branches tie** for the lowest count, the merge-base is shared and git cannot determine the true parent. **Use `AskUserQuestion`** to ask the user which branch is the parent, presenting the tied candidates as options.
 
 ### PR target (`<target>`)
 

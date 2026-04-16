@@ -1,92 +1,132 @@
 ---
-allowed-tools: Read, Grep, Glob, Bash(ls:*, uv run aib-devtools version show:*, uv run aib-devtools analysis prompt-health:*), AskUserQuestion
-description: Read all agent code from scratch, evaluate design quality, propose structural improvements
+allowed-tools: Read, Grep, Glob, Bash(ls:*, uv run aib-devtools:*), AskUserQuestion
+description: Evaluate agent capabilities, propose changes to improve forecasts
 argument-hint: [focus area]
 ---
 
-# Architecture Review
+# Agent Design Review
 
-Read the entire agent codebase and evaluate whether the system is well-designed. The question is: **if we were building this today, would we build it this way?**
+Read the entire agent codebase with fresh eyes and evaluate: **what changes to tools, architecture, and pipeline would produce better forecasts?**
+
+This is not a code quality review — `/refactor` handles that. This is about whether the agent has the right capabilities to forecast well.
 
 ## Phase 1: Read the System
 
-Read all agent code, building your mental model purely from the code. Start with the directories below and discover the structure yourself.
+Build your mental model purely from the code. No feedback-loop data yet — fresh eyes first.
 
 ### 1a. The prompt
 
-`src/aib/agent/prompts.py` — The agent's instructions. The most consequential file. Read every line.
-
-```bash
-uv run aib-devtools analysis prompt-health
-```
+`src/aib/agent/prompts.py` — The agent's instructions. Read every line. Understand what strategies it teaches, what guardrails it sets, what it asks the agent to do.
 
 ### 1b. The tools
 
-`src/aib/tools/` — All tool implementations. Start with `src/aib/agent/tool_policy.py` for the inventory, then read the implementations.
+Start with `src/aib/agent/tool_policy.py` for the inventory, then read every file in `src/aib/tools/`. For each tool, understand:
+- What data does it give the agent?
+- How much enrichment happens inside the tool vs. left to the agent?
+- What domains or question types does it serve?
 
 ### 1c. The pipeline
 
-`src/aib/agent/` — Orchestration, hooks, reflection, CDF generation. Trace the flow from question input to forecast output.
+`src/aib/agent/` — Orchestration, hooks, reflection, CDF generation. Trace the flow from question input to forecast output. Understand what the agent does, in what order, with what tools.
 
-### 1d. Supporting code
+### 1d. Draw the map
 
-Everything else in `src/aib/` — submission, scoring, configuration, utilities.
+Present a compact overview:
+- Pipeline diagram: question → agent → tools/servers → forecast
+- Tool inventory grouped by domain (data sources, computation, workflow)
+- Prompt structure: what sections exist, what they teach
+- Key stats: tool count, prompt token estimate, server count
 
-## Phase 2: The Greenfield Question
+Use AskUserQuestion to confirm your understanding before proceeding.
 
-**If you were building this system today, from scratch, with the same goals — what would it look like?**
+## Phase 2: Capability Assessment
 
-The gap between that answer and what exists is the review.
+With the system fresh in your mind, assess it through the **forecasting lens**. The question for every component is: does this help the agent make better forecasts?
 
-### Dimensions
+### Data coverage
 
-For each, describe what the greenfield design would look like and where the current system diverges.
+- What domains are well-covered by tools? (economics, markets, politics, science, tech, etc.)
+- What domains have no dedicated tools — where is the agent relying entirely on web search?
+- For each tool: does it follow the data augmentation pattern (enrich inside the tool), or does it return raw data and leave the agent to fish for meaning?
+- Are there obvious data sources missing? (Government databases, polling aggregators, scientific repositories, prediction markets, etc.)
 
-**Conceptual integrity** — Does the system have one coherent design philosophy, or is it a collection of independent decisions? Do the prompt, tools, and pipeline pull in the same direction?
+### Question type readiness
 
-**Responsibility boundaries** — Does each module own one thing? Is there logic that should move? Are there modules that do too much, or exist for historical reasons?
+- How does the toolkit serve binary vs. numeric vs. multiple-choice questions differently?
+- Are there question types where the agent is under-equipped? (e.g., questions requiring time series analysis, geopolitical judgment, technical domain knowledge)
+- Does the CDF generation pipeline have the right inputs?
 
-**Tool design** — Do the tools follow consistent patterns? Are they the right granularity — or could some be unified? Are there tools that exist because of a specific past problem but aren't the right abstraction? What tools would you build if starting fresh?
+### Reasoning support
 
-**Prompt architecture** — Is the prompt structured around principles or accumulated rules? What would the prompt look like if written from scratch today? What sections earn their token cost and which are patches?
+- Does the prompt teach useful forecasting strategies, or mostly defensive rules?
+- Are there prompt sections that are doing the job of a tool? (e.g., "look up base rates" as a prompt rule instead of a base-rate tool)
+- Where does the pipeline structure help the agent think well? Where does it get in the way?
+- Do hooks and reflection stages add forecasting value, or mostly process overhead?
 
-**Pipeline design** — Is the flow from question to forecast the right flow? Are hooks/reflection/review adding value proportional to their complexity? Would you design the pipeline differently?
+### Information flow
 
-**Information flow** — How does data move through the system? Are there places where information is lost, duplicated, or transformed unnecessarily?
+- Does the agent get the right information at the right time?
+- Is there data available in the pipeline that doesn't reach the agent effectively?
+- Are tool results structured so the agent can use them directly, or does it need to parse/interpret?
 
-**What's no longer needed** — Code, tools, prompt sections, or pipeline stages that could be removed without loss.
+### What's earning its keep
 
-## Phase 3: Propose
+Not everything needs to change. Identify components that are clearly pulling their weight — tools that provide high-value data, prompt sections that teach genuinely useful strategies, pipeline stages that improve forecast quality. These should be protected from unnecessary change.
 
-Present your findings as a **design document**.
+## Phase 3: Cross-Reference with Performance Data
 
-### 1. System overview (as you understand it)
+Now — and only now — look at how the agent actually performs. The goal is to validate, challenge, or enrich your Phase 2 assessment with ground truth.
 
-How the system works, from your reading. Validates your understanding — the user can correct misunderstandings before you build on them.
+### 3a. Recent feedback-loop findings
 
-### 2. What's working well
+Read the most recent 2-3 analysis docs from `notes/feedback_loop/`. Extract:
+- Recurring error types (wrong base rate, missed data, stale data, overconfident CDF, etc.)
+- Tool health flags — which tools are failing or underperforming?
+- Capability gaps — what has feedback-loop identified as missing?
+- What the agent does well — patterns of strong performance
 
-Design choices that are sound and would survive a rewrite. Be specific about why — this protects good decisions from unnecessary change.
+### 3b. Calibration data
 
-### 3. Structural proposals
+```bash
+uv run aib-devtools calibration summary
+uv run aib-devtools scores summary
+```
 
-For each:
-- **What**: The change — consolidation, restructure, new abstraction, new tool, removal
-- **Why**: What's wrong with the current design, or what gap exists
-- **Greenfield**: What this would look like if built from scratch
-- **Migration**: How to get from here to there
+Where is the agent well-calibrated? Where is it systematically off?
 
-This includes building new things. If the system is missing a tool, an abstraction, or a pipeline stage that the greenfield design would have — propose it. Design review isn't just about trimming; it's about filling holes.
+### 3c. Reconcile
 
-Order by structural importance, not ease of implementation.
+For each finding from Phase 2:
+- **Confirmed**: Performance data supports this assessment
+- **Challenged**: The data tells a different story — update your view
+- **Blind spot**: Something the data reveals that your code read missed
+- **Unconfirmed**: No performance data either way — flag as speculative
 
-## Phase 4: Discussion
+This reconciliation is the unique value of running /design. The feedback loop sees patterns in outcomes; the fresh code read sees structural gaps. The intersection is where the strongest proposals come from.
 
-Use AskUserQuestion to present your top 3 proposals and get the user's reaction. The output becomes the input to a `/refactor` session or a new worktree.
+## Phase 4: Propose
+
+Present changes ranked by **expected impact on forecast accuracy**.
+
+For each proposal:
+- **What**: The change — new tool, tool enhancement, pipeline modification, prompt restructure
+- **Why**: What forecasting problem it solves, with evidence (Phase 2 assessment + Phase 3 data)
+- **Bitter Lesson**: Classify as tool > capability > principle > prompt patch. Prefer the left side.
+- **Effort**: Small / medium / large
+
+Group proposals:
+1. **High-confidence improvements** — Both code analysis and performance data point the same way
+2. **Fresh-eye findings** — Code review surfaced issues not yet visible in performance data
+3. **Data-confirmed gaps** — Performance data shows problems the code review can now explain
+
+## Phase 5: Discussion
+
+Use AskUserQuestion to present top 3-5 proposals and get the user's reaction. The output becomes the input to implementation work.
 
 ## Principles
 
-- **Design over performance.** "The forecasts are inaccurate" is not a design finding. "The prompt conflates strategy guidance with output formatting" is.
-- **Greenfield thinking.** For every component, ask "would I build it this way?" If not, that's a finding — even if the current version works.
-- **Removal is a feature.** Every component should justify its existence.
-- **Structural over incremental.** If your proposal could be a one-line fix, think bigger. If it requires rewriting everything, think smaller. The sweet spot is changes that simplify the system's conceptual model.
+- **Forecasting over engineering.** "The module boundaries are clean" is not a finding. "The agent has no tool for checking prediction market prices" is.
+- **Fresh eyes matter.** Read the code before the performance data. Your unbiased assessment catches things the feedback loop can't.
+- **The Bitter Lesson.** Tool > capability > principle > prompt patch. If the prompt says "look up X", that should probably be a tool that provides X.
+- **Data augmentation pattern.** Tools should enrich data inside the tool, not return raw results for the agent to interpret. If a tool isn't doing this, that's a finding.
+- **Propose, don't implement.** This is a review. Present findings and let the user decide.
