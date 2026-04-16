@@ -1,0 +1,97 @@
+---
+timestamp: 2026-04-16 18:58:43 UTC
+question_type: binary
+factors:
+- description: CP currently exactly at 15.00% threshold; strict inequality means any
+    drift down or stagnation resolves NO
+  logit: -0.3
+  confidence: 0.9
+  effective_logit: -0.27
+- description: Historical mean of recent 6 snapshots is 17.1%, suggesting mild mean
+    reversion upward
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+- description: CP has oscillated 14.8-20.0 over 6 weeks; 3/6 readings strictly >15%
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Most recent trend is down (20→15 in one week), suggesting negative
+    momentum
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Monte Carlo mean-reversion simulation: P(>15%) ≈ 0.59; random walk:
+    ≈ 0.50'
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+- description: Status quo (Trump deregulatory stance) supports NO on underlying question,
+    but CP already prices this in
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+tentative_estimate:
+  logit: 0.15
+  probability: 0.52
+anchor: Historical mean of recent CP readings (17.1%) with observed weekly volatility
+  (~3.4pp std) — suggests ~55% probability of being strictly >15% after 11 days from
+  15.00
+assessment: 'Meta-prediction question. CP sits exactly at 15.00% on April 13, and
+  the question resolves based on whether it''s STRICTLY > 15% on April 24 (11 days
+  later). Historical CP history over 6 weeks shows oscillation between 14.8-20.0,
+  with mean ~17%. Three of six snapshots are strictly above 15%. Pure random walk
+  simulation gives ~50%; mean reversion to historical mean gives ~59%. The most recent
+  reading (Apr 13 = 15.00) is down from Apr 6 (20.00), so there''s slight negative
+  momentum. But the prior drop (Mar 9→16: 20→15) was followed by rebound to 18→20.
+  The oscillatory pattern suggests roughly coin-flip with slight upward bias from
+  mean reversion. Final estimate ~52% — slight lean YES but close to toss-up.'
+tool_audit: Used execute_code for Monte Carlo simulation based on historical CP snapshots.
+  No other tools needed for this meta-prediction.
+process_reflection: For meta-prediction questions with weekly CP snapshots, the provided
+  history is sufficient. The simulation framework works well. A useful addition would
+  be a tool that automatically computes threshold crossing probabilities from provided
+  CP history.
+computed:
+  factor_count: 6
+  factor_sum: -0.030000000000000054
+  tentative_logit: 0.15
+  logit_gap: 0.18000000000000005
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: CP currently exactly at 15.00% threshold; strict inequality means
+      any drift down or stagnation resolves NO
+    logit: -0.3
+    confidence: 0.9
+    effective_logit: -0.27
+  - description: Historical mean of recent 6 snapshots is 17.1%, suggesting mild mean
+      reversion upward
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  - description: CP has oscillated 14.8-20.0 over 6 weeks; 3/6 readings strictly >15%
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Most recent trend is down (20→15 in one week), suggesting negative
+      momentum
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Monte Carlo mean-reversion simulation: P(>15%) ≈ 0.59; random walk:
+      ≈ 0.50'
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  - description: Status quo (Trump deregulatory stance) supports NO on underlying
+      question, but CP already prices this in
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  dominant_factor: Historical mean of recent 6 snapshots is 17.1%, suggesting mild
+    mean reversion upward
+  dominant_effective_logit: 0.27999999999999997
+  factor_implied_probability: 0.4925005624493796
+  tentative_probability: 0.52
+  gap_pp: 2.7499437550620396
+  sources: []
