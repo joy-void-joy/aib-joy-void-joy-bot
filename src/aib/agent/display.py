@@ -9,6 +9,7 @@ import json
 import logging
 
 from rich.console import Console
+from rich.style import Style
 
 from claude_agent_sdk import (
     ContentBlock,
@@ -33,6 +34,7 @@ _TOOL_COLORS = [
     "bright_red",
 ]
 _color_cycle = itertools.cycle(_TOOL_COLORS)
+_agent_color_cycle = itertools.cycle(_TOOL_COLORS)
 _id_to_color: dict[str, str] = {}
 _console = Console(highlight=False, markup=False)
 stream_log = logging.getLogger("aib.agent.stream")
@@ -94,6 +96,24 @@ def truncate_content(content: str | list | None, max_len: int = 500) -> str:
 def normalize_content(content: str | list | None) -> str:
     """Convert MCP content blocks to a plain string."""
     return _normalize_content(content)
+
+
+def _truncate_label(label: str, max_len: int = 30) -> str:
+    """Clean and truncate a label for use inside an agent prefix tag."""
+    cleaned = label.replace("\n", " ").strip()
+    return cleaned[: max_len - 3] + "..." if len(cleaned) > max_len else cleaned
+
+
+def make_agent_prefix(agent_type: str, label: str | None = None) -> str:
+    """Build an ANSI-colored prefix like '  ↳ [research: <label>] ' for a nested sub-agent.
+
+    Each call picks the next color from a cycle so parallel/sequential
+    sub-agent instances can be visually distinguished. Call once per
+    sub-agent launch and reuse the returned prefix across all print_block
+    calls for that instance.
+    """
+    tag = f"[{agent_type}: {_truncate_label(label)}]" if label else f"[{agent_type}]"
+    return f"  ↳ {Style(color=next(_agent_color_cycle)).render(tag)} "
 
 
 def print_block(block: ContentBlock, prefix: str = "") -> None:
