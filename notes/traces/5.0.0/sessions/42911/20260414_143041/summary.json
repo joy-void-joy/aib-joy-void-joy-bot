@@ -1,0 +1,129 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed the agent's trace for Metaculus question 42911: \"Will an AdaptyvBio protein-binder competition have >75% of tested designs be classified as binders before 2030?\" The agent conducted thorough research using multiple tools:\n\n- **Metaculus API**: Retrieved the full question details, including resolution criteria (>75% of ALL computationally generated designs selected for experimental testing must be classified as binders) and fine print (novel designs only).\n- **Research tool** (`mcp__research__research`): Obtained comprehensive data on AdaptyvBio's competition history and the state of computational protein design tools (2024-2026).\n- **Web search**: Found details on the RBX-1 competition (GEM × Adaptyv, ICLR 2026 workshop), BindCraft success rates, and Escalante/Mosaic tool performance.\n- **URL fetch**: Extracted specific details from Escalante's blog (8/10 PDL1, 7/10 IL7RA success rates) and the GEM workshop page (300 designs, expert teams, April 26 results).\n- **Monte Carlo simulation**: Ran multiple scenario-based simulations in a sandbox to model improvement trajectories.\n\n## Key Evidence\n\n- **AdaptyvBio competition history**:\n  - EGFR R1 (Oct 2024): **2.5%** hit rate (201 designs)\n  - EGFR R2 (Dec 2024): **14%** hit rate (400 designs) — 5.6× improvement\n  - Nipah (Jan 2026): **9.6%** hit rate (1,030 designs) — harder target\n  - RBX-1 (2026): 300 designs, results pending April 26, 2026\n\n- **Individual vs. competition-wide performance gap**: Escalante's Mosaic achieved **88.8%** (n=9) in Nipah, while the overall competition rate was **9.6%**. This ~79 percentage point gap is the central challenge.\n\n- **Tool performance in competition vs. published benchmarks**: `BindCraft` claims 10-100% (avg ~46%) in its Nature paper but achieved only **5.7%** on Nipah in the competition (n=88). This suggests real-world competition conditions are substantially harder.\n\n- **State of the art tools**: AlphaProteo (9-88%, closed source), BindCraft (10-100%, open source), Mosaic/Escalante (70-90% on select targets), Latent-X (claims 90-100% macrocyclic, preprint only).\n\n- **Expert-only competitions**: RBX-1 is a precedent for smaller, more selective competitions that could boost overall rates.\n\n## Conclusion\n\nThe agent concluded at **25% probability**. The reasoning path was:\n\n1. Current best competition-wide rate is **14%**, threshold is **75%** — a ~5× gap\n2. Monte Carlo simulations across 5 scenarios (conservative, base, fast improvement, expert, expert+fast) plus a \"no more competitions\" scenario yielded a weighted cumulative of **~31%**\n3. The agent adjusted downward to **25%** citing concerns about optimistic tool improvement assumptions, particularly the BindCraft paper-vs-competition performance gap (46% → 5.7%)\n4. Key paths to YES: tool commoditization, expert-only formats, improved in-silico screening, favorable targets\n5. Key barriers: enormous gap between current and threshold rates, target difficulty variance, participant diversity dragging averages down",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__metaculus__get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "high",
+        "notes": "Retrieved full question details including resolution criteria and fine print"
+      },
+      "mcp__metaculus__get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "low",
+        "notes": "Returned empty array, no linked questions found"
+      },
+      "mcp__research__research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "high",
+        "notes": "Provided comprehensive competition history and tool benchmarks in a single call with 2 queries"
+      },
+      "mcp__search__web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": "Found RBX-1 details, BindCraft info, Escalante blog; 2 searches for prediction markets found nothing specific"
+      },
+      "mcp__search__fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "high",
+        "notes": "Extracted key details from Escalante blog and GEM workshop page"
+      },
+      "mcp__sandbox__execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": "Monte Carlo simulations across scenarios; first non-vectorized version timed out, second vectorized version worked; results highly assumption-dependent"
+      },
+      "mcp__notes__reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": "Reviewer verified factual claims and approved forecast"
+      }
+    },
+    "capability_gaps": [
+      "No prediction market data found for this specific question (Manifold had protein design prediction markets but none on this exact threshold)",
+      "No ability to query Proteinbase directly for raw competition data distributions"
+    ],
+    "subtle_bugs": [
+      "The first Monte Carlo simulation (non-vectorized, 100K sims with for-loops) timed out after 30 seconds, wasting a code execution turn. The agent recovered by vectorizing with numpy."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Multi-scenario Monte Carlo simulation combining historical competition data with projected tool improvement rates under conservative, base, fast-improvement, and expert-competition scenarios.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The rate at which average competition participants' tools and skills improve enough to close the gap from 14% overall to 75% overall within 3.5 years."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The Monte Carlo model's 'fast improvement' scenario assumes average tool hit rate increases linearly by 18 percentage points per year (from 15% to 78% by late 2029). BindCraft's competition performance (5.7%) vs published average (46%) suggests even current best open-source tools perform ~8x worse in competition settings than benchmarks suggest. The linear improvement assumption may be overly generous even for the 'fast' scenario, and this scenario received 20% weight.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent searched for prediction markets but found none specific to this question. AdaptyvBio's own Manifold prediction markets for the Nipah competition were mentioned in search results but not investigated. These could have provided community probability estimates on hit rate thresholds.",
+      "severity": "minor"
+    },
+    {
+      "category": "computation_error",
+      "evidence": "The target_difficulty multiplier in the Monte Carlo model uses a uniform distribution [0.5, 1.2], which can amplify hit rates above their calibrated values (multiplier > 1.0 is 1/3 of the distribution). This means easy targets can push overall rates unrealistically high. The sensitivity analysis showed this parameter matters significantly: changing from [0.5, 1.2] to [0.4, 1.0] dropped late-2029 base P(>75%) from 9.3% to 0.1%.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "20%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the critical distinction between individual performer rates (90%) and competition-wide rates (14%), which is the crux of this question",
+    "Surfaced the BindCraft paper-vs-competition performance gap (46% published avg vs 5.7% on Nipah) as a key reality check against naive tool improvement extrapolation",
+    "Used Monte Carlo simulation with multiple scenarios (conservative, base, fast, expert, expert+fast) to structure reasoning about deep uncertainty, then appropriately discounted the model output from 31% to 25%",
+    "Identified the RBX-1 workshop competition as evidence that expert-only formats exist, correctly noting this could be a path to higher overall rates",
+    "Thorough research across multiple data sources: Metaculus API, research tool, web search, URL fetch for primary sources (Escalante blog, GEM workshop page)",
+    "Explicit adversarial reasoning in the reflection ('what would a smart disagreer say') with substantive response"
+  ],
+  "weaknesses": [
+    "Monte Carlo model parameters (improvement rates, scenario weights) are largely subjective rather than empirically calibrated — the model provides structure but the output (31%) is highly sensitive to assumptions, making the simulation more of a reasoning scaffold than a true quantitative model",
+    "Did not investigate the Manifold prediction markets that AdaptyvBio themselves set up for their competitions, which could have provided additional calibration data",
+    "The target_difficulty multiplier allowing values >1.0 can unrealistically amplify hit rates — a uniform [0.5, 1.0] distribution for difficulty (where 1.0 is 'ideal' target and difficulty only reduces performance) would be more defensible",
+    "Did not consider whether improved in-silico pre-screening could shift the denominator — if competitions start testing only the most promising 100 designs instead of 1000, the tested-design success rate could be much higher even without tool improvement"
+  ],
+  "pipeline": {
+    "issues": [
+      "First Monte Carlo simulation (non-vectorized Python with 100K iterations in a for-loop) timed out after 30 seconds, requiring a rewrite with numpy vectorization — minor token waste"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Calibrate Monte Carlo parameters against historical data more rigorously — e.g., verify that the model at t=0 reproduces observed competition-wide rates (it produced 18% median vs. 9.6-14% actual)",
+    "Investigate AdaptyvBio's Manifold prediction markets for additional calibration on community expectations",
+    "Use a target difficulty multiplier bounded at 1.0 (difficulty only reduces performance, never enhances it beyond baseline) for more defensible modeling",
+    "Consider the in-silico screening improvement pathway more explicitly — if design-selection methods improve, the tested-design success rate could rise even without better design tools",
+    "Start with vectorized numpy code to avoid timeout on Monte Carlo simulations"
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "slug": "computational-protein-design-binder-success-rates-caee394e",
+  "query": "Computational protein design binder success rates state of the art 2025 2026 RFdiffusion AlphaFold",
+  "answer": "\n\nBased on all the data gathered across multiple rounds of research, here is my comprehensive synthesis:\n\n---\n\n# Computational Protein Binder Design: State-of-the-Art Success Rates (2024–2026)\n\n## Executive Summary\n\nThe field of computational protein binder design has undergone a dramatic transformation since 2023. Experimental success rates have improved from <0.1% (Rosetta-era methods) to routinely 10–90%+ with the latest ML-based approaches. The key inflection point was the introduction of diffusion-based and AlphaFold-leveraging methods in 2023–2024, with 2025–2026 seeing rapid iteration on these foundations. As of mid-2026, multiple competing approaches claim state-of-the-art performance, though direct comparisons are complicated by differing target panels, experimental protocols, and (critically) whether methods are open-source.\n\n## 1. Historical Baseline: Rosetta-Era Methods (Pre-2023)\n\nTraditional computational protein design using Rosetta relied on physics-based energy functions and combinatorial sequence optimization. Success rates for de novo binder design were extremely low:\n\n- **Experimental success rates**: Typically <0.1% of designs showed measurable binding\n- **Binding affinities**: Usually micromolar (µM) range, requiring extensive directed evolution to reach nanomolar\n- **Process**: Required screening thousands to tens of thousands of designs for each successful binder\n- **Notable limitation**: Interface design was constrained to pre-defined backbone geometries\n\n## 2. RFdiffusion (2023–2024, Baker Lab / UW IPD)\n\nRFdiffusion introduced denoising diffusion on protein structures, paired with ProteinMPNN for sequence design. It represented a paradigm shift but still had significant limitations:\n\n### Standard Binder Design\n- **Experimental success rates**: 0–33.7% across tested targets (highly target-dependent)\n  - IL-7Rα: 17% (30/179)\n  - PD-L1: 13.4% (13/97)\n  - TrkA: 0% (0/98)\n  - BHRF1: 33.7% (best case, from AlphaProteo comparison panel)\n  - SC2 RBD: 14.3%\n- **Binding affinities**: Best KDs typically 14–370 nM range\n- **Key limitation**: Predominantly generates helical interfaces; struggles with hydrophilic/flat epitopes\n\n### β-Pairing Targeted RFdiffusion (Published Nature Communications, Jan 2026)\n- **Innovation**: Conditions diffusion to generate β-sheet interfaces, expanding the epitope space\n- **In silico success rate**: 9.2% (vs 0.98% for standard hotspot conditioning) — ~9-fold improvement\n- **Best experimental affinities**: ALK-3bp 528 pM, PDGFRα 137 pM, α-CTXbp 1.9 nM\n- **Key advance**: Enabled binders for targets where standard RFdiffusion completely failed (ALK-3, KIT)\n- **Crystal structure validation**: KITbp at 1.9 Å all-atom RMSD to design model\n\n### RFdiffusion for Antibody Design (Published Nature, 2025)\n- **VHH (nanobody) success rates**: 0–2% across targets (~9,000 designs screened per target)\n- **Best VHH affinities**: Influenza HA 78 nM, TcdB 260 nM\n- **scFv affinities**: TcdB 72 nM\n- **After OrthoRep directed evolution**: ~100-fold affinity improvement\n- **Cryo-EM validation**: 3.0–6.1 Å resolution structures\n\n### Documented Limitations\n- A bioRxiv preprint (2025.02.07.636769) titled \"RFdiffusion Exhibits Low Success Rate in Designing Functional Protein Binders\" specifically documents reproducibility challenges, though the full text was not accessible.\n\n## 3. AlphaProteo (Sep 2024, Google DeepMind)\n\nAlphaProteo uses a generator-filter architecture trained on PDB and PPI data, with an AlphaFold2-based confidence filter.\n\n### Experimental Success Rates (Table 1 of paper)\n| Target | Designs Tested | Success Rate | Best KD |\n|--------|---------------|-------------|---------|\n| BHRF1 | 8 | 88% (7/8) | 3.0 nM |\n| SC2 RBD | 96 | 12% | 26 nM |\n| IL-7Rα | 163 | 25% (41/163) | 82 pM |\n| PD-L1 | 89 | 15% (13/89) | 0.18 nM |\n| TrkA | 96 | 9% (9/96) | 0.96 nM |\n| IL-17A | 96 | 14% (13/96) | 11.8 nM |\n| VEGF-A | 96 | 33% (32/96) | 0.48 nM |\n| TNFα | 96 | **0%** (0/96) | — |\n\n### Key Characteristics\n- **Closed-source**: Not publicly available; only DeepMind can run the pipeline\n- **Picomolar affinities**: Achieved 82 pM for IL-7Rα without any optimization — a first for de novo design\n- **TNFα failure**: Could not design binders for TNFα (homotrimeric target), a notable gap\n- **Filter importance**: The AF2-based filter is critical; without it, success rates drop substantially\n- **Training data concern**: Possible overlap between training set and benchmark targets (BHRF1's 88% rate on only 8 designs raises questions)\n\n## 4. BindCraft (Published Nature, 2025)\n\nBindCraft is an open-source pipeline that uses AlphaFold2's structure prediction weights in a hallucination/optimization loop for binder design.\n\n### Experimental Success Rates\n- **Range**: 10–100% across 12 diverse targets\n- **Average**: ~46.3% across all targets\n- **Standout results**: SpCas9 100%, CLDN1 85.7%, PD-L1 77.8%\n- **Best affinities**: PD-1 <1 nM, Der f7 12.8 nM\n- **Crystal structure validation**: Backbone RMSD 1.7 Å to design model\n- **Interface novelty**: TM score 0.15 vs known protein-protein interactions (genuinely novel interfaces)\n\n### Key Characteristics\n- **Open-source**: Fully available, leverages public AF2 weights\n- **No diffusion model**: Uses iterative optimization (hallucination) rather than generative diffusion\n- **Diverse targets**: Tested on membrane proteins, enzymes, viral proteins, and more\n- **Practical utility**: Lower computational cost per design than RFdiffusion\n\n## 5. Latent-X (Jul 2025, Latent Labs)\n\nLatent-X is an all-atom generative model operating in latent space, claiming state-of-the-art performance across both macrocyclic peptides and mini-protein binders.\n\n### Macrocyclic Peptide Hit Rates\n| Target | Hit Rate |\n|--------|---------|\n| MDM2 | 90.9% |\n| MCL-1 | 100% |\n| PD-L1 | 94.1% |\n\n### Mini-Binder Hit Rates\n| Target | Hit Rate |\n|--------|---------|\n| BHRF1 | 64% |\n| SC2 RBD | 52% |\n| PD-L1 | 49% |\n| IL-7Rα | 22% |\n| TrkA | 10% |\n\n### Key Characteristics\n- **Best claimed affinities**: TrkA 0.04 nM, IL-7R <0.01 nM, SC2 RBD <0.01 nM\n- **Claims superiority** over AlphaProteo and RFdiffusion on shared targets\n- **10× faster inference** than RFdiffusion\n- **All-atom generation**: Designs both backbone and side chains simultaneously\n- **Status**: Preprint only (not yet peer-reviewed as of mid-2026)\n\n## 6. Proteina-Complexa (Mar 2026)\n\nA flow-based latent generation method with test-time optimization (TTO), representing the newest entrant.\n\n### Performance vs. RFdiffusion (In Silico, 19 Targets)\n- **Average unique successes**: 14.4 (Complexa+MPNN) vs 4.68 (RFdiffusion)\n- **Best method on**: 14/19 targets (vs RFdiffusion on 3/19)\n- **TNFα**: 15 unique successes (where AlphaProteo achieved 0)\n- **Generation speed**: 4.5× faster per sample than RFdiffusion (15.6s vs 70.8s)\n- **Enzyme design**: 41/41 tasks successful vs RFdiffusion2's 30/41\n\n### Key Characteristics\n- **In silico only**: No wet-lab experimental validation yet\n- **Broad applicability**: Works for both binder and enzyme design\n- **Test-time optimization**: Key differentiator enabling target-specific refinement\n- **Status**: Preprint (arXiv:2603.27950)\n\n## 7. BECraft (May 2025)\n\nBECraft (BindEnergyCraft) reinterprets structure predictor confidence scores as energy functions for binder design.\n\n### In Silico Performance\n- **Outperforms** BindCraft, RFdiffusion, and ESM3 on **7/8 targets** in silico\n- **ESM3 baseline**: 0% success across all 8 targets (notable failure of the ESM approach for binder design)\n- **Virtual screening AUPRC**: 0.79 (vs Boltz-1 0.68, Rosetta 0.61)\n\n### Key Characteristics\n- **Energy-based approach**: Novel theoretical framework connecting structure prediction confidence to binding energy\n- **No experimental validation yet**: In silico benchmarks only\n- **Status**: Preprint (arXiv:2505.21241)\n\n## 8. Meta-Analysis: Community-Wide Benchmarking\n\nA meta-analysis of 3,766 experimentally tested binders across 15 targets (bioRxiv 2025.08.14.670059) found:\n- **Overall success rate**: 436/3,766 = **11.6%** classified as in vitro binders\n- **Best in silico predictor**: AF3 ipSAE_min (1.4-fold improvement in average precision vs ipAE)\n- **Key insight**: In silico filtering remains critical — raw generation success rates are much lower than post-filter rates\n\n## 9. Trajectory and Key Themes\n\n### Success Rate Progression\n| Era | Method | Typical Success Rate | Best Affinity |\n|-----|--------|---------------------|---------------|\n| Pre-2023 | Rosetta | <0.1% | µM |\n| 2023 | RFdiffusion | 0–34% | 14–370 nM |\n| 2024 | AlphaProteo | 9–88% | 82 pM |\n| 2025 | BindCraft | 10–100% | <1 nM |\n| 2025 | Latent-X | 10–100% | <0.01 nM (claimed) |\n| 2026 | Proteina-Complexa | ~3× RFdiffusion (in silico) | N/A (no wet lab) |\n| 2026 | β-pairing RFdiffusion | ~9× standard (in silico) | 137 pM |\n\n### Important Caveats\n1. **Target dependence**: Success rates vary enormously by target (TNFα remains unsolved by most methods; BHRF1 is relatively easy)\n2. **Benchmark heterogeneity**: Different papers use different target panels, experimental protocols, and success criteria, making direct comparisons imperfect\n3. **Publication bias**: Groups may report on targets where their method performs best\n4. **In silico vs. experimental**: Many newer methods (Proteina-Complexa, BECraft) lack wet-lab validation\n5. **Closed-source concerns**: AlphaProteo and Latent-X are not publicly available, limiting independent verification\n6. **Training/test overlap**: Potential data leakage in benchmarks when training on PDB structures of well-studied targets\n7. **Affinity claims**: Sub-nanomolar and picomolar affinities from preprints (especially Latent-X's <0.01 nM claims) await independent confirmation\n\n### Key Open Questions\n- Can the high success rates of BindCraft and Latent-X be reproduced across truly novel targets not in training data?\n- Will Proteina-Complexa's in silico advantages translate to experimental success?\n- When will AlphaProteo (or its successor) be made publicly available?\n- Can any method reliably design binders for \"hard\" targets (homotrimers like TNFα, disordered proteins)?\n\n---",
+  "sources": [
+    {
+      "url": "https://arxiv.org/abs/2409.08022",
+      "title": "AlphaProteo: De Novo Binder Design with AlphaFold",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Google DeepMind paper reporting 9-88% experimental success rates across 7 targets with picomolar affinities. Generator-filter architecture using AF2-based confidence filtering."
+    },
+    {
+      "url": "https://www.nature.com/articles/s41586-025-09429-6",
+      "title": "BindCraft: De novo protein binder design using AlphaFold",
+      "domain": "nature.com",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Open-source pipeline achieving 10-100% experimental success rates across 12 diverse targets using AF2 hallucination-based optimization."
+    },
+    {
+      "url": "https://www.nature.com/articles/s41467-025-67866-3",
+      "title": "β-pairing targeted RFdiffusion for binder design on hydrophilic surfaces",
+      "domain": "nature.com",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Extension of RFdiffusion with β-sheet interface conditioning achieving ~9-fold improvement in silico and sub-nanomolar affinities on previously intractable targets."
+    },
+    {
+      "url": "https://www.nature.com/articles/s41586-025-09721-5",
+      "title": "RFdiffusion for de novo antibody design",
+      "domain": "nature.com",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "RFdiffusion applied to VHH/scFv antibody design with 0-2% experimental success rates across targets."
+    },
+    {
+      "url": "https://arxiv.org/abs/2507.19375",
+      "title": "Latent-X: All-atom binder generation model",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Claims 90-100% macrocyclic hit rates and 10-64% mini-binder hit rates with sub-picomolar affinities, operating in latent space."
+    },
+    {
+      "url": "https://arxiv.org/abs/2603.27950",
+      "title": "Proteina-Complexa: Flow-based latent generation for protein complex design",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "March 2026 preprint reporting ~3× more in silico successes than RFdiffusion across 19 targets, including solving TNFα."
+    },
+    {
+      "url": "https://arxiv.org/abs/2505.21241",
+      "title": "BECraft: Energy-based binder design using structure predictor confidence",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Outperforms BindCraft, RFdiffusion, and ESM3 on 7/8 targets in silico using energy-based reinterpretation of structure prediction confidence."
+    },
+    {
+      "url": "https://www.biorxiv.org/content/10.1101/2025.08.14.670059",
+      "title": "Meta-analysis of 3,766 experimentally tested computational binders",
+      "domain": "biorxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Community-wide analysis finding 11.6% overall confirmed binding rate with AF3 ipSAE_min as best predictor."
+    },
+    {
+      "url": "https://www.biorxiv.org/content/10.1101/2025.02.07.636769v1",
+      "title": "RFdiffusion Exhibits Low Success Rate in Designing Functional Protein Binders",
+      "domain": "biorxiv.org",
+      "accessed_at": "2026-04-14T00:00:00Z",
+      "snippet": "Preprint documenting reproducibility challenges and low success rates for RFdiffusion binder design."
+    }
+  ],
+  "key_facts": [
+    "Rosetta-era de novo binder design had experimental success rates below 0.1%, typically requiring screening of tens of thousands of designs",
+    "RFdiffusion (2023) achieved 0-33.7% experimental success rates across targets, with best affinities of 14-370 nM; IL-7Rα 17%, PD-L1 13.4%, TrkA 0%",
+    "AlphaProteo (Sep 2024, DeepMind) achieved 9-88% experimental success rates across 7 targets with picomolar affinities (best: 82 pM for IL-7Rα), but failed on TNFα (0%) and remains closed-source",
+    "BindCraft (Nature 2025) achieved 10-100% experimental success rates across 12 targets (avg ~46.3%), is open-source, and leverages AlphaFold2 weights",
+    "β-pairing targeted RFdiffusion (Nature Comms, Jan 2026) improved in silico success ~9-fold over standard RFdiffusion (9.2% vs 0.98%) and achieved sub-nanomolar affinities on previously intractable targets",
+    "RFdiffusion antibody (VHH) design achieved only 0-2% experimental success rates with 9,000 designs screened per target",
+    "Latent-X (Jul 2025 preprint) claims 90-100% macrocyclic hit rates and 10-64% mini-binder hit rates with sub-picomolar affinities, but is not peer-reviewed and is closed-source",
+    "Proteina-Complexa (Mar 2026 preprint) achieved 14.4 avg unique in silico successes vs 4.68 for RFdiffusion across 19 targets, including 15 successes on TNFα where AlphaProteo got 0, but lacks wet-lab validation",
+    "BECraft (May 2025 preprint) outperforms BindCraft, RFdiffusion, and ESM3 on 7/8 targets in silico; ESM3 achieved 0% success across all 8 targets",
+    "A meta-analysis of 3,766 experimentally tested binders found an overall 11.6% confirmed binding rate, with AF3 ipSAE_min as the best in silico predictor of binding success",
+    "In silico filtering (AF2/AF3-based) is critical: raw generation success rates are much lower than post-filter success rates across all methods",
+    "Success rates are highly target-dependent: BHRF1 is relatively easy (33-88%), while TNFα remains largely unsolved by most methods"
+  ],
+  "data_points": [
+    {
+      "metric": "AlphaProteo experimental success rate (BHRF1)",
+      "value": 88.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (SC2 RBD)",
+      "value": 12.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (IL-7Rα)",
+      "value": 25.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (PD-L1)",
+      "value": 15.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (TrkA)",
+      "value": 9.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (IL-17A)",
+      "value": 14.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (VEGF-A)",
+      "value": 33.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo experimental success rate (TNFα)",
+      "value": 0.0,
+      "unit": "percent",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo best binding affinity (IL-7Rα)",
+      "value": 0.082,
+      "unit": "nM KD",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "AlphaProteo best binding affinity (PD-L1)",
+      "value": 0.18,
+      "unit": "nM KD",
+      "as_of": "2024-09-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "RFdiffusion experimental success rate (IL-7Rα)",
+      "value": 17.0,
+      "unit": "percent",
+      "as_of": "2023-07-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "RFdiffusion experimental success rate (PD-L1)",
+      "value": 13.4,
+      "unit": "percent",
+      "as_of": "2023-07-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "RFdiffusion experimental success rate (TrkA)",
+      "value": 0.0,
+      "unit": "percent",
+      "as_of": "2023-07-01",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    },
+    {
+      "metric": "RFdiffusion VHH antibody design success rate",
+      "value": 2.0,
+      "unit": "percent (max)",
+      "as_of": "2025-06-01",
+      "source_url": "https://www.nature.com/articles/s41586-025-09721-5"
+    },
+    {
+      "metric": "BindCraft average experimental success rate",
+      "value": 46.3,
+      "unit": "percent",
+      "as_of": "2025-01-01",
+      "source_url": "https://www.nature.com/articles/s41586-025-09429-6"
+    },
+    {
+      "metric": "BindCraft experimental success rate (SpCas9)",
+      "value": 100.0,
+      "unit": "percent",
+      "as_of": "2025-01-01",
+      "source_url": "https://www.nature.com/articles/s41586-025-09429-6"
+    },
+    {
+      "metric": "β-pairing RFdiffusion in silico success rate",
+      "value": 9.2,
+      "unit": "percent",
+      "as_of": "2026-01-01",
+      "source_url": "https://www.nature.com/articles/s41467-025-67866-3"
+    },
+    {
+      "metric": "Standard RFdiffusion in silico success rate (hotspot)",
+      "value": 0.98,
+      "unit": "percent",
+      "as_of": "2026-01-01",
+      "source_url": "https://www.nature.com/articles/s41467-025-67866-3"
+    },
+    {
+      "metric": "β-pairing RFdiffusion best affinity (PDGFRα)",
+      "value": 0.137,
+      "unit": "nM KD",
+      "as_of": "2026-01-01",
+      "source_url": "https://www.nature.com/articles/s41467-025-67866-3"
+    },
+    {
+      "metric": "Latent-X macrocyclic hit rate (MCL-1)",
+      "value": 100.0,
+      "unit": "percent",
+      "as_of": "2025-07-01",
+      "source_url": "https://arxiv.org/abs/2507.19375"
+    },
+    {
+      "metric": "Latent-X mini-binder hit rate (BHRF1)",
+      "value": 64.0,
+      "unit": "percent",
+      "as_of": "2025-07-01",
+      "source_url": "https://arxiv.org/abs/2507.19375"
+    },
+    {
+      "metric": "Latent-X mini-binder hit rate (SC2 RBD)",
+      "value": 52.0,
+      "unit": "percent",
+      "as_of": "2025-07-01",
+      "source_url": "https://arxiv.org/abs/2507.19375"
+    },
+    {
+      "metric": "Proteina-Complexa avg unique in silico successes per target",
+      "value": 14.4,
+      "unit": "unique successes",
+      "as_of": "2026-03-01",
+      "source_url": "https://arxiv.org/abs/2603.27950"
+    },
+    {
+      "metric": "RFdiffusion avg unique in silico successes per target (Proteina benchmark)",
+      "value": 4.68,
+      "unit": "unique successes",
+      "as_of": "2026-03-01",
+      "source_url": "https://arxiv.org/abs/2603.27950"
+    },
+    {
+      "metric": "Meta-analysis overall confirmed binder rate",
+      "value": 11.6,
+      "unit": "percent",
+      "as_of": "2025-08-01",
+      "source_url": "https://www.biorxiv.org/content/10.1101/2025.08.14.670059"
+    },
+    {
+      "metric": "Meta-analysis total binders tested",
+      "value": 3766.0,
+      "unit": "binders",
+      "as_of": "2025-08-01",
+      "source_url": "https://www.biorxiv.org/content/10.1101/2025.08.14.670059"
+    },
+    {
+      "metric": "Meta-analysis confirmed binders",
+      "value": 436.0,
+      "unit": "binders",
+      "as_of": "2025-08-01",
+      "source_url": "https://www.biorxiv.org/content/10.1101/2025.08.14.670059"
+    },
+    {
+      "metric": "Rosetta-era baseline success rate",
+      "value": 0.1,
+      "unit": "percent (upper bound)",
+      "as_of": "2022-12-31",
+      "source_url": "https://arxiv.org/abs/2409.08022"
+    }
+  ],
+  "created_at": "2026-04-14T14:39:02.871225Z",
+  "updated_at": "2026-04-14T14:39:02.871225Z",
+  "stale_after": "2026-04-21T14:39:02.871225Z",
+  "resolvable_after": null,
+  "state": "fresh",
+  "superseded_by": null,
+  "revision_history": [],
+  "session_id": "53eb0f0d-351a-4919-8115-06739a0dc2b0",
+  "follow_up_count": 0
+}

@@ -1,0 +1,291 @@
+---
+timestamp: 2026-04-15 07:39:43 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay from March 27 peak: April 1 value is ~6-8 on the
+    Mar 10-Apr 9 scale, and without news would decay to ~0 by April 9, a decrease
+    of 6-8 points'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: Confirmed Reuters article on April 6 about Trump proposing to cut 9,400
+    TSA workers and $1.5B from budget - a major news catalyst that would re-spike
+    'tsa funding' searches
+  supports: Increases
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Fortune article April 3 about Trump's '$10B slush fund' for TSA keeps
+    topic in news before April 6
+  supports: Increases
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Congress on recess until mid-April - no legislative action to generate
+    additional news
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Wide ''Doesn''t change'' band: strict inequality (>3) means if Apr
+    1=7, Apr 9 must be 4-10 to qualify - 7 integer values vs 4 for Decreases (0-3)'
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.9
+  effective_logit: 0.7200000000000001
+- description: Google Trends quantization at low values (0-10 range) introduces noise
+    that could push outcomes either way
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: 3-day decay from April 6 re-spike to April 9 at ~42%/day residual brings
+    a moderate spike (25-30) back to ~5-6, roughly matching April 1 value
+  supports: Doesn't change
+  logit: 0.7
+  confidence: 0.65
+  effective_logit: 0.45499999999999996
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.48
+    Decreases: 0.4
+anchor: 'Niche policy terms on Google Trends: 98.5% of weekly comparisons show no
+  change (threshold=3) over 5-year baseline, but during active spike/decay periods,
+  volatility is extreme (CV=1.67)'
+assessment: 'The core dynamic is a tension between post-spike decay (which would produce
+  Decreases) and confirmed upcoming news events that could re-spike interest (which
+  could produce Doesn''t change or Increases).
+
+
+  April 1 is in the decay phase after the massive March 27 peak (100), likely around
+  6-8 on the resolution scale. Without intervention, pure decay would bring April
+  9 to ~0, clearly Decreases.
+
+
+  However, we have confirmed evidence of significant news events: a Fortune article
+  on April 3 about Trump''s TSA "slush fund" and a Reuters article on April 6 about
+  Trump proposing to cut 9,400 TSA workers and $1.5B from the budget. These would
+  drive renewed search interest in "tsa funding."
+
+
+  The April 6 story is particularly significant because cutting 9,400 TSA workers
+  during an active DHS shutdown is explosive news directly related to this exact search
+  term. A moderate re-spike (25-40 on the scale) with 3 days of decay at ~42%/day
+  would put April 9 at roughly 5-8, which is within 3 points of April 1''s value of
+  ~7.
+
+
+  Monte Carlo simulation across multiple scenarios gives: Increases ~9%, Doesn''t
+  change ~53%, Decreases ~38%. I adjust slightly upward for Increases (to 12%) given
+  the confirmed major news catalysts, and slightly for Decreases (to 40%) reflecting
+  the strong default decay force.
+
+
+  Key insight: the "Doesn''t change" band is wide relative to the range of plausible
+  April 9 values, making it the modal outcome even with high volatility in the underlying
+  search term.'
+calibration_notes: The long-run base rate (98.5% no-change) is not relevant here because
+  we're in an active spike/decay period. The simulation-based estimates are more appropriate.
+  The probabilities reflect genuine uncertainty about the magnitude of the April 6
+  re-spike.
+key_uncertainties: 1. Exact magnitude of the April 6 re-spike from budget cut news;
+  2. Whether the decay rate slows at low values (floor effect); 3. The exact April
+  1 value on the resolution scale (could be 5-9); 4. Whether additional unknown news
+  events occur between April 6-9
+tool_audit: research() returned excellent data on both TSA funding crisis context
+  and Google Trends volatility patterns. The volatility research included actual computed
+  statistics (CV, decay rates, autocorrelation). Web search found confirmed articles
+  from April 3 and April 6 providing crucial evidence of upcoming news catalysts.
+  fetch_url failed on the Google Trends page (expected - dynamic page). get_coherence_links
+  returned empty. execute_code worked well for Monte Carlo simulation.
+update_triggers: If the April 6 budget proposal generates massive mainstream coverage
+  (comparable to the airport chaos in late March), Increases probability would rise
+  to 25%+. If the news is a brief blip, Decreases rises to 50%+.
+process_reflection: 'The research tool was extremely effective here, providing both
+  qualitative context and quantitative data. The key analytical challenge was modeling
+  the interplay between post-spike decay and confirmed future news events. The Monte
+  Carlo simulation was essential for formalizing the scenario analysis. One gap: I
+  couldn''t directly access Google Trends data to verify exact values for April 1
+  - had to infer from the stated March 29 value and decay rate. A Google Trends API
+  tool would have been very helpful here.'
+computed:
+  factor_count: 7
+  factor_sum: 3.805
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay from March 27 peak: April 1 value is ~6-8 on the
+      Mar 10-Apr 9 scale, and without news would decay to ~0 by April 9, a decrease
+      of 6-8 points'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: Confirmed Reuters article on April 6 about Trump proposing to cut
+      9,400 TSA workers and $1.5B from budget - a major news catalyst that would re-spike
+      'tsa funding' searches
+    supports: Increases
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Fortune article April 3 about Trump's '$10B slush fund' for TSA keeps
+      topic in news before April 6
+    supports: Increases
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Congress on recess until mid-April - no legislative action to generate
+      additional news
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Wide ''Doesn''t change'' band: strict inequality (>3) means if Apr
+      1=7, Apr 9 must be 4-10 to qualify - 7 integer values vs 4 for Decreases (0-3)'
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.9
+    effective_logit: 0.7200000000000001
+  - description: Google Trends quantization at low values (0-10 range) introduces
+      noise that could push outcomes either way
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: 3-day decay from April 6 re-spike to April 9 at ~42%/day residual
+      brings a moderate spike (25-30) back to ~5-6, roughly matching April 1 value
+    supports: Doesn't change
+    logit: 0.7
+    confidence: 0.65
+    effective_logit: 0.45499999999999996
+  dominant_factor: 'Post-spike decay from March 27 peak: April 1 value is ~6-8 on
+    the Mar 10-Apr 9 scale, and without news would decay to ~0 by April 9, a decrease
+    of 6-8 points'
+  dominant_effective_logit: 1.02
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 1.42
+    factors:
+    - description: 'Post-spike decay from March 27 peak: April 1 value is ~6-8 on
+        the Mar 10-Apr 9 scale, and without news would decay to ~0 by April 9, a decrease
+        of 6-8 points'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.85
+      effective_logit: 1.02
+    - description: Congress on recess until mid-April - no legislative action to generate
+        additional news
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 1.0
+    factors:
+    - description: Confirmed Reuters article on April 6 about Trump proposing to cut
+        9,400 TSA workers and $1.5B from budget - a major news catalyst that would
+        re-spike 'tsa funding' searches
+      supports: Increases
+      logit: 1.0
+      confidence: 0.7
+      effective_logit: 0.7
+    - description: Fortune article April 3 about Trump's '$10B slush fund' for TSA
+        keeps topic in news before April 6
+      supports: Increases
+      logit: 0.5
+      confidence: 0.6
+      effective_logit: 0.3
+  - outcome: Doesn't change
+    factor_count: 3
+    logit_sum: 1.385
+    factors:
+    - description: 'Wide ''Doesn''t change'' band: strict inequality (>3) means if
+        Apr 1=7, Apr 9 must be 4-10 to qualify - 7 integer values vs 4 for Decreases
+        (0-3)'
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.9
+      effective_logit: 0.7200000000000001
+    - description: Google Trends quantization at low values (0-10 range) introduces
+        noise that could push outcomes either way
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.7
+      effective_logit: 0.21
+    - description: 3-day decay from April 6 re-spike to April 9 at ~42%/day residual
+        brings a moderate spike (25-30) back to ~5-6, roughly matching April 1 value
+      supports: Doesn't change
+      logit: 0.7
+      confidence: 0.65
+      effective_logit: 0.45499999999999996
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.25052761886531066
+      Doesn't change: 0.3681789766010091
+      Decreases: 0.3812934045336803
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.48
+      Decreases: 0.4
+    per_option_gap_pp:
+      Increases: -13.052761886531068
+      Doesn't change: 11.182102339899085
+      Decreases: 1.8706595466319698
+    max_gap_pp: -13.052761886531068
+    max_gap_option: Increases
+  sources:
+  - '[(Metaculus) Will the interest in “tsa funding” change between 2026-04-01 and
+    2026-04-09 according to Google Trends?](https://www.metaculus.com/questions/43016)'
+  - '[trends.google.com](https://trends.google.com/trends/explore?geo=US&tz=0&q=tsa%20funding&date=2026-03-10%202026-04-09)'
+  - '[2026 United States federal government shutdowns - Wikipedia](https://en.wikipedia.org/wiki/2026_United_States_federal_government_shutdowns)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43016
+- **Question ID**: 42952
+- **Session Duration**: 2040.2s (34.0 min)
+- **Cost**: $24.0407 total (orchestrator $3.9613 + sub-agents $20.0794)
+- **Tokens**: 21,927 total (29 in, 21,898 out)
+  - Cache: 589,224 read, 76,515 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/feedback-loop-03-29/logs/43016_20260401_000000/20260401-000000.log`
+
+### Tool Calls
+
+- **Total**: 281 calls
+- **Errors**: 17 (6.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1943 |
+| execute_code | 27 | 0 | 126ms | — |
+| fetch_url | 21 | 7 ⚠️ | 23171ms | — |
+| fred_series | 30 | 2 ⚠️ | 476ms | — |
+| get_coherence_links | 1 | 0 | 269ms | — |
+| get_metaculus_questions | 5 | 0 | 6659ms | — |
+| google_trends | 9 | 0 | 26740ms | — |
+| google_trends_compare | 1 | 0 | 295ms | — |
+| kalshi_price | 4 | 0 | 8285ms | — |
+| manifold_price | 1 | 0 | 170ms | — |
+| options_iv | 2 | 2 ⚠️ | 0ms | — |
+| premortem | 5 | 0 | 10ms | — |
+| reflection | 5 | 0 | 6392ms | — |
+| research | 4 | 0 | 1367752ms | $15.5777 |
+| search_exa | 13 | 0 | 46415ms | — |
+| search_markets | 2 | 0 | 16769ms | — |
+| stock_history | 7 | 0 | 53ms | — |
+| stock_price | 6 | 6 ⚠️ | 1749ms | — |
+| web_search | 96 | 0 | 61470ms | $4.3073 |
+| wikipedia | 42 | 0 | 2768ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “tsa funding” change between 2026-04-01 and...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=tsa%20...
+- [2026 United States federal government shutdowns - Wikipedia](https://en.wiki...
