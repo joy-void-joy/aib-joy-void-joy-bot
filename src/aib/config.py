@@ -237,12 +237,12 @@ class Settings(BaseSettings):
     subforecast_max_budget_usd: float = Field(
         default=5.0,
         validation_alias="AIB_SUBFORECAST_MAX_BUDGET_USD",
-        description="Maximum budget for each sub-forecast spawned by spawn_subquestions",
+        description="Maximum budget for each sub-forecast spawned by subforecast()",
     )
     sandbox_timeout_seconds: int = Field(
-        default=30,
+        default=60,
         validation_alias="AIB_SANDBOX_TIMEOUT_SECONDS",
-        description="Timeout for code execution in sandbox",
+        description="Default timeout for code execution in sandbox",
     )
     http_timeout_seconds: int = Field(
         default=30,

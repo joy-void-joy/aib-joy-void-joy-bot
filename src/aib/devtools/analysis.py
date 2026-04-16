@@ -334,9 +334,7 @@ def flags(
         raise typer.Exit(1)
 
     # Count summaries with new-schema risk_flags
-    has_flags_schema = [
-        (s, d) for s, d in summaries if s.classification is not None
-    ]
+    has_flags_schema = [(s, d) for s, d in summaries if s.classification is not None]
     old_schema = len(summaries) - len(has_flags_schema)
 
     if old_schema:
@@ -620,7 +618,7 @@ def review(
         for session_dir in _iter_session_timestamp_dirs(
             version=version, post_id=post_id
         ):
-            trace_file = session_dir / "trace_for_condensation.md"
+            trace_file = session_dir / "trace.md"
             summary_file = session_dir / "summary.json"
             if trace_file.exists() and not summary_file.exists():
                 targets.append(session_dir)
@@ -628,7 +626,7 @@ def review(
         for session_dir in _iter_session_timestamp_dirs(
             version=version, post_id=post_id
         ):
-            trace_file = session_dir / "trace_for_condensation.md"
+            trace_file = session_dir / "trace.md"
             if trace_file.exists():
                 targets.append(session_dir)
 
@@ -639,7 +637,7 @@ def review(
     from tqdm import tqdm
 
     for session_dir in tqdm(targets, desc="Reviewing", unit="session"):
-        trace_file = session_dir / "trace_for_condensation.md"
+        trace_file = session_dir / "trace.md"
         trace = trace_file.read_text(encoding="utf-8")
         pid = _post_id_for_session(session_dir)
         ver = _version_for_session(session_dir)

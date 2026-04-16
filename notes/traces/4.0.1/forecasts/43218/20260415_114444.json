@@ -1,0 +1,190 @@
+{
+  "question_id": 43233,
+  "post_id": 43218,
+  "question_title": "Will the interest in “athena strand” change between 2026-04-15 and 2026-04-24 according to Google Trends?",
+  "question_type": "multiple_choice",
+  "timestamp": "20260415_114444",
+  "probability": null,
+  "logit": null,
+  "probabilities": {
+    "Increases": 0.42,
+    "Doesn't change": 0.22,
+    "Decreases": 0.36
+  },
+  "median": null,
+  "confidence_interval": null,
+  "percentiles": null,
+  "summary": "The forecast centers on the Tanner Horner capital murder sentencing trial for the killing of 7-year-old Athena Strand. The trial is in its second week (sentencing phase only, as Horner pleaded guilty), with the prosecution still presenting evidence as of Day 6 (Apr 14). A trial analyst predicted deliberations could begin by end of this week.\n\nThe starting value on Apr 15 is 16 (relative to a peak of 100 on Apr 8 when the guilty plea/trial started). The ±3 threshold means \"Doesn't change\" covers [13, 19].\n\nThe key variable is whether the verdict falls within the Apr 15-24 window (~60% probability). If it does, the verdict spike + Google Trends rescaling effect strongly favors \"Increases\" (especially if verdict comes in the latter half). If the verdict falls after Apr 24, natural decay from 16 toward 8-12 favors \"Decreases.\" \"Doesn't change\" requires interest to hold steady at 13-19 for 9 days, which is possible but requires the trial to continue without major events while daily coverage sustains search interest.",
+  "factors": [
+    {
+      "description": "Active trial with imminent verdict: The Tanner Horner capital murder sentencing trial is in week 2, with multiple sources predicting deliberations by end of this week. A verdict (death penalty or life) would generate a major search interest spike within the forecast window.",
+      "supports": "Increases",
+      "logit": 1.5,
+      "confidence": 0.7,
+      "conditional": null,
+      "effective_logit": 1.0499999999999998
+    },
+    {
+      "description": "Rescaling effect favors Increases when verdict in window: If the verdict spike exceeds or matches the Apr 8 guilty plea peak, Google Trends rescaling compresses Apr 15's value downward while Apr 24 (if near the verdict) stays elevated, mechanically producing an Increases result.",
+      "supports": "Increases",
+      "logit": 1.0,
+      "confidence": 0.6,
+      "conditional": null,
+      "effective_logit": 0.6
+    },
+    {
+      "description": "Post-spike decay pattern: Interest dropped from 100 to 16 over 7 days (decay rate ~0.26/day). If no new catalyst arrives, the natural trajectory takes the value from 16 toward 8-12 by Apr 24, below the threshold for Decreases.",
+      "supports": "Decreases",
+      "logit": 1.2,
+      "confidence": 0.6,
+      "conditional": null,
+      "effective_logit": 0.72
+    },
+    {
+      "description": "Verdict timing uncertainty: Defense hasn't presented mitigating evidence yet (as of Apr 14, Day 6). Capital sentencing phases can take 2-4 weeks total. There's meaningful probability (30-40%) the verdict falls after Apr 24.",
+      "supports": "Decreases",
+      "logit": 0.8,
+      "confidence": 0.6,
+      "conditional": "If verdict falls after Apr 24",
+      "effective_logit": 0.48
+    },
+    {
+      "description": "Trial sustaining interest above baseline: Unlike a one-time news event, the ongoing trial with daily coverage has kept interest at 13-16 for 3 consecutive days instead of decaying to baseline (0-5). This creates a floor effect.",
+      "supports": "Doesn't change",
+      "logit": 0.7,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": 0.35
+    },
+    {
+      "description": "Change stats trailing rate: Recent 6-transition trailing stats show 66.7% decrease rate, indicating the current regime is one of active decay, not stability.",
+      "supports": "Decreases",
+      "logit": 0.5,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": 0.25
+    },
+    {
+      "description": "SerpAPI measurement uncertainty: Resolution uses SerpAPI (not pytrends), with documented differences of ±2-3 points. At value 16, this could shift the start value, changing which outcome the same Apr 24 value produces.",
+      "supports": "Doesn't change",
+      "logit": 0.3,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": 0.15
+    }
+  ],
+  "resolution": null,
+  "submitted_at": "20260415_134444",
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 649.96,
+    "total_tool_calls": 12,
+    "total_errors": 1,
+    "overall_error_rate": "8.3%",
+    "total_tool_time_ms": 232447.48,
+    "tools_used": 7,
+    "by_tool": {
+      "google_trends": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 2586.63,
+        "avg_duration_ms": 2586.63,
+        "min_duration_ms": 2586.63,
+        "max_duration_ms": 2586.63
+      },
+      "get_metaculus_questions": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 249.98,
+        "avg_duration_ms": 249.98,
+        "min_duration_ms": 249.98,
+        "max_duration_ms": 249.98
+      },
+      "wikipedia": {
+        "call_count": 2,
+        "error_count": 1,
+        "error_rate": "50.0%",
+        "total_duration_ms": 10898.66,
+        "avg_duration_ms": 5449.33,
+        "min_duration_ms": 189.11,
+        "max_duration_ms": 10709.56
+      },
+      "web_search": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 152595.41,
+        "avg_duration_ms": 76297.7,
+        "min_duration_ms": 75083.89,
+        "max_duration_ms": 77511.52
+      },
+      "execute_code": {
+        "call_count": 4,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 2049.82,
+        "avg_duration_ms": 512.45,
+        "min_duration_ms": 1.61,
+        "max_duration_ms": 1110.42
+      },
+      "get_coherence_links": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 428.84,
+        "avg_duration_ms": 428.84,
+        "min_duration_ms": 428.84,
+        "max_duration_ms": 428.84
+      },
+      "reflection": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 63638.14,
+        "avg_duration_ms": 63638.14,
+        "min_duration_ms": 63638.14,
+        "max_duration_ms": 63638.14
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 29,
+    "output_tokens": 16625,
+    "cache_read_input_tokens": 700915,
+    "cache_creation_input_tokens": 85952,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 85952,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43218_20260415_113354/20260415-113354.log",
+  "question_published_at": "2026-04-15T11:32:38Z",
+  "question_close_time": "2026-04-15T13:02:38Z",
+  "question_scheduled_resolve_time": "2026-04-24T17:57:58Z",
+  "reasoning": "**Forecast: Increases 42% / Decreases 36% / Doesn't change 22%**\n\nKey reasoning:\n\n- **\"Athena Strand\"** is currently elevated at 16 (on a 0-100 scale) due to the ongoing Tanner Horner capital murder sentencing trial, which began Apr 7 with a guilty plea (peak = 100 on Apr 8)\n- The **verdict is the dominant driver** — it's expected somewhere in the Apr 17-28 range. If it falls within the forecast window (Apr 15-24, ~60% likely), the interest spike + Google Trends rescaling effect pushes strongly toward \"Increases\"\n- If the verdict falls **after** the window (~40%), natural decay from 16 toward 8-12 over 9 days favors \"Decreases\"\n- \"Doesn't change\" requires interest to stay within [13, 19] for the full 9 days — possible but requires the trial to sustain interest without a major event like a verdict",
+  "sources_consulted": [
+    "[(Google Trends) athena strand](https://trends.google.com/trends/explore?q=athena strand)",
+    "[(Metaculus) Will the interest in “athena strand” change between 2026-04-15 and 2026-04-24 according to Google Trends?](https://www.metaculus.com/questions/43218)",
+    "[(Wikipedia) List of television series based on video games](https://en.wikipedia.org/wiki/List_of_television_series_based_on_video_games)"
+  ],
+  "agent_version": "4.0.1",
+  "cdf": null,
+  "numeric_bounds": null,
+  "retrodict_date": null,
+  "comparison": null,
+  "peer_score": null,
+  "baseline_score": null,
+  "score_timestamp": null,
+  "resolution_source": null,
+  "resolution_reason": null,
+  "resolution_criteria": "This question resolves “Doesn't change” if the value on the timeline at [https://trends.google.com/trends/explore?geo=US&tz=0&q=athena%20strand&date=2026-03-25%202026-04-24](https://trends.google.com/trends/explore?geo=US&tz=0&q=athena%20strand&date=2026-03-25%202026-04-24) for 2026-04-24 is within 3 of the value at 2026-04-15. It resolves “Increases” if the value is more than 3 greater, and resolves “Decreases” if the value is more than 3 lower.",
+  "fine_print": "A script will be used to determine the resolution of this question. It will access the data on Google Trends using [SerpApi](https://serpapi.com/), and compare the height of the timeline for the two aforementioned dates. The specific python query will be structured as follows:\n```\nfrom serpapi import GoogleSearch\n\nsearch = GoogleSearch(params={\n  \"api_key\": API_KEY,\n  \"engine\": \"google_trends\",\n  \"data_type\": \"TIMESERIES\",\n  \"geo\": \"US\",\n  \"tz\": 0,\n  \"q\": \"athena strand\",\n  \"date\": \"2026-03-25 2026-04-24\",\n})\nsearch.get_dict()\n```\nNote that there may be differences between the results returned by the API and the data appearing on the page. This seems to be due to the 'tz' parameter not having the intended effect in-browser. In this case, the API results will be considered authoritative.\nNote that the precision of the timeline will be 1 day, so this will compare the overall interest for the whole day as determined by Google Trends.\nDates are determined in UTC.\nIf the data is no longer available, or the script fails, this question will be annulled or manually resolved by a moderator.",
+  "background_info": null
+}

@@ -8,9 +8,9 @@ The cutoff date is stored in a ContextVar (retrodict_cutoff) so that it
 propagates automatically through asyncio.gather() to sub-forecasts.
 
 Most tools read the ContextVar directly in their implementations. The hook
-denies tools that have no retrodict support (WebSearch, WebFetch, live market
-prices, Playwright, search_news) and redirects to retrodict-safe alternatives
-— needed because bypassPermissions ignores allowed_tools.
+denies the few tools that are in allowed_tools but have no retrodict support
+(currently just Bash — everything else is filtered out by the allowed_tools
+hook in both modes with identical wording).
 """
 
 import logging
@@ -38,28 +38,7 @@ def get_modified_input(tool_use_id: str) -> dict[str, Any] | None:
         return None
 
 
-_DENIED_TOOLS = frozenset(
-    {
-        "Bash",
-        "WebSearch",
-        "WebFetch",
-        "mcp__asknews__search_news",
-        "mcp__asknews__search_wikipedia",
-        "mcp__asknews__search_google",
-        "mcp__asknews__search_x_twitter",
-        "mcp__asknews__do_news_research",
-        "mcp__playwright__browser_navigate",
-        "mcp__playwright__browser_snapshot",
-        "mcp__playwright__browser_click",
-        "mcp__playwright__browser_type",
-    }
-)
-
-_DENY_HINTS: dict[str, str] = {
-    "Bash": "Use mcp__sandbox__execute_code for computation.",
-    "WebSearch": "Use mcp__search__web_search for web search.",
-    "WebFetch": "Use mcp__search__fetch_url to fetch page content.",
-}
+_DENIED_TOOLS = frozenset({"Bash"})
 
 
 def _parse_trends_duration(timeframe: str) -> int:
@@ -159,15 +138,12 @@ def create_retrodict_hooks() -> HooksConfig:
         tool_name = input_data.get("tool_name", "")
         hook_event = input_data["hook_event_name"]
 
-        def deny(reason: str, hint: str = "") -> dict[str, Any]:
-            msg = reason
-            if hint:
-                msg += f" {hint}"
+        def deny(reason: str) -> dict[str, Any]:
             return {
                 "hookSpecificOutput": {
                     "hookEventName": hook_event,
                     "permissionDecision": "deny",
-                    "permissionDecisionReason": msg,
+                    "permissionDecisionReason": reason,
                 }
             }
 
@@ -179,14 +155,8 @@ def create_retrodict_hooks() -> HooksConfig:
                 }
             }
 
-        # --- Deny tools with no retrodict support ---
-        # bypassPermissions ignores allowed_tools, so we must deny explicitly
-
         if tool_name in _DENIED_TOOLS:
-            return deny(
-                f"{tool_name} is not available.",
-                _DENY_HINTS.get(tool_name, ""),
-            )
+            return deny(f"{tool_name} is not available.")
 
         # All other tools read retrodict_cutoff ContextVar internally
         return allow()

@@ -1,0 +1,247 @@
+---
+timestamp: 2026-04-11 20:59:55 UTC
+question_type: numeric
+factors:
+- description: '4 of 7 days already known (Mon-Thu Apr 6-9): 9,882,898 passengers.
+    This is 57% of the total already locked in.'
+  supports:
+    center: 17930000.0
+    low: 17500000.0
+    high: 18200000.0
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: Day-of-week ratio analysis from 5 recent weeks (excluding Easter/Good
+    Friday anomalies) gives Fri ~2.78M, Sat ~2.77M, Sun ~2.50M
+  supports:
+    center: 17930000.0
+    low: 17700000.0
+    high: 18160000.0
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: 'YoY comparison: 2026 Mon-Thu is 2.5% above 2025 equivalent, suggesting
+    volumes are healthy despite jet fuel crisis'
+  supports:
+    center: 17950000.0
+    low: 17600000.0
+    high: 18200000.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Jet fuel crisis and 5% route cuts by United - but impact already reflected
+    in Mon-Thu actuals which are UP year-over-year
+  supports:
+    center: 17800000.0
+    low: 17400000.0
+    high: 17950000.0
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: No holiday effects this week (Easter was Apr 5), so normal travel patterns
+    expected for Fri-Sun
+  supports:
+    center: 17930000.0
+    low: 17750000.0
+    high: 18100000.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+tentative_estimate:
+  center: 17930000.0
+  low: 17550000.0
+  high: 18250000.0
+assessment: "This is a measurement question where 4 of 7 days are already known (9.88M).\
+  \ The remaining uncertainty is only about Fri-Sun (Apr 10-12). \n\nMultiple estimation\
+  \ methods converge on ~17.9M total:\n- Ratio-based: 17.82M\n- DOW averages: 17.75M\
+  \  \n- YoY from 2025: 17.84M\n- YoY from 2024: 17.64M\n- Refined ratio (excluding\
+  \ Easter effects): 17.93M\n\nThe jet fuel crisis context from the question description\
+  \ hasn't materially reduced passenger volumes based on the actual Mon-Thu data,\
+  \ which is UP 2.5% YoY. The 5% route cuts are about profitability optimization,\
+  \ not demand collapse.\n\nKey counterargument: Could there be a sudden disruption\
+  \ on Fri-Sun (weather, system failure, mass cancellations)? This is possible but\
+  \ rare - I've included a 5% disruption scenario in my fat-tail simulation. Even\
+  \ in that scenario, the total stays above 17.1M.\n\nThe distribution should be relatively\
+  \ tight since 57% of the total is already known."
+calibration_notes: With 4/7 days known, uncertainty is fundamentally limited. The
+  remaining 3 days have a combined standard deviation of ~250K based on recent weekly
+  patterns. A 90% CI of roughly (17.55M, 18.25M) seems appropriate given that the
+  base number (9.88M) is fixed and only ~8M more is uncertain with ~3% coefficient
+  of variation.
+key_uncertainties: 1. Weekend travel patterns in the context of high fuel prices -
+  could manifest as suppressed leisure travel on Fri-Sun even if business travel (Mon-Thu)
+  held up. 2. Potential weather disruptions in major hubs. 3. Whether the data updates
+  in time for resolution.
+tool_audit: 'TSA passenger volumes page: excellent, provided exact daily data through
+  April 9. Historical TSA data for 2024 and 2025: successfully retrieved for calibration.
+  Monte Carlo simulation: ran smoothly in sandbox. No tool failures.'
+process_reflection: 'The scaffolding worked well for this question type - it''s essentially
+  a measurement question with partial data. The key analytical steps were: (1) fetch
+  actual data, (2) identify the right historical comparables adjusting for day-of-week
+  and holiday effects, (3) run Monte Carlo for remaining days. The main insight was
+  recognizing that the Easter/Good Friday effects on week 5 data needed to be excluded
+  when estimating this week''s Fri-Sun. The financial data tools weren''t needed here
+  - this was pure TSA data analysis.'
+computed:
+  factor_count: 5
+  factor_sum: 4.6
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: '4 of 7 days already known (Mon-Thu Apr 6-9): 9,882,898 passengers.
+      This is 57% of the total already locked in.'
+    supports:
+      center: 17930000.0
+      low: 17500000.0
+      high: 18200000.0
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: Day-of-week ratio analysis from 5 recent weeks (excluding Easter/Good
+      Friday anomalies) gives Fri ~2.78M, Sat ~2.77M, Sun ~2.50M
+    supports:
+      center: 17930000.0
+      low: 17700000.0
+      high: 18160000.0
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: 'YoY comparison: 2026 Mon-Thu is 2.5% above 2025 equivalent, suggesting
+      volumes are healthy despite jet fuel crisis'
+    supports:
+      center: 17950000.0
+      low: 17600000.0
+      high: 18200000.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Jet fuel crisis and 5% route cuts by United - but impact already
+      reflected in Mon-Thu actuals which are UP year-over-year
+    supports:
+      center: 17800000.0
+      low: 17400000.0
+      high: 17950000.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: No holiday effects this week (Easter was Apr 5), so normal travel
+      patterns expected for Fri-Sun
+    supports:
+      center: 17930000.0
+      low: 17750000.0
+      high: 18100000.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  dominant_factor: '4 of 7 days already known (Mon-Thu Apr 6-9): 9,882,898 passengers.
+    This is 57% of the total already locked in.'
+  dominant_effective_logit: 2.375
+  distribution_metrics:
+    implied_median: 17926764.705882356
+    implied_p10: 17580392.156862747
+    implied_p90: 18169901.960784316
+    median_gap: 3235.294117644429
+    median_gap_pct: 0.5488109096952128
+    spread_ratio: 1.1874272409778803
+    precision: 0.03904071388733965
+  sources:
+  - '[(Metaculus) What will US airline passenger volume be for these weeks in April
+    2026, according to the TSA? (Apr 6–12, 2026](https://www.metaculus.com/questions/43116)'
+  - '[TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes)'
+  - '[2025 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2025)'
+  - '[2024 TSA checkpoint travel numbers | Transportation Security Administration](https://www.tsa.gov/travel/passenger-volumes/2024)'
+  reviewer_critique: '**Evidence Verification:**
+
+
+    1. **Factor 1 (Mon-Thu known data = 9,882,898):** Verified. The trace shows TSA
+    fetch results for April 6-9, 2026: 2,705,640 + 2,207,180 + 2,278,770 + 2,691,308
+    = 9,882,898. Source is directly from tsa.gov/travel/passenger-volumes.
+
+
+    2. **Factor 2 (Day-of-week estimates ~2.78M/2.77M/2.50M for Fri/Sat/Sun):** Verified.
+    The trace shows the agent calculated refined DOW averages excluding Easter/Good
+    Friday anomalies: Fri=2,779,565, Sat=2,767,459, Sun=2,500,769 from 4 non-holiday
+    weeks.
+
+
+    3. **Factor 3 (YoY 2.5% above 2025):** Verified. Trace calculation shows YoY ratio
+    = 1.0248 (2.48%), comparing 2026 Mon-Thu (9,882,898) to 2025 equivalent Mon-Thu
+    (9,643,822).
+
+
+    4. **Factor 4 (5% route cuts by United):** Verified. The question background text
+    confirms "cutting approximately 5 percent of planned routes."
+
+
+    5. **Factor 5 (Easter was Apr 5):** Verified. Agent''s datetime code confirms
+    April 5, 2026 is Sunday (Easter).
+
+
+    **Resolution Criteria Check:** The agent correctly identified the resolution source
+    (TSA passenger volumes page) and fetched data directly from it. The agent also
+    correctly understood that Apr 10-12 data won''t be available until after the question
+    closes (TSA updates Mon-Fri by 9am).
+
+
+    **No Double-Counting:** Factors 1 and 3 both reference Mon-Thu data but for different
+    purposes (baseline vs. YoY comparison). Not problematic.
+
+
+    **No Wrong-Direction Factors:** Factor 4''s negative logit (-0.5) is appropriate—jet
+    fuel crisis is a bearish factor, but assigned low confidence because the actual
+    Mon-Thu data shows it hasn''t materially reduced volumes.
+
+
+    **Adversarial Reasoning:** Present. Assessment addresses the key counterargument:
+    "Could there be a sudden disruption on Fri-Sun?" and includes a 5% disruption
+    scenario in simulations.
+
+
+    **Probability Assessment:** The estimate (center 17,930,000, range 17,550,000–18,250,000)
+    aligns well with the Monte Carlo simulations:
+
+    - Refined MC: Mean=17,930,741, P5=17,634,922, P95=18,227,023
+
+    - Fat-tail MC: Mean=17,903,551, P5=17,541,406, P95=18,221,990
+
+
+    The range appropriately captures ~90% confidence interval. The methodology is
+    sound—57% of the outcome is known, and the remaining 3 days have well-characterized
+    DOW patterns from recent weeks.
+
+
+    **No Issues Found:** No hallucinated evidence, no double-counting, no wrong-direction
+    factors, no contradictory assessment, resolution criteria properly engaged.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43116
+- **Question ID**: 43130
+- **Session Duration**: 384.2s (6.4 min)
+- **Cost**: $3.6302
+- **Tokens**: 12,225 total (41 in, 12,184 out)
+  - Cache: 850,272 read, 76,820 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43116_20260411_205347/20260411-205347.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 9 | 0 | 36ms |
+| fetch_url | 4 | 0 | 13478ms |
+| get_metaculus_questions | 1 | 0 | 426ms |
+| reflection | 1 | 0 | 67694ms |
+| web_search | 1 | 0 | 11020ms |
+
+### Sources Consulted
+
+- [(Metaculus) What will US airline passenger volume be for these weeks in Apri...
+- [TSA checkpoint travel numbers | Transportation Security Administration](http...
+- [2025 TSA checkpoint travel numbers | Transportation Security Administration]...
+- [2024 TSA checkpoint travel numbers | Transportation Security Administration]...

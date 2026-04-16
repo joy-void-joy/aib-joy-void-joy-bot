@@ -96,9 +96,12 @@ class TestStripCommand:
     def test_basic_invocation(self, mock_forecasts: list[dict[str, object]]) -> None:
         from aib.devtools.scores import app
 
-        with patch(
-            "aib.devtools.scores.load_all_forecast_jsons",
-            return_value=mock_forecasts,
+        with (
+            patch(
+                "aib.devtools.scores.load_all_forecast_jsons",
+                return_value=mock_forecasts,
+            ),
+            patch("aib.devtools.scores.refresh_scrape"),
         ):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "1"])
         assert result.exit_code == 0
@@ -115,9 +118,12 @@ class TestStripCommand:
             _make_forecast(5, "1.0.0", 30.0),
             _make_forecast(6, "1.0.0", 25.0),
         ]
-        with patch(
-            "aib.devtools.scores.load_all_forecast_jsons",
-            return_value=forecasts,
+        with (
+            patch(
+                "aib.devtools.scores.load_all_forecast_jsons",
+                return_value=forecasts,
+            ),
+            patch("aib.devtools.scores.refresh_scrape"),
         ):
             result = runner.invoke(app, ["strip", "--no-watch", "--min-n", "3"])
         assert result.exit_code == 0
@@ -126,7 +132,10 @@ class TestStripCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
+        with (
+            patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]),
+            patch("aib.devtools.scores.refresh_scrape"),
+        ):
             result = runner.invoke(app, ["strip", "--no-watch"])
         assert result.exit_code == 0
 
@@ -135,9 +144,12 @@ class TestTrendCommand:
     def test_basic_invocation(self, mock_forecasts: list[dict[str, object]]) -> None:
         from aib.devtools.scores import app
 
-        with patch(
-            "aib.devtools.scores.load_all_forecast_jsons",
-            return_value=mock_forecasts,
+        with (
+            patch(
+                "aib.devtools.scores.load_all_forecast_jsons",
+                return_value=mock_forecasts,
+            ),
+            patch("aib.devtools.scores.refresh_scrape"),
         ):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
@@ -165,7 +177,10 @@ class TestTrendCommand:
     def test_no_data(self) -> None:
         from aib.devtools.scores import app
 
-        with patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]):
+        with (
+            patch("aib.devtools.scores.load_all_forecast_jsons", return_value=[]),
+            patch("aib.devtools.scores.refresh_scrape"),
+        ):
             result = runner.invoke(app, ["trend", "--no-watch"])
         assert result.exit_code == 0
         assert "No scored forecasts found" in result.output

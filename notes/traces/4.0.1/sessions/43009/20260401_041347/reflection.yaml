@@ -1,0 +1,331 @@
+---
+timestamp: 2026-04-01 04:20:47 UTC
+question_type: numeric
+factors:
+- description: Latest value is 4.95 (Mar 30), within a stable regime since Mar 10
+    with mean 4.924 and daily std 0.066
+  supports:
+    center: 4.95
+    low: 4.73
+    high: 5.17
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Regime shift upward in early March: AAA yields jumped from ~4.55-4.60
+    range to 4.85-5.04 range, coinciding with new Section 301 trade investigations
+    and tariff uncertainty'
+  supports:
+    center: 4.92
+    low: 4.8
+    high: 5.1
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 10% global tariffs still in effect under Section 122 (150-day limit);
+    Section 301 investigations into ~80 countries ongoing - sustained upward pressure
+    on yields
+  supports:
+    center: 4.97
+    low: 4.85
+    high: 5.15
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: 10-year Treasury yield also elevated at 4.35 (Mar 30), up from ~4.05
+    in early March, confirming broad rates selloff not just credit-specific
+  supports:
+    center: 4.95
+    low: 4.75
+    high: 5.15
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: Short horizon (7 business days) limits range of possible moves; mean
+    reversion toward regime mean of 4.924 is plausible given oscillation pattern in
+    last 2 weeks
+  supports:
+    center: 4.94
+    low: 4.8
+    high: 5.1
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Potential for yield-increasing shock: further tariff escalation, Section
+    301 results, or fiscal concerns from $165B tariff refunds could push yields higher'
+  supports:
+    center: 5.15
+    low: 5.0
+    high: 5.4
+  logit: 0.5
+  confidence: 0.4
+  conditional: If tariff escalation news breaks
+  effective_logit: 0.2
+- description: 'Potential for yield-decreasing scenario: flight to quality if equity
+    markets sell off, or de-escalation of trade tensions could bring yields down'
+  supports:
+    center: 4.75
+    low: 4.55
+    high: 4.9
+  logit: 0.5
+  confidence: 0.4
+  conditional: If risk-off event or trade de-escalation
+  effective_logit: 0.2
+tentative_estimate:
+  center: 4.95
+  low: 4.73
+  high: 5.17
+assessment: 'The AAA corporate yield has been oscillating in the 4.85-5.04 range since
+  mid-March 2026, following a regime shift upward from the ~4.55-4.60 range. The shift
+  coincides with renewed tariff uncertainty (Section 301 investigations, 10% global
+  tariff under Section 122 after SCOTUS struck down IEEPA tariffs).
+
+
+  The latest value of 4.95 is very close to the regime mean of 4.924. Over a 7-business-day
+  horizon, the distribution is centered near the current level with modest pull toward
+  regime mean. The Monte Carlo simulation using regime-specific volatility (daily
+  std = 0.0654) produces:
+
+  - Median ~4.95
+
+  - 80% CI: [4.73, 5.17]
+
+  - 90% CI: [4.65, 5.25]
+
+
+  The model blends three scenarios: random walk (40%), mean-reverting to 4.924 (40%),
+  and mild upward drift (20%). Volatility sensitivity testing with fat tails (1.5x)
+  and thin tails (0.7x) is blended 60/25/15.
+
+
+  Key tension: whether the current elevated yield level is the new normal or if there
+  will be significant moves from tariff news. The oscillation pattern (5.04 → 4.95
+  most recently) suggests the market is digesting the new tariff regime without a
+  clear directional trend.'
+calibration_notes: 'Base rate: AAA corporate yields in this regime (since Mar 10)
+  have had daily std of 0.066, implying over 7 days the standard deviation is roughly
+  0.066*sqrt(7) ≈ 0.175. This matches the simulation output well. The 80% CI of ~0.44
+  wide is appropriate for this volatility level over this horizon.'
+key_uncertainties: '1. Whether new tariff-related announcements (Section 301 results)
+  occur in the April 1-8 window
+
+  2. Whether the recent oscillation continues or a directional move emerges
+
+  3. Whether Treasury yields move meaningfully (which drives AAA corporate yields)'
+tool_audit: 'FRED series for BAMLC0A1CAAAEY: excellent data, 132 observations with
+  regime detection. DGS10: good supporting context. Kalshi: no relevant markets found.
+  AskNews search_news: rate-limited (403), fell back to web_search. Web search: highly
+  informative for understanding the tariff/SCOTUS context. execute_code: essential
+  for Monte Carlo simulations.'
+update_triggers: '1. Major tariff escalation/de-escalation announcement
+
+  2. Significant equity market crash driving flight-to-quality
+
+  3. Fed commentary changing rate expectations
+
+  4. April 1 market data (first trading day after Mar 30 close)'
+process_reflection: The FRED tool was excellent here - regime detection was particularly
+  valuable as it identified the March 10 structural break. The news search failure
+  (AskNews rate limit) was a minor inconvenience but web_search adequately compensated.
+  The main gap was not having intraday or April 1 data yet. For daily financial series
+  with short horizons, the Monte Carlo approach with regime-specific parameters is
+  well-suited. The question is quite well-specified and the resolution is mechanical.
+computed:
+  factor_count: 7
+  factor_sum: 4.03
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Latest value is 4.95 (Mar 30), within a stable regime since Mar 10
+      with mean 4.924 and daily std 0.066
+    supports:
+      center: 4.95
+      low: 4.73
+      high: 5.17
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Regime shift upward in early March: AAA yields jumped from ~4.55-4.60
+      range to 4.85-5.04 range, coinciding with new Section 301 trade investigations
+      and tariff uncertainty'
+    supports:
+      center: 4.92
+      low: 4.8
+      high: 5.1
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 10% global tariffs still in effect under Section 122 (150-day limit);
+      Section 301 investigations into ~80 countries ongoing - sustained upward pressure
+      on yields
+    supports:
+      center: 4.97
+      low: 4.85
+      high: 5.15
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: 10-year Treasury yield also elevated at 4.35 (Mar 30), up from ~4.05
+      in early March, confirming broad rates selloff not just credit-specific
+    supports:
+      center: 4.95
+      low: 4.75
+      high: 5.15
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: Short horizon (7 business days) limits range of possible moves; mean
+      reversion toward regime mean of 4.924 is plausible given oscillation pattern
+      in last 2 weeks
+    supports:
+      center: 4.94
+      low: 4.8
+      high: 5.1
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Potential for yield-increasing shock: further tariff escalation,
+      Section 301 results, or fiscal concerns from $165B tariff refunds could push
+      yields higher'
+    supports:
+      center: 5.15
+      low: 5.0
+      high: 5.4
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+    conditional: If tariff escalation news breaks
+  - description: 'Potential for yield-decreasing scenario: flight to quality if equity
+      markets sell off, or de-escalation of trade tensions could bring yields down'
+    supports:
+      center: 4.75
+      low: 4.55
+      high: 4.9
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+    conditional: If risk-off event or trade de-escalation
+  dominant_factor: Latest value is 4.95 (Mar 30), within a stable regime since Mar
+    10 with mean 4.924 and daily std 0.066
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 4.94560794044665
+    implied_p10: 4.772208436724566
+    implied_p90: 5.1424317617866
+    median_gap: 0.004392059553349981
+    median_gap_pct: 1.1863270777480188
+    spread_ratio: 1.1884718498659517
+    precision: 0.08888888888888878
+  sources:
+  - '[(FRED) BAMLC0A1CAAAEY](https://fred.stlouisfed.org/series/BAMLC0A1CAAAEY)'
+  - '[(FRED) DGS10](https://fred.stlouisfed.org/series/DGS10)'
+  - '[Market Volatility and Corporate Bonds: 3 Takeaways](https://www.schwab.com/learn/story/market-volatility-and-corporate-bonds-3-takeaways)'
+  - '[2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stock_market_crash)'
+  - '[Bond markets have muted response to new tariff announcement](https://www.bondbuyer.com/news/bond-markets-have-muted-response-to-new-tariff-announcement)'
+  - '[Learning Resources, Inc. v. Trump - Wikipedia](https://en.wikipedia.org/wiki/Learning_Resources,_Inc._v._Trump)'
+  - '[Trump says Justices Barrett, Gorsuch ‘sicken me’ after Supreme Court tariff
+    ruling](https://www.cnbc.com/2026/03/26/trump-supreme-court-tariffs-barrett-gorsuch-trade-ieepa-ruling.html)'
+  reviewer_critique: '**Verification Summary:**
+
+
+    I verified each factor''s core claims against the research trace:
+
+
+    1. **Factor 1 (Latest 4.95, regime mean 4.924, std 0.066)**: VERIFIED. Trace shows
+    `"latest_value": 4.95, "latest_date": "2026-03-30"` and `"stable_since": "2026-03-10",
+    "stable_mean": 4.924, "stable_std": 0.065605"`.
+
+
+    2. **Factor 2 (Regime shift from ~4.55-4.60 to 4.85-5.04 range)**: VERIFIED. Trace
+    data shows late Feb values in 4.55-4.60 range, with `"prior_regime_mean": 4.643565`
+    and current regime values 4.78-5.04. Section 301 investigations cited are confirmed
+    in CNBC web fetch.
+
+
+    3. **Factor 3 (Section 122 tariffs, Section 301 investigations into ~80 countries)**:
+    VERIFIED. Trace line 496-497 confirms Trump invoked Section 122 for 10% global
+    tariffs on Feb 20, 2026, with 150-day limit, and Section 301 investigations opened
+    in early March 2026 into nearly 80 countries.
+
+
+    4. **Factor 4 (10-year Treasury at 4.35 on Mar 30, up from ~4.05 in early March)**:
+    VERIFIED. DGS10 data shows `"latest_value": 4.35, "latest_date": "2026-03-30"`
+    and March 2 value was 4.05.
+
+
+    5. **Factor 5 (7 business day horizon)**: Correctly stated; resolution date is
+    April 8.
+
+
+    6. **Factor 6 ($165B tariff refunds)**: VERIFIED. Trace line 499 explicitly states
+    "The U.S. government must refund up to $165 billion in tariffs."
+
+
+    7. **Factor 7 (Flight-to-quality scenario)**: Reasonable counterfactual scenario
+    with appropriately low confidence (0.4).
+
+
+    **Methodology Check:**
+
+    - Monte Carlo simulation properly uses regime-specific data (since Mar 10) for
+    drift/volatility estimation, avoiding regime-spanning contamination
+
+    - Blended model (40% RW + 40% OU + 20% upward drift) is confirmed in trace output
+
+    - Final output shows 80% CI: [4.726, 5.170] matching the stated range [4.73, 5.17]
+
+
+    **Resolution Criteria:** Clear - FRED API series BAMLC0A1CAAAEY, agent correctly
+    pulled this data source.
+
+
+    **Adversarial Reasoning:** Both upside (tariff escalation, fiscal concerns) and
+    downside (flight to quality, de-escalation) scenarios are included with appropriately
+    lower confidence (0.4).
+
+
+    **Probability Assessment:** The center estimate of 4.95 and range 4.73-5.17 is
+    well-supported by the Monte Carlo output (median 4.9461, 80% CI [4.726, 5.170]).
+    The short 7-day horizon and recent oscillation pattern (5.04 → 4.95) justify centering
+    near the current value with regime-specific volatility scaling. I find no basis
+    to disagree with this estimate.
+
+
+    No errors found. All factual claims are grounded in the research trace.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43009
+- **Question ID**: 42945
+- **Session Duration**: 429.8s (7.2 min)
+- **Cost**: $3.6330
+- **Tokens**: 12,146 total (39 in, 12,107 out)
+  - Cache: 761,183 read, 84,404 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43009_20260401_041347/20260401-041347.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 97ms |
+| fetch_url | 3 | 0 | 11681ms |
+| fred_series | 2 | 0 | 513ms |
+| kalshi_price | 1 | 0 | 682ms |
+| reflection | 1 | 0 | 113922ms |
+| web_search | 4 | 0 | 27016ms |
+| wikipedia | 2 | 0 | 213ms |
+
+### Sources Consulted
+
+- [(FRED) BAMLC0A1CAAAEY](https://fred.stlouisfed.org/series/BAMLC0A1CAAAEY)
+- [(FRED) DGS10](https://fred.stlouisfed.org/series/DGS10)
+- [Market Volatility and Corporate Bonds: 3 Takeaways](https://www.schwab.com/l...
+- [2025 stock market crash - Wikipedia](https://en.wikipedia.org/wiki/2025_stoc...
+- [Bond markets have muted response to new tariff announcement](https://www.bon...
+- [Learning Resources, Inc. v. Trump - Wikipedia](https://en.wikipedia.org/wiki...
+- [Trump says Justices Barrett, Gorsuch ‘sicken me’ after Supreme Court tariff ...

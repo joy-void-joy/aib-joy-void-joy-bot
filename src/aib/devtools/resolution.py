@@ -395,9 +395,7 @@ def backfill_metadata(
             if dry_run or _update_forecast_json(f, **fields):
                 updated_files += 1
 
-    asyncio.run(
-        scrape_questions_batch(targets, on_data=write_scraped)
-    )
+    asyncio.run(scrape_questions_batch(targets, on_data=write_scraped))
 
     typer.echo(f"Backfilled {updated_files} files")
     if dry_run:
@@ -454,6 +452,30 @@ def sync(
     typer.echo(f"\nUpdated: {updated}, Unchanged: {unchanged}")
     if dry_run:
         typer.echo("(dry run — no files changed)")
+
+    # Worldview subforecast resolution sweep
+    from aib.tools.worldview_manager import (
+        find_resolvable_forecasts,
+        resolve_ready_forecasts,
+    )
+
+    resolvable = find_resolvable_forecasts()
+    if resolvable:
+        typer.echo(
+            f"\n--- Worldview subforecast resolution ({len(resolvable)} resolvable) ---"
+        )
+        wv_results = asyncio.run(resolve_ready_forecasts(dry_run=dry_run))
+        resolved = sum(1 for r in wv_results if r.get("resolved") and "resolution" in r)
+        typer.echo(f"Checked: {len(wv_results)}, Resolved: {resolved}")
+        for r in wv_results:
+            if r.get("resolved") and "resolution" in r:
+                typer.echo(
+                    f"  ✓ {r.get('slug')}: {r['resolution']} (score={r.get('score')})"
+                )
+        if not dry_run and resolved > 0:
+            from aib.worldview.lookup import commit_worldview
+
+            commit_worldview("worldview: AI resolution sweep")
 
     if backfill:
         typer.echo("\n--- Backfilling missing metadata ---")
@@ -555,6 +577,32 @@ def is_due_within(
     return resolve_time <= cutoff
 
 
+def _score_resolved_forecasts(applied_pids: list[int]) -> None:
+    """Fetch community predictions and compute peer+baseline scores for resolved posts."""
+    from aib.agent.history import _update_forecast_json
+    from aib.devtools.scores import scrape_community_batch
+
+    typer.echo(f"\nScoring {len(applied_pids)} resolved forecasts...")
+
+    community_data = asyncio.run(scrape_community_batch(applied_pids))
+
+    scored = 0
+    for pid in applied_pids:
+        cd = community_data.get(pid)
+        if cd is None:
+            continue
+        cp_updates = cd.to_forecast_updates()
+        if not cp_updates:
+            continue
+
+        for f in iter_forecast_files(pid):
+            _update_forecast_json(f, **cp_updates)
+
+        scored += 1
+
+    typer.echo(f"  Scored: {scored}/{len(applied_pids)}")
+
+
 @app.command("tentative")
 def tentative(
     post_ids: list[int] = typer.Argument(
@@ -650,9 +698,7 @@ def tentative(
         ]
         typer.echo(f"  Scraping {len(pids_to_scrape)} questions missing criteria...")
 
-        scraped = asyncio.run(
-            scrape_questions_batch(pids_to_scrape)
-        )
+        scraped = asyncio.run(scrape_questions_batch(pids_to_scrape))
 
         items_by_pid = {
             item["post_id"]: item
@@ -700,6 +746,7 @@ def tentative(
 
     applied = 0
     skipped = 0
+    applied_pids: list[int] = []
 
     def on_complete(pid: int, verdict: ResolutionVerdict) -> None:
         nonlocal applied, skipped
@@ -724,12 +771,20 @@ def tentative(
                     reason=verdict.reason,
                 )
             applied += 1
+            applied_pids.append(pid)
 
         pbar.update(1)
 
     async def run() -> list[tuple[int, ResolutionVerdict]]:
         if len(questions) == 1:
-            v = await resolve_question(questions[0])
+            report = await resolve_question(questions[0])
+            v = report.payload or ResolutionVerdict(
+                resolved=False,
+                resolution=None,
+                confidence=0.0,
+                reason="Agent produced no structured output",
+                sources=[],
+            )
             on_complete(questions[0].post_id, v)
             return [(questions[0].post_id, v)]
         return await resolve_batch(questions, on_complete=on_complete)
@@ -738,6 +793,9 @@ def tentative(
     pbar.close()
 
     typer.echo(f"\nResults: {applied} applied, {skipped} skipped")
+
+    if applied_pids:
+        _score_resolved_forecasts(applied_pids)
 
 
 TRACE_FIELD_MAP: dict[str, str] = {
@@ -786,7 +844,9 @@ def backfill_criteria(
     from tqdm import tqdm
 
     fields_by_post: dict[int, dict[str, str | None]] = {}
-    for version_dir in tqdm(sorted(TRACES_PATH.iterdir()), desc="Scanning traces", unit="ver"):
+    for version_dir in tqdm(
+        sorted(TRACES_PATH.iterdir()), desc="Scanning traces", unit="ver"
+    ):
         sessions = version_dir / "sessions"
         if not sessions.is_dir():
             continue

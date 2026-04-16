@@ -9,15 +9,18 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from claude_agent_sdk import ResultMessage
-from claude_agent_sdk.types import McpHttpServerConfig, McpServerConfig
+from claude_agent_sdk import AssistantMessage, ResultMessage
+from claude_agent_sdk.types import McpHttpServerConfig, McpServerConfig, TextBlock
 from pydantic import BaseModel
 
 from aib.agent.client import build_client
+from aib.agent.display import make_agent_prefix, print_block
+from aib.agent.hooks import create_allowed_tools_hook
+from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
-    COMPOSITION_TOOLS,
     NOTES_TOOLS,
     SANDBOX_TOOLS,
+    SUBFORECAST_TOOLS,
     ToolPolicy,
 )
 from aib.config import settings as default_settings
@@ -73,7 +76,7 @@ Guidelines:
 - Include the URLs and sources you consulted in your response.
 """
 
-EXCLUDED_TOOL_SETS = SANDBOX_TOOLS | COMPOSITION_TOOLS | NOTES_TOOLS
+EXCLUDED_TOOL_SETS = SANDBOX_TOOLS | SUBFORECAST_TOOLS | NOTES_TOOLS
 
 
 def build_resolver_servers() -> dict[str, McpServerConfig]:
@@ -83,6 +86,7 @@ def build_resolver_servers() -> dict[str, McpServerConfig]:
         company_financials,
         fred_search,
         fred_series,
+        options_iv,
         stock_conditional_returns,
         stock_history,
         stock_price,
@@ -130,6 +134,7 @@ def build_resolver_servers() -> dict[str, McpServerConfig]:
                 stock_price,
                 stock_history,
                 stock_conditional_returns,
+                options_iv,
                 world_bank_indicator,
                 world_bank_search,
             ],
@@ -184,7 +189,7 @@ def build_resolver_servers() -> dict[str, McpServerConfig]:
 
 
 def build_resolver_tools() -> list[str]:
-    """Build allowed tool list using ToolPolicy (all tools except sandbox/composition/notes)."""
+    """Build allowed tool list using ToolPolicy (all tools except sandbox/subforecast/notes)."""
     policy = ToolPolicy.from_settings(default_settings)
     all_tools = policy.get_allowed_tools(allow_spawn=False)
     return [t for t in all_tools if t not in EXCLUDED_TOOL_SETS]
@@ -195,7 +200,7 @@ async def resolve_question(
     *,
     mcp_servers: dict[str, McpServerConfig] | None = None,
     allowed_tools: list[str] | None = None,
-) -> ResolutionVerdict:
+) -> NestedAgentReport[ResolutionVerdict]:
     """Run a resolver agent to check if a question has resolved."""
     servers = mcp_servers or build_resolver_servers()
     tools = allowed_tools or build_resolver_tools()
@@ -213,11 +218,14 @@ async def resolve_question(
         prompt += f"\n**Scheduled Resolve Time:** {question.scheduled_resolve_time}\n"
 
     result_output: dict[str, object] | None = None
+    text_blocks: list[str] = []
+    prefix = make_agent_prefix("resolver", question.question_title)
     async with build_client(
-        model="opus",
+        model=default_settings.model,
         system_prompt=RESOLVER_SYSTEM_PROMPT,
         mcp_servers=servers,
         allowed_tools=tools,
+        hooks=create_allowed_tools_hook(tools),
         permission_mode="bypassPermissions",
         output_format={
             "type": "json_schema",
@@ -226,18 +234,30 @@ async def resolve_question(
     ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    print_block(block, prefix=prefix)
+                    if isinstance(block, TextBlock):
+                        text_blocks.append(block.text)
             if isinstance(message, ResultMessage):
                 result_output = message.structured_output
 
+    final_text = text_blocks[-1] if text_blocks else ""
     if result_output:
-        return ResolutionVerdict.model_validate(result_output)
+        return NestedAgentReport[ResolutionVerdict](
+            payload=ResolutionVerdict.model_validate(result_output),
+            final_text=final_text,
+        )
 
-    return ResolutionVerdict(
-        resolved=False,
-        resolution=None,
-        confidence=0.0,
-        reason="Agent produced no structured output",
-        sources=[],
+    return NestedAgentReport[ResolutionVerdict](
+        payload=ResolutionVerdict(
+            resolved=False,
+            resolution=None,
+            confidence=0.0,
+            reason="Agent produced no structured output",
+            sources=[],
+        ),
+        final_text=final_text,
     )
 
 
@@ -256,8 +276,15 @@ async def resolve_batch(
         try:
             async with semaphore:
                 logger.info("Resolving post %d: %s", q.post_id, q.question_title[:60])
-                verdict = await asyncio.shield(
+                report = await asyncio.shield(
                     resolve_question(q, mcp_servers=servers, allowed_tools=tools)
+                )
+                verdict = report.payload or ResolutionVerdict(
+                    resolved=False,
+                    resolution=None,
+                    confidence=0.0,
+                    reason="Agent produced no structured output",
+                    sources=[],
                 )
         except (Exception, asyncio.CancelledError) as exc:
             logger.exception("Resolver failed for post %d", q.post_id)

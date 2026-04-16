@@ -1,0 +1,289 @@
+---
+timestamp: 2026-03-31 09:12:35 UTC
+question_type: binary
+factors:
+- description: 'Historical base rate: ~2 cholera DONs per year in 2025, ~0 in 2024.
+    Over a 30-day remaining window, Poisson P(>=1) is 7-15% depending on which period
+    used.'
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: WHO structural shift to monthly epidemiological updates (#33-#35) instead
+    of DONs for cholera, reducing DON publication frequency
+  logit: -1.5
+  confidence: 0.7
+  effective_logit: -1.0499999999999998
+- description: 14 days of resolution window already passed (Mar 17 - Mar 31) with
+    no cholera DON published
+  logit: -0.5
+  confidence: 0.9
+  effective_logit: -0.45
+- description: 'WHO published epidemiological update #35 on Mar 27 (4 days ago) as
+    a situation report, not a DON, suggesting continuation of non-DON approach'
+  logit: -0.8
+  confidence: 0.8
+  effective_logit: -0.6400000000000001
+- description: 'Active severe cholera situation: 18,715 cases in Feb 2026, Southern
+    Africa 7x surge, DRC epidemic expanding, 269 deaths with 48% monthly increase'
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: 7-month gap since last cholera DON (Aug 2025) - WHO has historically
+    published periodic global cholera DONs
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Southern Africa acute surge due to cyclones/flooding is a NEW development
+    that could warrant a country/regional DON (similar to Angola DON in 2025)
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 2024 had zero cholera DONs despite active global outbreak, showing
+    WHO can go a full year without cholera DONs
+  logit: -0.8
+  confidence: 0.8
+  effective_logit: -0.6400000000000001
+tentative_estimate:
+  logit: -0.8
+  probability: 0.3
+assessment: 'The question asks whether WHO will publish a Disease Outbreak News (DON)
+  item specifically about cholera or acute watery diarrhoea in a ~45-day window (March
+  17 - April 30, 2026), of which ~14 days have already passed without such a publication.
+
+
+  Key tension: The cholera situation globally remains severe (18,000+ cases/month,
+  expanding Southern Africa surge), which would historically have triggered DON publications.
+  However, WHO has clearly shifted its cholera reporting approach from DONs to monthly
+  epidemiological updates (situation reports #29-#35), which are published under /publications/m/item/
+  rather than /emergencies/disease-outbreak-news/item/. This structural shift is the
+  dominant factor.
+
+
+  In 2022, WHO published ~6 cholera DONs. In 2023, about 2-4. In 2024, zero. In 2025,
+  2 (Angola country-specific + multi-country update). In 2026 through March 31, zero.
+  The declining trend is clear, even as cholera cases remained high.
+
+
+  The fact that WHO published epidemiological update #35 just 4 days ago (March 27)
+  as a situation report rather than a DON suggests they are not planning an imminent
+  cholera DON. If the Southern Africa surge was going to trigger a DON, one might
+  expect it would have happened by now (the surge started in January 2026).
+
+
+  Against this: 30 days remain, the situation is worsening (deaths up 48%), and a
+  new country outbreak or dramatic escalation could trigger a DON. The 2025 Angola
+  DON shows WHO still uses DONs for notable new country outbreaks.
+
+
+  My estimate of ~30% reflects: low-to-moderate base rate (~10-15% from Poisson),
+  moderate upward adjustment for severity/potential triggers, and a small additional
+  adjustment for the possibility that WHO decides to publish a periodic global cholera
+  DON update.
+
+
+  Counterargument for higher probability: The PubMed article on WHO''s cholera communication
+  explicitly references DONs as part of their dissemination strategy, and the ongoing
+  global emergency could prompt one. But the practical evidence from 2024-2026 shows
+  they''ve been using situation reports instead.'
+calibration_notes: 'Base rate from Poisson model (recent 2024-2026 data): ~7-15% for
+  a 30-day window. Historical rate (2022-2023) would give much higher ~30-50%, but
+  the structural shift in reporting format makes older data less relevant. Status
+  quo (no DON published) resolves NO. The Southern Africa surge is the most plausible
+  trigger for a YES resolution.'
+key_uncertainties: 1. Whether WHO will publish a periodic global cholera DON update
+  (last one was Aug 2025). 2. Whether the Southern Africa surge or a new country outbreak
+  triggers a country-specific DON. 3. Whether WHO's shift to situation reports is
+  permanent or they still plan periodic DON updates.
+tool_audit: 'Useful: web_search found DON items and situation reports; search_exa
+  found the crucial epidemiological update #35 and Southern Africa news; fetch_url
+  provided DON579 details. Empty but expected: Polymarket and Manifold had no relevant
+  markets. The WHO DON landing page couldn''t be scraped for the actual list of items
+  (JavaScript-rendered). The PubMed article was an excellent source for historical
+  DON publication patterns.'
+update_triggers: 1. WHO publishes a cholera DON (immediate resolution). 2. Major new
+  cholera outbreak in a previously unaffected country. 3. WHO changes its communication
+  strategy back to DONs. 4. Dramatic escalation in Southern Africa cases/deaths.
+process_reflection: The main challenge was distinguishing between DON items and situation
+  reports, which required careful URL analysis. The WHO DON page is JavaScript-rendered
+  and couldn't be scraped directly, so I relied on search results to enumerate DONs.
+  The search tools worked well for finding specific DON URLs. A tool that could scrape
+  JavaScript-rendered pages or access the WHO API directly would have been helpful.
+  The question is well-structured and the resolution criteria are clear.
+computed:
+  factor_count: 8
+  factor_sum: -2.18
+  tentative_logit: -0.8
+  logit_gap: 1.3800000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: ~2 cholera DONs per year in 2025, ~0 in 2024.
+      Over a 30-day remaining window, Poisson P(>=1) is 7-15% depending on which period
+      used.'
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: WHO structural shift to monthly epidemiological updates (#33-#35)
+      instead of DONs for cholera, reducing DON publication frequency
+    logit: -1.5
+    confidence: 0.7
+    effective_logit: -1.0499999999999998
+  - description: 14 days of resolution window already passed (Mar 17 - Mar 31) with
+      no cholera DON published
+    logit: -0.5
+    confidence: 0.9
+    effective_logit: -0.45
+  - description: 'WHO published epidemiological update #35 on Mar 27 (4 days ago)
+      as a situation report, not a DON, suggesting continuation of non-DON approach'
+    logit: -0.8
+    confidence: 0.8
+    effective_logit: -0.6400000000000001
+  - description: 'Active severe cholera situation: 18,715 cases in Feb 2026, Southern
+      Africa 7x surge, DRC epidemic expanding, 269 deaths with 48% monthly increase'
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: 7-month gap since last cholera DON (Aug 2025) - WHO has historically
+      published periodic global cholera DONs
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Southern Africa acute surge due to cyclones/flooding is a NEW development
+      that could warrant a country/regional DON (similar to Angola DON in 2025)
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 2024 had zero cholera DONs despite active global outbreak, showing
+      WHO can go a full year without cholera DONs
+    logit: -0.8
+    confidence: 0.8
+    effective_logit: -0.6400000000000001
+  dominant_factor: WHO structural shift to monthly epidemiological updates (#33-#35)
+    instead of DONs for cholera, reducing DON publication frequency
+  dominant_effective_logit: -1.0499999999999998
+  factor_implied_probability: 0.10156092789763664
+  tentative_probability: 0.3
+  gap_pp: 19.843907210236335
+  sources:
+  - '[Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news)'
+  - '[Cholera – Multi-country with a focus on countries experiencing current surges](https://www.who.int/emergencies/disease-outbreak-news/item/2025-DON579)'
+  - '[Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news/index)'
+  - '[(Metaculus) Will WHO publish at least one new Disease Outbreak News item about
+    cholera or acute watery diarrhoea before April 30, 2026?](https://www.metaculus.com/questions/42929)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified all 8 factors against the research trace:
+
+
+    1. **Historical base rate (~2 cholera DONs per year in 2025, ~0 in 2024)** - VERIFIED.
+    Trace shows 2025-DON562 (Angola) and 2025-DON579 (Multi-country, Aug 2025) found
+    in searches; no 2024 cholera DONs found.
+
+
+    2. **WHO structural shift to monthly epidemiological updates** - VERIFIED. Trace
+    shows situation reports #33-#35 under `/publications/m/item/` URL pattern, distinct
+    from DON items at `/emergencies/disease-outbreak-news/item/`.
+
+
+    3. **14 days of resolution window passed with no cholera DON** - VERIFIED. Multiple
+    trace searches for 2026 cholera DONs returned no results.
+
+
+    4. **WHO published epidemiological update #35 on Mar 27 as a situation report**
+    - VERIFIED. Exa search in trace found this exact publication at the situation
+    report URL.
+
+
+    5. **Active severe cholera situation (18,715 cases, 269 deaths, 48% death increase)**
+    - VERIFIED. Update #35 search result in trace contains these exact figures.
+
+
+    6. **7-month gap since last cholera DON (Aug 2025)** - VERIFIED. Trace confirms
+    2025-DON579 published August 29, 2025.
+
+
+    7. **Southern Africa acute surge (7x increase)** - VERIFIED. WHO AFRO press release
+    (Feb 26, 2026) in trace states "risen by over seven times in the first six weeks
+    of 2026."
+
+
+    8. **2024 had zero cholera DONs** - VERIFIED. Agent''s systematic searches found
+    no 2024 cholera DONs.
+
+
+    ## Resolution Criteria Alignment
+
+    The agent correctly distinguished between DON items and situation reports, which
+    is central to this question''s resolution criteria. The fine print explicitly
+    excludes "situation reports" - the agent properly identified that WHO''s epidemiological
+    updates (#33-#35) are published under `/publications/m/item/` not `/emergencies/disease-outbreak-news/item/`.
+
+
+    ## Probability Assessment
+
+    The 30% estimate is reasonable given:
+
+    - Base Poisson rate: 7-15% (2 DONs in 27 months recent history)
+
+    - Upward adjustments for: severity of current situation, 7-month gap since last
+    DON, Southern Africa acute surge
+
+    - Downward adjustments for: structural shift to situation reports, 14 days already
+    passed with no DON, 2024 had zero DONs
+
+
+    The trace shows the agent considered estimates ranging from 17% (scenario-weighted)
+    to 40% before settling on 30%. This reflects appropriate uncertainty about whether
+    WHO will break from its recent pattern of using situation reports rather than
+    DONs for cholera updates.
+
+
+    ## No Issues Found
+
+    - No hallucinated evidence
+
+    - No significant double-counting (Factors 2/4 and 3/8 have minor overlap but serve
+    distinct analytical purposes)
+
+    - All factor signs align with their descriptions
+
+    - Assessment engages with the strongest counterargument (WHO structural shift)
+
+    - Probability is well-supported by the evidence'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42929
+- **Question ID**: 42867
+- **Session Duration**: 581.8s (9.7 min)
+- **Cost**: $5.5138
+- **Tokens**: 11,622 total (41 in, 11,581 out)
+  - Cache: 1,780,114 read, 105,304 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42929_20260331_090306/20260331-090306.log`
+
+### Tool Calls
+
+- **Total**: 27 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 1ms |
+| fetch_url | 3 | 0 | 7746ms |
+| get_metaculus_questions | 1 | 0 | 432ms |
+| manifold_price | 1 | 0 | 224ms |
+| polymarket_price | 1 | 0 | 73ms |
+| reflection | 1 | 0 | 93472ms |
+| search_exa | 2 | 0 | 1182ms |
+| web_search | 14 | 0 | 15214ms |
+
+### Sources Consulted
+
+- [Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news)
+- [Cholera – Multi-country with a focus on countries experiencing current surge...
+- [Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news...
+- [(Metaculus) Will WHO publish at least one new Disease Outbreak News item abo...

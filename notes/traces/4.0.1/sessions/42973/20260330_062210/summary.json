@@ -1,0 +1,69 @@
+{
+  "condensed_reasoning": "## Research\n\nI analyzed a 5-trading-day stock direction forecast for ADM (Archer-Daniels-Midland), comparing close prices on 2026-03-30 vs 2026-04-06.\n\nThe agent gathered comprehensive data:\n- **ADM current price**: $72.23 (as of March 27, 2026)\n- **52-week range**: $40.98 - $74.19 (current price only 2.6% below 52-week high)\n- **Recent performance**: +27% rally from $57 (late December) to $72 (late March)\n- **6-month volatility**: 27.6% annualized, 1.74% daily\n- **Analyst consensus target**: $58.57 — **19% below current price**\n\nKey macro context discovered via news search:\n- US-Iran war ongoing (fifth week)\n- **Brent crude >$110/barrel**, Strait of Hormuz effectively closed\n- **S&P 500 down 9% from 52-week high**, VIX at 31\n- Trump extended Iran strike deadline to **April 6** — the exact resolution date\n\n## Key Evidence\n\n**Bullish factors:**\n- Strong momentum (+27% in 3 months)\n- ADM showing relative strength vs broader market selloff\n- Commodity company may benefit from elevated oil/commodity prices\n- Institutional buying (Assenagon +1,542%, others increasing)\n\n**Bearish factors:**\n- Trading well above all analyst targets ($58.57 consensus, Morgan Stanley at $50)\n- Multiple insider sales (SVP Weber: 25k shares, SVP Pinner: 34k shares, SVP Morris: 50k shares)\n- Q4 revenue missed ($18.56B vs $21.03B expected)\n- Severe macro headwinds\n\n**Monte Carlo results:**\n- With 6-month drift: **58.7%** positive\n- With recent 20-day parameters: **59.2%** positive\n- **Zero drift: 49.9%** (essentially 50/50)\n- Negative drift (-0.1%/day): **45.8%** positive\n\n**S&P 500 conditional base rate**: During 8%+ drawdowns, **52.8%** positive over 5 days (from 1,446 historical events since 1927).\n\n## Conclusion\n\nThe agent concluded with **49% probability** — essentially a coin flip with slight negative lean. The weighted Monte Carlo gave ~51%, adjusted down slightly for qualitative headwinds. The April 6 Iran strike deadline creates symmetric binary risk on the exact resolution date. The agent appropriately treated this as high-uncertainty and avoided overconfidence in either direction.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__stock_price": "3 calls, 0 errors, impact: none, value: high — provided current prices for ADM and S&P 500 plus recent history",
+      "mcp__financial__stock_history": "1 call, 0 errors, impact: none, value: medium — provided 6-month OHLCV data for volatility calculation",
+      "mcp__financial__stock_conditional_returns": "1 call, 0 errors, impact: none, value: high — key S&P 500 base rate during 8%+ drawdowns",
+      "mcp__asknews__search_news": "2 calls, 0 errors, impact: none, value: high — discovered critical Iran war context and April 6 deadline",
+      "mcp__sandbox__execute_code": "3 calls, 0 errors, impact: none, value: high — Monte Carlo simulations with multiple drift scenarios",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — structured factor analysis and reviewer critique",
+      "TodoWrite": "3 calls, 0 errors, impact: none, value: low — task tracking overhead"
+    },
+    "capability_gaps": [
+      "No prediction market check (Polymarket/Kalshi) for Iran-related or ADM-specific markets",
+      "No ADM-specific conditional returns (e.g., how ADM performs when near 52-week high)"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation with multiple drift assumptions combined with macro news analysis and S&P 500 conditional base rates",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Trump's April 6 Iran strike deadline coincides with the resolution date, creating symmetric high-impact binary risk that dominates all other factors"
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi) for Iran conflict or geopolitical risk pricing, despite the April 6 strike deadline being identified as the dominant uncertainty",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "Used S&P 500 conditional returns (52.8%) as a reference, but ADM's beta of 0.68 means it's less correlated with the broad market; an ADM-specific base rate during elevated VIX periods would be more relevant",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "48-50%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Ran Monte Carlo with four distinct drift scenarios (6-month drift, recent 20-day, zero drift, negative drift) providing a 46-59% probability range",
+    "Discovered the critical April 6 Iran strike deadline through news search and correctly identified it as the dominant catalyst",
+    "Computed S&P 500 conditional base rate during 8%+ drawdowns (52.8% from 1,446 events) as an empirical anchor",
+    "Identified insider selling by three SVPs with specific share counts and dates ($7.5M total)",
+    "Recognized ADM's relative strength vs broader market despite elevated macro headwinds",
+    "Appropriately landed near 50% given genuine symmetric uncertainty rather than forcing a directional call"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets for Iran conflict or ADM-related pricing",
+    "S&P 500 conditional base rate may not apply well to ADM given its 0.68 beta and commodity exposure",
+    "No analysis of how ADM specifically performs when trading near 52-week highs (mean reversion vs momentum continuation)",
+    "Analyst price targets ($58.57 average) were given significant weight but these often lag during strong momentum moves"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market check for geopolitical events when they're identified as dominant catalysts",
+    "Compute stock-specific conditional returns (e.g., ADM during high VIX, ADM near 52-week high) rather than relying solely on S&P 500 base rates",
+    "For commodity stocks, check commodity price forecasts (oil futures, agricultural commodities) as additional inputs"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed a forecast trace for the question: \"Will the interest in 'rory kennedy' change between 2026-03-31 and 2026-04-07 according to Google Trends?\"\n\nThe agent systematically gathered data from multiple sources:\n- **Google Trends API** (`mcp__trends__google_trends`): Retrieved the exact date range (2026-03-08 to 2026-04-07) matching the resolution URL. Obtained full historical data showing a massive spike: baseline of **~6 median** pre-spike, peaking at **100 on March 28**, decaying to **43 by March 31**.\n- **Web searches** (`mcp__search__web_search`, `mcp__search__search_exa`): Successfully identified the spike catalyst - FX's \"Love Story: John F. Kennedy Jr. & Carolyn Bessette\" finale on **March 26, 2026**. The 9-episode series dramatized JFK Jr.'s death while flying to Rory Kennedy's wedding.\n- **News search** (`mcp__asknews__search_news`): Failed with 403 rate limit error, but web searches covered the news angle adequately.\n- **Metaculus question data** (`mcp__markets__get_metaculus_questions`): Retrieved exact resolution criteria (±3 threshold, SerpApi methodology).\n\n## Key Evidence\n\n**For Decreases:**\n- The driving event (Love Story finale) is **complete** - no more episodes\n- Clear decay pattern: **100 → 82 → 43** in 3 days (57% drop from peak)\n- Current value **43** is 7x above baseline (~6), with threshold for \"Decreases\" at **<40**\n- Only 4 points of decay needed to cross threshold\n\n**Against Decreases (minor):**\n- Rory Kennedy's \"Queen of Chess\" documentary is a Netflix hit, potentially sustaining some interest\n- Risk of new Kennedy family news as a catalyst\n\n**Monte Carlo simulation** (100,000 runs) projected:\n- Median end value: **10.6**\n- **97% probability of Decreases**, 1.9% Increases, 1.1% Doesn't change\n\nEven the most conservative decay scenario (10%/day) projects **~21 by April 7**, well below the 40 threshold.\n\n## Conclusion\n\nThe agent concluded **95% Decreases**, slightly conservative vs. the 97% Monte Carlo output to account for model uncertainty and potential unexpected catalysts. The reasoning is sound: a completed TV series caused a spike that has already begun rapid decay, with the current value far above baseline and only needing minimal additional decay to resolve as \"Decreases.\"",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__trends__google_trends": "1 call, 0 errors, impact: none, value: high — core data source with exact resolution-range history",
+      "mcp__search__web_search": "2 calls, 0 errors, impact: none, value: high — identified Love Story finale as spike catalyst",
+      "mcp__search__search_exa": "1 call, 0 errors, impact: none, value: medium — supplementary news search",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: none (web search covered gap), value: low",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — retrieved resolution criteria",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: high — decay projections and Monte Carlo simulation",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — structured factor verification"
+    },
+    "capability_gaps": [],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "culture",
+    "approach": "Monte Carlo decay simulation from Google Trends spike data with news-driven catalyst analysis",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether any new Kennedy family news catalyst could reverse the decay trend in the 7-day window."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "94-96% Decreases",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the exact spike catalyst (Love Story FX finale March 26) through multiple web searches",
+    "Used Monte Carlo simulation with 100K samples to quantify decay scenarios",
+    "Retrieved Google Trends data for the exact resolution date range (2026-03-08 to 2026-04-07)",
+    "Appropriately reduced 97% model estimate to 95% for calibration/uncertainty",
+    "Considered counterarguments (Queen of Chess documentary, new catalyst risk) and assigned appropriate low weights",
+    "Verified resolution criteria alignment (±3 threshold, SerpApi methodology)"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi) for any relevant Kennedy/trends markets",
+    "AskNews tool hit rate limit but this was adequately covered by alternative searches"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market check to standard workflow even when not obviously applicable",
+    "Consider checking historical decay patterns for similar Google Trends spikes to validate decay rate assumptions"
+  ]
+}

@@ -1,0 +1,378 @@
+{
+  "slug": "adaptyvbio-protein-binder-competition-results-hist-05d5592d",
+  "query": "AdaptyvBio protein binder competition results history success rates 2024 2025 2026",
+  "answer": "Now I have comprehensive data to compile a thorough report. Let me produce the structured output.\n\n## AdaptyvBio Protein Binder Competition: Complete Results History (2024–2026)\n\n### Overview\n\nAdaptyv Bio (based in Switzerland) has run a series of open, crowdsourced protein binder design competitions since mid-2024, rapidly scaling in scope and participation. Their platform, Proteinbase, hosts all experimental data open-source. As of April 2026, they have experimentally validated over 2,000 protein designs across multiple targets, yielding hundreds of confirmed binders. A fourth competition (RBX1, co-organized with GEM for ICLR 2026) is currently active.\n\n---\n\n### Competition 1: EGFR Binder Design – Round 1 (Summer 2024)\n\n- **Target**: EGFR (Epidermal Growth Factor Receptor), PDB: 1IVO\n- **Timeline**: Submissions open Jul 18, 2024 → Close Aug 18, 2024 → Results released Oct 18, 2024\n- **Participants**: ~50+ designers\n- **Submissions**: ~726 total designs submitted; 201 selected for experimental validation (100 by best pAE_interaction, ~100 by \"rule of cool\")\n- **Expression rate**: 73–76% (146/201); some sources cite 92% in the Proteinbase collection\n- **Binding hit rate**: **2.5%** (5 strong binders out of 201 tested), plus 2 weak binders = 7 total binders\n- **Best KD**: 6.6 nM (an scFv)\n- **KD range**: 3e-8 M to 2.3e-5 M\n- **Dominant methods**: RFdiffusion for backbone generation, ProteinMPNN for sequence design\n- **Winning approach**: AlphaFold2 hallucination + SolubleMPNN inverse-folding\n- **Key finding**: 2.5% hit rate was already considerably higher than previously reported EGFR campaigns (0.01% with Rosetta, Cao et al. 2022)\n\n---\n\n### Competition 2: EGFR Binder Design – Round 2 (Fall 2024)\n\n- **Target**: EGFR (same target, with neutralization assay added)\n- **Timeline**: Submissions open Oct 4, 2024 → Close Nov 4, 2024 → Results released Dec 8–24, 2024\n- **Participants**: ~130 designers (up from ~50)\n- **Submissions**: ~1,000+ designs; 400 selected for validation (doubled from Round 1)\n- **Expression rate**: **95–96%** (378/400) — up from 76%\n- **Binding hit rate**: **13–14%** (53/400) — a **5× improvement** over Round 1\n- **Best KD**: 1.21 nM (Cradle's optimized Cetuximab scFv variant — 8× better than Merck's commercial Cetuximab)\n- **26 single-digit nM binders** in this round\n- **30 out of 130 designers** produced at least one successful binder\n\n**Hit rates by design category:**\n| Category | Hit Rate | Expression Rate |\n|---|---|---|\n| Diversified binders | 28% | 92% |\n| Optimized binders | 18% | — |\n| De novo (BindCraft/hallucination) | 9% (6/65) | 100% |\n| De novo (RFdiffusion/diffusion) | ~1 binder | — |\n| Top 100 selected designs | 24% | — |\n| Pseudo-random (diversity) | 10% | — |\n\n**Notable performers:**\n- **Cradle** (1st place): Optimized Cetuximab scFv with 10 mutations, achieved 1.21 nM KD\n- **Chris Xu / Tihumab** (2nd & 3rd): Nanobodies via antibody humanization\n- **Aurelia Bustos** (80% hit rate): Modified TGFα with diffusion models; 8/10 designs bound\n- **Lennart Nickel**: Fully de novo binders via BindCraft\n\n**Community paper**: Published on bioRxiv (April 2025): \"Crowdsourced Protein Design: Lessons From the Adaptyv EGFR Binder Competition\" (doi: 10.1101/2025.04.17.648362v2). Also introduced **BenchBB** (Bench-tested Binder Benchmark).\n\n---\n\n### Competition 3: Nipah Virus Glycoprotein G Binder (Fall 2025–Winter 2026)\n\n- **Target**: Nipah Virus Glycoprotein G (NiV-G), PDB: 2VSM — a challenging tetrameric target with 40–75% mortality and no approved treatments\n- **Timeline**: Submissions open Oct 30, 2025 → Close Dec 1, 2025 → Validation starts Dec 11, 2025 → Results released Jan 21, 2026\n- **Participants**: **680+** designers (massive growth from 130)\n- **Submissions**: **10,000+** designs (5× more than both previous competitions combined)\n- **Selected for validation**: **1,200** designs (600 by Boltz-2 ipSAE score, 400 by expert panel, 200 by community vote)\n- **Designs experimentally characterized**: **1,030** (of 1,200; remaining 174 had characterization difficulties)\n- **Expression rate**: **86%** (881/1,026)\n- **Binding hit rate**: **~9.6%** (99 binders out of 1,026 tested) — lower than EGFR Round 2 but against a much harder target with little prior work\n- **High-affinity binders**: **26 single-digit nM or better**, with best at **picomolar** affinity\n- **Total binders listed on Proteinbase**: 103 (including some from additional data)\n\n**Hit rates by design tool (from Deniz Kavi's analysis):**\n| Tool | # Entries | Hit Rate |\n|---|---|---|\n| Escalante's Mosaic | 9 | **88.8%** |\n| RFdiffusion | 42 | **21.4%** |\n| ProteinMPNN | 29 | **20.7%** |\n| BindCraft | 88 | **5.68%** |\n| BoltzGen | 163 | **1.23%** |\n\n**Top winners:**\n- 🥇 **Miles McGibbon** — General ranking #1 (KD: 3.7e-10 M / 370 pM)\n- 🥈 **Liviu Copoiu** — General #2 (KD: 4.5e-10 M / 450 pM)\n- 🥉 **Andrew Huang** — General #3 (KD: 7.2e-10 M / 720 pM)\n- De novo #1: **Nick Boyd** (Escalante) — KD: 1.4e-9 M; **9 out of 10 designs bound (90% hit rate)**\n\n**Notable findings:**\n- Boltz-2 ipSAE as a filter: Top 0.5% by min_ipsae achieved 83.3% binders (5/6); top 1% achieved 63.6% (7/11)\n- RFdiffusion resolved as having the highest model-level hit rate on Manifold prediction markets\n- BindCraft2 (pre-release) and Latent-X both achieved ~30% hit rates\n- Nipah target was significantly harder than EGFR (tetrameric, little prior binder work)\n\n---\n\n### Competition 4: RBX1 Binder Design (Active, 2026)\n\n- **Target**: RBX1 (RING Box Protein 1 / ROC1) — 108 amino acid E3 ubiquitin ligase component, cancer-relevant\n- **Co-organized with**: GEM Workshop at ICLR 2026 (April 27, 2026, Rio de Janeiro)\n- **Proteins to be validated**: 300\n- **Status**: Active, ends in ~27 days (as of mid-April 2026)\n- **Results**: To be announced at ICLR 2026\n\n---\n\n### Cumulative Platform Statistics (as of April 2026, from Proteinbase)\n\n| Target | Proteins Validated | Binders Found |\n|---|---|---|\n| Nipah Virus Glycoprotein G | 1,030 | 103 |\n| EGFR | 826 | 134 |\n| PD-L1 | 110 | 40 |\n| Human Serum Albumin | 103 | 0 |\n| IL-7Ra | 97 | 62 |\n| **Total across all targets** | **~2,100+** | **~340+** |\n\n### Trajectory of Key Metrics Across Competitions\n\n| Metric | EGFR R1 (Oct 2024) | EGFR R2 (Dec 2024) | Nipah (Jan 2026) |\n|---|---|---|---|\n| Designs tested | 201 | 400 | 1,030 |\n| Expression rate | 73–76% | 95–96% | 86% |\n| Overall hit rate | 2.5% | 13–14% | ~9.6% |\n| Best KD | 6.6 nM | 1.21 nM | 370 pM |\n| Participants | ~50 | ~130 | 680+ |\n| Total submissions | ~726 | ~1,000+ | 10,000+ |",
+  "sources": [
+    {
+      "url": "https://www.adaptyvbio.com/blog/po102/",
+      "title": "Protein Optimization 102: Lessons from the protein design competition (EGFR Round 1 analysis)",
+      "domain": "adaptyvbio.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Results of the first round of the EGFR binder design competition. 2.5% hit rate (5/201), 73% expression rate."
+    },
+    {
+      "url": "https://adaptyvbio.substack.com/p/protein-design-competition-results",
+      "title": "Protein Design Competition - RESULTS (EGFR Round 2)",
+      "domain": "adaptyvbio.substack.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "400 proteins tested, 378 expressed (95%), 53 bound EGFR (14% success rate), 5x improvement over Round 1."
+    },
+    {
+      "url": "https://www.adaptyvbio.com/blog/po104/",
+      "title": "Protein Design Competition: Has binder design been solved? (EGFR Round 2 deep analysis)",
+      "domain": "adaptyvbio.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "13% hit rate, 96% expression. Diversified binders 28%, optimized 18%, de novo hallucination 9%."
+    },
+    {
+      "url": "https://adaptyvbio.substack.com/p/protein-design-competition-has-binder",
+      "title": "Protein Design Competition: Has binder design been solved? (Substack version)",
+      "domain": "adaptyvbio.substack.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "400 tested, 378 expressed (95%), 53 bound (14%). Cradle won with 1.21 nM KD. 30/130 designers made at least one binder."
+    },
+    {
+      "url": "https://www.cradle.bio/blog/adaptyv-protein-design-competition",
+      "title": "8x improvement in EGFR binding affinity: winning the Adaptyv Bio protein design competition",
+      "domain": "cradle.bio",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Cradle achieved 1st place with 1.21 nM binding affinity, 8.2x stronger than Cetuximab."
+    },
+    {
+      "url": "https://foundry.adaptyvbio.com/egfr_design_competition",
+      "title": "Adaptyv EGFR Binder Design Competition 1 (Proteinbase page)",
+      "domain": "foundry.adaptyvbio.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "EGFR Round 1: 200 proteins validated. Submissions Jul-Aug 2024, results Oct 2024."
+    },
+    {
+      "url": "https://foundry.adaptyvbio.com/competition",
+      "title": "Adaptyv EGFR Binder Design Competition 2 (Proteinbase page)",
+      "domain": "foundry.adaptyvbio.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "EGFR Round 2: 400 proteins validated. Submissions Oct-Nov 2024, results Jan 2025."
+    },
+    {
+      "url": "https://proteinbase.com/collections/nipah-binder-competition-results",
+      "title": "Nipah Competition Results (Proteinbase collection)",
+      "domain": "proteinbase.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "1,030 designs tested, 881 expressed (86%), 99 binders (9.6%), 26 single-digit nM. Top KD: 3.7e-10 M."
+    },
+    {
+      "url": "https://proteinbase.com/competitions/adaptyv-nipah-competition",
+      "title": "Nipah Binder Competition page (Proteinbase)",
+      "domain": "proteinbase.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "1200 proteins experimentally validated. Submissions Oct-Dec 2025, results Jan 21, 2026."
+    },
+    {
+      "url": "https://adaptyvbio.substack.com/p/what-happened-in-the-nipah-protein",
+      "title": "What happened in the Nipah Protein Design Competition so far?",
+      "domain": "adaptyvbio.substack.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "10,000+ designs submitted, 680+ designers, BoltzGen most popular tool, 1,200 selected for validation."
+    },
+    {
+      "url": "https://x.com/adaptyvbio/status/2014218665542242568",
+      "title": "Adaptyv Bio on X: Nipah results announcement",
+      "domain": "x.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "1200 proteins validated, 99 novel binders, 26 single digit nM or better, best at picomolar affinity."
+    },
+    {
+      "url": "https://www.linkedin.com/posts/deniz-kavi_newest-adaptyv-competition-results-are-out-activity-7420133202150912000-pL15",
+      "title": "Deniz Kavi LinkedIn: Adaptyv Competition Results - AI Protein Design Tools Compared",
+      "domain": "linkedin.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "BoltzGen 1.23% hit rate (n=163), BindCraft 5.68% (n=88), RFdiffusion 21.4% (n=42), Escalante Mosaic 88.8% (n=9)."
+    },
+    {
+      "url": "https://blog.escalante.bio/winning-the-de-novo-portion-of-the-adaptyv-nipah-binder-competition/",
+      "title": "Winning the de novo portion of the Adaptyv Nipah binder competition (Escalante blog)",
+      "domain": "blog.escalante.bio",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "9/10 designs bound for 90% success rate. Used gradient-based optimization on Boltz-2 loss without inverse folding."
+    },
+    {
+      "url": "https://design.adaptyvbio.com/",
+      "title": "Proteinbase - The home of protein design data (main page with cumulative stats)",
+      "domain": "design.adaptyvbio.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Nipah: 1030 validated, 103 binders. EGFR: 826 validated, 134 binders. PD-L1: 110, 40 binders. HSA: 103, 0 binders."
+    },
+    {
+      "url": "https://github.com/adaptyvbio/egfr_competition_1/",
+      "title": "GitHub: adaptyvbio/egfr_competition_1 (Round 1 data)",
+      "domain": "github.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Results data for Round 1 of EGFR competition. Created Sep 2024."
+    },
+    {
+      "url": "https://github.com/adaptyvbio/egfr_competition_2/",
+      "title": "GitHub: adaptyvbio/egfr_competition_2 (Round 2 data)",
+      "domain": "github.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Results data for Round 2 including neutralization assay. Created Dec 2024."
+    },
+    {
+      "url": "https://blog.booleanbiotech.com/what-we-learned-adaptyv",
+      "title": "Boolean Biotech: What we learned about binder design from the Adaptyv competition",
+      "domain": "blog.booleanbiotech.com",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Analysis of Adaptyv competition data. No single feature dominated predictive power for binding."
+    },
+    {
+      "url": "https://www.biorxiv.org/content/10.1101/2025.04.17.648362v2",
+      "title": "Crowdsourced Protein Design: Lessons From the Adaptyv EGFR Binder Competition (bioRxiv)",
+      "domain": "biorxiv.org",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "Community paper analyzing both rounds of EGFR competition, introducing BenchBB benchmark."
+    },
+    {
+      "url": "https://www.gembio.ai/gemadaptyv2026",
+      "title": "GEM x Adaptyv: RBX-1 Binder Design Competition 2026",
+      "domain": "gembio.ai",
+      "accessed_at": "2026-04-14T12:00:00Z",
+      "snippet": "RBX1 competition for ICLR 2026, 300 binders to be tested in wet lab."
+    }
+  ],
+  "key_facts": [
+    "Adaptyv Bio has run 3 completed protein binder design competitions (EGFR Round 1, EGFR Round 2, Nipah) and has a 4th (RBX1) currently active as of April 2026",
+    "EGFR Round 1 (Oct 2024): 201 designs tested, 2.5% binding hit rate, 73-76% expression rate, ~50 participants, best KD 6.6 nM",
+    "EGFR Round 2 (Dec 2024): 400 designs tested, 13-14% binding hit rate (5x improvement over Round 1), 95-96% expression rate, 130 participants, best KD 1.21 nM (Cradle, 8x better than Cetuximab)",
+    "Nipah Competition (Jan 2026): 1,030 designs characterized out of 1,200 selected, 9.6% hit rate (99 binders), 86% expression rate, 680+ participants, 10,000+ submissions, best KD 370 pM",
+    "Nipah was a significantly harder target than EGFR (tetrameric protein with little prior binder work), explaining the lower hit rate vs EGFR Round 2",
+    "In Nipah competition, Escalante's Mosaic tool achieved 88.8% hit rate (n=9), RFdiffusion 21.4% (n=42), BindCraft 5.68% (n=88), BoltzGen 1.23% (n=163)",
+    "Nick Boyd (Escalante) won de novo category in Nipah with 9/10 designs binding (90% success rate) using gradient-based optimization directly on Boltz-2 loss without inverse folding or filtering",
+    "Participation grew dramatically: ~50 designers (EGFR R1) → 130 (EGFR R2) → 680+ (Nipah)",
+    "Submissions grew from ~726 (EGFR R1) to 10,000+ (Nipah) — a 14x increase",
+    "Cumulative across all Proteinbase data: ~2,100+ proteins validated, ~340+ binders found across targets including EGFR, Nipah, PD-L1, IL-7Ra, HSA",
+    "RBX1 competition (4th) is co-organized with GEM Workshop at ICLR 2026, with 300 proteins to be validated, results expected late April 2026",
+    "Community paper published on bioRxiv April 2025: 'Crowdsourced Protein Design: Lessons From the Adaptyv EGFR Binder Competition', also introduced BenchBB benchmark",
+    "Boltz-2 ipSAE proved effective as a filter in Nipah: top 0.5% by min_ipsae achieved 83.3% binders",
+    "Expression rates have generally improved over time: 73-76% (EGFR R1) → 95-96% (EGFR R2); Nipah was 86% but for a harder target",
+    "Best binding affinities improved from 6.6 nM (EGFR R1) to 1.21 nM (EGFR R2) to 370 pM (Nipah)"
+  ],
+  "data_points": [
+    {
+      "metric": "EGFR Round 1 binding hit rate",
+      "value": 2.5,
+      "unit": "%",
+      "as_of": "2024-10-18",
+      "source_url": "https://www.adaptyvbio.com/blog/po102/"
+    },
+    {
+      "metric": "EGFR Round 1 expression rate",
+      "value": 76.0,
+      "unit": "%",
+      "as_of": "2024-10-18",
+      "source_url": "https://www.adaptyvbio.com/blog/po102/"
+    },
+    {
+      "metric": "EGFR Round 1 designs tested",
+      "value": 201.0,
+      "unit": "proteins",
+      "as_of": "2024-10-18",
+      "source_url": "https://foundry.adaptyvbio.com/egfr_design_competition"
+    },
+    {
+      "metric": "EGFR Round 1 best KD",
+      "value": 6.6,
+      "unit": "nM",
+      "as_of": "2024-10-18",
+      "source_url": "https://proteinbase.com/collections/adaptyv-egfr-competition-round-1"
+    },
+    {
+      "metric": "EGFR Round 1 total binders",
+      "value": 7.0,
+      "unit": "binders",
+      "as_of": "2024-10-18",
+      "source_url": "https://www.adaptyvbio.com/blog/po102/"
+    },
+    {
+      "metric": "EGFR Round 1 participants",
+      "value": 50.0,
+      "unit": "designers",
+      "as_of": "2024-10-18",
+      "source_url": "https://www.adaptyvbio.com/blog/po102/"
+    },
+    {
+      "metric": "EGFR Round 2 binding hit rate",
+      "value": 14.0,
+      "unit": "%",
+      "as_of": "2024-12-08",
+      "source_url": "https://adaptyvbio.substack.com/p/protein-design-competition-results"
+    },
+    {
+      "metric": "EGFR Round 2 expression rate",
+      "value": 95.0,
+      "unit": "%",
+      "as_of": "2024-12-08",
+      "source_url": "https://adaptyvbio.substack.com/p/protein-design-competition-results"
+    },
+    {
+      "metric": "EGFR Round 2 designs tested",
+      "value": 400.0,
+      "unit": "proteins",
+      "as_of": "2024-12-08",
+      "source_url": "https://adaptyvbio.substack.com/p/protein-design-competition-results"
+    },
+    {
+      "metric": "EGFR Round 2 total binders",
+      "value": 53.0,
+      "unit": "binders",
+      "as_of": "2024-12-08",
+      "source_url": "https://adaptyvbio.substack.com/p/protein-design-competition-results"
+    },
+    {
+      "metric": "EGFR Round 2 best KD (Cradle)",
+      "value": 1.21,
+      "unit": "nM",
+      "as_of": "2024-12-08",
+      "source_url": "https://www.cradle.bio/blog/adaptyv-protein-design-competition"
+    },
+    {
+      "metric": "EGFR Round 2 participants",
+      "value": 130.0,
+      "unit": "designers",
+      "as_of": "2024-12-08",
+      "source_url": "https://adaptyvbio.substack.com/p/protein-design-competition-results"
+    },
+    {
+      "metric": "EGFR Round 2 diversified binder hit rate",
+      "value": 28.0,
+      "unit": "%",
+      "as_of": "2024-12-24",
+      "source_url": "https://www.adaptyvbio.com/blog/po104/"
+    },
+    {
+      "metric": "EGFR Round 2 optimized binder hit rate",
+      "value": 18.0,
+      "unit": "%",
+      "as_of": "2024-12-24",
+      "source_url": "https://www.adaptyvbio.com/blog/po104/"
+    },
+    {
+      "metric": "EGFR Round 2 de novo BindCraft hit rate",
+      "value": 9.0,
+      "unit": "%",
+      "as_of": "2024-12-24",
+      "source_url": "https://www.adaptyvbio.com/blog/po104/"
+    },
+    {
+      "metric": "Nipah competition total submissions",
+      "value": 10000.0,
+      "unit": "designs",
+      "as_of": "2025-12-01",
+      "source_url": "https://adaptyvbio.substack.com/p/what-happened-in-the-nipah-protein"
+    },
+    {
+      "metric": "Nipah competition participants",
+      "value": 680.0,
+      "unit": "designers",
+      "as_of": "2025-12-01",
+      "source_url": "https://adaptyvbio.substack.com/p/what-happened-in-the-nipah-protein"
+    },
+    {
+      "metric": "Nipah designs characterized",
+      "value": 1030.0,
+      "unit": "proteins",
+      "as_of": "2026-01-21",
+      "source_url": "https://proteinbase.com/collections/nipah-binder-competition-results"
+    },
+    {
+      "metric": "Nipah expression rate",
+      "value": 86.0,
+      "unit": "%",
+      "as_of": "2026-01-21",
+      "source_url": "https://proteinbase.com/collections/nipah-binder-competition-results"
+    },
+    {
+      "metric": "Nipah total binders",
+      "value": 99.0,
+      "unit": "binders",
+      "as_of": "2026-01-21",
+      "source_url": "https://x.com/adaptyvbio/status/2014218665542242568"
+    },
+    {
+      "metric": "Nipah binding hit rate",
+      "value": 9.6,
+      "unit": "%",
+      "as_of": "2026-01-21",
+      "source_url": "https://proteinbase.com/collections/nipah-binder-competition-results"
+    },
+    {
+      "metric": "Nipah single-digit nM binders",
+      "value": 26.0,
+      "unit": "binders",
+      "as_of": "2026-01-21",
+      "source_url": "https://x.com/adaptyvbio/status/2014218665542242568"
+    },
+    {
+      "metric": "Nipah best KD (Miles McGibbon)",
+      "value": 0.37,
+      "unit": "nM",
+      "as_of": "2026-01-21",
+      "source_url": "https://proteinbase.com/collections/nipah-binder-competition-results"
+    },
+    {
+      "metric": "Nipah RFdiffusion hit rate",
+      "value": 21.4,
+      "unit": "%",
+      "as_of": "2026-01-22",
+      "source_url": "https://www.linkedin.com/posts/deniz-kavi_newest-adaptyv-competition-results-are-out-activity-7420133202150912000-pL15"
+    },
+    {
+      "metric": "Nipah BindCraft hit rate",
+      "value": 5.68,
+      "unit": "%",
+      "as_of": "2026-01-22",
+      "source_url": "https://www.linkedin.com/posts/deniz-kavi_newest-adaptyv-competition-results-are-out-activity-7420133202150912000-pL15"
+    },
+    {
+      "metric": "Nipah BoltzGen hit rate",
+      "value": 1.23,
+      "unit": "%",
+      "as_of": "2026-01-22",
+      "source_url": "https://www.linkedin.com/posts/deniz-kavi_newest-adaptyv-competition-results-are-out-activity-7420133202150912000-pL15"
+    },
+    {
+      "metric": "Nipah Escalante Mosaic hit rate",
+      "value": 88.8,
+      "unit": "%",
+      "as_of": "2026-01-22",
+      "source_url": "https://www.linkedin.com/posts/deniz-kavi_newest-adaptyv-competition-results-are-out-activity-7420133202150912000-pL15"
+    },
+    {
+      "metric": "Nipah Nick Boyd de novo hit rate",
+      "value": 90.0,
+      "unit": "%",
+      "as_of": "2026-01-29",
+      "source_url": "https://blog.escalante.bio/winning-the-de-novo-portion-of-the-adaptyv-nipah-binder-competition/"
+    },
+    {
+      "metric": "RBX1 competition proteins to validate",
+      "value": 300.0,
+      "unit": "proteins",
+      "as_of": "2026-04-14",
+      "source_url": "https://www.gembio.ai/gemadaptyv2026"
+    },
+    {
+      "metric": "Proteinbase cumulative proteins validated (all targets)",
+      "value": 2100.0,
+      "unit": "proteins",
+      "as_of": "2026-04-14",
+      "source_url": "https://design.adaptyvbio.com/"
+    }
+  ],
+  "created_at": "2026-04-14T14:38:07.844395Z",
+  "updated_at": "2026-04-14T14:38:07.844395Z",
+  "stale_after": "2026-04-17T14:38:07.844395Z",
+  "resolvable_after": null,
+  "state": "fresh",
+  "superseded_by": null,
+  "revision_history": [],
+  "session_id": "83f560d0-af41-43d1-aaa0-b239d0f3b581",
+  "follow_up_count": 0
+}

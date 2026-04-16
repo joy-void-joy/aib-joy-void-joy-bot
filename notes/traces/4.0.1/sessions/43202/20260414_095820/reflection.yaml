@@ -1,0 +1,248 @@
+---
+timestamp: 2026-04-14 10:03:10 UTC
+question_type: numeric
+factors:
+- description: SOFR Index grows mechanically at ~SOFR_rate/360 per calendar day. With
+    SOFR at 3.61% and 8 calendar days, the deterministic projection gives ~1.24035.
+    This is essentially a compounding calculation with known parameters.
+  supports:
+    center: 1.24035
+    low: 1.24034
+    high: 1.24036
+  logit: 3.0
+  confidence: 0.95
+  effective_logit: 2.8499999999999996
+- description: No FOMC meeting between now and April 21. Fed held rates at 3.50-3.75%
+    on March 18. Next meeting likely in May. SOFR rate will stay anchored to the current
+    target range.
+  supports:
+    center: 1.24035
+    low: 1.24033
+    high: 1.24037
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: Recent SOFR rates (3.57-3.68%) show very low daily volatility (std
+    ~0.03%). The index value is extremely predictable over 1 week with no policy change
+    expected.
+  supports:
+    center: 1.24035
+    low: 1.24034
+    high: 1.24036
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: 'Small tail risk: emergency inter-meeting rate cut (~0.5% probability)
+    or repo market stress (~0.5% probability) could shift SOFR materially. These widen
+    the tails slightly but barely affect the median.'
+  supports:
+    center: 1.24035
+    low: 1.24025
+    high: 1.24045
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 1.24035
+  low: 1.24034
+  high: 1.24036
+assessment: 'The SOFR Index is a cumulative compounding index that grows by approximately
+  (SOFR_rate / 360) per calendar day. With the Fed holding rates steady at 3.50-3.75%
+  and no FOMC meeting before April 21, the SOFR rate will remain extremely stable.
+  The latest known index value is 1.23935285 on April 13. Over the next 8 calendar
+  days, compounding at ~3.62% annual rate gives approximately 1.24035.
+
+
+  The distribution is extremely tight because:
+
+  1. SOFR tracks the Fed''s policy rate closely
+
+  2. No rate change is expected
+
+  3. Daily SOFR variation is tiny (~0.03% std)
+
+  4. The compounding formula is deterministic given the rate
+
+
+  Even extreme scenarios (emergency 50bp cut or repo stress spike) only shift the
+  value by ~0.0001 from the center. Monte Carlo simulation with a mixture model (95%
+  normal + 4% mild stress + 1% extreme) produces a 90% CI of approximately [1.24034,
+  1.24036].'
+calibration_notes: This is a measurement/projection question with extremely low uncertainty.
+  The SOFR Index is mechanically determined by the SOFR rate, which is anchored to
+  Fed policy. With no policy change expected in the next week, the outcome is nearly
+  deterministic. The main uncertainty is which exact SOFR rate applies each day (ranging
+  between ~3.55-3.70%), but this creates variation of only ~0.00002 in the index value
+  over 8 days.
+key_uncertainties: '1. Exact daily SOFR rate realizations (minor effect)
+
+  2. Emergency inter-meeting Fed action (extremely unlikely, ~0.5%)
+
+  3. Repo market stress causing SOFR spike (unlikely mid-month, ~0.5%)
+
+  4. Potential data revision to the April 13 starting value (very unlikely)'
+tool_audit: '- fred_series (SOFRINDEX): Excellent - provided full recent history and
+  the latest value (1.23935285 on April 13)
+
+  - fred_series (SOFR): Excellent - provided the underlying SOFR rate history showing
+  stable 3.57-3.68% range
+
+  - web_search: Useful - confirmed Fed held rates at March 18 meeting, target 3.50-3.75%,
+  no emergency action expected
+
+  - kalshi_price: No results for Fed rate cut query
+
+  - search_news: API error (quota exceeded) - not critical since web search provided
+  sufficient info
+
+  - execute_code: Essential - ran Monte Carlo simulations to derive the distribution'
+process_reflection: This question type (short-horizon projection of a near-deterministic
+  financial index) is very well-suited to the available tools. The fred_series tool
+  provided exactly the data needed. The code sandbox allowed proper Monte Carlo simulation.
+  The main friction was the search_news API quota being exceeded, but web_search provided
+  adequate substitutes. For this question type, the simulation is essentially solving
+  a deterministic compounding problem with small noise - the tooling worked perfectly.
+computed:
+  factor_count: 4
+  factor_sum: 6.875
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: SOFR Index grows mechanically at ~SOFR_rate/360 per calendar day.
+      With SOFR at 3.61% and 8 calendar days, the deterministic projection gives ~1.24035.
+      This is essentially a compounding calculation with known parameters.
+    supports:
+      center: 1.24035
+      low: 1.24034
+      high: 1.24036
+    logit: 3.0
+    confidence: 0.95
+    effective_logit: 2.8499999999999996
+  - description: No FOMC meeting between now and April 21. Fed held rates at 3.50-3.75%
+      on March 18. Next meeting likely in May. SOFR rate will stay anchored to the
+      current target range.
+    supports:
+      center: 1.24035
+      low: 1.24033
+      high: 1.24037
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: Recent SOFR rates (3.57-3.68%) show very low daily volatility (std
+      ~0.03%). The index value is extremely predictable over 1 week with no policy
+      change expected.
+    supports:
+      center: 1.24035
+      low: 1.24034
+      high: 1.24036
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: 'Small tail risk: emergency inter-meeting rate cut (~0.5% probability)
+      or repo market stress (~0.5% probability) could shift SOFR materially. These
+      widen the tails slightly but barely affect the median.'
+    supports:
+      center: 1.24035
+      low: 1.24025
+      high: 1.24045
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: SOFR Index grows mechanically at ~SOFR_rate/360 per calendar day.
+    With SOFR at 3.61% and 8 calendar days, the deterministic projection gives ~1.24035.
+    This is essentially a compounding calculation with known parameters.
+  dominant_effective_logit: 2.8499999999999996
+  distribution_metrics:
+    implied_median: 1.24035
+    implied_p10: 1.2403348083623693
+    implied_p90: 1.2403651916376304
+    median_gap: 0.0
+    median_gap_pct: 0.0
+    spread_ratio: 0.6582568807366939
+    precision: 1.6124480993194645e-05
+  sources:
+  - '[(FRED) SOFRINDEX](https://fred.stlouisfed.org/series/SOFRINDEX)'
+  - '[(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)'
+  reviewer_critique: '**Verification complete - no errors found.**
+
+
+    **Hallucination check:** All factual claims are grounded in the trace:
+
+    - Latest SOFR Index 1.23935285 on April 13 (trace line 31: "latest_value": 1.23935285,
+    "latest_date": "2026-04-13")
+
+    - Latest SOFR rate 3.61% (trace line 51: "latest_value": 3.61)
+
+    - Fed target rate 3.50-3.75% held at March 18 FOMC (trace lines 179-192: web search
+    confirms "keeping the target between 3.5% and 3.75%")
+
+    - No FOMC meeting before April 21, next meeting in May (trace line 193: "next
+    meeting is likely in May")
+
+    - SOFR daily std ~0.03% (trace line 97: "SOFR std: 0.0289%")
+
+    - 8 calendar days from April 13 to April 21 (trace line 80)
+
+
+    **Double-counting check:** Factors 1-3 address different aspects (mechanical calculation,
+    policy stability, empirical volatility) - not the same evidence.
+
+
+    **Resolution criteria alignment:** Agent correctly used FRED SOFRINDEX series
+    and targets April 21. ✓
+
+
+    **Regime-spanning check:** Data window (March 16+) is within the current Fed rate
+    regime (3.50-3.75% since before March 18). No contamination.
+
+
+    **Adversarial reasoning:** Assessment addresses emergency rate cut and repo stress
+    tail risks, explaining why even extreme scenarios only shift the value by ~0.0001.
+
+
+    **Estimate verification:** The center of 1.24035 with range [1.24034, 1.24036]
+    is consistent with:
+
+    - Trace deterministic projection at SOFR 3.61%: 1.24034744
+
+    - Trace deterministic projection at SOFR 3.62%: 1.24035019
+
+    - Trace mixture model Monte Carlo P10-P90: [1.24033866, 1.24036168]
+
+
+    The extremely tight distribution is justified because: (1) SOFR Index is a deterministic
+    compounding formula given SOFR rates, (2) SOFR tracks Fed policy closely with
+    no policy change expected, and (3) daily SOFR volatility is minimal at ~0.03%
+    std. The past SOFR-related forecast (42963) showed similar tight distributions
+    and resolved well (peer_score: 80.45).'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43202
+- **Question ID**: 43217
+- **Session Duration**: 301.1s (5.0 min)
+- **Cost**: $2.8747
+- **Tokens**: 9,255 total (29 in, 9,226 out)
+  - Cache: 598,774 read, 68,488 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43202_20260414_095820/20260414-095820.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 5 | 0 | 3010ms |
+| fred_series | 2 | 0 | 784ms |
+| kalshi_price | 1 | 0 | 447ms |
+| reflection | 1 | 0 | 73325ms |
+| web_search | 1 | 0 | 14739ms |
+
+### Sources Consulted
+
+- [(FRED) SOFRINDEX](https://fred.stlouisfed.org/series/SOFRINDEX)
+- [(FRED) SOFR](https://fred.stlouisfed.org/series/SOFR)

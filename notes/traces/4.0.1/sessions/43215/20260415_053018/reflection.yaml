@@ -1,0 +1,395 @@
+---
+timestamp: 2026-04-15 05:35:07 UTC
+question_type: multiple_choice
+factors:
+- description: Natural baseline for 'joint comprehensive plan of action' is 0-1; 90%
+    of non-spike days in the window show 0-1 values. Post-spike decay pattern (100→90→6→6)
+    shows rapid reversion. Without a catalyst, Apr 24 value will be 0-1, which is
+    Decreases.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: US-Iran ceasefire expires Apr 21, just 3 days before resolution date.
+    Failed 21-hour Islamabad talks, mediators trying to restart before deadline. War
+    could resume if no deal. This is a near-certain catalyst for Iran-related news
+    coverage.
+  supports: Increases
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: Democrats have been actively weaponizing JCPOA as a political talking
+    point ('Trump tore up the deal'). House Foreign Affairs Committee cited JCPOA
+    by name on Apr 12, driving the spike. Continued political debate around ceasefire/nuclear
+    talks likely generates JCPOA-specific searches.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: The search term 'joint comprehensive plan of action' is very niche/policy-wonk.
+    Most Iran searches use 'Iran deal', 'Iran war', 'ceasefire'. The Apr 12 spike
+    was unusually driven by specific political messaging. New catalysts may not reproduce
+    JCPOA-specific search volume.
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Decay from spike is extremely fast (100→6 in 2 days). Even if a new
+    spike occurs around Apr 21, by Apr 24 it could already be back to low single digits.
+    This makes 'Increases' harder to achieve unless the catalyst produces sustained
+    multi-day interest.
+  supports: Decreases
+  logit: 0.7
+  confidence: 0.65
+  effective_logit: 0.45499999999999996
+- description: SerpAPI vs pytrends measurement uncertainty of ±2-3 points. At low
+    absolute values (0-9), this can flip outcomes across the ±3 threshold. Adds noise
+    to all three outcomes.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: If war resumes after Apr 21 ceasefire expiry (meaningful probability
+    given talks collapsed), coverage would be sustained rather than spike-and-decay,
+    keeping JCPOA elevated through Apr 24.
+  supports: Increases
+  logit: 1.0
+  confidence: 0.4
+  conditional: If ceasefire breaks down and war resumes
+  effective_logit: 0.4
+tentative_estimate:
+  probabilities:
+    Increases: 0.3
+    Doesn't change: 0.3
+    Decreases: 0.4
+assessment: 'The core tension is between natural post-spike decay to baseline (strongly
+  favoring Decreases) and the major Apr 21 ceasefire deadline catalyst (potentially
+  favoring Increases).
+
+
+  Current state: Apr 15 value is 6, already crashed from the Apr 12 peak of 100. The
+  baseline for this niche policy term is 0-1. Without any new catalyst, the value
+  would drift to 0-1 by Apr 24, resolving as Decreases.
+
+
+  The ceasefire deadline on Apr 21 is the key uncertainty. Three scenarios:
+
+  1. War resumes (~30-35%): Sustained intense coverage, JCPOA heavily referenced as
+  political weapon → P(Increases) high, maybe 50-60%
+
+  2. Ceasefire extended/new talks (~45-50%): Moderate coverage, some JCPOA mentions
+  → value likely 0-5 by Apr 24, mostly Decreases with some Doesn''t Change
+
+  3. Deal reached (~15-20%): Huge coverage comparing to JCPOA → elevated for a few
+  days then decay
+
+
+  The term''s niche nature is important - even with massive Iran coverage, people
+  don''t necessarily search the full name "joint comprehensive plan of action." But
+  the current political environment (Democrats specifically citing JCPOA) increases
+  the likelihood.
+
+
+  The fast decay pattern (100→6 in 2 days) means even an Apr 21 spike might not persist
+  to Apr 24 unless it''s a sustained event like war resumption.'
+calibration_notes: 'Base rates from change_stats: No change 85.7%, Decrease 9.5%,
+  Increase 4.8%. But these base rates are computed during a mostly-flat period and
+  don''t capture the current unusual post-spike dynamics with an imminent catalyst.
+  The trailing_change_stats (50% no change, 33% decrease, 17% increase) are more reflective
+  of the current regime but based on very few data points. I''m departing significantly
+  from the full-series base rates because the current situation (post-spike with imminent
+  ceasefire deadline) is not represented in the base rate sample.'
+key_uncertainties: '1. Will the Apr 21 ceasefire deadline generate JCPOA-specific
+  (not just Iran-general) search interest?
+
+  2. If a spike occurs around Apr 21-22, will interest persist to Apr 24 or decay
+  rapidly like the Apr 12 spike?
+
+  3. Will war resume after the ceasefire expires?
+
+  4. SerpAPI vs pytrends measurement difference at low values'
+tool_audit: 'google_trends: Excellent - provided exact resolution-window data showing
+  the spike and decay pattern, change_stats, tail_stats. The 12-month view confirmed
+  the niche nature of the term.
+
+  search_news: Very useful - identified the ceasefire deadline, failed Islamabad talks,
+  and ongoing mediation efforts.
+
+  get_metaculus_questions: Confirmed no community prediction available.
+
+  execute_code: Used for threshold arithmetic and scenario analysis.'
+update_triggers: '- War resumes after Apr 21: major shift toward Increases
+
+  - Deal announced: moderate shift toward Increases (initial spike) then rapid decay
+
+  - Ceasefire quietly extended: shift toward Decreases
+
+  - New Democratic political campaign specifically citing JCPOA: shift toward Increases'
+process_reflection: The Google Trends tool with tz=0 matching the resolution source
+  was extremely helpful. The change_stats and tail_stats provided good quantitative
+  priors. The news search tools complemented well by revealing the Apr 21 ceasefire
+  deadline, which is the critical catalyst. The main challenge was assessing how a
+  niche policy term responds to general geopolitical events - this required qualitative
+  judgment that the tools can't directly address. Would have been useful to have historical
+  examples of how this specific term behaved during past Iran crises (2019 tensions,
+  etc.) but the 12-month data was mostly flat.
+computed:
+  factor_count: 7
+  factor_sum: 4.16
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Natural baseline for 'joint comprehensive plan of action' is 0-1;
+      90% of non-spike days in the window show 0-1 values. Post-spike decay pattern
+      (100→90→6→6) shows rapid reversion. Without a catalyst, Apr 24 value will be
+      0-1, which is Decreases.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: US-Iran ceasefire expires Apr 21, just 3 days before resolution date.
+      Failed 21-hour Islamabad talks, mediators trying to restart before deadline.
+      War could resume if no deal. This is a near-certain catalyst for Iran-related
+      news coverage.
+    supports: Increases
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: Democrats have been actively weaponizing JCPOA as a political talking
+      point ('Trump tore up the deal'). House Foreign Affairs Committee cited JCPOA
+      by name on Apr 12, driving the spike. Continued political debate around ceasefire/nuclear
+      talks likely generates JCPOA-specific searches.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: The search term 'joint comprehensive plan of action' is very niche/policy-wonk.
+      Most Iran searches use 'Iran deal', 'Iran war', 'ceasefire'. The Apr 12 spike
+      was unusually driven by specific political messaging. New catalysts may not
+      reproduce JCPOA-specific search volume.
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Decay from spike is extremely fast (100→6 in 2 days). Even if a new
+      spike occurs around Apr 21, by Apr 24 it could already be back to low single
+      digits. This makes 'Increases' harder to achieve unless the catalyst produces
+      sustained multi-day interest.
+    supports: Decreases
+    logit: 0.7
+    confidence: 0.65
+    effective_logit: 0.45499999999999996
+  - description: SerpAPI vs pytrends measurement uncertainty of ±2-3 points. At low
+      absolute values (0-9), this can flip outcomes across the ±3 threshold. Adds
+      noise to all three outcomes.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: If war resumes after Apr 21 ceasefire expiry (meaningful probability
+      given talks collapsed), coverage would be sustained rather than spike-and-decay,
+      keeping JCPOA elevated through Apr 24.
+    supports: Increases
+    logit: 1.0
+    confidence: 0.4
+    effective_logit: 0.4
+    conditional: If ceasefire breaks down and war resumes
+  dominant_factor: Natural baseline for 'joint comprehensive plan of action' is 0-1;
+    90% of non-spike days in the window show 0-1 values. Post-spike decay pattern
+    (100→90→6→6) shows rapid reversion. Without a catalyst, Apr 24 value will be 0-1,
+    which is Decreases.
+  dominant_effective_logit: 1.275
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 2.29
+    factors:
+    - description: Natural baseline for 'joint comprehensive plan of action' is 0-1;
+        90% of non-spike days in the window show 0-1 values. Post-spike decay pattern
+        (100→90→6→6) shows rapid reversion. Without a catalyst, Apr 24 value will
+        be 0-1, which is Decreases.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: The search term 'joint comprehensive plan of action' is very niche/policy-wonk.
+        Most Iran searches use 'Iran deal', 'Iran war', 'ceasefire'. The Apr 12 spike
+        was unusually driven by specific political messaging. New catalysts may not
+        reproduce JCPOA-specific search volume.
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+    - description: Decay from spike is extremely fast (100→6 in 2 days). Even if a
+        new spike occurs around Apr 21, by Apr 24 it could already be back to low
+        single digits. This makes 'Increases' harder to achieve unless the catalyst
+        produces sustained multi-day interest.
+      supports: Decreases
+      logit: 0.7
+      confidence: 0.65
+      effective_logit: 0.45499999999999996
+  - outcome: Increases
+    factor_count: 3
+    logit_sum: 1.72
+    factors:
+    - description: US-Iran ceasefire expires Apr 21, just 3 days before resolution
+        date. Failed 21-hour Islamabad talks, mediators trying to restart before deadline.
+        War could resume if no deal. This is a near-certain catalyst for Iran-related
+        news coverage.
+      supports: Increases
+      logit: 1.2
+      confidence: 0.7
+      effective_logit: 0.84
+    - description: Democrats have been actively weaponizing JCPOA as a political talking
+        point ('Trump tore up the deal'). House Foreign Affairs Committee cited JCPOA
+        by name on Apr 12, driving the spike. Continued political debate around ceasefire/nuclear
+        talks likely generates JCPOA-specific searches.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: If war resumes after Apr 21 ceasefire expiry (meaningful probability
+        given talks collapsed), coverage would be sustained rather than spike-and-decay,
+        keeping JCPOA elevated through Apr 24.
+      supports: Increases
+      logit: 1.0
+      confidence: 0.4
+      effective_logit: 0.4
+      conditional: If ceasefire breaks down and war resumes
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: SerpAPI vs pytrends measurement uncertainty of ±2-3 points. At
+        low absolute values (0-9), this can flip outcomes across the ±3 threshold.
+        Adds noise to all three outcomes.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.3359862546162901
+      Doesn't change: 0.06990032161109838
+      Decreases: 0.5941134237726116
+    tentative_probabilities:
+      Increases: 0.3
+      Doesn't change: 0.3
+      Decreases: 0.4
+    per_option_gap_pp:
+      Increases: -3.5986254616290125
+      Doesn't change: 23.009967838890162
+      Decreases: -19.411342377261153
+    max_gap_pp: 23.009967838890162
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Google Trends) joint comprehensive plan of action](https://trends.google.com/trends/explore?q=joint
+    comprehensive plan of action)'
+  - '[(Metaculus) Will the interest in “joint comprehensive plan of action” change
+    between 2026-04-15 and 2026-04-24 according to Google Trends?](https://www.metaculus.com/questions/43215)'
+  reviewer_critique: '**Verification Summary**
+
+
+    I verified all 7 factors against the research trace:
+
+
+    **Factor 1 (Baseline 0-1, 90% of non-spike days)**: Fully supported. The Google
+    Trends data in trace shows Mar 25-Apr 11 values were almost all 0s and 1s. The
+    code output explicitly states "Values in 0-2 range: 18/20" which is 90%. Post-spike
+    decay pattern (100→90→6→6) is exactly as shown in the history data.
+
+
+    **Factor 2 (Ceasefire expires Apr 21, failed 21-hour Islamabad talks)**: Fully
+    supported. Multiple news articles in the trace confirm: "a ceasefire set to expire
+    on April 21" (Moneycontrol, News18), "21 hours of talks" (multiple sources), and
+    mediators "intensifying efforts to bridge gaps before the ceasefire expires" (News18,
+    Axios).
+
+
+    **Factor 3 (House Foreign Affairs Committee cited JCPOA Apr 12)**: Fully supported.
+    Livemint article [7] explicitly states: "On April 12, 2026, Democrats on the House
+    Foreign Affairs Committee criticized... In a post on X, the committee stated that
+    ''Vance says the goal is getting Iran to commit to not build a nuclear weapon.
+    It already made that commitment in 2015 under the JCPOA -- a deal Trump tore up.''"
+
+
+    **Factor 4 (Niche search term)**: Supported. The 12-month data shows average value
+    2.1 with most weeks at 0. The trace reasoning explicitly discusses this limitation.
+
+
+    **Factor 5 (Fast decay 100→6 in 2 days)**: Fully supported. Trace data shows Apr
+    12: 100, Apr 13: 90, Apr 14: 6.
+
+
+    **Factor 6 (Measurement uncertainty ±2-3)**: Supported. Resolution criteria fine
+    print acknowledges: "there may be differences between the results returned by
+    the API and the data appearing on the page." Magnitude is reasonable inference.
+
+
+    **Factor 7 (War resumption → sustained coverage)**: Supported. Trace news articles
+    discuss "heightening the risk of renewed war" and Trump "considering resuming
+    strikes."
+
+
+    **No Double-Counting Issues**: Factors 2, 3, and 7 all contribute to "Increases"
+    probability but capture distinct mechanisms (deadline timing, political messaging,
+    war resumption scenarios respectively).
+
+
+    **No Sign Direction Errors**: All factor signs are consistent with their descriptions.
+
+
+    **Resolution Criteria Alignment**: The agent correctly parsed the ±3 threshold
+    requirements (Increases ≥10, Decreases ≤2, Doesn''t change 3-9).
+
+
+    **Adversarial Reasoning**: Present. The assessment engages with key counterarguments:
+    niche term nature limiting spike magnitude, fast decay pattern working against
+    sustained elevation, and multiple scenario analysis.
+
+
+    **Probability Assessment**: The 40-30-30 (Decreases-Doesn''t change-Increases)
+    distribution is reasonable given:
+
+    - Strong baseline reversion tendency (factor 1 at 0.85 confidence)
+
+    - Major catalyst (Apr 21 deadline) creating meaningful upside risk
+
+    - Term''s niche nature and fast decay pattern capping that risk
+
+    - Narrow "Doesn''t change" band (3-9) making it genuinely less likely than the
+    tails
+
+
+    I find no fabricated evidence, no double-counting, no wrong-direction factors,
+    and the probability distribution is defensible given the evidence presented.'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43215
+- **Question ID**: 43230
+- **Session Duration**: 298.7s (5.0 min)
+- **Cost**: $2.9437
+- **Tokens**: 10,837 total (26 in, 10,811 out)
+  - Cache: 451,238 read, 77,633 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43215_20260415_053018/20260415-053018.log`
+
+### Tool Calls
+
+- **Total**: 7 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 3 | 0 | 2ms |
+| get_metaculus_questions | 1 | 0 | 429ms |
+| google_trends | 2 | 0 | 2080ms |
+| reflection | 1 | 0 | 66811ms |
+
+### Sources Consulted
+
+- [(Google Trends) joint comprehensive plan of action](https://trends.google.co...
+- [(Metaculus) Will the interest in “joint comprehensive plan of action” change...

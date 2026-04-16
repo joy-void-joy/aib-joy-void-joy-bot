@@ -1,13 +1,18 @@
 """Metaculus Forecasting Bot - CLI Entry Point."""
 
 import asyncio
+import contextlib
+import contextvars
+import io
 import json
 import logging
 import math
+import sys
+from collections.abc import Callable, Iterator
 from pathlib import Path
 import time
 from datetime import datetime, timezone
-from typing import Annotated, TypedDict
+from typing import Annotated, TextIO, TypedDict, cast
 
 import httpx
 import typer
@@ -34,6 +39,7 @@ from metaculus import (
 from aib.agent.models import CreditExhaustedError
 from aib.submission import (
     SubmissionError,
+    TournamentQuestion,
     format_reasoning_comment,
     list_open_tournament_questions,
     post_comment,
@@ -45,6 +51,96 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 logger = logging.getLogger(__name__)
+
+
+task_writer: contextvars.ContextVar[Callable[[str], None] | None] = (
+    contextvars.ContextVar("task_writer", default=None)
+)
+
+
+class LinearOutputStream:
+    """Streams parallel task output to the terminal in strict task order.
+
+    The "head" task (the lowest-index task still running) writes directly to
+    the real stdout — its progress appears live. Later tasks buffer their
+    output until they become the head. When the head completes, the next
+    task's accumulated buffer is flushed in one shot (catching up), and that
+    task then streams live. This preserves linear ordering while still giving
+    live feedback on whichever task is currently at the front.
+    """
+
+    def __init__(self, fallback: TextIO, num_tasks: int) -> None:
+        self.fallback = fallback
+        self.buffers: list[io.StringIO] = [io.StringIO() for _ in range(num_tasks)]
+        self.completed: list[bool] = [False] * num_tasks
+        self.head = 0
+
+    def write(self, task_idx: int, data: str) -> None:
+        if task_idx == self.head:
+            self.fallback.write(data)
+            self.fallback.flush()
+        else:
+            self.buffers[task_idx].write(data)
+
+    def complete(self, task_idx: int) -> None:
+        self.completed[task_idx] = True
+        if task_idx != self.head:
+            return
+        self.head += 1
+        while self.head < len(self.buffers):
+            pending = self.buffers[self.head].getvalue()
+            if pending:
+                self.fallback.write(pending)
+                self.buffers[self.head] = io.StringIO()
+            if not self.completed[self.head]:
+                break
+            self.head += 1
+        self.fallback.flush()
+
+
+class TaskStdout:
+    """Routes print() through a per-task writer contextvar.
+
+    When a task runs inside per_task_output(), its prints are dispatched to a
+    LinearOutputStream via the task_writer contextvar. Outside that scope,
+    writes fall through to the real stdout unchanged.
+    """
+
+    def __init__(self, fallback: TextIO) -> None:
+        self.fallback = fallback
+
+    def write(self, data: str) -> int:
+        writer = task_writer.get()
+        if writer is None:
+            return self.fallback.write(data)
+        writer(data)
+        return len(data)
+
+    def flush(self) -> None:
+        if task_writer.get() is None:
+            self.fallback.flush()
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self.fallback, name)
+
+
+real_stdout: TextIO = sys.stdout
+sys.stdout = cast(TextIO, TaskStdout(real_stdout))
+
+
+@contextlib.contextmanager
+def per_task_output(stream: LinearOutputStream, task_idx: int) -> Iterator[None]:
+    """Route the current asyncio task's prints through stream at task_idx.
+
+    Marks the slot complete on exit, allowing the stream's head to advance
+    and any following task's buffered output to flush.
+    """
+    token = task_writer.set(lambda data: stream.write(task_idx, data))
+    try:
+        yield
+    finally:
+        task_writer.reset(token)
+        stream.complete(task_idx)
 
 
 class NumericCP(TypedDict):
@@ -285,13 +381,12 @@ def display_question_preview(
         print("─" * 60)
 
 
-def wait_for_credit_reset(error: CreditExhaustedError) -> None:
+async def wait_for_credit_reset(error: CreditExhaustedError) -> None:
     """Wait until credit reset time, with progress updates."""
     if error.reset_time is None:
-        # No reset time available, use a default wait of 1 hour
         default_wait = 60 * 60
         print("💤 Credit exhausted, waiting 1 hour (no reset time available)...")
-        time.sleep(default_wait)
+        await asyncio.sleep(default_wait)
         return
 
     now = datetime.now(error.reset_time.tzinfo)
@@ -306,12 +401,11 @@ def wait_for_credit_reset(error: CreditExhaustedError) -> None:
         f"💤 Credit exhausted. Waiting until {reset_str} ({wait_seconds / 60:.0f} minutes)..."
     )
 
-    # Sleep in chunks to show progress
-    chunk_size = 300  # 5 minutes
+    chunk_size = 300
     remaining = wait_seconds
     while remaining > 0:
         sleep_time = min(chunk_size, remaining)
-        time.sleep(sleep_time)
+        await asyncio.sleep(sleep_time)
         remaining -= sleep_time
         if remaining > 0:
             print(f"   ⏳ {remaining / 60:.0f} minutes remaining...")
@@ -373,7 +467,14 @@ def display_forecast(output: ForecastOutput) -> None:
         else:
             print(f"Duration: {seconds:.1f}s")
     if output.cost_usd:
-        print(f"Cost: ${output.cost_usd:.4f}")
+        subagent_cost = cast(
+            float, (output.tool_metrics or {}).get("subagent_cost_usd", 0.0)
+        )
+        total_cost = output.cost_usd + subagent_cost
+        print(
+            f"Cost: ${total_cost:.4f} total "
+            f"(orchestrator ${output.cost_usd:.4f} + sub-agents ${subagent_cost:.4f})"
+        )
     if output.tool_metrics:
         metrics = output.tool_metrics
         print(
@@ -442,6 +543,13 @@ def test(
         overrides = _build_overrides(description, resolution_criteria, fine_print)
         output = asyncio.run(run_forecast(question_id, context_overrides=overrides))
         display_forecast(output)
+    except KeyboardInterrupt:
+        from aib.agent import core as agent_core
+
+        print(
+            f"\n\n⏸  Interrupted. Trace log: {agent_core.ACTIVE_LOG_PATH or '(not yet created)'}"
+        )
+        raise typer.Exit(130)
     except CreditExhaustedError as e:
         reset_msg = ""
         if e.reset_time:
@@ -558,15 +666,16 @@ def retrodict(
 
     results: list[dict] = []
 
-    for i, qid in enumerate(question_ids, 1):
-        meta = asyncio.run(get_question_meta(qid))
+    setup_logging()
+
+    async def _process_one(idx: int, qid: int) -> dict:
+        meta = await get_question_meta(qid)
         title_part = f": {meta['title'][:50]}..." if meta else ""
-        print(f"\n[{i}/{len(question_ids)}] Retrodicting #{qid}{title_part}")
+        print(f"\n[{idx}/{len(question_ids)}] Retrodicting #{qid}{title_part}")
 
         if meta is None:
             print("❌ Could not fetch question metadata")
-            results.append({"post_id": qid, "error": "fetch_failed"})
-            continue
+            return {"post_id": qid, "error": "fetch_failed"}
 
         resolution = meta["resolution"]
         final_cp = meta["binary_cp"]
@@ -592,20 +701,26 @@ def retrodict(
         if blind and not cutoff_date:
             print("   ⚠️  No published_at found, running without blind mode")
 
-        setup_logging()
-
-        # Run forecast (set ContextVar for retrodict mode)
+        token = retrodict_cutoff.set(cutoff_date)
+        pid_token = forecasted_post_id.set(qid)
         try:
-            token = retrodict_cutoff.set(cutoff_date)
-            pid_token = forecasted_post_id.set(qid)
             try:
-                output = asyncio.run(run_forecast(qid))
-            finally:
-                forecasted_post_id.reset(pid_token)
-                retrodict_cutoff.reset(token)
+                output = await run_forecast(qid)
+            except CreditExhaustedError as e:
+                reset_msg = ""
+                if e.reset_time:
+                    reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
+                print(f"❌ Credit exhausted.{reset_msg}")
+                return {"post_id": qid, "error": "credit_exhausted"}
+            except (httpx.HTTPStatusError, httpx.TimeoutException) as e:
+                print(f"❌ Failed to fetch question: {e}")
+                return {"post_id": qid, "error": str(e)}
+            except RuntimeError as e:
+                print(f"❌ Agent failed: {e}")
+                return {"post_id": qid, "error": str(e)}
+
             display_forecast(output)
 
-            # Compute and display comparison between prediction and actual
             comparison: RetrodictComparison | None = None
             brier = None
 
@@ -826,34 +941,44 @@ def retrodict(
 
             print(f"\n{'═' * 60}")
 
-            # Save comparison to retrodict file
             if comparison is not None:
                 update_retrodict_comparison(qid, comparison, resolution)
 
-            results.append(
-                {
-                    "post_id": qid,
-                    "resolution": resolution,
-                    "our_forecast": output.probability or output.median,
-                    "final_cp": final_cp,
-                    "brier": brier,
-                    "question_type": output.question_type,
-                    "comparison": comparison.model_dump() if comparison else None,
-                }
-            )
+            return {
+                "post_id": qid,
+                "resolution": resolution,
+                "our_forecast": output.probability or output.median,
+                "final_cp": final_cp,
+                "brier": brier,
+                "question_type": output.question_type,
+                "comparison": comparison.model_dump() if comparison else None,
+            }
+        finally:
+            forecasted_post_id.reset(pid_token)
+            retrodict_cutoff.reset(token)
 
-        except CreditExhaustedError as e:
-            reset_msg = ""
-            if e.reset_time:
-                reset_msg = f" Resets at {e.reset_time.strftime('%H:%M %Z')}."
-            print(f"❌ Credit exhausted.{reset_msg}")
-            results.append({"post_id": qid, "error": "credit_exhausted"})
-        except (httpx.HTTPStatusError, httpx.TimeoutException) as e:
-            print(f"❌ Failed to fetch question: {e}")
-            results.append({"post_id": qid, "error": str(e)})
-        except RuntimeError as e:
-            print(f"❌ Agent failed: {e}")
-            results.append({"post_id": qid, "error": str(e)})
+    async def _run_all() -> list:
+        print(
+            f"\n🔁 Running {len(question_ids)} retrodicts in parallel: "
+            f"{list(question_ids)}\n"
+        )
+        stream = LinearOutputStream(real_stdout, len(question_ids))
+
+        async def wrapped(task_idx: int, qid: int) -> dict:
+            with per_task_output(stream, task_idx):
+                return await _process_one(task_idx + 1, qid)
+
+        tasks = [wrapped(i, qid) for i, qid in enumerate(question_ids)]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+    gathered = asyncio.run(_run_all())
+
+    for item in gathered:
+        if isinstance(item, BaseException):
+            print(f"❌ Unhandled error in retrodict task: {item}")
+            results.append({"post_id": -1, "error": str(item)})
+        else:
+            results.append(item)
 
     # Summary
     print(f"\n{'═' * 60}")
@@ -991,6 +1116,114 @@ def submit(
             print(f"⚠️  Comment failed (forecast was submitted): {e}")
 
 
+async def process_question(
+    q: TournamentQuestion,
+    *,
+    use_cache: bool,
+    comment: bool,
+    git_lock: asyncio.Lock,
+) -> str:
+    """Forecast, submit, commit, and optionally comment on a single question.
+
+    Returns "submitted", "skipped", or "error".
+    """
+    label = f"{q.post_id}: {q.title[:50]}"
+
+    if use_cache and is_submitted(q.post_id):
+        print(f"  ⏭️  {label} already submitted (local cache)")
+        return "skipped"
+
+    meta = await get_question_meta(q.post_id)
+    if meta is not None:
+        display_question_preview(meta)
+
+    output: ForecastOutput | None = None
+    if use_cache:
+        output = load_latest_for_submission(q.post_id)
+        if output is not None:
+            print(f"  📂 {label} loaded from cache")
+            display_forecast(output)
+
+    if output is None:
+        while True:
+            try:
+                output = await run_forecast(q.post_id)
+                display_forecast(output)
+                break
+            except CreditExhaustedError as e:
+                print(f"  ⚠️  {label}: {e}")
+                await wait_for_credit_reset(e)
+                print(f"  🔄 Retrying {q.post_id}...")
+            except httpx.HTTPStatusError as e:
+                print(f"  ❌ {label}: fetch failed: {e}")
+                return "error"
+            except RuntimeError as e:
+                print(f"  ❌ {label}: agent failed: {e}")
+                return "error"
+            except Exception as e:
+                print(f"  ❌ {label}: unexpected error: {e}")
+                logger.exception("Unexpected error forecasting %d", q.post_id)
+                return "error"
+
+    print(f"  📤 Submitting {q.post_id}...")
+    try:
+        await submit_forecast(output)
+        mark_submitted(output.post_id)
+        print(f"  ✅ Submitted {q.post_id}")
+    except SubmissionError as e:
+        print(f"  ❌ {label}: submission failed: {e}")
+        return "error"
+
+    async with git_lock:
+        try:
+            if commit_forecast(output.post_id, output.question_title):
+                print(f"  📦 Committed {q.post_id}")
+        except Exception as e:
+            print(f"  ⚠️  Git commit failed for {q.post_id}: {e}")
+
+    if comment:
+        try:
+            comment_text = format_reasoning_comment(output)
+            await post_comment(q.post_id, comment_text)
+            print(f"  💬 Comment posted for {q.post_id}")
+        except Exception as e:
+            print(f"  ⚠️  Comment failed for {q.post_id}: {e}")
+
+    return "submitted"
+
+
+async def forecast_all(
+    questions: list[TournamentQuestion],
+    *,
+    use_cache: bool,
+    comment: bool,
+) -> list[str]:
+    """Forecast all questions in parallel.
+
+    Returns a list of status strings ("submitted", "skipped", "error") — one per question.
+    """
+    git_lock = asyncio.Lock()
+    stream = LinearOutputStream(real_stdout, len(questions))
+
+    async def wrapped(task_idx: int, q: TournamentQuestion) -> str:
+        with per_task_output(stream, task_idx):
+            return await process_question(
+                q, use_cache=use_cache, comment=comment, git_lock=git_lock
+            )
+
+    tasks = [wrapped(i, q) for i, q in enumerate(questions)]
+    raw = await asyncio.gather(*tasks, return_exceptions=True)
+    results: list[str] = []
+    for q, r in zip(questions, raw, strict=True):
+        if isinstance(r, BaseException):
+            logger.exception("process_question crashed for %d", q.post_id, exc_info=r)
+            print(f"  ❌ {q.post_id}: crashed: {r}")
+            results.append("error")
+        else:
+            results.append(r)
+    return results
+
+
 @app.command()
 def tournament(
     tournament_id: Annotated[
@@ -1044,82 +1277,24 @@ def tournament(
             print(f"  [{status}] {q.post_id}: {q.title[:60]}...")
         return
 
-    # Track results
-    success_count = 0
+    pending: list[TournamentQuestion] = []
     skip_count = 0
-    error_count = 0
-
-    for i, q in enumerate(questions, 1):
-        print(f"\n[{i}/{len(questions)}] Question {q.post_id}: {q.title[:50]}...")
-
-        # Check for existing forecast (uses Metaculus API data)
+    for q in questions:
         if skip_existing and q.already_forecast:
-            print("  ⏭️  Skipping (already forecast on Metaculus)")
+            print(f"  ⏭️  {q.post_id}: {q.title[:50]} (already forecast on Metaculus)")
             skip_count += 1
-            continue
+        else:
+            pending.append(q)
 
-        meta = asyncio.run(get_question_meta(q.post_id))
-        if meta is not None:
-            display_question_preview(meta)
+    print(f"\nForecasting {len(pending)} questions in parallel...\n")
+    setup_logging()
 
-        setup_logging()
+    results = asyncio.run(forecast_all(pending, use_cache=False, comment=comment))
 
-        # Run forecast with credit exhaustion retry
-        output: ForecastOutput | None = None
-        while True:
-            try:
-                output = asyncio.run(run_forecast(q.post_id))
-                display_forecast(output)
-                break
-            except CreditExhaustedError as e:
-                print(f"  ⚠️  {e}")
-                wait_for_credit_reset(e)
-                print(f"  🔄 Retrying {q.post_id}...")
-            except httpx.HTTPStatusError as e:
-                print(f"  ❌ Failed to fetch question: {e}")
-                error_count += 1
-                break
-            except RuntimeError as e:
-                print(f"  ❌ Agent failed: {e}")
-                error_count += 1
-                break
-            except Exception as e:
-                print(f"  ❌ Unexpected error: {e}")
-                logger.exception("Unexpected error forecasting %d", q.post_id)
-                error_count += 1
-                break
+    success_count = sum(1 for r in results if r == "submitted")
+    error_count = sum(1 for r in results if r == "error")
+    skip_count += sum(1 for r in results if r == "skipped")
 
-        if output is None:
-            continue
-
-        # Submit forecast
-        print("  📤 Submitting forecast...")
-        try:
-            asyncio.run(submit_forecast(output))
-            mark_submitted(output.post_id)
-            print("  ✅ Forecast submitted")
-            success_count += 1
-        except SubmissionError as e:
-            print(f"  ❌ Submission failed: {e}")
-            error_count += 1
-            continue
-
-        try:
-            if commit_forecast(output.post_id, output.question_title):
-                print("  📦 Committed to git")
-        except Exception as e:
-            print(f"  ⚠️  Git commit failed: {e}")
-
-        # Post comment if requested
-        if comment:
-            try:
-                comment_text = format_reasoning_comment(output)
-                asyncio.run(post_comment(q.post_id, comment_text))
-                print("  💬 Comment posted")
-            except Exception as e:
-                print(f"  ⚠️  Comment failed: {e}")
-
-    # Summary
     print(f"\n{'=' * 60}")
     print(
         f"Tournament complete: {success_count} submitted, {skip_count} skipped, {error_count} errors"
@@ -1172,6 +1347,7 @@ def loop(
         print(f"Cycle started at {datetime.now(timezone.utc).isoformat()}")
         print("=" * 60)
 
+        cycle_forecasts = 0
         for tid in tournaments:
             # Resolve tournament ID alias
             resolved_id: int | str
@@ -1190,91 +1366,41 @@ def loop(
                 print(f"  ❌ Failed to fetch questions: {e}")
                 continue
 
-            # Filter to only unforecast questions
             pending = [q for q in questions if not q.already_forecast]
             print(
                 f"  Found {len(pending)} pending questions (of {len(questions)} open)"
             )
 
-            for i, q in enumerate(pending, 1):
-                print(f"\n  [{i}/{len(pending)}] {q.post_id}: {q.title[:50]}...")
-
-                # Check if already submitted locally (API doesn't track this in listings)
-                if use_cache and is_submitted(q.post_id):
-                    print("    ⏭️  Already submitted (from local cache)")
-                    continue
-
-                meta = asyncio.run(get_question_meta(q.post_id))
-                if meta is not None:
-                    display_question_preview(meta)
-
-                output: ForecastOutput | None = None
-
-                # Try cache first
-                if use_cache:
-                    output = load_latest_for_submission(q.post_id)
-                    if output is not None:
-                        print("    📂 Loaded from cache")
-                        display_forecast(output)
-
-                # Run agent if no cached forecast
-                if output is None:
-                    setup_logging()
-
-                    # Retry loop for credit exhaustion
-                    while True:
-                        try:
-                            output = asyncio.run(run_forecast(q.post_id))
-                            display_forecast(output)
-                            break
-                        except CreditExhaustedError as e:
-                            print(f"    ⚠️  {e}")
-                            wait_for_credit_reset(e)
-                            print(f"    🔄 Retrying {q.post_id}...")
-                        except httpx.HTTPStatusError as e:
-                            print(f"    ❌ Failed to fetch: {e}")
-                            output = None
-                            break
-                        except RuntimeError as e:
-                            print(f"    ❌ Agent failed: {e}")
-                            output = None
-                            break
-                        except Exception as e:
-                            print(f"    ❌ Unexpected error: {e}")
-                            logger.exception(
-                                "Unexpected error forecasting %d", q.post_id
-                            )
-                            output = None
-                            break
-
-                if output is None:
-                    continue
-
-                print("    📤 Submitting...")
-                try:
-                    asyncio.run(submit_forecast(output))
-                    mark_submitted(output.post_id)
-                    print("    ✅ Submitted")
-                except SubmissionError as e:
-                    print(f"    ❌ Submission failed: {e}")
-                    continue
-
-                try:
-                    if commit_forecast(output.post_id, output.question_title):
-                        print("    📦 Committed to git")
-                except Exception as e:
-                    print(f"    ⚠️  Git commit failed: {e}")
-
-                if comment:
-                    try:
-                        comment_text = format_reasoning_comment(output)
-                        asyncio.run(post_comment(q.post_id, comment_text))
-                        print("    💬 Comment posted")
-                    except Exception as e:
-                        print(f"    ⚠️  Comment failed: {e}")
+            if pending:
+                setup_logging()
+                results = asyncio.run(
+                    forecast_all(pending, use_cache=use_cache, comment=comment)
+                )
+                cycle_forecasts += sum(1 for r in results if r == "submitted")
 
         cycle_duration = time.time() - cycle_start
-        print(f"\n✅ Cycle complete in {cycle_duration:.0f}s")
+        mins, secs = divmod(int(cycle_duration), 60)
+        duration_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+        print(f"\n✅ Cycle complete in {duration_str}")
+
+        if cycle_forecasts > 0:
+            print("\n🧹 Running worldview maintenance...")
+            from aib.tools.worldview_manager import run_maintenance_agent
+
+            try:
+                summary = asyncio.run(run_maintenance_agent()).payload
+                if summary is not None:
+                    print(f"  Actions: {len(summary.actions_taken)}")
+                    for action in summary.actions_taken:
+                        print(f"    • {action}")
+                    if summary.contradictions_flagged:
+                        print(
+                            f"  Contradictions flagged: {len(summary.contradictions_flagged)}"
+                        )
+                    if summary.notes:
+                        print(f"  Notes: {summary.notes}")
+            except Exception as e:
+                print(f"  ⚠️  Maintenance failed: {e}")
 
         sleep_seconds = interval * 60
         next_run = datetime.now(timezone.utc).timestamp() + sleep_seconds

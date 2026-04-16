@@ -1,0 +1,262 @@
+---
+timestamp: 2026-03-30 20:49:22 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay: Mar 28-29 spike (100) driven by Bill Maher appearance
+    already dropped to 37 by Mar 30. Historical decay patterns show return to baseline
+    (8-15) within 3-5 days. By Apr 11 (12 days out), interest almost certainly at
+    baseline.'
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: 'Baseline interest is very low: In the resolution date range with peak=100,
+    typical non-news days show values of 8-15. 90% of days in the 3-month history
+    are below 34. The threshold for Decreases (value < 34) encompasses the vast majority
+    of normal days.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: Slotkin is in an active political period with multiple ongoing stories
+    (prediction markets bill, AI Guardrails Act, Iran debate, SAVE Act, DHS funding),
+    giving slightly elevated probability of another spike near Apr 11.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'Narrow Doesn''t Change window: Requires Apr 11 value in [34, 40] -
+    a 7-point range. Zero days in 50-day history fell in this exact range. Only achievable
+    if a moderate spike happens to land very close to Apr 11.'
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'SerpAPI measurement uncertainty: Values can differ by ±2 from pytrends,
+    and both start/end values are subject to this. Adds some noise but doesn''t change
+    the fundamental picture since the gap from 37 to baseline (~11) is ~26 points.'
+  supports: Decreases
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.05
+    Decreases: 0.83
+assessment: 'The Mar 30 value in the resolution range is 37 - this is elevated due
+  to the tail of the Bill Maher appearance spike (100 on Mar 28-29). By Apr 11, 12
+  days later, historical patterns strongly suggest interest will have returned to
+  baseline (8-15 range). The threshold arithmetic is very clear: Decreases requires
+  value < 34, which covers ~90% of all historical days. The narrow [34, 40] window
+  for Doesn''t Change is extremely hard to hit. Increases requires > 40, which only
+  happens on major spike days (~10% frequency).
+
+
+  The main risk to a Decreases forecast is if Slotkin generates another major news
+  event very close to Apr 11. She is politically active with multiple ongoing stories,
+  but none seem likely to produce a spike comparable to the Bill Maher appearance.
+  The probability of a significant spike landing on exactly Apr 11 (or within 1-2
+  days) is roughly 10-15%.
+
+
+  Monte Carlo simulations consistently show Decreases at 79-85%, Increases at 10-15%,
+  and Doesn''t Change at 4-6%.'
+calibration_notes: 'Base rate from empirical data: 90% of days fall below 34 (Decreases
+  territory). The starting value of 37 is itself an anomaly - a post-spike elevated
+  value that is almost certain to decay. This is a strong post-spike decay scenario
+  where the starting point is still elevated and the endpoint will be at baseline.'
+key_uncertainties: The main uncertainty is whether Slotkin generates another major
+  news event close to Apr 11. Her current active political profile (prediction markets,
+  AI, Iran, voting rights) creates non-trivial probability of another spike, but landing
+  it on the exact resolution date is unlikely.
+tool_audit: Google Trends tool worked well with tz=0 and exact date ranges. The resolution
+  range query (2026-03-12 to 2026-04-11) returned current data through Mar 30, giving
+  the actual start value. News search provided rich context on why the spike occurred.
+  Code execution worked for Monte Carlo simulations.
+update_triggers: 1. A major news event involving Slotkin around Apr 9-11 would significantly
+  shift probability toward Increases or Doesn't Change. 2. If the ongoing Iran/prediction
+  markets stories escalate with Slotkin at center, sustained elevated interest could
+  shift probabilities.
+process_reflection: 'The scaffolding worked well for this question type. The Google
+  Trends tool returning change_stats, tail_stats, and recent_news was very helpful.
+  The guidance about threshold arithmetic and post-spike dynamics was directly applicable.
+  One thing that would help: the ability to query Google Trends for historical spike
+  patterns more systematically.'
+computed:
+  factor_count: 5
+  factor_sum: 4.89
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay: Mar 28-29 spike (100) driven by Bill Maher appearance
+      already dropped to 37 by Mar 30. Historical decay patterns show return to baseline
+      (8-15) within 3-5 days. By Apr 11 (12 days out), interest almost certainly at
+      baseline.'
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: 'Baseline interest is very low: In the resolution date range with
+      peak=100, typical non-news days show values of 8-15. 90% of days in the 3-month
+      history are below 34. The threshold for Decreases (value < 34) encompasses the
+      vast majority of normal days.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: Slotkin is in an active political period with multiple ongoing stories
+      (prediction markets bill, AI Guardrails Act, Iran debate, SAVE Act, DHS funding),
+      giving slightly elevated probability of another spike near Apr 11.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'Narrow Doesn''t Change window: Requires Apr 11 value in [34, 40]
+      - a 7-point range. Zero days in 50-day history fell in this exact range. Only
+      achievable if a moderate spike happens to land very close to Apr 11.'
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'SerpAPI measurement uncertainty: Values can differ by ±2 from pytrends,
+      and both start/end values are subject to this. Adds some noise but doesn''t
+      change the fundamental picture since the gap from 37 to baseline (~11) is ~26
+      points.'
+    supports: Decreases
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  dominant_factor: 'Post-spike decay: Mar 28-29 spike (100) driven by Bill Maher appearance
+    already dropped to 37 by Mar 30. Historical decay patterns show return to baseline
+    (8-15) within 3-5 days. By Apr 11 (12 days out), interest almost certainly at
+    baseline.'
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 4.49
+    factors:
+    - description: 'Post-spike decay: Mar 28-29 spike (100) driven by Bill Maher appearance
+        already dropped to 37 by Mar 30. Historical decay patterns show return to
+        baseline (8-15) within 3-5 days. By Apr 11 (12 days out), interest almost
+        certainly at baseline.'
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: 'Baseline interest is very low: In the resolution date range with
+        peak=100, typical non-news days show values of 8-15. 90% of days in the 3-month
+        history are below 34. The threshold for Decreases (value < 34) encompasses
+        the vast majority of normal days.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'Narrow Doesn''t Change window: Requires Apr 11 value in [34, 40]
+        - a 7-point range. Zero days in 50-day history fell in this exact range. Only
+        achievable if a moderate spike happens to land very close to Apr 11.'
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+    - description: 'SerpAPI measurement uncertainty: Values can differ by ±2 from
+        pytrends, and both start/end values are subject to this. Adds some noise but
+        doesn''t change the fundamental picture since the gap from 37 to baseline
+        (~11) is ~26 points.'
+      supports: Decreases
+      logit: 0.2
+      confidence: 0.7
+      effective_logit: 0.13999999999999999
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.4
+    factors:
+    - description: Slotkin is in an active political period with multiple ongoing
+        stories (prediction markets bill, AI Guardrails Act, Iran debate, SAVE Act,
+        DHS funding), giving slightly elevated probability of another spike near Apr
+        11.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+  mc_distribution_metrics:
+    implied_probabilities:
+      Decreases: 0.9728006141253743
+      Increases: 0.016283936685775314
+      Doesn't change: 0.01091544918885034
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.05
+      Decreases: 0.83
+    per_option_gap_pp:
+      Decreases: -14.280061412537437
+      Increases: 10.371606331422468
+      Doesn't change: 3.9084550811149663
+    max_gap_pp: -14.280061412537437
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “elissa slotkin” change between 2026-03-30
+    and 2026-04-11 according to Google Trends?](https://www.metaculus.com/questions/42988)'
+  - '[(Google Trends) elissa slotkin](https://trends.google.com/trends/explore?q=elissa
+    slotkin)'
+  reviewer_critique: "**Verification Summary:**\n\nI verified all key factual claims\
+    \ in the factors against the research trace:\n\n1. **Factor 1 (Post-spike decay)**:\
+    \ ✓ CONFIRMED\n   - Mar 28-29 spike to 100: Trace shows `{\"date\": \"2026-03-28\"\
+    , \"value\": 100}, {\"date\": \"2026-03-29\", \"value\": 100}`\n   - Mar 30 value\
+    \ of 37: Trace confirms `{\"date\": \"2026-03-30\", \"value\": 37}` in the resolution\
+    \ date range\n   - Bill Maher appearance: Multiple news citations confirm Slotkin\
+    \ appeared on \"Real Time with Bill Maher\" on Mar 28, discussing Iran and Democratic\
+    \ talking points\n\n2. **Factor 2 (Baseline interest)**: ✓ CONFIRMED\n   - Trace\
+    \ shows quiet baseline mean=11.3, median=11.0; full baseline mean=16.3, median=12.0\n\
+    \   - Claim of \"8-15\" is consistent with trace evidence\n   - \"90% of days\
+    \ below 34\" matches trace: \"Days with value < 34: 45/50 = 90.0%\"\n\n3. **Factor\
+    \ 3 (Active political period)**: ✓ CONFIRMED\n   - Trace contains news about prediction\
+    \ markets bill, AI Guardrails Act, SAVE Act, DHS funding vote, Iran debate - all\
+    \ mentioning Slotkin\n\n4. **Factor 4 (Narrow window)**: ✓ CONFIRMED\n   - Trace\
+    \ explicitly states: \"Days with value in [34, 40]: 0/50 = 0.0%\"\n\n5. **Factor\
+    \ 5 (SerpAPI uncertainty)**: ⚠️ WEAKLY SUPPORTED\n   - The fine print mentions\
+    \ API/browser differences, but the specific \"±2\" claim is not quantified in\
+    \ the trace. However, this is a minor factor (logit=+0.2, confidence=0.7) and\
+    \ doesn't materially affect the forecast.\n\n**Monte Carlo simulations**: ✓ CONFIRMED\n\
+    - Trace shows P(Decreases) ranging from 0.791 (higher-activity scenario) to 0.847\
+    \ (base case), consistent with the assessment's \"79-85%\" claim.\n\n**Probability\
+    \ Assessment**: The 83% Decreases estimate aligns well with simulation evidence.\
+    \ The logic is sound: (1) post-spike decay from 37 to baseline (~11) is expected\
+    \ within 12 days based on historical patterns, (2) the [34-40] \"Doesn't Change\"\
+    \ window hit 0 out of 50 historical days, (3) only a new spike landing near Apr\
+    \ 11 could push Increases. The agent appropriately accounts for Slotkin's active\
+    \ news profile with 12% Increases probability.\n\n**No issues found**: No hallucinated\
+    \ evidence, no double-counting, factor signs are correct, assessment matches factors,\
+    \ resolution criteria are engaged correctly (comparing Mar 30 to Apr 11 values\
+    \ with ±3 threshold)."
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42988
+- **Question ID**: 42924
+- **Session Duration**: 372.7s (6.2 min)
+- **Cost**: $3.3638
+- **Tokens**: 10,766 total (27 in, 10,739 out)
+  - Cache: 605,546 read, 87,982 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42988_20260330_204303/20260330-204303.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 4 | 0 | 471ms |
+| get_metaculus_questions | 1 | 0 | 251ms |
+| google_trends | 3 | 0 | 13672ms |
+| reflection | 1 | 0 | 115884ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “elissa slotkin” change between 2026-03-30 ...
+- [(Google Trends) elissa slotkin](https://trends.google.com/trends/explore?q=e...

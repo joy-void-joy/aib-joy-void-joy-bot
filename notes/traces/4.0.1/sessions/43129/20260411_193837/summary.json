@@ -1,0 +1,59 @@
+{
+  "condensed_reasoning": "## Research\n\nI reviewed the forecasting agent's trace analyzing whether the ICC will open a formal investigation into the 2026 Iran conflict before May 1, 2026. The agent conducted systematic research using web searches and direct URL fetches.\n\n**Context established:**\n- The 2026 Iran war began on February 28, 2026 when the US and Israel launched airstrikes on Iran\n- Iran retaliated with missile/drone strikes against Israel, US bases, and neighboring countries (Jordan, Bahrain, Kuwait, etc.)\n- A ceasefire was brokered beginning April 8, 2026\n- The forecast was made on April 11, 2026, leaving ~20 days until the May 1 deadline\n\n## Key Evidence\n\n**Jurisdictional barriers (decisive):**\n- Iran, the US, and Israel are all **non-parties to the Rome Statute** — confirmed via multiple sources including Courthouse News (\"The United States, Iran, and Iraq are all non-signatories\")\n- **Iran has NOT filed an Article 12(3) declaration** granting ICC jurisdiction despite DAWN urging them to do so on March 5, 2026\n- **US holds UNSC veto**, blocking any Security Council referral\n- **Jordan** (ICC member) was struck by Iranian missiles but has **not referred** the situation\n\n**Current ICC status:**\n- Agent directly fetched `icc-cpi.int/situations-under-investigations` — confirmed **no Iran-related investigation** is listed\n- ICC news page showed no announcement of an investigation\n- ICC Prosecutor **Karim Khan on voluntary leave since May 2025**, facing disciplinary proceedings\n\n**Expert consensus:**\n- Courthouse News: Legal experts see \"no path to the International Criminal Court\"\n- Former ICC Prosecutor Ocampo acknowledged potential war crimes but recognized jurisdictional obstacles\n\n**Historical precedent:**\n- Ukraine investigation (March 2022) was the fastest ever but required pre-existing Article 12(3) declarations and state party referrals — conditions absent here\n\n## Conclusion\n\nThe agent correctly concluded at **3% probability**. The jurisdictional barrier is near-absolute: without state party membership, an Article 12(3) declaration, or a UNSC referral (blocked by US veto), the ICC has no legal basis to investigate. No such jurisdictional development has occurred, only ~20 days remain, and the prosecutor's office is in institutional crisis. The 3% appropriately accounts for residual uncertainty (e.g., Iran suddenly filing a declaration + unprecedented ICC speed).",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__web_search": "8 calls, 0 errors, impact: none, value: high — primary source for conflict context, jurisdictional analysis, and expert opinions",
+      "mcp__search__fetch_url": "4 calls, 0 errors, impact: none, value: high — directly confirmed no Iran investigation on ICC situations page",
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: medium — provided question details and resolution criteria",
+      "mcp__asknews__do_news_research": "1 call, 1 error (403 forbidden model restriction), impact: minor, value: wasted — failed due to API plan limitations",
+      "mcp__asknews__search_news": "1 call, 1 error (403 usage limit exceeded), impact: minor, value: wasted — failed due to API rate limits",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — provided factor verification and calibration check"
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "ICC news page fetch returned contact page instead of actual news headlines — agent noted this but couldn't get recent news directly"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Qualitative legal analysis of ICC jurisdictional requirements with verification via official ICC sources",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Iran might suddenly file an Article 12(3) declaration granting ICC jurisdiction in the remaining ~20 days"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "2-4%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Directly verified ICC situations page shows no Iran investigation — decisive primary source check",
+    "Correctly identified all three jurisdictional pathways (state party, Art. 12(3), UNSC referral) and systematically confirmed none are available",
+    "Found and cited expert legal opinion confirming 'no path to ICC' — independent corroboration",
+    "Appropriately noted ICC institutional crisis (Khan on leave) as secondary factor",
+    "Identified Jordan as theoretical pathway (ICC member struck by Iranian missiles) but correctly noted no referral has occurred",
+    "Good calibration — 3% is appropriately low without being dismissively zero"
+  ],
+  "weaknesses": [
+    "Claim of '41 simultaneous state party referrals' for Ukraine appears unsourced in trace",
+    "Internal note incorrectly stated Bahrain is an ICC member (it's not) — though this error didn't affect final factors",
+    "Did not check prediction markets (Polymarket, Kalshi) for relevant contracts",
+    "Could not verify very recent ICC announcements due to news page fetch returning wrong content"
+  ],
+  "pipeline": {
+    "issues": [
+      "asknews tools both failed (403 errors) — usage limits and model restrictions",
+      "ICC news page fetch returned wrong content (contact page instead of news)"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks for legal/geopolitical questions",
+    "When URL fetch returns unexpected content, try alternative search queries for recent announcements",
+    "Verify specific numeric claims like '41 state party referrals' before including in factors"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "condensed_reasoning": "## Research\n\nI analyzed the agent's forecast for whether `FIS` (Fidelity National Information Services) would close higher on 2026-04-11 than on 2026-03-31. The agent gathered comprehensive data:\n\n- **Price data**: FIS at **$47.45** (March 30 close), in a severe **42.7% drawdown** from its 52-week high of $82.74, only **2.9% above** its 52-week low of $46.13\n- **Momentum**: Strong negative trailing returns: **-4.7%** 5-day, **-5.9%** 10-day, **-4.3%** 20-day\n- **Macro context**: S&P 500 down **9.4%** from 52-week high, down **7% YTD**\n- **Historical conditional returns**: When FIS is in a 40%+ drawdown, 8-day forward returns are positive **63.8%** of the time (n=47)\n\nThe agent correctly identified that April 11, 2026 is a Saturday (resolution uses April 10 close) and that Good Friday (April 3) is a market holiday, yielding **7 trading days** for the horizon.\n\n## Key Evidence\n\n**Bearish factors:**\n- Strong negative momentum in both FIS and broad market\n- S&P 500 at 20-day lows, approaching correction territory\n- Liberation Day anniversary (April 2) could trigger volatility\n- Despite Supreme Court striking down IEEPA tariffs in Feb 2026, market continues declining\n\n**Bullish factors:**\n- Deep drawdown base rate: 63.8% positive historically (but n=47 with high variance)\n- Proximity to 52-week low may provide technical support\n\n**Monte Carlo results:**\n- Zero drift: ~50% probability higher\n- Recent negative drift continuation: ~31-42%\n- Mean reversion scenario: ~65%\n- Blended scenario model: ~49.5%\n\n## Conclusion\n\nThe agent arrived at **46%** probability, modestly below the random walk baseline of 50%. The reasoning was sound: the agent weighted negative momentum over the mean reversion signal because the current drawdown coincides with a broad market selloff rather than being idiosyncratic to FIS. The 63.8% conditional base rate was appropriately discounted given that many historical deep drawdown events occurred during stable market conditions where mean reversion is more reliable.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__stock_price": "2 calls, 0 errors, impact: none, value: high — provided current price, 52w range, trailing returns",
+      "mcp__financial__stock_history": "1 call, 0 errors, impact: none, value: high — 6-month daily data for volatility calculation",
+      "mcp__financial__stock_conditional_returns": "1 call, 0 errors, impact: none, value: high — key base rate for 40%+ drawdown scenarios",
+      "mcp__search__web_search": "4 calls, 0 errors, impact: none, value: medium — provided macro context on tariffs, Liberation Day anniversary",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor — web_search compensated",
+      "mcp__sandbox__execute_code": "4 calls, 0 errors, impact: none, value: high — Monte Carlo simulations with multiple drift scenarios",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: medium — structured factor review with verification"
+    },
+    "capability_gaps": [
+      "No FIS-specific news tool (earnings calendar, analyst ratings) — could have identified upcoming catalysts",
+      "No prediction market lookup for FIS stock direction"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation with multiple drift scenarios, weighted by conditional base rate for deep drawdowns and macro momentum signals",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the deep drawdown mean reversion signal (63.8% historically positive) applies when the drawdown coincides with a broad market selloff"
+  },
+  "risk_flags": [
+    {
+      "category": "underconfidence",
+      "evidence": "The conditional base rate shows 63.8% positive returns when FIS is in a 40%+ drawdown (n=47), but the agent only assigned this factor a 0.5 confidence multiplier (reducing effective logit from +0.5 to +0.25). The agent's reasoning for discounting—that this drawdown coincides with broad market decline—is reasonable but may be overly aggressive. The base rate sample includes diverse market conditions.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "47%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified April 11 is Saturday (uses April 10 close) and Good Friday holiday, yielding 7 trading days",
+    "Ran multiple Monte Carlo scenarios with different drift assumptions (zero, negative continuation, mean reversion) rather than relying on a single model",
+    "Used conditional returns tool to establish quantitative base rate for deep drawdowns (63.8%, n=47) rather than purely qualitative judgment",
+    "Appropriately weighted the conditional base rate lower given that current drawdown coincides with broad market selloff (not idiosyncratic)",
+    "Gathered S&P 500 data to contextualize FIS movement within macro environment",
+    "Identified Liberation Day anniversary (April 2) as potential volatility catalyst"
+  ],
+  "weaknesses": [
+    "Did not check for FIS earnings calendar or analyst activity that could create company-specific catalysts in the 7-day window",
+    "Did not search for prediction markets (Kalshi, Polymarket) that might have relevant stock direction contracts",
+    "The scenario weights in blended model (40% bearish, 35% sideways, 25% mean reversion) appear somewhat arbitrary without explicit justification"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__asknews__search_news returned 403 rate limit error — forced fallback to web_search"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add earnings calendar check for company-specific catalysts within forecast horizon",
+    "Include prediction market lookup when available for financial forecasts",
+    "Document explicit reasoning for scenario weights in blended probability models"
+  ]
+}

@@ -58,10 +58,10 @@ _SOURCE_TOOLS: dict[str, SourceTool] = {
     "mcp__markets__polymarket_price": ResultSourceTool(label="Polymarket"),
     "mcp__markets__manifold_price": ResultSourceTool(label="Manifold"),
     # Metaculus
-    "mcp__markets__get_metaculus_questions": ResultSourceTool(label="Metaculus"),
-    "mcp__markets__search_metaculus": ResultSourceTool(label="Metaculus"),
-    "mcp__markets__list_tournament_questions": ResultSourceTool(label="Metaculus"),
-    "mcp__markets__get_coherence_links": ResultSourceTool(label="Metaculus"),
+    "mcp__metaculus__get_metaculus_questions": ResultSourceTool(label="Metaculus"),
+    "mcp__metaculus__search_metaculus": ResultSourceTool(label="Metaculus"),
+    "mcp__metaculus__list_tournament_questions": ResultSourceTool(label="Metaculus"),
+    "mcp__metaculus__get_coherence_links": ResultSourceTool(label="Metaculus"),
     # Financial
     "mcp__financial__stock_price": ApiSourceTool(
         label="yfinance",

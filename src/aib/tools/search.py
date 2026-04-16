@@ -17,6 +17,7 @@ from urllib.parse import unquote
 
 import httpx
 from claude_agent_sdk import (
+    AssistantMessage,
     HookCallback,
     HookInput,
     HookJSONOutput,
@@ -26,10 +27,12 @@ from claude_agent_sdk import (
 from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
 
+from aib.agent.client import AupRefusalError
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
 from aib.tools.decorator import ToolError, mcp_tool
+from aib.tools.metrics import get_collector
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
@@ -280,8 +283,10 @@ async def _raw_web_search(
     )
 
     from aib.agent.client import build_client
+    from aib.agent.display import make_agent_prefix, print_block
 
     capture_hook, captured_links = _make_websearch_capture_hook()
+    prefix = make_agent_prefix("websearch", search_query)
 
     async with build_client(
         model="haiku",
@@ -297,6 +302,9 @@ async def _raw_web_search(
     ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    print_block(block, prefix=prefix)
             if isinstance(message, ResultMessage):
                 logger.debug(
                     "[WebSearch] sub-agent result: subtype=%s turns=%d is_error=%s",
@@ -304,6 +312,8 @@ async def _raw_web_search(
                     message.num_turns,
                     message.is_error,
                 )
+                if message.total_cost_usd is not None:
+                    get_collector().record_cost("web_search", message.total_cost_usd)
 
     seen_urls: set[str] = set()
     results: list[SearchResult] = []
@@ -568,7 +578,11 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
                     items = candidate
                     break
         return [
-            {"title": a["title"], "snippet": a.get("snippet", ""), "url": a.get("url", "")}
+            {
+                "title": a["title"],
+                "snippet": a.get("snippet", ""),
+                "url": a.get("url", ""),
+            }
             for a in items
             if isinstance(a, dict) and "title" in a
         ]
@@ -838,6 +852,11 @@ async def fetch_url(params: FetchUrlInput) -> dict[str, Any]:
     if prompt:
         try:
             text = await extract_with_prompt(text, prompt, url)
+        except AupRefusalError:
+            logger.warning(
+                "Content extraction refused for %s, returning raw content", url
+            )
+            text = f"[Prompt extraction failed, returning raw content]\n\n{text}"
         except Exception as e:
             logger.warning("Prompt extraction failed for %s: %s", url, e)
             text = f"[Prompt extraction failed, returning raw content]\n\n{text}"

@@ -17,36 +17,40 @@ from claude_agent_sdk.types import (
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
+from aib.tools.premortem import create_premortem_server
 from aib.tools.reflection import create_reflection_server
 
 if TYPE_CHECKING:
+    from aib.agent.session import ReviewState
     from aib.config import Settings
-    from aib.tools.reflection import ReviewState
     from aib.tools.sandbox import Sandbox
 
 # --- Tool Sets ---
 
 # Built-in SDK tools (always available)
+# WebSearch and WebFetch are excluded — agent uses MCP equivalents
+# (mcp__search__web_search, mcp__search__fetch_url) which provide
+# API augmentation and retrodict support.
 BUILTIN_TOOLS: frozenset[str] = frozenset(
     {
-        "WebSearch",
-        "WebFetch",
         "Read",
         "Write",
         "Glob",
         "Grep",
         "Bash",
         "Task",
+        "StructuredOutput",
     }
 )
 
 # Metaculus tools (require METACULUS_TOKEN)
 METACULUS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__markets__get_metaculus_questions",
-        "mcp__markets__list_tournament_questions",
-        "mcp__markets__search_metaculus",
-        "mcp__markets__get_coherence_links",
+        "mcp__metaculus__get_metaculus_questions",
+        "mcp__metaculus__list_tournament_questions",
+        "mcp__metaculus__search_metaculus",
+        "mcp__metaculus__get_coherence_links",
+        "mcp__metaculus__get_cp_history",
     }
 )
 
@@ -97,10 +101,25 @@ SANDBOX_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Composition tools
-COMPOSITION_TOOLS: frozenset[str] = frozenset(
+# Subforecast tools (replaces composition)
+SUBFORECAST_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__composition__spawn_subquestions",
+        "mcp__subforecast__subforecast",
+        "mcp__subforecast__extract_cdf_threshold",
+    }
+)
+
+# Research tool (Opus sub-agent for data gathering)
+RESEARCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__research__research",
+    }
+)
+
+# Worldview manager (store maintenance)
+WORLDVIEW_MANAGER_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__worldview__worldview_manager",
     }
 )
 
@@ -130,6 +149,7 @@ STOCK_TOOLS: frozenset[str] = frozenset(
         "mcp__financial__stock_price",
         "mcp__financial__stock_history",
         "mcp__financial__stock_conditional_returns",
+        "mcp__financial__options_iv",
     }
 )
 
@@ -141,10 +161,24 @@ TRENDS_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Weather tools (no API key required, uses Open-Meteo)
+WEATHER_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__weather__weather_forecast",
+    }
+)
+
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__notes__reflection",
+    }
+)
+
+# Premortem tool (Opus reviewer with adversarial input)
+PREMORTEM_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__premortem__premortem",
     }
 )
 
@@ -269,6 +303,7 @@ class ToolPolicy:
         if self.is_retrodict:
             excluded.update(ASKNEWS_TOOLS)
             excluded.update(REDDIT_TOOLS)
+            excluded.update(WEATHER_TOOLS)
 
         self._excluded_tools = frozenset(excluded)
 
@@ -330,12 +365,70 @@ class ToolPolicy:
         Returns:
             Dict mapping server name to server config.
         """
+        from aib.tools.markets import (
+            get_coherence_links,
+            get_cp_history,
+            get_metaculus_questions,
+            list_tournament_questions,
+            search_metaculus,
+        )
+        from aib.tools.research import research
+        from aib.tools.search import fetch_url, web_search
+        from aib.tools.subforecast import extract_cdf_threshold_tool, subforecast
+        from aib.tools.worldview_manager import worldview_manager
+
+        # Main agent: orchestrator tools only
+        servers: dict[str, McpServerConfig] = {
+            "sandbox": sandbox.create_mcp_server(),
+            "subforecast": create_mcp_server(
+                "subforecast", tools=[subforecast, extract_cdf_threshold_tool]
+            ),
+            "research": create_mcp_server("research", tools=[research]),
+            "search": create_mcp_server("search", tools=[web_search, fetch_url]),
+            "worldview": create_mcp_server("worldview", tools=[worldview_manager]),
+            "metaculus": create_mcp_server(
+                "metaculus",
+                tools=[
+                    get_metaculus_questions,
+                    list_tournament_questions,
+                    search_metaculus,
+                    get_coherence_links,
+                    get_cp_history,
+                ],
+            ),
+            "notes": create_reflection_server(
+                session_dir,
+                question_type,
+                get_sources,
+                review_state=review_state,
+            ),
+            "premortem": create_premortem_server(
+                session_dir=session_dir,
+                get_trace=get_trace,
+                question_context=question_context,
+                traces_dir=traces_dir,
+                review_state=review_state,
+            ),
+        }
+
+        return cast(dict[str, McpServerConfig], servers)
+
+    def get_research_mcp_servers(
+        self,
+        sandbox: Sandbox,
+    ) -> dict[str, McpServerConfig]:
+        """Get MCP servers for the research sub-agent.
+
+        Includes all ~35 data-gathering tools that the main agent
+        delegates via research(). The research sub-agent also gets
+        sandbox access for data analysis.
+        """
         from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
-        from aib.tools.composition import spawn_subquestions
         from aib.tools.financial import (
             company_financials,
             fred_search,
             fred_series,
+            options_iv,
             stock_conditional_returns,
             stock_history,
             stock_price,
@@ -344,22 +437,19 @@ class ToolPolicy:
         )
         from aib.tools.government import bls_series, census_data
         from aib.tools.markets import (
-            get_coherence_links,
-            get_cp_history,
-            get_metaculus_questions,
             kalshi_event,
             kalshi_history,
             kalshi_price,
-            list_tournament_questions,
             manifold_history,
             manifold_price,
             polymarket_history,
             polymarket_price,
-            search_metaculus,
+            search_markets,
         )
         from aib.tools.reddit import reddit_hot, reddit_search
         from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
         from aib.tools.trends import google_trends, google_trends_compare
+        from aib.tools.weather import weather_forecast
 
         servers: dict[str, McpServerConfig] = {
             "financial": create_mcp_server(
@@ -371,6 +461,7 @@ class ToolPolicy:
                     stock_price,
                     stock_history,
                     stock_conditional_returns,
+                    options_iv,
                     world_bank_indicator,
                     world_bank_search,
                 ],
@@ -383,10 +474,10 @@ class ToolPolicy:
                 ],
             ),
             "sandbox": sandbox.create_mcp_server(),
-            "composition": create_mcp_server("composition", tools=[spawn_subquestions]),
             "markets": create_mcp_server(
                 "markets",
                 tools=[
+                    search_markets,
                     polymarket_price,
                     polymarket_history,
                     manifold_price,
@@ -394,21 +485,7 @@ class ToolPolicy:
                     kalshi_price,
                     kalshi_event,
                     kalshi_history,
-                    get_metaculus_questions,
-                    list_tournament_questions,
-                    search_metaculus,
-                    get_coherence_links,
-                    get_cp_history,
                 ],
-            ),
-            "notes": create_reflection_server(
-                session_dir,
-                question_type,
-                get_sources,
-                get_trace=get_trace,
-                question_context=question_context,
-                traces_dir=traces_dir,
-                review_state=review_state,
             ),
             "trends": create_mcp_server(
                 "trends",
@@ -430,7 +507,12 @@ class ToolPolicy:
             ),
         }
 
-        # Reddit MCP server (excluded in retrodict — no exact date cutoff)
+        if not self.is_retrodict:
+            servers["weather"] = create_mcp_server(
+                "weather",
+                tools=[weather_forecast],
+            )
+
         if (
             self.reddit_client_id
             and self.reddit_client_secret
@@ -440,7 +522,6 @@ class ToolPolicy:
                 "reddit", tools=[reddit_search, reddit_hot]
             )
 
-        # AskNews throttled proxy (excluded in retrodict — no date filtering)
         if self.asknews_api_key and not self.is_retrodict:
             from aib.tools.asknews import create_asknews_server
 
@@ -452,76 +533,35 @@ class ToolPolicy:
         """Get list of allowed tools based on policy.
 
         Args:
-            allow_spawn: Whether to allow spawn_subquestions (False for sub-forecasts).
+            allow_spawn: Whether to allow subforecast (False for leaf sub-forecasts).
 
         Returns:
             List of tool names that are allowed for this forecast.
         """
-        # Start with all potential tools
+        # Orchestrator tool surface: research(), subforecast(), reflection,
+        # execute_code, Metaculus tools, built-in SDK tools, and web_search /
+        # fetch_url for single-fact verification and fallback when research()
+        # fails. Heavy data-gathering tools (~35) live on the research sub-agent.
         tools: set[str] = set()
 
-        # Built-in tools
         tools.update(BUILTIN_TOOLS)
-
-        # Metaculus tools (conditional on token)
         tools.update(METACULUS_TOOLS)
-
-        # Wikipedia (no API key needed)
-        tools.update(WIKIPEDIA_TOOLS)
-
-        # Search tools (conditional on API keys)
-        tools.update(EXA_TOOLS)
-        tools.update(ASKNEWS_TOOLS)
-
-        # Financial tools (conditional on API key)
-        tools.update(FRED_TOOLS)
-        tools.update(COMPANY_FINANCIALS_TOOLS)
-
-        # Sandbox tools
         tools.update(SANDBOX_TOOLS)
-
-        # Composition tools (conditional on allow_spawn)
-        if allow_spawn:
-            tools.update(COMPOSITION_TOOLS)
-
-        # Market tools
-        tools.update(LIVE_MARKET_TOOLS)
-        tools.update(HISTORICAL_MARKET_TOOLS)
-
-        # Stock tools (in financial server)
-        tools.update(STOCK_TOOLS)
-
-        # Trends tools
-        tools.update(TRENDS_TOOLS)
-
-        # Notes tools
         tools.update(NOTES_TOOLS)
-
-        # arXiv tools (supports date filtering)
-        tools.update(ARXIV_TOOLS)
-
-        # World Bank tools (no API key required)
-        tools.update(WORLD_BANK_TOOLS)
-
-        # Reddit tools (conditional on API keys)
-        tools.update(REDDIT_TOOLS)
-
-        # Government data tools
-        tools.update(BLS_TOOLS)
-        tools.update(CENSUS_TOOLS)
-
-        # Fetch tool (unified URL fetching)
+        tools.update(PREMORTEM_TOOLS)
+        tools.update(RESEARCH_TOOLS)
+        tools.update(WORLDVIEW_MANAGER_TOOLS)
+        tools.update(SEARCH_TOOLS)
         tools.update(FETCH_TOOLS)
 
-        # Web search tools
-        tools.update(SEARCH_TOOLS)
+        if allow_spawn:
+            tools.update(SUBFORECAST_TOOLS)
 
-        # Remove excluded tools
+        # Remove excluded tools (API key gating)
         tools -= self._excluded_tools
 
-        # Also remove spawn if not allowed (in case it was in _excluded_tools)
         if not allow_spawn:
-            tools -= COMPOSITION_TOOLS
+            tools -= SUBFORECAST_TOOLS
 
         return sorted(tools)
 
@@ -548,7 +588,7 @@ class ToolPolicy:
 
         Args:
             mcp_servers: Dict of MCP servers from get_mcp_servers().
-            allow_spawn: Whether to include spawn_subquestions.
+            allow_spawn: Whether to include subforecast.
 
         Returns:
             Markdown-formatted tool documentation.

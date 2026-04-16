@@ -1,0 +1,58 @@
+{
+  "condensed_reasoning": "## Research\n\nI analyzed the agent's forecast on whether UK public sector net borrowing excluding public sector banks (PSNB ex) would be below £0 (a surplus) in March 2026.\n\nThe agent conducted systematic research across multiple ONS bulletins and data sources:\n- Fetched the Metaculus question details to understand resolution criteria\n- Searched for and retrieved multiple ONS Public Sector Finances bulletins (March 2017, 2019, 2024, 2025)\n- Retrieved February 2026 borrowing data showing **£14.3B deficit** (2nd highest February since 1993)\n- Compiled historical March PSNB values from 2015-2025 using cross-references between bulletins\n- Retrieved fiscal year-to-date context showing **£125.9B cumulative deficit** through February 2026\n\n## Key Evidence\n\n**Historical Base Rate:**\n- **0/33 March surpluses** since ONS monthly records began in 1993\n- The agent correctly identified this as structural: March is the final month of UK fiscal year when departments spend remaining budgets\n- Smallest-ever March deficit: **£0.8B** (March 2018)\n- Recent March deficits: £16.4B (2025), £13.6B revised (2024), £21.5B (2023)\n\n**Current Fiscal Context:**\n- February 2026: 2nd highest February borrowing since 1993\n- 11-month cumulative deficit at £125.9B (4th highest on record)\n- Elevated spending on public services, benefits, and debt interest\n- No announced one-off receipts or structural changes\n\n**Structural Reasoning:**\n- No major tax deadlines in March (self-assessment in January, corporation tax in Q1/Q3)\n- End-of-fiscal-year spending acceleration is typical government behavior\n- January 2026 surplus of £31.9B was driven by self-assessment - no equivalent March driver exists\n\n## Conclusion\n\nThe agent concluded with a **2% probability** that March 2026 would show a surplus. This was based on:\n1. Zero historical precedent (0/33 years) for a March surplus\n2. Strong structural explanation for why March is always a deficit month\n3. Current fiscal year showing elevated borrowing\n4. Laplace's rule of succession (1/35 ≈ 2.9%) as an upper bound\n\nThe agent appropriately noted that even this 2% may be generous given the structural factors, but allowed for extreme tail scenarios like an unknown massive one-off receipt.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__markets__get_metaculus_questions": "1 call, 0 errors, impact: none, value: high - correctly retrieved resolution criteria",
+      "mcp__search__web_search": "5 calls, 0 errors, impact: none, value: high - found ONS bulletins and Trading Economics data",
+      "mcp__asknews__search_news": "1 call, 1 error (403 usage limit), impact: minor (news not critical for historical base rate question), value: low",
+      "mcp__search__fetch_url": "9 calls, 1 error (403 on Commons Library), impact: minor (other sources covered), value: high - extracted specific March PSNB figures from ONS bulletins",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: medium - organized data but no quantitative modeling needed",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high - verified factors and probability calibration"
+    },
+    "capability_gaps": [
+      "Direct access to ONS time series data (DZLS) would have avoided manual compilation from multiple bulletins",
+      "UK-specific economic data API similar to FRED for US data"
+    ],
+    "subtle_bugs": [
+      "ONS timeseries page (DZLS) returned only correction notices rather than actual data table, requiring workaround via bulletin pages"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/macro",
+    "approach": "Historical base rate analysis of 33 years of ONS monthly PSNB data combined with current fiscal year context assessment",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether an unknown extraordinary one-off receipt could break the 33-year pattern of March deficits"
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "1-2%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified and verified the 0/33 historical base rate for March surpluses since 1993",
+    "Provided strong structural explanation for why March is always a deficit month (fiscal year-end spending, no tax deadlines)",
+    "Cross-referenced multiple ONS bulletins to derive historical March figures not available in a single source",
+    "Appropriately contextualized current fiscal year as worse than average, not better",
+    "Self-corrected from initial mistaken prior ('March often sees a surplus') after finding actual data",
+    "Used Laplace's rule of succession as principled upper bound for never-observed events"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi, Metaculus community prediction) for corroboration",
+    "No Monte Carlo or quantitative modeling - though arguably not needed for a structural base rate question",
+    "Could have searched for any announced March 2026 fiscal events more explicitly (asset sales, privatizations)"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks (Polymarket, Kalshi) as standard research step even for fiscal questions",
+    "When ONS timeseries data fails to render, try downloading the Excel/CSV dataset directly via ONS datasets page",
+    "Search explicitly for upcoming fiscal policy announcements that could affect specific months"
+  ]
+}

@@ -34,5 +34,6 @@ async def extract_with_prompt(content: str, prompt: str, source: str = "") -> st
         extraction_prompt,
         model="sonnet",
         system_prompt="You extract information from text content. Be concise and factual.",
+        cost_tool_name="content_extract",
     )
     return result or content[:5000]

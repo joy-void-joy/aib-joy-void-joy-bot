@@ -1,0 +1,65 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched PTC Inc. (`PTC`) stock to forecast whether the close on 2026-04-22 would exceed the close on 2026-04-14. The agent gathered comprehensive data:\n\n- **Current price data**: `stock_price` and `stock_history` tools provided 30-day and 3-month price history, showing PTC trading at **$133.77** on Apr 14, down **39.1%** from its 52-week high of $219.69, and only **2.2%** above its 52-week low of $130.89.\n\n- **Recent performance**: Trailing returns of **-7.1%** (5-day) and **-14.2%** (20-day) indicated strong negative momentum. Daily volatility was elevated at ~2%.\n\n- **Conditional base rates**: The `stock_conditional_returns` tool provided empirical data:\n  - When PTC is in a ≥35% drawdown: **54.0% positive** 6-day returns (224 historical events)\n  - After a ≥4.1% single-day drop (shock alert): only **45% positive** outcomes with -1.03% median forward return\n\n- **News research**: `search_news` and `web_search` found company-specific headwinds:\n  - Barclays flagged \"mixed or negative checks\" for PTC\n  - Kepware/ThingWorx divestiture to TPG removed ~$200M revenue\n  - Mizuho downgraded to Neutral with $160 target\n  - Multiple other target cuts (Oppenheimer $240→$200, KeyCorp $210→$195)\n\n- **Market context**: S&P 500 up **+3.3%** over the trailing month, suggesting broader market recovery provides a modest tailwind.\n\n## Key Evidence\n\n**Bullish factors:**\n- Empirical conditional base rate of **54% positive** when in 35%+ drawdown\n- Near 52-week low suggests potential capitulation/support zone\n- Analyst consensus \"Moderate Buy\" with average target **$182** (36% upside)\n- **95% institutional ownership**\n- Broader market recovery\n\n**Bearish factors:**\n- Strong negative momentum: **-14.2%** over 20 days\n- Shock alert after **-4.1%** drop shows only 45% positive outcomes\n- Company-specific headwinds from divestiture and analyst downgrades\n- Barclays specifically flagged negative checks\n\n## Quantitative Modeling\n\nThe agent ran Monte Carlo simulations using `execute_code`:\n- With zero drift: **~50%** probability of higher close\n- With slight negative drift (-0.5% over 6 days): **~46%** probability\n- Using the extreme recent daily drift (-0.77%/day) gave only 16%, but this was correctly identified as unsustainable\n\nThe agent appropriately recognized that extrapolating the recent crash rate forward would be incorrect, and anchored on the conditional base rates instead.\n\n## Conclusion\n\nThe agent concluded with a **47% probability** that PTC closes higher on Apr 22 than Apr 14. This reflects:\n- The mean-reversion signal from the 54% base rate is offset by\n- Company-specific negatives and momentum\n- The shock alert's 45% positive rate pulling the estimate below 50%\n\nThe estimate is positioned between the conditional base rate (54%) and the shock-conditional rate (45%), leaning bearish due to the company-specific headwinds identified in the news research.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__financial__stock_price": "1 call, 0 errors, impact: none, value: high — provided current price and 52-week range",
+      "mcp__financial__stock_history": "2 calls (30d PTC + 1mo S&P), 0 errors, impact: none, value: high — key data for volatility and momentum calculations",
+      "mcp__financial__stock_conditional_returns": "2 calls, 0 errors, impact: none, value: high — empirical base rates were central to the forecast",
+      "mcp__asknews__search_news": "1 call, 0 errors, impact: none, value: high — identified company-specific headwinds (divestiture, analyst downgrades)",
+      "mcp__search__web_search": "1 call, 0 errors, impact: none, value: medium — confirmed pricing data already available from other tools",
+      "mcp__sandbox__execute_code": "2 calls, 0 errors, impact: none, value: high — Monte Carlo simulations with sensitivity analysis",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high — structured factor verification caught no issues"
+    },
+    "capability_gaps": [
+      "No prediction market data checked (Polymarket/Kalshi) — could have provided market-implied probabilities",
+      "No options market data — implied volatility and put/call skew could inform directional bias"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Conditional base rate analysis from historical drawdown data combined with Monte Carlo simulation and company news assessment",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the 54% mean-reversion tendency for deeply oversold stocks will manifest despite company-specific headwinds and persistent negative momentum"
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check prediction markets (Polymarket, Kalshi) or options market data (implied volatility, put/call ratios) which could have provided additional signals for a stock trading question",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "47%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent use of conditional base rates: queried stock_conditional_returns for both drawdown (35%+) and single-day shock scenarios, providing empirically-grounded anchors",
+    "Thoughtful drift assumption: correctly rejected extrapolating the extreme recent -0.77%/day drift and instead used the conditional base rate data",
+    "Comprehensive news research identified company-specific factors (Kepware/ThingWorx divestiture, Barclays negative checks, analyst downgrades) that justified deviation from pure base rate",
+    "Monte Carlo sensitivity analysis tested multiple drift assumptions (zero, negative, half-recent) to bound the estimate",
+    "Well-structured factor analysis with appropriate confidence weighting and no double-counting",
+    "The reflection tool verified all 8 factors against the research trace with citations"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket/Kalshi) which could have provided market-implied probabilities for this specific stock or related markets",
+    "Did not examine options market data (implied volatility surface, put/call skew) which could inform directional bias expectations",
+    "The shock alert data was for 10-day horizon but the question is 6-day — slight mismatch though directionally still informative",
+    "Could have queried conditional returns for the specific -4.1% shock threshold rather than the generic 5% spike threshold"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market check to standard equity direction workflow",
+    "Query options implied volatility and skew for stocks with liquid options markets",
+    "Match shock alert horizon exactly to question timeframe when possible",
+    "Consider using the exact shock magnitude (-4.1%) rather than a generic threshold for conditional returns"
+  ]
+}

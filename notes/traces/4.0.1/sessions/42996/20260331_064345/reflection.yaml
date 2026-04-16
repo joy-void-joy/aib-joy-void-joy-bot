@@ -1,0 +1,355 @@
+---
+timestamp: 2026-03-31 06:50:11 UTC
+question_type: multiple_choice
+factors:
+- description: 'Mean reversion toward pre-spike baseline (~59): current value 66 is
+    elevated post-spike (Mar 25), pre-spike values were 52-59. Expected drift of ~-3.5
+    over 10 days pushes end value toward 62-63, which is in Decreases territory.'
+  supports: Decreases
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: 'Trailing change stats show decay: last 6 daily transitions show 50%
+    decrease rate vs 17% increase rate, consistent with ongoing post-spike decay.'
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'High spike frequency: two spikes in 30 days (Feb 27, Mar 25) = ~1
+    per 15 days. P(spike in 10-day window) ≈ 25-49%. If spike lands in days 6-10,
+    end value likely >69.'
+  supports: Increases
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: 'Movie on Netflix: related queries all about ''the visit movie'', ''netflix'',
+    ''where to watch'' - suggesting algorithmic recommendation cycles drive periodic
+    spikes.'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Narrow ±3 band vs high volatility: daily std ~7-13 points, 10-day
+    range P10-P90 spans ~46 points. The 7-point DC window [63-69] is very narrow,
+    consistently yielding 7-15% DC in simulations.'
+  supports: Doesn't change
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: 'SerpAPI measurement uncertainty: ±1-2 point difference between pytrends
+    and SerpAPI could shift borderline outcomes. Slightly expands effective DC probability.'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.4
+    Doesn't change: 0.15
+    Decreases: 0.45
+assessment: 'The question asks whether Google Trends interest in "the visit" (a 2015
+  M. Night Shyamalan horror movie) will change between Mar 31 (value 66) and Apr 10,
+  with a ±3 threshold.
+
+
+  The dominant dynamic is post-spike decay. The Mar 25 spike (100) has decayed to
+  66 by Mar 31, but the pre-spike baseline was ~52-59. This mean-reversion pressure
+  favors Decreases. However, there have been two spikes in 30 days (~every 12-15 days),
+  suggesting meaningful probability of another spike within the 10-day window. A late-window
+  spike would strongly favor Increases.
+
+
+  The ±3 "Doesn''t change" band is narrow relative to the high daily volatility (std
+  ~7-13 points). All Monte Carlo simulations consistently place DC probability at
+  7-15%, which I''ve adjusted slightly upward to 15% for SerpAPI measurement uncertainty.
+
+
+  The key tension: mean reversion favors Decreases (~45%), but spike probability provides
+  substantial upside risk for Increases (~40%). Without a spike, Decreases dominates.
+  With a spike, Increases dominates. The timing of any spike within the window matters
+  greatly.
+
+
+  Counterargument against Decreases: if the Netflix-driven interest has established
+  a new baseline around 63-68 (the last 4 days are 61, 68, 65, 66), the mean-reversion
+  target might be higher than 59, reducing decay pressure. But this is hard to distinguish
+  from slow post-spike decay.
+
+
+  Counterargument against Increases: the 25-49% spike estimate comes from only 2 observed
+  spikes in 30 days - small sample size. The true rate could be lower.'
+calibration_notes: 'Base rate from change_stats (full window): 30% Inc, 35% DC, 35%
+  Dec. These are daily transition rates. Over 10 days, variance compounds, reducing
+  DC and increasing tail probabilities. Trailing stats (50% Dec) capture recent decay
+  trend. Monte Carlo models consistently show ~40% Inc, ~12% DC, ~48% Dec before judgment
+  adjustments.'
+key_uncertainties: '1. Will there be another spike? (most impactful variable - shifts
+  15-20% between Inc and Dec)
+
+  2. What is the true baseline? (~59 or ~65 - changes mean reversion strength)
+
+  3. SerpAPI vs pytrends values for the exact dates'
+tool_audit: Google Trends tool worked well with tz=0 and exact date ranges, providing
+  change_stats, tail_stats, and related queries. Web search confirmed the movie context.
+  Monte Carlo simulations in execute_code provided quantitative backbone. No tool
+  failures. Would have benefited from longer Google Trends history (90+ days) to better
+  estimate spike frequency and baseline level.
+update_triggers: '1. Netflix trending list featuring "The Visit" → strongly favors
+  Increases
+
+  2. No spike by Apr 7 → shifts ~10% from Increases to Decreases
+
+  3. New data showing value already at 60 or below by Apr 3 → confirms Decreases'
+process_reflection: 'The forecasting process worked well for this question type. The
+  google_trends tool provided excellent structured data including change_stats and
+  tail_stats. The Monte Carlo simulation in the sandbox was essential for converting
+  daily volatility into 10-day outcome probabilities. The guidance about threshold
+  arithmetic and proportional research was helpful. One friction point: the question
+  description says current value is 55 but the resolution window data shows 66 - this
+  is because different date ranges produce different scaling. The resolution window
+  scaling is what matters, and I correctly used that. The spike frequency estimation
+  from only 2 observations is inherently uncertain - would benefit from a longer historical
+  window.'
+computed:
+  factor_count: 6
+  factor_sum: 1.045
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Mean reversion toward pre-spike baseline (~59): current value 66
+      is elevated post-spike (Mar 25), pre-spike values were 52-59. Expected drift
+      of ~-3.5 over 10 days pushes end value toward 62-63, which is in Decreases territory.'
+    supports: Decreases
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: 'Trailing change stats show decay: last 6 daily transitions show
+      50% decrease rate vs 17% increase rate, consistent with ongoing post-spike decay.'
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'High spike frequency: two spikes in 30 days (Feb 27, Mar 25) = ~1
+      per 15 days. P(spike in 10-day window) ≈ 25-49%. If spike lands in days 6-10,
+      end value likely >69.'
+    supports: Increases
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: 'Movie on Netflix: related queries all about ''the visit movie'',
+      ''netflix'', ''where to watch'' - suggesting algorithmic recommendation cycles
+      drive periodic spikes.'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Narrow ±3 band vs high volatility: daily std ~7-13 points, 10-day
+      range P10-P90 spans ~46 points. The 7-point DC window [63-69] is very narrow,
+      consistently yielding 7-15% DC in simulations.'
+    supports: Doesn't change
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: 'SerpAPI measurement uncertainty: ±1-2 point difference between pytrends
+      and SerpAPI could shift borderline outcomes. Slightly expands effective DC probability.'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: 'Narrow ±3 band vs high volatility: daily std ~7-13 points, 10-day
+    range P10-P90 spans ~46 points. The 7-point DC window [63-69] is very narrow,
+    consistently yielding 7-15% DC in simulations.'
+  dominant_effective_logit: -1.275
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 1.3199999999999998
+    factors:
+    - description: 'Mean reversion toward pre-spike baseline (~59): current value
+        66 is elevated post-spike (Mar 25), pre-spike values were 52-59. Expected
+        drift of ~-3.5 over 10 days pushes end value toward 62-63, which is in Decreases
+        territory.'
+      supports: Decreases
+      logit: 1.2
+      confidence: 0.7
+      effective_logit: 0.84
+    - description: 'Trailing change stats show decay: last 6 daily transitions show
+        50% decrease rate vs 17% increase rate, consistent with ongoing post-spike
+        decay.'
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.85
+    factors:
+    - description: 'High spike frequency: two spikes in 30 days (Feb 27, Mar 25) =
+        ~1 per 15 days. P(spike in 10-day window) ≈ 25-49%. If spike lands in days
+        6-10, end value likely >69.'
+      supports: Increases
+      logit: 1.0
+      confidence: 0.6
+      effective_logit: 0.6
+    - description: 'Movie on Netflix: related queries all about ''the visit movie'',
+        ''netflix'', ''where to watch'' - suggesting algorithmic recommendation cycles
+        drive periodic spikes.'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: -1.125
+    factors:
+    - description: 'Narrow ±3 band vs high volatility: daily std ~7-13 points, 10-day
+        range P10-P90 spans ~46 points. The 7-point DC window [63-69] is very narrow,
+        consistently yielding 7-15% DC in simulations.'
+      supports: Doesn't change
+      logit: -1.5
+      confidence: 0.85
+      effective_logit: -1.275
+    - description: 'SerpAPI measurement uncertainty: ±1-2 point difference between
+        pytrends and SerpAPI could shift borderline outcomes. Slightly expands effective
+        DC probability.'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.3651293436037933
+      Doesn't change: 0.05066582685687126
+      Decreases: 0.5842048295393355
+    tentative_probabilities:
+      Increases: 0.4
+      Doesn't change: 0.15
+      Decreases: 0.45
+    per_option_gap_pp:
+      Increases: 3.487065639620673
+      Doesn't change: 9.933417314312873
+      Decreases: -13.420482953933549
+    max_gap_pp: -13.420482953933549
+    max_gap_option: Decreases
+  sources:
+  - '[(Google Trends) the visit](https://trends.google.com/trends/explore?q=the visit)'
+  reviewer_critique: '## Verification Summary
+
+
+    **Factors Checked Against Trace:**
+
+
+    1. **Factor 1 (Mean reversion toward baseline ~59)**: ✓ SUPPORTED. Trace confirms
+    Mar 31 value = 66 (line 46), Mar 25 spike = 100 (line 45), pre-spike values Mar
+    17-21 were 58, 57, 59, 56, 52 (lines 44-45), averaging ~56.4. The "~59" claim
+    is slightly high but reasonable. Mean-reverting model output of 61.3 end value
+    (line 147) supports the "-3.5 drift" claim.
+
+
+    2. **Factor 2 (Trailing change stats 50% decrease, 17% increase)**: ✓ SUPPORTED.
+    Trace confirms trailing_change_stats with increase_rate: 0.167, decrease_rate:
+    0.5 (line 52).
+
+
+    3. **Factor 3 (Spike frequency ~1 per 15 days, 25-49% probability)**: ✓ SUPPORTED.
+    Feb 27 spike at 100 (line 76) and Mar 25 spike at 100 (line 80) = 2 spikes in
+    ~26 days. Agent''s Poisson calculation in thinking (line 286) yields ~49%, making
+    the "25-49%" range reasonable.
+
+
+    4. **Factor 4 (Movie on Netflix drives spikes)**: ✓ SUPPORTED. Related queries
+    include "the visit netflix", "where to watch", "movie the visit" (lines 47-51,
+    82-83). Web search confirms Netflix availability (lines 223-227).
+
+
+    5. **Factor 5 (Narrow ±3 band, DC = 7-15%)**: ✓ SUPPORTED. Daily std = 10.87 (line
+    112), trailing volatility = 10.25 (line 53). Monte Carlo results consistently
+    show DC at 7.3%, 6.3%, 15.3%, 10.8%, 12.7% across different models (lines 130-131,
+    147-149, 200).
+
+
+    6. **Factor 6 (SerpAPI measurement uncertainty)**: ✓ SUPPORTED. Acknowledged in
+    fine print and by agent (lines 165-166).
+
+
+    **Other Checks:**
+
+
+    - **Double-counting**: No issues found. Factors 1-2 use distinct evidence (baseline
+    values vs transition rates). Factors 3-4 use different lines of evidence (spike
+    frequency vs related query context).
+
+
+    - **Wrong-direction factors**: All logit signs align with descriptions.
+
+
+    - **Resolution criteria engagement**: Agent correctly understands the ±3 threshold
+    comparison between Mar 31 and Apr 10 values (line 111).
+
+
+    - **Adversarial reasoning**: Assessment addresses counterarguments for both Decreases
+    (new baseline established at 63-68) and Increases (small sample size for spike
+    frequency estimate).
+
+
+    - **Regime-spanning data**: The 30-day data includes two spike+decay cycles, which
+    could contaminate drift estimates. However, the agent addresses this by running
+    multiple models (mean-reverting, random walk, spike scenario) and weighting them
+    appropriately.
+
+
+    **Probability Assessment:**
+
+
+    Monte Carlo results ranged from:
+
+    - Bootstrap/Normal: 60% Dec, 7% DC, 33% Inc
+
+    - Mean-reverting: 54% Dec, 15% DC, 31% Inc
+
+    - Random walk: 45% Dec, 11% DC, 45% Inc
+
+    - Spike scenario: 38% Dec, 13% DC, 50% Inc
+
+    - Weighted combination: 43% Dec, 12% DC, 45% Inc
+
+
+    The agent''s final 45-15-40 split is within the range of these well-grounded simulations.
+    The 15% DC is reasonable given consistent Monte Carlo outputs of 7-15%. The 45%
+    Dec vs 40% Inc split appropriately reflects the tension between mean-reversion
+    (favoring Decreases) and spike probability (favoring Increases). While I might
+    lean slightly more toward Decreases (~48-50%), the difference is not meaningful
+    enough to constitute an error.
+
+
+    **No errors found. All factual claims are grounded in the trace. The probability
+    distribution is appropriately calibrated to the simulation evidence.**'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 42996
+- **Question ID**: 42932
+- **Session Duration**: 394.3s (6.6 min)
+- **Cost**: $3.3729
+- **Tokens**: 14,003 total (29 in, 13,974 out)
+  - Cache: 610,053 read, 75,165 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42996_20260331_064345/20260331-064345.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 6 | 0 | 1491ms |
+| google_trends | 2 | 0 | 16602ms |
+| reflection | 1 | 0 | 86583ms |
+| web_search | 1 | 0 | 16868ms |
+
+### Sources Consulted
+
+- [(Google Trends) the visit](https://trends.google.com/trends/explore?q=the vi...

@@ -12,7 +12,12 @@ import pandas as pd
 from pydantic import BaseModel, Field
 from pytrends.exceptions import TooManyRequestsError
 from pytrends.request import TrendReq
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
@@ -376,14 +381,71 @@ async def _fetch_recent_news(
 @mcp_tool(
     "google_trends",
     (
-        "Get Google Trends interest over time for a search term. "
-        "Returns relative search interest (0-100) over the specified timeframe, "
-        "plus top and rising related queries (included by default). "
-        "Useful for questions about search trends, popularity, and public interest. "
+        "Get Google Trends interest over time for a search term. Returns relative "
+        "search interest over the specified timeframe, plus `change_stats` "
+        "(historical base rates for how often interest rises, falls, or stays flat "
+        "under the question's resolution threshold), `tail_stats` (whether interest "
+        "has plateaued recently), `recent_news` headlines for context, and "
+        "`related_queries` for emerging catalysts.\n\n"
         "Timeframes: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m', "
-        "'today 3-m', 'today 12-m', 'today 5-y', 'all', or 'YYYY-MM-DD YYYY-MM-DD' for exact ranges. "
+        "'today 3-m', 'today 12-m', 'today 5-y', 'all', or 'YYYY-MM-DD YYYY-MM-DD'. "
         "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide. "
-        "Tz: timezone offset in minutes (default 360=CST). Use tz=0 to match SerpAPI resolution scripts."
+        "Tz: timezone offset in minutes. Use tz=0 and the exact resolution date "
+        "range to match SerpAPI-based resolution scripts.\n\n"
+        "## How to use this tool for directional-change questions\n\n"
+        "Metaculus has a family of multiple-choice questions that resolve on "
+        "whether a search term's interest 'Increases', 'Decreases', or \"Doesn't "
+        'change" over a window. These are threshold questions: the end-window '
+        "value has to move by more than a fixed amount (defined by the question's "
+        "resolution criteria) for Increases/Decreases to resolve. Start by reading "
+        "the resolution criteria to pin down the exact threshold, then:\n\n"
+        "- Use `change_stats` as your empirical prior — it already reports how "
+        "often this specific term historically crossed that threshold. Start from "
+        "those base rates and adjust based on current context. Small samples are "
+        "weak evidence; prefer longer timeframes when the recent history is thin.\n"
+        "- Use `tail_stats` to check whether recent interest has plateaued. A "
+        'stable tail strongly favors "Doesn\'t change"; an active upslope or '
+        "downslope signals directional movement.\n"
+        "- Use `recent_news` to decide whether the story is winding down or "
+        "escalating. A term whose news coverage has fresh developments is still "
+        "live; one whose news has gone quiet is likely decaying.\n"
+        "- Use `related_queries` to catch emerging catalysts the headline search "
+        "term misses.\n\n"
+        "**Asymmetric possibility space.** Compute which outcomes are even "
+        "reachable from the current value given the threshold. A term already at "
+        "its baseline floor cannot decrease; a term already at its ceiling cannot "
+        "increase. When the arithmetic clearly identifies one dominant outcome, "
+        "match your research depth to the genuine uncertainty rather than hunting "
+        "for narrative catalysts that inflate an already-unlikely outcome.\n\n"
+        "**Post-spike dynamics.** After a news spike, distinguish 'already decayed "
+        "to baseline' from 'still elevated and active'. A term that has returned "
+        "to its sustained baseline is most likely to stay there next period — "
+        "don't extrapolate the earlier decline as if it were still happening. A "
+        "term still well above baseline is in an active regime: check whether "
+        "interest is decaying monotonically or showing upticks, and read "
+        "recent_news to judge whether the story has ongoing developments. "
+        "Exponential decay models overpredict the decline for topics with "
+        "active real-world developments; model the end value as the recent tail "
+        "average rather than an exponential projection when news keeps arriving.\n\n"
+        "**Scheduled events in the forecast window.** When a hearing, trial date, "
+        "product launch, earnings report, or similar scheduled event falls inside "
+        "the window and the topic is still elevated, default to expecting "
+        "sustained or increased interest — scheduled events in active stories "
+        "generate multi-day follow-on coverage.\n\n"
+        "**Weather-dependent terms.** For weather-related search terms (freeze "
+        "watch, frost, heat wave, winter storm), pair this tool with "
+        "`weather_forecast` to check whether a relevant weather event is expected "
+        "in the window. Weather forecasts lose reliability at longer horizons — "
+        "discount the confidence of a long-range weather forecast, and remember "
+        "that a new weather system can re-spike search interest after a prior "
+        "spike has decayed.\n\n"
+        "**Resolution mechanism nuance.** Directional-change questions usually "
+        "resolve via SerpAPI rather than the pytrends-derived values this tool "
+        "returns. Small numeric differences between the two sources can flip the "
+        "outcome across the threshold when the measured interest level sits near "
+        "the baseline floor. Always query with tz=0 and the exact resolution "
+        "date range, and leave meaningful probability on outcomes that a small "
+        "measurement shift would produce."
     ),
 )
 async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:

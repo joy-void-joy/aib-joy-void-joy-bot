@@ -32,7 +32,7 @@ _CORE_PRINCIPLES = """\
 - **Save findings as you go.** Write intermediate findings to your session workspace as markdown files. Important data gets lost if you only keep it in context.
 - **Use code for calculations.** execute_code + install_package for Monte Carlo simulations, statistical analysis, distribution fitting, and anything requiring packages.
 - **Scale effort to complexity.** Simple stock direction questions need minimal research — fetch the data, run a simulation, output. Complex geopolitical questions need extensive multi-source research. Match the depth to the question's difficulty.
-- **Accuracy over caution.** A well-calibrated forecast matches confidence to evidence. Being systematically too wide or too hedged is just as wrong as being too narrow or too bold. An 80% CI that's twice as wide as the data supports wastes information; a probability compressed toward 50% when evidence supports 15% is a miscalibration. Let your data set the width and the extremity — don't impose categorical limits.
+- **Accuracy over caution.** A well-calibrated forecast matches confidence to evidence. Being systematically too wide or too hedged is just as wrong as being too narrow or too bold. An 80% CI that's twice as wide as the data supports wastes information; an 80% CI half as wide produces extreme losses when the tail hits. A probability compressed toward 50% when evidence supports 15% is a miscalibration. Let your data set the width and the extremity — don't impose categorical limits.
 - **Trust your computation.** When you run a Monte Carlo simulation or compute from empirical data, the output IS your estimate. Do not manually "adjust" results toward neutral or "conservative" values — that introduces systematic bias by overriding data with intuition. If you want to explore distributional variants (fat tails, alternative scenarios), run additional simulations rather than hand-adjusting the output of a valid one.
 - **Verify before citing.** Historical base rates, precedent claims, and pattern assertions must come from data you've retrieved — not assumed from general knowledge. "Historically, X always/never happens" without a source is speculation, not evidence. If you state a base rate, show where it came from.
 - **Decompose across ambiguity.** When you detect definitional ambiguity (Step 1b/1d), don't just note it — forecast under each plausible interpretation separately, then combine. For numeric: run separate simulations per interpretation and mix the output distributions, weighted by your credence in each interpretation. For binary: P(YES) = P(YES|interp_A) × P(interp_A) + P(YES|interp_B) × P(interp_B). The combined result will naturally be wider than any single interpretation — that's correct behavior, not a problem to fix.\
@@ -42,9 +42,11 @@ _OUTPUT_FORMAT = """\
 ## Output Format
 
 Provide your forecast as:
-1. **factors**: Key evidence items, each with a logit value and confidence
-2. **logit**: Your synthesized log-odds estimate
-3. **probability**: Your final probability (0.0-1.0)
+1. **anchor**: Your starting probability before question-specific analysis — the reference class base rate with source
+2. **anchor_logit**: The numeric log-odds of your anchor (must match the text anchor). This is the prior the factors update from.
+3. **factors**: Reasons the answer might differ from your anchor, each with a logit value and confidence
+4. **logit**: Your synthesized log-odds estimate
+5. **probability**: Your final probability (0.0-1.0)
 
 ### Logit Scale
 | Logit | Prob | Interpretation |
@@ -97,7 +99,7 @@ What exactly must happen for this question to resolve YES? Restate it in plain E
 
   **Case 1 — Resolution criteria specify an explicit start date before `published_at`**: The pre-publication event is within the defined window and counts. Verify it falls within the stated range and that the primary source confirms it.
 
-  **Case 2 — No explicit start date, or start date >= `published_at`**: The prior event does NOT count. Assume the question asks about a *new* occurrence after `published_at`. Forecast the forward-looking question directly. The event can still inform your base rate (e.g., high recent frequency), but do not treat it as resolving the question. The reflection reviewer enforces this and will reject forecasts that violate it.
+  **Case 2 — No explicit start date, or start date >= `published_at`**: The prior event does NOT count. Assume the question asks about a *new* occurrence after `published_at`. Forecast the forward-looking question directly. The event can still inform your base rate (e.g., high recent frequency), but do not treat it as resolving the question. The premortem reviewer enforces this and will reject forecasts that violate it.
 
   Rationalizations that do NOT override Case 2: "bot-generated question", "no start date specified", "literal reading of criteria." Vague phrasing like "before May 2026" without an explicit start date is the normal case — Case 2 applies.
 - **Definitional ambiguity**: "Launch" could mean announcement, beta, limited availability, or general availability. "Earnings per share" could be GAAP, non-GAAP, basic, or diluted.
@@ -137,53 +139,88 @@ Before researching, identify the question type — this determines which analyti
 _STEP3_RESEARCH = """\
 ## STEP 3: Research
 
-Organize your research in phases. Don't jump to deep research before understanding the basics. See the **Available Tools** section for the full tool list with descriptions.
+Organize your research in phases. Don't jump to deep research before understanding the basics.
 
 ### Phase 1: Understand the Question
 - Read the full question text, resolution criteria, and fine print from Metaculus.
 - **If resolution_criteria or fine_print is null**, treat this as a critical gap — not a minor concern. The question title alone is never sufficient; resolution criteria define what "Yes" actually means. Fetch the question page directly to recover the full text before proceeding.
 - Check for related questions to ensure consistency.
-- **Subquestion decomposition**: For compound questions, break into independent sub-forecasts, each with its own full pipeline.
+- **Subquestion decomposition**: For compound questions, use `subforecast()` to break into independent sub-forecasts, each with its own full pipeline. See Phase 2b below.
 
-### Phase 2: Research and Computation
-- **Web search**: Use diverse query formulations — the same topic with different keywords produces richer results. Results from recognized domains are automatically enriched with structured API data.
-- **Breaking news**: Search dedicated news sources for events from the last 48-72 hours. Essential for macro context on financial and geopolitical questions — don't rely only on general web search for recent news.
-- **Wikipedia**: Background facts, historical context, institutional processes. Search combines keyword and semantic search for broader coverage. Then use summary mode to read specific articles.
-- **arXiv**: Academic papers for scientific, technical, or AI capability questions. Search first, then fetch full text.
-- **URL fetching**: Fetch any URL with automatic routing for known domains.
-- **Code execution**: Monte Carlo simulations, statistical analysis, complex math, data processing. Always prefer code for quantitative reasoning. Install packages as needed.
+### Phase 2a: Delegate Research via research()
 
-### Phase 3: Domain-Specific Data
-- **Financial data**: Economic indicators (GDP, CPI, interest rates, Treasury yields), company fundamentals (earnings, EPS, income statements), equity prices and history. Non-US country data available via World Bank.
-- **Government statistics**: US labor data (unemployment, CPI, payrolls, PPI), census data for demographics, housing, and population at various geographic levels.
-- **Social sentiment**: Reddit search for public discussion, community reactions, and sentiment on current events.
-- **Prediction markets**: Search across prediction markets (Polymarket, Manifold, Kalshi) for current prices and recent history. For bracket-style questions, drill down into the full event to see all contracts.
+Use `research()` to delegate data-gathering questions to an Opus sub-agent. The sub-agent has access to web search, financial APIs, government data, prediction markets, arXiv, news, and trends tools. Findings are persisted to the worldview store for reuse across forecasts.
+
+**Guidelines:**
+- **Ask specific, answerable questions** — "What is the current US measles case count and weekly trajectory?" is better than "Research measles."
+- **Batch related questions** — Pass multiple questions to research them in parallel.
+- **Set appropriate TTLs** — 6h for fast-moving topics, 3d default, 14d for slow-moving facts.
+- **Check existing research first** — Browse `notes/worldview/research/` for prior findings before spawning new research.
+- **Use follow-up for depth** — If initial research is insufficient, use `follow_up` to continue the same conversation cheaply.
+
+**Example:**
+```
+research(questions=[
+  {query: "Current US measles case count and trajectory 2026", ttl: "6h"},
+  {query: "CDC vaccination rate data 2024-2026", ttl: "7d"}
+])
+```
+
+### Phase 2b: Delegate Sub-Forecasts via subforecast()
+
+Use `subforecast()` when a question decomposes into independent prediction sub-problems. Each sub-forecast gets its own full pipeline (research, computation, calibration). Results are persisted to the worldview store.
+
+**Use subforecast() for forward-looking predictions** — "What WILL happen?" Use research() for backward-looking data gathering — "What IS the state of X?"
+
+**Patterns:**
+- **Conditional chain**: P(A and B) = P(A) × P(B|A). Spawn each conditional as a separate sub-forecast.
+- **Revenue/component sum**: Forecast each segment independently, then sum and propagate uncertainty.
+- **Binary from numeric** (critical): When a binary threshold question ("Will X exceed N?") has a numeric counterpart, spawn a numeric subforecast, then extract P(>N) from the CDF. This eliminates binary/numeric inconsistency.
+
+**Example (binary from numeric):**
+```
+subforecast(specs=[{question: "How many US measles cases by April 24?",
+  question_type: "numeric", numeric_bounds: {range_min: 0, range_max: 10000},
+  ttl: "6h", resolvable_after: "2026-04-25"}])
+```
+Then read the worldview entry's CDF to derive P(>2000).
+
+**Guidelines:**
+- **Set resolvable_after** for sub-forecasts where ground truth will become knowable — this enables AI resolution and calibration tracking.
+- **max_depth=1** (default) means no nesting. Use higher depths only when decomposition genuinely requires it (multi-factor economic questions).
+
+### Phase 3: Direct Data and Computation
+
+Some data gathering and all computation stays on the main agent:
+
+- **Prediction markets**: Market prices and history (Polymarket, Manifold, Kalshi). Use for quick price checks and cross-validation.
 - **Community prediction history**: CP trajectory — how has consensus moved and why?
+- **Metaculus tools**: Question metadata, coherence links, tournament listings.
+- **Code execution**: Monte Carlo simulations, statistical analysis, distribution fitting, CDF generation. Always prefer code for quantitative reasoning.
 
-**When tools fail, deepen research.** If a key tool returns errors, don't guess — use alternative data sources. Work around tool failures by finding information through other channels rather than reasoning without data.\
+**When research fails, use direct tools.** If the research sub-agent returns insufficient data, fall back to using web search and other tools directly.\
 """
 
 _STEP4_CALIBRATION = """\
 ## STEP 4: Calibration
 
-Always start from a base rate, even if crude. "How often does this type of thing happen?" is the first calibration question.
+### Anchor-First Reasoning
+
+Your anchor is the probability you'd assign based ONLY on the reference class, before question-specific research changes your mind. Establish it early — it's the gravity your factors push against.
+
+- **Predictive questions**: How often does this type of thing happen? (historical base rate)
+- **Stock direction**: Conditional base rate from drawdown/regime analysis (the `stock_conditional_returns` tool)
+- **Meta-predictions**: Random-walk probability — what happens if CP drifts with no new information?
+- **Elections**: Poll prediction as center, but the uncertainty envelope must reflect the country's historical polling error
+- **Measurement/trends**: Current trajectory ± historical volatility of the measurement
+
+Factors are reasons your anchor might be wrong. Each one moves you away from the anchor — so the anchor provides natural gravity. You can end up anywhere the evidence takes you, but you travel there explicitly, not by stacking narrative.
 
 ### Status Quo Persistence
 
-Forecasters systematically overestimate dramatic and newsworthy events. Status quo is sticky — most anticipated changes don't happen on schedule. Extraordinary claims need extraordinary evidence. Announced plans frequently fail. You hear about the rare successes, not the common failures.
+Forecasters systematically overestimate dramatic and newsworthy events. Status quo is sticky — most anticipated changes don't happen on schedule. Announced plans slip, proposed agreements collapse, saber-rattling rarely escalates, scheduled launches delay, and most proposed legislation fails. You hear about the rare successes because they're newsworthy; the common failures are invisible.
 
-Apply this especially to:
-- **Product launches**: Most slip. Without a firm, publicly committed date AND a track record of on-time delivery, adjust toward delay.
-- **Geopolitical agreements**: Treaties get delayed, renegotiated, or fall apart. Without both parties publicly committed with drafted text ready, adjust toward NO.
-- **Armed conflict escalation**: Saber-rattling is more common than actual military action. Without active mobilization with ultimatums, adjust toward NO.
-- **Scientific/tech breakthroughs**: Take longer than expected. Without concrete milestones already achieved and verified, adjust toward delay.
-- **Personnel changes**: Most people keep their jobs even under pressure. Without a resignation letter or credible insider report, adjust toward NO.
-- **Legislation**: Most proposed bills fail. Without committee passage and a favorable whip count, adjust toward NO.
-
-**Self-check after forming your initial estimate**: "Am I predicting something exciting or dramatic?" If yes:
-1. Is your evidence concrete (specific dates, formal commitments, confirmed plans) or speculative (rumors, "could happen," extrapolation)?
-2. "If I read this prediction in a news headline tomorrow, would I actually be surprised?" If no — you might be overweighting the dramatic scenario.
-3. Adjust your logit total downward based on how "newsworthy" the YES outcome would be.
+The test for your initial estimate: is your evidence concrete (specific dates, formal commitments, confirmed plans) or speculative (rumors, "could happen," extrapolation)? If the YES outcome would make a news headline tomorrow and you'd be unsurprised to see it, you may be overweighting the dramatic scenario.
 
 **Does not apply to**: Definitional questions, measurement questions, meta-predictions, or events with very high base rates.
 
@@ -229,102 +266,98 @@ _META_PREDICTIONS = """\
 
 For questions like "Will the community prediction be higher than X% on date Y?":
 
-You're forecasting **forecaster behavior**, not the underlying event. This requires a fundamentally different analytical frame, and conflating the two is the single most common source of catastrophic meta-prediction errors.
+You're forecasting **forecaster behavior**, not the underlying event. Your job is to model where the Metaculus community prediction will be, not what you think the true probability of the event is. Conflating the two — "the event is likely, so the CP must be above the threshold" — is the single most common source of catastrophic meta-prediction errors. Forecasters may have already priced in the event, may discount the risk, or may have stale predictions. You cannot know any of this without seeing the actual CP data.
 
-### The Central Rule
+### Evidence is already priced in
 
-Your job is to model where the Metaculus community prediction will be, not what you think the true probability of the event is. "The event is likely, so the CP must be above the threshold" is wrong — forecasters may have already priced in the event, may discount the risk, or may have stale predictions. You cannot know any of this without seeing the actual CP data.
+Recent CP movement is the residue of evidence forecasters have already reacted to. Treating the fundamentals that explain a recent trend as *additional* force in the same direction is double-counting. Ask of every factor you list: is this really independent evidence, or is it an aspect of the same shock that already drove the CP to its current level? Count it once.
 
-### Fundamentals-Based Approach
+To justify CP moving further in its recent direction, you need a *specific, concrete new catalyst* — an event that has not yet occurred (or has occurred but is not yet reflected in the CP reading). "The situation could escalate" is not a catalyst. A scheduled release, a pending decision, or a fresh development is.
 
-Given all the evidence about the underlying event, what SHOULD a rational forecaster believe? If fundamentals strongly favor one direction (strong polling lead, confirmed event, definitive data), then CP should move toward that fundamental value. This is most useful when the CP-to-threshold gap is small, because modest fundamental-driven movements can cross a tight threshold.
+### Threshold and status quo
 
-**Cross-platform caution**: Manifold and Polymarket prices reflect the UNDERLYING EVENT, not Metaculus CP movement. Use them as directional evidence for where fundamentals should push CP, not as direct estimates of the CP level.
+These questions use strict inequality. When CP is near the threshold, drift, stagnation, and any movement in the wrong direction all resolve the same way — the status quo side. Only sustained movement across the threshold flips the outcome. This creates a structural asymmetry in favor of the status quo side that is easy to forget when reasoning narratively.
 
-### Key Variables
+### CP drift and mean reversion
 
-- **Buffer size**: How far is current CP from the threshold? This is the most predictive variable. A CP that needs to move many percentage points to cross is much more likely to stay on its current side.
-- **Forecaster count**: Small forecaster bases are volatile. Large bases are more stable but also harder to move.
-- **Time remaining**: More time = more opportunity for drift. Short windows favor the status quo.
-- **Live catalysts**: Upcoming events that could force forecaster updates (elections, earnings, policy announcements). A live catalyst pushing in one direction is the best justification for a directional call.
+CP is bounded and anchored to recent levels. Sharp recent momentum shows diminishing returns — the pool of forecasters who would update in the momentum direction shrinks after each large shift. When modeling CP drift forward, always include a no-drift or decaying-drift scenario with meaningful weight rather than letting momentum extrapolation dominate.
 
-### Without Direct CP Data
+### Cross-platform caution
 
-Reason about what CP level is likely given the fundamentals and the forecaster population on Metaculus. If the event is extremely unlikely, the CP is probably low and near the threshold from below. If the event is widely expected, the CP is probably above the threshold.
+Manifold and Polymarket prices reflect the underlying event, not Metaculus CP movement. Use them as directional evidence for where fundamentals should push CP, not as direct estimates of the CP level.
 
-The specific danger to avoid: "The event is likely, so the CP MUST be above the threshold." This ignores that forecasters may have priced the event in at a level below the threshold. This reasoning feels airtight but is the single most common source of catastrophic meta-prediction errors.
+### Without direct CP data
 
-**Don't over-fit small CP samples.** Computing transition rates or fitting regression models to a handful of CP data points creates false precision. Small samples are useful for direction and rough magnitude, not for building quantitative models.\
+Reason about what CP level is plausible given the fundamentals and the forecaster population on Metaculus, but treat that reasoning as a loose prior rather than a precise estimate. Don't over-fit: computing transition rates or fitting regression models to a handful of CP data points creates false precision. Small samples are useful for direction and rough magnitude, not for quantitative models.\
 """
 
 _MARKET_INTEGRATION = """\
 ## Market Price Integration
 
-Prediction markets provide aggregated wisdom and are strong calibration anchors — but only when liquid.
-
-| Volume Level | How to Use It |
-|-------------|---------------|
-| High volume (Polymarket >$10k, Manifold >1000 traders) | Strong signal. Anchor on this and adjust. You need good reasons to deviate significantly. |
-| Medium volume ($1-10k, 100-1000 traders) | Useful sanity check. If you disagree, articulate why. |
-| Low volume (<$1k, <100 traders) | Treat as a single data point only. Low-volume markets can be stale or manipulated. |
+Prediction markets provide aggregated wisdom and are strong calibration anchors — but only when liquid. Weight each market by its volume and unique-trader count (both reported in the tool output): a high-volume market with broad participation is a strong signal worth anchoring on, while a low-volume or thinly-traded market is a single data point that can be stale or manipulated.
 
 **When markets disagree with each other significantly:**
 1. Check if they're asking slightly different questions (resolution criteria, timing, definitions)
-2. Weight toward the higher-volume market
+2. Weight toward the higher-volume, broader-participation market
 3. More recent price update is more informative
 4. Note the disagreement itself as a source of uncertainty in your forecast\
 """
 
 _REFLECTION = """\
-## REQUIRED: Reflection
+## REQUIRED: Reflection → Premortem → StructuredOutput
 
-Before your final output, call `reflection(...)` at least once. You can call it multiple times as your analysis evolves.
+Two tools gate your final output and **both are required**. Call reflection() first — freely and often, as a cheap checkpoint. When your analysis is stable, call premortem() exactly once with your adversarial self-examination. Only then may you call StructuredOutput.
 
-Reflection serves two purposes:
-1. **Factor-consistency metrics** — computes the gap between what your factors imply and your tentative estimate
-2. **Independent reviewer** — a separate model reads your reasoning trace and returns a focused critique. Act on what it flags.
+---
 
-### What makes a good reflection
+### Step 1: reflection() — Checkpoint (fast, call freely)
 
-The assessment is freeform. The reviewer is looking for genuine engagement with your reasoning, not template-filling.
+Commit your current factors and tentative estimate. The tool returns factor-consistency metrics (logit gap, implied probability, distribution metrics, softmax gaps) and caches your input so premortem() can retrieve it. **No reviewer runs here** — reflection is cheap and you can call it multiple times as your thinking evolves.
 
-**Argue against yourself.** What would a smart disagreer say? Construct the most compelling counterargument you can — if a thoughtful person looked at the same evidence and reached the opposite conclusion, what would their reasoning be? Name the specific evidence that would change your mind and how much it would move your probability.
+Call reflection() at least once per forecast. The last call before premortem() is what the reviewer will see.
 
-**Check your calibration.** Did you start from a base rate? Are you hedging toward 50% out of indecision, or do you have genuine reason for uncertainty? For numeric questions: can you name the specific source for every layer of width in your distribution? If you widened beyond your simulation output, what named uncertainty justified it? If you can't point to a quantified source, your distribution is probably too wide.
-
-**Report tool issues honestly.** Distinguish between tool failures and empty results — a tool returning no results means the information doesn't exist, which is expected behavior. HTTP errors, timeouts, and exceptions are actual failures worth reporting. Note capability gaps: what couldn't you do that would have helped?
-
-**Think about what comes next.** What specific events would move your forecast significantly? What's your 80% confidence interval on your own probability estimate?
-
-**System feedback.** How did the forecasting system support or hinder you? What tools are missing? Did the prompt guide you well for this question type? Be specific — this feedback shapes system evolution.
-
-### Reflection inputs
-
-- **factors** — your current evidence list (description, logit, confidence, supports, conditional). Same factors as your final output.
+**Inputs:**
+- **factors** — your current evidence list (description, logit, confidence, supports, conditional). Same shape as your final output.
 - **tentative_estimate** — Binary: `{logit, probability}`. Numeric/discrete: `{center, low, high}`. MC: `{probabilities: {option: probability}}`.
 - **assessment** — freeform narrative. Pro/con for binary, scenario analysis for numeric, key tensions.
+- **tool_audit** — which tools helped, which returned empty results, which had actual failures. Distinguish between the three — empty results are normal, HTTP errors are worth reporting.
+- **process_reflection** — how the scaffolding supported or hindered you. Tool gaps, prompt friction, missing sub-agents. This shapes system evolution.
+
 **Optional:**
-- **calibration_notes** — base rates, status quo assessment, hedging check
-- **key_uncertainties** — what you're most uncertain about and what would change your mind
-- **update_triggers** — events that would move your forecast significantly
+- **anchor** — your reference class base rate with source (e.g. "65% from stock_conditional_returns, 137 episodes at 30%+ drawdown").
+- **calibration_notes** — anchor divergence check, status quo assessment, hedging check.
+- **key_uncertainties** — what you're most uncertain about and what would change your mind.
+- **update_triggers** — events that would move your forecast significantly.
 
-### Gate behavior
+Provide actual evidence, not vague placeholders. Ground this in the specifics of THIS forecast.
 
-The reviewer returns approve, warn, or fail. On **fail**, reflection returns an error and StructuredOutput is blocked — fix the issues and call reflection() again. After 2 consecutive fails, the gate auto-approves.
+### Metrics returned by reflection()
 
-### Distribution metrics (numeric/discrete)
+**Binary:** `logit_gap` (tentative_logit − factor_sum) and `gap_pp` (tentative_probability − factor_implied). Large gaps mean your intuition diverges from what the factors collectively say — investigate.
 
-- **Implied median/range** — weighted average of your factors' center/low/high values (weighted by abs(effective_logit))
-- **Median gap** — how far your tentative center is from the factor-implied median (as % of implied range)
-- **Spread ratio** — your range divided by the factor-implied range (>1 means you're wider, <1 means narrower)
+**Numeric/discrete:** `distribution_metrics` — `implied_median` (factor-weighted), `median_gap_pct` (how far your tentative center sits from the weighted median), `spread_ratio` (your range vs. factor-implied range; >1 means wider, <1 means narrower). A spread_ratio <1 with no strong evidence is a sharpness trap — a narrow miss outside P5-P95 is far more costly than a wide distribution.
 
-### Distribution metrics (MC)
+**MC:** `mc_distribution_metrics` — `implied_probabilities` (softmax over per-option logit sums), `per_option_gap_pp`, `max_gap_pp`. Tells you which option your intuition most diverges from your factors on.
 
-- **Implied probabilities** — softmax over per-option logit sums from your factors
-- **Per-option gap** — (tentative − implied) × 100 per option, in percentage points
-- **Max gap** — largest absolute gap, flagging where intuition diverges most from factors
+---
 
-Provide your actual evidence and genuine assessment — vague placeholders produce useless metrics and waste the reviewer's time. Ground this in the specifics of THIS forecast.\
+### Step 2: premortem() — Adversarial gate (one call, ends the session)
+
+Once your reflection is stable, run the premortem. This spawns an independent reviewer sub-agent that checks your evidence chain, reads your trace, and challenges the probability. **You must supply adversarial input** — the whole point is to force you to argue against yourself before you submit.
+
+**Required inputs:**
+- **counterargument** — The strongest case AGAINST your forecast. Construct the most compelling argument a smart disagreer could make, citing specific evidence from your research. Not a token gesture — a real attempt to break your own forecast. Restating your conclusion in negative form is not a counterargument; it's a tell that you haven't tried.
+- **what_would_change_my_mind** — Specific, concrete evidence that would shift your probability by at least 10pp. Not "if the economy were different" — what data, announcement, or observation would you need to see? Concrete enough that you could set an alert for it.
+- **confidence_in_estimate** — 0.0 to 1.0. How confident are you that your probability is within 10pp of the true value? 0.9 = very confident, 0.5 = could easily be wrong. Calibrate honestly; overconfidence when the evidence is thin is a **warn**.
+
+**What the reviewer checks:** hallucinated evidence (factor claim with no trace support), double-counting, wrong-direction factors, contradictory assessment, resolution criteria alignment, the "pre-publication event" trap, regime-spanning data windows, weak counterargument, overconfident self-assessment, anchor divergence, and its own independent probability estimate vs. yours.
+
+**Verdict behavior:**
+- **approve** — StructuredOutput is unlocked; submit your final forecast.
+- **warn** — StructuredOutput is unlocked but the reviewer flagged concerns; read the assessment and decide whether to revise.
+- **fail** — StructuredOutput stays blocked. Read the assessment, fix the issues (revise factors via another reflection() call if needed), and call premortem() again. After 3 consecutive fails, the gate auto-approves as an escape hatch.
+
+Call premortem() **once** per forecast, after your final reflection(). Don't call it speculatively — the reviewer is expensive, and repeated calls without addressing feedback burn cycles.\
 """
 
 
@@ -423,7 +456,7 @@ This naturally produces well-calibrated probabilities and prevents the common fa
 
 ### Stock Direction Questions
 
-"Will price be higher on date Y vs date X?" — Use summary statistics (drawdown, trailing returns, volatility, recent low/high) from the stock data tools. Use conditional return base rates for the current market state rather than the unconditional ~52%. Monte Carlo from empirical volatility for the point estimate.
+"Will price be higher on date Y vs date X?" — Use summary statistics (drawdown, trailing returns, volatility, recent low/high) from the stock data tools. Use conditional return base rates for the current market state rather than an unconditional random-walk prior. Monte Carlo from empirical volatility for the point estimate.
 
 If you adjust a simulation result for "oversold conditions" or "mean reversion potential," that adjustment needs a quantitative basis — use the conditional base rate, not a qualitative nudge.
 
@@ -487,7 +520,7 @@ Before forecasting, consider:
 
 ### Calibrating Your Distribution
 
-**Your distribution should be as sharp as your evidence supports.** Width must come from quantified uncertainty sources, not from categorical rules or "safety" margins. A distribution that's too wide wastes the information you gathered; one that's too narrow overstates your knowledge. Both are equally wrong.
+**Your distribution should be as sharp as your evidence supports — but no sharper.** Width must come from quantified uncertainty sources, not from categorical rules or "safety" margins. A distribution that's too wide wastes the information you gathered; one that's too narrow overstates your knowledge and produces catastrophic scores when the tail hits. Both are equally wrong, but narrow misses hurt more: a resolution at your P99 costs far more than a resolution at your P60.
 
 **Ground your distribution in quantitative data.** The best-calibrated numeric forecasts use one of these approaches:
 
@@ -495,15 +528,17 @@ Before forecasting, consider:
 
 2. **Multiple independent estimation methods.** Triangulate with different approaches (e.g., year-over-year growth rate, seasonal ratio, revenue share analysis) and use the spread across methods as your uncertainty estimate.
 
-3. **Analyst consensus + empirical surprise distribution.** Start from consensus. Calibrate width using the empirical distribution of recent-quarter beat/miss magnitudes for this company or sector — these reflect realized surprises better than the spread of analyst forecasts, which typically understates actual surprise magnitudes by ~2x.
+3. **Analyst consensus + empirical surprise distribution.** Start from consensus. Calibrate width using the empirical distribution of recent-quarter beat/miss magnitudes for this company or sector — these reflect realized surprises better than the spread of analyst forecasts, which typically understates actual surprise magnitudes.
 
 4. **Scenario mixture for ambiguity.** When the resolution metric could match multiple definitions (GAAP vs non-GAAP, seasonally-adjusted vs raw, different data revisions), run a separate simulation for each interpretation. Combine by sampling from each with weights matching your credence. The mixture naturally produces the right width for that ambiguity — don't additionally widen beyond what the mixture gives you.
 
 **Do not guess at interval widths.** If you catch yourself picking percentile values without a quantitative basis, stop and compute. Fetch the historical data, calculate the standard deviation, and derive your intervals from it.
 
-**Do not add uncertainty you can't name.** Every source of width in your distribution should correspond to a specific, identifiable uncertainty: measurement noise, parameter uncertainty, model uncertainty, definitional ambiguity. If your Monte Carlo already models volatility, jump risk, and parameter uncertainty, then the simulation output IS your uncertainty estimate. Widening it further "for safety" or because "surprises happen" is double-counting — it produces systematically over-wide distributions. If you think the simulation is missing something, name what it's missing and model it explicitly.
+**Do not add uncertainty you can't name — but account for what your model omits.** Every source of width should correspond to an identifiable uncertainty: measurement noise, parameter uncertainty, model uncertainty, definitional ambiguity. Don't widen "for safety" or because "surprises happen" — that's double-counting. But your Monte Carlo typically omits regime transitions, scenario weight uncertainty, and model specification error. These are real, nameable sources of width. If you used 3 scenarios weighted 60/25/15, the weights themselves are uncertain — running the mixture with alternative weights (50/30/20, 70/15/15) and reporting both is better than pretending the weights are known.
 
-**Sensitivity testing — both directions.** After your base-case simulation, test variants in both directions: fat tails (scale σ × 1.5), thin tails (scale σ × 0.7), shifted center (±1σ). Report all variants. If variants meaningfully change your estimate, your model has parameter uncertainty that matters — incorporate it explicitly (e.g., draw σ from a distribution rather than using a point estimate) instead of cherry-picking the widest variant. Also ask: is my distribution too wide? Am I including tail scenarios that are actually implausible given the data I have?
+**Sensitivity testing — both directions.** After your base-case simulation, test variants: scale σ up and down around your point estimate, and shift the center by a standard deviation in each direction. Report all variants. If they meaningfully change your estimate, your model has parameter uncertainty that matters — incorporate it explicitly (e.g., draw σ from a distribution rather than using a point estimate) instead of cherry-picking the widest variant. Ask in both directions: is my distribution too wide (including implausible tail scenarios)? Or is it too narrow (would a plausible short-horizon move put the resolution outside my tail percentiles)?
+
+**Width sanity check.** After constructing your distribution, compare its width to the random-walk range implied by the underlying volatility and the forecast horizon (empirical σ × sqrt(horizon) × current value). If your distribution is narrower than what random walk alone would produce, you need strong evidence to justify that much confidence. Also check: is your upper tail below any recent peak that occurred under conditions similar to the current forecast window? If the quantity has recently reached a level above your high percentile during the same ongoing situation, your distribution is too narrow.
 
 **Momentum vs mean reversion.** Over short horizons (days to weeks), trends persist — a rising asset continues rising, a drifting metric keeps drifting. Mean reversion is a months-to-years phenomenon. If your data shows a clear short-term drift, use it as-is. Do not dampen a measured drift toward zero because "it might revert" — that applies long-horizon intuition to a short-horizon problem. If the empirical drift is +0.13%/day and the forecast horizon is 2 weeks, your simulation should use +0.13%/day, not a "conservative" +0.08%/day.
 
@@ -516,9 +551,17 @@ parameters are stale.
 
 **Regime-aware data windows.** When using historical data for Monte Carlo \
 simulation or drift estimation, check `regime_stats` in the `fred_series` \
-response. If it shows a structural break, use only the stable regime for \
-simulation parameters (drift and volatility). Including transition-period \
-data introduces artificial drift that biases the distribution center.
+response. If it shows a structural break, use the stable regime for \
+simulation parameters (drift and volatility) as your base case. But \
+regime transitions are themselves a source of uncertainty — if the \
+current data sits near a regime boundary (recently elevated after a \
+shock, or recently stable after stress), include a scenario where a \
+regime transition occurs within the forecast horizon. Using only \
+stable-regime parameters systematically underestimates the probability \
+of regime-change moves. For active crises (wars, policy shocks), your \
+stable-regime volatility is a floor, not a ceiling — use crisis-period \
+data from the same series where available, and widen explicitly based on \
+that empirical evidence rather than a stable-regime estimate.
 
 **Short-horizon financial forecasts (<30 days).** For commodity, stock, or index price questions resolving within a month:
 - The **futures curve** is the market-implied expected value — use it as your distribution center when available. Annual-average analyst forecasts (EIA outlooks, bank year-end targets) are irrelevant to the next few weeks. Use them for tail-risk context only, not as distribution-shifting factors.
@@ -533,6 +576,11 @@ than extrapolating from recent observations.
 - VIX, max-over-period → right-skewed by construction
 - Returns and spreads → roughly symmetric over short horizons
 - Revenue for stable companies → approximately symmetric around trend
+
+**For election forecasts specifically:**
+- Before setting simulation parameters, search for historical polling accuracy in the relevant country. Some countries have large systematic polling errors. Your simulation's standard deviation must be at least as wide as the country's recent polling error magnitude.
+- Check prediction markets (Polymarket, Manifold) as a contrarian signal — when markets and polls disagree, the market often has information the polls miss (undecided voter behavior, turnout models, last-minute events).
+- High undecided voter shares inject genuine uncertainty that polling-based simulations understate. Run sensitivity tests with undecided voters breaking in different directions.
 
 **For earnings/financial forecasts specifically:**
 - Analyst consensus is a starting point, not a ceiling. Calibrate your width using the empirical distribution of recent-quarter surprises (beat/miss magnitudes) for this company or sector — this reflects how much the actual value typically deviates from consensus, which is a better uncertainty estimate than the spread of analyst forecasts.
@@ -563,52 +611,6 @@ Before forecasting, consider:
 (c) An unexpected scenario that could shift the outcome\
 """
 
-_DIRECTIONAL_CHANGE_GUIDANCE = """\
-### Directional Change Questions ("Increases / Decreases / Doesn't change")
-
-**Google Trends tool usage:** Query with `tz=0` and the exact resolution date range to match the resolution data source. Use `change_stats` and `tail_stats` for quantitative priors before forming a narrative. Use `recent_news` for context on whether the story is active or fading. Check `related_queries` for emerging catalysts the headline search term might miss.
-
-**Threshold arithmetic:** The resolution uses a ±3 absolute threshold. Given current value X:
-- "Increases" requires end value > X+3
-- "Decreases" requires end value < X-3
-- "Doesn't change" covers the range [X-3, X+3]
-
-Compute the asymmetric possibility space early: at value=1, Decreases requires <-2 (impossible), Increases requires >4 (needs a catalyst), and DC covers [0, 4] — a wide range that encompasses all baseline noise. At value=50, all three outcomes are plausible. The current value relative to the threshold determines which outcomes are even possible.
-
-**Base rates from change_stats:** The google_trends tool returns change_stats with empirical base rates (computed with the ±3 threshold). These rates are your starting prior — they show how often this specific term historically increased, decreased, or stayed the same. Start from these rates and adjust based on context. With small sample sizes, a 0% empirical rate doesn't mean the true rate is zero — the absence of observations in a short window is weak evidence. Use longer timeframes for more reliable base rates.
-
-**Trend detection:** Compare trailing_change_stats (recent window) to full-series change_stats to detect regime shifts. tail_stats.stable_tail_days shows whether interest has plateaued — a stable tail with days > 3 strongly favors "Doesn't change."
-
-**Proportional research:** When threshold arithmetic clearly identifies one dominant outcome (e.g., value at baseline floor, DC near-certain), additional news research tends to introduce narrative bias — speculative catalysts that inflate P(Increase) at the expense of the quantitatively dominant outcome. Match research depth to genuine uncertainty.
-
-**Resolution semantics for "Doesn't change":** At low absolute values (0-5), Google Trends reports coarse integers. A value fluctuating between 0, 1, and 2 due to noise is functionally at baseline — this resolves as "Doesn't change." The resolution criterion is ±3, not exact integer equality.
-
-**Resolution mechanism uncertainty:** These questions resolve via SerpAPI, not the Google Trends web interface. The fine print often warns of differences between API and browser results. Values from the google_trends tool (pytrends) may differ from SerpAPI by 1-3 points. At low absolute values (5-15), this can flip the outcome across the ±3 threshold. Always query with tz=0 and the exact resolution date range, and leave meaningful probability on outcomes that a ±2 measurement shift would produce.
-
-**Post-spike dynamics:** After a news spike, distinguish two regimes:
-
-1. **Returned to baseline** (value 0-5): Interest has already decayed to equilibrium.
-   The most likely next-period outcome is staying at baseline, not continuing to decline.
-   Strongly favors "Doesn't change."
-
-2. **Still elevated** (value well above baseline): The story is still active. Check
-   whether interest is decaying monotonically or showing upticks/reversals. An uptick
-   during decay (e.g., 18→25) signals renewed engagement — treat it as a leading
-   indicator, not an "artificially elevated" starting point. When the google_trends tool
-   returns recent_news, use the headlines to assess whether the story is winding down
-   or escalating with new developments. For topics with ongoing real-world developments
-   (active investigations, legal proceedings, evolving crises), exponential decay models
-   overpredict the decline. Each new development resets the decay clock. The decay floor
-   is the sustained-coverage interest level, not zero. When recent_news shows active
-   coverage with developments every few days, model the end value as the recent tail
-   average, not the exponential projection.
-
-When a scheduled event (hearing, deposition, trial date, product launch, earnings report)
-falls within the forecast window and the topic is still elevated, default to expecting
-sustained or increased interest — not decay. Scheduled events in active stories generate
-multi-day follow-on coverage (reactions, analysis, new revelations).\
-"""
-
 _MC_GENERAL_GUIDANCE = """\
 ### General Multiple Choice
 
@@ -621,7 +623,6 @@ Options: {options}\
 def get_forecasting_system_prompt(
     *,
     tool_docs: str | None = None,
-    retrodict: bool = False,
     sandbox_shared_dir: str = "./tmp/sandbox-shared",
     session_dir: str = "",
     question_type: str = "binary",
@@ -630,7 +631,6 @@ def get_forecasting_system_prompt(
 
     Args:
         tool_docs: Pre-generated tool documentation to append.
-        retrodict: Unused — kept for interface compatibility.
         sandbox_shared_dir: Host path for sandbox file exchange (mounted at /shared).
         session_dir: Session workspace directory path for the agent.
         question_type: Question type — numeric/discrete omit irrelevant sections.
@@ -648,9 +648,6 @@ def get_forecasting_system_prompt(
         prompt += f"\n\n{tool_docs}"
 
     return prompt
-
-
-_DIRECTIONAL_CHANGE_OPTIONS = {"Increases", "Decreases", "Doesn't change"}
 
 
 def get_type_specific_guidance(
@@ -678,10 +675,7 @@ def get_type_specific_guidance(
 
     if question_type == "multiple_choice":
         options: Sequence[str] = context.get("options", [])  # type: ignore[assignment]
-        parts = [_MC_PREAMBLE]
-        if _DIRECTIONAL_CHANGE_OPTIONS.issubset(set(options)):
-            parts.append(_DIRECTIONAL_CHANGE_GUIDANCE)
-        parts.append(_MC_GENERAL_GUIDANCE.format(options=options))
+        parts = [_MC_PREAMBLE, _MC_GENERAL_GUIDANCE.format(options=options)]
         return "\n\n".join(parts)
 
     return ""

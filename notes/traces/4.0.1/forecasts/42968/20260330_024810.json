@@ -1,0 +1,153 @@
+{
+  "question_id": 42904,
+  "post_id": 42968,
+  "question_title": "Will the interest in “ashley fisler” change between 2026-03-30 and 2026-04-09 according to Google Trends?",
+  "question_type": "multiple_choice",
+  "timestamp": "20260330_024810",
+  "probability": null,
+  "logit": null,
+  "probabilities": {
+    "Increases": 0.05,
+    "Doesn't change": 0.35,
+    "Decreases": 0.6
+  },
+  "median": null,
+  "confidence_interval": null,
+  "percentiles": null,
+  "summary": "Ashley Fisler's arrest on March 26, 2026 generated a massive Google Trends spike (peak 100 on Mar 27) that is rapidly decaying with a half-life of ~0.7 days. By March 30, the value is already at 5, and pure exponential decay projects to 0 within 1-2 more days—well before the April 9 endpoint. The pre-arrest baseline was 0 for months, confirming this as a one-off viral crime story.\n\nThe dominant outcome is Decreases (~60%), since the end value on April 9 is most likely 0, giving a difference of -5 from the start value of 5. However, Doesn't change has meaningful probability (~35%) primarily due to SerpAPI vs pytrends measurement uncertainty on the start value. If SerpAPI reports the March 30 value as 3 instead of 5, then an end value of 0 gives diff=-3, which is \"within 3\" and resolves as Doesn't change. The bail hearing on April 1 is a minor factor since any coverage bump would fully decay by April 9. Increases is very unlikely (~5%), requiring sustained interest above 8 on April 9 from some major new development.",
+  "factors": [
+    {
+      "description": "Post-spike exponential decay: Interest peaked at 100 on Mar 27 (arrest) and has decayed to 5 by Mar 30. Half-life is ~0.7 days. Pure decay projects to 0 by Apr 1-2, well before Apr 9.",
+      "supports": "Decreases",
+      "logit": 1.5,
+      "confidence": 0.85,
+      "conditional": null,
+      "effective_logit": 1.275
+    },
+    {
+      "description": "Pre-spike baseline was 0 for months. This is a one-off viral crime story, not a sustained topic. The natural resting state is 0.",
+      "supports": "Decreases",
+      "logit": 1.0,
+      "confidence": 0.9,
+      "conditional": null,
+      "effective_logit": 0.9
+    },
+    {
+      "description": "SerpAPI vs pytrends measurement uncertainty: start value of 5 could be reported as 3-7 by SerpAPI. If start=3, Decreases becomes nearly impossible (end=0 gives diff=-3, which is 'within 3'). This creates meaningful probability mass for Doesn't change.",
+      "supports": "Doesn't change",
+      "logit": 0.8,
+      "confidence": 0.7,
+      "conditional": null,
+      "effective_logit": 0.5599999999999999
+    },
+    {
+      "description": "At low absolute values (0-5), Google Trends integers are coarse. End value of 0 is most likely. Start=5, end=0 gives diff=-5 (Decreases). But start=3 or 4, end=0 gives diff=-3 or -4. The -3 case resolves Doesn't change per the 'within 3' criterion.",
+      "supports": "Doesn't change",
+      "logit": 0.5,
+      "confidence": 0.7,
+      "conditional": null,
+      "effective_logit": 0.35
+    },
+    {
+      "description": "Bail hearing scheduled for April 1 could generate brief renewed coverage, but it's 8 days before Apr 9 and any bump would fully decay.",
+      "supports": "Doesn't change",
+      "logit": 0.3,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": 0.15
+    },
+    {
+      "description": "Increases requires end value >8 on Apr 9, which needs a major new development (new victims, dramatic hearing, broader scandal) sustaining interest for days near the end of the window. Very unlikely for a teacher arrest story.",
+      "supports": "Increases",
+      "logit": -1.5,
+      "confidence": 0.8,
+      "conditional": null,
+      "effective_logit": -1.2000000000000002
+    }
+  ],
+  "resolution": "Decreases",
+  "submitted_at": "20260330_044810",
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 374.39,
+    "total_tool_calls": 8,
+    "total_errors": 0,
+    "overall_error_rate": "0.0%",
+    "total_tool_time_ms": 110801.83,
+    "tools_used": 4,
+    "by_tool": {
+      "google_trends": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 5509.62,
+        "avg_duration_ms": 2754.81,
+        "min_duration_ms": 953.03,
+        "max_duration_ms": 4556.59
+      },
+      "web_search": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 30786.8,
+        "avg_duration_ms": 15393.4,
+        "min_duration_ms": 11575.78,
+        "max_duration_ms": 19211.02
+      },
+      "execute_code": {
+        "call_count": 3,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 851.51,
+        "avg_duration_ms": 283.84,
+        "min_duration_ms": 11.07,
+        "max_duration_ms": 636.06
+      },
+      "reflection": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 73653.89,
+        "avg_duration_ms": 73653.89,
+        "min_duration_ms": 73653.89,
+        "max_duration_ms": 73653.89
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 26,
+    "output_tokens": 8930,
+    "cache_read_input_tokens": 479173,
+    "cache_creation_input_tokens": 61378,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 61378,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/42968_20260330_024156/20260330-024156.log",
+  "question_published_at": "2026-03-30T02:35:28Z",
+  "question_close_time": "2026-03-30T04:05:28Z",
+  "question_scheduled_resolve_time": "2026-04-09T12:48:08Z",
+  "reasoning": "**Forecast: Decreases (60%), Doesn't change (35%), Increases (5%)**\n\nKey reasoning:\n- Ashley Fisler's arrest on March 26 caused a viral spike (peak=100 on Mar 27) that's decaying rapidly (half-life ~0.7 days). By March 30, the value is already 5 and projecting to 0 within 1-2 days.\n- **Decreases is most likely** because the April 9 value will almost certainly be 0, and a drop from 5→0 exceeds the ±3 threshold.\n- **Doesn't change has meaningful probability** due to SerpAPI measurement uncertainty — if SerpAPI reports the March 30 start as 3 instead of pytrends' 5, a drop to 0 would only be -3, which falls \"within 3\" and resolves as Doesn't change.\n- **Increases is very unlikely** — it would require the April 9 value to exceed 8, needing a major new development sustaining interest near the end of the window. The bail hearing on April 1 is too early to matter by April 9.",
+  "sources_consulted": [
+    "[(Google Trends) ashley fisler](https://trends.google.com/trends/explore?q=ashley fisler)"
+  ],
+  "agent_version": "4.0.1",
+  "cdf": null,
+  "numeric_bounds": null,
+  "retrodict_date": null,
+  "comparison": null,
+  "peer_score": 18.38864390681426,
+  "baseline_score": 53.50264792820728,
+  "score_timestamp": 1775892611.519727,
+  "resolution_source": "scrape",
+  "resolution_reason": null,
+  "resolution_criteria": "This question resolves “Doesn't change” if the value on the timeline at [https://trends.google.com/trends/explore?geo=US&tz=0&q=ashley%20fisler&date=2026-03-10%202026-04-09](https://trends.google.com/trends/explore?geo=US&tz=0&q=ashley%20fisler&date=2026-03-10%202026-04-09) for 2026-04-09 is within 3 of the value at 2026-03-30. It resolves “Increases” if the value is more than 3 greater, and resolves “Decreases” if the value is more than 3 lower.",
+  "fine_print": "A script will be used to determine the resolution of this question. It will access the data on Google Trends using [SerpApi](https://serpapi.com/), and compare the height of the timeline for the two aforementioned dates. The specific python query will be structured as follows:\n```\nfrom serpapi import GoogleSearch\n\nsearch = GoogleSearch(params={\n  \"api_key\": API_KEY,\n  \"engine\": \"google_trends\",\n  \"data_type\": \"TIMESERIES\",\n  \"geo\": \"US\",\n  \"tz\": 0,\n  \"q\": \"ashley fisler\",\n  \"date\": \"2026-03-10 2026-04-09\",\n})\nsearch.get_dict()\n```\nNote that there may be differences between the results returned by the API and the data appearing on the page. This seems to be due to the 'tz' parameter not having the intended effect in-browser. In this case, the API results will be considered authoritative.\nNote that the precision of the timeline will be 1 day, so this will compare the overall interest for the whole day as determined by Google Trends.\nDates are determined in UTC.\nIf the data is no longer available, or the script fails, this question will be annulled or manually resolved by a moderator.",
+  "background_info": null
+}

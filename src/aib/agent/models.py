@@ -4,9 +4,16 @@ import math
 import re
 from datetime import date, datetime, timedelta
 from enum import StrEnum
-from typing import Self, TypedDict, cast
+from typing import NotRequired, Self, TypedDict, cast
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, create_model, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    create_model,
+    model_validator,
+)
 import zoneinfo
 
 
@@ -105,17 +112,66 @@ class CreditExhaustedError(Exception):
         return cls(message, reset_time)
 
 
-class ToolAudit(BaseModel):
-    """Aggregated tool usage review from post-session Opus reviewer."""
+class ToolCallMetrics(TypedDict):
+    """Ground-truth metrics for a single tool, as exposed by tools.metrics."""
 
-    by_tool: dict[str, str] = Field(
+    call_count: int
+    error_count: int
+    avg_duration_ms: NotRequired[float]
+    total_duration_ms: NotRequired[float]
+    total_cost_usd: NotRequired[float]
+    error_rate: NotRequired[str]
+
+
+class ToolAuditEntry(BaseModel):
+    """Structured per-tool assessment — filterable and aggregatable."""
+
+    calls: int = Field(description="Number of times this tool was called.")
+    errors: int = Field(default=0, description="Number of errors encountered.")
+    error_cause: str | None = Field(
+        default=None,
+        description="Brief cause of errors, if any (e.g., 'timeout', 'rate limit', '403').",
+    )
+    impact: str = Field(
+        description="Impact of errors: 'none', 'minor', or 'significant'.",
+    )
+    value: str = Field(
+        description="Value this tool provided: 'high', 'medium', 'low', or 'wasted'.",
+    )
+    notes: str | None = Field(
+        default=None,
+        description="Brief notes on tool usage (e.g., 'key data source for forecast').",
+    )
+
+    @classmethod
+    def from_metrics(cls, tool_metrics: ToolCallMetrics) -> "ToolAuditEntry":
+        """Build a skeleton entry from ground-truth metrics.
+
+        Calls/errors are authoritative from instrumentation; subjective
+        fields (value, notes) default to placeholders for the reviewer
+        to override.
+        """
+        error_count = tool_metrics["error_count"]
+        return cls(
+            calls=tool_metrics["call_count"],
+            errors=error_count,
+            error_cause=None,
+            impact="none" if error_count == 0 else "minor",
+            value="medium",
+            notes=None,
+        )
+
+
+class ToolAudit(BaseModel):
+    """Aggregated tool usage review."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    by_tool: dict[str, str] | dict[str, ToolAuditEntry] = Field(
         description=(
-            "Per-tool qualitative assessment. Key is the exact tool name. "
-            "Value is a compact one-line summary in this format: "
-            "'N calls, M errors (brief cause), impact: none/minor/significant, "
-            "value: high/medium/low/wasted, [notes]'. "
-            "Example: '5 calls, 1 error (timeout on earnings API), impact: minor "
-            "(retried successfully), value: high — key data source for forecast'."
+            "Per-tool assessment. Key is the exact tool name. "
+            "Value is either a structured ToolAuditEntry or a legacy "
+            "one-line string summary."
         )
     )
     capability_gaps: list[str] = Field(
@@ -124,6 +180,32 @@ class ToolAudit(BaseModel):
     subtle_bugs: list[str] = Field(
         description="Tool behaviors that weren't errors but produced misleading or suboptimal results.",
     )
+
+    def merge_metrics(
+        self, by_tool_metrics: dict[str, ToolCallMetrics]
+    ) -> dict[str, ToolAuditEntry]:
+        """Return a by_tool dict populated from metrics, overlaid with the
+        reviewer's subjective fields.
+
+        Calls/errors come from metrics (ground truth). Value/notes/impact
+        /error_cause come from the reviewer when available, else defaults.
+        """
+        skeleton: dict[str, ToolAuditEntry] = {
+            name: ToolAuditEntry.from_metrics(data)
+            for name, data in by_tool_metrics.items()
+        }
+        for name, entry in skeleton.items():
+            reviewer_entry = self.by_tool.get(name)
+            if isinstance(reviewer_entry, ToolAuditEntry):
+                skeleton[name] = ToolAuditEntry(
+                    calls=entry.calls,
+                    errors=entry.errors,
+                    error_cause=reviewer_entry.error_cause or entry.error_cause,
+                    impact=reviewer_entry.impact,
+                    value=reviewer_entry.value,
+                    notes=reviewer_entry.notes,
+                )
+        return skeleton
 
 
 class ForecastClassification(BaseModel):
@@ -441,14 +523,30 @@ def create_forecast_model(
 class Forecast(BaseModel):
     """Forecast for binary questions. Used as structured output schema."""
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting probability "
+            "before question-specific analysis. E.g. 'Historical base rate: 15% "
+            "(3 of 20 similar bills passed committee in the last decade)'"
+        ),
+    )
+    anchor_logit: float = Field(
+        description=(
+            "Numeric log-odds for your anchor base rate, the prior from which "
+            "factors update. Must be consistent with the `anchor` text. "
+            "Reference: -2.2 = 10%, -1.1 = 25%, 0 = 50%, +1.1 = 75%, +2.2 = 90%."
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
         description=(
-            "Key pieces of evidence with their directional strength. "
-            "Each factor should have a description and a logit value."
+            "Reasons the answer might differ from your anchor, each with "
+            "directional strength. Each factor should have a description "
+            "and a logit value."
         ),
     )
     logit: float = Field(
@@ -479,8 +577,8 @@ class Forecast(BaseModel):
     @computed_field
     @property
     def probability_from_factors(self) -> float:
-        """Probability computed from sum of factor effective logits."""
-        return 1 / (1 + math.exp(-self.factors_sum_logit))
+        """Probability from anchor_logit updated by the sum of factor effective logits."""
+        return 1 / (1 + math.exp(-(self.anchor_logit + self.factors_sum_logit)))
 
     def check_consistency(self, threshold: float = 0.15) -> list[str]:
         """Check for consistency issues between factors and final probability.
@@ -536,12 +634,19 @@ class Forecast(BaseModel):
 class MultipleChoiceForecast(BaseModel):
     """Forecast for multiple choice questions."""
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting distribution "
+            "before question-specific analysis."
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
-        description="Key pieces of evidence that influenced the probability distribution.",
+        description="Reasons the distribution might differ from your anchor.",
     )
     probabilities: dict[str, float] = Field(
         description=(
@@ -585,12 +690,19 @@ class NumericForecast(BaseModel):
     If components are provided, they take precedence over percentiles.
     """
 
+    anchor: str = Field(
+        default="",
+        description=(
+            "Reference class base rate with source — your starting distribution "
+            "before question-specific analysis."
+        ),
+    )
     summary: str = Field(
         description="Brief explanation of the forecast and the key reasoning behind it."
     )
     factors: list[Factor] = Field(
         default_factory=list,
-        description="Key pieces of evidence that influenced the estimate.",
+        description="Reasons the distribution might differ from your anchor.",
     )
 
     # Percentile mode: flexible dict of percentile level → value
@@ -630,7 +742,10 @@ class NumericForecast(BaseModel):
             )
 
         if has_percentiles:
-            assert self.percentile_values is not None
+            if self.percentile_values is None:
+                raise ValueError(
+                    "percentile_values must not be None when has_percentiles"
+                )
             required = {"10", "20", "40", "60", "80", "90"}
             missing = required - set(self.percentile_values.keys())
             if missing:
@@ -810,10 +925,6 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Process reflection metadata.",
     )
-    question_category: str | None = Field(
-        default=None,
-        description="Question category: predictive, definitional, meta, or measurement.",
-    )
     retrodict_date: date | None = Field(
         default=None,
         description="If set, forecast was made in retrodict mode with data restricted to before this date.",
@@ -826,22 +937,3 @@ class ForecastOutput(BaseModel):
         default=False,
         description="True if the agent crashed mid-forecast and this is partial output.",
     )
-
-    @staticmethod
-    def classify_category(title: str, question_type: str) -> str:
-        """Classify question into category based on title and type heuristics."""
-        title_lower = title.lower()
-
-        if "community prediction" in title_lower or "will the cp " in title_lower:
-            return "meta"
-
-        if question_type in ("numeric", "discrete"):
-            return "measurement"
-
-        if any(
-            phrase in title_lower
-            for phrase in ("has ", "does ", "did ", "is there", "are there", "qualify")
-        ):
-            return "definitional"
-
-        return "predictive"

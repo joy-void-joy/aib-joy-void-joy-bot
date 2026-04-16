@@ -1,0 +1,56 @@
+{
+  "condensed_reasoning": "## Research\n\nI analyzed a forecasting trace for TSA passenger volume during April 20-26, 2026 (Mon-Sun week). The agent conducted thorough research across multiple dimensions:\n\n**Data Collection:**\n- Fetched **2026 TSA daily data** through April 9 from tsa.gov/travel/passenger-volumes\n- Retrieved complete **2025 April daily data** (all 30 days)\n- Retrieved complete **2024 April daily data** (all 30 days)\n- Searched for and analyzed news on the Iran war jet fuel crisis via CNBC and other sources\n\n**Key Evidence Found:**\n\n*Historical Comparables (Mon-Sun weeks):*\n- 2024 Apr 22-28: **17,178,886** (normal, 3 weeks post-Easter Mar 31)\n- 2025 Apr 7-13: **17,405,722** (normal, 2 weeks pre-Easter Apr 20)\n- 2025 Apr 20-26: 17,712,186 (Easter-inflated - **correctly excluded** as comparable)\n\n*2026 Actual Data (crisis already underway):*\n- Apr 1-7, 2026 vs 2025: **+1.94% YoY**\n- Apr 3-9, 2026 vs 2025: **+1.17% YoY**\n- Mar 30-Apr 5, 2026 (Mon-Sun): 17,254,778\n\n*Iran War Jet Fuel Crisis Context:*\n- Jet fuel prices nearly doubled: **$2.50 → $4.88/gallon**\n- Strait of Hormuz effectively closed\n- United cutting **~5% of routes** in Q2-Q3\n- Total capacity growth trimmed from **+2.4% to +1.1%**\n- Crucially: **\"Demand is strong\"** per airline executives, better than 2025\n- Supply constraint, not demand destruction\n\n**Critical Calendar Insight:**\n- Easter 2026: April 5 (target week is 15 days post-Easter = normal)\n- Easter 2025: April 20 (Apr 20-26, 2025 is Easter return week - inflated)\n- Easter 2024: March 31 (Apr 22-28, 2024 is normal)\n\nThe agent correctly identified that comparing 2026's target week directly to 2025's Apr 20-26 (17.71M) would be misleading due to Easter timing.\n\n## Key Evidence\n\n- **2024 Apr 22-28**: 17.18M (cleanest comparable - same Mon-Sun structure, normal post-Easter timing)\n- **2025 Apr 7-13**: 17.41M (alternative comparable - normal non-Easter April week)\n- **Observed 2026 growth**: +1-2% YoY in early April despite crisis\n- **Seasonal pattern**: Late April ~2% lower than early April (ratio 0.98)\n- **Crisis impact on capacity**: Growth trimmed from +2.4% to +1.1%, not reversed\n\n## Conclusion\n\nThe agent built a Monte Carlo simulation with 100k draws using three estimation approaches:\n1. **2024 comparable** (17.18M) + ~3% two-year growth\n2. **2025 comparable** (17.41M) + ~0.5% crisis-moderated growth  \n3. **March 2026** (17.73M) × seasonal ratio (~0.975)\n\nCrisis scenarios modeled: 15% chance of deeper cuts, 75% status quo, 10% partial relief.\n\n**Final forecast:**\n- **Median**: 17,442,000\n- **80% CI**: [16,932,000 - 17,861,000]\n- **50% CI**: [17,211,000 - 17,657,000]\n\nThe distribution shows modest left skew reflecting downside crisis risk while acknowledging strong underlying demand prevents severe drops.",
+  "tool_audit": {
+    "by_tool": {
+      "mcp__search__fetch_url": "6 calls, 1 error (403 on The Hill), impact: minor (CNBC provided same info), value: high - primary data source for TSA volumes",
+      "mcp__search__web_search": "2 calls, 0 errors, impact: none, value: medium - found news articles and data source URLs",
+      "mcp__sandbox__execute_code": "7 calls, 0 errors, impact: none, value: high - essential for all calculations and Monte Carlo simulation",
+      "mcp__markets__get_metaculus_questions": "1 call, 1 partial error (43112 failed list index), impact: none (43117 succeeded), value: medium - got question details",
+      "mcp__asknews__search_news": "1 call, 1 error (403 rate limit), impact: minor - web_search substituted adequately, value: wasted",
+      "TodoWrite": "5 calls, 0 errors, impact: none, value: low - organizational overhead",
+      "mcp__notes__reflection": "1 call, 0 errors, impact: none, value: high - structured factor verification"
+    },
+    "capability_gaps": [
+      "Structured historical TSA data API (had to scrape web pages)",
+      "Direct Easter date lookup tool (had to compute manually)"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/macro",
+    "approach": "Monte Carlo simulation combining historical TSA comparables with YoY growth adjustments and crisis scenario modeling.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the Iran war jet fuel crisis will deepen significantly in the 10 days before the target week, potentially triggering additional airline capacity cuts."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "17.4M (80% CI: 16.9M - 17.8M)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified Easter date shifts between years and excluded the Easter-inflated 2025 Apr 20-26 week (17.71M) as a misleading comparable",
+    "Used 100k-draw Monte Carlo simulation integrating three independent estimation approaches with explicit crisis scenario probabilities",
+    "Verified early April 2026 TSA data showing +1-2% YoY growth despite crisis already underway, providing near-term calibration",
+    "Distinguished between supply constraints (fuel costs, capacity cuts) and demand (which remains strong per airline executives)",
+    "Computed within-April seasonal ratio (0.98) from historical data to adjust for late-April softening"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi, Metaculus community prediction) for alternative probability anchors",
+    "Did not attempt to quantify the magnitude of United's 5% route cuts in terms of absolute passenger impact",
+    "Could have fetched March 2025 data for cleaner March-to-April seasonal ratio comparison"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market check to forecasting workflow, especially for questions with active Metaculus community",
+    "When airline capacity cuts are announced, estimate their passenger volume impact using load factor data",
+    "Fetch complete prior-year seasonal data (March 2025) for more robust seasonal adjustment calculations"
+  ]
+}
