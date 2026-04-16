@@ -1,0 +1,375 @@
+---
+timestamp: 2026-04-16 05:55:09 UTC
+question_type: multiple_choice
+factors:
+- description: Apr 16 value is 98/100 - nearly at peak, leaving almost no room for
+    Increases and a very narrow ±3 window for Doesn't Change (95-101). Mathematically,
+    almost any non-trivial decay resolves as Decreases.
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: The spike was driven by Swalwell exit (Apr 13) - a one-time shock event.
+    Post-shock decay is the dominant dynamic. Even active campaigns can't sustain
+    peak-level search interest for 12+ days.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Gubernatorial debate scheduled for Apr 22 (Nexstar/NewsNation) - a
+    major scheduled event within the forecast window that could boost interest. However,
+    it's 3 days before Apr 25, and post-debate interest typically decays quickly.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Active campaign heading toward June 2 primary (early voting May 4).
+    Steyer is now the frontrunner with ongoing endorsements, policy announcements,
+    and media coverage. This provides a higher floor than typical post-spike decay.
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Google Trends change_stats for this resolution date range show: 61.9%
+    no_change, 28.6% increase, 9.5% decrease base rate. However, these rates are computed
+    across the full series including the low-volatility baseline period (Mar 26-Apr
+    9). The current elevated regime is fundamentally different.'
+  supports: Doesn't change
+  logit: 0.2
+  confidence: 0.3
+  effective_logit: 0.06
+- description: A canceled debate (USC/KABC) and the potential for another cancelation
+    introduces uncertainty about the Apr 22 Nexstar debate. If it doesn't happen,
+    there's no major catalyst to interrupt the decay.
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+tentative_estimate:
+  probabilities:
+    Increases: 0.05
+    Doesn't change: 0.04
+    Decreases: 0.91
+assessment: 'The core dynamic is straightforward: Apr 16''s value of 98 is nearly
+  at the peak (100 on Apr 13) within the resolution date range. For "Doesn''t change,"
+  Apr 25 would need to be 95-100, meaning Steyer would need to sustain 95%+ of peak
+  search interest for 12 days past the peak. This is exceptionally rare for any search
+  term.
+
+
+  The spike was driven by the Swalwell sexual assault allegations and subsequent campaign
+  exit on Apr 12-13, which catapulted Steyer to frontrunner status. While the campaign
+  remains very active with multiple ongoing storylines (ICE policy, endorsements,
+  polls, private prison investments), the initial shock is fading.
+
+
+  The April 22 gubernatorial debate is the most significant catalyst within the window.
+  It could create a new spike, but even if it exceeds the Apr 13 peak, it would rescale
+  Apr 16 DOWN while Apr 25 (3 days post-debate) would also be lower than the debate
+  peak. In most scenarios, even a debate-driven new peak still resolves as Decreases
+  because the post-debate Apr 25 value relative to Apr 16 still shows a gap.
+
+
+  Monte Carlo simulations across multiple parameter assumptions and scenarios consistently
+  yield 80-98% probability for Decreases, 1-10% for Increases, and 1-10% for Doesn''t
+  change. The final blend accounts for debate uncertainty and extraordinary scenarios.
+
+
+  Counterargument: If the debate generates a massive, sustained spike (viral moment,
+  major gaffe/scandal) that keeps interest elevated through Apr 25, Increases becomes
+  possible. But this would need a secondary event BIGGER than the original Swalwell
+  scandal, which is the kind of dramatic scenario status quo bias warns against overweighting.'
+calibration_notes: Base rates from change_stats (61.9% DC, 28.6% Inc, 9.5% Dec) are
+  misleading here because they're computed across the full series including the stable
+  baseline period. The relevant regime is "post-spike, elevated starting value near
+  100" which is extremely rare in the data and strongly biased toward decay. I'm confident
+  departing from these base rates given the clear structural reason (ceiling effect
+  at value ~98).
+key_uncertainties: 1. Whether the April 22 debate happens and how much interest it
+  generates. 2. Whether a new, unforeseen catalyst (scandal, viral moment) creates
+  a peak exceeding the current one. 3. SerpAPI vs pytrends measurement differences
+  (±1-3 points), though at these levels this barely matters since the typical expected
+  drop is 30-50 points.
+tool_audit: 'Google Trends tool: Excellent - provided detailed history with change_stats,
+  tail_stats, and recent_news. Web search: Found the crucial April 22 debate information.
+  AskNews search: Provided comprehensive news context about the CA governor race dynamics.
+  All tools worked well for this question.'
+update_triggers: 1. Debate cancelation would push Decreases probability even higher.
+  2. A new major scandal involving Steyer before Apr 25 could create sustained peak-level
+  interest. 3. Steyer dropping out of the race would create a massive new spike (but
+  also irrelevant since it would be a new, different story).
+process_reflection: 'This question type (Google Trends change) has a clear analytical
+  framework: check current value, compute threshold arithmetic, assess catalysts.
+  The system guidance about threshold arithmetic and post-spike dynamics was very
+  helpful. The google_trends tool with tz=0 and exact date range matching the resolution
+  URL was essential. The main friction point was that the change_stats base rates
+  can be misleading when the current regime is clearly different from the historical
+  average - the guidance should emphasize this more for cases where the starting value
+  is near 0 or 100.'
+computed:
+  factor_count: 6
+  factor_sum: 4.36
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Apr 16 value is 98/100 - nearly at peak, leaving almost no room for
+      Increases and a very narrow ±3 window for Doesn't Change (95-101). Mathematically,
+      almost any non-trivial decay resolves as Decreases.
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: The spike was driven by Swalwell exit (Apr 13) - a one-time shock
+      event. Post-shock decay is the dominant dynamic. Even active campaigns can't
+      sustain peak-level search interest for 12+ days.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Gubernatorial debate scheduled for Apr 22 (Nexstar/NewsNation) -
+      a major scheduled event within the forecast window that could boost interest.
+      However, it's 3 days before Apr 25, and post-debate interest typically decays
+      quickly.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Active campaign heading toward June 2 primary (early voting May 4).
+      Steyer is now the frontrunner with ongoing endorsements, policy announcements,
+      and media coverage. This provides a higher floor than typical post-spike decay.
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Google Trends change_stats for this resolution date range show:
+      61.9% no_change, 28.6% increase, 9.5% decrease base rate. However, these rates
+      are computed across the full series including the low-volatility baseline period
+      (Mar 26-Apr 9). The current elevated regime is fundamentally different.'
+    supports: Doesn't change
+    logit: 0.2
+    confidence: 0.3
+    effective_logit: 0.06
+  - description: A canceled debate (USC/KABC) and the potential for another cancelation
+      introduces uncertainty about the Apr 22 Nexstar debate. If it doesn't happen,
+      there's no major catalyst to interrupt the decay.
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  dominant_factor: Apr 16 value is 98/100 - nearly at peak, leaving almost no room
+    for Increases and a very narrow ±3 window for Doesn't Change (95-101). Mathematically,
+    almost any non-trivial decay resolves as Decreases.
+  dominant_effective_logit: 2.375
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 3.85
+    factors:
+    - description: Apr 16 value is 98/100 - nearly at peak, leaving almost no room
+        for Increases and a very narrow ±3 window for Doesn't Change (95-101). Mathematically,
+        almost any non-trivial decay resolves as Decreases.
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.95
+      effective_logit: 2.375
+    - description: The spike was driven by Swalwell exit (Apr 13) - a one-time shock
+        event. Post-shock decay is the dominant dynamic. Even active campaigns can't
+        sustain peak-level search interest for 12+ days.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: A canceled debate (USC/KABC) and the potential for another cancelation
+        introduces uncertainty about the Apr 22 Nexstar debate. If it doesn't happen,
+        there's no major catalyst to interrupt the decay.
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.3
+    factors:
+    - description: Gubernatorial debate scheduled for Apr 22 (Nexstar/NewsNation)
+        - a major scheduled event within the forecast window that could boost interest.
+        However, it's 3 days before Apr 25, and post-debate interest typically decays
+        quickly.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.6
+      effective_logit: 0.3
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.21
+    factors:
+    - description: Active campaign heading toward June 2 primary (early voting May
+        4). Steyer is now the frontrunner with ongoing endorsements, policy announcements,
+        and media coverage. This provides a higher floor than typical post-spike decay.
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+    - description: 'Google Trends change_stats for this resolution date range show:
+        61.9% no_change, 28.6% increase, 9.5% decrease base rate. However, these rates
+        are computed across the full series including the low-volatility baseline
+        period (Mar 26-Apr 9). The current elevated regime is fundamentally different.'
+      supports: Doesn't change
+      logit: 0.2
+      confidence: 0.3
+      effective_logit: 0.06
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.02722774060499119
+      Doesn't change: 0.02488428124337715
+      Decreases: 0.9478879781516316
+    tentative_probabilities:
+      Increases: 0.05
+      Doesn't change: 0.04
+      Decreases: 0.91
+    per_option_gap_pp:
+      Increases: 2.277225939500881
+      Doesn't change: 1.5115718756622851
+      Decreases: -3.7887978151631585
+    max_gap_pp: -3.7887978151631585
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “tom steyer” change between 2026-04-16 and
+    2026-04-25 according to Google Trends?](https://www.metaculus.com/questions/43223)'
+  - '[(Google Trends) tom steyer](https://trends.google.com/trends/explore?q=tom steyer)'
+  - '[Tom Steyer - Wikipedia](https://en.wikipedia.org/wiki/Tom_Steyer)'
+  - '[2026 California gubernatorial election - Wikipedia](https://en.wikipedia.org/wiki/2026_California_gubernatorial_election)'
+  reviewer_critique: '## Verification Summary
+
+
+    I verified all six factors against the research trace:
+
+
+    **Factor 1 (Apr 16 value = 98)**: VERIFIED. The trace shows Google Trends API
+    data with `"date": "2026-04-16", "value": 98` in the raw response. The peak of
+    100 was on Apr 13, confirming the agent''s claim that Apr 16 is "nearly at peak."
+
+
+    **Factor 2 (Swalwell-driven spike)**: VERIFIED. The trace contains:
+
+    - Calmatters: "Rep. Eric Swalwell on April 12 suspended his campaign after news
+    organizations detailed allegations from women who accused him of sexual assault
+    and misconduct"
+
+    - Newsweek article confirming Swalwell exited after "sexual misconduct allegations"
+
+    - Related queries showing "eric swalwell" as a top search term
+
+
+    Minor discrepancy: Factor 2 says "Apr 13" for Swalwell exit, but sources cite
+    Apr 12 (Calmatters) or Apr 14 (Newsweek). However, the core claim—that the spike
+    was driven by the Swalwell scandal—is well-grounded.
+
+
+    **Factor 3 (Apr 22 debate)**: VERIFIED. Web search results confirm "Nexstar television
+    stations across California...will air that debate live on April 22 at 7 p.m."
+    featuring leading candidates including Steyer.
+
+
+    **Factor 4 (Active campaign)**: VERIFIED. Multiple news stories confirm ongoing
+    activity: ICE policy announcements, Jared Huffman endorsement, AI token tax proposal,
+    poll coverage.
+
+
+    **Factor 5 (change_stats base rates)**: VERIFIED. The trace shows raw data: `"change_stats":
+    {"increases": 6, "decreases": 2, "no_change": 13, "total": 21}` with the agent
+    correctly noting these include the low-volatility baseline period.
+
+
+    **Factor 6 (canceled USC/KABC debate)**: VERIFIED. NBC News article in trace:
+    "California governor debate canceled after criticism of criteria that excluded
+    candidates of color" with USC and KABC explicitly mentioned.
+
+
+    ## Resolution Criteria Engagement
+
+
+    The agent correctly engaged with the resolution criteria:
+
+    - Compared Apr 16 vs Apr 25 values
+
+    - Applied ±3 threshold correctly
+
+    - Understood Google Trends rescaling dynamics
+
+    - Used the correct SerpApi methodology specified in fine print
+
+
+    ## Probability Assessment
+
+
+    The Monte Carlo simulations in the trace show:
+
+    - With Apr 22 debate: Decreases 97.1%
+
+    - With "very strong debate": Decreases 80.9%
+
+    - Final weighted: Decreases 92.5%
+
+
+    The tentative estimate of 91% Decreases is consistent with these simulation outputs
+    and represents a reasonable blend accounting for debate uncertainty.
+
+
+    ## Adversarial Reasoning
+
+
+    The assessment explicitly addresses the counterargument: "If the debate generates
+    a massive, sustained spike...that keeps interest elevated through Apr 25, Increases
+    becomes possible." This is appropriate engagement with the strongest counter-scenario.
+
+
+    ## Checks Passed
+
+
+    - No hallucinated evidence
+
+    - No meaningful double-counting (factors capture different reasoning angles)
+
+    - No wrong-direction factors
+
+    - Assessment consistent with factors
+
+    - Resolution criteria properly engaged
+
+    - Adequate adversarial reasoning
+
+    - Probability estimate aligns with evidence'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43223
+- **Question ID**: 43238
+- **Session Duration**: 515.3s (8.6 min)
+- **Cost**: $3.8733
+- **Tokens**: 14,501 total (31 in, 14,470 out)
+  - Cache: 823,746 read, 82,773 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43223_20260416_054645/20260416-054645.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time |
+|------|-------|--------|----------|
+| execute_code | 8 | 0 | 1158ms |
+| get_metaculus_questions | 1 | 0 | 413ms |
+| google_trends | 1 | 0 | 2906ms |
+| reflection | 1 | 0 | 100068ms |
+| web_search | 2 | 0 | 47369ms |
+| wikipedia | 2 | 0 | 194ms |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “tom steyer” change between 2026-04-16 and ...
+- [(Google Trends) tom steyer](https://trends.google.com/trends/explore?q=tom s...
+- [Tom Steyer - Wikipedia](https://en.wikipedia.org/wiki/Tom_Steyer)
+- [2026 California gubernatorial election - Wikipedia](https://en.wikipedia.org...
