@@ -597,7 +597,9 @@ REVIEWER_SYSTEM_PROMPT = textwrap.dedent("""\
     Use markdown: **bold** for key figures, bullet lists for evidence,
     `inline code` for tickers/identifiers. Use ## subtitles (## Research,
     ## Key Evidence, ## Conclusion) but no top-level # title.
-    First-person voice: 'I researched...', 'I found...', 'I concluded...'.
+    Write in first person AS the forecasting agent: 'I researched...', 'I found...',
+    'I concluded...'. The reader should feel the agent itself is narrating.
+    Never say 'the agent' — always 'I'.
 
     ## tool_audit
 
