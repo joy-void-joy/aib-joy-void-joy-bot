@@ -56,6 +56,14 @@ class ExecuteCodeInput(BaseModel):
     """Input schema for the execute_code tool."""
 
     code: str = Field(min_length=1)
+    timeout: int | None = Field(
+        default=None,
+        ge=1,
+        le=300,
+        description=(
+            "Optional max execution time in seconds (1-300). Omit to use the default."
+        ),
+    )
 
 
 class InstallPackageInput(BaseModel):
@@ -697,7 +705,7 @@ class Sandbox:
         )
         async def execute_code(args: ExecuteCodeInput) -> ExecuteCodeResult:
             try:
-                return self.run_code(args.code)
+                return self.run_code(args.code, timeout_seconds=args.timeout)
             except (SandboxNotInitializedError, CodeExecutionTimeoutError) as e:
                 raise ToolError(str(e)) from e
 

@@ -27,6 +27,7 @@ class ToolMetrics:
     total_duration_ms: float = 0.0
     min_duration_ms: float = float("inf")
     max_duration_ms: float = 0.0
+    total_cost_usd: float = 0.0
 
     @property
     def avg_duration_ms(self) -> float:
@@ -56,6 +57,10 @@ class ToolMetrics:
         if is_error:
             self.error_count += 1
 
+    def add_cost(self, cost_usd: float) -> None:
+        """Accumulate sub-agent cost for this tool."""
+        self.total_cost_usd += cost_usd
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for logging/serialization."""
         return {
@@ -70,6 +75,7 @@ class ToolMetrics:
                 else 0
             ),
             "max_duration_ms": round(self.max_duration_ms, 2),
+            "total_cost_usd": round(self.total_cost_usd, 4),
         }
 
 
@@ -94,6 +100,10 @@ class MetricsCollector:
         """
         self._metrics[tool_name].record_call(duration_ms, is_error)
 
+    def record_cost(self, tool_name: str, cost_usd: float) -> None:
+        """Accumulate sub-agent cost for a tool."""
+        self._metrics[tool_name].add_cost(cost_usd)
+
     def get_metrics(self, tool_name: str) -> ToolMetrics:
         """Get metrics for a specific tool."""
         return self._metrics[tool_name]
@@ -107,6 +117,7 @@ class MetricsCollector:
         total_calls = sum(m.call_count for m in self._metrics.values())
         total_errors = sum(m.error_count for m in self._metrics.values())
         total_duration = sum(m.total_duration_ms for m in self._metrics.values())
+        total_cost = sum(m.total_cost_usd for m in self._metrics.values())
         session_duration = time.time() - self._session_start
 
         return {
@@ -115,6 +126,7 @@ class MetricsCollector:
             "total_errors": total_errors,
             "overall_error_rate": f"{total_errors / max(1, total_calls):.1%}",
             "total_tool_time_ms": round(total_duration, 2),
+            "subagent_cost_usd": round(total_cost, 4),
             "tools_used": len(self._metrics),
             "by_tool": self.get_all_metrics(),
         }
