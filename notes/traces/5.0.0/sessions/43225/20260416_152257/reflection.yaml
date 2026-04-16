@@ -1,0 +1,167 @@
+---
+timestamp: 2026-04-16 15:26:48 UTC
+question_type: binary
+factors:
+- description: 'Unconditional base rate: stocks go up ~52% over 6 trading days historically'
+  logit: 0.08
+  confidence: 0.9
+  effective_logit: 0.07200000000000001
+- description: 'Broad market bullish: S&P 500 at all-time highs, positive sentiment
+    from Iran peace talks, upward regime since Apr 8'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: WY underperforming S&P by 3pp over past month - sector-specific weakness
+    (lumber prices at one-month low, housing starts falling 14.2%, weak demand)
+  logit: -0.4
+  confidence: 0.7
+  effective_logit: -0.27999999999999997
+- description: 'Recent negative momentum: WY down 2.9% over last 5 trading days, dropped
+    from $24.90 peak to $24.10'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Truist cut price target from $29 to $28 with hold rating; Q1 2026 profit
+    decline projected
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: 'No major catalyst in window: Q1 earnings not until Apr 30, no special
+    ex-dividend dates identified'
+  logit: -0.1
+  confidence: 0.6
+  effective_logit: -0.06
+- description: Slight positive mean return in 22-day sample (0.07%/day) provides very
+    mild positive drift over 6 days
+  logit: 0.15
+  confidence: 0.4
+  effective_logit: 0.06
+tentative_estimate:
+  logit: 0.08
+  probability: 0.52
+anchor: 'Unconditional base rate: ~52% probability stock is higher after 6 trading
+  days (slight positive drift in equities)'
+assessment: 'WY is a timber REIT trading at $24.10 on Apr 16. The question asks if
+  the close on Apr 24 (6 trading days later) will be higher. Monte Carlo simulation
+  using the 22-day empirical parameters (mu=0.07%/day, sigma=1.67%/day) gives ~54%
+  probability. However, WY has been underperforming the broader market significantly
+  (S&P up 4.6% vs WY up 1.6% over the past month), reflecting sector-specific headwinds:
+  lumber prices near one-month lows, 14.2% collapse in housing starts, and analyst
+  downgrades. The recent 5-day selloff (-2.9%) adds short-term negative momentum.
+  Offsetting this somewhat is the strongly bullish broader market (S&P at ATH), positive
+  sentiment from potential Iran peace resolution, and the possibility of mean reversion
+  after the recent dip. With 6 trading days and ~4.1% cumulative standard deviation,
+  volatility dominates and the drift is nearly irrelevant. The probability settles
+  near 50-52%, with mild headwinds from WY-specific factors slightly offset by the
+  bullish market backdrop.'
+calibration_notes: The Monte Carlo with full-sample parameters gives 54%, while a
+  zero-drift model gives 50%. The difference is small because 6 days is too short
+  for drift to matter much. WY's underperformance vs market and sector headwinds argue
+  for something below 54%, while the bullish market environment prevents going below
+  50%. 52% feels right - slightly above coin flip given the positive market environment,
+  but barely.
+key_uncertainties: 1. Whether WY continues to decouple from the broader market (has
+  been significantly underperforming). 2. Whether the recent 3-day selloff is the
+  start of a trend or just noise. 3. Any unexpected lumber market or housing data.
+  4. Iran peace talks outcome affecting broader market sentiment.
+tool_audit: 'Yahoo Finance API: excellent - provided full price history and summary
+  stats. FRED S&P 500 data: useful for market regime context. Web search: good for
+  macro context, earnings dates, lumber market conditions. Monte Carlo simulation:
+  primary quantitative tool, ran multiple scenarios.'
+update_triggers: Major change in lumber futures, unexpected WY news (pre-earnings
+  leak), dramatic market shift (Iran deal collapse), housing data release showing
+  improvement
+process_reflection: 'Stock direction questions with short horizons are inherently
+  near-50/50 and the scaffolding handles this well. The multi-scenario Monte Carlo
+  approach (varying drift assumptions) is more informative than a single simulation.
+  The Yahoo Finance API data with summary stats was very efficient. One gap: no dedicated
+  tool for conditional stock return base rates by sector/regime would have been useful.'
+computed:
+  factor_count: 7
+  factor_sum: -0.21799999999999997
+  tentative_logit: 0.08
+  logit_gap: 0.298
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Unconditional base rate: stocks go up ~52% over 6 trading days historically'
+    logit: 0.08
+    confidence: 0.9
+    effective_logit: 0.07200000000000001
+  - description: 'Broad market bullish: S&P 500 at all-time highs, positive sentiment
+      from Iran peace talks, upward regime since Apr 8'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: WY underperforming S&P by 3pp over past month - sector-specific weakness
+      (lumber prices at one-month low, housing starts falling 14.2%, weak demand)
+    logit: -0.4
+    confidence: 0.7
+    effective_logit: -0.27999999999999997
+  - description: 'Recent negative momentum: WY down 2.9% over last 5 trading days,
+      dropped from $24.90 peak to $24.10'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Truist cut price target from $29 to $28 with hold rating; Q1 2026
+      profit decline projected
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: 'No major catalyst in window: Q1 earnings not until Apr 30, no special
+      ex-dividend dates identified'
+    logit: -0.1
+    confidence: 0.6
+    effective_logit: -0.06
+  - description: Slight positive mean return in 22-day sample (0.07%/day) provides
+      very mild positive drift over 6 days
+    logit: 0.15
+    confidence: 0.4
+    effective_logit: 0.06
+  dominant_factor: WY underperforming S&P by 3pp over past month - sector-specific
+    weakness (lumber prices at one-month low, housing starts falling 14.2%, weak demand)
+  dominant_effective_logit: -0.27999999999999997
+  factor_implied_probability: 0.44571481732653206
+  tentative_probability: 0.52
+  gap_pp: 7.428518267346796
+  sources:
+  - '[Weyerhaeuser Company (WY) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/WY/)'
+  - '[Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia.org/wiki/Tariffs_in_the_second_Trump_administration)'
+  - '[Weyerhaeuser Company (WY) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/WY)'
+  - '[S&P 500 (SP500) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/SP500)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43225
+- **Question ID**: 43240
+- **Session Duration**: 396.9s (6.6 min)
+- **Cost**: $5.0581 total (orchestrator $2.5185 + sub-agents $2.5396)
+- **Tokens**: 8,840 total (27 in, 8,813 out)
+  - Cache: 427,076 read, 64,879 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43225_20260416_152257/20260416-152257.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 91ms | — |
+| fetch_url | 1 | 0 | 212ms | — |
+| fred_series | 1 | 0 | 436ms | — |
+| premortem | 1 | 0 | 115839ms | $2.2834 |
+| reflection | 1 | 0 | 1344ms | — |
+| stock_price | 3 | 0 | 343ms | — |
+| web_search | 6 | 0 | 16618ms | $0.2561 |
+| wikipedia | 1 | 0 | 200ms | — |
+
+### Sources Consulted
+
+- [Weyerhaeuser Company (WY) Stock Price, News, Quote & History - Yahoo Finance...
+- [Tariffs in the second Trump administration - Wikipedia](https://en.wikipedia...
+- [Weyerhaeuser Company (WY) Stock Price, News, Quote & History - Yahoo Finance...
+- [S&P 500 (SP500) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/S...
