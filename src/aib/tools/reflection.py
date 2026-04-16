@@ -1,31 +1,27 @@
 """Reflection tool for forecasting sessions.
 
-Replaces write_meta with a structured, iterative checkpoint tool.
-Takes the agent's current factors and tentative logit, computes the
-factor-implied probability, and returns the gap. Each call appends a
-timestamped entry to reflection.yaml in the session directory.
+Fast checkpoint: takes the agent's current factors and tentative
+estimate, computes factor-consistency metrics, appends to reflection.yaml,
+and caches the input in ReviewState so premortem() can retrieve it.
 
-After computing metrics, calls a Sonnet reviewer sub-agent that
-reviews the forecast with access to the full reasoning trace, past
-forecasts, and web search.
+No reviewer call — that lives in premortem.py. The StructuredOutput gate
+requires both reflection() to have been called and premortem() to have
+approved.
 """
 
 import json
 import logging
 import math
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import aiofiles
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from claude_agent_sdk import ToolUseBlock, tool
+from claude_agent_sdk import tool
 
-from aib.agent.hooks import HooksConfig
 from aib.agent.models import (
     BinaryEstimate,
     Factor,
@@ -33,7 +29,7 @@ from aib.agent.models import (
     NumericEstimate,
     NumericSupport,
 )
-from aib.retrodict_context import retrodict_cutoff
+from aib.agent.session import ReviewState
 from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
@@ -75,6 +71,16 @@ class ReflectionInput(BaseModel):
             if isinstance(te, str):
                 data = {**data, "tentative_estimate": json.loads(te)}
         return data
+
+    anchor: str | None = Field(
+        default=None,
+        description=(
+            "Your reference class base rate with source — the probability "
+            "you'd assign before question-specific analysis. "
+            "E.g. 'Conditional base rate: 65% (stock_conditional_returns, "
+            "137 episodes at 30%+ drawdown)'"
+        ),
+    )
     assessment: str = Field(
         description=(
             "Freeform narrative assessment of the evidence. Structure however "
@@ -84,7 +90,7 @@ class ReflectionInput(BaseModel):
     )
     calibration_notes: str | None = Field(
         default=None,
-        description="Base rates, status quo assessment, hedging check.",
+        description="Base rates, anchor divergence check, hedging check.",
     )
     key_uncertainties: str | None = Field(
         default=None,
@@ -185,71 +191,11 @@ class ReflectionOutput(BaseModel):
     # Sources consulted so far (populated from infrastructure)
     sources: list[str] = Field(default_factory=list)
 
-    # Reviewer (populated by Sonnet sub-agent)
-    reviewer_critique: str | None = None
-
-
-# --- Reviewer Models ---
-
-
-class ReviewVerdict(StrEnum):
-    approve = "approve"
-    warn = "warn"
-    fail = "fail"
-
-
-class ReviewResult(BaseModel):
-    """Structured output from the reviewer sub-agent."""
-
-    verdict: ReviewVerdict
-    assessment: str = Field(
-        description="Your full analysis. Explain what you checked, what you "
-        "found, and why you reached your verdict. Be thorough — this is "
-        "the agent's primary feedback for improving its forecast.",
-    )
-
-
-@dataclass
-class ReviewState:
-    """Shared mutable state between reflection tool and StructuredOutput hook."""
-
-    consecutive_fails: int = 0
-    last_verdict: ReviewVerdict | None = None
-    last_review: ReviewResult | None = None
-    history: list[dict[str, object]] = field(default_factory=list)
-
-    @property
-    def passed(self) -> bool:
-        if self.last_verdict is None:
-            return False
-        if self.last_verdict in (ReviewVerdict.approve, ReviewVerdict.warn):
-            return True
-        return self.consecutive_fails >= 2
-
-    def record(
-        self,
-        result: ReviewResult,
-        reflection_input: ReflectionInput | None = None,
-    ) -> None:
-        self.last_verdict = result.verdict
-        self.last_review = result
-        if result.verdict == ReviewVerdict.fail:
-            self.consecutive_fails += 1
-        else:
-            self.consecutive_fails = 0
-
-        entry: dict[str, object] = {"verdict": result.verdict.value}
-        if reflection_input is not None:
-            entry["input"] = reflection_input.model_dump(mode="json")
-        if result.assessment:
-            entry["reviewer_assessment"] = result.assessment
-        self.history.append(entry)
-
 
 # --- Computation ---
 
 
-def _compute_distribution_metrics(
+def compute_distribution_metrics(
     breakdown: list[FactorBreakdown],
     tentative: NumericEstimate,
 ) -> NumericDistributionMetrics | None:
@@ -341,7 +287,7 @@ def compute_reflection(
         output.gap_pp = (estimate.probability - output.factor_implied_probability) * 100
     elif question_type in ("numeric", "discrete"):
         assert isinstance(estimate, NumericEstimate)
-        output.distribution_metrics = _compute_distribution_metrics(breakdown, estimate)
+        output.distribution_metrics = compute_distribution_metrics(breakdown, estimate)
     elif question_type == "multiple_choice":
         from collections import defaultdict
 
@@ -390,7 +336,7 @@ def compute_reflection(
 # --- File Writing ---
 
 
-async def _append_reflection(
+async def append_reflection(
     session_dir: Path,
     inp: ReflectionInput,
     computed: ReflectionOutput,
@@ -419,396 +365,22 @@ async def _append_reflection(
     return filepath
 
 
-async def _write_trace_file(session_dir: Path, trace: str) -> Path:
-    """Write the reasoning trace to a file for the reviewer to Read."""
-    filepath = session_dir / "trace.md"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
-        await f.write(trace)
-    return filepath
-
-
-# --- Reviewer ---
-
-
-_REVIEWER_SYSTEM_PROMPT = """\
-You verify a forecasting agent's evidence chain before it commits \
-to a probability. Your job is to catch concrete errors that would \
-make the forecast wrong and to challenge the probability when the \
-evidence doesn't support it. You do not research the question \
-independently — you work from the agent's trace and factors.
-
-## What to check
-
-- **Hallucinated evidence** — A factor's core claim has NO support \
-  in the research trace. Read the trace carefully. Focus on whether \
-  the *conclusion* is grounded, not whether every specific detail \
-  matches verbatim. Only flag as hallucination when the core claim \
-  itself — the thing that moves the forecast — has no trace support.
-
-- **Double-counting** — Two or more factors that draw on the same \
-  underlying evidence. Name both factors and the shared source.
-
-- **Wrong-direction factor** — A factor's logit sign contradicts \
-  its own description. Do NOT flag factors where you simply \
-  disagree with the magnitude.
-
-- **Contradictory assessment** — The narrative assessment reaches \
-  a conclusion that contradicts what the factors collectively say.
-
-- **Missing resolution criteria** — If the question section shows \
-  resolution criteria as MISSING, check whether the trace shows \
-  an attempt to recover them (e.g., a fetch_url call for the \
-  Metaculus question page). If the agent did not attempt recovery, \
-  this is always at least a **warn** — the agent's prompt \
-  explicitly requires fetching the page. Question titles can be \
-  misleading; resolution criteria define what actually counts as \
-  YES/NO, what source is authoritative, and what edge cases apply.
-
-- **Resolution misalignment** — When resolution criteria ARE \
-  provided, check whether the factors and assessment engage with \
-  the specific terms. Examples: criteria cite a specific source \
-  but the agent used a different one; criteria define a threshold \
-  the agent didn't evaluate; criteria specify a timeframe the \
-  factors ignore.
-
-- **Pre-publication event** — If a factor claims an event already \
-  satisfies the resolution criteria AND the question's Published \
-  date is AFTER that event, determine which case applies:
-  \
-  **Case 1 — Resolution criteria specify an explicit start date \
-  BEFORE published_at** (e.g., "on or after Feb 24" when \
-  published_at is March 13): Events within that window are \
-  legitimate. Verify the event falls within the stated range and \
-  that the primary source confirms the claim. Not a problem.
-  \
-  **Case 2 — No explicit start date, or start date >= \
-  published_at** (typical "Will X happen before Y?" questions): \
-  The agent should NOT treat the pre-publication event as already \
-  resolving the question. If the pre-publication event is the \
-  dominant factor and the probability would collapse without it, \
-  this is a **fail**. The event can still be used as base-rate \
-  evidence (e.g., "high recent frequency"), \
-  but the forecast must be built on forward-looking probability \
-  from published_at to resolution. Common rationalizations that \
-  do NOT override Case 2: "bot-generated question", "literal \
-  reading of criteria."
-
-- **Regime-spanning data window** (numeric/discrete only) — If the \
-  agent ran a Monte Carlo simulation or computed drift/volatility from \
-  historical data, check whether the data window includes a structural \
-  break (e.g., a rate level change after a policy decision, a price \
-  regime shift after a major event). If the trace shows the agent \
-  used data spanning two clearly different regimes to estimate drift, \
-  this is a **warn** — the drift estimate is contaminated by the \
-  regime transition, not representative of current dynamics.
-
-- **Missing adversarial reasoning** — The assessment should engage \
-  with the strongest counterargument, not just the supporting \
-  evidence. If the assessment doesn't address what a smart \
-  disagreer would say or what scenario makes the forecast most \
-  wrong, this is a **warn** — one-sided assessments are a \
-  calibration risk.
-
-- **Probability assessment** — After reviewing the factors and \
-  trace, form your own independent probability estimate based on \
-  the evidence. If your estimate meaningfully differs from the \
-  agent's tentative probability, this is a **fail** — state what \
-  you think the probability should be and why. Don't just flag the \
-  gap; explain what evidence the agent is over- or under-weighting. \
-  Common failure modes: hedging toward round numbers without \
-  evidentiary support, anchoring on an intuition that isn't captured \
-  in any factor, double-discounting uncertainty already reflected in \
-  factor confidence values, or ignoring strong evidence that should \
-  dominate the estimate.
-
-## What NOT to check
-
-- Whether the agent did enough research (but resolution criteria \
-  recovery IS your concern)
-- Scenarios the agent could have researched but didn't
-
-## Verdicts
-
-- **fail** — A core claim is fabricated (no trace support) AND \
-  correcting it would change the forecast; OR the probability is \
-  meaningfully wrong given the evidence (state your estimate).
-- **warn** — An error that doesn't affect the forecast direction. \
-  Includes: unsupported details when the underlying conclusion is \
-  well-grounded, missing resolution criteria with no recovery \
-  attempt, or factors that don't clearly map to the resolution \
-  criteria's specific terms.
-- **approve** — No errors found, or only trivial issues.
-
-If you find no errors, approve and stop. Do not manufacture \
-concerns. Be specific: name the factor, quote the claim, explain \
-what you checked in the trace.
-
-## Research trace
-
-The agent's full reasoning trace is at `{trace_file}`. Read it to \
-verify that factual claims in factors are grounded in actual tool \
-results.
-
-## Historical data
-
-You have Read, Glob, and Grep access to past forecasts at:
-
-  {traces_dir}/
-
-Use `Glob("{traces_dir}/forecasts/**/*.json")` to list them. Each \
-JSON has question_title, probability, factors, and resolution. \
-Use these to check for patterns — repeated errors, systematic \
-biases on this question type, or similar past forecasts.
-"""
-
-
-def _build_reviewer_prompt(
-    inp: ReflectionInput,
-    question_context: dict[str, Any] | None,
-    trace_file: Path | None,
-) -> str:
-    """Build the prompt for the reviewer sub-agent."""
-    sections: list[str] = []
-
-    if question_context:
-        title = question_context.get("title", "Unknown")
-        qtype = question_context.get("type", "unknown")
-        resolution = question_context.get("resolution_criteria", "")
-        fine_print = question_context.get("fine_print", "")
-        published_at = question_context.get("published_at", "")
-        close_time = question_context.get("scheduled_close_time", "")
-        resolve_time = question_context.get("scheduled_resolve_time", "")
-        header = f"## Question\n\nTitle: {title}\nType: {qtype}"
-        if published_at:
-            header += f"\nPublished: {published_at}"
-        if close_time:
-            header += f"\nCloses: {close_time}"
-        if resolve_time:
-            header += f"\nResolves: {resolve_time}"
-        sections.append(header)
-        if resolution and not resolution.startswith("MISSING"):
-            sections.append(f"Resolution criteria: {resolution}")
-        else:
-            sections.append(
-                "Resolution criteria: MISSING (agent should have fetched the question page)"
-            )
-        if fine_print and not fine_print.startswith("MISSING"):
-            sections.append(f"Fine print: {fine_print}")
-
-    factor_lines: list[str] = []
-    for i, f in enumerate(inp.factors, 1):
-        if isinstance(f.supports, NumericSupport):
-            prefix = f"{i}. [{f.supports.center} ({f.supports.low}–{f.supports.high})] "
-        elif f.supports is not None:
-            prefix = f"{i}. [{f.supports}] "
-        else:
-            prefix = f"{i}. "
-        factor_lines.append(
-            f"{prefix}{f.description} (logit={f.logit:+.1f}, confidence={f.confidence})"
-        )
-    sections.append("## Factors\n\n" + "\n".join(factor_lines))
-
-    sections.append(f"## Assessment\n\n{inp.assessment}")
-
-    estimate = inp.tentative_estimate
-    if isinstance(estimate, BinaryEstimate):
-        sections.append(
-            f"## Tentative estimate\n\nProbability: {estimate.probability:.1%}"
-        )
-    elif isinstance(estimate, NumericEstimate):
-        sections.append(
-            f"## Tentative estimate\n\n"
-            f"Center: {estimate.center}, Range: {estimate.low}–{estimate.high}"
-        )
-    elif isinstance(estimate, MultipleChoiceEstimate):
-        prob_lines = [
-            f"  {opt}: {p:.1%}" for opt, p in sorted(estimate.probabilities.items())
-        ]
-        sections.append(
-            "## Tentative estimate\n\nProbabilities:\n" + "\n".join(prob_lines)
-        )
-
-    if trace_file:
-        sections.append(
-            f"## Research Trace\n\n"
-            f"The agent's full reasoning trace is at `{trace_file}`. "
-            f"Read it to verify factual claims in the factors above."
-        )
-
-    return "\n\n".join(sections)
-
-
-def _build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
-    """Build permission hooks restricting the reviewer to specific directories."""
-    from claude_agent_sdk import HookMatcher
-    from claude_agent_sdk.types import (
-        HookContext,
-        HookInput,
-        HookJSONOutput,
-        PreToolUseHookSpecificOutput,
-        SyncHookJSONOutput,
-    )
-
-    from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
-
-    allowed = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "StructuredOutput"]
-    hooks = create_allowed_tools_hook(allowed)
-
-    if not allowed_dirs:
-        return hooks
-
-    resolved_dirs = [d.resolve() for d in allowed_dirs]
-
-    def _deny(reason: str) -> HookJSONOutput:
-        return SyncHookJSONOutput(
-            hookSpecificOutput=PreToolUseHookSpecificOutput(
-                hookEventName="PreToolUse",
-                permissionDecision="deny",
-                permissionDecisionReason=reason,
-            ),
-        )
-
-    def _is_under_allowed(path: Path) -> bool:
-        resolved = path.resolve()
-        return any(resolved == d or resolved.is_relative_to(d) for d in resolved_dirs)
-
-    async def path_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> HookJSONOutput:
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return SyncHookJSONOutput()
-
-        tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
-
-        if tool_name in ("Read", "Glob", "Grep"):
-            file_path = tool_input.get("file_path") or tool_input.get("path", "")
-            if not file_path:
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Path required. Allowed directories: {dirs}")
-            if not _is_under_allowed(Path(file_path)):
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Access restricted to: {dirs}")
-
-        return SyncHookJSONOutput()
-
-    path_hooks: HooksConfig = {
-        "PreToolUse": [HookMatcher(hooks=[path_hook])],
-    }
-    return merge_hooks(hooks, path_hooks)
-
-
-async def _run_reviewer(
-    inp: ReflectionInput,
-    question_context: dict[str, Any] | None,
-    trace_file: Path | None,
-    traces_dir: Path | None,
-) -> ReviewResult | None:
-    """Call a Sonnet sub-agent to review the forecast.
-
-    Returns structured ReviewResult, or None on failure.
-    """
-    from claude_agent_sdk import (
-        AssistantMessage as _AssistantMessage,
-        ResultMessage,
-    )
-    from claude_agent_sdk.types import HookEvent, HookMatcher as HookMatcherType
-
-    from aib.agent.client import build_client
-    from aib.agent.display import print_block
-
-    prompt = _build_reviewer_prompt(inp, question_context, trace_file)
-
-    system_prompt = _REVIEWER_SYSTEM_PROMPT.format(
-        trace_file=trace_file or "(not available)",
-        traces_dir=traces_dir or "(not available)",
-    )
-
-    add_dirs: list[str | Path] = []
-    hook_dirs: list[Path] = []
-    if traces_dir and traces_dir.exists():
-        add_dirs.append(traces_dir)
-        hook_dirs.append(traces_dir)
-    if trace_file:
-        add_dirs.append(trace_file.parent)
-        hook_dirs.append(trace_file.parent)
-
-    reviewer_hooks: dict[HookEvent, list[HookMatcherType]] = cast(
-        dict[HookEvent, list[HookMatcherType]],
-        _build_reviewer_hooks(hook_dirs),
-    )
-
-    try:
-        structured_output: dict[str, Any] | None = None
-        so_tool_blocks: list[ToolUseBlock] = []
-        async with build_client(
-            model="opus",
-            allowed_tools=["Read", "Glob", "Grep", "WebSearch", "WebFetch"],
-            permission_mode="bypassPermissions",
-            system_prompt=system_prompt,
-            hooks=reviewer_hooks,
-            add_dirs=add_dirs,
-            output_format={
-                "type": "json_schema",
-                "schema": ReviewResult.model_json_schema(),
-            },
-        ) as client:
-            await client.query(prompt)
-            async for message in client.receive_response():
-                if isinstance(message, _AssistantMessage):
-                    for block in message.content:
-                        print_block(block, prefix="  ↳ [reviewer] ")
-                        if (
-                            isinstance(block, ToolUseBlock)
-                            and block.name == "StructuredOutput"
-                        ):
-                            so_tool_blocks.append(block)
-                elif isinstance(message, ResultMessage):
-                    structured_output = message.structured_output
-
-        if structured_output:
-            return ReviewResult.model_validate(structured_output)
-
-        # Fallback: reparse from StructuredOutput tool_use blocks
-        if so_tool_blocks:
-            last_block = so_tool_blocks[-1]
-            try:
-                json_output = last_block.input["json_output"]
-                result = ReviewResult.model_validate(json_output)
-                logger.warning(
-                    "Recovered reviewer verdict from ToolUseBlock fallback: %s",
-                    result.verdict,
-                )
-                return result
-            except (KeyError, ValidationError):
-                logger.warning(
-                    "Reviewer produced %d StructuredOutput blocks but "
-                    "none could be parsed as ReviewResult",
-                    len(so_tool_blocks),
-                )
-
-        return None
-    except Exception:
-        logger.exception("Reviewer sub-agent failed")
-        return None
-
-
 # --- Tool ---
 
 _REFLECTION_DESCRIPTION = """\
 Checkpoint your reasoning by committing to factors and a tentative estimate.
 
 Returns: factor-consistency metrics, distribution metrics (for numeric/discrete),
-per-outcome breakdowns (for MC), sources consulted, and an independent reviewer
-verdict.
+per-outcome breakdowns (for MC), and sources consulted.
 
-**Gate behavior:** An independent reviewer checks your evidence chain and
-returns approve, warn, or fail. On fail, this tool returns an error — fix the
-issues and call reflection() again. StructuredOutput is blocked until the
-reviewer approves. After 2 consecutive fails, the gate auto-approves.
+Fast and cheap — call freely mid-research whenever you want to pressure-test
+your evolving analysis against the numbers. This tool does not run a reviewer;
+it only computes metrics and caches your input so the premortem tool can
+retrieve it.
+
+**Gate behavior:** You must call reflection() at least once before premortem(),
+and premortem() must approve before you can submit the final forecast via
+StructuredOutput.
 
 Binary example:
   reflection(
@@ -845,13 +417,10 @@ MC example:
 """
 
 
-def _create_reflection_tool(
+def create_reflection_tool(
     session_dir: Path | None,
     question_type: str,
     get_sources: Callable[[], list[str]] | None = None,
-    get_trace: Callable[[], str] | None = None,
-    question_context: dict[str, Any] | None = None,
-    traces_dir: Path | None = None,
     review_state: ReviewState | None = None,
 ):
     """Create the reflection tool with session context."""
@@ -870,68 +439,14 @@ def _create_reflection_tool(
 
         computed = compute_reflection(validated, question_type)
 
-        # Inject sources from infrastructure
         if get_sources is not None:
             computed.sources = get_sources()
 
-        # Write trace file for reviewer
-        trace_file: Path | None = None
-        if session_dir and get_trace:
-            trace = get_trace()
-            if trace:
-                trace_file = await _write_trace_file(session_dir, trace)
+        if review_state is not None:
+            review_state.store_reflection(validated)
 
-        # Run the reviewer sub-agent (disabled in retrodict to prevent leaks)
-        review_result: ReviewResult | None = None
-        if retrodict_cutoff.get() is None:
-            try:
-                review_result = await _run_reviewer(
-                    validated,
-                    question_context,
-                    trace_file,
-                    traces_dir,
-                )
-                if review_result:
-                    computed.reviewer_critique = review_result.assessment
-            except Exception:
-                logger.exception("Reviewer failed, continuing without critique")
-        elif review_state is not None:
-            # Auto-approve in retrodict mode (reviewer disabled)
-            review_state.record(
-                ReviewResult(
-                    verdict=ReviewVerdict.approve,
-                    assessment="Auto-approved (retrodict mode).",
-                ),
-                reflection_input=validated,
-            )
-
-        # Record verdict for StructuredOutput gate
-        if review_result and review_state is not None:
-            review_state.record(review_result, reflection_input=validated)
-            logger.info(
-                "Reviewer verdict: %s (consecutive_fails=%d)",
-                review_result.verdict,
-                review_state.consecutive_fails,
-            )
-
-        # On reviewer crash, auto-approve so the agent isn't stuck
-        if (
-            review_result is None
-            and review_state is not None
-            and retrodict_cutoff.get() is None
-        ):
-            logger.warning("Reviewer returned None — auto-approving")
-            review_state.record(
-                ReviewResult(
-                    verdict=ReviewVerdict.approve,
-                    assessment="Reviewer unavailable; auto-approved.",
-                ),
-                reflection_input=validated,
-            )
-
-        # Always write reflection.yaml (even on fail) for logging
         try:
-            filepath = await _append_reflection(
+            filepath = await append_reflection(
                 session_dir, validated, computed, question_type
             )
             logger.info("Appended reflection entry to %s", filepath)
@@ -939,27 +454,7 @@ def _create_reflection_tool(
             logger.exception("Failed to write reflection")
             return mcp_error(f"Failed to write reflection: {e}")
 
-        result_data = computed.model_dump(exclude_none=True)
-
-        # Gate: fail verdict → tool error (unless escape hatch)
-        if review_result and review_result.verdict == ReviewVerdict.fail:
-            if review_state and review_state.passed:
-                logger.warning(
-                    "Escape hatch: force-approving after %d consecutive fails",
-                    review_state.consecutive_fails,
-                )
-                result_data["reviewer_note"] = (
-                    f"Force-approved after {review_state.consecutive_fails} "
-                    f"consecutive reviewer failures."
-                )
-                return mcp_success(result_data)
-
-            return mcp_error(
-                f"REVIEWER FAILED: {review_result.assessment}\n\n"
-                f"Fix the issues above, then call reflection() again."
-            )
-
-        return mcp_success(result_data)
+        return mcp_success(computed.model_dump(exclude_none=True))
 
     return reflection_tool
 
@@ -968,9 +463,6 @@ def create_reflection_server(
     session_dir: Path | None = None,
     question_type: str = "binary",
     get_sources: Callable[[], list[str]] | None = None,
-    get_trace: Callable[[], str] | None = None,
-    question_context: dict[str, Any] | None = None,
-    traces_dir: Path | None = None,
     review_state: ReviewState | None = None,
 ):
     """Create the reflection MCP server with session context.
@@ -981,26 +473,18 @@ def create_reflection_server(
         question_type: The question type for this forecast session.
         get_sources: Callback returning sources consulted so far.
             Called at reflection time to inject into output.
-        get_trace: Callback returning the full reasoning trace as markdown.
-            Passed to the reviewer sub-agent for context.
-        question_context: Question details (title, type, resolution criteria).
-            Passed to the reviewer for informed critique.
-        traces_dir: Directory with past forecast JSONs.
-            The reviewer gets read access to browse historical performance.
-        review_state: Shared state for reviewer gate coordination
-            with the StructuredOutput hook.
+        review_state: Shared state for gate coordination with premortem
+            and the StructuredOutput hook. Reflection marks reflection_done
+            by caching the input here.
     """
     return create_mcp_server(
         name="notes",
         version="6.0.0",
         tools=[
-            _create_reflection_tool(
+            create_reflection_tool(
                 session_dir,
                 question_type,
                 get_sources,
-                get_trace,
-                question_context,
-                traces_dir,
                 review_state,
             )
         ],

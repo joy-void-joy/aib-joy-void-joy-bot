@@ -15,12 +15,8 @@ from aib.agent.models import (
 from aib.tools.reflection import (
     ReflectionInput,
     ReflectionOutput,
-    ReviewResult,
-    ReviewState,
-    ReviewVerdict,
     compute_reflection,
-    _append_reflection,
-    _build_reviewer_prompt,
+    append_reflection,
 )
 
 
@@ -349,7 +345,7 @@ class TestFileWriting:
         )
         computed = compute_reflection(inp, "binary")
 
-        filepath = await _append_reflection(tmp_path, inp, computed, "binary")
+        filepath = await append_reflection(tmp_path, inp, computed, "binary")
 
         assert filepath.exists()
         assert filepath.name == "reflection.yaml"
@@ -369,10 +365,10 @@ class TestFileWriting:
             tentative_logit=1.5,
         )
 
-        await _append_reflection(
+        await append_reflection(
             tmp_path, inp1, compute_reflection(inp1, "binary"), "binary"
         )
-        await _append_reflection(
+        await append_reflection(
             tmp_path, inp2, compute_reflection(inp2, "binary"), "binary"
         )
 
@@ -387,7 +383,7 @@ class TestFileWriting:
         inp = _make_binary_input(tentative_logit=0.0)
         computed = compute_reflection(inp, "binary")
 
-        await _append_reflection(tmp_path, inp, computed, "binary")
+        await append_reflection(tmp_path, inp, computed, "binary")
 
         content = (tmp_path / "reflection.yaml").read_text()
         assert "calibration_notes" not in content
@@ -407,7 +403,7 @@ class TestFileWriting:
         )
         computed = compute_reflection(inp, "binary")
 
-        await _append_reflection(tmp_path, inp, computed, "binary")
+        await append_reflection(tmp_path, inp, computed, "binary")
 
         content = (tmp_path / "reflection.yaml").read_text()
         assert "calibration_notes" in content
@@ -430,133 +426,6 @@ class TestSourcesInOutput:
         result.sources = ["https://example.com", "https://other.org"]
         dumped = result.model_dump(exclude_none=True)
         assert dumped["sources"] == ["https://example.com", "https://other.org"]
-
-
-class TestReviewerCritique:
-    """Tests for the reviewer critique field."""
-
-    def test_reviewer_critique_default_none(self) -> None:
-        """Output should have None reviewer_critique by default."""
-        inp = _make_binary_input(tentative_logit=0.5)
-        result = compute_reflection(inp, "binary")
-        assert result.reviewer_critique is None
-
-    def test_reviewer_critique_excluded_when_none(self) -> None:
-        """reviewer_critique should not appear in dump when None."""
-        inp = _make_binary_input(tentative_logit=0.5)
-        result = compute_reflection(inp, "binary")
-        dumped = result.model_dump(exclude_none=True)
-        assert "reviewer_critique" not in dumped
-
-    def test_reviewer_critique_included_when_set(self) -> None:
-        """reviewer_critique should appear in dump when populated."""
-        inp = _make_binary_input(tentative_logit=0.5)
-        result = compute_reflection(inp, "binary")
-        result.reviewer_critique = "The factors seem one-sided."
-        dumped = result.model_dump(exclude_none=True)
-        assert dumped["reviewer_critique"] == "The factors seem one-sided."
-
-
-class TestBuildReviewerPrompt:
-    """Tests for reviewer prompt construction."""
-
-    def test_includes_question_context(self) -> None:
-        """Prompt should include question title and type."""
-        inp = _make_binary_input(
-            factors=[Factor(description="Evidence", logit=1.0, confidence=0.8)],
-            tentative_logit=0.8,
-        )
-        context = {"title": "Will X happen?", "type": "binary"}
-
-        prompt = _build_reviewer_prompt(inp, context, None)
-
-        assert "Will X happen?" in prompt
-        assert "binary" in prompt
-
-    def test_includes_factors(self) -> None:
-        """Prompt should list all factors."""
-        inp = _make_binary_input(
-            factors=[
-                Factor(description="Strong signal", logit=2.0, confidence=0.9),
-                Factor(description="Weak counter", logit=-0.5, confidence=0.7),
-            ],
-            tentative_logit=1.0,
-        )
-
-        prompt = _build_reviewer_prompt(inp, None, None)
-
-        assert "Strong signal" in prompt
-        assert "Weak counter" in prompt
-
-    def test_includes_trace(self) -> None:
-        """Prompt should reference the trace file."""
-        inp = _make_binary_input(tentative_logit=0.5)
-        trace_path = Path("/tmp/session/trace.md")
-
-        prompt = _build_reviewer_prompt(inp, None, trace_path)
-
-        assert "trace.md" in prompt
-
-    def test_trace_file_path_included(self) -> None:
-        """Prompt should reference the trace file path."""
-        inp = _make_binary_input(tentative_logit=0.5)
-        trace_path = Path("/tmp/session/trace.md")
-
-        prompt = _build_reviewer_prompt(inp, None, trace_path)
-
-        assert "/tmp/session/trace.md" in prompt
-
-
-class TestReviewState:
-    """Tests for ReviewState verdict tracking and gate logic."""
-
-    def test_initial_state_not_passed(self) -> None:
-        state = ReviewState()
-        assert state.passed is False
-        assert state.last_verdict is None
-        assert state.consecutive_fails == 0
-
-    def test_approve_passes(self) -> None:
-        state = ReviewState()
-        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
-        assert state.passed is True
-        assert state.last_verdict == ReviewVerdict.approve
-
-    def test_warn_passes(self) -> None:
-        state = ReviewState()
-        state.record(ReviewResult(verdict=ReviewVerdict.warn, assessment="Minor"))
-        assert state.passed is True
-        assert state.last_verdict == ReviewVerdict.warn
-
-    def test_single_fail_does_not_pass(self) -> None:
-        state = ReviewState()
-        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.passed is False
-        assert state.consecutive_fails == 1
-
-    def test_three_consecutive_fails_auto_approves(self) -> None:
-        state = ReviewState()
-        for _ in range(3):
-            state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.consecutive_fails == 3
-        assert state.passed is True
-
-    def test_approve_resets_consecutive_fails(self) -> None:
-        state = ReviewState()
-        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.consecutive_fails == 2
-        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
-        assert state.consecutive_fails == 0
-        assert state.passed is True
-
-    def test_fail_after_approve_resets_pass(self) -> None:
-        state = ReviewState()
-        state.record(ReviewResult(verdict=ReviewVerdict.approve, assessment="OK"))
-        assert state.passed is True
-        state.record(ReviewResult(verdict=ReviewVerdict.fail, assessment="Bad"))
-        assert state.passed is False
-        assert state.consecutive_fails == 1
 
 
 def _make_mc_input(
@@ -660,20 +529,3 @@ class TestComputeReflectionMC:
         assert result.gap_pp is None
         assert result.tentative_logit is None
         assert result.distribution_metrics is None
-
-    def test_mc_reviewer_prompt(self) -> None:
-        """Reviewer prompt should render MC probabilities."""
-        factors = [
-            Factor(description="For A", supports="A", logit=1.0, confidence=0.9),
-        ]
-        inp = _make_mc_input(
-            factors=factors,
-            probabilities={"A": 0.6, "B": 0.3, "C": 0.1},
-        )
-
-        prompt = _build_reviewer_prompt(inp, None, None)
-
-        assert "Probabilities:" in prompt
-        assert "A: 60.0%" in prompt
-        assert "B: 30.0%" in prompt
-        assert "C: 10.0%" in prompt
