@@ -42,6 +42,16 @@ TRACES_PATH = NOTES_PATH / "traces"
 
 FEEDBACK_PATH = NOTES_PATH / "feedback_loop"
 
+# ── Agent SDK spawn cwd (session isolation from user's worktree) ──
+AGENT_CWD = NOTES_PATH / "agent-cwd"
+
+# ── Worldview store paths (version-independent) ───────────────────
+WORLDVIEW_PATH = NOTES_PATH / "worldview"
+WORLDVIEW_RESEARCH_PATH = WORLDVIEW_PATH / "research"
+WORLDVIEW_FORECASTS_PATH = WORLDVIEW_PATH / "forecasts"
+WORLDVIEW_ARCHIVE_PATH = WORLDVIEW_PATH / "archive"
+WORLDVIEW_TRACES_PATH = WORLDVIEW_PATH / "traces"
+
 _TIMESTAMP_FMT = "%Y%m%d_%H%M%S"
 _TIMESTAMP_RE = re.compile(r"\d{8}_\d{6}")
 
@@ -359,3 +369,38 @@ def resolve_version(
         f"v{major}.* has only {major_count} forecasts "
         f"(need {min_datapoints}) — including all versions"
     )
+
+
+# ── Worldview store iteration ──────────────────────────────────────
+
+
+def iter_worldview_entries(
+    kind: str | None = None,
+) -> Iterator[Path]:
+    """Iterate worldview JSON files.
+
+    kind: "research", "forecasts", or None for both.
+    """
+    dirs: list[Path] = []
+    if kind is None:
+        dirs = [WORLDVIEW_RESEARCH_PATH, WORLDVIEW_FORECASTS_PATH]
+    elif kind == "research":
+        dirs = [WORLDVIEW_RESEARCH_PATH]
+    elif kind == "forecasts":
+        dirs = [WORLDVIEW_FORECASTS_PATH]
+
+    for d in dirs:
+        if d.exists():
+            yield from sorted(d.glob("*.json"))
+
+
+def iter_worldview_archive() -> Iterator[Path]:
+    """Iterate archived worldview entries."""
+    if WORLDVIEW_ARCHIVE_PATH.exists():
+        yield from sorted(WORLDVIEW_ARCHIVE_PATH.glob("*.json"))
+
+
+def worldview_entry_path(slug: str, kind: str) -> Path:
+    """Return the path for a worldview entry by slug and kind."""
+    base = WORLDVIEW_RESEARCH_PATH if kind == "research" else WORLDVIEW_FORECASTS_PATH
+    return base / f"{slug}.json"
