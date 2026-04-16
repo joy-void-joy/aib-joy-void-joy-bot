@@ -18,7 +18,7 @@ from claude_agent_sdk.types import HookContext
 from aib.agent.hooks import HooksConfig
 
 if TYPE_CHECKING:
-    from aib.tools.reflection import ReviewState
+    from aib.agent.session import ReviewState
 
 logger = logging.getLogger(__name__)
 
@@ -53,24 +53,35 @@ def create_structured_output_hooks(
         hook_event = input_data["hook_event_name"]
         tool_input = input_data.get("tool_input", {})
 
-        # --- Reviewer gate: deny until the reviewer has approved ---
-        if review_state is not None and not review_state.passed:
-            if review_state.last_verdict is None:
+        # --- Gate: deny until reflection + premortem have both run ---
+        if review_state is not None and not (
+            review_state.reflection_done and review_state.passed
+        ):
+            if not review_state.reflection_done:
                 reason = (
-                    "You must call reflection(...) with your factors "
-                    "and tentative estimate BEFORE providing your final "
-                    "forecast. The reviewer must approve before you can "
-                    "submit. Run reflection first, then call "
-                    "StructuredOutput again."
+                    "You must call reflection(...) with your factors and "
+                    "tentative estimate BEFORE providing your final forecast. "
+                    "Run reflection first to commit your evidence, then call "
+                    "premortem() with your adversarial self-examination, "
+                    "then call StructuredOutput."
+                )
+            elif review_state.last_verdict is None:
+                reason = (
+                    "You called reflection() but haven't called premortem() "
+                    "yet. Call premortem() now with your counterargument, "
+                    "what_would_change_my_mind, and confidence_in_estimate. "
+                    "The reviewer must approve before you can submit."
                 )
             else:
                 reason = (
-                    "The reviewer found errors in your forecast. "
-                    "Address the findings from the last reflection() call, "
-                    "then call reflection() again to get reviewer approval."
+                    "The premortem reviewer found errors in your forecast. "
+                    "Address the findings from the last premortem() call, "
+                    "update your factors via reflection() if needed, then "
+                    "call premortem() again to get reviewer approval."
                 )
             logger.warning(
-                "Denying StructuredOutput — reviewer state: verdict=%s, passed=%s",
+                "Denying StructuredOutput — reflection_done=%s, verdict=%s, passed=%s",
+                review_state.reflection_done,
                 review_state.last_verdict,
                 review_state.passed,
             )
@@ -106,4 +117,62 @@ def create_structured_output_hooks(
 
     return {
         "PreToolUse": [HookMatcher(hooks=[pre_tool_use_hook])],  # type: ignore[list-item]
+    }
+
+
+def create_structured_output_enforcement() -> HooksConfig:
+    """Block the Stop event until StructuredOutput has been called.
+
+    Pairs with output_format=json_schema on ClaudeAgentOptions. The SDK
+    exposes StructuredOutput as a tool but does not enforce that the
+    agent calls it before ending the turn. When the agent writes its
+    answer as a TextBlock and stops, ResultMessage.structured_output is
+    None and the caller has to decide whether to soft-fail or crash.
+
+    This hook pair tracks StructuredOutput invocations via PostToolUse
+    and blocks Stop with a feedback reason if the tool was never called.
+    stop_hook_active guards against infinite loops: on the second Stop
+    we let the agent through so the caller's structured_output=None
+    handling remains the final backstop.
+    """
+    state = {"called": False}
+
+    async def post_tool_use(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> dict[str, Any]:
+        if (
+            input_data.get("hook_event_name") == "PostToolUse"
+            and input_data.get("tool_name") == "StructuredOutput"
+        ):
+            state["called"] = True
+        return {}
+
+    async def stop_hook(
+        input_data: Any,
+        _tool_use_id: str | None,
+        _context: HookContext,
+    ) -> dict[str, Any]:
+        if input_data.get("hook_event_name") != "Stop":
+            return {}
+        if state["called"] or input_data.get("stop_hook_active"):
+            return {}
+        logger.warning(
+            "Blocking Stop — agent ended turn without calling StructuredOutput"
+        )
+        return {
+            "decision": "block",
+            "reason": (
+                "You ended your turn without calling the StructuredOutput "
+                "tool. Your response format requires it. Call "
+                "StructuredOutput now with your complete findings. Do not "
+                "write the answer as prose text — only the StructuredOutput "
+                "call is read by the caller."
+            ),
+        }
+
+    return {
+        "PostToolUse": [HookMatcher(hooks=[post_tool_use])],  # type: ignore[list-item]
+        "Stop": [HookMatcher(hooks=[stop_hook])],  # type: ignore[list-item]
     }

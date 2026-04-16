@@ -10,12 +10,11 @@ from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, TypedDict, cast
 
-from claude_agent_sdk.types import HookContext, SyncHookJSONOutput
+from claude_agent_sdk.types import HookContext, HookInput, SyncHookJSONOutput
 
 from claude_agent_sdk import (
     AssistantMessage,
     ContentBlock,
-    HookInput,
     HookMatcher,
     ResultMessage,
     SystemMessage,
@@ -37,12 +36,12 @@ from aib.agent.history import (
     save_forecast,
 )
 from aib.agent.sources import extract_sources
-from aib.agent.hooks import HooksConfig, merge_hooks
+from aib.agent.hooks import HooksConfig, create_allowed_tools_hook, merge_hooks
 from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
 from aib.tools.fetch_http import downloads_dir
-from aib.tools.reflection import ReviewState
+from aib.agent.session import ReviewState
 from aib.agent.tool_policy import ToolPolicy
 from aib.agent.models import (
     CreditExhaustedError,
@@ -52,6 +51,7 @@ from aib.agent.models import (
     ForecastSummary,
     MultipleChoiceForecast,
     NumericForecast,
+    ToolCallMetrics,
     TokenUsage,
     create_forecast_model,
 )
@@ -75,6 +75,8 @@ from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_me
 from aib.tools.sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
+
+ACTIVE_LOG_PATH: Path | None = None
 
 _PRESET_TEMPLATE = (Path(__file__).parent / "claude_code_preset.txt").read_text()
 
@@ -101,7 +103,6 @@ def _build_system_prompt(
         + "\n\n"
         + get_forecasting_system_prompt(
             tool_docs=tool_docs,
-            retrodict=cutoff is not None,
             sandbox_shared_dir=sandbox_shared_dir,
             session_dir=session_dir,
             question_type=question_type,
@@ -133,6 +134,8 @@ class ReasoningLogger:
         """Format a content block as markdown."""
         match block:
             case ThinkingBlock():
+                # Claude 4.x returns summarized thinking; dangling fragments
+                # at section seams are upstream artifacts, not parse bugs.
                 return f"## 💭 Thinking\n\n{block.thinking}\n"
             case TextBlock():
                 return f"## 💬 Response\n\n{block.text}\n"
@@ -207,7 +210,12 @@ def append_metrics_to_reflection(
             f"- **Session Duration**: {duration_seconds:.1f}s ({minutes:.1f} min)"
         )
     if cost_usd is not None:
-        lines.append(f"- **Cost**: ${cost_usd:.4f}")
+        subagent_cost = (metrics or {}).get("subagent_cost_usd", 0.0)
+        total_cost = cost_usd + subagent_cost
+        lines.append(
+            f"- **Cost**: ${total_cost:.4f} total "
+            f"(orchestrator ${cost_usd:.4f} + sub-agents ${subagent_cost:.4f})"
+        )
 
     # Token usage
     if token_usage:
@@ -242,15 +250,18 @@ def append_metrics_to_reflection(
         by_tool = metrics.get("by_tool", {})
         if by_tool:
             lines.append("")
-            lines.append("| Tool | Calls | Errors | Avg Time |")
-            lines.append("|------|-------|--------|----------|")
+            lines.append("| Tool | Calls | Errors | Avg Time | Sub-agent cost |")
+            lines.append("|------|-------|--------|----------|----------------|")
             for tool_name, tool_data in sorted(by_tool.items()):
                 calls = tool_data.get("call_count", 0)
                 errors = tool_data.get("error_count", 0)
                 avg_ms = tool_data.get("avg_duration_ms", 0)
+                tool_cost = tool_data.get("total_cost_usd", 0.0)
                 error_indicator = " ⚠️" if errors > 0 else ""
+                cost_cell = f"${tool_cost:.4f}" if tool_cost else "—"
                 lines.append(
-                    f"| {tool_name} | {calls} | {errors}{error_indicator} | {avg_ms:.0f}ms |"
+                    f"| {tool_name} | {calls} | {errors}{error_indicator} "
+                    f"| {avg_ms:.0f}ms | {cost_cell} |"
                 )
 
     # Sources consulted
@@ -458,59 +469,6 @@ def create_permission_hooks(
     }
 
 
-def create_websearch_nudge_hooks() -> HooksConfig:
-    """PostToolUse hook that nudges the agent to prefer web_search over WebSearch."""
-
-    async def nudge_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> SyncHookJSONOutput:
-        if input_data.get("hook_event_name") != "PostToolUse":
-            return SyncHookJSONOutput()
-        if input_data.get("tool_name") != "WebSearch":
-            return SyncHookJSONOutput()
-
-        return SyncHookJSONOutput(
-            systemMessage=(
-                "Tip: Prefer mcp__search__web_search over WebSearch. "
-                "It provides structured results with automatic API data "
-                "for recognized domains (stock prices, arXiv, Wikipedia, "
-                "FRED, prediction markets)."
-            )
-        )
-
-    return {
-        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
-    }
-
-
-def create_webfetch_nudge_hooks() -> HooksConfig:
-    """PostToolUse hook that nudges the agent to prefer fetch_url over WebFetch."""
-
-    async def nudge_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> SyncHookJSONOutput:
-        if input_data.get("hook_event_name") != "PostToolUse":
-            return SyncHookJSONOutput()
-        if input_data.get("tool_name") != "WebFetch":
-            return SyncHookJSONOutput()
-
-        return SyncHookJSONOutput(
-            systemMessage=(
-                "Tip: Prefer mcp__search__fetch_url over WebFetch. "
-                "It provides automatic text extraction, JavaScript rendering "
-                "via Playwright, and domain-specific API routing."
-            )
-        )
-
-    return {
-        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
-    }
-
-
 def create_suggest_only_nudge_hooks() -> HooksConfig:
     """PostToolUse hook that nudges the agent toward structured APIs for known domains."""
     from aib.tools.fetch_routes import SUGGEST_ONLY
@@ -643,10 +601,12 @@ REVIEWER_SYSTEM_PROMPT = textwrap.dedent("""\
 
     ## tool_audit
 
-    For each tool the agent used, write a compact one-line assessment in
-    by_tool. Format: "N calls, M errors (cause), impact: none/minor/significant,
-    value: high/medium/low/wasted, [notes]". Keep each entry to one line —
-    these get aggregated across many forecasts.
+    Call counts and error counts in by_tool are auto-populated from
+    instrumentation after you return — do not re-derive them. For each
+    tool, provide a structured ToolAuditEntry with your subjective
+    judgment: impact (none/minor/significant), value (high/medium/low/
+    wasted), error_cause (if any), and notes. Focus on what mattered
+    for the forecast, not bookkeeping.
 
     Also note capability_gaps (tools the agent needed but didn't have)
     and subtle_bugs (tools that didn't error but produced misleading results).
@@ -708,7 +668,7 @@ async def review_forecast_trace(
     access the full trace without truncation. Saves summary.json to
     the session directory.
     """
-    trace_file = session_dir / "trace_for_condensation.md"
+    trace_file = session_dir / "trace.md"
     session_dir.mkdir(parents=True, exist_ok=True)
     trace_file.write_text(trace, encoding="utf-8")
 
@@ -740,7 +700,7 @@ async def review_forecast_trace(
     try:
         result_output: dict[str, Any] | None = None
         async with build_client(
-            model="opus",
+            model=settings.model,
             system_prompt=REVIEWER_SYSTEM_PROMPT,
             allowed_tools=["Read"],
             permission_mode="bypassPermissions",
@@ -755,6 +715,13 @@ async def review_forecast_trace(
                     result_output = message.structured_output
         if result_output:
             summary = ForecastSummary.model_validate(result_output)
+            by_tool_metrics = cast(
+                dict[str, ToolCallMetrics],
+                get_metrics_summary().get("by_tool", {}),
+            )
+            summary.tool_audit.by_tool = summary.tool_audit.merge_metrics(
+                by_tool_metrics
+            )
             summary_file = session_dir / "summary.json"
             summary_file.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
             logger.info("Saved forecast summary to %s", summary_file)
@@ -770,13 +737,16 @@ async def run_forecast(
     *,
     question_context: dict | None = None,
     allow_spawn: bool = True,
+    subforecast_depth: int | None = None,
+    current_depth: int = 0,
+    parent_slug: str | None = None,
     context_overrides: ContextOverrides | None = None,
 ) -> ForecastOutput:
     """Run the forecasting agent on a question.
 
     Args:
         question_id: Metaculus post ID (for top-level forecasts)
-        question_context: Pre-built context dict (for sub-forecasts from spawn_subquestions)
+        question_context: Pre-built context dict (for sub-forecasts from subforecast())
         allow_spawn: Whether this forecast can spawn subquestions (False for sub-forecasts)
 
     Returns:
@@ -796,7 +766,12 @@ async def run_forecast(
         session_id = f"sub_{timestamp}"
 
     # Create session-scoped state (metrics, run_forecast_fn, modified_inputs)
-    session = ForecastSession(run_forecast_fn=run_forecast)
+    session = ForecastSession(
+        run_forecast_fn=run_forecast,
+        subforecast_depth=subforecast_depth,
+        current_depth=current_depth,
+        parent_slug=parent_slug,
+    )
     set_session(session)
     reset_metrics()
 
@@ -832,6 +807,8 @@ async def run_forecast(
     else:
         raise ValueError("Either question_id or question_context must be provided")
 
+    session.post_id = post_id if post_id > 0 else None
+
     if context_overrides:
         context.update(context_overrides)
 
@@ -857,18 +834,45 @@ async def run_forecast(
     assistant_messages: list[AssistantMessage] = []
     all_messages: list[AssistantMessage | UserMessage] = []
     result: ResultMessage | None = None
+    partial_saved = False
+
+    def save_partial(reason: str) -> None:
+        nonlocal partial_saved
+        if partial_saved:
+            return
+        if post_id <= 0 or not (collected_text or all_messages):
+            return
+        try:
+            save_forecast(
+                question_id=actual_question_id,
+                post_id=post_id,
+                question_title=question_title,
+                question_type=question_type,
+                summary=f"PARTIAL: {reason}",
+                factors=[],
+                reasoning="\n".join(collected_text),
+                sources_consulted=extract_sources(all_messages),
+                partial=True,
+                retrodict_date=cutoff.isoformat() if cutoff else None,
+            )
+            partial_saved = True
+        except Exception:
+            logger.warning("Failed to save partial forecast")
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
     log_path = (
         RUNTIME_LOGS_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    if current_depth == 0:
+        global ACTIVE_LOG_PATH
+        ACTIVE_LOG_PATH = log_path
     _log_handler = logging.FileHandler(log_path)
     _log_handler.setLevel(logging.DEBUG)
     _log_handler.setFormatter(
         logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     )
-    logging.getLogger().addHandler(_log_handler)
+    logging.getLogger("aib").addHandler(_log_handler)
 
     # Session-specific scratch directory for sandbox file exchange
     sandbox_shared_dir = RUNTIME_LOGS_PATH / session_id / "sandbox-shared"
@@ -897,36 +901,34 @@ async def run_forecast(
         rw_dirs = [sandbox_shared_dir, session_downloads] + notes.rw
         ro_dirs = notes.ro
 
+        # Centralized tool policy determines MCP servers and allowed tools
+        policy = ToolPolicy.from_settings(settings)
+        allowed_tools = policy.get_allowed_tools(allow_spawn=allow_spawn)
+
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
+        hooks = permission_hooks
 
-        # Nudge agent toward fetch_url when it uses WebFetch
-        hooks = merge_hooks(permission_hooks, create_webfetch_nudge_hooks())
+        # Enforce allowed_tools whitelist (bypassPermissions ignores the
+        # ClaudeAgentOptions.allowed_tools field, so we hook-enforce it).
+        hooks = merge_hooks(hooks, create_allowed_tools_hook(allowed_tools))
 
         # Nudge agent toward structured APIs for SUGGEST_ONLY domains
         hooks = merge_hooks(hooks, create_suggest_only_nudge_hooks())
-
-        # Nudge agent toward web_search when it uses WebSearch (live mode only;
-        # in retrodict mode, WebSearch is denied entirely by retrodict hooks)
-        if not cutoff:
-            hooks = merge_hooks(hooks, create_websearch_nudge_hooks())
 
         # Compose with retrodict hooks if in retrodict mode
         if cutoff:
             retrodict_hooks = create_retrodict_hooks()
             hooks = merge_hooks(hooks, retrodict_hooks)
 
-        # Shared reviewer state: reflection tool records verdicts,
-        # StructuredOutput hook checks them.
+        # Shared gate state: reflection caches input, premortem records
+        # reviewer verdicts, StructuredOutput hook checks both.
         review_state = ReviewState() if post_id > 0 else None
 
         # StructuredOutput hook: unwrap {"parameter": {...}} + reviewer gate.
         # Must be LAST PreToolUse hook (CLI bug #15897: updatedInput is
         # discarded when later hooks overwrite the result).
         hooks = merge_hooks(hooks, create_structured_output_hooks(review_state))
-
-        # Centralized tool policy determines MCP servers and allowed tools
-        policy = ToolPolicy.from_settings(settings)
 
         # Create MCP servers first so we can extract tool descriptions
         mcp_servers = policy.get_mcp_servers(
@@ -937,12 +939,17 @@ async def run_forecast(
             get_trace=lambda: build_trace(
                 all_messages,
                 question_title,
-                exclude_tools=frozenset({"mcp__notes__reflection"}),
+                exclude_tools=frozenset(
+                    {"mcp__notes__reflection", "mcp__premortem__premortem"}
+                ),
             ),
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
             review_state=review_state,
         )
+
+        # Build data-gathering MCP servers for the research sub-agent
+        session.research_mcp_servers = policy.get_research_mcp_servers(sandbox)
 
         try:
             async with build_client(
@@ -971,7 +978,7 @@ async def run_forecast(
                     session_downloads,
                     Path.home() / ".claude" / "projects",
                 ],
-                allowed_tools=policy.get_allowed_tools(allow_spawn=allow_spawn),
+                allowed_tools=allowed_tools,
                 output_format={
                     "type": "json_schema",
                     "schema": output_schema,
@@ -1033,23 +1040,8 @@ async def run_forecast(
                                 "Unhandled message type: %s", type(message).__name__
                             )
         except Exception as exc:
-            if post_id > 0 and (collected_text or all_messages):
-                try:
-                    save_forecast(
-                        question_id=actual_question_id,
-                        post_id=post_id,
-                        question_title=question_title,
-                        question_type=question_type,
-                        summary=f"PARTIAL: {type(exc).__name__}: {exc}",
-                        factors=[],
-                        reasoning="\n".join(collected_text),
-                        sources_consulted=extract_sources(all_messages),
-                        partial=True,
-                        retrodict_date=cutoff.isoformat() if cutoff else None,
-                    )
-                except Exception:
-                    logger.warning("Failed to save partial forecast")
-            logging.getLogger().removeHandler(_log_handler)
+            save_partial(f"{type(exc).__name__}: {exc}")
+            logging.getLogger("aib").removeHandler(_log_handler)
             _log_handler.close()
             raise
         finally:
@@ -1057,16 +1049,21 @@ async def run_forecast(
             reset_session()
 
     if result is None:
+        save_partial("No result received from agent")
         raise RuntimeError("No result received from agent")
 
-    # Post-session Opus review (replaces Sonnet condensation)
-    forecast_summary = await review_forecast_trace(
-        build_trace(all_messages, question_title),
-        question_title,
-        notes.session,
-        structured_output=result.structured_output,
-        is_retrodict=cutoff is not None,
-    )
+    try:
+        # Post-session Opus review (replaces Sonnet condensation)
+        forecast_summary = await review_forecast_trace(
+            build_trace(all_messages, question_title),
+            question_title,
+            notes.session,
+            structured_output=result.structured_output,
+            is_retrodict=cutoff is not None,
+        )
+    except Exception as exc:
+        save_partial(f"review_forecast_trace failed: {type(exc).__name__}: {exc}")
+        raise
 
     # Extract structured forecast based on question type
     output = ForecastOutput(
@@ -1074,9 +1071,6 @@ async def run_forecast(
         post_id=post_id,
         question_title=question_title,
         question_type=question_type,
-        question_category=ForecastOutput.classify_category(
-            question_title, question_type
-        ),
         summary="No forecast produced",
         factors=[],
         reasoning=next(
@@ -1120,7 +1114,7 @@ async def run_forecast(
             output.percentiles = forecast.get_percentile_dict()
 
             # Generate CDF from percentiles or mixture components
-            bounds = context.get("numeric_bounds", {})
+            bounds = context.get("numeric_bounds") or {}
             if (
                 bounds.get("range_min") is not None
                 and bounds.get("range_max") is not None
@@ -1209,8 +1203,8 @@ async def run_forecast(
         subagents_used = []
         if metrics and "by_tool" in metrics:
             for tool_name in metrics["by_tool"]:
-                if tool_name == "spawn_subquestions":
-                    subagents_used.append("(via spawn_subquestions)")
+                if tool_name == "subforecast":
+                    subagents_used.append("(via subforecast)")
 
         if reflection_file.exists():
             output.meta = ForecastMeta(
@@ -1245,6 +1239,10 @@ async def run_forecast(
                 subagents_used=subagents_used,
             )
 
+    # Record revision history from reviewer interactions (before save)
+    if review_state and review_state.history:
+        output.revision_history = review_state.history
+
     # Auto-save forecast to history (for top-level forecasts only)
     if post_id > 0 and actual_question_id > 0:
         try:
@@ -1275,6 +1273,7 @@ async def run_forecast(
                 "sources_consulted": output.sources_consulted,
                 "resolution_criteria": context.get("resolution_criteria"),
                 "fine_print": context.get("fine_print"),
+                "revision_history": output.revision_history,
             }
 
             save_forecast(
@@ -1284,11 +1283,7 @@ async def run_forecast(
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
 
-    # Record revision history from reviewer interactions
-    if review_state and review_state.history:
-        output.revision_history = review_state.history
-
-    logging.getLogger().removeHandler(_log_handler)
+    logging.getLogger("aib").removeHandler(_log_handler)
     _log_handler.close()
 
     return output

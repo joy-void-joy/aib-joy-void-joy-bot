@@ -81,9 +81,11 @@ class TestWaybackTimestampNormalization:
 class TestRetrodictHooks:
     """Tests for the PreToolUse hooks.
 
-    The hooks handle:
-    - Denying tools with no retrodict support (WebSearch, WebFetch, Playwright, search_news)
-    - Allowing everything else (tools read ContextVar internally)
+    The retrodict hook denies the few tools that exist in allowed_tools but
+    have no retrodict-aware filtering (currently just Bash). Tools excluded
+    from allowed_tools entirely (asknews, playwright, WebSearch, WebFetch)
+    are denied upstream by create_allowed_tools_hook in both modes with
+    identical wording — they pass through the retrodict hook unchanged.
     """
 
     @pytest.fixture(autouse=True)
@@ -120,53 +122,34 @@ class TestRetrodictHooks:
     # --- Denial tests ---
 
     @pytest.mark.asyncio
-    async def test_websearch_denied(self, hooks: HooksConfig) -> None:
-        """WebSearch should be denied without revealing retrodict mode."""
-        result = await self._invoke_hook(hooks, "WebSearch", {"query": "test"})
+    async def test_bash_denied(self, hooks: HooksConfig) -> None:
+        """Bash should be denied in retrodict mode."""
+        result = await self._invoke_hook(hooks, "Bash", {"command": "ls"})
         output = result["hookSpecificOutput"]
         assert output["permissionDecision"] == "deny"
-        assert "not available" in output["permissionDecisionReason"]
-        assert "retrodict" not in output["permissionDecisionReason"].lower()
+        assert output["permissionDecisionReason"] == "Bash is not available."
 
     @pytest.mark.asyncio
-    async def test_asknews_tools_denied(self, hooks: HooksConfig) -> None:
-        """All AskNews tools should be denied in retrodict mode."""
-        asknews_tools = [
+    async def test_excluded_tools_pass_through(self, hooks: HooksConfig) -> None:
+        """Tools excluded from allowed_tools (asknews, playwright, WebSearch,
+        WebFetch) pass through the retrodict hook — they're denied upstream by
+        create_allowed_tools_hook in both live and retrodict mode with
+        identical wording.
+        """
+        excluded_tools = [
             "mcp__asknews__search_news",
-            "mcp__asknews__search_wikipedia",
             "mcp__asknews__search_google",
-            "mcp__asknews__search_x_twitter",
             "mcp__asknews__do_news_research",
+            "mcp__playwright__browser_navigate",
+            "WebSearch",
+            "WebFetch",
         ]
-        for tool_name in asknews_tools:
+        for tool_name in excluded_tools:
             result = await self._invoke_hook(hooks, tool_name, {"query": "test"})
             output = result["hookSpecificOutput"]
-            assert output["permissionDecision"] == "deny", (
-                f"{tool_name} should be denied"
+            assert output["permissionDecision"] == "allow", (
+                f"{tool_name} should pass through retrodict hook (denied upstream)"
             )
-
-    @pytest.mark.asyncio
-    async def test_playwright_denied(self, hooks: HooksConfig) -> None:
-        """Playwright tools should be denied in retrodict mode."""
-        result = await self._invoke_hook(
-            hooks, "mcp__playwright__browser_navigate", {"url": "https://example.com"}
-        )
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
-
-    # --- WebFetch tests (denied, use mcp__search__fetch_url instead) ---
-
-    @pytest.mark.asyncio
-    async def test_webfetch_denied(self, hooks: HooksConfig) -> None:
-        """WebFetch should be denied with hint to use fetch tool."""
-        result = await self._invoke_hook(
-            hooks, "WebFetch", {"url": "https://example.com/page"}
-        )
-
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
-        assert "not available" in output["permissionDecisionReason"]
-        assert "mcp__search__fetch_url" in output["permissionDecisionReason"]
 
     # --- Passthrough tests ---
 

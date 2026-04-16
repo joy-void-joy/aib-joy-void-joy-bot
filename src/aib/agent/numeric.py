@@ -11,13 +11,16 @@ Ported from to_port/main_with_no_framework.py with improved typing and structure
 
 import logging
 from collections import Counter
-from typing import Self
+from typing import Literal, Self
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, model_validator
 from scipy import stats
+from scipy.ndimage import gaussian_filter1d
 
 logger = logging.getLogger(__name__)
+
+CdfCapMode = Literal["uniform", "redistribute"]
 
 
 class NumericDefaults:
@@ -122,6 +125,7 @@ class NumericDistribution(BaseModel):
     zero_point: float | None = None
     cdf_size: int | None = None  # None means use DEFAULT_CDF_SIZE (201)
     standardize_cdf: bool = True
+    cap_mode: CdfCapMode = "uniform"
     strict_validation: bool = True
 
     @model_validator(mode="after")
@@ -525,10 +529,13 @@ class NumericDistribution(BaseModel):
         for i in range(len(cdf_array)):
             cdf_array[i] = apply_minimum(cdf_array[i], i / (len(cdf_array) - 1))
 
-        # Apply PMF cap via outward redistribution from peaks
         pmf = np.diff(cdf_array, prepend=0, append=1)
         cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
-        pmf = redistribute_capped_pmf(pmf, cap)
+
+        pmf = apply_pmf_cap(pmf, cap, self.cap_mode)
+        if len(pmf) > 3:
+            pmf[1:-1] = gaussian_filter1d(pmf[1:-1], sigma=1.0)
+        pmf = apply_pmf_cap(pmf, cap, self.cap_mode)
 
         # Defensive renormalize to preserve exact tail mass
         inner_sum = pmf[1:-1].sum()
@@ -601,11 +608,63 @@ def redistribute_capped_pmf(pmf: np.ndarray, cap: float) -> np.ndarray:
     return result
 
 
+def uniform_scale_capped_pmf(pmf: np.ndarray, cap: float) -> np.ndarray:
+    """Scale all inner PMF bins by a uniform factor, clipping at cap.
+
+    Binary-searches for the scalar that makes the capped PMF sum to 1.0.
+    Preserves relative shape — tails, shoulders, skew stay proportional.
+
+    Args:
+        pmf: PMF array of length cdf_size + 1. pmf[0] is lower tail mass,
+             pmf[-1] is upper tail mass, pmf[1:-1] are inner bins.
+        cap: Maximum allowed PMF value per inner bin.
+
+    Returns:
+        New PMF array with same total sum, all inner bins <= cap.
+    """
+    result = pmf.copy()
+    inner = result[1:-1]
+
+    if not np.any(inner > cap):
+        return result
+
+    def capped_at_scale(scale: float) -> np.ndarray:
+        return np.minimum(cap, scale * inner)
+
+    def capped_sum(scale: float) -> float:
+        return float(result[0] + capped_at_scale(scale).sum() + result[-1])
+
+    lo = hi = scale = 1.0
+    while capped_sum(hi) < 1.0:
+        hi *= 1.2
+
+    for _ in range(100):
+        scale = 0.5 * (lo + hi)
+        s = capped_sum(scale)
+        if s < 1.0:
+            lo = scale
+        else:
+            hi = scale
+        if abs(s - 1.0) < 1e-10 or (hi - lo) < 2e-5:
+            break
+
+    result[1:-1] = capped_at_scale(scale)
+    return result
+
+
+def apply_pmf_cap(pmf: np.ndarray, cap: float, mode: CdfCapMode) -> np.ndarray:
+    """Apply PMF cap using the specified mode."""
+    if mode == "uniform":
+        return uniform_scale_capped_pmf(pmf, cap)
+    return redistribute_capped_pmf(pmf, cap)
+
+
 def standardize_cdf(
     cdf: list[float],
     *,
     open_lower_bound: bool,
     open_upper_bound: bool,
+    cap_mode: CdfCapMode = "uniform",
 ) -> list[float]:
     """Apply Metaculus standardization rules to a raw CDF.
 
@@ -644,7 +703,7 @@ def standardize_cdf(
 
     pmf = np.diff(cdf_array, prepend=0, append=1)
     cap = NumericDefaults.get_max_pmf_value(len(cdf_array))
-    pmf = redistribute_capped_pmf(pmf, cap)
+    pmf = apply_pmf_cap(pmf, cap, cap_mode)
 
     inner_sum = pmf[1:-1].sum()
     if inner_sum > 0:
@@ -664,6 +723,7 @@ def percentiles_to_cdf(
     open_lower_bound: bool = False,
     zero_point: float | None = None,
     cdf_size: int = 201,
+    cap_mode: CdfCapMode = "uniform",
 ) -> list[float]:
     """Convert percentile estimates to Metaculus CDF format.
 
@@ -703,6 +763,7 @@ def percentiles_to_cdf(
         lower_bound=lower_bound,
         zero_point=zero_point,
         cdf_size=cdf_size,
+        cap_mode=cap_mode,
     )
 
     return dist.get_cdf_as_floats()
@@ -772,6 +833,7 @@ class MixtureDistributionConfig(BaseModel):
     open_upper_bound: bool = False
     zero_point: float | None = None
     use_lognormal: bool = False
+    cap_mode: CdfCapMode = "uniform"
 
     @field_validator("components")
     @classmethod
@@ -934,4 +996,5 @@ def mixture_components_to_cdf(
         clamped.tolist(),
         open_lower_bound=config.open_lower_bound,
         open_upper_bound=config.open_upper_bound,
+        cap_mode=config.cap_mode,
     )
