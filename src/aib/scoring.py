@@ -76,6 +76,106 @@ def _baseline_numeric(data: dict[str, object]) -> float | None:
     if resolution is None or not isinstance(cdf, list) or not isinstance(bounds, dict):
         return None
 
+    pdf = _pdf_at_resolution(cdf, bounds, resolution)
+    if pdf is None:
+        return None
+
+    open_lower = bounds.get("open_lower_bound", False)
+    open_upper = bounds.get("open_upper_bound", False)
+    n_open = (1 if open_lower else 0) + (1 if open_upper else 0)
+    uniform_baseline = 1.0 - 0.05 * n_open
+
+    return 100.0 * (math.log(pdf) - math.log(uniform_baseline)) / 2.0
+
+
+def compute_peer_score(data: dict[str, object]) -> float | None:
+    """Estimated peer score: rescaled log score vs community prediction.
+
+    Binary:  100 * (ln(p_our) - ln(p_community))
+    MC:      100 * (ln(P_our) - ln(P_community)) / ln(N)
+    Numeric: 100 * (ln(pdf_our) - ln(pdf_community)) / 2
+
+    Uses community_mean (binary), community_means (MC), or
+    community_cdf + community_scaling (numeric) from stored data.
+
+    Positive = better than community, 0 = same, negative = worse.
+    This is a snapshot estimate, not the time-averaged official score.
+    """
+    qtype = str(data.get("question_type", ""))
+
+    if qtype == "binary":
+        return _peer_binary(data)
+    if qtype == "multiple_choice":
+        return _peer_mc(data)
+    if qtype in ("numeric", "discrete"):
+        return _peer_numeric(data)
+    return None
+
+
+def _peer_binary(data: dict[str, object]) -> float | None:
+    prob = data.get("probability")
+    cp = data.get("community_mean")
+    resolution = resolve_binary(data)
+    if (
+        not isinstance(prob, (int, float))
+        or not isinstance(cp, (int, float))
+        or resolution is None
+    ):
+        return None
+    p_our = max(0.001, min(0.999, prob if resolution == "yes" else 1.0 - prob))
+    p_cp = max(0.001, min(0.999, cp if resolution == "yes" else 1.0 - cp))
+    return 100.0 * (math.log(p_our) - math.log(p_cp))
+
+
+def _peer_mc(data: dict[str, object]) -> float | None:
+    mc_res = resolve_mc(data)
+    probs = data.get("probabilities")
+    cp_means = data.get("community_means")
+    if not mc_res or not isinstance(probs, dict) or not isinstance(cp_means, list):
+        return None
+    options = sorted(probs.keys())
+    if len(options) < 2 or len(cp_means) != len(options):
+        return None
+    res_idx = options.index(mc_res) if mc_res in options else -1
+    if res_idx < 0:
+        return None
+    p_our = max(0.001, probs[mc_res])
+    p_cp = max(0.001, cp_means[res_idx])
+    n = len(options)
+    return 100.0 * (math.log(p_our) - math.log(p_cp)) / math.log(n)
+
+
+def _peer_numeric(data: dict[str, object]) -> float | None:
+    """Peer score for numeric/discrete: 100 * (ln(pdf_our) - ln(pdf_cp)) / 2."""
+    resolution = resolve_numeric(data)
+    our_cdf = data.get("cdf")
+    cp_cdf = data.get("community_cdf")
+    bounds = data.get("numeric_bounds")
+    cp_scaling = data.get("community_scaling")
+    if (
+        resolution is None
+        or not isinstance(our_cdf, list)
+        or not isinstance(cp_cdf, list)
+    ):
+        return None
+    if not isinstance(bounds, dict):
+        return None
+
+    our_pdf = _pdf_at_resolution(our_cdf, bounds, resolution)
+    cp_bounds = cp_scaling if isinstance(cp_scaling, dict) else bounds
+    cp_pdf = _pdf_at_resolution(cp_cdf, cp_bounds, resolution)
+    if our_pdf is None or cp_pdf is None:
+        return None
+
+    return 100.0 * (math.log(our_pdf) - math.log(cp_pdf)) / 2.0
+
+
+def _pdf_at_resolution(
+    cdf: list[float],
+    bounds: dict[str, object],
+    resolution: float,
+) -> float | None:
+    """Extract PDF value from a CDF at a resolution point."""
     range_min = bounds.get("range_min")
     range_max = bounds.get("range_max")
     if not isinstance(range_min, (int, float)) or not isinstance(
@@ -84,25 +184,15 @@ def _baseline_numeric(data: dict[str, object]) -> float | None:
         return None
     if range_max <= range_min:
         return None
-
     n_points = len(cdf)
     if n_points < 2:
         return None
-
     qrange = float(range_max - range_min)
     frac = (resolution - range_min) / qrange
     idx = frac * (n_points - 1)
     i = max(0, min(n_points - 2, int(idx)))
-
     pdf = (cdf[i + 1] - cdf[i]) * (n_points - 1)
-    pdf = max(0.01, min(pdf, 35.0))
-
-    open_lower = bounds.get("open_lower_bound", False)
-    open_upper = bounds.get("open_upper_bound", False)
-    n_open = (1 if open_lower else 0) + (1 if open_upper else 0)
-    uniform_baseline = 1.0 - 0.05 * n_open
-
-    return 100.0 * (math.log(pdf) - math.log(uniform_baseline)) / 2.0
+    return max(0.01, min(pdf, 35.0))
 
 
 def resolve_binary(data: dict[str, object]) -> str | None:
@@ -217,6 +307,25 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
     )
     cost = token_usage.get("cost_usd", "") if isinstance(token_usage, dict) else ""
 
+    # Peer and baseline scores: use stored value if present, else compute locally
+    stored_peer = data.get("peer_score")
+    stored_baseline = data.get("baseline_score")
+    if isinstance(stored_peer, (int, float)):
+        peer_str = f"{stored_peer:.4f}"
+        peer_estimated = False
+    else:
+        local_peer = compute_peer_score(data) if resolved else None
+        peer_str = f"{local_peer:.4f}" if local_peer is not None else ""
+        peer_estimated = local_peer is not None
+
+    if isinstance(stored_baseline, (int, float)):
+        baseline_str = f"{stored_baseline:.4f}"
+        baseline_estimated = False
+    else:
+        local_baseline = compute_baseline_score(data) if resolved else None
+        baseline_str = f"{local_baseline:.4f}" if local_baseline is not None else ""
+        baseline_estimated = local_baseline is not None
+
     return {
         "post_id": str(data.get("post_id", data.get("question_id", ""))),
         "question_id": str(data.get("question_id", "")),
@@ -237,6 +346,10 @@ def build_score_row(data: dict[str, object], source: str) -> dict[str, str]:
         "abs_error": abs_error,
         "norm_error": norm_error,
         "within_ci": within_ci,
+        "peer_score": peer_str,
+        "peer_estimated": str(peer_estimated),
+        "baseline_score": baseline_str,
+        "baseline_estimated": str(baseline_estimated),
         "duration_seconds": str(duration) if duration else "",
         "cost_usd": str(cost) if cost else "",
     }

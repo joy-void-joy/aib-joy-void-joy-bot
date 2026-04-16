@@ -2,7 +2,8 @@
 
 Thin CLI wrapper around aib.scoring for interactive use.
 Also hosts the Metaculus track-record scraping logic (Playwright headless
-browser extraction of React internals from the profile page).
+browser extraction of React internals from the profile page) and
+community prediction scraping for local peer score computation.
 """
 
 import asyncio
@@ -163,6 +164,168 @@ async def fetch_scores(user_id: int) -> dict[str, object]:
     return result
 
 
+QUESTION_URL = "https://www.metaculus.com/questions/{post_id}/"
+
+EXTRACT_CP_JS = """
+() => {
+    const elements = document.querySelectorAll("div, section, main");
+    const seen = new Set();
+    for (const el of elements) {
+        const fk = Object.keys(el).find(k => k.startsWith("__reactFiber"));
+        if (!fk) continue;
+        let fiber = el[fk];
+        let depth = 0;
+        while (fiber && depth < 60) {
+            const props = fiber.memoizedProps || fiber.pendingProps;
+            if (props && !seen.has(fiber)) {
+                seen.add(fiber);
+                if (props.question && typeof props.question === "object") {
+                    const q = props.question;
+                    if (q.aggregations) {
+                        const result = {type: q.type, options: q.options};
+                        for (const [method, val] of Object.entries(q.aggregations)) {
+                            if (val && val.latest) {
+                                result.agg = {
+                                    means: val.latest.means,
+                                    centers: val.latest.centers,
+                                    forecast_values: val.latest.forecast_values,
+                                    forecaster_count: val.latest.forecaster_count,
+                                };
+                            }
+                        }
+                        if (q.scaling) {
+                            result.scaling = {
+                                range_min: q.scaling.range_min,
+                                range_max: q.scaling.range_max,
+                            };
+                        }
+                        if (q.open_lower_bound !== undefined) {
+                            result.open_lower_bound = q.open_lower_bound;
+                            result.open_upper_bound = q.open_upper_bound;
+                        }
+                        return result;
+                    }
+                }
+            }
+            fiber = fiber.return;
+            depth++;
+        }
+    }
+    return {error: "no_question_data"};
+}
+"""
+
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
+class CommunityData:
+    """Community prediction data extracted from a question page."""
+
+    def __init__(self, raw: dict[str, object], post_id: int) -> None:
+        self.post_id = post_id
+        self.qtype = str(raw.get("type", ""))
+        self.raw = raw
+
+    def to_forecast_updates(self) -> dict[str, object]:
+        """Convert to dict of fields for updating a forecast JSON."""
+        agg = self.raw.get("agg")
+        if not isinstance(agg, dict):
+            return {}
+
+        updates: dict[str, object] = {}
+        means = agg.get("means")
+        forecast_values = agg.get("forecast_values")
+
+        if self.qtype == "binary" and isinstance(means, list) and means:
+            updates["community_mean"] = means[0]
+
+        elif self.qtype == "multiple_choice" and isinstance(means, list):
+            updates["community_means"] = means
+
+        elif self.qtype in ("numeric", "discrete"):
+            if isinstance(forecast_values, list) and len(forecast_values) > 1:
+                updates["community_cdf"] = forecast_values
+            scaling = self.raw.get("scaling")
+            if isinstance(scaling, dict):
+                updates["community_scaling"] = {
+                    "range_min": scaling.get("range_min"),
+                    "range_max": scaling.get("range_max"),
+                    "open_lower_bound": self.raw.get("open_lower_bound"),
+                    "open_upper_bound": self.raw.get("open_upper_bound"),
+                }
+
+        return updates
+
+
+async def scrape_community_prediction(
+    post_id: int,
+    page: object,
+) -> CommunityData | None:
+    """Extract community prediction from a question page using React fiber.
+
+    Requires an authenticated Playwright page (with auth header route).
+    """
+    url = QUESTION_URL.format(post_id=post_id)
+    await page.goto(url, wait_until="domcontentloaded", timeout=60_000)  # type: ignore[union-attr]
+    try:
+        await page.wait_for_selector("svg", state="attached", timeout=15_000)  # type: ignore[union-attr]
+    except Exception:
+        pass
+    await page.wait_for_timeout(4_000)  # type: ignore[union-attr]
+
+    result = await page.evaluate(EXTRACT_CP_JS)  # type: ignore[union-attr]
+    if isinstance(result, dict) and "error" in result:
+        return None
+
+    return CommunityData(result, post_id)
+
+
+async def scrape_community_batch(
+    post_ids: list[int],
+    on_complete: "Callable[[int, CommunityData | None], None] | None" = None,
+) -> dict[int, CommunityData]:
+    """Scrape community predictions for multiple questions.
+
+    Opens one browser, reuses the page for all questions.
+    """
+    from playwright.async_api import async_playwright
+
+    from aib.config import settings
+
+    results: dict[int, CommunityData] = {}
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        context = await browser.new_context(user_agent=USER_AGENT)
+        page = await context.new_page()
+
+        token = settings.metaculus_token
+
+        async def add_auth(route: object) -> None:
+            headers = {**route.request.headers, "Authorization": f"Token {token}"}  # type: ignore[union-attr]
+            await route.continue_(headers=headers)  # type: ignore[union-attr]
+
+        await page.route("**/*", add_auth)
+
+        for pid in post_ids:
+            try:
+                data = await scrape_community_prediction(pid, page)
+                if data is not None:
+                    results[pid] = data
+                if on_complete is not None:
+                    on_complete(pid, data)
+            except Exception:
+                if on_complete is not None:
+                    on_complete(pid, None)
+
+        await browser.close()
+
+    return results
+
+
 def normalize_resolution(raw: str) -> str | float:
     """Normalize a scraped resolution string to forecast JSON format."""
     s = raw.strip()
@@ -196,7 +359,9 @@ def resolve_scraped(
     updated = 0
     unchanged = 0
 
-    for post_id, rec in tqdm(sorted(scores_by_post.items()), desc="Updating scores", unit="post"):
+    for post_id, rec in tqdm(
+        sorted(scores_by_post.items()), desc="Updating scores", unit="post"
+    ):
         raw_res = rec.get("question_resolution")
         peer = rec.get("score")
         score_ts = rec.get("score_timestamp")
@@ -333,10 +498,11 @@ def show(
 
     typer.echo(
         f"\n{'ID':<8} {'Src':<6} {'Ver':<6} {'Type':<8} "
+        f"{'Peer':<8} {'Base':<8} "
         f"{'Brier':<8} {'LogS':<8} {'AbsErr':<8} {'NormErr':<8} "
         f"{'Res':<6} {'Title'}"
     )
-    typer.echo("-" * 116)
+    typer.echo("-" * 132)
 
     for r in rows:
         brier = r.get("brier", "")
@@ -349,8 +515,17 @@ def show(
         norm_str = f"{float(norm_err):.2f}" if norm_err else "-"
         res = r.get("resolution", "")[:6] if r["resolved"] == "True" else "-"
         ver = r.get("agent_version", "")[:6] or "-"
+
+        peer = r.get("peer_score", "")
+        base = r.get("baseline_score", "")
+        est_prefix = "~" if r.get("peer_estimated") == "True" else ""
+        peer_str = f"{est_prefix}{float(peer):+.1f}" if peer else "-"
+        base_prefix = "~" if r.get("baseline_estimated") == "True" else ""
+        base_str = f"{base_prefix}{float(base):+.1f}" if base else "-"
+
         typer.echo(
             f"{r['post_id']:<8} {r['source']:<6} {ver:<6} {r['question_type']:<8} "
+            f"{peer_str:<8} {base_str:<8} "
             f"{brier_str:<8} {log_str:<8} {abs_str:<8} {norm_str:<8} "
             f"{res:<6} {r['question_title'][:40]}"
         )
@@ -393,6 +568,16 @@ def summary(
         if briers:
             typer.echo(
                 f"  Avg Brier: {sum(briers) / len(briers):.4f} (n={len(briers)})"
+            )
+        peers = [float(r["peer_score"]) for r in resolved if r.get("peer_score")]
+        baselines = [
+            float(r["baseline_score"]) for r in resolved if r.get("baseline_score")
+        ]
+        if peers:
+            typer.echo(f"  Avg Peer:  {sum(peers) / len(peers):+.1f} (n={len(peers)})")
+        if baselines:
+            typer.echo(
+                f"  Avg Base:  {sum(baselines) / len(baselines):+.1f} (n={len(baselines)})"
             )
         typer.echo()
 
@@ -1473,6 +1658,83 @@ def track_record_cmd(
     if baseline_scores_list:
         avg = sum(baseline_scores_list) / len(baseline_scores_list)
         typer.echo(f"Avg baseline score:{avg:>+8.2f}")
+
+
+@app.command("backfill-scores")
+def backfill_scores_cmd(
+    limit: int = typer.Option(
+        0, "--limit", "-l", help="Max questions to process (0=all)"
+    ),
+) -> None:
+    """Fetch community predictions and compute peer+baseline scores for resolved forecasts."""
+    from aib.agent.history import _update_forecast_json
+
+    from tqdm import tqdm
+
+    needs_scoring: dict[int, list[Path]] = {}
+    for d in load_all_forecast_jsons():
+        pid = d.get("post_id")
+        resolution = d.get("resolution")
+        if not isinstance(pid, int) or resolution is None:
+            continue
+        if d.get("resolution_source") == "scrape" and d.get("peer_score") is not None:
+            continue
+        if d.get("community_mean") is not None or d.get("community_cdf") is not None:
+            continue
+        needs_scoring.setdefault(pid, [])
+
+    for d in load_all_retrodict_jsons():
+        pid = d.get("post_id")
+        resolution = d.get("resolution")
+        if not isinstance(pid, int) or resolution is None:
+            continue
+        if d.get("community_mean") is not None or d.get("community_cdf") is not None:
+            continue
+        needs_scoring.setdefault(pid, [])
+
+    if not needs_scoring:
+        typer.echo(
+            "All resolved forecasts already have community data or scraped scores."
+        )
+        return
+
+    post_ids_list = sorted(needs_scoring.keys())
+    if limit > 0:
+        post_ids_list = post_ids_list[:limit]
+
+    typer.echo(f"Scraping community predictions for {len(post_ids_list)} posts...")
+
+    pbar = tqdm(total=len(post_ids_list), desc="Scraping", unit="q")
+
+    def on_done(_pid: int, _data: "CommunityData | None") -> None:
+        pbar.update(1)
+
+    community_data = asyncio.run(
+        scrape_community_batch(post_ids_list, on_complete=on_done)
+    )
+    pbar.close()
+
+    scored = 0
+    for pid in post_ids_list:
+        cd = community_data.get(pid)
+        if cd is None:
+            continue
+        cp_updates = cd.to_forecast_updates()
+        if not cp_updates:
+            continue
+
+        from aib.paths import iter_forecast_files, iter_retrodict_files
+
+        files = list(iter_forecast_files(pid)) + list(iter_retrodict_files(pid))
+        for f in files:
+            data = json.loads(f.read_text())
+            if data.get("resolution") is None:
+                continue
+            _update_forecast_json(f, **cp_updates)
+
+        scored += 1
+
+    typer.echo(f"\nScored: {scored}/{len(post_ids_list)}")
 
 
 def _fetch_cdf(post_id: int, client: object) -> dict[str, object]:

@@ -9,6 +9,7 @@ from aib.scoring import (
     compute_baseline_score,
     compute_brier,
     compute_log_score,
+    compute_peer_score,
     resolve_binary,
     resolve_mc,
     resolve_numeric,
@@ -352,3 +353,129 @@ class TestBuildScoreRow:
         }
         row = build_score_row(data, "live")
         assert row["agent_version"] == "0.3.0"
+
+    def test_peer_and_baseline_in_row(self) -> None:
+        data: dict[str, object] = {
+            "post_id": 1,
+            "question_type": "binary",
+            "question_title": "Test",
+            "timestamp": "20260101_120000",
+            "probability": 0.8,
+            "resolution": "yes",
+            "community_mean": 0.5,
+        }
+        row = build_score_row(data, "live")
+        assert row["peer_score"] != ""
+        assert row["baseline_score"] != ""
+        assert row["peer_estimated"] == "True"
+        assert row["baseline_estimated"] == "True"
+
+    def test_stored_peer_takes_precedence(self) -> None:
+        data: dict[str, object] = {
+            "post_id": 1,
+            "question_type": "binary",
+            "question_title": "Test",
+            "timestamp": "20260101_120000",
+            "probability": 0.8,
+            "resolution": "yes",
+            "peer_score": 42.0,
+            "community_mean": 0.5,
+        }
+        row = build_score_row(data, "live")
+        assert float(row["peer_score"]) == pytest.approx(42.0)
+        assert row["peer_estimated"] == "False"
+
+
+class TestComputePeerScore:
+    def test_binary_better_than_community(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.9,
+            "resolution": "yes",
+            "community_mean": 0.5,
+        }
+        score = compute_peer_score(data)
+        assert score is not None
+        assert score > 0
+
+    def test_binary_worse_than_community(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.3,
+            "resolution": "yes",
+            "community_mean": 0.8,
+        }
+        score = compute_peer_score(data)
+        assert score is not None
+        assert score < 0
+
+    def test_binary_same_as_community(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.6,
+            "resolution": "yes",
+            "community_mean": 0.6,
+        }
+        score = compute_peer_score(data)
+        assert score is not None
+        assert score == pytest.approx(0.0)
+
+    def test_binary_no_resolution(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.8,
+            "community_mean": 0.5,
+        }
+        assert compute_peer_score(data) is None
+
+    def test_binary_no_community_data(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "binary",
+            "probability": 0.8,
+            "resolution": "yes",
+        }
+        assert compute_peer_score(data) is None
+
+    def test_numeric_better_than_community(self) -> None:
+        n = 201
+        flat_cdf = [i / (n - 1) for i in range(n)]
+        peaked_cdf = [0.0] * n
+        for i in range(n):
+            frac = i / (n - 1)
+            if frac < 0.4:
+                peaked_cdf[i] = 0.0
+            elif frac > 0.6:
+                peaked_cdf[i] = 1.0
+            else:
+                peaked_cdf[i] = (frac - 0.4) / 0.2
+
+        data: dict[str, object] = {
+            "question_type": "numeric",
+            "resolution": 50.0,
+            "cdf": peaked_cdf,
+            "numeric_bounds": {"range_min": 0.0, "range_max": 100.0},
+            "community_cdf": flat_cdf,
+            "community_scaling": {"range_min": 0.0, "range_max": 100.0},
+        }
+        score = compute_peer_score(data)
+        assert score is not None
+        assert score > 0
+
+    def test_mc_better_than_community(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "multiple_choice",
+            "resolution": "B",
+            "probabilities": {"A": 0.2, "B": 0.6, "C": 0.2},
+            "community_means": [0.33, 0.34, 0.33],
+        }
+        score = compute_peer_score(data)
+        assert score is not None
+        assert score > 0
+
+    def test_mc_missing_community(self) -> None:
+        data: dict[str, object] = {
+            "question_type": "multiple_choice",
+            "resolution": "A",
+            "probabilities": {"A": 0.5, "B": 0.5},
+        }
+        assert compute_peer_score(data) is None

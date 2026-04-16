@@ -15,6 +15,7 @@ from aib.devtools.scores import app as scores_app
 from aib.devtools.trace import app as trace_app
 from aib.devtools.usage import app as usage_app
 from aib.devtools.version import app as version_app
+from aib.devtools.worldview import app as worldview_app
 
 app = typer.Typer(
     help="aib-devtools: forecasting analysis and development tools",
@@ -37,6 +38,7 @@ app.add_typer(health_app, name="health", help="Service health checks")
 app.add_typer(migration_app, name="migration", help="One-time data migrations")
 app.add_typer(usage_app, name="usage", help="API usage and rate limits")
 app.add_typer(version_app, name="version", help="Agent version management")
+app.add_typer(worldview_app, name="worldview", help="Worldview store management")
 
 if __name__ == "__main__":
     app()
