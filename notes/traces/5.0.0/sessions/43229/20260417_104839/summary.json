@@ -1,0 +1,120 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by gathering current price data for `HUBB` (Hubbell Incorporated) via web search and Yahoo Finance API. I retrieved a full 22-day price history (March 17 – April 16, 2026) showing the stock at **$521.71** at last close (April 16). I also pulled the Metaculus question details to confirm the resolution criteria: the question compares HUBB's close on 2026-04-25 to its close on 2026-04-17, using Yahoo Finance as the data source.\n\nI identified a critical calendar issue early: **April 25, 2026 is a Saturday**, so the effective comparison is Friday April 17 close vs. Friday April 24 close — exactly 5 trading days.\n\nI then conducted three parallel web searches for context:\n- **Macro market conditions**: Found that the S&P 500 closed at a record **7,041.28** and the Nasdaq was on a **12-day winning streak** (longest since 2009), with markets shrugging off Iran war/oil risks\n- **HUBB-specific news**: Confirmed Q1 2026 earnings are due **April 30** (after the resolution window), with no company-specific catalysts in the 5-day window\n- **Trade/tariff context**: Found that tariff noise persists but markets had largely priced this in\n\n## Key Evidence\n\n- **Recent price action**: HUBB rallied **+15.8%** from $472.07 (Mar 30) to $545.62 (Apr 14, 52-week high), then pulled back **-4.4%** over 2 days to $521.71\n- **Empirical volatility**: 20-day daily vol of **2.48%**, implying ~5.5% over 5 trading days — very high noise-to-signal ratio\n- **Beta = 1.00**: HUBB tracks the market closely\n- **Pre-market April 17**: Stock up **+0.63%** to ~$525, suggesting buyers stepping in after pullback\n- **No earnings catalyst**: Q1 results due April 30, after the resolution window\n\n## Quantitative Modeling\n\nI ran Monte Carlo simulations with 100K-200K iterations across multiple drift scenarios:\n\n| Scenario | Daily Drift | P(up over 5 days) |\n|---|---|---|\n| Zero drift | 0.00% | **50.0%** |\n| Market drift (10% annual) | 0.04% | **51.3%** |\n| Moderate positive | 0.10% | **53.9%** |\n| Mean reversion from high | -0.20% | **42.8%** |\n| Half recent drift | 0.26% | **59.3%** |\n| Bootstrap (empirical) | 0.52% | **67.6%** |\n\nI then computed a weighted average across scenarios (25% zero drift, 25% market drift, 20% moderate positive, 15% mean reversion, 15% half recent), yielding **P(up) = 51.4%**.\n\n## Conclusion\n\nI settled on **53%** probability, representing a modest ~1.6pp adjustment above the weighted Monte Carlo average. This adjustment is justified by the bullish broad market (S&P 500 at all-time highs) providing a mild tailwind for this beta-1.0 stock, partially offset by the mean-reversion risk from the recent sharp rally and pullback. The estimate appropriately reflects the near-coin-flip nature of 5-day stock direction forecasts with high daily volatility.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No dedicated stock conditional returns tool for computing base rates conditioned on market regime (e.g., P(stock up | market at ATH))",
+      "No prediction market lookup tool (Polymarket/Kalshi) to check if there was a relevant market for HUBB direction"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation across multiple drift scenarios using HUBB's empirical 2.48% daily volatility, weighted by scenario plausibility and adjusted for macro context.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the 4.4% pullback from the 52-week high represents a brief consolidation or the start of a larger correction, given the stock's 15.8% prior rally."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check Polymarket, Kalshi, or Manifold for a relevant prediction market on HUBB's direction, which could have provided additional signal or calibration data.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The weighted Monte Carlo average yields 51.4% but agent adjusts upward to 53% based on qualitative market momentum factor. The reflection tool noted the effective logit sum implies ~55.2%, creating a gap. The 53% sits between two different quantitative anchors, and the qualitative adjustment may slightly overweight the bullish market narrative given geopolitical risks (Iran war, Hormuz blockade) that could easily reverse market sentiment.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "52%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that April 25, 2026 is a Saturday and the effective comparison is Apr 17 vs Apr 24 close (5 trading days) — this is a common error that was avoided",
+    "Ran Monte Carlo with multiple drift scenarios (zero, market, moderate, mean-reversion, half-recent) rather than relying on a single assumption, providing a robust range of estimates",
+    "Explicitly recognized that the 21-day sample's 0.52%/day mean return was inflated by the V-shaped recovery and should not be used as the primary drift estimate",
+    "Appropriately calibrated near 50% for a 5-day stock direction question with high volatility (2.48% daily), avoiding the temptation to make a strong directional call",
+    "Identified the earnings date (Apr 30) as falling outside the resolution window, correctly treating it as a non-factor rather than ignoring it",
+    "Strong premortem with a specific bearish counter-narrative (38-50% Fibonacci retracement) and concrete alternative probability (47-48%)"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi, Manifold) for any relevant HUBB or broader market directional contract",
+    "The scenario weighting (25/25/20/15/15) was assigned subjectively without justification for why those specific weights were chosen over alternatives",
+    "The 'mean reversion from high' scenario used an arbitrary -0.2%/day drift without empirical basis for that specific magnitude",
+    "Did not consider whether upcoming earnings on Apr 30 might cause pre-earnings positioning or IV expansion effects during the 5-day window, even though it falls outside the window",
+    "Pre-market price (+0.63%) was used as a directional signal despite pre-market being thin-volume and an unreliable predictor of next-week returns"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks (Polymarket, Kalshi) as a standard step for equity direction questions to provide an additional calibration anchor",
+    "When using scenario weighting, briefly justify the weight allocation — e.g., based on how often each regime historically occurs or how similar current conditions are to each scenario",
+    "For the mean-reversion scenario, use empirical base rates (e.g., average 5-day return after a stock pulls back X% from a 52-week high) rather than arbitrary drift parameters",
+    "Consider pre-earnings positioning effects even when earnings fall just outside the resolution window — institutional positioning often begins 5-7 days before earnings"
+  ]
+}
