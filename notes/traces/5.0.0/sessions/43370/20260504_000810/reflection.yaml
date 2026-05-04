@@ -1,0 +1,355 @@
+---
+timestamp: 2026-05-04 00:28:17 UTC
+question_type: numeric
+factors:
+- description: Economist consensus clusters at 60-75k (Trading Economics ~70k, Investing.com
+    ~73k)
+  supports:
+    center: 70.0
+    low: 50.0
+    high: 90.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Kalshi prediction market implies mean ~99k with std ~84k, more bullish
+    than consensus. P(>80k)=56%, median around 90k
+  supports:
+    center: 99.0
+    low: -9.0
+    high: 207.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'March +178k was partly one-off: healthcare strike returns added ~35k
+    to physicians offices. This won''t repeat in April, creating mean-reversion pressure'
+  supports:
+    center: 65.0
+    low: 40.0
+    high: 120.0
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: ISM Manufacturing Employment at 46.4 in April - deeply contracting,
+    worst of 2026, 15th consecutive contraction month
+  supports:
+    center: 55.0
+    low: 20.0
+    high: 90.0
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+- description: ISM Services Employment at 45.2 in March - one of steepest drops since
+    pandemic, signals services sector pulling back on hiring
+  supports:
+    center: 60.0
+    low: 30.0
+    high: 100.0
+  logit: -0.8
+  confidence: 0.6
+  effective_logit: -0.48
+- description: Initial jobless claims at 189k for week ending April 25 - lowest since
+    September 1969, 4-week avg 207.5k. Very low layoffs
+  supports:
+    center: 110.0
+    low: 70.0
+    high: 160.0
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: JOLTS shows hiring at lowest level since pandemic despite low layoffs
+    - 'low-hire, low-fire' equilibrium
+  supports:
+    center: 65.0
+    low: 30.0
+    high: 100.0
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 2025 was revised to only ~200k total jobs for the whole year (~17k/month
+    avg). This suggests underlying trend is very weak
+  supports:
+    center: 50.0
+    low: -20.0
+    high: 100.0
+  logit: -0.7
+  confidence: 0.6
+  effective_logit: -0.42
+- description: Historical NFP surprise std dev is ~80-100k in uncertain periods, with
+    fat tails and ~55-60% positive surprise rate
+  supports:
+    center: 80.0
+    low: -10.0
+    high: 170.0
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: 'Tariff headwinds: 189.6k blue-collar jobs lost since Liberation Day.
+    Manufacturing and transportation heavily impacted'
+  supports:
+    center: 55.0
+    low: 20.0
+    high: 90.0
+  logit: -0.6
+  confidence: 0.6
+  effective_logit: -0.36
+- description: ADP weekly NER Pulse shows ~39.25k/week average through mid-April (preliminary),
+    suggesting moderate private hiring
+  supports:
+    center: 80.0
+    low: 40.0
+    high: 130.0
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  center: 83.0
+  low: 0.0
+  high: 164.0
+anchor: Consensus forecast of 70k (midpoint of 60-75k range from Trading Economics
+  and Investing.com)
+assessment: 'My central estimate is ~83k, slightly above the economist consensus of
+  60-75k but below the Kalshi market-implied median of ~90-100k.
+
+
+  Key tensions:
+
+  1. Initial claims are extraordinarily low (189k, lowest since 1969) suggesting minimal
+  layoffs → bullish for payrolls
+
+  2. But ISM employment indices are deeply contractionary in both manufacturing (46.4)
+  and services (45.2) → bearish, suggesting hiring freezes
+
+  3. March''s +178k was inflated by ~35k healthcare strike returns that won''t repeat
+
+  4. The 2025 benchmark revision showed initial reports systematically overstated
+  employment
+
+  5. Kalshi market is more bullish than economist consensus, particularly in the right
+  tail
+
+
+  The "low-hire, low-fire" dynamic is key: companies aren''t laying off workers but
+  also aren''t hiring, which could produce a modest positive print. The center of
+  80-85k seems reasonable as a compromise between the very bullish claims data and
+  the bearish ISM employment/JOLTS hiring signals.
+
+
+  Distribution width: My 80% CI of [0, 164] spans 164k, which is reasonable given
+  recent NFP volatility (3-month std dev of initial releases = 118k) and the historical
+  surprise std dev of ~85-100k in uncertain periods. The Kalshi-implied 80% CI is
+  wider at about 216k.'
+calibration_notes: My median (83k) is about 13k above the economist consensus center
+  (70k), driven primarily by very low initial claims and slight positive surprise
+  bias. My distribution is slightly narrower and lower than the Kalshi market (median
+  90-100k), which I believe is justified by ISM employment weakness. The 80% CI of
+  [0, 164] captures a wide range from flat to March-like gains.
+key_uncertainties: '1. Whether ISM employment weakness translates to actual payroll
+  weakness (diffusion indices vs levels)
+
+  2. How much of March''s strength was truly one-off vs. underlying improvement
+
+  3. Impact of DOGE federal workforce reductions on April government employment
+
+  4. Whether the claims signal (very bullish) or the ISM/JOLTS signal (bearish) is
+  more predictive
+
+  5. Possible seasonal adjustment issues given the unusual recent data volatility'
+tool_audit: 'Useful: research() sub-agent provided extensive labor market data including
+  ISM, claims, JOLTS, Challenger data. web_search found Kalshi market-implied probabilities
+  and ISM April manufacturing data. execute_code ran Monte Carlo simulations and fit
+  Kalshi-implied distribution.
+
+
+  Empty/Limited: First research sub-agent couldn''t access tools (fell back gracefully).
+  Kalshi direct market API didn''t return NFP-specific contracts (had to use Octagon
+  AI analysis).
+
+
+  No failures.'
+update_triggers: '- ADP April report (May 6): if significantly above/below 70k would
+  shift estimate
+
+  - ISM Services April report (May 5): employment sub-index would be very informative
+
+  - Any major company announcement of mass layoffs in April
+
+  - Any revision to March data released alongside April data'
+process_reflection: "The research() tool was very effective for this question - the\
+  \ Opus sub-agent compiled a comprehensive picture of the labor market. The web_search\
+  \ tool effectively found Kalshi market probabilities via Octagon AI when direct\
+  \ Kalshi didn't return results. The execute_code sandbox worked well for Monte Carlo\
+  \ simulation. \n\nOne friction point: I couldn't find the ADP April monthly report\
+  \ (not yet released as of May 4), and the ADP weekly NER Pulse data was only available\
+  \ through mid-April in snippets. Having a dedicated economic calendar tool that\
+  \ shows which reports are already out vs pending would be useful.\n\nAlso, the Kalshi\
+  \ market contracts for NFP would be more useful if there were a dedicated prediction\
+  \ market tool that could pull structured contract data rather than relying on web\
+  \ scraping."
+computed:
+  factor_count: 11
+  factor_sum: -0.26999999999999985
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Economist consensus clusters at 60-75k (Trading Economics ~70k, Investing.com
+      ~73k)
+    supports:
+      center: 70.0
+      low: 50.0
+      high: 90.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Kalshi prediction market implies mean ~99k with std ~84k, more bullish
+      than consensus. P(>80k)=56%, median around 90k
+    supports:
+      center: 99.0
+      low: -9.0
+      high: 207.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'March +178k was partly one-off: healthcare strike returns added
+      ~35k to physicians offices. This won''t repeat in April, creating mean-reversion
+      pressure'
+    supports:
+      center: 65.0
+      low: 40.0
+      high: 120.0
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: ISM Manufacturing Employment at 46.4 in April - deeply contracting,
+      worst of 2026, 15th consecutive contraction month
+    supports:
+      center: 55.0
+      low: 20.0
+      high: 90.0
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  - description: ISM Services Employment at 45.2 in March - one of steepest drops
+      since pandemic, signals services sector pulling back on hiring
+    supports:
+      center: 60.0
+      low: 30.0
+      high: 100.0
+    logit: -0.8
+    confidence: 0.6
+    effective_logit: -0.48
+  - description: Initial jobless claims at 189k for week ending April 25 - lowest
+      since September 1969, 4-week avg 207.5k. Very low layoffs
+    supports:
+      center: 110.0
+      low: 70.0
+      high: 160.0
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: JOLTS shows hiring at lowest level since pandemic despite low layoffs
+      - 'low-hire, low-fire' equilibrium
+    supports:
+      center: 65.0
+      low: 30.0
+      high: 100.0
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 2025 was revised to only ~200k total jobs for the whole year (~17k/month
+      avg). This suggests underlying trend is very weak
+    supports:
+      center: 50.0
+      low: -20.0
+      high: 100.0
+    logit: -0.7
+    confidence: 0.6
+    effective_logit: -0.42
+  - description: Historical NFP surprise std dev is ~80-100k in uncertain periods,
+      with fat tails and ~55-60% positive surprise rate
+    supports:
+      center: 80.0
+      low: -10.0
+      high: 170.0
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: 'Tariff headwinds: 189.6k blue-collar jobs lost since Liberation
+      Day. Manufacturing and transportation heavily impacted'
+    supports:
+      center: 55.0
+      low: 20.0
+      high: 90.0
+    logit: -0.6
+    confidence: 0.6
+    effective_logit: -0.36
+  - description: ADP weekly NER Pulse shows ~39.25k/week average through mid-April
+      (preliminary), suggesting moderate private hiring
+    supports:
+      center: 80.0
+      low: 40.0
+      high: 130.0
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: Initial jobless claims at 189k for week ending April 25 - lowest
+    since September 1969, 4-week avg 207.5k. Very low layoffs
+  dominant_effective_logit: 0.96
+  distribution_metrics:
+    implied_median: 74.07129798903108
+    implied_p10: 30.23400365630713
+    implied_p90: 122.2961608775137
+    median_gap: 8.92870201096892
+    median_gap_pct: 9.698558322411532
+    spread_ratio: 1.7814051392033043
+    precision: 1.9759036144578312
+  sources:
+  - '[(Metaculus) What will the US April 2026 nonfarm payrolls figure be in the initial
+    release?](https://www.metaculus.com/questions/43370)'
+  - '[Jobs numbers this month? Odds & Predictions 2026](https://kalshi.com/markets/kxpayrolls/jobs-numbers)'
+  - '[Market | Trade on Kalshi](https://kalshi.com/markets/kxpayrolls)'
+  - '[Jobs numbers in February 2026? Odds & Predictions](https://kalshi.com/markets/payrolls/jobs-numbers)'
+  - '[April Jobs Report Forecasts Show Stable Growth, but Impact From Federal Layoffs
+    and Tariffs Looms](https://www.morningstar.com/markets/april-jobs-report-forecasts-show-stable-growth-impact-federal-layoffs-tariffs-looms)'
+  - '[US nonfarm payrolls for April 2026 Odds and Forecast | Octagon AI](https://octagonai.co/markets/economics/jobs-economy/us-nonfarm-payrolls-for-april-2026/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43370
+- **Question ID**: 43366
+- **Session Duration**: 1492.1s (24.9 min)
+- **Cost**: $40.4973 total (orchestrator $3.9713 + sub-agents $36.5260)
+- **Tokens**: 13,601 total (40 in, 13,561 out)
+  - Cache: 862,440 read, 88,507 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43370_20260504_000810/20260504-000810.log`
+
+### Tool Calls
+
+- **Total**: 94 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.5549 |
+| execute_code | 13 | 0 | 678ms | — |
+| fetch_url | 21 | 0 | 10973ms | — |
+| get_coherence_links | 1 | 0 | 244ms | — |
+| get_metaculus_questions | 4 | 0 | 2042ms | — |
+| kalshi_price | 3 | 0 | 7522ms | — |
+| polymarket_price | 1 | 0 | 256ms | — |
+| premortem | 4 | 0 | 165958ms | $12.2878 |
+| reflection | 4 | 0 | 17ms | — |
+| research | 3 | 0 | 359206ms | $22.5591 |
+| web_search | 26 | 0 | 30372ms | $1.1242 |
+| wikipedia | 14 | 0 | 223ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will the US April 2026 nonfarm payrolls figure be in the in...
+- [Jobs numbers this month? Odds & Predictions 2026](https://kalshi.com/markets...
+- [Market | Trade on Kalshi](https://kalshi.com/markets/kxpayrolls)
+- [Jobs numbers in February 2026? Odds & Predictions](https://kalshi.com/market...
+- [April Jobs Report Forecasts Show Stable Growth, but Impact From Federal Layo...
+- [US nonfarm payrolls for April 2026 Odds and Forecast | Octagon AI](https://o...
