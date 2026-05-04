@@ -1,0 +1,182 @@
+---
+timestamp: 2026-05-04 13:18:31 UTC
+question_type: numeric
+factors:
+- description: No FOMC meeting before May 14 (next is June 17) - rate is anchored
+    at 3.50-3.75% target
+  supports:
+    center: 3.6834
+    low: 3.68
+    high: 3.687
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: 'Extremely stable regime since April 20: mean 3.6834, std 0.00155 over
+    10 observations'
+  supports:
+    center: 3.6834
+    low: 3.6805
+    high: 3.6864
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: Small sample size (9 daily changes) means true volatility could be
+    up to 1.9x measured
+  supports:
+    center: 3.6834
+    low: 3.676
+    high: 3.692
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Rare funding stress or liquidity event could cause temporary 5-15 bp
+    spike/dip
+  supports:
+    center: 3.69
+    low: 3.67
+    high: 3.75
+  logit: -0.3
+  confidence: 0.3
+  conditional: If there is a funding stress event before May 14
+  effective_logit: -0.09
+tentative_estimate:
+  center: 3.6834
+  low: 3.6805
+  high: 3.6863
+anchor: 'Regime mean: 3.6834 (from FRED regime_stats, stable since April 20, 10 observations)'
+assessment: 'AMERIBOR is an overnight unsecured interbank rate that closely tracks
+  the Fed Funds effective rate. With the Fed holding steady at 3.50-3.75% and no FOMC
+  meeting until June 17, there is essentially no policy risk before the May 14 resolution
+  date. The rate has been in an extraordinarily stable regime since April 20, with
+  daily standard deviation of only 1.55 basis points and a range of 3.6805 to 3.6864.
+  The simulation uses a mean-reverting (OU) process with t-distributed innovations
+  for the base case (95% weight), plus elevated volatility (4%) and rare jump scenarios
+  (1%) for tail events. The median forecast of 3.6834 is essentially the current regime
+  mean. The 80% CI spans only about 0.6 basis points, which is extremely tight but
+  consistent with the evidence: during stable Fed policy periods, AMERIBOR shows minimal
+  variation from day to day.'
+calibration_notes: 'The distribution is very tight (80% CI ~0.6 bps) but this is justified
+  by: (1) no policy change expected, (2) observed daily vol of only 1.55 bps, (3)
+  strong mean-reversion in the regime. The tails are fattened by the mixture model
+  accounting for rare funding stress events. The question bounds (3.13-4.24) suggest
+  much wider range but this would only be reached with emergency rate changes, which
+  are extremely unlikely in 10 days.'
+key_uncertainties: 1. True daily volatility (small sample of 9 observations). 2. Whether
+  a rare funding stress event occurs. 3. Whether unexpected macro shock could prompt
+  emergency Fed action (extremely unlikely).
+tool_audit: 'FRED AMERIBOR series via web_search: excellent structured data with regime
+  stats. Fed meeting calendar via web search: confirmed April 29 was the last meeting,
+  next is June 17. Wells Fargo FOMC summary confirmed rate held at 3.50-3.75%. Monte
+  Carlo simulation via execute_code: ran multiple models (random walk, OU, t-distribution,
+  blended with jumps).'
+update_triggers: Emergency FOMC meeting or statement would dramatically shift forecast.
+  Major bank failure or liquidity crisis would cause AMERIBOR to spike. Unexpected
+  geopolitical shock affecting financial markets.
+process_reflection: The FRED structured data from web_search was extremely useful,
+  providing both recent observations and regime statistics. The question is straightforward
+  for this type of short-horizon interest rate forecast - the key insight is that
+  AMERIBOR is completely policy-anchored and no policy change is coming. The forecasting
+  scaffolding worked well for this. The code execution sandbox was useful for running
+  simulations with scipy's t-distribution.
+computed:
+  factor_count: 4
+  factor_sum: 3.635
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: No FOMC meeting before May 14 (next is June 17) - rate is anchored
+      at 3.50-3.75% target
+    supports:
+      center: 3.6834
+      low: 3.68
+      high: 3.687
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: 'Extremely stable regime since April 20: mean 3.6834, std 0.00155
+      over 10 observations'
+    supports:
+      center: 3.6834
+      low: 3.6805
+      high: 3.6864
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: Small sample size (9 daily changes) means true volatility could be
+      up to 1.9x measured
+    supports:
+      center: 3.6834
+      low: 3.676
+      high: 3.692
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Rare funding stress or liquidity event could cause temporary 5-15
+      bp spike/dip
+    supports:
+      center: 3.69
+      low: 3.67
+      high: 3.75
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+    conditional: If there is a funding stress event before May 14
+  dominant_factor: No FOMC meeting before May 14 (next is June 17) - rate is anchored
+    at 3.50-3.75% target
+  dominant_effective_logit: 2.375
+  distribution_metrics:
+    implied_median: 3.6835315614617943
+    implied_p10: 3.6796788482834994
+    implied_p90: 3.688417497231451
+    median_gap: -0.0001315614617944938
+    median_gap_pct: -1.505512609307118
+    spread_ratio: 0.6637181599290436
+    precision: 0.0015746321333551202
+  sources:
+  - '[(Metaculus) What will be the value of "Overnight Unsecured AMERIBOR Benchmark
+    Interest Rate" on 2026-05-14?](https://www.metaculus.com/questions/43394)'
+  - '[Overnight Unsecured AMERIBOR Benchmark Interest Rate (AMERIBOR) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/AMERIBOR)'
+  - '[AMERIBOR Term-30 Derived Interest Rate Index (AMBOR30T) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/AMBOR30T)'
+  - '[30-Day Moving Average AMERIBOR Benchmark Interest Rate (AMBOR30) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/AMBOR30)'
+  - '[AMERIBOR Term-90 Derived Interest Rate Index (AMBOR90T) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/AMBOR90T)'
+  - '[90-Day Moving Average AMERIBOR Benchmark Interest Rate (AMBOR90) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/AMBOR90)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43394
+- **Question ID**: 43390
+- **Session Duration**: 467.1s (7.8 min)
+- **Cost**: $4.8108 total (orchestrator $2.9706 + sub-agents $1.8402)
+- **Tokens**: 10,337 total (30 in, 10,307 out)
+  - Cache: 620,672 read, 67,524 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43394_20260504_131319/20260504-131319.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 5 | 0 | 10141ms | — |
+| fetch_url | 1 | 0 | 539ms | — |
+| fred_series | 6 | 0 | 706ms | — |
+| get_metaculus_questions | 1 | 0 | 363ms | — |
+| premortem | 1 | 0 | 113608ms | $1.6809 |
+| reflection | 1 | 0 | 594ms | — |
+| web_search | 4 | 0 | 19632ms | $0.1593 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "Overnight Unsecured AMERIBOR Benchmar...
+- [Overnight Unsecured AMERIBOR Benchmark Interest Rate (AMERIBOR) | FRED | St....
+- [AMERIBOR Term-30 Derived Interest Rate Index (AMBOR30T) | FRED | St. Louis F...
+- [30-Day Moving Average AMERIBOR Benchmark Interest Rate (AMBOR30) | FRED | St...
+- [AMERIBOR Term-90 Derived Interest Rate Index (AMBOR90T) | FRED | St. Louis F...
+- [90-Day Moving Average AMERIBOR Benchmark Interest Rate (AMBOR90) | FRED | St...
