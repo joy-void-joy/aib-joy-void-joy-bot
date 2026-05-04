@@ -1,0 +1,238 @@
+---
+timestamp: 2026-05-04 00:17:26 UTC
+question_type: multiple_choice
+factors:
+- description: King Charles's state visit to US (April 27-30) caused the spike to
+    100; visit is over, natural decay expected
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: May 2 was at 100 (peak) in its window - May 4 is only 2-4 days after
+    peak, still significantly elevated above baseline
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Google Trends decay patterns show 70-80% drop within first few days
+    of shock events; half-life 1.5-3.5 days for planned ceremonies
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: No major royal events scheduled for May 5-16 that would spike US interest
+    (only garden parties, routine engagements)
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Small chance (~3%) of unexpected major royal news (health crisis, scandal,
+    death) in May 5-16 window that could boost interest
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: If decay is extremely fast (half-life <1 day), both May 4 and May 16
+    could be at baseline - but this is implausible for a multi-day state visit event
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.15
+  effective_logit: 0.045
+tentative_estimate:
+  probabilities:
+    Increases: 0.04
+    Doesn't change: 0.04
+    Decreases: 0.92
+anchor: 'Base rate for Google Trends topic decreasing by >3 points over 12 days after
+  a confirmed spike: ~80-90% based on decay literature (Cook et al. 2012 - median
+  fame duration ~2 weeks with power-law decay)'
+assessment: 'The "british royal family" search interest spiked to 100 due to King
+  Charles III''s historic state visit to the United States (April 27-30, 2026) - the
+  first by a British monarch since 2007. The visit included a speech to Congress,
+  state dinner with Trump, and extensive media coverage. May 2 was confirmed as the
+  peak in its window.
+
+
+  In the resolution window (April 16 - May 16), the state visit will be the peak (100).
+  By May 4 (2-6 days after peak depending on exact peak day), interest is declining
+  but still significantly elevated (estimated 25-50 range). By May 16 (16-18 days
+  after peak), interest will have decayed back to near baseline (estimated 5-15 range).
+  The difference of 10-40 points clearly exceeds the 3-point threshold for "Decreases."
+
+
+  Monte Carlo simulations across 3 different model specifications all show 99%+ probability
+  of "Decreases." Even with generous uncertainty about decay rates, new events, and
+  baseline levels, the direction is overwhelmingly clear. The only scenarios that
+  don''t resolve as "Decreases" require either: (1) implausibly fast decay (half-life
+  < 1 day) so May 4 is already at baseline, or (2) a major unexpected royal event
+  right before May 16 that exceeds the still-elevated May 4 level.'
+calibration_notes: My estimate of 92% for Decreases is consistent with simulations
+  (99%+) but discounted for model uncertainty and black-swan events. The simulations
+  may overstate confidence because they assume no new major events and well-behaved
+  decay. Real-world probability of Decreases is likely 88-95%.
+key_uncertainties: 1. Whether there's an unknown upcoming royal event in May 5-16
+  that could spike interest. 2. Exact Google Trends normalization in the resolution
+  window. 3. SerpAPI data quirks.
+tool_audit: 'Useful: mcp__search__web_search (confirmed state visit details, timing,
+  no upcoming events), mcp__research__research (decay pattern analysis was excellent),
+  mcp__sandbox__execute_code (Monte Carlo simulations confirmed directional strength).
+  Empty/failed: research sub-agent couldn''t access live news but the web search tools
+  compensated well.'
+process_reflection: The research tool's pre-cached decay pattern analysis was extremely
+  helpful and well-organized. The web search tools quickly confirmed the cause of
+  the spike (King Charles state visit) and the absence of upcoming events. The sandbox
+  simulations were useful for quantifying edge case probabilities. The overall workflow
+  was smooth - this is a relatively straightforward question once you identify the
+  cause of the spike and confirm no upcoming events.
+computed:
+  factor_count: 6
+  factor_sum: 5.495
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: King Charles's state visit to US (April 27-30) caused the spike to
+      100; visit is over, natural decay expected
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: May 2 was at 100 (peak) in its window - May 4 is only 2-4 days after
+      peak, still significantly elevated above baseline
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Google Trends decay patterns show 70-80% drop within first few days
+      of shock events; half-life 1.5-3.5 days for planned ceremonies
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: No major royal events scheduled for May 5-16 that would spike US
+      interest (only garden parties, routine engagements)
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Small chance (~3%) of unexpected major royal news (health crisis,
+      scandal, death) in May 5-16 window that could boost interest
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: If decay is extremely fast (half-life <1 day), both May 4 and May
+      16 could be at baseline - but this is implausible for a multi-day state visit
+      event
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.15
+    effective_logit: 0.045
+  dominant_factor: King Charles's state visit to US (April 27-30) caused the spike
+    to 100; visit is over, natural decay expected
+  dominant_effective_logit: 2.375
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 5.3
+    factors:
+    - description: King Charles's state visit to US (April 27-30) caused the spike
+        to 100; visit is over, natural decay expected
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.95
+      effective_logit: 2.375
+    - description: May 2 was at 100 (peak) in its window - May 4 is only 2-4 days
+        after peak, still significantly elevated above baseline
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: Google Trends decay patterns show 70-80% drop within first few
+        days of shock events; half-life 1.5-3.5 days for planned ceremonies
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: No major royal events scheduled for May 5-16 that would spike US
+        interest (only garden parties, routine engagements)
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.85
+      effective_logit: 0.85
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: Small chance (~3%) of unexpected major royal news (health crisis,
+        scandal, death) in May 5-16 window that could boost interest
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.045
+    factors:
+    - description: If decay is extremely fast (half-life <1 day), both May 4 and May
+        16 could be at baseline - but this is implausible for a multi-day state visit
+        event
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.15
+      effective_logit: 0.045
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.005736187631161871
+      Decreases: 0.989099381978347
+      Doesn't change: 0.005164430390491051
+    tentative_probabilities:
+      Increases: 0.04
+      Doesn't change: 0.04
+      Decreases: 0.92
+    per_option_gap_pp:
+      Increases: 3.426381236883813
+      Decreases: -6.909938197834697
+      Doesn't change: 3.4835569609508945
+    max_gap_pp: -6.909938197834697
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “british royal family” change between 2026-05-04
+    and 2026-05-16 according to Google Trends?](https://www.metaculus.com/questions/43373)'
+  - '[State visit by Charles III to the United States - Wikipedia](https://en.wikipedia.org/wiki/State_visit_by_Charles_III_to_the_United_States)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43373
+- **Question ID**: 43369
+- **Session Duration**: 759.7s (12.7 min)
+- **Cost**: $30.7475 total (orchestrator $3.4917 + sub-agents $27.2558)
+- **Tokens**: 15,578 total (29 in, 15,549 out)
+  - Cache: 599,991 read, 75,980 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43373_20260504_000808/20260504-000808.log`
+
+### Tool Calls
+
+- **Total**: 77 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.4840 |
+| execute_code | 8 | 0 | 880ms | — |
+| fetch_url | 19 | 0 | 10821ms | — |
+| get_coherence_links | 1 | 0 | 244ms | — |
+| get_metaculus_questions | 4 | 0 | 2042ms | — |
+| polymarket_price | 1 | 0 | 256ms | — |
+| premortem | 1 | 0 | 162305ms | $3.2073 |
+| reflection | 3 | 0 | 19ms | — |
+| research | 3 | 0 | 359206ms | $22.5591 |
+| web_search | 23 | 0 | 29245ms | $1.0054 |
+| wikipedia | 14 | 0 | 223ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “british royal family” change between 2026-...
+- [State visit by Charles III to the United States - Wikipedia](https://en.wiki...

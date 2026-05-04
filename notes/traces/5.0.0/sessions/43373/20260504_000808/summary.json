@@ -1,0 +1,158 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for question 43373, which asks whether Google Trends interest in \"british royal family\" will change between 2026-05-04 and 2026-05-16. The resolution criteria specify: \"Decreases\" if the May 16 value is >3 points lower than May 4, \"Increases\" if >3 points higher, and \"Doesn't change\" if within 3 points, all within the fixed April 16–May 16 window.\n\nI then used the `mcp__research__research` tool to query two topics: (1) British royal family news in May 2026, and (2) Google Trends decay patterns for royal family search spikes. The first sub-query failed to retrieve live news (search tools were unavailable in that sub-session), but provided background context. The second sub-query returned a detailed analysis of search interest decay patterns, citing academic sources including **Masicampo & Ambady (2014)** and **Cook et al. (2012)**, along with empirical benchmarks from analogous events (Trump assassination attempt, Biden dropout, Kamala Harris nomination).\n\nI ran multiple web searches to identify the cause of the spike:\n- **King Charles III made a historic state visit to the United States from April 27–30, 2026**, the first by a British monarch since 2007\n- The visit included a speech to Congress, state dinner with Trump, visits to Washington DC, New York, Virginia, and a subsequent visit to Bermuda on May 1\n- The question confirmed May 2, 2026 was at **100** (peak) in the April 2–May 2 window\n\nI also searched for upcoming royal events in May 5–16 and found only routine Buckingham Palace garden parties (May 6, 8, 12) — nothing likely to drive significant US search interest.\n\n## Key Evidence\n\n- **Confirmed cause of spike**: King Charles III's US state visit (April 27–30), the first British monarch state visit since 2007, generating massive US media coverage\n- **Peak timing**: May 2 = 100 in its window, suggesting peak interest during recap/analysis coverage after the visit concluded April 30\n- **Decay literature**: Planned ceremony events show half-life of **1.5–3.5 days**, with 70–80% drop in first day and 90%+ decay within 7–14 days (Masicampo & Ambady 2014; Cook et al. 2012)\n- **No upcoming events**: Only routine garden parties scheduled for May 5–16; no major royal events expected\n- **Monte Carlo simulations** (3 runs, 100K samples each):\n  - Simulation 1: Increases 0.0%, Doesn't change 0.8%, Decreases **99.2%**\n  - Simulation 2 (with peak uncertainty + new events): Increases 0.34%, Doesn't change 0.48%, Decreases **99.18%**\n  - Simulation 3 (with extreme decay scenarios): Increases 0.28%, Doesn't change 0.62%, Decreases **99.1%**\n- Estimated May 4 values: **mean ~28–46**, May 16 values: **mean ~8–11**, giving a typical difference of **-20 to -32 points**\n\n## Conclusion\n\nI concluded that \"Decreases\" is overwhelmingly likely. The state visit created a massive, confirmed spike that peaked around May 2. By May 4, interest is still elevated (estimated 25–50 range in the resolution window), but by May 16 (16–18 days post-peak), it will have decayed to near baseline (5–15). All three Monte Carlo simulations showed ~99% probability of Decreases.\n\nI discounted from 99% to **92%** for Decreases, allocating 4% each to \"Increases\" and \"Doesn't change\" to account for model uncertainty, potential unexpected royal news, and Google Trends normalization quirks. The premortem reviewer noted this discount was slightly conservative (their independent estimate was ~95% Decreases) but approved the forecast.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 23,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 14,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 19,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct access to Google Trends API to check the actual current value on May 4 in the resolution window — the agent had to rely on modeling from the May 2 peak",
+      "The research sub-agent's live news search failed, though web_search compensated"
+    ],
+    "subtle_bugs": [
+      "The research tool's decay pattern analysis was cached from a prior session (created 2026-04-16) and applied generically to political figures, not specifically calibrated for 'british royal family' as a search term in the US — this may introduce systematic bias in half-life estimates"
+    ]
+  },
+  "classification": {
+    "question_domain": "culture",
+    "approach": "Monte Carlo simulation of exponential decay from confirmed Google Trends spike, calibrated with academic decay literature and empirical benchmarks from analogous events.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether May 4's Google Trends value is still sufficiently elevated above baseline to create a >3 point gap with May 16, given uncertainty about the exact decay rate for this specific search term."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The agent's simulations showed ~99% Decreases but the agent only discounted to 92%. The premortem reviewer noted this same ~7pp conservative discount appeared on a prior Google Trends question (q43226), suggesting a systematic calibration pattern. However, the real concern is the opposite direction: the simulations may themselves be overfit. The decay parameters (half-life 1.5-3.5 days) are calibrated from US political figures, not royal family search terms. Royal family events may have different decay profiles (the research itself noted 'institutional permanence' and 'global audience' modifiers that could slow decay), yet the simulations don't incorporate these modifiers, potentially making even 92% too high.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent had no access to the actual Google Trends data for 'british royal family' in the resolution window (April 16-May 16). The question states May 2 = 100 in the April 2-May 2 window, but the resolution window is different. The agent modeled this indirectly but never verified what the May 4 value actually is in the resolution window. A direct check of current Google Trends data would have substantially reduced uncertainty.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Decreases ~94%, Doesn't change ~4%, Increases ~2%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the cause of the spike (King Charles state visit April 27-30) through multiple web searches, cross-referencing Wikipedia, CNN, ABC News, and the White House press release",
+    "Used three distinct Monte Carlo simulations with 100K samples each, varying assumptions about peak timing, decay rates, new event probability, and extreme decay scenarios — providing robust convergence at ~99% Decreases",
+    "Grounded decay modeling in academic literature (Masicampo & Ambady 2014, Cook et al. 2012) and empirical benchmarks from analogous Google Trends events (Trump assassination attempt, Biden dropout)",
+    "Proactively searched for upcoming royal events in the May 5-16 window, finding only routine garden parties — directly addressing the key alternative scenario",
+    "The premortem analysis identified three specific failure modes (ultra-fast decay, unexpected news, normalization effects) rather than vague concerns, and the counterargument was substantive",
+    "Correctly understood the resolution criteria including the fixed date window, 3-point threshold, and SerpAPI as authoritative source"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Metaculus community forecast) which could have provided an independent calibration point",
+    "The decay model parameters were borrowed from US political figures without adjusting for the agent's own research finding that royal family topics have 'institutional permanence' and 'global audience' modifiers that could produce different decay profiles",
+    "The 7pp discount from simulations (99% → 92%) appears to be a systematic pattern (premortem identified same discount on prior question q43226) rather than a reasoned adjustment for this specific question's uncertainties",
+    "Never attempted to directly access Google Trends data for the resolution window, even though the verification URL was provided in the question — a WebFetch or similar tool could have been tried",
+    "The simulation models all use simple exponential decay, but the research itself noted power-law decay fits better (R² = 0.67-0.80 for exponential) — this model misspecification is acknowledged in research but not incorporated into simulations"
+  ],
+  "pipeline": {
+    "issues": [
+      "Research sub-agent's first query (live news) failed because 'all search tools were unavailable in this session' — this is a recurring capability gap in the research tool",
+      "The research tool's decay analysis was pre-cached from April 16, roughly 18 days before the forecast date, using analogous events rather than the actual 'british royal family' term"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Attempt to fetch Google Trends data directly using the verification URL provided in the question, even if the tool might fail — the current value on May 4 would be the single most informative data point",
+    "Check prediction markets or community forecasts for independent calibration, especially for Metaculus questions where this data is readily available via the API",
+    "Use power-law decay models in simulations instead of exponential, since the research explicitly found power-law provides a better fit for Google Trends data",
+    "Develop a principled framework for discounting simulation results rather than applying an ad-hoc ~7pp haircut — consider calibrating this discount based on how well the simulation parameters are known",
+    "When the research tool identifies domain-specific modifiers (institutional permanence, global audience), incorporate these quantitatively into the simulation rather than noting them qualitatively"
+  ]
+}
