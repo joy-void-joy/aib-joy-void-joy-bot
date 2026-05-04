@@ -1,0 +1,469 @@
+---
+timestamp: 2026-05-04 01:39:48 UTC
+question_type: multiple_choice
+factors:
+- description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+    to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+    through May 15.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+    called fabricated). Debunked stories typically decay faster than average.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: By May 15 (14+ days after peak), virtually all viral stories have returned
+    to baseline. Power law and exponential models both predict near-zero values.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: If May 4 is already very low (3-5 on the scale), the remaining decline
+    to May 15 could be within 3 points, resolving as 'Doesn't change'.
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Google Trends sampling noise is high for low-volume terms. Integer
+    rounding means small absolute differences at low values could resolve within ±3.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+    - ongoing developments could spike interest around May 15.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: High-profile international scandal with many follow-up angles (AI deepfakes,
+    accuser's chatbot convos, wife revelations) could sustain or re-spike interest.
+  supports: Increases
+  logit: 0.3
+  confidence: 0.35
+  effective_logit: 0.105
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.23
+    Decreases: 0.65
+anchor: 'Base rate for viral news story interest declining over 11 days from near-peak:
+  ~75-85% based on typical viral content lifecycle research'
+assessment: 'This is a Google Trends question about a viral scandal that exploded
+  late April 2026. Lorna Hajdini, a JPMorgan executive, was accused of sexual harassment
+  in a lawsuit that went massively viral around April 30-May 1. The story quickly
+  fell apart (lawsuit retracted, fabrication allegations against accuser). The comparison
+  is between May 4 (3-4 days post-peak) and May 15 (14-15 days post-peak) values in
+  a fixed April 15-May 15 Google Trends window.
+
+
+  The May 2 value was 31 relative to peak (confirmed in question). Monte Carlo simulation
+  across exponential, power law, and stretched exponential decay models consistently
+  shows Decreases as the dominant outcome (~78% raw). I''ve adjusted upward for Increases
+  (to 12%) and Doesn''t change (to 23%) to account for: (1) this being an exceptionally
+  high-profile scandal with 104 Polymarket markets and ongoing developments, (2) potential
+  for lawsuit refiling or new legal action, and (3) the possibility that May 4 is
+  already at noise floor making the ±3 threshold hard to breach downward.
+
+
+  The key tension is between the very strong viral decay physics (which overwhelmingly
+  favors Decreases) and the potential for new developments in a still-active legal/media
+  situation.'
+key_uncertainties: 1. Exact May 4 value (could be 3-15 depending on decay model),
+  2. Whether new legal developments spike interest around May 15, 3. Google Trends
+  sampling noise at low volumes
+tool_audit: 'web_search: Very useful - identified the viral scandal, timeline, and
+  current status. Multiple results confirmed the story''s trajectory. fetch_url on
+  Google Trends: Failed (JS-rendered content not extractable). research(): One sub-agent
+  had no web access (returned empty), the other provided good general knowledge about
+  Google Trends volatility for niche terms. execute_code: Excellent for Monte Carlo
+  modeling of decay patterns.'
+update_triggers: 1. New lawsuit filed by or against Hajdini/Rana (would spike interest),
+  2. Criminal charges, 3. Major media event (60 Minutes piece, documentary), 4. Counter-viral
+  moment (meme revival)
+process_reflection: The Google Trends question format creates a challenge because
+  we cannot directly access the Google Trends API data. The fetch_url tool cannot
+  render the JS-heavy Google Trends page. However, the question helpfully provides
+  the May 2 baseline value (31), which anchors the entire analysis. The decay modeling
+  approach works well for this type of question. The research sub-agent's lack of
+  web access was unhelpful for the person-specific query but the general Google Trends
+  volatility research was useful context.
+computed:
+  factor_count: 7
+  factor_sum: 4.91
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+      to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+      through May 15.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+      called fabricated). Debunked stories typically decay faster than average.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: By May 15 (14+ days after peak), virtually all viral stories have
+      returned to baseline. Power law and exponential models both predict near-zero
+      values.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: If May 4 is already very low (3-5 on the scale), the remaining decline
+      to May 15 could be within 3 points, resolving as 'Doesn't change'.
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Google Trends sampling noise is high for low-volume terms. Integer
+      rounding means small absolute differences at low values could resolve within
+      ±3.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+      - ongoing developments could spike interest around May 15.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: High-profile international scandal with many follow-up angles (AI
+      deepfakes, accuser's chatbot convos, wife revelations) could sustain or re-spike
+      interest.
+    supports: Increases
+    logit: 0.3
+    confidence: 0.35
+    effective_logit: 0.105
+  dominant_factor: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+    to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+    through May 15.
+  dominant_effective_logit: 1.8
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 3.875
+    factors:
+    - description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+        to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+        through May 15.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.9
+      effective_logit: 1.8
+    - description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+        called fabricated). Debunked stories typically decay faster than average.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: By May 15 (14+ days after peak), virtually all viral stories have
+        returned to baseline. Power law and exponential models both predict near-zero
+        values.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.73
+    factors:
+    - description: If May 4 is already very low (3-5 on the scale), the remaining
+        decline to May 15 could be within 3 points, resolving as 'Doesn't change'.
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: Google Trends sampling noise is high for low-volume terms. Integer
+        rounding means small absolute differences at low values could resolve within
+        ±3.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.305
+    factors:
+    - description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+        - ongoing developments could spike interest around May 15.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+    - description: High-profile international scandal with many follow-up angles (AI
+        deepfakes, accuser's chatbot convos, wife revelations) could sustain or re-spike
+        interest.
+      supports: Increases
+      logit: 0.3
+      confidence: 0.35
+      effective_logit: 0.105
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.026283845214755273
+      Decreases: 0.9335126369528399
+      Doesn't change: 0.040203517832404806
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.23
+      Decreases: 0.65
+    per_option_gap_pp:
+      Increases: 9.371615478524472
+      Decreases: -28.35126369528399
+      Doesn't change: 18.97964821675952
+    max_gap_pp: -28.35126369528399
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “lorna hajdini” change between 2026-05-04 and
+    2026-05-15 according to Google Trends?](https://www.metaculus.com/questions/43377)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=lorna%20hajdini&date=2026-04-15%202026-05-15)'
+---
+timestamp: 2026-05-04 01:40:10 UTC
+question_type: multiple_choice
+factors:
+- description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+    to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+    through May 15.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+    called fabricated). Debunked stories typically decay faster than average.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: By May 15 (14+ days after peak), virtually all viral stories have returned
+    to baseline. Power law and exponential models both predict near-zero values.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: If May 4 is already very low (3-5 on the scale), the remaining decline
+    to May 15 could be within 3 points, resolving as Doesn't change.
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Google Trends sampling noise is high for low-volume terms. Integer
+    rounding means small absolute differences at low values could resolve within 3.
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+    - ongoing developments could spike interest around May 15.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: High-profile international scandal with many follow-up angles (AI deepfakes,
+    accuser chatbot convos, wife revelations) could sustain or re-spike interest.
+  supports: Increases
+  logit: 0.3
+  confidence: 0.35
+  effective_logit: 0.105
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.2
+    Decreases: 0.7
+assessment: Revised estimate. The Monte Carlo simulation consistently shows 74-80%
+  for Decreases across multiple parameter assumptions. The factor-implied probability
+  (93%) is too extreme because it doesn't properly weight the threshold effect (if
+  May 4 is already low, the remaining decay might be within 3 points). My revised
+  estimate of 70% Decreases is a compromise between the raw simulation (78%) and my
+  intuition that new developments have some chance. The 20% for Doesn't change accounts
+  for the real possibility that by May 4, the value is already at 3-8, and the further
+  decline to 0-3 by May 15 falls within the 3-point tolerance. The 10% for Increases
+  accounts for this being an exceptionally high-profile scandal with active legal
+  proceedings and 104 Polymarket markets - meaningfully higher than base rate for
+  new developments, but still requires a specific event that exceeds May 4 interest
+  levels.
+calibration_notes: 'Raw simulation: 78% Decreases, 19% No change, 3% Increases. I''m
+  adjusting Increases upward to 10% because the simulation doesn''t model correlated
+  news events well (one news development can trigger a cascade of follow-up coverage).
+  I''m keeping Doesn''t change at 20% (slightly above simulation). Decreases at 70%
+  is between simulation and my narrative judgment.'
+tool_audit: Monte Carlo simulation was the key analytical tool. Web search provided
+  excellent context on the scandal timeline and current status.
+process_reflection: The factor framework struggles with multiple-choice questions
+  where the factors don't map cleanly to a single logit sum. The MC distribution metrics
+  are useful but the implied probabilities from raw logit sums overweight the dominant
+  outcome. The simulation approach is more appropriate for this type of question.
+computed:
+  factor_count: 7
+  factor_sum: 4.91
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+      to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+      through May 15.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+      called fabricated). Debunked stories typically decay faster than average.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: By May 15 (14+ days after peak), virtually all viral stories have
+      returned to baseline. Power law and exponential models both predict near-zero
+      values.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: If May 4 is already very low (3-5 on the scale), the remaining decline
+      to May 15 could be within 3 points, resolving as Doesn't change.
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Google Trends sampling noise is high for low-volume terms. Integer
+      rounding means small absolute differences at low values could resolve within
+      3.
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+      - ongoing developments could spike interest around May 15.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: High-profile international scandal with many follow-up angles (AI
+      deepfakes, accuser chatbot convos, wife revelations) could sustain or re-spike
+      interest.
+    supports: Increases
+    logit: 0.3
+    confidence: 0.35
+    effective_logit: 0.105
+  dominant_factor: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+    to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+    through May 15.
+  dominant_effective_logit: 1.8
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 3.875
+    factors:
+    - description: Viral scandal peaked April 30-May 1, already decaying rapidly (100
+        to 31 in ~1 day). Classic viral decay pattern strongly predicts further decline
+        through May 15.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.9
+      effective_logit: 1.8
+    - description: Story already being debunked by May 1-2 (lawsuit retracted, claims
+        called fabricated). Debunked stories typically decay faster than average.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: By May 15 (14+ days after peak), virtually all viral stories have
+        returned to baseline. Power law and exponential models both predict near-zero
+        values.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.73
+    factors:
+    - description: If May 4 is already very low (3-5 on the scale), the remaining
+        decline to May 15 could be within 3 points, resolving as Doesn't change.
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: Google Trends sampling noise is high for low-volume terms. Integer
+        rounding means small absolute differences at low values could resolve within
+        3.
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.305
+    factors:
+    - description: 104 Polymarket markets, potential lawsuit refiling, possible counter-suit
+        - ongoing developments could spike interest around May 15.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+    - description: High-profile international scandal with many follow-up angles (AI
+        deepfakes, accuser chatbot convos, wife revelations) could sustain or re-spike
+        interest.
+      supports: Increases
+      logit: 0.3
+      confidence: 0.35
+      effective_logit: 0.105
+  mc_distribution_metrics:
+    implied_probabilities:
+      Increases: 0.026283845214755273
+      Decreases: 0.9335126369528399
+      Doesn't change: 0.040203517832404806
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.2
+      Decreases: 0.7
+    per_option_gap_pp:
+      Increases: 7.371615478524474
+      Decreases: -23.351263695283997
+      Doesn't change: 15.97964821675952
+    max_gap_pp: -23.351263695283997
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “lorna hajdini” change between 2026-05-04 and
+    2026-05-15 according to Google Trends?](https://www.metaculus.com/questions/43377)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=lorna%20hajdini&date=2026-04-15%202026-05-15)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43377
+- **Question ID**: 43373
+- **Session Duration**: 687.6s (11.5 min)
+- **Cost**: $8.2197 total (orchestrator $4.2548 + sub-agents $3.9649)
+- **Tokens**: 20,231 total (41 in, 20,190 out)
+  - Cache: 822,044 read, 80,364 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43377_20260504_013055/20260504-013055.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0195 |
+| execute_code | 5 | 0 | 1825ms | — |
+| fetch_url | 1 | 0 | 9128ms | — |
+| get_metaculus_questions | 1 | 0 | 252ms | — |
+| premortem | 1 | 0 | 99513ms | $1.8307 |
+| reflection | 2 | 0 | 9ms | — |
+| research | 1 | 0 | 85399ms | $1.8970 |
+| web_search | 5 | 0 | 19841ms | $0.2176 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “lorna hajdini” change between 2026-05-04 a...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=lorna%...
