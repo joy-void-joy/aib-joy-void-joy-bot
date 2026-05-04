@@ -1,0 +1,518 @@
+---
+timestamp: 2026-05-04 08:30:54 UTC
+question_type: multiple_choice
+factors:
+- description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May 16
+    (14 days after peak) - natural decay strongly favors decrease
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: Academic research shows 70-80% attention lost within 24 hours, 90-97%
+    within one week for event-driven spikes
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.7
+  effective_logit: 1.0499999999999998
+- description: This is an ongoing policy issue affecting millions, not a one-time
+    event - sustained interest reduces decay rate
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Active litigation with multiple courts ruling - new developments could
+    generate fresh search interest near May 16
+  supports: Increases
+  logit: 0.7
+  confidence: 0.4
+  effective_logit: 0.27999999999999997
+- description: New FBI vetting pause (April 27) is brand new and ongoing with no end
+    date - people continue discovering they're affected
+  supports: Doesn't change
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: Monte Carlo simulation with stretched exponential decay + re-spike
+    probability shows 91-95% probability of decrease across scenarios
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.75
+  effective_logit: 1.5
+- description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+    to flip the outcome - narrow timing window reduces probability
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Google Trends rescaling: if a bigger spike occurs before May 16, it
+    rescales down May 4 value, potentially reducing the gap or flipping'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.15
+    Doesn't change: 0.13
+    Decreases: 0.72
+anchor: 'Base rate for Google Trends spike decay over 12 days: ~85-90% probability
+  of decrease (based on academic literature showing 90-97% attention loss within one
+  week for event-driven spikes, moderated for policy events)'
+assessment: 'The search term "uscis pause" hit its peak (100) around May 2, 2026,
+  driven by the convergence of multiple major events: a new FBI enhanced vetting pause
+  affecting all fingerprint-based immigration applications (effective April 27), two
+  federal court rulings blocking the Trump admin''s USCIS pause (May 1), and extensive
+  media coverage (NPR, CBS, Newsweek, etc.).
+
+
+  The question compares May 4 (2 days after peak) vs May 16 (14 days after peak) in
+  the Apr 16 - May 16 window. The fundamental dynamics strongly favor "Decreases":
+
+  1. May 4 is very close to the peak, so its value will still be elevated (likely
+  50-80 range)
+
+  2. May 16 is 14 days after peak, where significant decay is expected (likely 15-35
+  range)
+
+  3. Even with slower decay for policy events (vs viral content), the 12-day gap is
+  substantial
+
+
+  The main risk to this assessment is a new, larger spike near May 16 that rescales
+  everything. This would require a major new development (bigger than the April 27-May
+  1 cluster) happening close to May 16 specifically. While new court rulings and policy
+  developments are likely, exceeding the initial burst of attention from a brand new
+  policy + dual judicial orders is improbable.
+
+
+  My simulation showed 91-95% probability of "Decreases" across all respike probability
+  scenarios (10-40%). I''m adjusting upward on Increases/Doesn''t change to ~28% combined
+  to account for model uncertainty about the exact decay dynamics for ongoing policy
+  stories and the active legal/policy environment.'
+calibration_notes: 'My Monte Carlo simulations consistently give 91-95% for Decreases.
+  I''m pulling this back to 72% to account for: (1) model uncertainty - my decay model
+  may not capture the sustained nature of this ongoing policy issue, (2) the active
+  legal environment creates genuine possibility of re-spikes, (3) avoiding overconfidence
+  on a question where the specific Google Trends value depends on complex scaling
+  dynamics. The 72% still feels like it could be too low given the strong quantitative
+  evidence, but the gap between simulation (~94%) and my estimate (~72%) reflects
+  genuine uncertainty about whether the decay model is appropriate for this type of
+  ongoing policy crisis.'
+key_uncertainties: 1. How quickly does search interest in an ONGOING policy crisis
+  (vs a one-time event) decay? My model uses event-driven decay rates which may be
+  too aggressive. 2. Will new court rulings or policy developments generate a spike
+  LARGER than the April 27-May 1 cluster? 3. What are the actual May 4 and May 16
+  values? The question is resolved based on specific integer values from an API, and
+  small differences in the actual vs modeled decay shape could matter. 4. How does
+  Google Trends handle the scaling when the time window includes both the peak and
+  subsequent days?
+tool_audit: 'Research sub-agent: Partially useful - provided excellent academic background
+  on Google Trends decay patterns but could not access live web data about USCIS events.
+  Web search: Very useful - found the key events driving the spike (FBI vetting pause
+  April 27, court rulings May 1). Fetch URL: Mixed - Google Trends page didn''t render
+  (JS-dependent), but law firm articles were accessible. Code sandbox: Very useful
+  for Monte Carlo simulation. Google Trends data not directly accessible via API in
+  my toolset.'
+update_triggers: 1. A major new court ruling or executive action on USCIS processing
+  between now and May 16 could generate a new spike. 2. If the fingerprint pause is
+  lifted or expanded, that would be a major news event. 3. Congressional hearings
+  or legislation on immigration processing would generate renewed interest. 4. A viral
+  social media moment about the USCIS pause could create a sharp spike.
+process_reflection: The main friction was inability to access actual Google Trends
+  data programmatically. The page requires JavaScript rendering which the fetch tool
+  couldn't handle, and I don't have access to the SerpApi that the question uses for
+  resolution. Having direct access to a Google Trends API would have been very valuable
+  for seeing the actual current values and trajectory. The research sub-agent was
+  hampered by tool blockages but the direct web search tool worked well for news gathering.
+computed:
+  factor_count: 8
+  factor_sum: 6.41
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+      16 (14 days after peak) - natural decay strongly favors decrease
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: Academic research shows 70-80% attention lost within 24 hours, 90-97%
+      within one week for event-driven spikes
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.7
+    effective_logit: 1.0499999999999998
+  - description: This is an ongoing policy issue affecting millions, not a one-time
+      event - sustained interest reduces decay rate
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Active litigation with multiple courts ruling - new developments
+      could generate fresh search interest near May 16
+    supports: Increases
+    logit: 0.7
+    confidence: 0.4
+    effective_logit: 0.27999999999999997
+  - description: New FBI vetting pause (April 27) is brand new and ongoing with no
+      end date - people continue discovering they're affected
+    supports: Doesn't change
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: Monte Carlo simulation with stretched exponential decay + re-spike
+      probability shows 91-95% probability of decrease across scenarios
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.75
+    effective_logit: 1.5
+  - description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+      to flip the outcome - narrow timing window reduces probability
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Google Trends rescaling: if a bigger spike occurs before May 16,
+      it rescales down May 4 value, potentially reducing the gap or flipping'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  dominant_factor: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+    16 (14 days after peak) - natural decay strongly favors decrease
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 5.2
+    factors:
+    - description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+        16 (14 days after peak) - natural decay strongly favors decrease
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: Academic research shows 70-80% attention lost within 24 hours,
+        90-97% within one week for event-driven spikes
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.7
+      effective_logit: 1.0499999999999998
+    - description: Monte Carlo simulation with stretched exponential decay + re-spike
+        probability shows 91-95% probability of decrease across scenarios
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.75
+      effective_logit: 1.5
+    - description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+        to flip the outcome - narrow timing window reduces probability
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.78
+    factors:
+    - description: This is an ongoing policy issue affecting millions, not a one-time
+        event - sustained interest reduces decay rate
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: New FBI vetting pause (April 27) is brand new and ongoing with
+        no end date - people continue discovering they're affected
+      supports: Doesn't change
+      logit: 0.6
+      confidence: 0.5
+      effective_logit: 0.3
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.42999999999999994
+    factors:
+    - description: Active litigation with multiple courts ruling - new developments
+        could generate fresh search interest near May 16
+      supports: Increases
+      logit: 0.7
+      confidence: 0.4
+      effective_logit: 0.27999999999999997
+    - description: 'Google Trends rescaling: if a bigger spike occurs before May 16,
+        it rescales down May 4 value, potentially reducing the gap or flipping'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.011792317462162904
+      Increases: 0.008309905665768199
+      Decreases: 0.9798977768720688
+    tentative_probabilities:
+      Increases: 0.15
+      Doesn't change: 0.13
+      Decreases: 0.72
+    per_option_gap_pp:
+      Doesn't change: 11.82076825378371
+      Increases: 14.169009433423179
+      Decreases: -25.98977768720688
+    max_gap_pp: -25.98977768720688
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “uscis pause” change between 2026-05-04 and
+    2026-05-16 according to Google Trends?](https://www.metaculus.com/questions/43387)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=uscis%20pause&date=2026-04-16%202026-05-16)'
+  - '[thehill.com](https://thehill.com/homenews/administration/5859141-judge-blocks-trump-administration-pause-immigration-applications/)'
+  - '[BREAKING: USCIS Holds Temporary Pause on Green Card Applications for Enhanced
+    Security Checks](https://www.visalawyerblog.com/breaking-uscis-holds-temporary-pause-on-green-card-applications-for-enhanced-security-checks/)'
+  - '[Judge rejects Trump administration halt on immigration applications](https://thedailyrecord.com/2026/05/01/judge-blocks-trump-immigration-application-halt/)'
+---
+timestamp: 2026-05-04 08:31:31 UTC
+question_type: multiple_choice
+factors:
+- description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May 16
+    (14 days after peak) - natural decay strongly favors decrease
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: Academic research shows 70-80% attention lost within 24 hours, 90-97%
+    within one week for event-driven spikes
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.7
+  effective_logit: 1.0499999999999998
+- description: This is an ongoing policy issue affecting millions, not a one-time
+    event - sustained interest reduces decay rate
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Active litigation with multiple courts ruling - new developments could
+    generate fresh search interest near May 16
+  supports: Increases
+  logit: 0.7
+  confidence: 0.4
+  effective_logit: 0.27999999999999997
+- description: New FBI vetting pause (April 27) is brand new and ongoing with no end
+    date - people continue discovering they're affected
+  supports: Doesn't change
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: Monte Carlo simulation with stretched exponential decay + re-spike
+    probability shows 91-95% probability of decrease across scenarios
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.75
+  effective_logit: 1.5
+- description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+    to flip the outcome - narrow timing window reduces probability
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Google Trends rescaling: if a bigger spike occurs before May 16, it
+    rescales down May 4 value, potentially reducing the gap or flipping'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.1
+    Doesn't change: 0.08
+    Decreases: 0.82
+assessment: 'Revised assessment: The scenario-weighted analysis gives ~87% for Decreases,
+  which I''ve moderated slightly to 82% to account for the unusual nature of this
+  particular USCIS situation (ongoing crisis affecting millions, active multi-court
+  litigation, brand new FBI vetting policy with no end date). The core driver is simple:
+  the peak was May 2, May 4 is 2 days after peak (still elevated), May 16 is 14 days
+  after peak (substantially decayed). Even generous re-spike assumptions don''t materially
+  change the conclusion because the re-spike would need to happen specifically near
+  May 16 to flip the outcome.'
+tool_audit: 'Web search: Very useful for identifying the specific events (FBI vetting
+  pause, court rulings). Research sub-agent: Provided excellent academic background
+  on decay patterns. Code sandbox: Essential for Monte Carlo and scenario analysis.
+  Google Trends direct data: Not accessible (JS-rendered page).'
+process_reflection: The analysis was straightforward once I identified the key dynamics.
+  The main gap was inability to access actual Google Trends values for May 4, which
+  would have allowed a much more precise estimate.
+computed:
+  factor_count: 8
+  factor_sum: 6.41
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+      16 (14 days after peak) - natural decay strongly favors decrease
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: Academic research shows 70-80% attention lost within 24 hours, 90-97%
+      within one week for event-driven spikes
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.7
+    effective_logit: 1.0499999999999998
+  - description: This is an ongoing policy issue affecting millions, not a one-time
+      event - sustained interest reduces decay rate
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Active litigation with multiple courts ruling - new developments
+      could generate fresh search interest near May 16
+    supports: Increases
+    logit: 0.7
+    confidence: 0.4
+    effective_logit: 0.27999999999999997
+  - description: New FBI vetting pause (April 27) is brand new and ongoing with no
+      end date - people continue discovering they're affected
+    supports: Doesn't change
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: Monte Carlo simulation with stretched exponential decay + re-spike
+      probability shows 91-95% probability of decrease across scenarios
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.75
+    effective_logit: 1.5
+  - description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+      to flip the outcome - narrow timing window reduces probability
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Google Trends rescaling: if a bigger spike occurs before May 16,
+      it rescales down May 4 value, potentially reducing the gap or flipping'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  dominant_factor: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+    16 (14 days after peak) - natural decay strongly favors decrease
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 5.2
+    factors:
+    - description: Peak at 100 on May 2, comparing May 4 (2 days after peak) vs May
+        16 (14 days after peak) - natural decay strongly favors decrease
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: Academic research shows 70-80% attention lost within 24 hours,
+        90-97% within one week for event-driven spikes
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.7
+      effective_logit: 1.0499999999999998
+    - description: Monte Carlo simulation with stretched exponential decay + re-spike
+        probability shows 91-95% probability of decrease across scenarios
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.75
+      effective_logit: 1.5
+    - description: Even if a new spike occurs, it must happen ON or near May 16 specifically
+        to flip the outcome - narrow timing window reduces probability
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.8
+      effective_logit: 0.4
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.78
+    factors:
+    - description: This is an ongoing policy issue affecting millions, not a one-time
+        event - sustained interest reduces decay rate
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.6
+      effective_logit: 0.48
+    - description: New FBI vetting pause (April 27) is brand new and ongoing with
+        no end date - people continue discovering they're affected
+      supports: Doesn't change
+      logit: 0.6
+      confidence: 0.5
+      effective_logit: 0.3
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.42999999999999994
+    factors:
+    - description: Active litigation with multiple courts ruling - new developments
+        could generate fresh search interest near May 16
+      supports: Increases
+      logit: 0.7
+      confidence: 0.4
+      effective_logit: 0.27999999999999997
+    - description: 'Google Trends rescaling: if a bigger spike occurs before May 16,
+        it rescales down May 4 value, potentially reducing the gap or flipping'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.011792317462162904
+      Increases: 0.008309905665768199
+      Decreases: 0.9798977768720688
+    tentative_probabilities:
+      Increases: 0.1
+      Doesn't change: 0.08
+      Decreases: 0.82
+    per_option_gap_pp:
+      Doesn't change: 6.82076825378371
+      Increases: 9.16900943342318
+      Decreases: -15.989777687206885
+    max_gap_pp: -15.989777687206885
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “uscis pause” change between 2026-05-04 and
+    2026-05-16 according to Google Trends?](https://www.metaculus.com/questions/43387)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=uscis%20pause&date=2026-04-16%202026-05-16)'
+  - '[thehill.com](https://thehill.com/homenews/administration/5859141-judge-blocks-trump-administration-pause-immigration-applications/)'
+  - '[BREAKING: USCIS Holds Temporary Pause on Green Card Applications for Enhanced
+    Security Checks](https://www.visalawyerblog.com/breaking-uscis-holds-temporary-pause-on-green-card-applications-for-enhanced-security-checks/)'
+  - '[Judge rejects Trump administration halt on immigration applications](https://thedailyrecord.com/2026/05/01/judge-blocks-trump-immigration-application-halt/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43387
+- **Question ID**: 43383
+- **Session Duration**: 1551.4s (25.9 min)
+- **Cost**: $25.9235 total (orchestrator $3.8594 + sub-agents $22.0641)
+- **Tokens**: 14,467 total (42 in, 14,425 out)
+  - Cache: 873,565 read, 78,217 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43387_20260504_080842/20260504-080842.log`
+
+### Tool Calls
+
+- **Total**: 36 calls
+- **Errors**: 1 (2.8%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1208 |
+| execute_code | 8 | 0 | 192ms | — |
+| fetch_url | 6 | 1 ⚠️ | 9152ms | — |
+| get_cp_history | 1 | 0 | 3258ms | — |
+| get_metaculus_questions | 2 | 0 | 2113ms | — |
+| polymarket_price | 5 | 0 | 552ms | — |
+| premortem | 2 | 0 | 132365ms | $5.2437 |
+| reflection | 3 | 0 | 64ms | — |
+| research | 2 | 0 | 657148ms | $16.3984 |
+| web_search | 7 | 0 | 17988ms | $0.3012 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “uscis pause” change between 2026-05-04 and...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=uscis%...
+- [thehill.com](https://thehill.com/homenews/administration/5859141-judge-block...
+- [BREAKING: USCIS Holds Temporary Pause on Green Card Applications for Enhance...
+- [Judge rejects Trump administration halt on immigration applications](https:/...
