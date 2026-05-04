@@ -1,0 +1,251 @@
+---
+timestamp: 2026-05-04 00:53:49 UTC
+question_type: numeric
+factors:
+- description: Last known value is 5.32% (April 30), this is the anchor for the forecast
+  supports:
+    center: 5.32
+    low: 5.32
+    high: 5.32
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 10Y Treasury dropped ~5bps on May 1 to 4.35%, suggesting BBB yield
+    also pulled back from the April 30 spike
+  supports:
+    center: 5.27
+    low: 5.22
+    high: 5.32
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: FOMC held rates at 3.75% on April 29 with 4 dissents (most since 1992)
+    - hawkish signal supporting higher yields
+  supports:
+    center: 5.35
+    low: 5.28
+    high: 5.45
+  logit: 0.6
+  confidence: 0.6
+  effective_logit: 0.36
+- description: Middle East tensions (Iran naval blockade) causing energy price volatility
+    and inflation concerns
+  supports:
+    center: 5.35
+    low: 5.25
+    high: 5.5
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Credit spreads (BBB OAS) very tight at 1.02%, near 25-year lows - limited
+    room for compression, slight widening risk
+  supports:
+    center: 5.3
+    low: 5.2
+    high: 5.45
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: No FOMC meeting before May 14 - removes one source of near-term yield
+    volatility
+  supports:
+    center: 5.29
+    low: 5.15
+    high: 5.45
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+- description: April regime was stable with mean 5.23 and std 0.053 - some mean reversion
+    pull toward this level
+  supports:
+    center: 5.25
+    low: 5.18
+    high: 5.35
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  center: 5.29
+  low: 5.11
+  high: 5.48
+anchor: 'Last known value: 5.32% (April 30, 2026). April regime mean: 5.23% with std
+  0.053%.'
+assessment: 'The BBB corporate bond effective yield was 5.32% as of April 30, following
+  a sharp uptick on April 29-30 coinciding with the FOMC meeting where rates were
+  held with 4 hawkish dissents. The 10Y Treasury jumped to 4.42% on April 29 but pulled
+  back to ~4.35% by May 1. This suggests the BBB yield has likely already partially
+  reverted from the April 30 spike.
+
+
+  Key considerations for the 10 business days to May 14:
+
+  1. The FOMC meeting is done and priced in - no new meeting before May 14
+
+  2. Middle East tensions (Iran) remain a risk factor for energy prices and inflation
+  expectations
+
+  3. Credit spreads are near 25-year lows, suggesting limited downside for yields
+  from spread compression
+
+  4. The April mean was 5.23, and the spike to 5.32 may partially revert
+
+
+  My distribution centers around 5.29 (slightly below last known 5.32), reflecting
+  likely partial reversion from the FOMC spike, but with notable upside tail from
+  geopolitical risk.'
+calibration_notes: 10-day random walk from 5.32 with daily std 0.042 gives 90% CI
+  of [5.10, 5.54]. My distribution [5.11, 5.48] is slightly narrower and shifted down,
+  reflecting expected partial reversion from the April 30 spike. The width is consistent
+  with empirical volatility.
+key_uncertainties: 1. We don't have May 1-2 FRED data yet - the true starting point
+  for the remaining forecast horizon is uncertain. 2. Middle East escalation could
+  cause a sharp move upward. 3. The FOMC dissent pattern and Powell transition add
+  policy uncertainty. 4. The April volatility sample (19 obs) may understate true
+  volatility.
+tool_audit: 'FRED API data via web_search: excellent, provided full April data series
+  with regime stats. StreetStats: useful for cross-checking current yields. FOMC search:
+  informative about April 29 decision and market context. Monte Carlo simulation in
+  sandbox: worked well for distribution generation. TradingEconomics: useful for real-time
+  Treasury yields context.'
+process_reflection: This was a straightforward financial time series forecast. The
+  FRED API integration was excellent - getting both the BBB yield and Treasury data
+  with regime stats was very helpful. The main challenge was not having May 1-2 data,
+  which required modeling uncertainty in the starting point. The scenario mixture
+  approach felt appropriate for handling this. The sandbox execution for Monte Carlo
+  was smooth.
+computed:
+  factor_count: 7
+  factor_sum: 2.74
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Last known value is 5.32% (April 30), this is the anchor for the
+      forecast
+    supports:
+      center: 5.32
+      low: 5.32
+      high: 5.32
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 10Y Treasury dropped ~5bps on May 1 to 4.35%, suggesting BBB yield
+      also pulled back from the April 30 spike
+    supports:
+      center: 5.27
+      low: 5.22
+      high: 5.32
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: FOMC held rates at 3.75% on April 29 with 4 dissents (most since
+      1992) - hawkish signal supporting higher yields
+    supports:
+      center: 5.35
+      low: 5.28
+      high: 5.45
+    logit: 0.6
+    confidence: 0.6
+    effective_logit: 0.36
+  - description: Middle East tensions (Iran naval blockade) causing energy price volatility
+      and inflation concerns
+    supports:
+      center: 5.35
+      low: 5.25
+      high: 5.5
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Credit spreads (BBB OAS) very tight at 1.02%, near 25-year lows -
+      limited room for compression, slight widening risk
+    supports:
+      center: 5.3
+      low: 5.2
+      high: 5.45
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: No FOMC meeting before May 14 - removes one source of near-term yield
+      volatility
+    supports:
+      center: 5.29
+      low: 5.15
+      high: 5.45
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  - description: April regime was stable with mean 5.23 and std 0.053 - some mean
+      reversion pull toward this level
+    supports:
+      center: 5.25
+      low: 5.18
+      high: 5.35
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: Last known value is 5.32% (April 30), this is the anchor for the
+    forecast
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 5.308259493670886
+    implied_p10: 5.262974683544304
+    implied_p90: 5.36746835443038
+    median_gap: -0.018259493670885973
+    median_gap_pct: -17.47425802543899
+    spread_ratio: 3.5408843125378486
+    precision: 0.06994328922495276
+  sources:
+  - '[(Metaculus) What will be the value of "ICE BofA BBB US Corporate Index Effective
+    Yield" on 2026-05-14?](https://www.metaculus.com/questions/43374)'
+  - '[ICE BofA BBB US Corporate Index Effective Yield (BAMLC0A4CBBBEY) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/BAMLC0A4CBBBEY)'
+  - '[ICE BofA BBB US Corporate Index Option-Adjusted Spread (BAMLC0A4CBBB) | FRED
+    | St. Louis Fed](https://fred.stlouisfed.org/series/BAMLC0A4CBBB)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS10)'
+  - '[10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (T10Y2Y)
+    | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/T10Y2Y)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis, Inflation-Indexed (DFII10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFII10)'
+  - '[ICE BofA US Corporate Index Option-Adjusted Spread (BAMLC0A0CM) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/BAMLC0A0CM)'
+  - '[ICE BofA AA US Corporate Index Effective Yield (BAMLC0A2CAAEY) | FRED | St.
+    Louis Fed](https://fred.stlouisfed.org/series/BAMLC0A2CAAEY)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43374
+- **Question ID**: 43370
+- **Session Duration**: 594.0s (9.9 min)
+- **Cost**: $6.9430 total (orchestrator $3.5317 + sub-agents $3.4113)
+- **Tokens**: 13,655 total (39 in, 13,616 out)
+  - Cache: 694,259 read, 78,319 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43374_20260504_004705/20260504-004705.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 322ms | — |
+| fetch_url | 2 | 0 | 381ms | — |
+| fred_series | 10 | 0 | 379ms | — |
+| get_metaculus_questions | 1 | 0 | 268ms | — |
+| premortem | 1 | 0 | 152248ms | $3.2021 |
+| reflection | 1 | 0 | 682ms | — |
+| web_search | 5 | 0 | 41655ms | $0.2092 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "ICE BofA BBB US Corporate Index Effec...
+- [ICE BofA BBB US Corporate Index Effective Yield (BAMLC0A4CBBBEY) | FRED | St...
+- [ICE BofA BBB US Corporate Index Option-Adjusted Spread (BAMLC0A4CBBB) | FRED...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [ICE BofA US Corporate Index Option-Adjusted Spread (BAMLC0A0CM) | FRED | St....
+- [ICE BofA AA US Corporate Index Effective Yield (BAMLC0A2CAAEY) | FRED | St. ...
