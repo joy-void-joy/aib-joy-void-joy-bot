@@ -1,0 +1,221 @@
+---
+timestamp: 2026-05-04 10:46:03 UTC
+question_type: multiple_choice
+factors:
+- description: 'SCOTUS spike (Apr 29-30) is in active decay: 100→55→36→32→23 over
+    5 days. The exponential decay model predicts May 12 value between 5-15, which
+    is 8-18 points below May 4''s ~23. This virtually guarantees a decrease of >3
+    points.'
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: Pre-spike baseline is ~5-8 (90-day avg 7.2, 5-year avg 7.7). May 4
+    at 23 is still 3x elevated. Gravity toward baseline over 8 days makes continued
+    decline near-certain.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: No known scheduled catalytic events for voting rights act in May 4-12
+    timeframe. The 60th anniversary is August 6; SAVE Act Senate timing uncertain.
+    Low probability of re-spike.
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Possible new catalyst (redistricting ruling, legislative vote, political
+    event) could re-spike interest within May 4-12 window. Unknown unknowns always
+    exist.
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: The ±3 threshold is narrow. Even if decay slows, the gap between current
+    elevated level (23) and eventual baseline (~7-8) is too large for the change to
+    stay within ±3 over 8 days.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+tentative_estimate:
+  probabilities:
+    Increases: 0.03
+    Doesn't change: 0.07
+    Decreases: 0.9
+anchor: 'Base rate for Google Trends direction change over 8 days: roughly 33% each
+  for Increases/Doesn''t change/Decreases in normal conditions. However, this is NOT
+  normal conditions - we''re in the tail of a major spike, making the conditional
+  base rate for Decreases ~85-95%.'
+assessment: 'The "voting rights act" search interest experienced a massive spike on
+  Apr 29-30, 2026 driven by the SCOTUS Louisiana v. Callais decision. This spike peaked
+  at 100 and has been decaying rapidly: 100→55→36→32→23 over 5 days. The May 4 value
+  (~23) is still ~3x the long-term baseline (~7-8). By May 12 (8 additional days of
+  decay), exponential decay models project the value between 5-15, representing a
+  decline of 8-18 points from May 4. Since the resolution threshold is only ±3, this
+  nearly guarantees "Decreases." The only way to avoid Decreases is a new catalyst
+  re-spiking interest, which is unlikely in any specific 8-day window with no known
+  scheduled events.'
+calibration_notes: The unconditional base rate (33% each) is irrelevant here because
+  we have strong directional evidence from the decay pattern. The conditional base
+  rate (post-spike decay) dominates. My estimate of 90% for Decreases may even be
+  conservative given how consistently post-event decays resolve in this direction.
+key_uncertainties: 1. Will there be an unexpected catalyst for voting rights act searches
+  in May 4-12? 2. Will the API values differ significantly from the browser-observed
+  values? 3. Could the decay plateau at a higher-than-expected level?
+tool_audit: research() provided excellent Google Trends data with daily values and
+  decay trajectory - extremely useful. execute_code ran Monte Carlo simulations and
+  exponential decay fitting successfully. The second research query had tool failures
+  (web search unavailable) but provided useful background context from training data.
+update_triggers: A new major voting rights event (legislation vote, court ruling,
+  executive order) in the May 4-12 window would shift probability significantly toward
+  Increases or Doesn't change.
+process_reflection: The research tool was very effective for getting Google Trends
+  data and news context. The code sandbox worked well for fitting decay models. The
+  main friction was needing to reason carefully about the window-specific scaling
+  of Google Trends values, which required domain knowledge about how relative scaling
+  works. Would benefit from a specialized Google Trends API tool.
+computed:
+  factor_count: 5
+  factor_sum: 5.035
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'SCOTUS spike (Apr 29-30) is in active decay: 100→55→36→32→23 over
+      5 days. The exponential decay model predicts May 12 value between 5-15, which
+      is 8-18 points below May 4''s ~23. This virtually guarantees a decrease of >3
+      points.'
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: Pre-spike baseline is ~5-8 (90-day avg 7.2, 5-year avg 7.7). May
+      4 at 23 is still 3x elevated. Gravity toward baseline over 8 days makes continued
+      decline near-certain.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: No known scheduled catalytic events for voting rights act in May
+      4-12 timeframe. The 60th anniversary is August 6; SAVE Act Senate timing uncertain.
+      Low probability of re-spike.
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Possible new catalyst (redistricting ruling, legislative vote, political
+      event) could re-spike interest within May 4-12 window. Unknown unknowns always
+      exist.
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: The ±3 threshold is narrow. Even if decay slows, the gap between
+      current elevated level (23) and eventual baseline (~7-8) is too large for the
+      change to stay within ±3 over 8 days.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  dominant_factor: 'SCOTUS spike (Apr 29-30) is in active decay: 100→55→36→32→23 over
+    5 days. The exponential decay model predicts May 12 value between 5-15, which
+    is 8-18 points below May 4''s ~23. This virtually guarantees a decrease of >3
+    points.'
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 4.885
+    factors:
+    - description: 'SCOTUS spike (Apr 29-30) is in active decay: 100→55→36→32→23 over
+        5 days. The exponential decay model predicts May 12 value between 5-15, which
+        is 8-18 points below May 4''s ~23. This virtually guarantees a decrease of
+        >3 points.'
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: Pre-spike baseline is ~5-8 (90-day avg 7.2, 5-year avg 7.7). May
+        4 at 23 is still 3x elevated. Gravity toward baseline over 8 days makes continued
+        decline near-certain.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: No known scheduled catalytic events for voting rights act in May
+        4-12 timeframe. The 60th anniversary is August 6; SAVE Act Senate timing uncertain.
+        Low probability of re-spike.
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.7
+      effective_logit: 0.5599999999999999
+    - description: The ±3 threshold is narrow. Even if decay slows, the gap between
+        current elevated level (23) and eventual baseline (~7-8) is too large for
+        the change to stay within ±3 over 8 days.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: Possible new catalyst (redistricting ruling, legislative vote,
+        political event) could re-spike interest within May 4-12 window. Unknown unknowns
+        always exist.
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.007437581976254225
+      Increases: 0.008641237423110857
+      Decreases: 0.9839211806006348
+    tentative_probabilities:
+      Increases: 0.03
+      Doesn't change: 0.07
+      Decreases: 0.9
+    per_option_gap_pp:
+      Doesn't change: 6.256241802374578
+      Increases: 2.1358762576889143
+      Decreases: -8.392118060063481
+    max_gap_pp: -8.392118060063481
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “voting rights act” change between 2026-05-04
+    and 2026-05-12 according to Google Trends?](https://www.metaculus.com/questions/43391)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43391
+- **Question ID**: 43387
+- **Session Duration**: 735.4s (12.3 min)
+- **Cost**: $11.9116 total (orchestrator $2.4655 + sub-agents $9.4461)
+- **Tokens**: 9,023 total (28 in, 8,995 out)
+  - Cache: 453,393 read, 59,217 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43391_20260504_103645/20260504-103645.log`
+
+### Tool Calls
+
+- **Total**: 29 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0233 |
+| execute_code | 10 | 0 | 214ms | — |
+| fetch_url | 2 | 0 | 5038ms | — |
+| fred_series | 5 | 0 | 787ms | — |
+| get_metaculus_questions | 2 | 0 | 1797ms | — |
+| premortem | 2 | 0 | 119290ms | $4.7107 |
+| reflection | 2 | 0 | 106ms | — |
+| research | 1 | 0 | 365059ms | $4.5158 |
+| web_search | 5 | 0 | 16320ms | $0.1963 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “voting rights act” change between 2026-05-...
