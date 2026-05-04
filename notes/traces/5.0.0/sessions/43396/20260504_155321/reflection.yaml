@@ -1,0 +1,164 @@
+---
+timestamp: 2026-05-04 16:04:30 UTC
+question_type: numeric
+factors:
+- description: ECB deposit facility rate unchanged at 2.00% since June 2025, next
+    meeting June 11 - after resolution date. No policy rate change possible.
+  supports:
+    center: 1.932
+    low: 1.93
+    high: 1.934
+  logit: 3.0
+  confidence: 0.99
+  effective_logit: 2.9699999999999998
+- description: €STR has been stable at 1.930-1.933 throughout April 2026 (18 observations,
+    std=0.00073)
+  supports:
+    center: 1.932
+    low: 1.93
+    high: 1.933
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: April 30 ECB meeting held rates unanimously - confirmed stability through
+    at least June
+  supports:
+    center: 1.932
+    low: 1.93
+    high: 1.934
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Small risk of liquidity stress event or maintenance period effect causing
+    temporary deviation
+  supports:
+    center: 1.93
+    low: 1.925
+    high: 1.94
+  logit: -0.3
+  confidence: 0.3
+  effective_logit: -0.09
+tentative_estimate:
+  center: 1.932
+  low: 1.929
+  high: 1.935
+anchor: '€STR at 1.932% (April mean), anchored by ECB DFR of 2.00% minus ~7bp spread.
+  Source: FRED ECBESTRVOLWGTTRMDMNRT and ECB SDW data.'
+assessment: The €STR is an overnight interbank rate that is firmly anchored by the
+  ECB deposit facility rate (DFR). With the DFR at 2.00% and unchanged since June
+  2025, the €STR has been extremely stable around 1.930-1.933% (approximately 7bp
+  below DFR). The next ECB meeting is June 11, well after the May 14 resolution date.
+  There is essentially zero probability of a policy rate change before resolution.
+  Daily variation is sub-1bp (std of 0.00073). The distribution should be extremely
+  tight around 1.932, with only very small tails for rare liquidity events or maintenance
+  period effects that could push the rate 2-3bp in either direction.
+calibration_notes: This is an extremely stable rate with near-zero uncertainty about
+  the policy rate. The only uncertainty is daily microstructure noise. My distribution
+  is very tight (P10=1.929, P90=1.935) which matches the empirical data showing std
+  of less than 1bp. The tails are slightly wider than pure empirical data suggests
+  to account for rare events not observed in the short April window.
+key_uncertainties: 1. Could there be an unusual liquidity event (bank stress, settlement
+  failure) that temporarily pushes €STR away from DFR? Very unlikely to be more than
+  a few bp. 2. ECB maintenance period effects - these are real but typically small
+  (1-2bp). 3. Could the question date be a holiday? May 14 is a Thursday, appears
+  to be a normal TARGET2 business day.
+tool_audit: 'Research tool: excellent, returned detailed ECB policy data and €STR
+  history. FRED fetch_url: excellent, returned regime_stats and recent observations.
+  Monte Carlo simulation: useful for exploring distribution properties but almost
+  overkill given the extreme stability of this rate.'
+process_reflection: This question is essentially a near-certainty given the policy
+  rate is fixed and the rate has sub-1bp daily variation. The forecasting scaffolding
+  felt appropriate but perhaps overpowered for such a simple question. The research
+  tool was efficient at confirming the ECB meeting schedule and rate decision. The
+  main challenge is calibrating the tails of an extremely narrow distribution - how
+  wide should the tails be for a rate that barely moves?
+computed:
+  factor_count: 4
+  factor_sum: 6.6049999999999995
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: ECB deposit facility rate unchanged at 2.00% since June 2025, next
+      meeting June 11 - after resolution date. No policy rate change possible.
+    supports:
+      center: 1.932
+      low: 1.93
+      high: 1.934
+    logit: 3.0
+    confidence: 0.99
+    effective_logit: 2.9699999999999998
+  - description: €STR has been stable at 1.930-1.933 throughout April 2026 (18 observations,
+      std=0.00073)
+    supports:
+      center: 1.932
+      low: 1.93
+      high: 1.933
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: April 30 ECB meeting held rates unanimously - confirmed stability
+      through at least June
+    supports:
+      center: 1.932
+      low: 1.93
+      high: 1.934
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Small risk of liquidity stress event or maintenance period effect
+      causing temporary deviation
+    supports:
+      center: 1.93
+      low: 1.925
+      high: 1.94
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+  dominant_factor: ECB deposit facility rate unchanged at 2.00% since June 2025, next
+    meeting June 11 - after resolution date. No policy rate change possible.
+  dominant_effective_logit: 2.9699999999999998
+  distribution_metrics:
+    implied_median: 1.9319734708916725
+    implied_p10: 1.929933677229182
+    implied_p90: 1.9337295504789977
+    median_gap: 2.6529108327455475e-05
+    median_gap_pct: 0.6988934187605698
+    spread_ratio: 1.5806639487478114
+    precision: 0.003105590062111804
+  sources:
+  - '[(Metaculus) What will be the value of "Euro Short-Term Rate: Volume-Weighted
+    Trimmed Mean Rate" on 2026-05-14?](https://www.metaculus.com/questions/43396)'
+  - '[Euro Short-Term Rate: Volume-Weighted Trimmed Mean Rate](https://fred.stlouisfed.org/series/ECBESTRVOLWGTTRMDMNRT)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43396
+- **Question ID**: 43392
+- **Session Duration**: 782.2s (13.0 min)
+- **Cost**: $22.1521 total (orchestrator $2.1960 + sub-agents $19.9561)
+- **Tokens**: 6,906 total (26 in, 6,880 out)
+  - Cache: 370,977 read, 59,902 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43396_20260504_155321/20260504-155321.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 152ms | — |
+| fetch_url | 1 | 0 | 343ms | — |
+| fred_series | 1 | 0 | 343ms | — |
+| get_metaculus_questions | 1 | 0 | 271ms | — |
+| premortem | 1 | 0 | 86244ms | $1.5182 |
+| reflection | 1 | 0 | 198ms | — |
+| research | 1 | 0 | 556164ms | $18.4379 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "Euro Short-Term Rate: Volume-Weighted...
+- [Euro Short-Term Rate: Volume-Weighted Trimmed Mean Rate](https://fred.stloui...
