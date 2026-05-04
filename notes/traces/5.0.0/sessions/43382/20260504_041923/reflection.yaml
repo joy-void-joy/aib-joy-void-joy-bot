@@ -1,0 +1,294 @@
+---
+timestamp: 2026-05-04 04:29:50 UTC
+question_type: multiple_choice
+factors:
+- description: News event peaked on May 2 (Princess Charlotte birthday); May 4 is
+    only 2 days after peak, so residual interest is likely. Google Trends research
+    shows day-2 values typically 15-30% of peak for news events.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: May 16 is 14 days after the peak - research shows virtually all news
+    event queries reach zero within 5-10 days. The May 16 value is almost certainly
+    0.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: The query is an 11-word news headline sentence, which is extremely
+    specific. Very few people would search this exact phrase, meaning absolute volume
+    is very low. Google Trends may round the May 4 value to 0 due to low volume threshold.
+  supports: Doesn't change
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: Royal family birthday events have broad mainstream appeal, suggesting
+    sustained search interest for at least 2-3 days - this argues May 4 still has
+    measurable value above 3.
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: No plausible mechanism for renewed interest in this specific query
+    by May 16. No follow-up events expected for this exact topic. Increases essentially
+    requires an unexpected new event.
+  supports: Decreases
+  logit: -0.5
+  confidence: 0.9
+  conditional: Evaluating Increases scenario
+  effective_logit: -0.45
+tentative_estimate:
+  probabilities:
+    Increases: 0.02
+    Doesn't change: 0.28
+    Decreases: 0.7
+anchor: 'For Google Trends questions where a spike occurred near the start date: historical
+  pattern shows ~60-70% Decreases, ~25-30% Doesn''t change, ~5% Increases based on
+  similar Metaculus questions with news event spikes.'
+assessment: "The question hinges on whether the Google Trends value for this very\
+  \ specific 11-word news headline query still shows measurable interest (>3 on the\
+  \ 0-100 scale) on May 4, two days after the peak. May 16 will almost certainly be\
+  \ at 0. \n\nThe key tension: on one hand, the news event (Princess Charlotte's 11th\
+  \ birthday photo) generated enough interest for a peak of 100, and news event search\
+  \ interest typically retains 15-30% of peak at day 2. On the other hand, the query\
+  \ is so specific (a full sentence) that absolute search volume may be extremely\
+  \ low, causing Google Trends to round the day-2 value to 0 due to reporting thresholds.\
+  \ If May 4 ≤ 3 and May 16 ≈ 0, the resolution is 'Doesn't change.' If May 4 > 3\
+  \ and May 16 ≈ 0, the resolution is 'Decreases.'\n\nMy estimate weights ~70% on\
+  \ Decreases (May 4 likely retains some interest above the threshold) and ~28% on\
+  \ Doesn't change (both values effectively zero). Increases is near-impossible at\
+  \ ~2%."
+calibration_notes: The anchor of ~65% Decreases comes from similar Google Trends Metaculus
+  questions where a news spike occurs near the start date. My estimate of 70% Decreases
+  is close to this anchor. The main adjustment is the very specific nature of the
+  query, which creates more uncertainty about whether day-2 values are above or below
+  the reporting threshold. My estimate feels reasonable - not overconfident on Decreases
+  despite the strong theoretical case, because the low-volume threshold effect is
+  genuinely uncertain.
+key_uncertainties: The primary uncertainty is whether Google Trends shows a non-zero
+  value for this extremely specific 11-word query on May 4 (day 2). If May 4 > 3,
+  it's Decreases; if May 4 ≤ 3, it's Doesn't change. I cannot directly check the current
+  Google Trends value, so this remains the key unknown.
+tool_audit: Research sub-agent provided useful decay pattern analysis for news event
+  Google Trends queries. Web search confirmed the Princess Charlotte birthday event
+  on May 2 with photo release. Google Trends URL fetch failed (JS rendering issue,
+  expected for Google Trends). Monte Carlo simulations were useful for quantifying
+  scenarios. SerpApi access not available to check actual current values.
+update_triggers: 1. Accessing the actual Google Trends data for May 4 would resolve
+  the key uncertainty. 2. A significant royal family news event around May 16 could
+  increase interest (unlikely). 3. Evidence about how Google Trends handles very long
+  unquoted queries would refine the model.
+process_reflection: The main limitation is not being able to check the actual Google
+  Trends data for today (May 4). The Google Trends page requires JavaScript rendering
+  which failed. Having SerpApi access or a Google Trends API tool would be extremely
+  valuable for these questions. The research sub-agent provided good theoretical background
+  on decay patterns but couldn't access real-time Google Trends data either. The Monte
+  Carlo approach was helpful but the uncertainty about Google Trends' exact handling
+  of long queries without quotes is the biggest gap.
+computed:
+  factor_count: 5
+  factor_sum: 3.5
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: News event peaked on May 2 (Princess Charlotte birthday); May 4 is
+      only 2 days after peak, so residual interest is likely. Google Trends research
+      shows day-2 values typically 15-30% of peak for news events.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: May 16 is 14 days after the peak - research shows virtually all news
+      event queries reach zero within 5-10 days. The May 16 value is almost certainly
+      0.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: The query is an 11-word news headline sentence, which is extremely
+      specific. Very few people would search this exact phrase, meaning absolute volume
+      is very low. Google Trends may round the May 4 value to 0 due to low volume
+      threshold.
+    supports: Doesn't change
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: Royal family birthday events have broad mainstream appeal, suggesting
+      sustained search interest for at least 2-3 days - this argues May 4 still has
+      measurable value above 3.
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: No plausible mechanism for renewed interest in this specific query
+      by May 16. No follow-up events expected for this exact topic. Increases essentially
+      requires an unexpected new event.
+    supports: Decreases
+    logit: -0.5
+    confidence: 0.9
+    effective_logit: -0.45
+    conditional: Evaluating Increases scenario
+  dominant_factor: May 16 is 14 days after the peak - research shows virtually all
+    news event queries reach zero within 5-10 days. The May 16 value is almost certainly
+    0.
+  dominant_effective_logit: 1.9
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 4
+    logit_sum: 2.9
+    factors:
+    - description: News event peaked on May 2 (Princess Charlotte birthday); May 4
+        is only 2 days after peak, so residual interest is likely. Google Trends research
+        shows day-2 values typically 15-30% of peak for news events.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.8
+      effective_logit: 1.2000000000000002
+    - description: May 16 is 14 days after the peak - research shows virtually all
+        news event queries reach zero within 5-10 days. The May 16 value is almost
+        certainly 0.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.95
+      effective_logit: 1.9
+    - description: Royal family birthday events have broad mainstream appeal, suggesting
+        sustained search interest for at least 2-3 days - this argues May 4 still
+        has measurable value above 3.
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+    - description: No plausible mechanism for renewed interest in this specific query
+        by May 16. No follow-up events expected for this exact topic. Increases essentially
+        requires an unexpected new event.
+      supports: Decreases
+      logit: -0.5
+      confidence: 0.9
+      effective_logit: -0.45
+      conditional: Evaluating Increases scenario
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.6
+    factors:
+    - description: The query is an 11-word news headline sentence, which is extremely
+        specific. Very few people would search this exact phrase, meaning absolute
+        volume is very low. Google Trends may round the May 4 value to 0 due to low
+        volume threshold.
+      supports: Doesn't change
+      logit: 1.0
+      confidence: 0.6
+      effective_logit: 0.6
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.0867830003305275
+      Increases: 0.04762752039654523
+      Decreases: 0.8655894792729273
+    tentative_probabilities:
+      Increases: 0.02
+      Doesn't change: 0.28
+      Decreases: 0.7
+    per_option_gap_pp:
+      Doesn't change: 19.321699966947254
+      Increases: -2.7627520396545227
+      Decreases: -16.558947927292735
+    max_gap_pp: 19.321699966947254
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Metaculus) Will the interest in “princess charlotte celebrated her eleventh
+    birthday with a new photograph” change between 2026-05-04 and 2026-05-16 according
+    to Google Trends?](https://www.metaculus.com/questions/43382)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=princess%20charlotte%20celebrated%20her%20eleventh%20birthday%20with%20a%20new%20photograph&date=2026-04-16%202026-05-16)'
+  - '[(Metaculus) What will be the ratio of search interest between Google and ChatGPT
+    in the first two weeks of March 2026?](https://www.metaculus.com/questions/41511)'
+  - '[(Metaculus) Will the interest in “grants for reentry programs 2026” change between
+    2026-03-03 and 2026-03-14 according to Google Trends?](https://www.metaculus.com/questions/42414)'
+  - '[(Metaculus) Will the interest in “george washington” change between 2026-02-20
+    and 2026-02-25 according to Google Trends?](https://www.metaculus.com/questions/42208)'
+  - '[(Metaculus) Will the interest in “amber alert” change between 2025-10-30 and
+    2025-11-07 according to Google Trends?](https://www.metaculus.com/questions/40514)'
+  - '[(Metaculus) Will the interest in “super flu virus” change between 2026-01-08
+    and 2026-01-15 according to Google Trends?](https://www.metaculus.com/questions/41432)'
+  - '[(Metaculus) Will there be a significant increase in worldwide search interest
+    in the term “power outage” reported by Google Trends between 24 August 2018 and
+    7 September 2018?](https://www.metaculus.com/questions/1347)'
+  - '[(Metaculus) What will Substack''s Google Trends index be at end of 2022?](https://www.metaculus.com/questions/12433)'
+  - '[(Metaculus) Will the interest in “shireen afkari” change between 2025-12-30
+    and 2026-01-04 according to Google Trends?](https://www.metaculus.com/questions/41294)'
+  - '[(Metaculus) Will the interest in “venezuela” change between 2026-02-17 and 2026-02-27
+    according to Google Trends?](https://www.metaculus.com/questions/42180)'
+  - '[(Metaculus) Reliable automatic coding of described rules by 2030?](https://www.metaculus.com/questions/495)'
+  - '[(Metaculus) Will the interest in “one of ours all of yours” change between 2026-01-19
+    and 2026-01-31 according to Google Trends?](https://www.metaculus.com/questions/41620)'
+  - '[(Metaculus) Will the interest in “jesse van rootselaar” change between 2026-02-17
+    and 2026-02-28 according to Google Trends?](https://www.metaculus.com/questions/42156)'
+  - '[(Metaculus) Will the interest in “bbc news” change between 2026-03-03 and 2026-03-12
+    according to Google Trends?](https://www.metaculus.com/questions/42408)'
+  - '[(Metaculus) Will the interest in “don holt bridge” change between 2025-12-23
+    and 2026-01-04 according to Google Trends?](https://www.metaculus.com/questions/41257)'
+  - '[(Metaculus) Will the interest in “cote d''ivoire” change between 2025-11-24
+    and 2025-12-06 according to Google Trends?](https://www.metaculus.com/questions/40808)'
+  - '[(Metaculus) Will the interest in “travel” change between 2025-12-08 and 2025-12-20
+    according to Google Trends?](https://www.metaculus.com/questions/41036)'
+  - '[(Metaculus) Will the interest in “its” change between 2025-12-09 and 2025-12-20
+    according to Google Trends?](https://www.metaculus.com/questions/41011)'
+  - '[(Metaculus) Will the interest in “suriname” change between 2025-12-09 and 2025-12-18
+    according to Google Trends?](https://www.metaculus.com/questions/41021)'
+  - '[(Metaculus) Will the interest in “onlyfarms” change between 2026-03-30 and 2026-04-07
+    according to Google Trends?](https://www.metaculus.com/questions/42970)'
+  - '[(Metaculus) Will the interest in “tariff” change between 2025-10-30 and 2025-11-07
+    according to Google Trends?](https://www.metaculus.com/questions/40515)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43382
+- **Question ID**: 43378
+- **Session Duration**: 879.2s (14.7 min)
+- **Cost**: $11.1399 total (orchestrator $3.7690 + sub-agents $7.3709)
+- **Tokens**: 17,227 total (40 in, 17,187 out)
+  - Cache: 708,051 read, 75,587 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43382_20260504_041923/20260504-041923.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0194 |
+| execute_code | 7 | 0 | 258ms | — |
+| fetch_url | 1 | 0 | 8623ms | — |
+| get_metaculus_questions | 2 | 0 | 12868ms | — |
+| premortem | 1 | 0 | 176025ms | $3.6503 |
+| reflection | 1 | 0 | 18ms | — |
+| research | 1 | 0 | 223112ms | $3.6617 |
+| search_metaculus | 1 | 0 | 2709ms | — |
+| web_search | 1 | 0 | 76102ms | $0.0395 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “princess charlotte celebrated her eleventh...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=prince...
+- [(Metaculus) What will be the ratio of search interest between Google and Cha...
+- [(Metaculus) Will the interest in “grants for reentry programs 2026” change b...
+- [(Metaculus) Will the interest in “george washington” change between 2026-02-...
+- [(Metaculus) Will the interest in “amber alert” change between 2025-10-30 and...
+- [(Metaculus) Will the interest in “super flu virus” change between 2026-01-08...
+- [(Metaculus) Will there be a significant increase in worldwide search interes...
+- [(Metaculus) What will Substack's Google Trends index be at end of 2022?](htt...
+- [(Metaculus) Will the interest in “shireen afkari” change between 2025-12-30 ...
+- [(Metaculus) Will the interest in “venezuela” change between 2026-02-17 and 2...
+- [(Metaculus) Reliable automatic coding of described rules by 2030?](https://w...
+- [(Metaculus) Will the interest in “one of ours all of yours” change between 2...
+- [(Metaculus) Will the interest in “jesse van rootselaar” change between 2026-...
+- [(Metaculus) Will the interest in “bbc news” change between 2026-03-03 and 20...
+- [(Metaculus) Will the interest in “don holt bridge” change between 2025-12-23...
+- [(Metaculus) Will the interest in “cote d'ivoire” change between 2025-11-24 a...
+- [(Metaculus) Will the interest in “travel” change between 2025-12-08 and 2025...
+- [(Metaculus) Will the interest in “its” change between 2025-12-09 and 2025-12...
+- [(Metaculus) Will the interest in “suriname” change between 2025-12-09 and 20...
+- ... and 2 more
