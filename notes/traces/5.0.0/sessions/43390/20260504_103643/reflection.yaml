@@ -1,0 +1,223 @@
+---
+timestamp: 2026-05-04 10:40:58 UTC
+question_type: numeric
+factors:
+- description: 'Fed funds rate anchors T-bill rate: FF at 3.50-3.75%, DTB3 at 3.59%
+    - rate is firmly within the FF band and will stay there absent a rate change'
+  supports:
+    center: 3.59
+    low: 3.55
+    high: 3.63
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: 'No FOMC meeting before May 14 (next is June 17): eliminates the primary
+    source of large rate moves'
+  supports:
+    center: 3.59
+    low: 3.56
+    high: 3.62
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Extremely stable recent regime: DTB3 has been 3.59-3.60 for 10 consecutive
+    trading days'
+  supports:
+    center: 3.59
+    low: 3.57
+    high: 3.61
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 'Rate futures imply slightly higher rates later in 2026 (Oct: 3.63,
+    Dec: 3.67), suggesting no near-term rate cut expectations'
+  supports:
+    center: 3.6
+    low: 3.57
+    high: 3.63
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Economic data releases (CPI, jobs) between May 4-14 could cause 3-8bp
+    moves if they surprise significantly
+  supports:
+    center: 3.59
+    low: 3.52
+    high: 3.66
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Geopolitical tail risk (Middle East mentioned in FOMC statement) could
+    cause flight-to-safety driving rates lower
+  supports:
+    center: 3.55
+    low: 3.4
+    high: 3.59
+  logit: -0.3
+  confidence: 0.3
+  conditional: If a major geopolitical event occurs
+  effective_logit: -0.09
+tentative_estimate:
+  center: 3.59
+  low: 3.54
+  high: 3.64
+anchor: 3.59% - current DTB3 value, which should persist with near-zero drift given
+  Fed on hold
+assessment: 'The 3-month T-bill rate is firmly anchored by the federal funds rate
+  (3.50-3.75%) and has been remarkably stable at 3.59-3.60 for the past two weeks.
+  With no FOMC meeting before May 14 and the next meeting not until June 17, the primary
+  driver of large rate moves is absent. The rate should stay very close to its current
+  level of 3.59%.
+
+
+  The main sources of uncertainty are: (1) economic data surprises from CPI or employment
+  reports that could shift rate cut/hike expectations, (2) supply/demand dynamics
+  from weekly Treasury auctions, and (3) tail risks from geopolitical events. All
+  of these are small probability, modest magnitude effects over this 10-day horizon.
+
+
+  Monte Carlo simulation using a scenario mixture (85% stable, 12% modest shift, 3%
+  tail) produces a distribution centered at 3.59 with P10=3.54 and P90=3.64. This
+  is consistent with the extremely low empirical daily volatility (~1bp) and the institutional
+  anchoring from the Fed funds rate.'
+calibration_notes: The P10-P90 range of 10bp is consistent with random-walk expectations
+  (daily vol ~1bp × sqrt(10) ≈ 3.2bp × 2.56 for 80% CI ≈ 8bp) plus a small tail-risk
+  premium. The distribution is slightly wider than pure random walk, reflecting scenario
+  uncertainty.
+key_uncertainties: Main uncertainty is whether any economic data release (CPI, payrolls)
+  could shift market rate expectations enough to move the T-bill rate by more than
+  5bp. Historical experience suggests this is possible but uncommon when the Fed is
+  firmly on hold.
+tool_audit: 'FRED data via fetch_url: excellent, provided full recent time series,
+  regime stats, and rate futures. Web search: useful for confirming FOMC decision
+  and schedule. Monte Carlo: ran multiple scenario models to stress-test assumptions.
+  No tool failures.'
+process_reflection: This question type (short-horizon financial rate forecast) is
+  well-suited to the tooling. The FRED data came with regime stats and rate futures,
+  which were extremely helpful for anchoring. The scenario mixture approach feels
+  natural for capturing the anchored-but-with-tails nature of T-bill rates during
+  Fed pauses. The main friction was not having a longer historical dataset of DTB3
+  daily changes to better estimate volatility, but the one-month window was sufficient
+  given the stable environment.
+computed:
+  factor_count: 6
+  factor_sum: 4.255
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Fed funds rate anchors T-bill rate: FF at 3.50-3.75%, DTB3 at 3.59%
+      - rate is firmly within the FF band and will stay there absent a rate change'
+    supports:
+      center: 3.59
+      low: 3.55
+      high: 3.63
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: 'No FOMC meeting before May 14 (next is June 17): eliminates the
+      primary source of large rate moves'
+    supports:
+      center: 3.59
+      low: 3.56
+      high: 3.62
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Extremely stable recent regime: DTB3 has been 3.59-3.60 for 10 consecutive
+      trading days'
+    supports:
+      center: 3.59
+      low: 3.57
+      high: 3.61
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 'Rate futures imply slightly higher rates later in 2026 (Oct: 3.63,
+      Dec: 3.67), suggesting no near-term rate cut expectations'
+    supports:
+      center: 3.6
+      low: 3.57
+      high: 3.63
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Economic data releases (CPI, jobs) between May 4-14 could cause 3-8bp
+      moves if they surprise significantly
+    supports:
+      center: 3.59
+      low: 3.52
+      high: 3.66
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Geopolitical tail risk (Middle East mentioned in FOMC statement)
+      could cause flight-to-safety driving rates lower
+    supports:
+      center: 3.55
+      low: 3.4
+      high: 3.59
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+    conditional: If a major geopolitical event occurs
+  dominant_factor: 'Fed funds rate anchors T-bill rate: FF at 3.50-3.75%, DTB3 at
+    3.59% - rate is firmly within the FF band and will stay there absent a rate change'
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 3.5899791449426486
+    implied_p10: 3.554035453597497
+    implied_p90: 3.62385818561001
+    median_gap: 2.0855057351276685e-05
+    median_gap_pct: 0.029868578255487527
+    spread_ratio: 1.4321983273596268
+    precision: 0.027855153203342645
+  sources:
+  - '[(Metaculus) What will be the value of "3-Month Treasury Bill Secondary Market
+    Rate, Discount Basis" on 2026-05-14?](https://www.metaculus.com/questions/43390)'
+  - '[3-Month Treasury Bill Secondary Market Rate, Discount Basis](https://fred.stlouisfed.org/series/DTB3)'
+  - '[Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm)'
+  - '[3-Month Treasury Bill Secondary Market Rate, Discount Basis (TB3MS) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/TB3MS)'
+  - '[Market Yield on U.S. Treasury Securities at 3-Month Constant Maturity, Quoted
+    on an Investment Basis (DGS3MO) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS3MO)'
+  - '[10-Year Treasury Constant Maturity Minus 3-Month Treasury Constant Maturity
+    (T10Y3M) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/T10Y3M)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43390
+- **Question ID**: 43386
+- **Session Duration**: 405.7s (6.8 min)
+- **Cost**: $10.0846 total (orchestrator $3.0684 + sub-agents $7.0162)
+- **Tokens**: 11,624 total (38 in, 11,586 out)
+  - Cache: 582,260 read, 70,693 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43390_20260504_103643/20260504-103643.log`
+
+### Tool Calls
+
+- **Total**: 27 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0233 |
+| execute_code | 10 | 0 | 214ms | — |
+| fetch_url | 2 | 0 | 5038ms | — |
+| fred_series | 5 | 0 | 787ms | — |
+| get_metaculus_questions | 2 | 0 | 1797ms | — |
+| premortem | 1 | 0 | 113601ms | $2.2808 |
+| reflection | 1 | 0 | 193ms | — |
+| research | 1 | 0 | 365059ms | $4.5158 |
+| web_search | 5 | 0 | 16320ms | $0.1963 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "3-Month Treasury Bill Secondary Marke...
+- [3-Month Treasury Bill Secondary Market Rate, Discount Basis](https://fred.st...
+- [Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsev...
+- [3-Month Treasury Bill Secondary Market Rate, Discount Basis (TB3MS) | FRED |...
+- [Market Yield on U.S. Treasury Securities at 3-Month Constant Maturity, Quote...
+- [10-Year Treasury Constant Maturity Minus 3-Month Treasury Constant Maturity ...
