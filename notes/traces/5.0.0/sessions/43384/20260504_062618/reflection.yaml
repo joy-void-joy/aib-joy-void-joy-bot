@@ -1,0 +1,207 @@
+---
+timestamp: 2026-05-04 06:30:30 UTC
+question_type: numeric
+factors:
+- description: Fed Funds target unchanged at 3.50-3.75% through May 14 (no FOMC meeting
+    until June)
+  supports:
+    center: 3.647
+    low: 3.55
+    high: 3.75
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: SOFR stable regime mean of 3.647 with std 0.0135 since April 16
+  supports:
+    center: 3.647
+    low: 3.62
+    high: 3.68
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: Latest SOFR value of 3.66 (April 30) slightly above regime mean - will
+    mean-revert
+  supports:
+    center: 3.65
+    low: 3.63
+    high: 3.67
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: May 14 is a normal Thursday - no month-end/quarter-end repo market
+    stress
+  supports:
+    center: 3.647
+    low: 3.62
+    high: 3.67
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: 'Small tail risk: repo market stress could spike SOFR temporarily (like
+    April 15 spike to 3.72)'
+  supports:
+    center: 3.72
+    low: 3.68
+    high: 3.8
+  logit: -0.3
+  confidence: 0.3
+  conditional: If repo market stress occurs
+  effective_logit: -0.09
+- description: 'Very small tail risk: emergency rate cut (1% scenario per CNN/FOMC
+    dissent signals)'
+  supports:
+    center: 3.4
+    low: 3.35
+    high: 3.45
+  logit: -0.3
+  confidence: 0.1
+  conditional: If emergency rate action occurs
+  effective_logit: -0.03
+tentative_estimate:
+  center: 3.648
+  low: 3.6
+  high: 3.69
+anchor: Stable regime mean of 3.647% (from FRED SOFR series, regime stats since April
+  16, 11 observations)
+assessment: SOFR on May 14 will almost certainly be very close to its current level
+  of 3.65-3.66. The Fed held rates at 3.50-3.75% on April 29, and the next meeting
+  is not until mid-June. SOFR is bounded within the Fed Funds target range and highly
+  mean-reverting, with a stable regime mean of 3.647. May 14 is a normal business
+  day with no special calendar effects. The distribution should be tight - centered
+  around 3.647 with ~80% CI of about 3.60-3.69. Tail scenarios include repo market
+  stress (upside) and emergency rate cut (downside), both very unlikely in a 10-day
+  window.
+calibration_notes: 'Distribution width calibrated against: (1) empirical stable-regime
+  daily std of 0.0135, (2) full-month daily change std of 0.028, (3) observed April
+  range 3.57-3.72. Final P10-P90 of 3.60-3.69 is consistent with expected behavior
+  when no rate change occurs. Mean reversion ensures the distribution doesn''t drift
+  far from 3.65 over 8 business days.'
+key_uncertainties: Primary uncertainty is whether a repo market event or Treasury
+  settlement could cause a temporary spike on exactly May 14. Secondary uncertainty
+  is whether the small but non-zero emergency rate cut probability should be weighted
+  differently given FOMC dissent signals.
+tool_audit: 'FRED data via fetch_url: Excellent - provided full SOFR time series and
+  regime stats. Web search: Useful for confirming FOMC meeting dates and rate decision.
+  FRED Fed Funds target data: Confirmed 3.50-3.75 held steady. CNN article snippet:
+  Informed about Fed signaling future cuts (asymmetric risk). Monte Carlo simulation:
+  Ran 3 variants to calibrate distribution width.'
+process_reflection: 'This is an ideal question for the quantitative pipeline - SOFR
+  is well-defined, has clean daily data, and the key driver (Fed Funds rate) is directly
+  observable. The FRED API data was perfect. The main modeling challenge was calibrating
+  the right width: too narrow ignores tail repo market events, too wide ignores the
+  strong mean reversion. The OU process with mixture scenarios feels well-calibrated.'
+computed:
+  factor_count: 6
+  factor_sum: 4.83
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Fed Funds target unchanged at 3.50-3.75% through May 14 (no FOMC
+      meeting until June)
+    supports:
+      center: 3.647
+      low: 3.55
+      high: 3.75
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: SOFR stable regime mean of 3.647 with std 0.0135 since April 16
+    supports:
+      center: 3.647
+      low: 3.62
+      high: 3.68
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: Latest SOFR value of 3.66 (April 30) slightly above regime mean -
+      will mean-revert
+    supports:
+      center: 3.65
+      low: 3.63
+      high: 3.67
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: May 14 is a normal Thursday - no month-end/quarter-end repo market
+      stress
+    supports:
+      center: 3.647
+      low: 3.62
+      high: 3.67
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: 'Small tail risk: repo market stress could spike SOFR temporarily
+      (like April 15 spike to 3.72)'
+    supports:
+      center: 3.72
+      low: 3.68
+      high: 3.8
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+    conditional: If repo market stress occurs
+  - description: 'Very small tail risk: emergency rate cut (1% scenario per CNN/FOMC
+      dissent signals)'
+    supports:
+      center: 3.4
+      low: 3.35
+      high: 3.45
+    logit: -0.3
+    confidence: 0.1
+    effective_logit: -0.03
+    conditional: If emergency rate action occurs
+  dominant_factor: Fed Funds target unchanged at 3.50-3.75% through May 14 (no FOMC
+    meeting until June)
+  dominant_effective_logit: 2.375
+  distribution_metrics:
+    implied_median: 3.6470414201183425
+    implied_p10: 3.5873668639053253
+    implied_p90: 3.712031558185404
+    median_gap: 0.0009585798816575952
+    median_gap_pct: 0.7689265089793543
+    spread_ratio: 0.7219365556522417
+    precision: 0.024671052631578906
+  sources:
+  - '[(Metaculus) What will be the value of "Secured Overnight Financing Rate" on
+    2026-05-14?](https://www.metaculus.com/questions/43384)'
+  - '[Secured Overnight Financing Rate](https://fred.stlouisfed.org/series/SOFR)'
+  - '[Federal Funds Target Range - Upper Limit (DFEDTARU) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFEDTARU)'
+  - '[Federal Funds Target Range - Lower Limit (DFEDTARL) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFEDTARL)'
+  - '[Federal Funds Effective Rate (FEDFUNDS) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/FEDFUNDS)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43384
+- **Question ID**: 43380
+- **Session Duration**: 400.6s (6.7 min)
+- **Cost**: $4.8949 total (orchestrator $2.9944 + sub-agents $1.9005)
+- **Tokens**: 11,299 total (30 in, 11,269 out)
+  - Cache: 601,426 read, 66,487 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43384_20260504_062618/20260504-062618.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 1231ms | — |
+| fetch_url | 1 | 0 | 1172ms | — |
+| fred_series | 4 | 0 | 814ms | — |
+| get_metaculus_questions | 1 | 0 | 262ms | — |
+| premortem | 1 | 0 | 106643ms | $1.7447 |
+| reflection | 1 | 0 | 268ms | — |
+| web_search | 4 | 0 | 16703ms | $0.1558 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "Secured Overnight Financing Rate" on ...
+- [Secured Overnight Financing Rate](https://fred.stlouisfed.org/series/SOFR)
+- [Federal Funds Target Range - Upper Limit (DFEDTARU) | FRED | St. Louis Fed](...
+- [Federal Funds Target Range - Lower Limit (DFEDTARL) | FRED | St. Louis Fed](...
+- [Federal Funds Effective Rate (FEDFUNDS) | FRED | St. Louis Fed](https://fred...
