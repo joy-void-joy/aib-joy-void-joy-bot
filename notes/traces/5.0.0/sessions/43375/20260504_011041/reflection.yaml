@@ -1,0 +1,198 @@
+---
+timestamp: 2026-05-04 01:16:02 UTC
+question_type: numeric
+factors:
+- description: Fed funds rate held steady at 3.50-3.75% on April 29; no FOMC meeting
+    until June 17, anchoring short-term rates
+  supports:
+    center: 3.56
+    low: 3.49
+    high: 3.63
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: DTB1YR regime is stable since April 6 with mean 3.544 and std 0.024;
+    very low volatility environment
+  supports:
+    center: 3.55
+    low: 3.48
+    high: 3.62
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Last reading was 3.57 on April 30 (post-FOMC); slight uptick from regime
+    mean but within normal range
+  supports:
+    center: 3.57
+    low: 3.5
+    high: 3.64
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: 10 business day horizon with daily vol 0.025 implies random-walk sigma
+    of ~0.08, giving 80% CI of 3.47-3.67
+  supports:
+    center: 3.57
+    low: 3.47
+    high: 3.67
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Tail risk from unexpected economic data releases or geopolitical events
+    could shift rates more than regime vol suggests
+  supports:
+    center: 3.55
+    low: 3.35
+    high: 3.75
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  center: 3.56
+  low: 3.47
+  high: 3.66
+anchor: Regime mean of 3.544% with std 0.024 (from 19 daily observations in April
+  2026 stable regime). Last value 3.57%.
+assessment: The 1-year T-bill rate has been remarkably stable throughout April 2026
+  in the 3.49-3.60 range. The Fed held rates at 3.50-3.75% on April 29, and the next
+  FOMC meeting isn't until June 17. With no policy change expected in the 10 business
+  days to May 14, the rate is strongly anchored. Monte Carlo simulations using empirical
+  daily volatility (0.025) and scenario-mixed models consistently produce a median
+  around 3.56 with tight confidence intervals. The distribution is very slightly left-skewed
+  due to the mean-reversion pull toward the regime mean of 3.544.
+calibration_notes: Distribution width matches random-walk sigma * sqrt(horizon). No
+  systematic widening or narrowing applied beyond what the data implies. The scenario
+  mixture adds modest tail weight for unexpected events.
+key_uncertainties: Main uncertainty is whether any surprise economic data (CPI, employment)
+  or geopolitical events cause a sudden shift in rate expectations. But with Fed on
+  hold and no meeting until June, the anchoring is very strong.
+tool_audit: FRED API data via web_search returned excellent structured data with regime
+  stats. Treasury.gov provided broader historical context. FOMC statement confirmed
+  rate hold. All tools performed well; no failures.
+update_triggers: A surprise change in economic data (employment, inflation surprise),
+  unexpected Fed commentary, or a market shock could move rates significantly outside
+  the expected range.
+process_reflection: This was a straightforward short-horizon rate forecasting question.
+  The FRED structured data from web_search was excellent - having regime stats pre-computed
+  saved significant effort. The Monte Carlo simulation workflow was smooth. The main
+  challenge was ensuring I properly accounted for the FOMC meeting timing relative
+  to the forecast window.
+computed:
+  factor_count: 5
+  factor_sum: 5.15
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Fed funds rate held steady at 3.50-3.75% on April 29; no FOMC meeting
+      until June 17, anchoring short-term rates
+    supports:
+      center: 3.56
+      low: 3.49
+      high: 3.63
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: DTB1YR regime is stable since April 6 with mean 3.544 and std 0.024;
+      very low volatility environment
+    supports:
+      center: 3.55
+      low: 3.48
+      high: 3.62
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Last reading was 3.57 on April 30 (post-FOMC); slight uptick from
+      regime mean but within normal range
+    supports:
+      center: 3.57
+      low: 3.5
+      high: 3.64
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: 10 business day horizon with daily vol 0.025 implies random-walk
+      sigma of ~0.08, giving 80% CI of 3.47-3.67
+    supports:
+      center: 3.57
+      low: 3.47
+      high: 3.67
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Tail risk from unexpected economic data releases or geopolitical
+      events could shift rates more than regime vol suggests
+    supports:
+      center: 3.55
+      low: 3.35
+      high: 3.75
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Fed funds rate held steady at 3.50-3.75% on April 29; no FOMC meeting
+    until June 17, anchoring short-term rates
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 3.5604854368932037
+    implied_p10: 3.481747572815534
+    implied_p90: 3.639223300970874
+    median_gap: -0.00048543689320368344
+    median_gap_pct: -0.30826140567188276
+    spread_ratio: 1.2065351418002461
+    precision: 0.05337078651685392
+  sources:
+  - '[(Metaculus) What will be the value of "1-Year Treasury Bill Secondary Market
+    Rate, Discount Basis" on 2026-05-14?](https://www.metaculus.com/questions/43375)'
+  - '[1-Year Treasury Bill Secondary Market Rate, Discount Basis (DTB1YR) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/DTB1YR)'
+  - '[4-Week Treasury Bill Secondary Market Rate, Discount Basis (DTB4WK) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/DTB4WK)'
+  - '[3-Month Treasury Bill Secondary Market Rate, Discount Basis (DTB3) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/DTB3)'
+  - '[Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS1) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS1)'
+  - '[1-Year Treasury Bill Secondary Market Rate, Discount Basis (TB1YR) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/TB1YR)'
+  - '[Federal Funds Target Range - Upper Limit (DFEDTARU) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFEDTARU)'
+  - '[Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm)'
+  - '[U.S. Department of the Treasury](https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_bill_rates&field_tdr_date_value=2026)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43375
+- **Question ID**: 43371
+- **Session Duration**: 435.2s (7.3 min)
+- **Cost**: $6.6506 total (orchestrator $2.7696 + sub-agents $3.8810)
+- **Tokens**: 7,918 total (39 in, 7,879 out)
+  - Cache: 622,388 read, 66,373 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43375_20260504_011041/20260504-011041.log`
+
+### Tool Calls
+
+- **Total**: 43 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1298 |
+| execute_code | 8 | 0 | 129ms | — |
+| fetch_url | 6 | 0 | 5597ms | — |
+| fred_series | 15 | 0 | 460ms | — |
+| get_metaculus_questions | 2 | 0 | 1666ms | — |
+| premortem | 2 | 0 | 96477ms | $3.4395 |
+| reflection | 2 | 0 | 289ms | — |
+| web_search | 8 | 0 | 39825ms | $0.3117 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "1-Year Treasury Bill Secondary Market...
+- [1-Year Treasury Bill Secondary Market Rate, Discount Basis (DTB1YR) | FRED |...
+- [4-Week Treasury Bill Secondary Market Rate, Discount Basis (DTB4WK) | FRED |...
+- [3-Month Treasury Bill Secondary Market Rate, Discount Basis (DTB3) | FRED | ...
+- [Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted...
+- [1-Year Treasury Bill Secondary Market Rate, Discount Basis (TB1YR) | FRED | ...
+- [Federal Funds Target Range - Upper Limit (DFEDTARU) | FRED | St. Louis Fed](...
+- [Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsev...
+- [U.S. Department of the Treasury](https://home.treasury.gov/resource-center/d...
