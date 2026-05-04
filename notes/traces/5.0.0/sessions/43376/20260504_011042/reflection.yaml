@@ -1,0 +1,208 @@
+---
+timestamp: 2026-05-04 01:15:00 UTC
+question_type: numeric
+factors:
+- description: 'Stable regime: DGS1 has been in a tight range (3.64-3.75%) for 19
+    trading days with mean 3.694 and std 0.024. No structural break detected.'
+  supports:
+    center: 3.69
+    low: 3.64
+    high: 3.75
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Fed held rates unchanged at 3.5-3.75% on Apr 29 with no rate change
+    expected before May 14. Next FOMC is June 17. 1-year yield anchored near top of
+    fed funds band.
+  supports:
+    center: 3.72
+    low: 3.65
+    high: 3.78
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Most recent value 3.72% - slight uptick in last 2 days (from 3.69 to
+    3.75 to 3.72). No clear drift direction.
+  supports:
+    center: 3.72
+    low: 3.6
+    high: 3.84
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Middle East uncertainty (Iran blockade) mentioned in FOMC statement
+    as source of elevated uncertainty - could cause wider-than-normal swings in risk
+    sentiment.
+  supports:
+    center: 3.72
+    low: 3.5
+    high: 3.95
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: FOMC dissent (4 members, most since 1992) signals policy uncertainty
+    - some want cuts, others oppose easing bias. This creates two-sided risk for short-term
+    yields.
+  supports:
+    center: 3.72
+    low: 3.55
+    high: 3.9
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+tentative_estimate:
+  center: 3.72
+  low: 3.6
+  high: 3.84
+anchor: 'Current value: 3.72%. Regime mean: 3.694% (19 observations). Random walk
+  from 3.72 with daily vol 0.025.'
+assessment: The 1-year Treasury yield is tightly anchored near 3.72%, close to the
+  top of the fed funds target range (3.5-3.75%). With no FOMC meeting until June 17
+  and rates on hold for a third consecutive meeting, the primary driver of 1-year
+  yields (monetary policy expectations) is stable. The empirical daily volatility
+  is ~2.5 bps, giving a random-walk 10-day standard deviation of ~8 bps. The Monte
+  Carlo simulation (70/30 mixture of base and elevated volatility) produces a distribution
+  centered at 3.72 with P10=3.60 and P90=3.84. The Middle East tensions and FOMC dissent
+  add some tail risk but don't shift the center.
+calibration_notes: Distribution centered on current value (3.72) with no meaningful
+  drift. Width driven by empirical daily volatility scaled to 10 trading days. 70/30
+  mixture adds modest fat tails for geopolitical/macro surprise scenarios. P10-P90
+  range of 24 bps seems appropriate for a 2-week horizon in a stable rate environment.
+key_uncertainties: 1. Whether Middle East tensions escalate enough to cause a flight-to-safety
+  rally (pushing yields down) or inflation scare (pushing up). 2. Whether any unexpected
+  economic data (jobs, CPI) between now and May 14 shifts rate expectations significantly.
+  3. The 19-day calibration window may not capture rare large moves.
+tool_audit: 'FRED DGS1 data via web_search: excellent - returned full 19-day time
+  series with regime stats. FOMC statement fetch: very useful - confirmed rate hold,
+  dissent details, and policy stance. TradingEconomics: useful for confirming market
+  expectations. No tool failures.'
+update_triggers: Major geopolitical escalation in Middle East; surprise CPI or jobs
+  data; unexpected Fed communication shifting rate expectations; market liquidity
+  event.
+process_reflection: This was a straightforward short-horizon yield forecast. The FRED
+  data integration in web_search was excellent, providing structured JSON with regime
+  stats that made Monte Carlo parameterization easy. The main challenge was deciding
+  on the right volatility mixture - the 19-day window is short but the regime is clearly
+  stable. I used a 70/30 base/high-vol mixture to account for potential surprises.
+  The forecasting framework worked well for this type of measurement question.
+computed:
+  factor_count: 5
+  factor_sum: 3.375
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Stable regime: DGS1 has been in a tight range (3.64-3.75%) for 19
+      trading days with mean 3.694 and std 0.024. No structural break detected.'
+    supports:
+      center: 3.69
+      low: 3.64
+      high: 3.75
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Fed held rates unchanged at 3.5-3.75% on Apr 29 with no rate change
+      expected before May 14. Next FOMC is June 17. 1-year yield anchored near top
+      of fed funds band.
+    supports:
+      center: 3.72
+      low: 3.65
+      high: 3.78
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Most recent value 3.72% - slight uptick in last 2 days (from 3.69
+      to 3.75 to 3.72). No clear drift direction.
+    supports:
+      center: 3.72
+      low: 3.6
+      high: 3.84
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Middle East uncertainty (Iran blockade) mentioned in FOMC statement
+      as source of elevated uncertainty - could cause wider-than-normal swings in
+      risk sentiment.
+    supports:
+      center: 3.72
+      low: 3.5
+      high: 3.95
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: FOMC dissent (4 members, most since 1992) signals policy uncertainty
+      - some want cuts, others oppose easing bias. This creates two-sided risk for
+      short-term yields.
+    supports:
+      center: 3.72
+      low: 3.55
+      high: 3.9
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  dominant_factor: Fed held rates unchanged at 3.5-3.75% on Apr 29 with no rate change
+    expected before May 14. Next FOMC is June 17. 1-year yield anchored near top of
+    fed funds band.
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 3.708
+    implied_p10: 3.6311851851851853
+    implied_p90: 3.785333333333333
+    median_gap: 0.01200000000000001
+    median_gap_pct: 7.7847188851514
+    spread_ratio: 1.556943777030277
+    precision: 0.064516129032258
+  sources:
+  - '[(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securities
+    at 1-Year Constant Maturity, Quoted on an Investment Basis" on 2026-05-14?](https://www.metaculus.com/questions/43376)'
+  - '[Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS1) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS1)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS10)'
+  - '[Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted
+    on an Investment Basis (GS1) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/GS1)'
+  - '[Market Yield on U.S. Treasury Securities at 1-Month Constant Maturity, Quoted
+    on an Investment Basis (DGS1MO) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS1MO)'
+  - '[FOMC Summary of Economic Projections for the Fed Funds Rate, Median (FEDTARMD)
+    | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/FEDTARMD)'
+  - '[Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm)'
+  - '[United States Fed Funds Interest Rate](https://tradingeconomics.com/united-states/interest-rate)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43376
+- **Question ID**: 43372
+- **Session Duration**: 395.6s (6.6 min)
+- **Cost**: $6.3663 total (orchestrator $2.4853 + sub-agents $3.8810)
+- **Tokens**: 7,203 total (28 in, 7,175 out)
+  - Cache: 492,203 read, 64,451 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43376_20260504_011042/20260504-011042.log`
+
+### Tool Calls
+
+- **Total**: 43 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1298 |
+| execute_code | 8 | 0 | 129ms | — |
+| fetch_url | 6 | 0 | 5597ms | — |
+| fred_series | 15 | 0 | 460ms | — |
+| get_metaculus_questions | 2 | 0 | 1666ms | — |
+| premortem | 2 | 0 | 96477ms | $3.4395 |
+| reflection | 2 | 0 | 289ms | — |
+| web_search | 8 | 0 | 39825ms | $0.3117 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securit...
+- [Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [Market Yield on U.S. Treasury Securities at 1-Year Constant Maturity, Quoted...
+- [Market Yield on U.S. Treasury Securities at 1-Month Constant Maturity, Quote...
+- [FOMC Summary of Economic Projections for the Fed Funds Rate, Median (FEDTARM...
+- [Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsev...
+- [United States Fed Funds Interest Rate](https://tradingeconomics.com/united-s...
