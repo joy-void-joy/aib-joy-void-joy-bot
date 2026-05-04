@@ -1,0 +1,271 @@
+---
+timestamp: 2026-05-04 08:58:20 UTC
+question_type: multiple_choice
+factors:
+- description: Mean reversion after news-driven spike - research shows news-driven
+    Google Trends peaks have 3-7 day half-lives, and May 4→May 15 spans 11 days. The
+    spike was driven by CDC announcement on April 28 and heavy coverage through May
+    2.
+  supports: Decreases
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: May 4 is only 2 days after stated peak of 100, so it will be high on
+    resolution scale (likely 50-80), while May 15 will be 13-17 days post-peak (likely
+    5-25). The gap should far exceed 3 points.
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: Very niche search term - 'drug resistant salmonella outbreak' is highly
+    specific and event-driven, not a persistent interest topic. Pre-outbreak baseline
+    was likely 0-5.
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Outbreak is still active (34 cases, 13 states, CDC investigation ongoing).
+    Spring is backyard poultry season, so case counts could grow. CDC periodic updates
+    could generate follow-up news.
+  supports: Increases
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Drug-resistant angle targeting children makes this particularly newsworthy
+    - could sustain media attention longer or generate renewed coverage if cases increase
+    or deaths occur.
+  supports: Increases
+  logit: 0.6
+  confidence: 0.4
+  effective_logit: 0.24
+- description: 'Google Trends rescaling: if a second larger spike occurs before May
+    15, it would rescale all values, potentially compressing the May 4 value down
+    and elevating May 15.'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.07
+    Decreases: 0.81
+anchor: 'Base rate for news-driven Google Trends spikes: ~90-95% decay significantly
+  within 11 days. From simulation and comparable questions, P(Decreases) anchor is
+  ~85%.'
+assessment: 'The search term "drug resistant salmonella outbreak" spiked to 100 on
+  May 2, 2026 following the CDC announcement of a multi-state drug-resistant Salmonella
+  Saintpaul outbreak linked to backyard poultry (34 cases, 13 states, 13 hospitalizations,
+  41% children under 5). Heavy media coverage occurred April 28-May 2.
+
+
+  On the resolution scale (April 15-May 15), May 4 will be near the peak (likely 50-80)
+  while May 15 will be in the decay tail (likely 5-25). Monte Carlo simulation with
+  various decay parameters shows ~95% probability of Decreases in the base case, moderated
+  by a ~12% chance of a significant second spike from outbreak escalation.
+
+
+  The comparable "uscis pause" question with identical structure (peak at 100 on May
+  2, similar timeframe) was forecast at 82% Decreases. This salmonella term is arguably
+  even more likely to decay because it''s a very specific health outbreak term with
+  a clear event-driven spike, whereas USCIS policy could generate ongoing legal/political
+  developments.
+
+
+  Key tension: the outbreak is active and could escalate (more cases, deaths, broader
+  scope), which would generate renewed search interest. But even with CDC updates,
+  follow-up coverage typically generates less search volume than the initial breaking
+  news. The probability of a second spike large enough to match or exceed May 4 levels
+  at May 15 is low.'
+calibration_notes: My 81% Decreases is somewhat below the simulation's 95% and the
+  factor-implied probability, reflecting uncertainty about outbreak escalation. This
+  divergence is intentional - I'm adding ~12-15% probability weight for scenarios
+  where the outbreak generates renewed interest. The comparable USCIS question got
+  82% Decreases, which aligns well.
+key_uncertainties: Whether the outbreak escalates significantly (case count doubling,
+  deaths, broader geographic spread) in the next 11 days. Whether CDC issues a dramatically
+  updated warning. Whether a new resistant strain or related outbreak emerges.
+tool_audit: 'web_search: Useful - found current outbreak details (34 cases, 13 states,
+  backyard poultry, CDC investigation). research(): Provided good background on Google
+  Trends post-peak behavior and Salmonella context, though web access was blocked
+  for the sub-agent. fetch_url: Failed to extract Google Trends data (JS-rendered
+  page) and CDC outbreak page returned 404 then generic content. execute_code: Very
+  useful for Monte Carlo simulation modeling decay patterns. get_coherence_links:
+  Empty result (no related questions). Past traces: Very useful - found comparable
+  USCIS question with same structure for calibration.'
+update_triggers: CDC updates showing dramatic case increase (100+ cases); first death
+  reported; new drug-resistant strain identified; major media outlet does viral follow-up
+  piece; federal emergency or recall action.
+process_reflection: The Google Trends questions follow a predictable pattern - the
+  scaffolding works well once you recognize the archetype. The research sub-agent's
+  inability to access the web was a limitation but not critical since direct web_search
+  worked. The main gap is inability to programmatically access Google Trends API data
+  (the SerpApi endpoint) to see current values. Having access to the actual Trends
+  data would dramatically improve precision. The simulation framework works well for
+  these types of questions. Finding past traces for comparable questions is very valuable
+  for calibration.
+computed:
+  factor_count: 6
+  factor_sum: 5.54
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Mean reversion after news-driven spike - research shows news-driven
+      Google Trends peaks have 3-7 day half-lives, and May 4→May 15 spans 11 days.
+      The spike was driven by CDC announcement on April 28 and heavy coverage through
+      May 2.
+    supports: Decreases
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: May 4 is only 2 days after stated peak of 100, so it will be high
+      on resolution scale (likely 50-80), while May 15 will be 13-17 days post-peak
+      (likely 5-25). The gap should far exceed 3 points.
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: Very niche search term - 'drug resistant salmonella outbreak' is
+      highly specific and event-driven, not a persistent interest topic. Pre-outbreak
+      baseline was likely 0-5.
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Outbreak is still active (34 cases, 13 states, CDC investigation
+      ongoing). Spring is backyard poultry season, so case counts could grow. CDC
+      periodic updates could generate follow-up news.
+    supports: Increases
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Drug-resistant angle targeting children makes this particularly newsworthy
+      - could sustain media attention longer or generate renewed coverage if cases
+      increase or deaths occur.
+    supports: Increases
+    logit: 0.6
+    confidence: 0.4
+    effective_logit: 0.24
+  - description: 'Google Trends rescaling: if a second larger spike occurs before
+      May 15, it would rescale all values, potentially compressing the May 4 value
+      down and elevating May 15.'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  dominant_factor: Mean reversion after news-driven spike - research shows news-driven
+    Google Trends peaks have 3-7 day half-lives, and May 4→May 15 spans 11 days. The
+    spike was driven by CDC announcement on April 28 and heavy coverage through May
+    2.
+  dominant_effective_logit: 2.25
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 4.75
+    factors:
+    - description: Mean reversion after news-driven spike - research shows news-driven
+        Google Trends peaks have 3-7 day half-lives, and May 4→May 15 spans 11 days.
+        The spike was driven by CDC announcement on April 28 and heavy coverage through
+        May 2.
+      supports: Decreases
+      logit: 2.5
+      confidence: 0.9
+      effective_logit: 2.25
+    - description: May 4 is only 2 days after stated peak of 100, so it will be high
+        on resolution scale (likely 50-80), while May 15 will be 13-17 days post-peak
+        (likely 5-25). The gap should far exceed 3 points.
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: Very niche search term - 'drug resistant salmonella outbreak' is
+        highly specific and event-driven, not a persistent interest topic. Pre-outbreak
+        baseline was likely 0-5.
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+  - outcome: Increases
+    factor_count: 3
+    logit_sum: 0.79
+    factors:
+    - description: Outbreak is still active (34 cases, 13 states, CDC investigation
+        ongoing). Spring is backyard poultry season, so case counts could grow. CDC
+        periodic updates could generate follow-up news.
+      supports: Increases
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: Drug-resistant angle targeting children makes this particularly
+        newsworthy - could sustain media attention longer or generate renewed coverage
+        if cases increase or deaths occur.
+      supports: Increases
+      logit: 0.6
+      confidence: 0.4
+      effective_logit: 0.24
+    - description: 'Google Trends rescaling: if a second larger spike occurs before
+        May 15, it would rescale all values, potentially compressing the May 4 value
+        down and elevating May 15.'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.008418381367272668
+      Increases: 0.01854903141950816
+      Decreases: 0.9730325872132191
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.07
+      Decreases: 0.81
+    per_option_gap_pp:
+      Doesn't change: 6.158161863272734
+      Increases: 10.145096858049184
+      Decreases: -16.3032587213219
+    max_gap_pp: -16.3032587213219
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “drug resistant salmonella outbreak” change
+    between 2026-05-04 and 2026-05-15 according to Google Trends?](https://www.metaculus.com/questions/43388)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=drug%20resistant%20salmonella%20outbreak&date=2026-04-15%202026-05-15)'
+  - '[cdc.gov](https://www.cdc.gov/salmonella/outbreaks/backyard-poultry-04-26/index.html)'
+  - '[Salmonella Outbreak Linked to Backyard Poultry](https://www.cdc.gov/salmonella/outbreaks/saintpaul-04-26/index.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43388
+- **Question ID**: 43384
+- **Session Duration**: 734.9s (12.2 min)
+- **Cost**: $10.7694 total (orchestrator $3.9448 + sub-agents $6.8246)
+- **Tokens**: 14,957 total (42 in, 14,915 out)
+  - Cache: 871,979 read, 80,940 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43388_20260504_084859/20260504-084859.log`
+
+### Tool Calls
+
+- **Total**: 35 calls
+- **Errors**: 2 (5.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0486 |
+| execute_code | 10 | 0 | 2401ms | — |
+| fetch_url | 5 | 2 ⚠️ | 5670ms | — |
+| fred_series | 4 | 0 | 423ms | — |
+| get_coherence_links | 1 | 0 | 367ms | — |
+| get_metaculus_questions | 2 | 0 | 372ms | — |
+| premortem | 2 | 0 | 122962ms | $4.8003 |
+| reflection | 2 | 0 | 627ms | — |
+| research | 1 | 0 | 116666ms | $1.6413 |
+| web_search | 8 | 0 | 24683ms | $0.3344 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “drug resistant salmonella outbreak” change...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=drug%2...
+- [cdc.gov](https://www.cdc.gov/salmonella/outbreaks/backyard-poultry-04-26/ind...
+- [Salmonella Outbreak Linked to Backyard Poultry](https://www.cdc.gov/salmonel...
