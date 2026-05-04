@@ -1,0 +1,218 @@
+---
+timestamp: 2026-05-04 01:54:34 UTC
+question_type: multiple_choice
+factors:
+- description: News spike on May 1 with massive media coverage (11+ outlets) - peak
+    at 100. By May 4 (Day 3), power-law decay models predict significant decline to
+    ~5-15 range.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: By May 16 (Day 15 post-peak), celebrity soft-news stories are essentially
+    at baseline (0-2). Research shows 90%+ decay within 7 days for shock events, and
+    this is lighter soft news.
+  supports: Decreases
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: The 5-word search phrase 'prince william kate dog otto' is very specific
+    and niche - such queries decay faster than broader terms and may already be near-zero
+    on May 4
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Google Trends uses integer rounding - if both May 4 and May 16 values
+    round to 0-3, the change would be within the 3-point threshold
+  supports: Doesn't change
+  logit: 0.7
+  confidence: 0.4
+  effective_logit: 0.27999999999999997
+- description: Very small chance of a follow-up news event about Otto between May
+    4-16 that could re-spike interest
+  supports: Increases
+  logit: 0.3
+  confidence: 0.15
+  effective_logit: 0.045
+tentative_estimate:
+  probabilities:
+    Increases: 0.02
+    Doesn't change: 0.18
+    Decreases: 0.8
+anchor: 'Base rate for Google Trends "Decreases" after a news spike: ~70-80% based
+  on universal power-law decay patterns showing 70-80% of peak interest lost within
+  24 hours'
+assessment: The royal dog Otto was revealed on May 1, 2026 with massive media coverage,
+  driving the search term to peak (100). By May 4 (3 days later), interest will have
+  declined significantly based on well-documented power-law decay patterns for celebrity
+  news. By May 16 (15 days later), interest will be negligible. The main question
+  is whether May 4 value is already so low (0-3) that the difference from May 16 falls
+  within the 3-point "doesn't change" threshold. Given 11+ major outlets covered the
+  story, residual interest on May 4 should still be measurable (likely 5-15), making
+  "Decreases" the dominant outcome. The "Increases" scenario requires an unexpected
+  follow-up news event about Otto, which is very unlikely in a 12-day window.
+calibration_notes: The ±3 point threshold for 'Doesn't change' creates meaningful
+  probability mass on that outcome when both values are near zero. My 80% on Decreases
+  is consistent with the decay research but accounts for the possibility that the
+  niche query drops so fast that May 4 is already near-zero.
+key_uncertainties: 1. What is the actual May 4 Google Trends value? If it's 0-3, the
+  question resolves 'Doesn't change'. 2. Could a follow-up Otto news event drive interest
+  back up before May 16?
+tool_audit: 'Research tool: Excellent - provided detailed background on the Otto announcement
+  (May 1, 2026) and comprehensive academic research on Google Trends decay patterns.
+  Web search: Confirmed massive media coverage from 11+ major outlets. Code execution:
+  Useful for power-law fitting and Monte Carlo simulation. Google Trends fetch: Failed
+  (unsupported browser error from Playwright), but this was expected - Google Trends
+  doesn''t render well programmatically.'
+update_triggers: If I could see the actual May 4 Google Trends value, that would instantly
+  resolve most uncertainty. A value of 4+ on May 4 would push Decreases probability
+  above 95%.
+process_reflection: The research sub-agent was extremely effective for both the news
+  event context and the academic literature on search decay. The Monte Carlo simulation
+  helped quantify the sensitivity to the May 4 value assumption. The main friction
+  was not being able to fetch actual Google Trends data directly - the Playwright
+  renderer couldn't handle the Google Trends JavaScript. A SerpApi integration would
+  have been ideal. The decay pattern research was comprehensive and well-sourced.
+computed:
+  factor_count: 5
+  factor_sum: 3.35
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: News spike on May 1 with massive media coverage (11+ outlets) - peak
+      at 100. By May 4 (Day 3), power-law decay models predict significant decline
+      to ~5-15 range.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: By May 16 (Day 15 post-peak), celebrity soft-news stories are essentially
+      at baseline (0-2). Research shows 90%+ decay within 7 days for shock events,
+      and this is lighter soft news.
+    supports: Decreases
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: The 5-word search phrase 'prince william kate dog otto' is very specific
+      and niche - such queries decay faster than broader terms and may already be
+      near-zero on May 4
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Google Trends uses integer rounding - if both May 4 and May 16 values
+      round to 0-3, the change would be within the 3-point threshold
+    supports: Doesn't change
+    logit: 0.7
+    confidence: 0.4
+    effective_logit: 0.27999999999999997
+  - description: Very small chance of a follow-up news event about Otto between May
+      4-16 that could re-spike interest
+    supports: Increases
+    logit: 0.3
+    confidence: 0.15
+    effective_logit: 0.045
+  dominant_factor: By May 16 (Day 15 post-peak), celebrity soft-news stories are essentially
+    at baseline (0-2). Research shows 90%+ decay within 7 days for shock events, and
+    this is lighter soft news.
+  dominant_effective_logit: 1.35
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 2.625
+    factors:
+    - description: News spike on May 1 with massive media coverage (11+ outlets) -
+        peak at 100. By May 4 (Day 3), power-law decay models predict significant
+        decline to ~5-15 range.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.85
+      effective_logit: 1.275
+    - description: By May 16 (Day 15 post-peak), celebrity soft-news stories are essentially
+        at baseline (0-2). Research shows 90%+ decay within 7 days for shock events,
+        and this is lighter soft news.
+      supports: Decreases
+      logit: 1.5
+      confidence: 0.9
+      effective_logit: 1.35
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.6799999999999999
+    factors:
+    - description: The 5-word search phrase 'prince william kate dog otto' is very
+        specific and niche - such queries decay faster than broader terms and may
+        already be near-zero on May 4
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: Google Trends uses integer rounding - if both May 4 and May 16
+        values round to 0-3, the change would be within the 3-point threshold
+      supports: Doesn't change
+      logit: 0.7
+      confidence: 0.4
+      effective_logit: 0.27999999999999997
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.045
+    factors:
+    - description: Very small chance of a follow-up news event about Otto between
+        May 4-16 that could re-spike interest
+      supports: Increases
+      logit: 0.3
+      confidence: 0.15
+      effective_logit: 0.045
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.11732176912758562
+      Increases: 0.06217296901290812
+      Decreases: 0.8205052618595063
+    tentative_probabilities:
+      Increases: 0.02
+      Doesn't change: 0.18
+      Decreases: 0.8
+    per_option_gap_pp:
+      Doesn't change: 6.267823087241438
+      Increases: -4.217296901290812
+      Decreases: -2.0505261859506296
+    max_gap_pp: 6.267823087241438
+    max_gap_option: Doesn't change
+  sources:
+  - '[(Metaculus) Will the interest in “prince william kate dog otto” change between
+    2026-05-04 and 2026-05-16 according to Google Trends?](https://www.metaculus.com/questions/43378)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=prince%20william%20kate%20dog%20otto&date=2026-04-16%202026-05-16)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43378
+- **Question ID**: 43374
+- **Session Duration**: 579.4s (9.7 min)
+- **Cost**: $8.8027 total (orchestrator $2.6168 + sub-agents $6.1859)
+- **Tokens**: 10,597 total (27 in, 10,570 out)
+  - Cache: 430,385 read, 62,832 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43378_20260504_014715/20260504-014715.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0198 |
+| execute_code | 4 | 0 | 266ms | — |
+| fetch_url | 1 | 0 | 8211ms | — |
+| get_metaculus_questions | 1 | 0 | 1012ms | — |
+| premortem | 1 | 0 | 111045ms | $1.8968 |
+| reflection | 1 | 0 | 12ms | — |
+| research | 1 | 0 | 240493ms | $4.2289 |
+| web_search | 1 | 0 | 22392ms | $0.0404 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “prince william kate dog otto” change betwe...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=prince...
