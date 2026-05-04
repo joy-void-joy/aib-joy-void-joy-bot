@@ -1,0 +1,229 @@
+---
+timestamp: 2026-05-04 22:32:42 UTC
+question_type: numeric
+factors:
+- description: Current AGSI data shows Italy at 51.38% as of May 4 with 11 days remaining.
+    Recent 7-day injection rate is very stable at 0.36 pp/day, which projects to ~55.3%
+    by May 15.
+  supports:
+    center: 55.3
+    low: 55.0
+    high: 55.6
+  logit: 2.0
+  confidence: 0.9
+  effective_logit: 1.8
+- description: 'Injection rates have been accelerating: early April ~0.28 pp/day,
+    now stabilized at ~0.37-0.38 pp/day. Last 3 days all at 765 GWh/day injection.
+    Suggests the current high rate may persist.'
+  supports:
+    center: 55.5
+    low: 55.2
+    high: 55.8
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Strait of Hormuz closure disrupting ~20% of global LNG trade. Italy
+    partially reliant on LNG. Could constrain injection supply, pushing rate lower.
+  supports:
+    center: 54.0
+    low: 52.5
+    high: 55.0
+  logit: -0.8
+  confidence: 0.4
+  effective_logit: -0.32000000000000006
+- description: EU 90% fill mandate by November 1 creates strong regulatory pressure
+    to maintain high injection rates regardless of price. Operators have incentive
+    to keep injecting.
+  supports:
+    center: 55.5
+    low: 55.0
+    high: 56.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Italy energy rationing/lockdown reports suggest government awareness
+    of supply stress but also demand reduction measures that could free up gas for
+    storage.
+  supports:
+    center: 55.0
+    low: 53.5
+    high: 56.0
+  logit: 0.0
+  confidence: 0.3
+  effective_logit: 0.0
+- description: May weather in Italy is warm - heating demand near zero, so virtually
+    all gas goes to storage. Very unlikely to see net withdrawal days in mid-May.
+  supports:
+    center: 55.3
+    low: 54.5
+    high: 56.0
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+tentative_estimate:
+  center: 55.3
+  low: 53.6
+  high: 56.1
+anchor: 'Italy gas storage injection pattern from AGSI data: 14 days of consistent
+  daily injection at 0.34 pp/day average, linear projection gives 55.2% (current 51.38%
+  + 11 days × 0.34)'
+assessment: "This is a short-horizon measurement question with strong empirical anchoring.\
+  \ Italy's gas storage fill level as of May 15 depends on 11 more days of injection\
+  \ from the May 4 reading of 51.38%. The AGSI data shows remarkably stable injection\
+  \ rates, particularly in the last 5-7 days where rates have stabilized at 0.37-0.38\
+  \ pp/day (~765 GWh/day). The main uncertainty is whether this rate continues or\
+  \ gets disrupted.\n\nThe scenario-based Monte Carlo incorporating four scenarios\
+  \ (business as usual 70%, cold snap 10%, acceleration 10%, partial disruption 10%)\
+  \ gives:\n- Median: 55.29%\n- Mean: 55.11%  \n- 80% CI: 54.0% to 55.8%\n- 95% CI:\
+  \ 53.4% to 56.0%\n\nThe distribution is moderately right-skewed toward the base\
+  \ case, with a fat left tail from disruption scenarios. The tail risks are plausible\
+  \ but unlikely: the Hormuz closure primarily affects oil and Qatari LNG, while Italy's\
+  \ main gas supply comes via pipeline from Algeria (TransMed) which is unaffected.\n\
+  \nKey tension: the scenario-based model gives a wider distribution than pure random-walk\
+  \ extrapolation (which would give P5-P95 of ~55.0-55.5), but narrower than typical\
+  \ geopolitical uncertainty might suggest. Given that injection has been remarkably\
+  \ stable for 14 days and we're projecting only 11 days forward in the middle of\
+  \ injection season, the narrow-ish base case is well-justified."
+calibration_notes: Anchor is 55.2% from linear projection. Monte Carlo median is 55.29%.
+  The distribution width (80% CI ~1.8 pp) reflects a blend of stable base-case extrapolation
+  with 30% weight on disruption/acceleration scenarios. Random walk alone would give
+  only ±0.23 pp - too narrow given regime change risks. But 1.8 pp over 11 days seems
+  reasonable for a stable physical process with geopolitical tail risks.
+key_uncertainties: '1. Whether Hormuz closure will meaningfully constrain Italy''s
+  gas injection supply (main pipeline supply unaffected, but LNG shortfall could matter)
+
+  2. Whether the 765 GWh/day injection rate is sustainable or represents a temporary
+  peak
+
+  3. Weather surprises (late cold snap requiring heating)
+
+  4. TTF price spikes making injection uneconomical'
+tool_audit: 'AGSI API: Excellent - provided 15 days of actual daily data directly.
+  Web search: Useful for context (Hormuz, energy rationing news). Research sub-agents:
+  Limited by tool restrictions but provided good structural background. Monte Carlo
+  simulation: Core analytical tool, ran well.'
+process_reflection: The AGSI API access was the key enabler - getting 15 days of actual
+  daily injection data made this a well-grounded empirical forecast rather than speculation.
+  The research sub-agent couldn't access live data due to tool restrictions, but the
+  structural background on historical patterns and geopolitical context was helpful.
+  The Monte Carlo framework worked well for this type of short-horizon measurement
+  question. The main friction was the research sub-agent being unable to access web
+  sources, requiring direct fetch_url calls for live data.
+computed:
+  factor_count: 6
+  factor_sum: 3.055
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current AGSI data shows Italy at 51.38% as of May 4 with 11 days
+      remaining. Recent 7-day injection rate is very stable at 0.36 pp/day, which
+      projects to ~55.3% by May 15.
+    supports:
+      center: 55.3
+      low: 55.0
+      high: 55.6
+    logit: 2.0
+    confidence: 0.9
+    effective_logit: 1.8
+  - description: 'Injection rates have been accelerating: early April ~0.28 pp/day,
+      now stabilized at ~0.37-0.38 pp/day. Last 3 days all at 765 GWh/day injection.
+      Suggests the current high rate may persist.'
+    supports:
+      center: 55.5
+      low: 55.2
+      high: 55.8
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Strait of Hormuz closure disrupting ~20% of global LNG trade. Italy
+      partially reliant on LNG. Could constrain injection supply, pushing rate lower.
+    supports:
+      center: 54.0
+      low: 52.5
+      high: 55.0
+    logit: -0.8
+    confidence: 0.4
+    effective_logit: -0.32000000000000006
+  - description: EU 90% fill mandate by November 1 creates strong regulatory pressure
+      to maintain high injection rates regardless of price. Operators have incentive
+      to keep injecting.
+    supports:
+      center: 55.5
+      low: 55.0
+      high: 56.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Italy energy rationing/lockdown reports suggest government awareness
+      of supply stress but also demand reduction measures that could free up gas for
+      storage.
+    supports:
+      center: 55.0
+      low: 53.5
+      high: 56.0
+    logit: 0.0
+    confidence: 0.3
+    effective_logit: 0.0
+  - description: May weather in Italy is warm - heating demand near zero, so virtually
+      all gas goes to storage. Very unlikely to see net withdrawal days in mid-May.
+    supports:
+      center: 55.3
+      low: 54.5
+      high: 56.0
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  dominant_factor: Current AGSI data shows Italy at 51.38% as of May 4 with 11 days
+    remaining. Recent 7-day injection rate is very stable at 0.36 pp/day, which projects
+    to ~55.3% by May 15.
+  dominant_effective_logit: 1.8
+  distribution_metrics:
+    implied_median: 55.249661705006766
+    implied_p10: 54.76928281461434
+    implied_p90: 55.675236806495256
+    median_gap: 0.050338294993231614
+    median_gap_pct: 5.556385362210371
+    spread_ratio: 2.7595220313667115
+    precision: 0.045207956600361664
+  sources:
+  - '[(Metaculus) What percentage of Italy''s natural gas storage capacity will be
+    filled as of May 15, 2026, according to AGSI?](https://www.metaculus.com/questions/43400)'
+  - '[agsi.gie.eu](https://agsi.gie.eu/api?country=IT&size=15)'
+  - '[acer.europa.eu](https://www.acer.europa.eu/sites/default/files/documents/Publications/2026-ACER-Gas-Key-Developments-winter.pdf)'
+  - '[Europe Gas Storage Levels Today (Updated Daily](https://energyriskiq.com/gas-storage-levels-in-europe)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43400
+- **Question ID**: 43396
+- **Session Duration**: 633.8s (10.6 min)
+- **Cost**: $9.2158 total (orchestrator $2.7775 + sub-agents $6.4383)
+- **Tokens**: 9,732 total (30 in, 9,702 out)
+  - Cache: 583,080 read, 62,655 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43400_20260504_222446/20260504-222446.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0752 |
+| execute_code | 5 | 0 | 1218ms | — |
+| fetch_url | 3 | 0 | 14300ms | — |
+| get_metaculus_questions | 1 | 0 | 270ms | — |
+| premortem | 1 | 0 | 97933ms | $1.6910 |
+| reflection | 1 | 0 | 1657ms | — |
+| research | 1 | 0 | 247635ms | $4.6185 |
+| web_search | 1 | 0 | 26058ms | $0.0536 |
+
+### Sources Consulted
+
+- [(Metaculus) What percentage of Italy's natural gas storage capacity will be ...
+- [agsi.gie.eu](https://agsi.gie.eu/api?country=IT&size=15)
+- [acer.europa.eu](https://www.acer.europa.eu/sites/default/files/documents/Pub...
+- [Europe Gas Storage Levels Today (Updated Daily](https://energyriskiq.com/gas...
