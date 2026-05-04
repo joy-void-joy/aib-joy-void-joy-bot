@@ -1,0 +1,260 @@
+---
+timestamp: 2026-05-04 00:19:53 UTC
+question_type: binary
+factors:
+- description: Bhabanipur is Mamata's personal stronghold since 2011 - won 3 times
+    with increasing margins (2011, 2016 by ~25k, 2021 by-election by ~59k)
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: TMC lead collapsed from 58,832 (2021) to only 8,297 (2024 LS) in Bhabanipur
+    segment - massive erosion in just 3 years
+  logit: -1.5
+  confidence: 0.8
+  effective_logit: -1.2000000000000002
+- description: 6 of 8 exit polls favor BJP statewide (146-200 seats predicted vs 148
+    majority mark) - strong statewide wave signal
+  logit: -1.0
+  confidence: 0.65
+  effective_logit: -0.65
+- description: 'Record turnout: 86.5% in Bhabanipur (vs 62.6% in 2021, 65% in 2024)
+    - dramatic increase often signals anti-incumbency wave'
+  logit: -0.8
+  confidence: 0.6
+  effective_logit: -0.48
+- description: Mamata's defensive behavior - visited EVM strongroom for 4 hours, making
+    tampering allegations pre-counting - suggests low confidence
+  logit: -0.7
+  confidence: 0.5
+  effective_logit: -0.35
+- description: Assembly elections differ from Lok Sabha - TMC historically over-performs
+    by 5-15pp in state elections vs national
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Muslim voter deletions: 25% of electorate removed, Muslims disproportionately
+    affected (40% of deletions but 20% of electorate) - reduces TMC base'
+  logit: -0.6
+  confidence: 0.7
+  effective_logit: -0.42
+- description: Suvendu is an 'outsider' to Bhabanipur (from Medinipur/Nandigram region)
+    while Mamata has 60-year association with the constituency
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: '2/8 exit polls favor TMC strongly (People''s Pulse: 177-187, Janmat:
+    195-205 seats) - not unanimous against TMC'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: BJP gained ground in 5 of 8 wards in Bhabanipur since 2021; TMC even
+    trailed in Ward 73 (Mamata's own ward) in 2024
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+tentative_estimate:
+  logit: -0.08
+  probability: 0.48
+anchor: 'Incumbent CM contesting from own stronghold: ~70% base rate win probability
+  (Indian state elections, incumbents in home constituencies). Adjusted down significantly
+  for the specific signals in this case.'
+assessment: 'This is a genuinely close contest. Bhabanipur has been Mamata''s political
+  home since 2011, and the personal incumbency advantage is real. However, multiple
+  converging signals suggest this is her hardest test:
+
+
+  1. The 2024 Lok Sabha data is the strongest concrete signal - TMC''s lead collapsed
+  from 58,832 to 8,297 in this segment, showing massive erosion even before 2026.
+
+
+  2. Exit polls (6/8 favoring BJP) suggest a statewide swing toward BJP. If BJP wins
+  statewide, many TMC seats fall, and Bhabanipur - already competitive - is vulnerable.
+
+
+  3. The record turnout (86.5% vs typical 62-65%) in Bhabanipur is dramatic. Such
+  large turnout increases in Indian elections typically correlate with anti-incumbency
+  waves.
+
+
+  4. Mamata''s own behavior (visiting EVM strongroom for 4 hours, making tampering
+  allegations) is consistent with someone expecting a negative outcome.
+
+
+  5. Voter roll deletions disproportionately affected Muslim voters (TMC''s base),
+  structurally weakening TMC in this constituency.
+
+
+  Counter-factors: Assembly elections genuinely differ from Lok Sabha in India, and
+  TMC typically over-performs. Mamata''s personal brand and 60-year association with
+  Bhabanipur give her significant local advantage. Suvendu is an outsider to this
+  constituency.
+
+
+  Monte Carlo simulation across statewide scenarios yields P(Mamata wins) ≈ 0.48-0.50,
+  sensitive primarily to P(BJP wins statewide) and the Assembly-LS correction factor.
+  This is essentially a coin flip with signals leaning very slightly toward BJP.'
+calibration_notes: 'Anchor of 70% (incumbent CM in home seat) adjusted down to 48%
+  based on: (1) collapsed margins in 2024, (2) majority of exit polls against TMC,
+  (3) record turnout suggesting wave, (4) behavioral signals from Mamata. The 22pp
+  adjustment from anchor is large but supported by multiple independent data points.
+  Hedging check: this is NOT lazy 50% - it''s a well-reasoned near-50% driven by genuinely
+  balanced evidence. The sensitivity analysis shows P ranges from 0.41-0.57 depending
+  on assumptions, with central case around 0.48-0.50.'
+key_uncertainties: '1. Assembly vs Lok Sabha correction: How much does TMC outperform
+  in state elections? Historical 5-15pp is a wide range. 2. Exit poll accuracy: Indian
+  exit polls are often wrong; if TMC wins statewide, Mamata almost certainly wins
+  Bhabanipur. 3. Turnout interpretation: High turnout could mean anti-incumbency OR
+  high polarization with both sides mobilized equally.'
+tool_audit: 'Useful tools: web_search (found key articles on exit polls, Bhabanipur
+  analysis, turnout data), fetch_url (extracted detailed demographic and margin data
+  from Wire, BusinessToday, Organiser articles). Empty results: research() sub-agent
+  couldn''t access web data. No failures but research sub-agents were unable to gather
+  data due to tool access issues on their end. Direct web search and fetch worked
+  well.'
+update_triggers: 1. Actual counting trends from ECI (results expected May 4). 2. Early
+  leads in key bellwether constituencies indicating statewide direction. 3. Any report
+  of counting delay, recount, or legal challenge in Bhabanipur.
+process_reflection: The research sub-agents failed completely (all web tools unavailable
+  to them), which forced me to use direct web_search and fetch_url. This worked fine
+  but added extra turns. The process of decomposing by statewide scenarios and then
+  estimating constituency-level conditional probabilities was effective for this type
+  of question. The code sandbox was useful for Monte Carlo and sensitivity analysis.
+  For Indian election questions, having a specialized tool for ECI data would be very
+  helpful.
+computed:
+  factor_count: 10
+  factor_sum: -1.6900000000000002
+  tentative_logit: -0.08
+  logit_gap: 1.61
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Bhabanipur is Mamata's personal stronghold since 2011 - won 3 times
+      with increasing margins (2011, 2016 by ~25k, 2021 by-election by ~59k)
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: TMC lead collapsed from 58,832 (2021) to only 8,297 (2024 LS) in
+      Bhabanipur segment - massive erosion in just 3 years
+    logit: -1.5
+    confidence: 0.8
+    effective_logit: -1.2000000000000002
+  - description: 6 of 8 exit polls favor BJP statewide (146-200 seats predicted vs
+      148 majority mark) - strong statewide wave signal
+    logit: -1.0
+    confidence: 0.65
+    effective_logit: -0.65
+  - description: 'Record turnout: 86.5% in Bhabanipur (vs 62.6% in 2021, 65% in 2024)
+      - dramatic increase often signals anti-incumbency wave'
+    logit: -0.8
+    confidence: 0.6
+    effective_logit: -0.48
+  - description: Mamata's defensive behavior - visited EVM strongroom for 4 hours,
+      making tampering allegations pre-counting - suggests low confidence
+    logit: -0.7
+    confidence: 0.5
+    effective_logit: -0.35
+  - description: Assembly elections differ from Lok Sabha - TMC historically over-performs
+      by 5-15pp in state elections vs national
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Muslim voter deletions: 25% of electorate removed, Muslims disproportionately
+      affected (40% of deletions but 20% of electorate) - reduces TMC base'
+    logit: -0.6
+    confidence: 0.7
+    effective_logit: -0.42
+  - description: Suvendu is an 'outsider' to Bhabanipur (from Medinipur/Nandigram
+      region) while Mamata has 60-year association with the constituency
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: '2/8 exit polls favor TMC strongly (People''s Pulse: 177-187, Janmat:
+      195-205 seats) - not unanimous against TMC'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: BJP gained ground in 5 of 8 wards in Bhabanipur since 2021; TMC even
+      trailed in Ward 73 (Mamata's own ward) in 2024
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  dominant_factor: TMC lead collapsed from 58,832 (2021) to only 8,297 (2024 LS) in
+    Bhabanipur segment - massive erosion in just 3 years
+  dominant_effective_logit: -1.2000000000000002
+  factor_implied_probability: 0.15577584012374737
+  tentative_probability: 0.48
+  gap_pp: 32.422415987625264
+  sources:
+  - '[(Metaculus) Will Mamata Banerjee win the Bhabanipur constituency in the 2026
+    West Bengal Legislative Assembly election?](https://www.metaculus.com/questions/43372)'
+  - '[2026 West Bengal Legislative Assembly election - Wikipedia](https://en.wikipedia.org/wiki/2026_West_Bengal_Legislative_Assembly_election)'
+  - '[West Bengal Exit Polls 2026 Updates: BJP Leads In 158 seats, TMC At 130 In Poll
+    Of Polls | Full seat breakdown](https://www.republicworld.com/elections/west-bengal-exit-polls-2026-live-updates-exit-poll-results-mamata-vs-modi-who-will-win-live-news)'
+  - '[Khela Hobe in West Bengal? Will Mamata save her turf as 3 exit polls back BJP
+    - BusinessToday](https://www.businesstoday.in/elections/west-bengal/story/west-bengal-exit-poll-results-2026-mamata-banerjee-bjp-tmc-suvendu-adhikari-527893-2026-04-29)'
+  - '[Highlights] West Bengal Exit Poll Results 2026: BJP to win 150-175 seats, Mamata
+    Banerjee''s TMC may lose power, say exit polls](https://news24online.com/india/west-bengal-exit-poll-result-2026-live-updates-bjp-tmc-congress-bengal-assembly-election-maha-poll-results-today-chankaya-c-voter-axis-my-india/821069/)'
+  - '[''Mamata is losing Bhabanipur by...'': Suvendu Adhikari''s personal ''ground
+    exit poll'' for West Bengal - BusinessToday](https://www.businesstoday.in/elections/west-bengal/story/mamata-is-losing-bhabanipur-by-suvendu-adhikaris-personal-ground-exit-poll-for-bjp-528252-2026-04-30)'
+  - '[Mamata Banerjee vs Suvendu Adhikari: Who Will Win High-Stakes Battle for Bhabanipur
+    Assembly Seat in West Bengal Election 2026?](https://sundayguardianlive.com/india/mamata-banerjee-vs-suvendu-adhikari-who-will-win-high-stakes-battle-for-bhabanipur-assembly-seat-in-west-bengal-election-2026-188416/)'
+  - '[Bhabanipur, West Bengal Assembly constituency - Wikipedia](https://en.wikipedia.org/wiki/Bhabanipur,_West_Bengal_Assembly_constituency)'
+  - '[EVM panic before counting: Is Mamata Banerjee preparing grounds for defeat?](https://organiser.org/2026/05/03/351665/bharat/evm-panic-before-counting-is-mamata-banerjee-preparing-grounds-for-defeat/)'
+  - '[West Bengal Exit Polls 2026: Split Verdict as BJP and TMC Trade Leads Across
+    Surveys](https://www.deccanchronicle.com/nation/west-bengal-assembly-elections-2026-exit-polls-1953546)'
+  - '[Mamata Banerjee - Wikipedia](https://en.wikipedia.org/wiki/Mamata_Banerjee)'
+  - '[In Bhabanipur, Mamata Banerjee’s Bastion Faces Its Hardest Test - The Wire](https://m.thewire.in/article/politics/in-bhabanipur-mamata-banerjees-bastion-faces-its-hardest-test)'
+  - '[Bhabanipur election: Mamata faces BJP test in crucial Bengal seat showdown.](https://www.deccanherald.com/elections/west-bengal/west-bengal-assembly-election-2026-bhabanipur-at-crossroads-loyalty-to-didi-mamata-banerjee-or-call-for-change-3983559)'
+  - '[In Mamata Banerjee''s Bhabanipur Seat, ''40% of Deleted Voters Are Muslims'':
+    Study](https://www.thequint.com/news/politics/in-mamata-banerjees-bhabanipur-seat-40-of-deleted-voters-are-muslims-study)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43372
+- **Question ID**: 43368
+- **Session Duration**: 911.1s (15.2 min)
+- **Cost**: $37.4002 total (orchestrator $4.3150 + sub-agents $33.0852)
+- **Tokens**: 17,605 total (49 in, 17,556 out)
+  - Cache: 822,572 read, 94,039 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43372_20260504_000807/20260504-000807.log`
+
+### Tool Calls
+
+- **Total**: 87 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.5549 |
+| execute_code | 8 | 0 | 880ms | — |
+| fetch_url | 21 | 0 | 10973ms | — |
+| get_coherence_links | 1 | 0 | 244ms | — |
+| get_metaculus_questions | 4 | 0 | 2042ms | — |
+| kalshi_price | 3 | 0 | 7522ms | — |
+| polymarket_price | 1 | 0 | 256ms | — |
+| premortem | 3 | 0 | 153793ms | $8.8470 |
+| reflection | 3 | 0 | 19ms | — |
+| research | 3 | 0 | 359206ms | $22.5591 |
+| web_search | 26 | 0 | 30372ms | $1.1242 |
+| wikipedia | 14 | 0 | 223ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Mamata Banerjee win the Bhabanipur constituency in the 2026...
+- [2026 West Bengal Legislative Assembly election - Wikipedia](https://en.wikip...
+- [West Bengal Exit Polls 2026 Updates: BJP Leads In 158 seats, TMC At 130 In P...
+- [Khela Hobe in West Bengal? Will Mamata save her turf as 3 exit polls back BJ...
+- [Highlights] West Bengal Exit Poll Results 2026: BJP to win 150-175 seats, Ma...
+- ['Mamata is losing Bhabanipur by...': Suvendu Adhikari's personal 'ground exi...
+- [Mamata Banerjee vs Suvendu Adhikari: Who Will Win High-Stakes Battle for Bha...
+- [Bhabanipur, West Bengal Assembly constituency - Wikipedia](https://en.wikipe...
+- [EVM panic before counting: Is Mamata Banerjee preparing grounds for defeat?]...
+- [West Bengal Exit Polls 2026: Split Verdict as BJP and TMC Trade Leads Across...
+- [Mamata Banerjee - Wikipedia](https://en.wikipedia.org/wiki/Mamata_Banerjee)
+- [In Bhabanipur, Mamata Banerjee’s Bastion Faces Its Hardest Test - The Wire](...
+- [Bhabanipur election: Mamata faces BJP test in crucial Bengal seat showdown.]...
+- [In Mamata Banerjee's Bhabanipur Seat, '40% of Deleted Voters Are Muslims': S...
