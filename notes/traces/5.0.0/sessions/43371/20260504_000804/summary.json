@@ -1,0 +1,169 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details to understand the resolution criteria: TMC needs at least **148 seats** (outright majority of the 294-seat West Bengal Legislative Assembly) per the official ECI results portal by May 16, 2026. Only AITC/TMC candidates count — no alliance partners. The Falta constituency (AC 144) is excluded due to re-polling on May 21.\n\nI then conducted extensive web searches and URL fetches to compile exit poll data from multiple agencies:\n\n- **Today's Chanakya**: TMC 100+, BJP **192+** (strong BJP)\n- **Matrize**: TMC 125-140, BJP 146-161\n- **P-MARQ**: TMC 118-138, BJP 150-175\n- **Poll Diary**: TMC 99-127, BJP 142-171\n- **ABP**: TMC 125-140, BJP 146-161\n- **People's Pulse**: TMC **177-187**, BJP 95-110 (strong TMC outlier)\n- **Janmat**: TMC-leaning (no specific numbers)\n- **Poll of Polls** (Republic World): TMC ~130, BJP ~158\n\nI then checked **Polymarket** — the single most informative source — which showed the West Bengal Legislative Assembly Election Winner market at `BJP 51.2%`, `AITC 49.1%` with **$2.2M volume**. This market resolves to whichever party wins the *most seats*, not outright majority. The recent price history showed stability around 49-55% for BJP over the past week.\n\nI also found **Phalodi Satta Bazar** (Indian domestic betting market) projecting BJP 150-152, TMC 137-140, having shifted toward BJP after Phase 2 voting.\n\nKey contextual factors I identified:\n- TMC won **215/292 seats** in 2021 despite exit polls predicting a close race\n- Record **92.93% voter turnout** (vs ~79% in 2021)\n- Counting scheduled for 8 AM IST May 4, but forecast submitted before counting began\n\n## Key Evidence\n\n**Polymarket as anchor**: The $2.2M prediction market priced TMC at ~49% for winning the most seats. This integrates exit polls, the well-known 2021 exit poll failure, incumbency dynamics, and turnout signals — making it a more efficient aggregator than any single exit poll.\n\n**Structural gap between \"most seats\" and \"outright majority\"**: I ran **Monte Carlo simulations** using two approaches:\n\n1. **Normal distribution** calibrated to Polymarket (μ≈141, σ=25-35): P(TMC ≥ 148) ≈ **38-41%**\n2. **Mixture model** (TMC-dominant/BJP-dominant/close scenarios): P(TMC ≥ 148) ≈ **38-44%** when calibrated so P(TMC most seats) ≈ 49%\n\nThe consistent ~10pp gap between P(most seats) and P(majority) captures hung assembly risk — TMC could win plurality but fall short of 148.\n\n**Sensitivity analysis** across different scenario parameters confirmed robustness: P(TMC ≥ 148) ranged from 37% to 44%.\n\n## Conclusion\n\nI concluded at **40% probability** that TMC wins an outright majority (148+ seats). This is anchored to Polymarket's ~49% for TMC winning the most seats, with the ~10pp reduction reflecting the structural gap between plurality and majority. I assigned **0.35 confidence** that this estimate is within 10pp of truth, reflecting genuine deep uncertainty — the exit poll range for TMC spans 85-205 seats, and counting hadn't yet begun.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 26,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 14,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 21,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "kalshi_price": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to the actual ECI results portal (results.eci.gov.in) to check if any early results had been posted, though this turned out to be moot since counting hadn't started.",
+      "Could not check Kalshi or Manifold for additional prediction market data on the exact 'TMC majority' question (as opposed to 'most seats')."
+    ],
+    "subtle_bugs": [
+      "Wikipedia article for the 2026 election returned only a minimal extract ('Elections were held... turnout of 92.93%') with no exit poll or result data despite the full page likely containing more information. Multiple fetches returned the same truncated extract."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Monte Carlo simulation calibrated to Polymarket prediction market probability, bridging from 'most seats' to 'outright majority' using normal and bimodal mixture distributions.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether 2026 Bengal exit polls repeat the systematic anti-TMC bias of 2021 or reflect genuinely different political dynamics."
+  },
+  "risk_flags": [
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The premortem reviewer noted that the agent's worldview research entry states 2021 exit polls predicted TMC at '180-210 seats' (directionally accurate), while the agent's narrative claims they predicted 'a close race' with TMC at ~150. The magnitude of exit poll bias in Bengal is overstated in the narrative, though the factor logit (+0.5, confidence 0.6) is modest enough that the impact is minor.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Factors 2 (Polymarket, logit -0.1) and 3 (historical exit poll bias, logit +0.5) partially double-count: Polymarket already incorporates knowledge of historical exit poll unreliability. The agent acknowledges this but still treats them as separate factors with a combined effective logit contribution of +0.21. This double-counting biases the estimate slightly upward from what pure Polymarket calibration would suggest.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No Manifold or Kalshi markets were checked. A market specifically on TMC outright majority (rather than just 'most seats') would have been more directly relevant to the question. The agent only found the Polymarket 'most seats' market and had to bridge the gap via simulation.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "38%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that the Polymarket market resolves on 'most seats' rather than 'outright majority' and built Monte Carlo simulations to bridge this gap — a genuine analytical insight that many forecasters would miss.",
+    "Ran 500K-sample Monte Carlo simulations with both normal and bimodal mixture distributions, then performed sensitivity analysis across 5 parameter configurations, confirming the ~40% estimate is robust (range 37-44%).",
+    "Anchored to the most informationally efficient source (Polymarket at $2.2M volume) rather than over-weighting unreliable exit polls, while still cataloging all 7 exit poll agencies for context.",
+    "Calibrated the mixture model to match Polymarket's implied probability for TMC winning most seats before extracting the majority probability — a sound methodological approach.",
+    "Explicitly acknowledged the 2021 Bengal exit poll failure and correctly noted that Polymarket likely already prices in this known bias, avoiding naive double-counting in the final estimate.",
+    "Self-assigned 0.35 confidence, appropriately reflecting deep uncertainty in a pre-counting forecast with exit poll ranges spanning 85-205 seats."
+  ],
+  "weaknesses": [
+    "Overstated the magnitude of 2021 exit poll error — the premortem reviewer noted the agent's own worldview entry says exit polls predicted TMC at 180-210 seats (not ~150 as claimed in the narrative), which undermines the 'catastrophically wrong' framing.",
+    "Spent 2-3 redundant web searches looking for live counting results that couldn't exist yet, given the established timeline of counting starting at 8 AM IST May 4.",
+    "Did not explore whether Metaculus community prediction was available or check other prediction markets (Manifold, Kalshi) that might have had a market directly on TMC outright majority rather than just 'most seats'.",
+    "The mixture model scenario parameters (TMC-dominant at μ=180, BJP-dominant at μ=118, close at μ=145) were chosen somewhat arbitrarily without rigorous calibration to historical seat distributions in Bengal elections."
+  ],
+  "pipeline": {
+    "issues": [
+      "Wikipedia fetch repeatedly returned the same minimal extract despite likely containing more detailed information — 3 separate web searches returned the same Wikipedia snippet, wasting some tokens.",
+      "Agent searched for live counting results multiple times despite already establishing that counting hadn't started — 2-3 redundant searches for results that couldn't exist yet given the timeline."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "When a prediction market resolves on a related but different question, explicitly quantify the conditional probability P(majority | most seats) using historical data from similar Indian state elections, not just assumed distributions.",
+    "Check Manifold and Kalshi in addition to Polymarket — sometimes more directly relevant markets exist on those platforms.",
+    "Avoid redundant searches for information that logically cannot exist yet (e.g., counting results before counting starts). Establish the timeline first and then only search for data that could plausibly be available.",
+    "When citing historical exit poll errors, verify the actual magnitude against source data rather than relying on narrative framing — the difference between 'predicted 180-210, actual 215' and 'predicted ~150, actual 215' materially affects how much weight to give exit poll bias."
+  ]
+}

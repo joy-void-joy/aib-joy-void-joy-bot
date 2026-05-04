@@ -1,0 +1,227 @@
+---
+timestamp: 2026-05-04 00:20:26 UTC
+question_type: binary
+factors:
+- description: 'Exit polls majority favor BJP: 5 of 7 agencies project BJP as largest
+    party, poll of polls gives BJP ~158, TMC ~130. Median exit poll TMC midpoint is
+    ~132.'
+  logit: -1.0
+  confidence: 0.5
+  effective_logit: -0.5
+- description: 'Polymarket prediction market ($2.2M volume) shows essentially 50-50:
+    BJP 51%, TMC 49% for most seats. Well-informed market that integrates exit polls
+    plus historical unreliability knowledge.'
+  logit: -0.1
+  confidence: 0.9
+  effective_logit: -0.09000000000000001
+- description: 'Historical exit poll bias in Bengal: In 2021, exit polls predicted
+    close race but TMC won 215/292. Exit polls systematically underestimate TMC''s
+    organizational strength and ground-level support.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'TMC incumbency strength: 15 years in power, strong party machinery,
+    Mamata Banerjee''s personal popularity, minority vote consolidation.'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Anti-incumbency after 15 years of TMC rule: corruption allegations,
+    governance issues, strong BJP national campaign with PM Modi. High turnout (92.93%
+    - historic) could signal desire for change.'
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+- description: 'Gap between ''most seats'' and ''outright majority'': Even if TMC
+    wins most seats (~49% probability), they may fall short of 148 in a hung assembly
+    scenario. P(TMC>=148) < P(TMC most seats).'
+  logit: -0.3
+  confidence: 0.8
+  effective_logit: -0.24
+- description: Phalodi Satta Bazar (Indian betting market) projects BJP 150-152, TMC
+    137-140 - slightly favoring BJP but very close to majority threshold.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  logit: -0.4
+  probability: 0.4
+anchor: 'Polymarket-implied base rate: P(TMC winning most seats) ≈ 49%, but TMC outright
+  majority requires 148+ seats which is a higher bar. Monte Carlo simulation calibrated
+  to Polymarket gives P(TMC ≥ 148) ≈ 40%. Source: Polymarket ($2.2M volume), multiple
+  exit polls, Phalodi Satta Bazar.'
+assessment: "This is an extremely close election with massive uncertainty. The key\
+  \ tension is between:\n\nPRO-TMC (YES): \n- Historical pattern of exit polls dramatically\
+  \ underestimating TMC in Bengal (2021: predicted ~150, actual 215)\n- TMC's unmatched\
+  \ organizational machinery at booth level\n- Mamata Banerjee's personal appeal remains\
+  \ strong\n- Muslim minority vote consolidation tends to be undersampled in exit\
+  \ polls\n- Polymarket, which incorporates all information, gives TMC ~49% chance\
+  \ of winning most seats\n\nPRO-BJP (NO):\n- Majority of exit polls (5 of 7) project\
+  \ BJP as largest party\n- Poll of polls: BJP 158, TMC 130\n- Today's Chanakya (historically\
+  \ accurate in many states): BJP 192+\n- Anti-incumbency after 15 years of TMC\n\
+  - Historic 92.93% turnout could signal desire for change\n- Phalodi Satta Bazar\
+  \ shifted toward BJP after phase 2\n\nKEY INSIGHT: The question asks about outright\
+  \ majority (148+ seats), not just winning most seats. This creates an additional\
+  \ hurdle. My Monte Carlo simulations consistently show P(TMC ≥ 148) ≈ 38-44% when\
+  \ calibrated to Polymarket's ~49% for TMC winning most seats.\n\nThe ~10pp gap between\
+  \ P(most seats) and P(majority) reflects the hung assembly risk - in a tight race,\
+  \ TMC could win the most seats but still fall short of 148.\n\nI weight Polymarket\
+  \ heavily (high volume, incorporates all public information including exit poll\
+  \ unreliability) while noting the structural asymmetry that 'outright majority'\
+  \ is a higher bar than 'most seats'."
+calibration_notes: 'Anchor is derived from Polymarket-calibrated Monte Carlo simulation
+  at ~40%. Exit polls alone would suggest ~25-30% for TMC majority, but exit poll
+  bias in Bengal is well-documented. The 40% estimate is roughly 10pp above what exit
+  polls would imply but accounts for their historical unreliability. Hedging check:
+  40% is not a lazy middle ground - it reflects genuine uncertainty with a slight
+  lean toward NO based on the gap between most-seats probability and majority probability.'
+key_uncertainties: '1. Accuracy of 2026 exit polls - if they''re right (unlike 2021),
+  TMC loses clearly. If biased like 2021, TMC wins comfortably.
+
+  2. Meaning of historic 92.93% turnout - could go either way (pro-change or strong
+  TMC mobilization)
+
+  3. Whether the hung assembly scenario materializes - if TMC wins most seats but
+  below 148
+
+  4. Actual counting results (starting 8 AM IST today) which are not yet available'
+tool_audit: 'Useful: Polymarket API data (excellent - $2.2M volume market with detailed
+  probability history), multiple news sources for exit poll compilations, Deccan Chronicle
+  comprehensive exit poll summary. Empty/limited: Wikipedia article had no results
+  yet (expected - counting hasn''t started), ECI results portal not yet publishing,
+  voterlistindia.in had exit poll page but no actual numbers visible. No failures.'
+update_triggers: '- Actual counting trends showing TMC leading/trailing (available
+  from ~8 AM IST May 4)
+
+  - Early postal ballot results (often released first)
+
+  - If TMC leads in initial rounds across constituencies, probability would shift
+  to 60-70%
+
+  - If BJP leads in initial rounds, probability would shift to 15-25%'
+process_reflection: The forecasting pipeline worked well for this election question.
+  Polymarket was the single most informative data source - it aggregates all available
+  information including exit polls and historical unreliability. The mixture model
+  Monte Carlo approach was useful for deriving P(TMC majority) from P(TMC most seats).
+  The main limitation is that counting starts in hours and will rapidly make pre-counting
+  analysis obsolete. The web search tools worked well for finding exit poll summaries
+  from multiple agencies. The fetch_url tool was helpful for extracting detailed data
+  from specific articles.
+computed:
+  factor_count: 7
+  factor_sum: -0.73
+  tentative_logit: -0.4
+  logit_gap: 0.32999999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Exit polls majority favor BJP: 5 of 7 agencies project BJP as largest
+      party, poll of polls gives BJP ~158, TMC ~130. Median exit poll TMC midpoint
+      is ~132.'
+    logit: -1.0
+    confidence: 0.5
+    effective_logit: -0.5
+  - description: 'Polymarket prediction market ($2.2M volume) shows essentially 50-50:
+      BJP 51%, TMC 49% for most seats. Well-informed market that integrates exit polls
+      plus historical unreliability knowledge.'
+    logit: -0.1
+    confidence: 0.9
+    effective_logit: -0.09000000000000001
+  - description: 'Historical exit poll bias in Bengal: In 2021, exit polls predicted
+      close race but TMC won 215/292. Exit polls systematically underestimate TMC''s
+      organizational strength and ground-level support.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'TMC incumbency strength: 15 years in power, strong party machinery,
+      Mamata Banerjee''s personal popularity, minority vote consolidation.'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Anti-incumbency after 15 years of TMC rule: corruption allegations,
+      governance issues, strong BJP national campaign with PM Modi. High turnout (92.93%
+      - historic) could signal desire for change.'
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  - description: 'Gap between ''most seats'' and ''outright majority'': Even if TMC
+      wins most seats (~49% probability), they may fall short of 148 in a hung assembly
+      scenario. P(TMC>=148) < P(TMC most seats).'
+    logit: -0.3
+    confidence: 0.8
+    effective_logit: -0.24
+  - description: Phalodi Satta Bazar (Indian betting market) projects BJP 150-152,
+      TMC 137-140 - slightly favoring BJP but very close to majority threshold.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: 'Exit polls majority favor BJP: 5 of 7 agencies project BJP as
+    largest party, poll of polls gives BJP ~158, TMC ~130. Median exit poll TMC midpoint
+    is ~132.'
+  dominant_effective_logit: -0.5
+  factor_implied_probability: 0.3251947274176865
+  tentative_probability: 0.4
+  gap_pp: 7.480527258231351
+  sources:
+  - '[(Metaculus) Will the All India Trinamool Congress (TMC) win an outright majority
+    of seats in the 2026 West Bengal Legislative Assembly election?](https://www.metaculus.com/questions/43371)'
+  - '[2026 West Bengal Legislative Assembly election - Wikipedia](https://en.wikipedia.org/wiki/2026_West_Bengal_Legislative_Assembly_election)'
+  - '[Live Election Results](https://westbengalelection.com/results)'
+  - '[West Bengal Exit Polls 2026 Updates: BJP Leads In 158 seats, TMC At 130 In Poll
+    Of Polls | Full seat breakdown](https://www.republicworld.com/elections/west-bengal-exit-polls-2026-live-updates-exit-poll-results-mamata-vs-modi-who-will-win-live-news)'
+  - '[Highlights] West Bengal Exit Poll Results 2026: BJP to win 150-175 seats, Mamata
+    Banerjee''s TMC may lose power, say exit polls](https://news24online.com/india/west-bengal-exit-poll-result-2026-live-updates-bjp-tmc-congress-bengal-assembly-election-maha-poll-results-today-chankaya-c-voter-axis-my-india/821069/)'
+  - '[BJP Set for Historic Bengal Sweep With 192+ Seats, Predicts Today''s Chanakya
+    Exit Poll English Bombay Samachar](https://english.bombaysamachar.com/india-news/west-bengal-exit-poll-2026-bjp-tmc-results-%E2%81%A0/)'
+  - '[West Bengal Exit Polls 2026: Split Verdict as BJP and TMC Trade Leads Across
+    Surveys](https://www.deccanchronicle.com/nation/west-bengal-assembly-elections-2026-exit-polls-1953546)'
+  - '[West Bengal Legislative Assembly Election Winner Predicti... 2026 | Polymarket](https://polymarket.com/event/west-bengal-legislative-assembly-election-winner)'
+  - '[Phalodi Satta Bazar Prediction for West Bengal Election 2026: Will BJP Cross
+    Majority Mark or Can Mamata Banerjee Defy Changing Trends on May 4?](https://sundayguardianlive.com/india/phalodi-satta-bazar-prediction-for-west-bengal-election-2026-will-bjp-cross-majority-mark-or-can-mamata-banerjee-defy-changing-trends-on-may-4-188471/)'
+  - '[West Bengal Election Exit Polls 2026: TMC vs BJP Seat Prediction, Full Survey
+    Report](https://voterlistindia.in/new-update/west-bengal-elections-exit-poll/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43371
+- **Question ID**: 43367
+- **Session Duration**: 934.9s (15.6 min)
+- **Cost**: $37.2946 total (orchestrator $4.2094 + sub-agents $33.0852)
+- **Tokens**: 18,731 total (41 in, 18,690 out)
+  - Cache: 816,402 read, 84,371 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43371_20260504_000804/20260504-000804.log`
+
+### Tool Calls
+
+- **Total**: 87 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.5549 |
+| execute_code | 8 | 0 | 880ms | — |
+| fetch_url | 21 | 0 | 10973ms | — |
+| get_coherence_links | 1 | 0 | 244ms | — |
+| get_metaculus_questions | 4 | 0 | 2042ms | — |
+| kalshi_price | 3 | 0 | 7522ms | — |
+| polymarket_price | 1 | 0 | 256ms | — |
+| premortem | 3 | 0 | 153793ms | $8.8470 |
+| reflection | 3 | 0 | 19ms | — |
+| research | 3 | 0 | 359206ms | $22.5591 |
+| web_search | 26 | 0 | 30372ms | $1.1242 |
+| wikipedia | 14 | 0 | 223ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will the All India Trinamool Congress (TMC) win an outright majo...
+- [2026 West Bengal Legislative Assembly election - Wikipedia](https://en.wikip...
+- [Live Election Results](https://westbengalelection.com/results)
+- [West Bengal Exit Polls 2026 Updates: BJP Leads In 158 seats, TMC At 130 In P...
+- [Highlights] West Bengal Exit Poll Results 2026: BJP to win 150-175 seats, Ma...
+- [BJP Set for Historic Bengal Sweep With 192+ Seats, Predicts Today's Chanakya...
+- [West Bengal Exit Polls 2026: Split Verdict as BJP and TMC Trade Leads Across...
+- [West Bengal Legislative Assembly Election Winner Predicti... 2026 | Polymark...
+- [Phalodi Satta Bazar Prediction for West Bengal Election 2026: Will BJP Cross...
+- [West Bengal Election Exit Polls 2026: TMC vs BJP Seat Prediction, Full Surve...
