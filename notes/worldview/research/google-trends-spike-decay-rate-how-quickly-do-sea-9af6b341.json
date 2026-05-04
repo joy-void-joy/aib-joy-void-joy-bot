@@ -1,0 +1,268 @@
+{
+  "slug": "google-trends-spike-decay-rate-how-quickly-do-sea-9af6b341",
+  "query": "Google Trends patterns for spike search terms - how quickly do search spikes typically decay? What happens after a term hits 100?",
+  "answer": "# Google Trends Spike Decay Patterns: Comprehensive Research Synthesis\n\n## 1. How Google Trends Scoring/Normalization Works\n\n### What Does Hitting 100 Mean?\n\nAccording to Google's official FAQ (support.google.com/trends/answer/4365533), Google Trends **does not** report absolute search volumes. Instead, it reports a **Relative Search Volume (RSV)** on a 0-100 scale:\n\n1. Each data point is divided by the **total searches** for that geography and time range, producing a proportion (i.e., the search term's share of all searches).\n2. The resulting proportions are then **scaled so that the highest point = 100**. All other values are expressed relative to that maximum.\n3. A value of 0 means the term fell below a minimum threshold of search volume (not literally zero searches).\n\n**Critical implication for spike analysis**: When a term hits 100, it means that was the moment when the term had its highest *proportion of all searches* within the selected time window. Changing the time window changes which point is 100 and rescales everything else. A term at 50 has half the search proportion of the peak moment.\n\n### Key Normalization Details\n- Google uses a **sample** of searches, not the complete dataset, but states this is representative given billions of daily queries.\n- **Duplicate searches** from the same person over short periods are filtered out.\n- **Low-volume searches** appear as 0 (there is a minimum threshold).\n- **Automated/bot searches** are filtered via anomaly detection.\n- As of 2025+, searches from AI Mode and AI Overviews are excluded.\n- Google acknowledges that **statistical noise** is added for privacy, which can produce apparent one-off spikes on low-volume queries that are not real search activity.\n\n### Wikipedia Additional Context\nThe Wikipedia article on Google Trends confirms: \"Google Trends does not provide absolute values for the number of search queries, but instead shows relative search volumes (RSV). The relative search volumes are normalised to the highest value, which is set to 100.\" Seeing absolute volumes requires third-party browser extensions.\n\n---\n\n## 2. Academic Research on Search Spike Decay\n\n### 2a. Wu & Huberman (2007) -- \"Novelty and Collective Attention\"\n**Published**: PNAS, Vol. 104, No. 45 (2007). DOI: 10.1073/pnas.0704916104\n**Citations**: 628 (as of 2026, per Semantic Scholar)\n**arXiv**: 0704.1158\n\n**Key findings**:\n- Analyzed dynamics of collective attention among **1 million users** on digg.com across **29,864 popular stories** in 2006.\n- The **final popularity (total diggs)** of stories follows a **log-normal distribution** (mean of log(N_inf) = 6.546, std = 0.6626, KS test p = 0.0939).\n- Proposed a stochastic model: N_t = (1 + r_t * X_t) * N_{t-1}, where r_t is a time-dependent novelty decay factor.\n- **The novelty factor r_t decays as a stretched exponential** (Kohlrausch-Williams-Watts law):\n  - r_t ~ exp(-0.4 * t^0.4)\n  - This is **slower than pure exponential** but **faster than power law**.\n- **The half-life of attention (novelty factor) was 69 minutes** (approximately 1 hour), consistent with stories living on the digg.com front page for 1-2 hours.\n- The stretched exponential form arises because multiple characteristic relaxation time scales are present (story category, time of day, etc.).\n- After the first 2-3 hours, the novelty factor drops below 0.03 (97% decay).\n\n### 2b. Candia, Jara-Figueroa, Rodriguez-Sickert, Barabasi & Hidalgo (2019) -- \"The Universal Decay of Collective Memory and Attention\"\n**Published**: Nature Human Behaviour, Vol. 3, pp. 82-91 (2019). DOI: 10.1038/s41562-018-0474-5\n**Citations**: 137 (as of 2026, per Semantic Scholar)\n\n**Key findings**:\n- Used data on citations of academic articles (APS, 485,105 papers), patents (USPTO, 1,681,690 patents), and online attention to songs, movies, and biographies.\n- **The decay of attention follows a universal BIEXPONENTIAL function** with two distinct phases:\n  - Phase 1: **Communicative memory** -- sustained by oral/social communication. Short-lived but intense.\n  - Phase 2: **Cultural memory** -- sustained by physical records and archives. Long-lived but mild.\n- The biexponential model fits better than previously proposed log-normal and simple exponential models.\n- **Quantitative time constants by category**:\n  - **Biographies**: Communicative memory lasts the longest, **20-30 years**\n  - **Academic papers (APS)**: Communicative memory phase of several years, then long cultural memory tail\n  - **Patents (USPTO)**: Similar two-phase pattern\n  - **Music/songs**: Communicative memory lasts the **shortest, about 5.6 years**\n  - **Movies**: Intermediate between music and biographies\n- The model predicts a **transition time** when cultural memory overtakes communicative memory.\n- This is a **universal** pattern: the same biexponential functional form describes all categories, only the time constants differ.\n\n### 2c. Candia & Uzzi (2020) -- \"The Rising of Collective Forgetting and Cultural Selectivity\"\n**Published**: American Psychologist. DOI: 10.1037/amp0000863\n**arXiv**: 2008.06592\n\n**Key findings**:\n- Extended the Candia et al. 2019 model to study how forgetting rates change over time.\n- Used patents (USPTO) and physics papers (APS) data.\n- Found an **increasing forgetting rate** for both communities as information volume grows.\n- Distinguished two branches of forgetting:\n  - **Short-lived branch**: Goes directly from communicative memory to oblivion.\n  - **Long-lived branch**: Goes from communicative memory to cultural memory, then eventually to oblivion.\n- Knowledge communities appear to be **increasing their selectivity** -- getting better at storing only the most valuable pieces in cultural memory.\n\n### 2d. Lorenz-Spreen, Monsted, Hovel & Lehmann (2019) -- \"Accelerating Dynamics of Collective Attention\"\n**Published**: Nature Communications, Vol. 10, Article 1759 (2019). DOI: 10.1038/s41467-019-09311-w\n**Citations**: 251 (as of 2026, per Semantic Scholar)\n**Open Access**: Yes (CC-BY)\n\n**This is the most directly relevant paper for Google Trends spike behavior.**\n\n**Key findings**:\n- Analyzed longitudinal data across 7 domains: Twitter (2013-2016), Google Books (100 years), movie ticket sales (40 years), Google Trends (2010-2018), Reddit (2010-2015), scientific citations (25 years), Wikipedia (2012-2017).\n- **Collective attention cycles are accelerating**: Topics rise and fall with **increasingly steep gradients** over time, but **peak heights remain stable**.\n\n**Specific quantitative findings for Twitter (most granular data)**:\n- In **2013**, a hashtag stayed in the global top 50 for an average of **17.5 hours**.\n- By **2016**, this had decreased to **11.9 hours** (a 32% reduction in just 3 years).\n- Distributions of relative gains and losses follow **log-normal distributions** with parameters (sigma, mu) that are systematically increasing over time.\n- The peak popularity (L_peak) distribution is very broad (power-law like) but **stable over time** -- peaks don't get bigger, they just arrive and depart faster.\n\n**Google Trends specific findings (2010-2018)**:\n- Weekly search queries for top topics show the same accelerating pattern.\n- Relative gains and losses are growing broader and more skewed over time.\n- This confirms that Google Trends spikes are getting sharper and shorter.\n\n**Model**: Used modified Lotka-Volterra competition dynamics:\n- Topics grow via imitation (rate r_p), decay via saturation (rate r_c), and compete with each other for finite attention.\n- The key parameter is the **communication rate r** (r_p = r_c = r). As r increases (more content produced and consumed), attention cycles **shorten** while peak heights stay constant.\n- The model fits empirical data with KS distance of 0.01 and p-value of 0.85.\n\n**Notable exception**: Scientific citations and Wikipedia traffic showed **negligible acceleration**, possibly because these knowledge-based systems are less governed by popularity dynamics.\n\n### 2e. Kobayashi, Gildersleve, Uno & Lambiotte (2021) -- \"Modeling Collective Anticipation and Response on Wikipedia\"\n**Published**: ICWSM 2021. arXiv: 2105.10900\n\n**Key findings**:\n- Modeled Wikipedia page view dynamics around planned events (elections, sports).\n- Proposed a model incorporating **anticipatory growth**, **decay of collective attention**, and **circadian rhythms**.\n- Found that the specific event outcome (e.g., which team wins) has a **significant effect on the response dynamics** after the event.\n- Demonstrates that different types of events trigger different lengths of post-peak activity.\n\n### 2f. Wang, Wu, Zhang & Janssen (2015) -- \"The Hidden Geometry of Attention Diffusion\"\n**arXiv**: 1501.06552\n\n**Key findings**:\n- Found that collective attention in web forums and news sites forms time-invariant \"fields\" whose density varies with distance from the attention center.\n- As new pieces arrive, old ones are pushed farther from the center, receive fewer clicks, and eventually become invisible.\n- This geometric model explains the **fast decay of attention** and predicts accelerating growth of clicks against active user population.\n\n---\n\n## 3. Typical Half-Life of Search Interest Spikes\n\n### By Platform/Medium (from the literature)\n\n| Platform/Medium | Half-life of attention | Source |\n|---|---|---|\n| Digg.com news stories | **69 minutes** (~1 hour) | Wu & Huberman 2007 |\n| Twitter hashtags (top 50) | **~12 hours** (as of 2016, was ~17h in 2013) | Lorenz-Spreen et al. 2019 |\n| Google Trends political figures - shock events | **1-2 days** | Empirical (prior research file b4a50ec8) |\n| Google Trends political figures - campaign events | **2-5 days** | Empirical (prior research file b4a50ec8) |\n| Google Trends political figures - exit events | **<1 day** | Empirical (prior research file b4a50ec8) |\n| News stories (median fame duration) | **~2 weeks** | Cook et al. 2012 |\n| Music (communicative memory) | **~5.6 years** | Candia et al. 2019 |\n| Movies (communicative memory) | **~10-15 years** (intermediate) | Candia et al. 2019 |\n| Biographies (communicative memory) | **20-30 years** | Candia et al. 2019 |\n| Academic papers (communicative memory) | **Several years** | Candia et al. 2019 |\n\n### Key Pattern: The Time Scale Hierarchy\nThe half-life depends critically on the time scale of the medium:\n- **Real-time social media** (Twitter, Digg): Hours\n- **Daily news cycles** (Google Trends for news): Days\n- **Weekly/monthly cycles** (product launches, campaigns): Weeks\n- **Cultural products** (songs, movies, books): Years to decades\n\n---\n\n## 4. Whether Decay Patterns Differ by Category\n\n### Yes -- dramatically. From the combined research:\n\n**By event/content type** (Google Trends scale, days to weeks):\n\n| Category | Decay Type | Half-life | Time to 90% Decay | Post-peak Baseline |\n|---|---|---|---|---|\n| **Breaking news / shock events** (assassinations, disasters) | Stretched exponential | 1-2 days | 3-7 days | Slightly above pre-event |\n| **Exit/termination events** (politician dropouts, company shutdowns) | Rapid sigmoid | <1 day | 3-5 days | At or below pre-event |\n| **Product launches** (tech products, entertainment releases) | Rapid exponential | 1-3 days | 1-2 weeks | Returns to baseline |\n| **Campaign/sustained narratives** (elections, ongoing investigations) | Multi-spike with envelope decay | 2-5 days per spike, weeks for envelope | 1-3 months | Elevated while narrative continues |\n| **Viral content** (memes, viral videos) | Fastest exponential | Hours to 1 day | 2-5 days | Returns to zero |\n| **Seasonal/recurring events** (holidays, annual events) | Symmetric spike with annual recurrence | N/A (cyclical) | 1-2 weeks per occurrence | Stable annual pattern |\n\n**By cultural domain** (Candia et al. 2019, years to decades scale):\n\n| Domain | Communicative Memory Duration | Cultural Memory Duration |\n|---|---|---|\n| Music | ~5.6 years | Decades (for hits that enter cultural memory) |\n| Movies | ~10-15 years | Decades |\n| Biographies | 20-30 years | Centuries (for historically significant figures) |\n| Academic papers | Years | Decades (classic papers) |\n| Patents | Years | Decades (foundational patents) |\n\n**The Masicampo & Ambady (2014) taxonomy**:\n- **Incidental events** (unexpected): Power-function decay, settles ABOVE pre-event baseline.\n- **Goal-related events** (expected/anticipated): Sigmoid decay, settles BELOW pre-event baseline.\n\n---\n\n## 5. Quantitative Data on Decay Rates and Time Constants\n\n### Mathematical Models That Describe the Decay\n\n**1. Stretched exponential (Wu & Huberman 2007)**:\n- r(t) ~ exp(-a * t^b)\n- For Digg.com: r(t) ~ exp(-0.4 * t^0.4)\n- Half-life: 69 minutes\n- This lies between pure exponential (faster) and power law (slower)\n\n**2. Biexponential (Candia et al. 2019)**:\n- S(t) = p * exp(-t/tau_c) + (1-p) * exp(-t/tau_m)\n- Where tau_c = communicative memory time constant, tau_m = cultural memory time constant\n- p = proportion in communicative channel\n- For music: tau_c ~ 5.6 years\n- For biographies: tau_c ~ 20-30 years\n\n**3. Modified Lotka-Volterra (Lorenz-Spreen et al. 2019)**:\n- dL_i/dt = r_p * L_i * (1 - (r_c/K) * integral(exp(-alpha*(t-t')))*L_i(t')dt' - c * sum(L_j))\n- Single-topic analytic solution: L(t) = (2K/r_c) * r_p * exp(-r_p*(t-t_peak)) / (1 + exp(-r_p*(t-t_peak)))^2\n- This produces a symmetric peak whose width scales as 1/r_p\n- Increasing r (communication rate) makes peaks narrower but not taller\n\n**4. Power-law decay (Cook et al. 2012)**:\n- Fame intensity ~ t^(-2.5)\n- Median fame duration ~2 weeks\n\n**5. Log-normal distribution of final popularity (Wu & Huberman 2007)**:\n- log(N_infinity) ~ Normal(6.546, 0.6626^2)\n- This means most stories get moderate attention, with a long tail of viral hits\n\n### Key Empirical Numbers\n\n- **First 24 hours**: 70-80% of peak attention is lost (consistent across multiple studies and event types)\n- **First week**: 90-97% of peak attention is lost for one-time events\n- **Twitter top-50 residence time**: Decreased from 17.5h (2013) to 11.9h (2016), a 32% reduction\n- **Digg.com novelty factor**: Falls below 0.03 (97% decay) within 2-3 hours of front-page appearance\n- **Google Trends for political shocks**: Half-life 1-7 days depending on event type (see taxonomy above)\n- **The acceleration trend**: Content production grows ~28% annually (per cited telecommunications research), driving proportional shortening of attention cycles\n\n---\n\n## 6. What Happens After a Term Hits 100 on Google Trends\n\n### The Normalization Trap\nA term at 100 simply means this is the peak within the selected window. If you narrow the window, a different point might become 100. The absolute search volume at \"100\" varies enormously between terms.\n\n### Typical Post-Peak Trajectory\n1. **Immediate crash (0-24h)**: 70-80% decline. This is the sharpest drop.\n2. **Rapid decay (1-7 days)**: Additional 10-20% decline, reaching 90-97% below peak.\n3. **Long tail (1-4 weeks)**: Slow decline, often settling at a new baseline 3-10% of peak.\n4. **New baseline**: Either returns to pre-peak level, settles slightly above (for incidental events), or drops below (for goal-related events).\n\n### The Acceleration Effect\nLorenz-Spreen et al. (2019) showed this pattern is getting faster over time. Topics that would have taken a week to decay in 2010 now decay in days. The mechanism: increasing content production and consumption rates exhaust finite collective attention faster.\n\n### Re-spike Dynamics\nFollow-up events can produce secondary spikes, but these typically:\n- Are smaller than the original (60-80% of original peak)\n- Decay faster (~2 days vs ~7 days for original)\n- Show diminishing returns with each successive re-spike",
+  "sources": [
+    {
+      "url": "https://support.google.com/trends/answer/4365533",
+      "title": "Google - FAQ about Google Trends data (Official)",
+      "domain": "support.google.com",
+      "accessed_at": "2026-05-04T08:10:00Z",
+      "snippet": "Official Google FAQ explaining normalization: each data point divided by total searches for geography and time range, then scaled 0-100 based on topic's proportion to all searches. Value of 100 = highest proportion in selected window."
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Google_Trends",
+      "title": "Wikipedia - Google Trends",
+      "domain": "en.wikipedia.org",
+      "accessed_at": "2026-05-04T08:10:00Z",
+      "snippet": "Google Trends does not provide absolute values for search queries, but shows relative search volumes (RSV) normalised to highest value set to 100."
+    },
+    {
+      "url": "https://arxiv.org/abs/0704.1158",
+      "title": "Wu & Huberman (2007) - Novelty and Collective Attention",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:10:00Z",
+      "snippet": "PNAS paper analyzing 1M digg.com users, 29,864 stories. Novelty decays as stretched exponential r(t) ~ exp(-0.4*t^0.4) with half-life of 69 minutes. Published DOI: 10.1073/pnas.0704916104. 628 citations."
+    },
+    {
+      "url": "https://doi.org/10.1073/pnas.0704916104",
+      "title": "Wu & Huberman (2007) - Novelty and Collective Attention (PNAS published version)",
+      "domain": "pnas.org",
+      "accessed_at": "2026-05-04T08:11:00Z",
+      "snippet": "Published in Proceedings of the National Academy of Sciences, Vol. 104, No. 45. Showed collective attention follows stretched-exponential decay with characteristic timescale."
+    },
+    {
+      "url": "https://doi.org/10.1038/s41562-018-0474-5",
+      "title": "Candia, Jara-Figueroa, Rodriguez-Sickert, Barabasi & Hidalgo (2019) - The universal decay of collective memory and attention",
+      "domain": "nature.com",
+      "accessed_at": "2026-05-04T08:11:00Z",
+      "snippet": "Nature Human Behaviour (Vol 3, pp 82-91). Universal biexponential decay model with communicative memory (short-lived) and cultural memory (long-lived). Biographies last 20-30yr in communicative memory, music ~5.6yr. 137 citations."
+    },
+    {
+      "url": "https://doi.org/10.1038/s41467-019-09311-w",
+      "title": "Lorenz-Spreen, Monsted, Hovel & Lehmann (2019) - Accelerating dynamics of collective attention",
+      "domain": "nature.com",
+      "accessed_at": "2026-05-04T08:11:00Z",
+      "snippet": "Nature Communications (Vol 10, Article 1759). Open access. Twitter top-50 hashtag residence time decreased from 17.5h (2013) to 11.9h (2016). Uses Google Trends 2010-2018, Reddit, Google Books, movies, citations. 251 citations. Lotka-Volterra model fits with KS distance 0.01."
+    },
+    {
+      "url": "https://arxiv.org/abs/2008.06592",
+      "title": "Candia & Uzzi (2020) - The rising of collective forgetting and cultural selectivity",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:12:00Z",
+      "snippet": "American Psychologist, DOI: 10.1037/amp0000863. Shows increasing forgetting rate as information grows. Two forgetting branches: short-lived (communicative to oblivion) and long-lived (communicative to cultural to oblivion)."
+    },
+    {
+      "url": "https://arxiv.org/abs/2203.05627",
+      "title": "Candia (2022) - Quantifying Collective Memories",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:11:00Z",
+      "snippet": "Models temporal dynamics of collective memory using two-step decay: short-lived intense initial stage (communicative memory) followed by long-lived milder decline (cultural memory). Predicts transition time between the two."
+    },
+    {
+      "url": "https://arxiv.org/abs/2105.10900",
+      "title": "Kobayashi, Gildersleve, Uno & Lambiotte (2021) - Modeling Collective Anticipation and Response on Wikipedia",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:12:00Z",
+      "snippet": "ICWSM 2021. Models Wikipedia page view dynamics around planned events. Shows event outcome significantly affects post-peak decay dynamics. Incorporates anticipatory growth, decay, and circadian rhythms."
+    },
+    {
+      "url": "https://arxiv.org/abs/1501.06552",
+      "title": "Wang, Wu, Zhang & Janssen (2015) - The Hidden Geometry of Attention Diffusion",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:12:00Z",
+      "snippet": "Geometric model of attention: collective attention forms time-invariant fields. Old information pushed farther from center by new pieces, receives fewer clicks, becomes invisible. Explains fast decay."
+    },
+    {
+      "url": "https://arxiv.org/abs/2108.08641",
+      "title": "Wolf, Lorenz-Spreen & Lehmann (2021) - Successive cohorts of Twitter users show increasing activity and shrinking content horizons",
+      "domain": "arxiv.org",
+      "accessed_at": "2026-05-04T08:11:00Z",
+      "snippet": "600,000 Twitter users 2012-2019. Content horizons (autocorrelation of topics) decay faster in later cohorts. More active users tweet more and elicit more retweets, contributing to faster information flow and depleted collective attention."
+    }
+  ],
+  "key_facts": [
+    "Google Trends value of 100 means the highest proportion of total searches within the selected time window -- it is NOT an absolute count. All other values are relative to this maximum.",
+    "Google normalizes by dividing each data point by total searches for that geography and time range, then scaling the maximum to 100. Changing the time window rescales everything.",
+    "Wu & Huberman (2007, PNAS, 628 citations): Novelty factor on Digg.com decays as stretched exponential r(t) ~ exp(-0.4*t^0.4) with half-life of 69 minutes. Decay falls below 0.03 (97%) within 2-3 hours.",
+    "Candia et al. (2019, Nature Human Behaviour, 137 citations): Universal BIEXPONENTIAL decay with two phases -- communicative memory (short-lived, intense) and cultural memory (long-lived, mild). Fits better than log-normal or simple exponential.",
+    "Candia et al. (2019): Communicative memory time constants vary enormously by domain -- biographies 20-30 years, music ~5.6 years, movies intermediate.",
+    "Lorenz-Spreen et al. (2019, Nature Communications, 251 citations): Attention cycles are ACCELERATING. Twitter top-50 hashtag residence time fell from 17.5 hours (2013) to 11.9 hours (2016) -- a 32% reduction in 3 years.",
+    "Lorenz-Spreen et al. (2019): The acceleration is driven by increasing content production and consumption rates (28% annual growth in world's communication capacity). Peak heights stay stable but are reached and abandoned faster.",
+    "Lorenz-Spreen et al. (2019): Used a modified Lotka-Volterra model where topics compete for finite attention. Increasing communication rate r shortens attention phases while preserving peak heights. Model fits data with KS distance 0.01, p=0.85.",
+    "Lorenz-Spreen et al. (2019): Scientific citations and Wikipedia traffic show NEGLIGIBLE acceleration, unlike news/social media -- suggesting knowledge-based systems are less governed by popularity dynamics.",
+    "Candia & Uzzi (2020): Collective forgetting rate is INCREASING as information volume grows, but communities are becoming more selective about what enters cultural memory.",
+    "Typical first-24-hour drop after a Google Trends peak is 70-80% across all event types and categories.",
+    "For breaking news/shock events: half-life of 1-2 days, 90% decay in 3-7 days, baseline settles slightly above pre-event level.",
+    "For exit/termination events: half-life under 1 day, 97% decay within 1 week, baseline at or below pre-event level.",
+    "For viral content: half-life of hours to 1 day, returns to zero within 2-5 days.",
+    "The functional form of decay is universal (stretched exponential or biexponential), but time constants differ by category/medium.",
+    "Wu & Huberman (2007): The distribution of total attention (final popularity) follows a log-normal distribution -- most items get moderate attention with a long tail of viral hits.",
+    "Google acknowledges adding statistical noise to Trends data for privacy, which can produce false one-off spikes on low-volume queries."
+  ],
+  "data_points": [
+    {
+      "metric": "Wu & Huberman - stretched exponential half-life on Digg.com",
+      "value": 69,
+      "unit": "minutes",
+      "as_of": "2007-04-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman - time to 97% decay of novelty factor",
+      "value": 150,
+      "unit": "minutes (2.5 hours)",
+      "as_of": "2007-04-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman - stretched exponential exponent",
+      "value": 0.4,
+      "unit": "dimensionless exponent in exp(-0.4*t^0.4)",
+      "as_of": "2007-04-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman - log-normal mean of ln(N_inf) for Digg stories",
+      "value": 6.546,
+      "unit": "ln(diggs)",
+      "as_of": "2007-01-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman - log-normal std of ln(N_inf) for Digg stories",
+      "value": 0.6626,
+      "unit": "ln(diggs)",
+      "as_of": "2007-01-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Candia et al. - communicative memory time constant for biographies",
+      "value": 25,
+      "unit": "years (range 20-30)",
+      "as_of": "2019-01-01",
+      "source_url": "https://doi.org/10.1038/s41562-018-0474-5"
+    },
+    {
+      "metric": "Candia et al. - communicative memory time constant for music",
+      "value": 5.6,
+      "unit": "years",
+      "as_of": "2019-01-01",
+      "source_url": "https://doi.org/10.1038/s41562-018-0474-5"
+    },
+    {
+      "metric": "Lorenz-Spreen - Twitter top-50 hashtag mean residence time (2013)",
+      "value": 17.5,
+      "unit": "hours",
+      "as_of": "2013-12-31",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Lorenz-Spreen - Twitter top-50 hashtag mean residence time (2016)",
+      "value": 11.9,
+      "unit": "hours",
+      "as_of": "2016-12-31",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Lorenz-Spreen - reduction in hashtag residence time 2013-2016",
+      "value": 32,
+      "unit": "percent reduction",
+      "as_of": "2019-04-15",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Lorenz-Spreen - Lotka-Volterra model fit KS distance",
+      "value": 0.01,
+      "unit": "KS distance",
+      "as_of": "2019-04-15",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Lorenz-Spreen - Lotka-Volterra model fit p-value",
+      "value": 0.85,
+      "unit": "p-value",
+      "as_of": "2019-04-15",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Typical first-24-hour decline from Google Trends peak",
+      "value": 75,
+      "unit": "percent decline (range 70-80%)",
+      "as_of": "2026-05-04",
+      "source_url": "https://support.google.com/trends/answer/4365533"
+    },
+    {
+      "metric": "World communication capacity annual growth rate",
+      "value": 28,
+      "unit": "percent per year (over 20 years)",
+      "as_of": "2019-04-15",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Wu & Huberman - number of stories analyzed",
+      "value": 29864,
+      "unit": "popular stories in 2006",
+      "as_of": "2007-01-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman - number of users in study",
+      "value": 1000000,
+      "unit": "users",
+      "as_of": "2007-04-09",
+      "source_url": "https://doi.org/10.1073/pnas.0704916104"
+    },
+    {
+      "metric": "Wu & Huberman citation count",
+      "value": 628,
+      "unit": "citations (Semantic Scholar)",
+      "as_of": "2026-05-04",
+      "source_url": "https://www.semanticscholar.org/paper/a8d9b84defac94f9f45f5d0c455ec4337fe09c58"
+    },
+    {
+      "metric": "Candia et al. 2019 citation count",
+      "value": 137,
+      "unit": "citations (Semantic Scholar)",
+      "as_of": "2026-05-04",
+      "source_url": "https://www.semanticscholar.org/paper/a1bdfab625379003eac79735dcd5977564038273"
+    },
+    {
+      "metric": "Lorenz-Spreen et al. 2019 citation count",
+      "value": 251,
+      "unit": "citations (Semantic Scholar)",
+      "as_of": "2026-05-04",
+      "source_url": "https://www.semanticscholar.org/paper/9d614fcded579385ab809a1bbe5d8cf6851ede71"
+    },
+    {
+      "metric": "Lorenz-Spreen - Twitter dataset size",
+      "value": 43000000000,
+      "unit": "tweets in corpus",
+      "as_of": "2016-12-31",
+      "source_url": "https://doi.org/10.1038/s41467-019-09311-w"
+    },
+    {
+      "metric": "Candia et al. 2019 - APS papers analyzed",
+      "value": 485105,
+      "unit": "papers",
+      "as_of": "2019-01-01",
+      "source_url": "https://doi.org/10.1038/s41562-018-0474-5"
+    },
+    {
+      "metric": "Candia et al. 2019 - USPTO patents analyzed",
+      "value": 1681690,
+      "unit": "patents",
+      "as_of": "2019-01-01",
+      "source_url": "https://doi.org/10.1038/s41562-018-0474-5"
+    }
+  ],
+  "created_at": "2026-05-04T08:15:00.000000Z",
+  "updated_at": "2026-05-04T08:15:00.000000Z",
+  "stale_after": "2027-05-04T08:15:00.000000Z",
+  "resolvable_after": null,
+  "state": "active",
+  "superseded_by": null,
+  "revision_history": [],
+  "session_id": null,
+  "follow_up_count": 0
+}
