@@ -1,0 +1,189 @@
+---
+timestamp: 2026-05-05 08:51:01 UTC
+question_type: numeric
+factors:
+- description: Fed just held rates at 3.50-3.75% on Apr 29 with no change expected
+    until June FOMC meeting - pins short-term rates near current levels
+  supports:
+    center: 3.6
+    low: 3.57
+    high: 3.63
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: DTB4WK has been in extremely tight range (3.57-3.63) for entire month
+    with regime std of only 0.0166 - very low volatility
+  supports:
+    center: 3.6
+    low: 3.57
+    high: 3.63
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Latest value is 3.61, regime mean is 3.5995 - current value is essentially
+    at the mean
+  supports:
+    center: 3.6
+    low: 3.56
+    high: 3.64
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Rate futures imply gradual increases to 3.62-3.70 by Oct-Jan 2027,
+    slight upward pressure over months but negligible over 8 days
+  supports:
+    center: 3.61
+    low: 3.58
+    high: 3.64
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Tail risk: market shock (flight-to-quality or inflation scare) could
+    move rates significantly, but very unlikely in 8 business days'
+  supports:
+    center: 3.6
+    low: 3.45
+    high: 3.75
+  logit: -0.3
+  confidence: 0.3
+  effective_logit: -0.09
+tentative_estimate:
+  center: 3.6
+  low: 3.54
+  high: 3.66
+anchor: Regime mean of 3.5995% from 20 observations in stable regime since April 6,
+  2026 (FRED DTB4WK series)
+assessment: The 4-week T-bill rate is effectively pinned by the federal funds rate
+  target of 3.50-3.75%. The FOMC just met on April 29 and held rates steady, with
+  the next meeting likely in June. Over the 8 business days until resolution (May
+  13), there is no scheduled policy event that could materially shift this rate. The
+  rate has been remarkably stable, ranging only from 3.57 to 3.63 over the past 20
+  trading days with a standard deviation of just 0.017%. My Monte Carlo simulations
+  (normal random walk, bootstrap, and O-U mean-reverting models) all converge on a
+  median around 3.60 with an 80% CI of roughly 3.54-3.66. The blended simulation gives
+  P10=3.54, P50=3.60, P90=3.66.
+calibration_notes: Very low divergence from anchor. The rate is nearly constant. Main
+  calibration concern is whether tails are wide enough for an unexpected shock, but
+  with no FOMC meeting and stable macro backdrop, tails beyond ±0.10 from current
+  are already quite conservative. The question bounds (3.0175-4.9396) are extremely
+  wide relative to plausible outcomes.
+key_uncertainties: 1. Unexpected macro shock (geopolitical crisis, tariff escalation)
+  that could move rates; 2. Treasury auction dynamics that could temporarily shift
+  4-week bill supply/demand; 3. Whether the 4 FOMC dissents signal imminent policy
+  shift (unlikely in 8 days)
+tool_audit: 'FRED data via web_search: excellent, returned full observation history
+  and regime stats. Fed statement via fetch_url: very useful, confirmed rate hold.
+  Monte Carlo simulations: ran 3 models and blended. All tools performed well with
+  no failures.'
+update_triggers: Emergency FOMC meeting, major geopolitical crisis, sudden market
+  liquidity event, unexpected economic data release
+process_reflection: Straightforward question with abundant data. The FRED API integration
+  in web_search was excellent - returned structured data including regime stats and
+  rate futures in a single call. The sandbox for Monte Carlo worked smoothly. No friction
+  points for this question type.
+computed:
+  factor_count: 5
+  factor_sum: 4.24
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Fed just held rates at 3.50-3.75% on Apr 29 with no change expected
+      until June FOMC meeting - pins short-term rates near current levels
+    supports:
+      center: 3.6
+      low: 3.57
+      high: 3.63
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: DTB4WK has been in extremely tight range (3.57-3.63) for entire month
+      with regime std of only 0.0166 - very low volatility
+    supports:
+      center: 3.6
+      low: 3.57
+      high: 3.63
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Latest value is 3.61, regime mean is 3.5995 - current value is essentially
+      at the mean
+    supports:
+      center: 3.6
+      low: 3.56
+      high: 3.64
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Rate futures imply gradual increases to 3.62-3.70 by Oct-Jan 2027,
+      slight upward pressure over months but negligible over 8 days
+    supports:
+      center: 3.61
+      low: 3.58
+      high: 3.64
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Tail risk: market shock (flight-to-quality or inflation scare) could
+      move rates significantly, but very unlikely in 8 business days'
+    supports:
+      center: 3.6
+      low: 3.45
+      high: 3.75
+    logit: -0.3
+    confidence: 0.3
+    effective_logit: -0.09
+  dominant_factor: Fed just held rates at 3.50-3.75% on Apr 29 with no change expected
+    until June FOMC meeting - pins short-term rates near current levels
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 3.600407239819005
+    implied_p10: 3.5659276018099546
+    implied_p90: 3.634886877828054
+    median_gap: -0.0004072398190047011
+    median_gap_pct: -0.5905511811026183
+    spread_ratio: 1.740157480314964
+    precision: 0.03333333333333336
+  sources:
+  - '[(Metaculus) What will be the value of "4-Week Treasury Bill Secondary Market
+    Rate, Discount Basis" on 2026-05-13?](https://www.metaculus.com/questions/43406)'
+  - '[4-Week Treasury Bill Secondary Market Rate, Discount Basis (DTB4WK) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/DTB4WK)'
+  - '[3-Month Treasury Bill Secondary Market Rate, Discount Basis (DTB3) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/DTB3)'
+  - '[Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43406
+- **Question ID**: 43402
+- **Session Duration**: 385.2s (6.4 min)
+- **Cost**: $4.6202 total (orchestrator $2.5757 + sub-agents $2.0445)
+- **Tokens**: 8,972 total (29 in, 8,943 out)
+  - Cache: 517,183 read, 60,200 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43406_20260505_084726/20260505-084726.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0220 |
+| execute_code | 6 | 0 | 343ms | — |
+| fetch_url | 2 | 0 | 4976ms | — |
+| fred_series | 3 | 0 | 1388ms | — |
+| get_metaculus_questions | 1 | 0 | 306ms | — |
+| premortem | 1 | 0 | 91064ms | $1.9501 |
+| reflection | 1 | 0 | 303ms | — |
+| web_search | 2 | 0 | 46359ms | $0.0724 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "4-Week Treasury Bill Secondary Market...
+- [4-Week Treasury Bill Secondary Market Rate, Discount Basis (DTB4WK) | FRED |...
+- [3-Month Treasury Bill Secondary Market Rate, Discount Basis (DTB3) | FRED | ...
+- [Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsev...
