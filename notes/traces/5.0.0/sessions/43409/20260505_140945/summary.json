@@ -1,0 +1,146 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by parsing the resolution criteria carefully: this is a meta-prediction asking whether the Metaculus community prediction (CP) for \"Will the Iranian government lose power before 2027?\" (question #38770) will be **strictly above 13.00%** on 2026-05-15. The CP as of 2026-05-02 was exactly **13.00%** — right at the threshold.\n\nI attempted to retrieve CP history directly via `get_cp_history`, but this returned `cp_available: false` because the question is in the AIB tournament and CP data is hidden from forecasting agents. I worked around this by:\n- Extracting CP snapshots from the question background info: weekly values showed **20% → 20% → 20% → 15% → 11% → 13%** from late March through early May\n- Discovering from a related meta-prediction (#42370) that CP was **70%** on March 1 (right after Khamenei's assassination)\n- Gathering Polymarket data: \"Regime fall by May 31\" at **2.65%** (declining from 3.6% a week prior), \"Regime fall by June 30\" at **5.5%** (declining from 8.5%)\n\nI conducted comprehensive research on the Iran situation via the research tool, which returned a detailed report covering:\n- The US-Israel war launched Feb 28, 2026, assassinating Supreme Leader Khamenei\n- A fragile ceasefire since April 8, with repeated violations\n- US naval blockade, Hormuz standoff, US strikes on IRGC boats (May 4-5)\n- Trump's threat to \"bomb Iran\" if no deal (May 4)\n- Internal regime divisions: Pezeshkian vs. IRGC, clerical fractures\n- New Supreme Leader Mojtaba Khamenei (installed March 8-9), untested\n\n## Key Evidence\n\n**Favoring NO (CP stays ≤ 13%):**\n- Strong downward CP trend: **70% → 13%** over ~9 weeks — massive sustained decline\n- CP at exact threshold with **strict inequality** required — status quo resolves NO\n- Polymarket regime fall markets **declining** (both May 31 and June 30 markets down over past week)\n- Regime showed institutional resilience: new Supreme Leader installed, IRGC functional, protests suppressed\n\n**Favoring YES (CP rises above 13%):**\n- Genuinely volatile situation: Trump \"bomb or deal\" threat, Hormuz standoff, IRGC boat strikes\n- Small CP bounce from **11% → 13%** (Apr 25 to May 2) suggests some upward pressure\n- Internal divisions (Pezeshkian vs IRGC \"madness\", clerical fractures) could generate headlines pushing CP up\n- ~12-15% probability of war resumption in next 10 days, which would spike CP well above threshold\n\n## Quantitative Modeling\n\nI ran three Monte Carlo / scenario models via `execute_code`:\n1. **Model 1 (observed weekly stats):** Using mean weekly change of -1.40 and std of 2.65, simulated 100K paths → **P(CP > 13%) = 22.9%**\n2. **Model 2 (scenario analysis):** Five discrete scenarios (war resumes 12%, deal 10%, status quo 65%, gradual escalation 10%, internal crisis 3%) → **P(CP > 13%) = 25.0%**\n3. **Model 3 (mixture with event shocks):** 85% normal drift + 15% jump risk per week → **P(CP > 13%) = 31.8%**\n\n## Conclusion\n\nI concluded with a **30% probability** of YES (CP being strictly above 13% on May 15). The three models converged around 23-32%, and I settled on 30% as the central estimate. The dominant factor is the strong downward trend and status quo threshold effect favoring NO, counterbalanced by meaningful tail risk from military escalation that could spike CP above the threshold. The key swing factor is the ~12-15% probability of war resumption in the next 10 days.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_cp_history": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 18,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Could not access Metaculus CP history directly due to AIB tournament restrictions — had to reconstruct from indirect sources",
+      "Did not have Manifold Markets tool despite a search result hinting at its availability"
+    ],
+    "subtle_bugs": [
+      "The Polymarket search returned near-identical data across multiple result entries (same markets repeated), wasting context tokens without adding new information"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Monte Carlo simulation of CP trajectory combined with scenario analysis of Iran military/diplomatic outcomes, cross-validated against Polymarket regime-fall pricing.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": true,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the US-Iran ceasefire holds or war resumes in the next 10 days, which would be the primary driver of a CP spike above the 13% threshold."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Search results included a Manifold Markets link ('Will Iran's regime fall in 2026?') with an explicit hint to 'Use manifold_price for market data', but the agent did not follow up to retrieve this additional prediction market data point.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The last known CP value is from May 2 (13.00%), but the agent is forecasting on May 5 with no attempt to estimate what the CP might already be on May 5. The 3-day gap could contain significant movement given the volatile situation (US struck IRGC boats on May 4-5).",
+      "severity": "minor"
+    },
+    {
+      "category": "computation_error",
+      "evidence": "Monte Carlo Model 1 estimates weekly mean and std from only 5 observations (changes: [0.0, 0.0, -5.0, -4.0, 2.0]), three of which are zero because CP was flat at 20% for three consecutive weeks. This makes the distribution estimates unreliable, yet the model output (22.9%) is treated as a meaningful data point.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "28%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified and handled the strict inequality threshold — CP at exactly 13.00% resolves NO, creating structural asymmetry. This nuance was properly incorporated into the analysis.",
+    "Ran three distinct quantitative models (historical MC, scenario analysis, mixture model with event shocks) that produced a converging range of 23-32%, lending robustness to the final 30% estimate.",
+    "Excellent research coverage: obtained comprehensive Iran situation report from multiple sources (Wikipedia, AP, Al Jazeera, BBC, Iran International, Reuters), Polymarket data with recent price history, and historical CP trajectory from related meta-predictions.",
+    "Strong premortem/counterargument: specifically argued the downward trend might be stronger than modeled, escalation risk may be already priced in, and CP lag with 214 forecasters could prevent timely updates — all substantive and falsifiable points.",
+    "Appropriately distinguished between Polymarket regime-fall pricing (actual event probability) and Metaculus CP dynamics (crowd sentiment about regime change), using the former as a cross-check rather than directly mapping between them.",
+    "Creative workaround for the CP history block: extracted trajectory data from the related meta-prediction question #42370 and the question background info, reconstructing a useful time series despite not having direct access."
+  ],
+  "weaknesses": [
+    "Monte Carlo Model 1 uses only 5 weekly change observations (with 3 of them being 0.0), making the estimated weekly mean and standard deviation quite unreliable — the agent acknowledged thin data but still placed significant weight on these numbers.",
+    "The scenario analysis assigned CP values to each scenario as point estimates (e.g., 'war resumes → CP=22%') without justification for those specific numbers. The CP response to war resumption could range widely (15-40%) depending on severity.",
+    "Did not check Manifold Markets despite a search result showing a relevant market ('Will Iran's regime fall in 2026?' on Manifold) with a hint to use manifold_price — this was a missed data source.",
+    "The 3-day gap between the last known CP (May 2) and the forecast date (May 5) is noted but not modeled — the CP could have already moved significantly in those 3 days, and this uncertainty is underweighted.",
+    "The agent's tool audit note incorrectly states 'get_cp_history returned 403' when the actual response was a structured JSON with cp_available: false — a minor factual error in self-assessment."
+  ],
+  "pipeline": {
+    "issues": [
+      "Significant token waste from Polymarket search results: the same market data (May 31 and June 30 markets) was returned 5+ times across different search results, consuming thousands of tokens with duplicate information",
+      "The get_cp_history tool returned a structured non-error response but the agent later mischaracterized it as a '403 error' in the tool audit note — minor narrative inconsistency"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Retrieve Manifold Markets data when search results surface relevant markets with explicit hints — this would have provided an additional cross-validation point.",
+    "When CP data has a multi-day gap, explicitly model the interim period: the May 4-5 Hormuz strikes could have already moved CP, and incorporating this uncertainty would improve the estimate.",
+    "For Monte Carlo models with very few data points (n=5), consider using broader distributional assumptions (e.g., t-distribution with low degrees of freedom) or explicitly discount the model's weight in the final ensemble.",
+    "Deduplicate search results before analysis — the same Polymarket data appeared 5+ times, wasting thousands of context tokens that could have been used for additional research."
+  ]
+}
