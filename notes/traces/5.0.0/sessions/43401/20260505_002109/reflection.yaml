@@ -1,0 +1,214 @@
+---
+timestamp: 2026-05-05 00:32:51 UTC
+question_type: numeric
+factors:
+- description: 'Current price anchor: CBN26 at ~$114 as of May 5, 2026'
+  supports:
+    center: 114.0
+    low: 112.0
+    high: 116.0
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Escalation risk: Iran attacked UAE May 4-5, ceasefire ''on the brink'',
+    US Project Freedom confrontation - upward pressure on prices'
+  supports:
+    center: 125.0
+    low: 118.0
+    high: 140.0
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: 'De-escalation risk: Active negotiations via Pakistan, Iran sent peace
+    proposal May 2, confidence-building measures - could trigger sharp drop'
+  supports:
+    center: 95.0
+    low: 80.0
+    high: 105.0
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'Extreme war-period volatility: observed 6.4%/day std in April, 100%+
+    annualized - wide distribution is warranted'
+  supports:
+    center: 114.0
+    low: 90.0
+    high: 140.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Moody's recession threshold at $125 creates soft ceiling as demand
+    destruction would limit further rally
+  supports:
+    center: 110.0
+    low: 105.0
+    high: 125.0
+  logit: -0.3
+  confidence: 0.4
+  effective_logit: -0.12
+- description: 'Status quo persistence: market already priced in significant disruption;
+    absent new major events, price should hover near current level'
+  supports:
+    center: 114.0
+    low: 108.0
+    high: 118.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+tentative_estimate:
+  center: 113.5
+  low: 96.5
+  high: 130.5
+anchor: Current market price of ~$114/barrel (CBN26 May 5, 2026). For a very short
+  horizon, the futures price IS the market-implied expected value.
+assessment: 'This is a highly volatile oil price during an active military crisis
+  (US-Iran War). The current price of ~$114 serves as the natural center of the distribution.
+  The 8-trading-day horizon means significant moves are possible given observed daily
+  volatility of 3-6%. Key binary risks: (1) ceasefire could collapse fully, sending
+  prices toward $120-140, or (2) breakthrough negotiations could rapidly open Hormuz,
+  sending prices toward $90-100. The scenario-weighted Monte Carlo (40% escalation,
+  35% stalemate, 25% de-escalation) produces a median of $113.5 with a wide 80% CI
+  of $96.5-$130.5, consistent with the empirically observed moves in April 2026 (range:
+  $98.63-$138.21 in 2 weeks).'
+calibration_notes: 'The 80% CI width ($34) exceeds what a normal-volatility random
+  walk would produce (~$22 at 3.5% daily vol), reflecting the crisis-period regime
+  with potential jump events. The range is narrower than the full realized Apr 7-17
+  range ($138-$99 = $39), which seems appropriate since that 10-day period contained
+  two extreme one-off events. Key check: my P10 ($96.5) is very close to the April
+  17 trough ($98.63) - this is reasonable as a similar-magnitude breakthrough could
+  recur.'
+key_uncertainties: 1. Whether the ceasefire formally collapses or holds in some form.
+  2. Success/failure of Project Freedom in reopening Hormuz. 3. Whether negotiations
+  produce a breakthrough before May 15. 4. Possibility of a major escalation event
+  (direct US-Iran naval battle, major infrastructure hit).
+tool_audit: FRED daily price data for DCOILBRENTEU was essential - provided 16 observations
+  from April 2026 with regime stats. Research sub-agent successfully found CBN26 at
+  $113.81 settlement May 4. CNBC article confirmed $114.44 close. Web search found
+  Trading Economics confirming ~$114 on May 5. Wikipedia article on economic impact
+  provided crucial context. All tools worked well.
+update_triggers: 1. Formal ceasefire collapse announcement (+$5-15 likely). 2. Successful
+  Hormuz convoy without incident (-$3-5 as risk premium declines). 3. Announced peace
+  deal or comprehensive ceasefire (-$15-25). 4. Major US-Iran naval engagement in
+  Hormuz (+$10-20). 5. Iran striking US carrier or major oil facility (+$15-25).
+process_reflection: 'The tools worked smoothly for this question. FRED data with regime_stats
+  was particularly useful for understanding the volatility regime. The research sub-agent
+  provided excellent comprehensive context on the geopolitical situation. One gap:
+  I couldn''t get intraday/real-time price data for the very latest trading, but the
+  May 4-5 data is close enough given the 8-day horizon. The scenario-based Monte Carlo
+  approach felt appropriate for this war-driven market where binary geopolitical events
+  drive outsized moves.'
+computed:
+  factor_count: 6
+  factor_sum: 3.875
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Current price anchor: CBN26 at ~$114 as of May 5, 2026'
+    supports:
+      center: 114.0
+      low: 112.0
+      high: 116.0
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Escalation risk: Iran attacked UAE May 4-5, ceasefire ''on the brink'',
+      US Project Freedom confrontation - upward pressure on prices'
+    supports:
+      center: 125.0
+      low: 118.0
+      high: 140.0
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: 'De-escalation risk: Active negotiations via Pakistan, Iran sent
+      peace proposal May 2, confidence-building measures - could trigger sharp drop'
+    supports:
+      center: 95.0
+      low: 80.0
+      high: 105.0
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'Extreme war-period volatility: observed 6.4%/day std in April, 100%+
+      annualized - wide distribution is warranted'
+    supports:
+      center: 114.0
+      low: 90.0
+      high: 140.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Moody's recession threshold at $125 creates soft ceiling as demand
+      destruction would limit further rally
+    supports:
+      center: 110.0
+      low: 105.0
+      high: 125.0
+    logit: -0.3
+    confidence: 0.4
+    effective_logit: -0.12
+  - description: 'Status quo persistence: market already priced in significant disruption;
+      absent new major events, price should hover near current level'
+    supports:
+      center: 114.0
+      low: 108.0
+      high: 118.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  dominant_factor: 'Current price anchor: CBN26 at ~$114 as of May 5, 2026'
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 114.28189550425272
+    implied_p10: 104.89914945321992
+    implied_p90: 125.2831105710814
+    median_gap: -0.7818955042527165
+    median_gap_pct: -3.8358369098711607
+    spread_ratio: 1.6679780639008113
+    precision: 0.29955947136563876
+  sources:
+  - '[(Metaculus) What will be the front-month ICE Brent crude oil futures settlement
+    price on May 15, 2026?](https://www.metaculus.com/questions/43401)'
+  - '[Oil prices jump after Iran attacks UAE as U.S. tries to open Strait of Hormuz](https://www.cnbc.com/2026/05/04/oil-prices-today-wti-brent-trump-iran-us-hormuz.html)'
+  - '[Economic impact of the 2026 Iran war - Wikipedia](https://en.wikipedia.org/wiki/Economic_impact_of_the_2026_Iran_war)'
+  - '[A timeline of how the Iran war shook oil prices — and what comes next](https://www.cnbc.com/2026/04/21/oil-price-iran-war-middle-east.html)'
+  - '[Crude Oil Prices: Brent - Europe (DCOILBRENTEU) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DCOILBRENTEU)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43401
+- **Question ID**: 43397
+- **Session Duration**: 879.4s (14.7 min)
+- **Cost**: $13.7849 total (orchestrator $3.6003 + sub-agents $10.1846)
+- **Tokens**: 13,294 total (31 in, 13,263 out)
+  - Cache: 769,752 read, 77,360 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43401_20260505_002109/20260505-002109.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0635 |
+| execute_code | 6 | 0 | 710ms | — |
+| fetch_url | 2 | 0 | 15556ms | — |
+| fred_series | 1 | 0 | 479ms | — |
+| get_metaculus_questions | 1 | 0 | 338ms | — |
+| premortem | 1 | 0 | 137912ms | $2.9627 |
+| reflection | 1 | 0 | 15ms | — |
+| research | 1 | 0 | 315784ms | $7.0166 |
+| web_search | 3 | 0 | 26580ms | $0.1418 |
+| wikipedia | 1 | 0 | 187ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the front-month ICE Brent crude oil futures settlem...
+- [Oil prices jump after Iran attacks UAE as U.S. tries to open Strait of Hormu...
+- [Economic impact of the 2026 Iran war - Wikipedia](https://en.wikipedia.org/w...
+- [A timeline of how the Iran war shook oil prices — and what comes next](https...
+- [Crude Oil Prices: Brent - Europe (DCOILBRENTEU) | FRED | St. Louis Fed](http...
