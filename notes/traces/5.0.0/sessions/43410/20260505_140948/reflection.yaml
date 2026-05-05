@@ -1,0 +1,184 @@
+---
+timestamp: 2026-05-05 14:19:03 UTC
+question_type: binary
+factors:
+- description: CP at exactly the threshold (36%) - baseline is near 50/50
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: 'Downward trend in CP: declined from 41% to 36% over 5 weeks, mean
+    weekly change of -1pp'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Flight 12 (May 12-18) as potential upward catalyst if successful -
+    first V3 flight would show progress toward refueling architecture
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Strict inequality threshold (>36%, not >=36%) - ties go to NO, creating
+    asymmetry against YES
+  logit: -0.2
+  confidence: 0.9
+  effective_logit: -0.18000000000000002
+- description: 'Mean reversion potential: 36% is below the 40% long-run CP average,
+    recent drop may be overshooting'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: Large forecaster pool (761) means CP is relatively sticky - requires
+    broad consensus to move
+  logit: -0.15
+  confidence: 0.6
+  effective_logit: -0.09
+tentative_estimate:
+  logit: -0.15
+  probability: 0.46
+anchor: 'Baseline for meta-prediction with CP at threshold: ~50% (symmetric around
+  current level)'
+assessment: "This is a meta-prediction about CP movement. The CP is currently exactly\
+  \ at the 36% threshold (as of May 2). The question requires strict inequality (>36%),\
+  \ so status quo resolves NO.\n\nKey dynamics:\n1. DOWNWARD TREND: CP declined from\
+  \ 41→40→40→43→40→36 over 5 weeks. The most recent weekly drop of 4pp was the largest\
+  \ observed. This suggests genuine pessimism shift, not noise.\n\n2. FLIGHT 12 CATALYST:\
+  \ SpaceX Flight 12 (first V3 Starship) is targeting May 12-18. If it launches and\
+  \ succeeds before the May 16 resolution, it could push CP up 2-4pp. But if it fails,\
+  \ CP could drop 2-5pp. I estimate ~45% chance of launch before May 16, ~55% success\
+  \ rate given launch.\n\n3. UNDERLYING FUNDAMENTALS: The propellant transfer demo\
+  \ requires TWO flights 3-4 weeks apart, neither has occurred, and V3 hasn't flown\
+  \ yet. ~8 months remain in 2026. The timeline is tight but not impossible. Forecasters\
+  \ seem to be pricing in growing schedule risk.\n\n4. STRICT INEQUALITY: CP must\
+  \ be STRICTLY above 36%. If it stays at 36% or drops, this resolves NO. Given the\
+  \ negative drift, the probability slightly favors NO.\n\nMonte Carlo simulations\
+  \ gave:\n- Pure random walk (negative drift): 30% YES\n- Mean-reverting model: 76%\
+  \ YES  \n- Scenario-weighted (my best model): 47.6% YES\n\nThe scenario model is\
+  \ most realistic, incorporating Flight 12 timing uncertainty. Sensitivity analysis\
+  \ shows the result is relatively stable (45.8-49.5%) across reasonable assumptions\
+  \ about Flight 12 launch probability."
+calibration_notes: 'Anchor is 50% (CP at threshold). My factors sum to a small negative
+  adjustment. The 46% estimate is close to 50% but reflects the genuine downward drift.
+  I''ve checked for hedging: the evidence genuinely supports near-even odds. Flight
+  12 is a real potential catalyst that could go either way. The negative trend creates
+  a small but real edge toward NO.'
+key_uncertainties: 1. Current CP (May 5) vs last known (May 2) - 3 days of unobserved
+  drift could shift the starting point significantly. 2. Flight 12 timing - will it
+  actually launch before May 16? 3. Magnitude of CP response to Flight 12 - how much
+  do forecasters update on a suborbital test for a refueling question?
+tool_audit: '- research(): Excellent - returned detailed SpaceX Starship schedule
+  and propellant transfer demo status. Two queries ran in parallel.
+
+  - get_cp_history(): Returned 403 (expected for AIB tournament questions). Had to
+  rely on weekly snapshots provided in the question description.
+
+  - get_metaculus_questions(): Returned question details but no CP (expected).
+
+  - get_coherence_links(): Empty - no related questions found.
+
+  - web_search (Polymarket): Found related markets (Starship reusable before 2027
+  at 40%) but no direct refueling market.
+
+  - execute_code(): Worked well for Monte Carlo simulations.'
+update_triggers: 1. Flight 12 launch outcome (success/failure). 2. Any SpaceX announcement
+  about propellant transfer demo timing. 3. Fresh CP data showing the current level.
+process_reflection: The main friction was not being able to access the actual CP for
+  the target question (403 for AIB questions). For a meta-prediction, this is a significant
+  handicap - I'm working with 3-day-old data. The weekly snapshot format in the question
+  description is helpful but coarse. The research() tool performed well and returned
+  comprehensive, well-structured findings about the SpaceX schedule. The scenario-based
+  simulation approach felt natural for this type of question where a binary catalyst
+  (Flight 12) could dominate the outcome.
+computed:
+  factor_count: 6
+  factor_sum: -0.35
+  tentative_logit: -0.15
+  logit_gap: 0.19999999999999998
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: CP at exactly the threshold (36%) - baseline is near 50/50
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: 'Downward trend in CP: declined from 41% to 36% over 5 weeks, mean
+      weekly change of -1pp'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Flight 12 (May 12-18) as potential upward catalyst if successful
+      - first V3 flight would show progress toward refueling architecture
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Strict inequality threshold (>36%, not >=36%) - ties go to NO, creating
+      asymmetry against YES
+    logit: -0.2
+    confidence: 0.9
+    effective_logit: -0.18000000000000002
+  - description: 'Mean reversion potential: 36% is below the 40% long-run CP average,
+      recent drop may be overshooting'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: Large forecaster pool (761) means CP is relatively sticky - requires
+      broad consensus to move
+    logit: -0.15
+    confidence: 0.6
+    effective_logit: -0.09
+  dominant_factor: 'Downward trend in CP: declined from 41% to 36% over 5 weeks, mean
+    weekly change of -1pp'
+  dominant_effective_logit: -0.35
+  factor_implied_probability: 0.41338242108267
+  tentative_probability: 0.46
+  gap_pp: 4.661757891733004
+  sources:
+  - '[(Metaculus) Will SpaceX successfully refuel a Starship in orbit during 2026?](https://www.metaculus.com/questions/41142)'
+  - '[SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-above)'
+  - '[What will SpaceX''s public ticker be? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/what-will-spacexs-public-ticker-be)'
+  - '[SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap)'
+  - '[SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-by)'
+  - '[SpaceX Starship fully reusable before 2027? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/spacex-starship-fully-reusable-before-2027)'
+  - '[SpaceX Starship Flight Test 12 Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-starship-flight-test-12)'
+  - '[Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://polymarket.com/event/largest-ipo-by-market-cap-in-2026-287)'
+  - '[SpaceX Starship launch today? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-starship-launch-tomorrow)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43410
+- **Question ID**: 43406
+- **Session Duration**: 742.7s (12.4 min)
+- **Cost**: $19.0675 total (orchestrator $2.9668 + sub-agents $16.1007)
+- **Tokens**: 11,690 total (28 in, 11,662 out)
+  - Cache: 523,539 read, 69,677 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43410_20260505_140948/20260505-140948.log`
+
+### Tool Calls
+
+- **Total**: 42 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 386ms | — |
+| get_coherence_links | 2 | 0 | 303ms | — |
+| get_cp_history | 2 | 0 | 2907ms | — |
+| get_metaculus_questions | 5 | 0 | 5514ms | — |
+| polymarket_price | 18 | 0 | 588ms | — |
+| premortem | 2 | 0 | 127084ms | $4.8403 |
+| reflection | 2 | 0 | 6ms | — |
+| research | 2 | 0 | 388163ms | $11.1394 |
+| web_search | 3 | 0 | 21135ms | $0.1211 |
+
+### Sources Consulted
+
+- [(Metaculus) Will SpaceX successfully refuel a Starship in orbit during 2026?...
+- [SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymark...
+- [What will SpaceX's public ticker be? Predictions & Odds 2026 | Polymarket](h...
+- [SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://...
+- [SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket...
+- [SpaceX Starship fully reusable before 2027? Trading Odds & Predictions | Pol...
+- [SpaceX Starship Flight Test 12 Predictions & Odds 2026 | Polymarket](https:/...
+- [Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://...
+- [SpaceX Starship launch today? Predictions & Odds 2026 | Polymarket](https://...
