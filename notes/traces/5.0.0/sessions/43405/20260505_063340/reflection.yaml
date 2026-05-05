@@ -1,0 +1,216 @@
+---
+timestamp: 2026-05-05 06:41:04 UTC
+question_type: binary
+factors:
+- description: 'CP has been in consistent downward trend: 12% → 12% → 10% → 10% →
+    10% → 8.6% over 5 weeks. No weekly increase observed.'
+  logit: -1.0
+  confidence: 0.9
+  effective_logit: -0.9
+- description: 'Mechanical time-decay: with constant hazard rate, fewer months remaining
+    means lower P. Expected CP ~8.08% by May 16 from pure time decay.'
+  logit: -0.7
+  confidence: 0.85
+  effective_logit: -0.595
+- description: 'De-escalatory environment: PLA air incursions at 169 in April (down
+    from 300+/month in 2024), declining trend for 3 months. No major provocations.'
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+- description: Trump-Xi summit in May creates restraint incentives for both sides
+    in the near term. Both want to avoid provocation before high-level meeting.
+  logit: -0.4
+  confidence: 0.7
+  effective_logit: -0.27999999999999997
+- description: 'Polymarket prices declining: invasion by June 30 at 1.45%, blockade
+    by June 30 at 1.95%, military clash before 2027 at 9%. All stable/declining.'
+  logit: -0.3
+  confidence: 0.75
+  effective_logit: -0.22499999999999998
+- description: 'Status quo asymmetry: threshold is exactly at current CP. CP must
+    INCREASE (strict inequality) to resolve YES. Any flat or declining outcome = NO.'
+  logit: -0.5
+  confidence: 0.95
+  effective_logit: -0.475
+- description: 'Random forecaster variation: CP can fluctuate by ±1pp between readings.
+    Some probability it''s slightly above 8.6% on the specific snapshot date.'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Tail risk: ~3% chance of a genuine military incident in 14 days that
+    would spike CP significantly.'
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Summit uncertainty: Taiwan is ''on top of Xi''s agenda'' - summit
+    going poorly could increase anxiety and push CP up.'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  logit: -0.9
+  probability: 0.29
+anchor: 'Meta-prediction base rate: ~50% (CP at exact threshold, equal chance of going
+  up or down from starting point). Adjusted heavily for observed downward trend.'
+assessment: 'This is a meta-prediction asking whether the Metaculus CP for China-Taiwan
+  conflict will be above 8.60% on May 16. The current CP (May 2) is exactly 8.60%,
+  so the question reduces to: will CP increase at all over the next 14 days?
+
+
+  The evidence strongly suggests NO:
+
+  1. CP has declined every week for 5 consecutive weeks (12% → 8.6%)
+
+  2. Time-decay mechanics (fewer months remaining = lower baseline probability) provide
+  structural reason for continued decline
+
+  3. The geopolitical environment is de-escalatory: declining PLA incursions, upcoming
+  Trump-Xi summit creates restraint
+
+  4. Prediction markets are low and stable/declining
+
+
+  The main sources of YES probability are:
+
+  1. Random fluctuation (~0.7pp std over 2 weeks could push CP above threshold)
+
+  2. Small tail risk of actual military incident
+
+  3. Summit-related uncertainty (though likely de-escalatory on net)
+
+
+  Monte Carlo simulation with time-decay drift (-0.45pp/2weeks) and moderate volatility
+  gives P(above) ≈ 29%. This feels appropriately calibrated given the strong directional
+  evidence against CP increasing.'
+calibration_notes: Starting from 50% base (CP at threshold), strong evidence of downward
+  trend and structural decline pushes toward NO. The 29% accounts for genuine uncertainty
+  about random variation and tail risks. Not hedging toward 50% - the evidence is
+  directional. But also not going below 20% because the threshold is exactly at the
+  current level and 14 days is enough time for fluctuation.
+key_uncertainties: 1. Actual volatility of CP over 2-week periods (observed from weekly
+  snapshots may underestimate). 2. Whether Trump-Xi summit occurs before or after
+  May 16 and its outcome. 3. Whether any military incident occurs in the 14-day window.
+  4. How 'sticky' the CP median is - if many forecasters haven't updated recently,
+  their stale higher predictions could keep CP elevated.
+tool_audit: 'Useful: web_search (Polymarket data with prices and history), fetch_url
+  (AEI update with detailed military assessment). CP history tool returned 403 (expected
+  for AIB tournament). Research sub-agent failed (web tools unavailable in sub-agent
+  environment). Direct search compensated effectively.'
+update_triggers: 1. A Chinese military provocation or incident involving Taiwan's
+  military. 2. Trump-Xi summit happening before May 16 with negative Taiwan outcome.
+  3. New major PLA exercises near Taiwan announced. 4. Evidence CP has already moved
+  above 8.6% before resolution date.
+process_reflection: The research() sub-agent having no web access was a friction point
+  - had to fall back to direct web_search which worked fine. The Metaculus CP history
+  tool correctly blocked (AIB tournament), but the question description provided historical
+  snapshots which were sufficient. The simulation framework worked well for this type
+  of threshold meta-prediction. The process of checking prediction markets for cross-validation
+  was smooth and informative.
+computed:
+  factor_count: 9
+  factor_sum: -2.195
+  tentative_logit: -0.9
+  logit_gap: 1.295
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'CP has been in consistent downward trend: 12% → 12% → 10% → 10%
+      → 10% → 8.6% over 5 weeks. No weekly increase observed.'
+    logit: -1.0
+    confidence: 0.9
+    effective_logit: -0.9
+  - description: 'Mechanical time-decay: with constant hazard rate, fewer months remaining
+      means lower P. Expected CP ~8.08% by May 16 from pure time decay.'
+    logit: -0.7
+    confidence: 0.85
+    effective_logit: -0.595
+  - description: 'De-escalatory environment: PLA air incursions at 169 in April (down
+      from 300+/month in 2024), declining trend for 3 months. No major provocations.'
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  - description: Trump-Xi summit in May creates restraint incentives for both sides
+      in the near term. Both want to avoid provocation before high-level meeting.
+    logit: -0.4
+    confidence: 0.7
+    effective_logit: -0.27999999999999997
+  - description: 'Polymarket prices declining: invasion by June 30 at 1.45%, blockade
+      by June 30 at 1.95%, military clash before 2027 at 9%. All stable/declining.'
+    logit: -0.3
+    confidence: 0.75
+    effective_logit: -0.22499999999999998
+  - description: 'Status quo asymmetry: threshold is exactly at current CP. CP must
+      INCREASE (strict inequality) to resolve YES. Any flat or declining outcome =
+      NO.'
+    logit: -0.5
+    confidence: 0.95
+    effective_logit: -0.475
+  - description: 'Random forecaster variation: CP can fluctuate by ±1pp between readings.
+      Some probability it''s slightly above 8.6% on the specific snapshot date.'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Tail risk: ~3% chance of a genuine military incident in 14 days
+      that would spike CP significantly.'
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Summit uncertainty: Taiwan is ''on top of Xi''s agenda'' - summit
+      going poorly could increase anxiety and push CP up.'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: 'CP has been in consistent downward trend: 12% → 12% → 10% → 10%
+    → 10% → 8.6% over 5 weeks. No weekly increase observed.'
+  dominant_effective_logit: -0.9
+  factor_implied_probability: 0.10020039019101071
+  tentative_probability: 0.29
+  gap_pp: 18.979960980898927
+  sources:
+  - '[Will China invade Taiwan by June 30, 2026? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/will-china-invade-taiwan-by-june-30-2026)'
+  - '[Will China invade Taiwan by end of 2026? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/will-china-invade-taiwan-before-2027)'
+  - '[China x Taiwan military clash before 2027? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/china-x-taiwan-military-clash-before-2027)'
+  - '[Will China blockade Taiwan by June 30? Trading Odds & Predictions 2026 | Polymarket](https://polymarket.com/event/will-china-blockade-taiwan-by-june-30)'
+  - '[Will China invade Taiwan by June 30, 2027? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/will-china-invade-taiwan-by-june-30-2027)'
+  - '[China & Taiwan Update, May 1, 2026](https://www.aei.org/articles/china-taiwan-update-may-1-2026/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43405
+- **Question ID**: 43401
+- **Session Duration**: 632.2s (10.5 min)
+- **Cost**: $15.3418 total (orchestrator $3.1506 + sub-agents $12.1912)
+- **Tokens**: 13,580 total (29 in, 13,551 out)
+  - Cache: 553,202 read, 69,551 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43405_20260505_063340/20260505-063340.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0868 |
+| execute_code | 3 | 0 | 131ms | — |
+| fetch_url | 1 | 0 | 20956ms | — |
+| get_cp_history | 2 | 0 | 3059ms | — |
+| get_metaculus_questions | 1 | 0 | 5328ms | — |
+| polymarket_price | 5 | 0 | 456ms | — |
+| premortem | 1 | 0 | 132954ms | $2.3352 |
+| reflection | 1 | 0 | 14ms | — |
+| research | 2 | 0 | 291608ms | $9.4598 |
+| web_search | 7 | 0 | 33666ms | $0.3094 |
+| wikipedia | 3 | 0 | 207ms | — |
+
+### Sources Consulted
+
+- [Will China invade Taiwan by June 30, 2026? Trading Odds & Predictions | Poly...
+- [Will China invade Taiwan by end of 2026? Trading Odds & Predictions | Polyma...
+- [China x Taiwan military clash before 2027? Trading Odds & Predictions | Poly...
+- [Will China blockade Taiwan by June 30? Trading Odds & Predictions 2026 | Pol...
+- [Will China invade Taiwan by June 30, 2027? Trading Odds & Predictions | Poly...
+- [China & Taiwan Update, May 1, 2026](https://www.aei.org/articles/china-taiwa...
