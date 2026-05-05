@@ -1,0 +1,230 @@
+---
+timestamp: 2026-05-05 00:56:44 UTC
+question_type: numeric
+factors:
+- description: Stable regime mean at 1.744 with low volatility (std=0.023) since April
+    8 - strong anchoring pull
+  supports:
+    center: 1.74
+    low: 1.7
+    high: 1.78
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Latest value 1.69 on May 1 represents new tightening driven by S&P
+    500 all-time highs and risk-on sentiment
+  supports:
+    center: 1.69
+    low: 1.63
+    high: 1.75
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Iran war re-escalation May 4-5: Iran attacked ships in Strait of Hormuz,
+    fire at UAE oil port, oil surged 5.8%, stocks fell - likely pushes spreads wider'
+  supports:
+    center: 1.78
+    low: 1.72
+    high: 1.92
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Fed held rates at 3.50-3.75% on April 29, 4 of 12 dissented, inflation
+    elevated from energy prices - uncertain monetary policy adds volatility
+  supports:
+    center: 1.75
+    low: 1.7
+    high: 1.85
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Market resilience despite war: S&P 500 recovered to ATH, suggesting
+    risk appetite strong, which limits spread widening'
+  supports:
+    center: 1.72
+    low: 1.65
+    high: 1.78
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Tail risk: Major Iran escalation could push spreads significantly
+    wider (toward early April levels of 1.86-1.92 or beyond)'
+  supports:
+    center: 1.9
+    low: 1.8
+    high: 2.1
+  logit: 0.5
+  confidence: 0.5
+  conditional: If Iran war escalates significantly beyond current levels
+  effective_logit: 0.25
+tentative_estimate:
+  center: 1.73
+  low: 1.62
+  high: 1.87
+anchor: Stable regime mean of 1.744 since April 8 (18 observations, std=0.023). This
+  is the central tendency the spread has been oscillating around.
+assessment: 'The BB OAS has been in a stable regime around 1.74 since April 8, dropping
+  to 1.69 on May 1 as the S&P 500 hit all-time highs. However, on May 4-5, renewed
+  Iran war escalation (attacks in Strait of Hormuz, UAE port fire) caused oil to surge
+  5.8% and stocks to fall. This likely pushed spreads back up from the 1.69 low toward
+  1.72-1.75 on May 5.
+
+
+  For the 7 trading days remaining until May 14, the key tension is between: (1) market
+  resilience and risk-on sentiment that had been pushing spreads tighter, and (2)
+  ongoing geopolitical risk from the Iran war that could cause sudden widening. The
+  distribution is slightly right-skewed due to the asymmetric nature of credit spread
+  moves (can widen fast, tighten slowly).
+
+
+  Monte Carlo simulation with scenario weighting (30% risk-on, 30% rangebound, 25%
+  gradual widening, 15% stress) and starting value uncertainty produces a median around
+  1.73 with P10=1.62 and P90=1.87.'
+calibration_notes: My P10-P90 range of 1.62-1.87 spans about 0.25, which is about
+  3x the random walk range for stable-regime volatility over 7 days (~0.073). This
+  widening is justified by scenario mixing and geopolitical uncertainty. The P99 at
+  2.07 seems reasonable given that April 7 (peak war fear) saw 1.92 - a further escalation
+  could push higher. The question bounds (1.35-2.56) are very wide and comfortably
+  contain our distribution.
+key_uncertainties: The biggest uncertainty is the Iran war trajectory over the next
+  9 days. A major escalation (Strait of Hormuz closure, more attacks) could push spreads
+  toward 1.9+ while de-escalation or ceasefire could push below 1.65. The May 4-5
+  escalation has already started this process. Secondary uncertainty is whether the
+  stock market's resilience continues (supporting tighter spreads) or breaks down.
+tool_audit: 'FRED data via web_search: Excellent - provided full time series, regime
+  stats, and latest values. Fed FOMC statement: Retrieved via fetch_url, very informative.
+  News search for Iran escalation: Critical context that changed the simulation materially.
+  Code sandbox: Monte Carlo simulation ran cleanly through multiple iterations.'
+process_reflection: The forecasting system worked well for this short-horizon financial
+  question. The FRED data came through cleanly with regime stats that immediately
+  oriented the analysis. The critical finding was the May 4 Iran escalation which
+  the news search surfaced effectively. The main challenge was estimating today's
+  (May 5) starting value since the FRED data only goes through May 1. The code sandbox
+  was invaluable for running Monte Carlo simulations with multiple scenarios.
+computed:
+  factor_count: 6
+  factor_sum: 2.18
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Stable regime mean at 1.744 with low volatility (std=0.023) since
+      April 8 - strong anchoring pull
+    supports:
+      center: 1.74
+      low: 1.7
+      high: 1.78
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Latest value 1.69 on May 1 represents new tightening driven by S&P
+      500 all-time highs and risk-on sentiment
+    supports:
+      center: 1.69
+      low: 1.63
+      high: 1.75
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Iran war re-escalation May 4-5: Iran attacked ships in Strait of
+      Hormuz, fire at UAE oil port, oil surged 5.8%, stocks fell - likely pushes spreads
+      wider'
+    supports:
+      center: 1.78
+      low: 1.72
+      high: 1.92
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Fed held rates at 3.50-3.75% on April 29, 4 of 12 dissented, inflation
+      elevated from energy prices - uncertain monetary policy adds volatility
+    supports:
+      center: 1.75
+      low: 1.7
+      high: 1.85
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Market resilience despite war: S&P 500 recovered to ATH, suggesting
+      risk appetite strong, which limits spread widening'
+    supports:
+      center: 1.72
+      low: 1.65
+      high: 1.78
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Tail risk: Major Iran escalation could push spreads significantly
+      wider (toward early April levels of 1.86-1.92 or beyond)'
+    supports:
+      center: 1.9
+      low: 1.8
+      high: 2.1
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+    conditional: If Iran war escalates significantly beyond current levels
+  dominant_factor: Stable regime mean at 1.744 with low volatility (std=0.023) since
+    April 8 - strong anchoring pull
+  dominant_effective_logit: 0.8
+  distribution_metrics:
+    implied_median: 1.7538888888888888
+    implied_p10: 1.695798611111111
+    implied_p90: 1.8440972222222223
+    median_gap: -0.02388888888888885
+    median_gap_pct: -16.10863966284238
+    spread_ratio: 1.6857878716928096
+    precision: 0.14450867052023122
+  sources:
+  - '[(Metaculus) What will be the value of "ICE BofA BB US High Yield Index Option-Adjusted
+    Spread" on 2026-05-14?](https://www.metaculus.com/questions/43402)'
+  - '[ICE BofA BB US High Yield Index Option-Adjusted Spread (BAMLH0A1HYBB) | FRED
+    | St. Louis Fed](https://fred.stlouisfed.org/series/BAMLH0A1HYBB)'
+  - '[ICE BofA US High Yield Index Option-Adjusted Spread (BAMLH0A0HYM2) | FRED |
+    St. Louis Fed](https://fred.stlouisfed.org/series/BAMLH0A0HYM2)'
+  - '[ICE BofA Single-B US High Yield Index Option-Adjusted Spread (BAMLH0A2HYB) |
+    FRED | St. Louis Fed](https://fred.stlouisfed.org/series/BAMLH0A2HYB)'
+  - '[Closing milestones of the S&P 500 - Wikipedia](https://en.wikipedia.org/wiki/Closing_milestones_of_the_S&P_500)'
+  - '[Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260429a.htm)'
+  - '[Economic impact of the 2026 Iran war - Wikipedia](https://en.wikipedia.org/wiki/Economic_impact_of_the_2026_Iran_war)'
+  - '[2026 Iran war fuel crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_war_fuel_crisis)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43402
+- **Question ID**: 43398
+- **Session Duration**: 564.4s (9.4 min)
+- **Cost**: $6.2551 total (orchestrator $3.5493 + sub-agents $2.7058)
+- **Tokens**: 12,546 total (39 in, 12,507 out)
+  - Cache: 712,592 read, 82,229 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43402_20260505_005008/20260505-005008.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0243 |
+| execute_code | 5 | 0 | 690ms | — |
+| fetch_url | 2 | 0 | 6766ms | — |
+| fred_series | 6 | 0 | 396ms | — |
+| get_metaculus_questions | 1 | 0 | 266ms | — |
+| premortem | 1 | 0 | 113976ms | $2.3379 |
+| reflection | 1 | 0 | 302ms | — |
+| web_search | 7 | 0 | 28558ms | $0.3436 |
+| wikipedia | 3 | 0 | 198ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "ICE BofA BB US High Yield Index Optio...
+- [ICE BofA BB US High Yield Index Option-Adjusted Spread (BAMLH0A1HYBB) | FRED...
+- [ICE BofA US High Yield Index Option-Adjusted Spread (BAMLH0A0HYM2) | FRED | ...
+- [ICE BofA Single-B US High Yield Index Option-Adjusted Spread (BAMLH0A2HYB) |...
+- [Closing milestones of the S&P 500 - Wikipedia](https://en.wikipedia.org/wiki...
+- [Federal Reserve issues FOMC statement](https://www.federalreserve.gov/newsev...
+- [Economic impact of the 2026 Iran war - Wikipedia](https://en.wikipedia.org/w...
+- [2026 Iran war fuel crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Ir...
