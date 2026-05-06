@@ -1,0 +1,213 @@
+---
+timestamp: 2026-05-06 17:59:33 UTC
+question_type: numeric
+factors:
+- description: 'Strong recent uptrend: +16.4% over 30 days, +7.3% over 7 days, consistent
+    higher lows each day in May'
+  supports:
+    center: 85600.0
+    low: 79500.0
+    high: 92100.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Current price at ~$81,425 already above $80K resistance level mentioned
+    by analysts, indicating bullish breakout
+  supports:
+    center: 83500.0
+    low: 79000.0
+    high: 88000.0
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Analyst consensus: Binance ~$79K, Changelly ~$80-84K, CoinCodex ~$84.3K
+    - most models project modest gains or sideways action'
+  supports:
+    center: 81000.0
+    low: 79000.0
+    high: 84300.0
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Macro catalysts in mid-May: Fed Chair transition (Powell leaves May
+    15), CLARITY Act markup, Warsh confirmation - could increase volatility in either
+    direction'
+  supports:
+    center: 82000.0
+    low: 72000.0
+    high: 95000.0
+  logit: 0.2
+  confidence: 0.4
+  effective_logit: 0.08000000000000002
+- description: BTC still 35% below ATH of $126K - recovery trend has room to continue
+    but also shows broader bearish context
+  supports:
+    center: 82000.0
+    low: 75000.0
+    high: 90000.0
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: '9-day horizon is short: daily volatility of ~1.9% implies 5.7% over
+    horizon, giving a wide possible range around any center estimate'
+  supports:
+    center: 82800.0
+    low: 76400.0
+    high: 89800.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 82824.0
+  low: 76396.0
+  high: 89791.0
+anchor: Current BTC price of $81,425. With zero drift over 9 days, the expected value
+  is $81,425 with 90% CI of ~$74K-$89.5K based on measured daily volatility of 1.9%.
+assessment: "Bitcoin is currently at ~$81,425 with strong short-term momentum (+16.4%\
+  \ over 30 days). The 9-day horizon to May 15 means the distribution is primarily\
+  \ driven by current price + drift + volatility. \n\nKey tension: The recent drift\
+  \ of 0.56%/day is very strong and unlikely to fully persist, but short-term momentum\
+  \ does tend to continue. I've weighted a mixture of scenarios: 15% full momentum,\
+  \ 40% half momentum, 25% no drift, 10% negative drift, and 10% high-volatility scenarios.\n\
+  \nThe median of ~$82,800 represents modest continued appreciation from $81,425,\
+  \ consistent with momentum persisting but decelerating. The P10-P90 range of $76,400-$89,800\
+  \ is slightly wider than a pure random walk (which gives $74,100-$89,500) due to\
+  \ the scenario mixture including high-vol possibilities.\n\nMacro events (Fed Chair\
+  \ transition, CLARITY Act) add uncertainty but could go either direction. Analyst\
+  \ forecasts cluster around $79K-$84K, consistent with our distribution center."
+calibration_notes: Distribution center of $82,824 is 1.7% above current price - a
+  modest upward drift reflecting continued but decelerating momentum. P10-P90 range
+  of $76.4K-$89.8K matches well with the random-walk implied range of $74.1K-$89.5K,
+  slightly shifted upward. The distribution feels appropriately calibrated - neither
+  excessively wide nor narrow for a 9-day BTC forecast.
+key_uncertainties: '1. Whether the strong uptrend continues or reverses - drift assumption
+  is the biggest driver. 2. Macro event impact: Fed transition and CLARITY Act could
+  cause large moves in either direction. 3. Bitcoin-specific catalysts (ETF flows,
+  regulatory news) that are hard to predict.'
+tool_audit: 'Research sub-agent: Very useful - retrieved current BTC price ($81,425),
+  ATH ($126K), volatility metrics, and 30-day performance data from CoinGecko and
+  Binance APIs. Web search: Useful - found Yahoo Finance historical data with daily
+  closes, Polymarket data, analyst forecasts. Monte Carlo simulation: Core computation
+  - ran 100K simulations across 6 weighted scenarios producing the final distribution.'
+update_triggers: '- BTC breaks above $85K or drops below $78K before May 15 would
+  shift the distribution substantially. - Major news on CLARITY Act (positive/negative
+  for crypto). - Kevin Warsh confirmation details and market reaction. - Unexpected
+  macro shock (geopolitical, financial crisis).'
+process_reflection: The research sub-agent worked well for retrieving current BTC
+  data. Having both CoinGecko API and Binance data gave good cross-validation. The
+  Yahoo Finance historical data in the web search was particularly valuable - provided
+  30 days of daily closes that I used directly in the Monte Carlo simulation. The
+  scenario mixture approach felt appropriate for this question since the drift is
+  clearly non-zero but unsustainable at current levels.
+computed:
+  factor_count: 6
+  factor_sum: 0.83
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Strong recent uptrend: +16.4% over 30 days, +7.3% over 7 days, consistent
+      higher lows each day in May'
+    supports:
+      center: 85600.0
+      low: 79500.0
+      high: 92100.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Current price at ~$81,425 already above $80K resistance level mentioned
+      by analysts, indicating bullish breakout
+    supports:
+      center: 83500.0
+      low: 79000.0
+      high: 88000.0
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Analyst consensus: Binance ~$79K, Changelly ~$80-84K, CoinCodex
+      ~$84.3K - most models project modest gains or sideways action'
+    supports:
+      center: 81000.0
+      low: 79000.0
+      high: 84300.0
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Macro catalysts in mid-May: Fed Chair transition (Powell leaves
+      May 15), CLARITY Act markup, Warsh confirmation - could increase volatility
+      in either direction'
+    supports:
+      center: 82000.0
+      low: 72000.0
+      high: 95000.0
+    logit: 0.2
+    confidence: 0.4
+    effective_logit: 0.08000000000000002
+  - description: BTC still 35% below ATH of $126K - recovery trend has room to continue
+      but also shows broader bearish context
+    supports:
+      center: 82000.0
+      low: 75000.0
+      high: 90000.0
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: '9-day horizon is short: daily volatility of ~1.9% implies 5.7% over
+      horizon, giving a wide possible range around any center estimate'
+    supports:
+      center: 82800.0
+      low: 76400.0
+      high: 89800.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: 'Strong recent uptrend: +16.4% over 30 days, +7.3% over 7 days,
+    consistent higher lows each day in May'
+  dominant_effective_logit: 0.7
+  distribution_metrics:
+    implied_median: 84120.3007518797
+    implied_p10: 78541.35338345864
+    implied_p90: 90312.03007518797
+    median_gap: -1296.3007518796949
+    median_gap_pct: -11.012967103161888
+    spread_ratio: 1.1379974449057804
+    precision: 0.16172848449724717
+  sources:
+  - '[(Metaculus) What will be the closing price of Bitcoin (BTC) on May 15, 2026,
+    in US dollars, according to CoinGecko?](https://www.metaculus.com/questions/43418)'
+  - '[Bitcoin USD (BTC-USD) Price History & Historical Data - Yahoo Finance](https://finance.yahoo.com/quote/BTC-USD/history/)'
+  - '[What price will Bitcoin hit in 2026? Trading Odds & Predictions | Polymarket](https://polymarket.com/event/what-price-will-bitcoin-hit-before-2027)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43418
+- **Question ID**: 43414
+- **Session Duration**: 489.5s (8.2 min)
+- **Cost**: $7.7852 total (orchestrator $2.4068 + sub-agents $5.3784)
+- **Tokens**: 7,661 total (27 in, 7,634 out)
+  - Cache: 435,894 read, 62,934 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43418_20260506_175409/20260506-175409.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 116ms | — |
+| get_metaculus_questions | 1 | 0 | 351ms | — |
+| polymarket_price | 1 | 0 | 893ms | — |
+| premortem | 1 | 0 | 130456ms | $2.0611 |
+| reflection | 1 | 0 | 10ms | — |
+| research | 1 | 0 | 194675ms | $3.2733 |
+| stock_price | 1 | 0 | 437ms | — |
+| web_search | 1 | 0 | 15083ms | $0.0440 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the closing price of Bitcoin (BTC) on May 15, 2026,...
+- [Bitcoin USD (BTC-USD) Price History & Historical Data - Yahoo Finance](https...
+- [What price will Bitcoin hit in 2026? Trading Odds & Predictions | Polymarket...
