@@ -1,0 +1,245 @@
+---
+timestamp: 2026-05-06 05:15:03 UTC
+question_type: multiple_choice
+factors:
+- description: 'Post-spike decay pattern: The main driver of search interest (Mills
+    dropping Senate bid Apr 30 + retrospective confrontation coverage) peaked ~6 days
+    before May 6. Political terms decay by 50% every 5-10 days. Under all half-life
+    assumptions (3-10 days), May 15 is significantly lower than May 6.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'No scheduled events likely to revive interest: Mills dropped Senate
+    bid, is term-limited as governor, Maine primary is June 9 (after resolution).
+    No obvious trigger for renewed confrontation coverage.'
+  supports: Decreases
+  logit: 0.8
+  confidence: 0.75
+  effective_logit: 0.6000000000000001
+- description: 'Very specific long-tail query may already be at baseline by May 6:
+    For a 5-word niche query like ''janet mills donald trump confrontation'', absolute
+    search volume is low and decay could be faster than typical political terms. Both
+    May 6 and May 15 could be at 0-5.'
+  supports: Doesn't change
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'Possibility of new Mills-Trump news event: Ongoing federal-state tensions
+    (Medicaid fraud investigation, environmental policy), unexpected political development,
+    or viral social media moment could spike interest.'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: 'Google Trends quantization noise for niche terms: Low-volume queries
+    have high day-to-day variance, which could push the difference in either direction
+    unexpectedly.'
+  supports: Doesn't change
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.23
+    Decreases: 0.65
+anchor: 'Base rate for Google Trends political terms after spike: ~70% decrease over
+  a 9-day window that falls within the post-spike decay phase, based on documented
+  spike-decay patterns in political search terms (Mellon 2013, Ripberger 2011).'
+assessment: 'The search term "janet mills donald trump confrontation" experienced
+  a spike around April 30-May 2, 2026, driven by Mills dropping her Senate bid and
+  retrospective media coverage of her February 2025 White House confrontation with
+  Trump. By May 6 (start of comparison), the spike should be partially decayed but
+  still elevated. By May 15 (end), further decay should bring values significantly
+  lower. Under all plausible half-life models (3-10 days), the difference exceeds
+  the 3-point threshold for "Decreases."
+
+
+  The main alternative is that both dates are at baseline (near 0), which would resolve
+  as "Doesn''t change." This requires very fast decay - plausible for a specific long-tail
+  query but less likely given the value was still 40 as recently as May 2. "Increases"
+  requires a new triggering event, which is possible but unlikely given Mills is now
+  a less prominent political figure.'
+calibration_notes: My estimate of 65% Decreases is slightly below the simulation outputs
+  (72-83%) because I'm giving more weight to the long-tail query noise/baseline scenario.
+  The 12% Increases accounts for the possibility of new events but may be slightly
+  generous. No obvious hedging toward 33/33/33 - the evidence clearly points to Decreases.
+key_uncertainties: 1. How quickly has interest decayed by May 6? If very fast, both
+  dates at baseline → Doesn't change. 2. Whether any new Mills-Trump confrontation
+  event occurs in the next 9 days. 3. Google Trends quantization effects for this
+  specific niche query.
+tool_audit: research() returned useful general patterns about political search decay
+  but couldn't verify specific 2026 events (tools blocked for sub-agent). web_search
+  provided good context on Mills-Trump timeline and Senate bid drop (Apr 30). fetch_url
+  succeeded for PBS article but failed for WashPost (timeout) and Google Trends (JS
+  rendering issue). Monte Carlo simulations in sandbox were useful for quantifying
+  the decay model.
+update_triggers: 1. A new Mills-Trump confrontation or major news event involving
+  both figures (→ Increases). 2. Evidence that the search term hit baseline before
+  May 6 (→ more weight to Doesn't change). 3. Evidence of a sustained media cycle
+  around the confrontation topic (→ slower decay, still Decreases).
+process_reflection: The research sub-agent had blocked tools which limited its usefulness
+  for current events. Direct web search filled the gap adequately. Google Trends data
+  couldn't be fetched directly (JS rendering), which is a significant limitation for
+  this question type. The sandbox simulations were smooth and helped quantify intuitions.
+  For Google Trends questions, having a SerpAPI-powered tool would be ideal.
+computed:
+  factor_count: 5
+  factor_sum: 3.0
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Post-spike decay pattern: The main driver of search interest (Mills
+      dropping Senate bid Apr 30 + retrospective confrontation coverage) peaked ~6
+      days before May 6. Political terms decay by 50% every 5-10 days. Under all half-life
+      assumptions (3-10 days), May 15 is significantly lower than May 6.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'No scheduled events likely to revive interest: Mills dropped Senate
+      bid, is term-limited as governor, Maine primary is June 9 (after resolution).
+      No obvious trigger for renewed confrontation coverage.'
+    supports: Decreases
+    logit: 0.8
+    confidence: 0.75
+    effective_logit: 0.6000000000000001
+  - description: 'Very specific long-tail query may already be at baseline by May
+      6: For a 5-word niche query like ''janet mills donald trump confrontation'',
+      absolute search volume is low and decay could be faster than typical political
+      terms. Both May 6 and May 15 could be at 0-5.'
+    supports: Doesn't change
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'Possibility of new Mills-Trump news event: Ongoing federal-state
+      tensions (Medicaid fraud investigation, environmental policy), unexpected political
+      development, or viral social media moment could spike interest.'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: 'Google Trends quantization noise for niche terms: Low-volume queries
+      have high day-to-day variance, which could push the difference in either direction
+      unexpectedly.'
+    supports: Doesn't change
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: 'Post-spike decay pattern: The main driver of search interest (Mills
+    dropping Senate bid Apr 30 + retrospective confrontation coverage) peaked ~6 days
+    before May 6. Political terms decay by 50% every 5-10 days. Under all half-life
+    assumptions (3-10 days), May 15 is significantly lower than May 6.'
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 2
+    logit_sum: 2.3
+    factors:
+    - description: 'Post-spike decay pattern: The main driver of search interest (Mills
+        dropping Senate bid Apr 30 + retrospective confrontation coverage) peaked
+        ~6 days before May 6. Political terms decay by 50% every 5-10 days. Under
+        all half-life assumptions (3-10 days), May 15 is significantly lower than
+        May 6.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'No scheduled events likely to revive interest: Mills dropped Senate
+        bid, is term-limited as governor, Maine primary is June 9 (after resolution).
+        No obvious trigger for renewed confrontation coverage.'
+      supports: Decreases
+      logit: 0.8
+      confidence: 0.75
+      effective_logit: 0.6000000000000001
+  - outcome: Doesn't change
+    factor_count: 2
+    logit_sum: 0.55
+    factors:
+    - description: 'Very specific long-tail query may already be at baseline by May
+        6: For a 5-word niche query like ''janet mills donald trump confrontation'',
+        absolute search volume is low and decay could be faster than typical political
+        terms. Both May 6 and May 15 could be at 0-5.'
+      supports: Doesn't change
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: 'Google Trends quantization noise for niche terms: Low-volume queries
+        have high day-to-day variance, which could push the difference in either direction
+        unexpectedly.'
+      supports: Doesn't change
+      logit: 0.3
+      confidence: 0.5
+      effective_logit: 0.15
+  - outcome: Increases
+    factor_count: 1
+    logit_sum: 0.15
+    factors:
+    - description: 'Possibility of new Mills-Trump news event: Ongoing federal-state
+        tensions (Medicaid fraud investigation, environmental policy), unexpected
+        political development, or viral social media moment could spike interest.'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.3
+      effective_logit: 0.15
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.13468153641942085
+      Increases: 0.0902797336928168
+      Decreases: 0.7750387298877622
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.23
+      Decreases: 0.65
+    per_option_gap_pp:
+      Doesn't change: 9.531846358057916
+      Increases: 2.972026630718319
+      Decreases: -12.503872988776221
+    max_gap_pp: -12.503872988776221
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “janet mills donald trump confrontation” change
+    between 2026-05-06 and 2026-05-15 according to Google Trends?](https://www.metaculus.com/questions/43414)'
+  - '[2026 Maine gubernatorial election - Wikipedia](https://en.wikipedia.org/wiki/2026_Maine_gubernatorial_election)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=janet%20mills%20donald%20trump%20confrontation&date=2026-04-15%202026-05-15)'
+  - '[washingtonpost.com](https://www.washingtonpost.com/politics/2026/05/01/mills-maine-platner-trump-transgender/)'
+  - '[Maine Gov. Janet Mills drops U.S. Senate bid before Democratic primary](https://www.pbs.org/newshour/politics/maine-gov-janet-mills-drops-u-s-senate-bid-before-democratic-primary)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43414
+- **Question ID**: 43410
+- **Session Duration**: 1040.7s (17.3 min)
+- **Cost**: $8.3880 total (orchestrator $2.9508 + sub-agents $5.4372)
+- **Tokens**: 11,239 total (29 in, 11,210 out)
+  - Cache: 554,898 read, 68,121 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43414_20260506_050106/20260506-050106.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 1 (6.2%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0488 |
+| execute_code | 3 | 0 | 1068ms | — |
+| fetch_url | 3 | 1 ⚠️ | 28066ms | — |
+| get_metaculus_questions | 1 | 0 | 253ms | — |
+| premortem | 1 | 0 | 155538ms | $2.9776 |
+| reflection | 1 | 0 | 30089ms | — |
+| research | 1 | 0 | 102193ms | $2.1879 |
+| web_search | 5 | 0 | 79776ms | $0.2229 |
+| wikipedia | 1 | 0 | 191ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “janet mills donald trump confrontation” ch...
+- [2026 Maine gubernatorial election - Wikipedia](https://en.wikipedia.org/wiki...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=janet%...
+- [washingtonpost.com](https://www.washingtonpost.com/politics/2026/05/01/mills...
+- [Maine Gov. Janet Mills drops U.S. Senate bid before Democratic primary](http...
