@@ -1,0 +1,119 @@
+{
+  "condensed_reasoning": "## Research\n\nI started by retrieving the Metaculus question metadata for post #43420, confirming the target is the FRED series `OBMMIFHA30YF` (30-Year Fixed Rate FHA Mortgage Index) for **2026-05-14**. The question resolves to the FRED API value for that date, with a daily frequency series. The question bounds were **4.98–7.64**.\n\nI then fetched the FRED data directly, obtaining **22 daily observations** from April 6 to May 5, 2026. The latest confirmed value was **6.12** on May 5. The data also included regime statistics showing a recent upward shift: the May 1–5 stable mean was **6.131** (σ=0.008), up from a prior regime mean of **6.076**.\n\nI used a research tool to gather two parallel queries:\n1. **Current FHA mortgage rates and trend** — This returned MND (Mortgage News Daily) data showing the FHA 30-year rate at **5.92%** on May 6 (down 0.10 from 6.02 on May 5), plus MBA weekly data showing three consecutive weeks of declines (6.14→6.10→6.09). The May 6 drop was driven by Iran deal talk progress and falling oil prices.\n2. **Treasury yields and macro outlook** — Comprehensive data including 10-Year Treasury at **4.43%** (May 5), yield curve at +50bps, Fed funds at 3.50–3.75% (held at April FOMC with 4 dissents), and upcoming catalysts: NFP (May 8), CPI (May 12), and Warsh confirmation (May 11). Key macro context: PCE inflation at 4.5% annualized Q1, gasoline up 49%, WTI at $102/bbl.\n\n## Key Evidence\n\n- **OBMMI FHA 30Y latest confirmed value**: 6.12 (May 5, 2026)\n- **May 6 intraday drop**: MND FHA fell 10bps to 5.92, Treasury yields dropped sharply on Iran deal progress\n- **OBMMI vs MND spread**: ~10bps on May 5 (6.12 vs 6.02), suggesting OBMMI is stickier and based on actual rate locks\n- **Empirical daily volatility (σ)**: **0.0495** percentage points/day from 21 daily changes\n- **Mean daily drift**: **+0.00129** (effectively zero)\n- **7-day random walk standard deviation**: ~**0.131**\n- **MBA weekly trend**: 3 consecutive declines (6.14→6.10→6.09)\n- **Upcoming catalysts**: NFP (May 8), Warsh confirmation (May 11), CPI (May 12), PPI (May 13)\n- **Structural pressures**: Elevated inflation (PCE 4.5%), oil >$100/bbl providing upward support; Iran deal talks providing downward pressure\n\n## Quantitative Modeling\n\nI ran **five Monte Carlo simulations** with 100K–300K samples each:\n\n1. **Pure random walk** from 6.12 (7 days, empirical μ/σ) → median **6.129**\n2. **Bootstrap** from 6.12 (7 days, resampled historical changes) → median **6.130**\n3. **Adjusted start** at 6.07 (6 days, reflecting May 6 drop) → median **6.078**\n4. **Event volatility model** (1.5× σ on NFP/CPI days, with May 6 drop) → median **6.087**\n5. **Three-scenario mixture** (30% rates stay high / 50% base / 20% rates drop further) → median **6.089**\n6. **Final bootstrap** from N(6.08, 0.03) start, 6 days forward → median **6.088**\n\nThe final approach used a starting value of ~6.08 (estimated OBMMI for May 6 based on cross-referencing MND data), with uncertainty modeled as N(6.08, 0.03), then bootstrapped 6 trading days forward using the empirical daily change distribution.\n\n## Conclusion\n\nI submitted a median forecast of **6.09** with P10–P90 range of **5.93–6.25**. The distribution is roughly symmetric around the center, with slight downside skew from the Iran deal de-escalation narrative offset by structural inflation pressures. The premortem identified key risks including the uncertain OBMMI-MND tracking relationship, potential for hot NFP/CPI data pushing rates up, and Iran deal fragility. Confidence was appropriately set at 0.45 given the multiple upcoming macro catalysts within the forecast horizon.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fred_series": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No tool for fetching intraday OBMMI data — had to estimate May 6 value from MND cross-reference",
+      "No prediction market check (Polymarket/Kalshi) for mortgage rate or Treasury yield direction"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/bonds",
+    "approach": "Monte Carlo simulation bootstrapping empirical daily changes from 22-day FRED history, starting from estimated current level adjusted for intraday May 6 rate drop.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "The magnitude of the OBMMI's May 6 drop (only MND data available, not confirmed FRED) and impact of upcoming NFP (May 8) and CPI (May 12) releases on mortgage rates."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check Polymarket, Kalshi, or Manifold for any relevant markets on Treasury yields, mortgage rates, or Iran deal outcomes. For a finance question with significant geopolitical catalysts, prediction market pricing could provide useful directional signal.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The FRED data stops at May 5 (6.12), and the agent estimates May 6 OBMMI at ~6.08 based on MND cross-reference. However, the OBMMI-MND relationship is acknowledged as imprecise (OBMMI is based on actual rate locks, MND is a survey). The estimated starting point of 6.08 could be off by 3-5bps, which is material relative to the 7-day forecast horizon.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "6.08, with P10-P90 of 5.92-6.24",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Ran 5 progressively refined Monte Carlo simulations (100K-300K samples), systematically testing different starting assumptions and volatility models before settling on the final bootstrap approach",
+    "Correctly identified and quantified the OBMMI-MND spread (~10bps) to estimate the unconfirmed May 6 OBMMI value, rather than naively applying the MND drop",
+    "Comprehensive macro context gathering: Treasury yields, Fed policy, upcoming catalysts (NFP, CPI, Warsh confirmation), geopolitical drivers (Iran deal, oil prices) — all grounded in sourced data",
+    "Strong premortem with 5 specific, evidence-based counterarguments including OBMMI tracking uncertainty, Iran deal fragility, and hot-data scenarios",
+    "Appropriately widened volatility for NFP and CPI event days (1.5× multiplier) in one simulation variant, acknowledging that not all trading days carry equal risk",
+    "Used empirical daily change distribution (bootstrap) rather than assuming normality, which better captures the actual fat-tailed behavior seen in the data"
+  ],
+  "weaknesses": [
+    "Did not check any prediction markets (Polymarket, Kalshi, Manifold) for directional bets on Treasury yields, mortgage rates, or Iran deal outcomes — a missed signal source",
+    "The estimate of May 6 OBMMI at ~6.08 is speculative — the OBMMI-MND relationship is acknowledged as imprecise, and using it as the starting point introduces systematic uncertainty. Could have presented more transparent sensitivity to this assumption in the final percentiles",
+    "Did not attempt to model mean reversion toward the April average (6.076), despite noting the regime_stats showed a recent upward shift. A mean-reverting model might have been more appropriate than a pure random walk for a series that oscillated in a tight range",
+    "22 daily observations is a relatively small sample for bootstrapping — the empirical distribution may not capture tail risks from events like NFP/CPI that haven't occurred in this window"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks for relevant financial and geopolitical questions — even approximate markets on Treasury direction or Iran deal probability would sharpen the forecast",
+    "Consider an Ornstein-Uhlenbeck (mean-reverting) process alongside the random walk, especially when the series shows range-bound behavior over the calibration window",
+    "When the starting value is estimated (not observed), run explicit sensitivity analysis showing how the percentile distribution shifts across plausible starting values and include this in the summary",
+    "Expand the historical calibration window beyond 22 days to capture a wider range of event-driven moves, particularly around prior NFP/CPI releases, to better estimate event-day volatility"
+  ]
+}

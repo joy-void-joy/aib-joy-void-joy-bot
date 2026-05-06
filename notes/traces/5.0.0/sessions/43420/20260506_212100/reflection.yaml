@@ -1,0 +1,221 @@
+---
+timestamp: 2026-05-06 21:31:56 UTC
+question_type: numeric
+factors:
+- description: Current OBMMI FHA value is 6.12 (May 5), providing the starting anchor
+    for a short-horizon forecast
+  supports:
+    center: 6.12
+    low: 6.05
+    high: 6.16
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'May 6 rate drop: MND FHA fell 0.10 to 5.92, Treasury yields dropped
+    sharply on Iran deal progress. OBMMI likely dropped too but less (estimated 6.05-6.10)'
+  supports:
+    center: 6.08
+    low: 6.02
+    high: 6.12
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: 'Declining weekly trend: MBA FHA rate fell 3 consecutive weeks (6.14
+    -> 6.10 -> 6.09). Suggests mild downward momentum'
+  supports:
+    center: 6.05
+    low: 5.95
+    high: 6.15
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Major data releases (NFP May 8, CPI May 12) add upside and downside
+    volatility risk. These can move rates 5-10 bps in either direction
+  supports:
+    center: 6.09
+    low: 5.9
+    high: 6.3
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Iran deal talks / geopolitical de-escalation narrative could push rates
+    lower if oil prices continue falling
+  supports:
+    center: 6.0
+    low: 5.85
+    high: 6.1
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: Kevin Warsh Fed Chair confirmation (May 11) adds policy uncertainty
+    that could move rates either way
+  supports:
+    center: 6.09
+    low: 5.95
+    high: 6.25
+  logit: 0.2
+  confidence: 0.3
+  effective_logit: 0.06
+- description: Elevated inflation (PCE 4.5% annualized Q1) and oil prices above $100/bbl
+    provide structural upward pressure on rates
+  supports:
+    center: 6.15
+    low: 6.05
+    high: 6.3
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+tentative_estimate:
+  center: 6.09
+  low: 5.93
+  high: 6.25
+anchor: Current OBMMI FHA 30Y value of 6.12 as of May 5, 2026. Empirical daily volatility
+  of 0.0495 implies random-walk std of ~0.13 over 7 trading days.
+assessment: The OBMMI FHA 30-Year index was at 6.12 on May 5. On May 6, rates dropped
+  significantly - MND FHA fell 10bps to 5.92 driven by Iran deal progress and falling
+  oil prices. OBMMI likely dropped less (it measures actual rate locks vs MND survey),
+  estimated at 6.05-6.10. From this starting point, there are 6 more trading days
+  to May 14. The empirical daily change has near-zero drift and ~5bps standard deviation.
+  Key catalysts are NFP (May 8) and CPI (May 12) which add volatility. The broader
+  trend shows rates moderating from April highs but structural inflation pressures
+  remain. Monte Carlo simulation from estimated May 6 starting value gives median
+  ~6.09 with P10-P90 range of 5.93-6.25.
+calibration_notes: The distribution center is slightly below the May 5 value (6.12)
+  reflecting the May 6 drop. The P10-P90 range of ~0.32 percentage points is consistent
+  with the random-walk implied range of ~0.33 for 7 days at 0.05/day volatility. No
+  hedging toward center detected - the estimate is data-driven from Monte Carlo output.
+key_uncertainties: 1. Magnitude of May 6 OBMMI drop (we only have MND data, not confirmed
+  FRED data). 2. NFP and CPI releases could move rates significantly in either direction.
+  3. Iran deal talks progression - sustained progress would push rates lower, breakdown
+  would push higher. 4. Whether the recent rate spike (May 4) and reversal (May 6)
+  represents a new trend or noise.
+tool_audit: 'FRED data via fetch_url: excellent, provided 22 daily observations with
+  regime stats. Research tool: very useful, returned detailed MND daily data and macro
+  context including Treasury yields, upcoming events, and geopolitical backdrop. Monte
+  Carlo simulation in sandbox: worked well for generating distributions from empirical
+  data. No tool failures.'
+process_reflection: 'The process worked smoothly for this short-horizon financial
+  measurement question. FRED data retrieval was fast and comprehensive. The research
+  sub-agent provided excellent context on the May 6 intraday moves and upcoming catalysts.
+  One friction point: the FRED tool gave data through May 5 but the question was created
+  on May 6, so I had to estimate the May 6 OBMMI value using cross-reference to MND
+  data. Having a tool that could fetch intraday OBMMI data would help. The Monte Carlo
+  approach with bootstrapped historical changes felt appropriate for this time horizon.'
+computed:
+  factor_count: 7
+  factor_sum: 2.9949999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current OBMMI FHA value is 6.12 (May 5), providing the starting anchor
+      for a short-horizon forecast
+    supports:
+      center: 6.12
+      low: 6.05
+      high: 6.16
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'May 6 rate drop: MND FHA fell 0.10 to 5.92, Treasury yields dropped
+      sharply on Iran deal progress. OBMMI likely dropped too but less (estimated
+      6.05-6.10)'
+    supports:
+      center: 6.08
+      low: 6.02
+      high: 6.12
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: 'Declining weekly trend: MBA FHA rate fell 3 consecutive weeks (6.14
+      -> 6.10 -> 6.09). Suggests mild downward momentum'
+    supports:
+      center: 6.05
+      low: 5.95
+      high: 6.15
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Major data releases (NFP May 8, CPI May 12) add upside and downside
+      volatility risk. These can move rates 5-10 bps in either direction
+    supports:
+      center: 6.09
+      low: 5.9
+      high: 6.3
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Iran deal talks / geopolitical de-escalation narrative could push
+      rates lower if oil prices continue falling
+    supports:
+      center: 6.0
+      low: 5.85
+      high: 6.1
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: Kevin Warsh Fed Chair confirmation (May 11) adds policy uncertainty
+      that could move rates either way
+    supports:
+      center: 6.09
+      low: 5.95
+      high: 6.25
+    logit: 0.2
+    confidence: 0.3
+    effective_logit: 0.06
+  - description: Elevated inflation (PCE 4.5% annualized Q1) and oil prices above
+      $100/bbl provide structural upward pressure on rates
+    supports:
+      center: 6.15
+      low: 6.05
+      high: 6.3
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  dominant_factor: Current OBMMI FHA value is 6.12 (May 5), providing the starting
+    anchor for a short-horizon forecast
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 6.098397328881469
+    implied_p10: 6.011502504173623
+    implied_p90: 6.170350584307178
+    median_gap: -0.008397328881469157
+    median_gap_pct: -5.286389910667432
+    spread_ratio: 2.0145034156595014
+    precision: 0.0525451559934319
+  sources:
+  - '[(Metaculus) What will be the value of "30-Year Fixed Rate FHA Mortgage Index"
+    on 2026-05-14?](https://www.metaculus.com/questions/43420)'
+  - '[30-Year Fixed Rate FHA Mortgage Index](https://fred.stlouisfed.org/series/OBMMIFHA30YF)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43420
+- **Question ID**: 43416
+- **Session Duration**: 881.0s (14.7 min)
+- **Cost**: $15.3888 total (orchestrator $2.7660 + sub-agents $12.6228)
+- **Tokens**: 10,982 total (29 in, 10,953 out)
+  - Cache: 520,982 read, 62,005 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43420_20260506_212100/20260506-212100.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 109ms | — |
+| fetch_url | 1 | 0 | 615ms | — |
+| fred_series | 1 | 0 | 615ms | — |
+| get_metaculus_questions | 1 | 0 | 468ms | — |
+| premortem | 1 | 0 | 173721ms | $2.5200 |
+| reflection | 1 | 0 | 325ms | — |
+| research | 1 | 0 | 457706ms | $10.1029 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "30-Year Fixed Rate FHA Mortgage Index...
+- [30-Year Fixed Rate FHA Mortgage Index](https://fred.stlouisfed.org/series/OB...
