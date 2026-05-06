@@ -1,0 +1,236 @@
+---
+timestamp: 2026-05-06 18:21:25 UTC
+question_type: numeric
+factors:
+- description: Current 2Y yield at ~3.87% intraday (May 6), down 7 bps from yesterday.
+    Zero-drift random walk from here centers at 3.87.
+  supports:
+    center: 3.87
+    low: 3.68
+    high: 4.06
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: NFP (May 8) and CPI (May 12) create event risk that widens the distribution.
+    Historically 2Y moves 5-10 bps on these releases.
+  supports:
+    center: 3.87
+    low: 3.65
+    high: 4.1
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Fed futures imply rate of ~3.61% by Aug 2026, suggesting downward pressure
+    on short rates over medium term. But 6-day horizon is too short for this to drive
+    drift.
+  supports:
+    center: 3.85
+    low: 3.7
+    high: 4.0
+  logit: -0.3
+  confidence: 0.4
+  effective_logit: -0.12
+- description: Recent regime shift upward since Apr 28 (mean 3.894 vs prior 3.781).
+    Recent upward momentum, but today's drop partially reversed it.
+  supports:
+    center: 3.87
+    low: 3.75
+    high: 4.0
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: Warsh confirmation vote week of May 11 adds policy uncertainty. New
+    Fed chair transition could introduce volatility but direction unclear.
+  supports:
+    center: 3.87
+    low: 3.75
+    high: 4.0
+  logit: 0.0
+  confidence: 0.3
+  effective_logit: 0.0
+- description: Oil price drop and Iran deal talks easing inflation concerns may support
+    lower yields near-term.
+  supports:
+    center: 3.83
+    low: 3.7
+    high: 3.95
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+tentative_estimate:
+  center: 3.87
+  low: 3.68
+  high: 4.06
+anchor: 'Current 2Y yield: 3.87%. Over 6 trading days, random walk with daily std
+  of 0.043 gives approximately ±0.105 (1 std), centering at 3.87.'
+assessment: 'The 2-year Treasury yield needs to be forecast 6 trading days out (May
+  6 to May 14). The current level is ~3.87% (down 7 bps today). Over this short horizon,
+  drift is essentially zero — the question is about volatility around the current
+  level.
+
+
+  Key event risks: NFP on May 8 and CPI on May 12 are the two biggest potential movers.
+  These typically generate 5-10 bps moves in the 2Y yield. The direction depends on
+  whether the data surprises hawkish (strong jobs/hot inflation → yields up) or dovish
+  (weak jobs/cool inflation → yields down).
+
+
+  Monte Carlo simulation with event-adjusted volatility (1.8-2.0x on event days) and
+  t-distribution fat tails gives a symmetric distribution centered at 3.87, with P10=3.68,
+  P50=3.87, P90=4.06. This is wider than a simple random walk (sim std 0.151 vs RW
+  std 0.105) due to the event risk premium.
+
+
+  The distribution is approximately symmetric — no strong directional bias over 6
+  days. Fed futures imply eventual rate cuts but the 2Y already prices this in. Today''s
+  drop (oil/Iran news) may or may not persist.'
+calibration_notes: Distribution width of 0.151 std (P10-P90 range of ~0.37) seems
+  reasonable for a 6-day horizon with two major data releases (NFP, CPI). This is
+  about 1.44x the random walk width, reflecting event risk. The 2Y yield has had a
+  range of 3.71-3.95 over the past month (0.24 range), and our 80% CI spans about
+  0.30 — slightly wider, which is appropriate given the concentrated event risk ahead.
+key_uncertainties: '1. Direction of NFP surprise (May 8) — could shift yield by 5-10
+  bps
+
+  2. Direction of CPI surprise (May 12) — could shift yield by 5-10 bps
+
+  3. Whether today''s drop (related to oil/Iran) reverses or extends
+
+  4. Warsh confirmation dynamics and any hawkish/dovish signaling'
+tool_audit: 'FRED DGS2 data: excellent, provided full month of daily observations
+  plus regime stats and rate futures. CNBC real-time quote: useful for current intraday
+  value. Web search for macro context: helpful, found FOMC decision details, upcoming
+  data calendar, oil/Iran context. Kraken blog: good summary of upcoming macro events.'
+process_reflection: 'The FRED API data with regime_stats and rate_futures was extremely
+  helpful for this type of question. The structured data from web search results (detecting
+  FRED URLs and returning API data) saved significant time. The pipeline worked well
+  for this financial metric question — data retrieval was fast and comprehensive.
+  One minor friction: the FRED data was 1 day stale (latest May 4) since the API hasn''t
+  been updated yet for today, requiring triangulation with real-time sources (CNBC)
+  for the current level.'
+computed:
+  factor_count: 6
+  factor_sum: 1.53
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current 2Y yield at ~3.87% intraday (May 6), down 7 bps from yesterday.
+      Zero-drift random walk from here centers at 3.87.
+    supports:
+      center: 3.87
+      low: 3.68
+      high: 4.06
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: NFP (May 8) and CPI (May 12) create event risk that widens the distribution.
+      Historically 2Y moves 5-10 bps on these releases.
+    supports:
+      center: 3.87
+      low: 3.65
+      high: 4.1
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Fed futures imply rate of ~3.61% by Aug 2026, suggesting downward
+      pressure on short rates over medium term. But 6-day horizon is too short for
+      this to drive drift.
+    supports:
+      center: 3.85
+      low: 3.7
+      high: 4.0
+    logit: -0.3
+    confidence: 0.4
+    effective_logit: -0.12
+  - description: Recent regime shift upward since Apr 28 (mean 3.894 vs prior 3.781).
+      Recent upward momentum, but today's drop partially reversed it.
+    supports:
+      center: 3.87
+      low: 3.75
+      high: 4.0
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: Warsh confirmation vote week of May 11 adds policy uncertainty. New
+      Fed chair transition could introduce volatility but direction unclear.
+    supports:
+      center: 3.87
+      low: 3.75
+      high: 4.0
+    logit: 0.0
+    confidence: 0.3
+    effective_logit: 0.0
+  - description: Oil price drop and Iran deal talks easing inflation concerns may
+      support lower yields near-term.
+    supports:
+      center: 3.83
+      low: 3.7
+      high: 3.95
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  dominant_factor: Current 2Y yield at ~3.87% intraday (May 6), down 7 bps from yesterday.
+    Zero-drift random walk from here centers at 3.87.
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 3.86520737327189
+    implied_p10: 3.6829493087557608
+    implied_p90: 4.048847926267281
+    median_gap: 0.004792626728109983
+    median_gap_pct: 1.3098236775816976
+    spread_ratio: 1.0385390428211587
+    precision: 0.09819121447028409
+  sources:
+  - '[(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securities
+    at 2-Year Constant Maturity, Quoted on an Investment Basis" on 2026-05-14?](https://www.metaculus.com/questions/43419)'
+  - '[Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS2) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS2)'
+  - '[10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (T10Y2Y)
+    | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/T10Y2Y)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis (DGS10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DGS10)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis, Inflation-Indexed (DFII10) | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/DFII10)'
+  - '[Check out ''s stock price (US2Y) in real time](https://www.cnbc.com/quotes/US2Y)'
+  - '[April jobs and inflation data land days apart as the Fed enters a new era](https://blog.kraken.com/economic-brief/may-6-2026)'
+  - '[EDITORIAL: Power struggles ahead for Fed - Taipei Times](https://www.taipeitimes.com/News/editorials/archives/2026/05/05/2003856756)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43419
+- **Question ID**: 43415
+- **Session Duration**: 512.9s (8.5 min)
+- **Cost**: $5.6916 total (orchestrator $2.9035 + sub-agents $2.7881)
+- **Tokens**: 9,942 total (29 in, 9,913 out)
+  - Cache: 566,352 read, 69,869 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43419_20260506_181611/20260506-181611.log`
+
+### Tool Calls
+
+- **Total**: 22 calls
+- **Errors**: 1 (4.5%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0803 |
+| execute_code | 4 | 0 | 109ms | — |
+| fetch_url | 4 | 0 | 8216ms | — |
+| fred_series | 7 | 1 ⚠️ | 758ms | — |
+| get_metaculus_questions | 1 | 0 | 327ms | — |
+| premortem | 1 | 0 | 152417ms | $2.5466 |
+| reflection | 1 | 0 | 216ms | — |
+| web_search | 4 | 0 | 34510ms | $0.1612 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the value of "Market Yield on U.S. Treasury Securit...
+- [Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity, Quoted...
+- [10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [Check out 's stock price (US2Y) in real time](https://www.cnbc.com/quotes/US2Y)
+- [April jobs and inflation data land days apart as the Fed enters a new era](h...
+- [EDITORIAL: Power struggles ahead for Fed - Taipei Times](https://www.taipeit...
