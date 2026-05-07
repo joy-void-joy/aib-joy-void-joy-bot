@@ -1,0 +1,272 @@
+---
+timestamp: 2026-05-07 18:03:30 UTC
+question_type: multiple_choice
+factors:
+- description: 'Power-law decay from peak (Apr 29-May 2): Google Trends for redistricting
+    terms decay ~45% Day 1, ~80% by Day 7 from peak. May 7 is Day 5-7 from peak, May
+    16 is Day 14-16. The natural decay trajectory puts May 16 significantly below
+    May 7.'
+  supports: Decreases
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'May 7 boosted by active House vote: Alabama House approved redistricting
+    map 75-29 today with major media coverage (CBS, NPR, national outlets). This elevates
+    May 7''s value relative to typical decay.'
+  supports: Decreases
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'May 16 is a Saturday: Courts and legislatures don''t typically act
+    on Saturdays. Political search terms have lower weekend volume. This structural
+    factor makes May 16 more likely to be lower.'
+  supports: Decreases
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: 'Potential SCOTUS injunction ruling: Alabama has asked SCOTUS to lift
+    the injunction requiring the current maps. A ruling on or near May 16 could spike
+    interest. ~30-40% chance SCOTUS rules by May 16, but only ~5-10% chance it falls
+    specifically near May 16 enough to boost that day.'
+  supports: Increases
+  logit: 0.8
+  confidence: 0.35
+  effective_logit: 0.27999999999999997
+- description: 'May 19 primary proximity: The primary is 3 days after May 16. Pre-primary
+    interest could generate some searches for ''alabama redistricting'' as voters
+    try to understand changing districts.'
+  supports: Increases
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: 'Ongoing news cycle: The Alabama redistricting story has multiple upcoming
+    events (Senate vote, governor signature, legal challenges) that could generate
+    sustained interest throughout May 7-16 period.'
+  supports: Doesn't change
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+tentative_estimate:
+  probabilities:
+    Increases: 0.12
+    Doesn't change: 0.15
+    Decreases: 0.73
+anchor: Niche political search terms typically decay following power law after spike
+  events. With May 7 at an active news peak and May 16 being 9 days later on a Saturday,
+  the base expectation is strong decay (>80% historical decline by Day 14 from peak).
+assessment: 'The fundamental dynamic is power-law decay from the April 29-May 2 spike
+  (SCOTUS Callais ruling + Alabama special session call). The specific term "alabama
+  redistricting" peaked when the story became Alabama-specific (around May 1-2). May
+  7 has elevated interest due to the House vote. May 16 is 14-16 days from the peak
+  AND is a Saturday, making it structurally lower.
+
+
+  The main risk to this assessment is a SCOTUS ruling on the injunction falling near
+  May 16, which could create a secondary spike. However, (1) the timing is uncertain,
+  (2) it would need to fall specifically on or near May 16, and (3) May 16 is a Saturday
+  when such rulings are less likely.
+
+
+  The "Doesn''t change" outcome requires both values to be within 3 of each other.
+  Given May 7 has active news (House vote) boosting it well above baseline, and May
+  16 is further into the decay with no guaranteed catalyst, the gap is likely to exceed
+  3 points. The "within 3" scenario mainly works if both values are very low (single
+  digits), but May 7 is almost certainly elevated above that given today''s news.
+
+
+  Monte Carlo simulation across scenarios gives Decreases 75-90% depending on assumptions
+  about the peak day and event probability.'
+calibration_notes: The Monte Carlo gives 82% Decreases as central estimate. My slightly
+  lower 73% accounts for model uncertainty and the possibility that the ongoing nature
+  of this story differs from typical one-off spike events. I'm not hedging toward
+  50% - the evidence strongly favors Decreases.
+key_uncertainties: 1. Whether SCOTUS issues an injunction ruling between May 7-16
+  (especially near May 16). 2. Whether the Alabama Senate or other legislative action
+  creates a second spike near May 16. 3. The exact Google Trends value for May 7 -
+  if it's lower than expected, the gap narrows.
+tool_audit: research() provided excellent contextual information on the SCOTUS ruling,
+  special session timeline, and Google Trends decay patterns. web_search gave current
+  news coverage confirming active events on May 7. fetch_url failed on Google Trends
+  (expected - requires JS rendering) and Axios (403). The sandbox execute_code worked
+  well for Monte Carlo simulation. No tool failures beyond expected limitations.
+update_triggers: SCOTUS issuing an order on the Alabama redistricting injunction on
+  or near May 16 would significantly boost Increases probability. A major legal filing
+  or court ruling on May 15-16 would also shift probabilities.
+process_reflection: The research sub-agent was very helpful in gathering both the
+  Alabama redistricting context and the Google Trends decay patterns. The Monte Carlo
+  simulation was straightforward. The main challenge was estimating Google Trends
+  values for specific dates without being able to access the actual Google Trends
+  data - the JavaScript-rendered page couldn't be scraped. A SerpAPI integration would
+  have been ideal for directly querying the current trends data. The multi-scenario
+  approach in the simulation helped handle uncertainty about the peak day.
+computed:
+  factor_count: 6
+  factor_sum: 3.605
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Power-law decay from peak (Apr 29-May 2): Google Trends for redistricting
+      terms decay ~45% Day 1, ~80% by Day 7 from peak. May 7 is Day 5-7 from peak,
+      May 16 is Day 14-16. The natural decay trajectory puts May 16 significantly
+      below May 7.'
+    supports: Decreases
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'May 7 boosted by active House vote: Alabama House approved redistricting
+      map 75-29 today with major media coverage (CBS, NPR, national outlets). This
+      elevates May 7''s value relative to typical decay.'
+    supports: Decreases
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'May 16 is a Saturday: Courts and legislatures don''t typically act
+      on Saturdays. Political search terms have lower weekend volume. This structural
+      factor makes May 16 more likely to be lower.'
+    supports: Decreases
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: 'Potential SCOTUS injunction ruling: Alabama has asked SCOTUS to
+      lift the injunction requiring the current maps. A ruling on or near May 16 could
+      spike interest. ~30-40% chance SCOTUS rules by May 16, but only ~5-10% chance
+      it falls specifically near May 16 enough to boost that day.'
+    supports: Increases
+    logit: 0.8
+    confidence: 0.35
+    effective_logit: 0.27999999999999997
+  - description: 'May 19 primary proximity: The primary is 3 days after May 16. Pre-primary
+      interest could generate some searches for ''alabama redistricting'' as voters
+      try to understand changing districts.'
+    supports: Increases
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: 'Ongoing news cycle: The Alabama redistricting story has multiple
+      upcoming events (Senate vote, governor signature, legal challenges) that could
+      generate sustained interest throughout May 7-16 period.'
+    supports: Doesn't change
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  dominant_factor: 'Power-law decay from peak (Apr 29-May 2): Google Trends for redistricting
+    terms decay ~45% Day 1, ~80% by Day 7 from peak. May 7 is Day 5-7 from peak, May
+    16 is Day 14-16. The natural decay trajectory puts May 16 significantly below
+    May 7.'
+  dominant_effective_logit: 1.7
+  outcome_breakdown:
+  - outcome: Decreases
+    factor_count: 3
+    logit_sum: 2.925
+    factors:
+    - description: 'Power-law decay from peak (Apr 29-May 2): Google Trends for redistricting
+        terms decay ~45% Day 1, ~80% by Day 7 from peak. May 7 is Day 5-7 from peak,
+        May 16 is Day 14-16. The natural decay trajectory puts May 16 significantly
+        below May 7.'
+      supports: Decreases
+      logit: 2.0
+      confidence: 0.85
+      effective_logit: 1.7
+    - description: 'May 7 boosted by active House vote: Alabama House approved redistricting
+        map 75-29 today with major media coverage (CBS, NPR, national outlets). This
+        elevates May 7''s value relative to typical decay.'
+      supports: Decreases
+      logit: 1.0
+      confidence: 0.8
+      effective_logit: 0.8
+    - description: 'May 16 is a Saturday: Courts and legislatures don''t typically
+        act on Saturdays. Political search terms have lower weekend volume. This structural
+        factor makes May 16 more likely to be lower.'
+      supports: Decreases
+      logit: 0.5
+      confidence: 0.85
+      effective_logit: 0.425
+  - outcome: Increases
+    factor_count: 2
+    logit_sum: 0.48
+    factors:
+    - description: 'Potential SCOTUS injunction ruling: Alabama has asked SCOTUS to
+        lift the injunction requiring the current maps. A ruling on or near May 16
+        could spike interest. ~30-40% chance SCOTUS rules by May 16, but only ~5-10%
+        chance it falls specifically near May 16 enough to boost that day.'
+      supports: Increases
+      logit: 0.8
+      confidence: 0.35
+      effective_logit: 0.27999999999999997
+    - description: 'May 19 primary proximity: The primary is 3 days after May 16.
+        Pre-primary interest could generate some searches for ''alabama redistricting''
+        as voters try to understand changing districts.'
+      supports: Increases
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  - outcome: Doesn't change
+    factor_count: 1
+    logit_sum: 0.2
+    factors:
+    - description: 'Ongoing news cycle: The Alabama redistricting story has multiple
+        upcoming events (Senate vote, governor signature, legal challenges) that could
+        generate sustained interest throughout May 7-16 period.'
+      supports: Doesn't change
+      logit: 0.5
+      confidence: 0.4
+      effective_logit: 0.2
+  mc_distribution_metrics:
+    implied_probabilities:
+      Doesn't change: 0.056884297728975165
+      Increases: 0.07526531017908578
+      Decreases: 0.8678503920919391
+    tentative_probabilities:
+      Increases: 0.12
+      Doesn't change: 0.15
+      Decreases: 0.73
+    per_option_gap_pp:
+      Doesn't change: 9.311570227102484
+      Increases: 4.473468982091422
+      Decreases: -13.785039209193917
+    max_gap_pp: -13.785039209193917
+    max_gap_option: Decreases
+  sources:
+  - '[(Metaculus) Will the interest in “alabama redistricting” change between 2026-05-07
+    and 2026-05-16 according to Google Trends?](https://www.metaculus.com/questions/43425)'
+  - '[Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=alabama%20redistricting&date=2026-04-16%202026-05-16)'
+  - '[Alabama House approves last-minute congressional gerrymander, despite votes
+    already cast](https://www.democracydocket.com/news-alerts/alabama-house-approves-last-minute-congressional-gerrymander-despite-votes-already-cast/)'
+  - '[axios.com](https://www.axios.com/local/huntsville/2026/05/06/alabama-legislature-scotus-redistricting-decision)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43425
+- **Question ID**: 43421
+- **Session Duration**: 884.3s (14.7 min)
+- **Cost**: $14.3636 total (orchestrator $3.7693 + sub-agents $10.5943)
+- **Tokens**: 16,744 total (39 in, 16,705 out)
+  - Cache: 701,530 read, 78,054 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43425_20260507_175146/20260507-175146.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 1 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0515 |
+| execute_code | 4 | 0 | 256ms | — |
+| fetch_url | 3 | 1 ⚠️ | 8557ms | — |
+| get_coherence_links | 1 | 0 | 525ms | — |
+| get_metaculus_questions | 1 | 0 | 307ms | — |
+| premortem | 1 | 0 | 125496ms | $3.0152 |
+| reflection | 1 | 0 | 73ms | — |
+| research | 1 | 0 | 266649ms | $7.3946 |
+| web_search | 3 | 0 | 19430ms | $0.1330 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the interest in “alabama redistricting” change between 2026...
+- [Google Trends](https://trends.google.com/trends/explore?geo=US&tz=0&q=alabam...
+- [Alabama House approves last-minute congressional gerrymander, despite votes ...
+- [axios.com](https://www.axios.com/local/huntsville/2026/05/06/alabama-legisla...
