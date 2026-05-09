@@ -1,0 +1,120 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for question 43429, carefully parsing the resolution criteria. The question resolves YES if at least one publicly released, non-partisan poll of the 2026 California gubernatorial primary, with a field period ending on or after May 1, is first publicly released between May 11-17 UTC, and shows two Republican candidates occupying the top two positions. A tie between a Republican and Democrat for second place does NOT qualify.\n\nI then used the research tool to pull comprehensive polling data from multiple sources: Wikipedia's polling table, five major aggregators (270toWin, Decision Desk HQ, Race to the WH, RealClearPolitics, FiftyPlusOne), and individual pollster results. I also retrieved pollster cadence information to estimate the probability of polls being released in the May 11-17 window.\n\n## Key Evidence\n\n- **Polling averages** (as of May 4-6, 2026): `Hilton (R)` **~19.0%**, `Steyer (D)` **~15.4%**, `Becerra (D)` **~14.7%**, `Bianco (R)` **~13.2%**, `Porter (D)` **~9.0%**\n- **Bianco trails the leading Democrats by ~1.5-2pp** — within MOE but on the wrong side of the threshold for a 2-R top-two result\n- **0 of 7 recent polls** (post-Swalwell exit, April-May 2026) show two Republicans clearly in the top two:\n  - The closest was Emerson (Apr 14-15): Hilton 17%, Bianco 14%, Steyer 14% — but Bianco tied with Steyer, which doesn't qualify per the resolution criteria\n  - Every other recent poll shows at least one Democrat ahead of Bianco\n- **Swalwell's exit** (April 12) redistributed Democratic support, consolidating it around Becerra and Steyer, making the 2-R scenario less likely than before\n- **High undecided share** (14-26% across polls) creates meaningful poll-to-poll volatility\n- **Multiple pollsters** (Emerson, PPIC, SurveyUSA, Evitarus) have cadences suggesting releases in the May 11-17 window are plausible\n- **Emerson College** has historically shown the highest Bianco numbers among major pollsters (14% vs 10-12% in others)\n\nI ran a **Monte Carlo simulation** with 100,000 iterations using current polling averages as centers and SD ~2.1pp per candidate (combining ~1.5pp true support uncertainty + ~1.5pp sampling noise). The simulation found:\n- **9.3% probability** that any single poll shows two Republicans in the top two\n- Sensitivity analysis: if Bianco's true support is 1pp higher (14.2%), probability rises to ~16.3%; if 1pp lower (12.2%), drops to ~4.6%\n\nI then combined this with the poll release probability:\n- Estimated **~85% chance** of at least one qualifying poll being released in the 7-day window\n- With a distribution over 1-3 expected polls, the composite probability of at least one poll showing 2 Rs was **~12.4-15.3%**\n\nI verified the simulation calibration: 0/7 recent polls showing 2 Rs is a ~50% likely outcome if the true per-poll probability is 9.3%, consistent with the model.\n\n## Conclusion\n\nI concluded **13% probability** of YES. The two-component structure (poll release × 2-R result) drives the estimate. The Monte Carlo simulation anchored the per-poll probability, and the pre-primary polling frequency informed the release probability. I acknowledged the logit gap between factor-implied probability (~20.5%) and the simulation-driven estimate (13%), correctly noting that the factors partially double-count the same underlying evidence (Bianco trailing = same data as 0/7 polls). The premortem identified the Emerson house effect and wider-than-modeled tails as the strongest counterarguments but approved the estimate.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market tool was used — Polymarket or Kalshi may have had a relevant market on this question."
+    ],
+    "subtle_bugs": [
+      "The research tool provided two very similar research entries with largely overlapping data, leading to token-heavy but not informationally distinct results."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Monte Carlo simulation of poll outcomes using current aggregator averages and realistic polling uncertainty, combined with pollster release frequency estimation.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Bianco's true support level is higher than the polling average suggests, particularly given pollster house effects (Emerson vs CBS/YouGov)."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The Monte Carlo simulation treats each candidate's noise as independent, but in reality, if one Democrat surges (e.g., Becerra at 24% in Gudelunas), it may come at the expense of other Democrats rather than Bianco, potentially leaving Bianco's position more stable. The independent noise assumption may slightly undercount the probability of 2-R outcomes in polls where Democratic support consolidates on one candidate.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market data (Polymarket, Kalshi, Manifold) was checked for this question or for the broader 'two Republicans advance' question, which could provide a useful cross-check on the probability.",
+      "severity": "minor"
+    },
+    {
+      "category": "computation_error",
+      "evidence": "The simulation uses independent Gaussian noise per candidate without ensuring the polled shares sum to a consistent total (e.g., 100% minus undecided). This could lead to unrealistic simulated polls where total named-candidate support is implausibly high or low, though the effect on the top-two ranking is likely small.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "14%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Monte Carlo simulation with 100K samples directly modeled the threshold-crossing probability rather than relying on heuristics.",
+    "Correctly identified and applied the tie rule from the resolution criteria (R tied with D for 2nd doesn't qualify), which correctly excluded the Emerson April poll from the 'favorable' category.",
+    "Sensitivity analysis systematically varied Bianco's baseline support to show how the probability changes (+1pp → 16.3%, -1pp → 4.6%), giving clear insight into parameter sensitivity.",
+    "Correctly identified that the Evitarus/CA Dem Party poll might not qualify as it was commissioned by a party committee, per the fine print.",
+    "Recognized and diagnosed the double-counting issue between factors when the reflection tool showed a logit gap, choosing the simulation result over naive factor arithmetic.",
+    "Decomposed the problem into two independent components (poll release probability × 2-R probability) and handled each with appropriate evidence.",
+    "The premortem counterargument was substantive — identified fat tails and Emerson house effects as specific mechanisms for YES."
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi, Manifold) which may have had relevant markets on the broader 'two Republicans advance' question or this specific weekly polling question.",
+    "The Monte Carlo simulation used independent Gaussian noise per candidate without constraining the total to sum consistently, which is a simplification that could distort tail probabilities.",
+    "Two research queries produced largely redundant results, consuming tokens without proportional informational gain — a single well-targeted query could have sufficed.",
+    "The poll release probability estimate (85%) was based on qualitative cadence reasoning rather than a systematic count of how many polls were released in comparable prior 7-day windows during the pre-primary period."
+  ],
+  "pipeline": {
+    "issues": [
+      "The two research queries returned largely overlapping data, consuming significant tokens for marginal incremental information."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks (Polymarket, Kalshi) as a standard cross-validation step for election-related questions.",
+    "When simulating multi-candidate polls, use a Dirichlet or constrained multinomial distribution rather than independent Gaussians to ensure realistic share totals.",
+    "Estimate poll release probability more rigorously by counting the number of 7-day windows in the prior 8 weeks that had qualifying polls released, rather than relying on subjective cadence reasoning.",
+    "Consolidate overlapping research queries into a single comprehensive query to reduce token waste."
+  ]
+}
