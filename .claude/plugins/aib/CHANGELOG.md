@@ -2,6 +2,10 @@
 
 aib-workflow plugin version history.
 
+## v1.1.1 (2026-05-09)
+
+add marketplace.json for plugin discovery
+
 ## v1.1.0 (2026-04-15)
 
 restore trace-explorer agent
