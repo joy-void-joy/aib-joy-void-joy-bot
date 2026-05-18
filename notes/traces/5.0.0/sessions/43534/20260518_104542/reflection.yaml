@@ -1,0 +1,185 @@
+---
+timestamp: 2026-05-18 10:53:40 UTC
+question_type: binary
+factors:
+- description: Days of Play has been an annual event every year since ~2017, always
+    announced on PlayStation Blog. 100% historical occurrence rate. Landing page already
+    updated for 2026.
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: 'Calendar alignment: The 4th Tuesday of May 2026 is May 26, perfectly
+    within the May 27 deadline. In 3/4 recent years (2022, 2024, 2025), announcements
+    fell on the 4th Tuesday of May.'
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Industry outlets unanimously expect event week of May 26, based on
+    'last Wednesday of May' pattern. Multiple credible sources (PlayStation LifeStyle,
+    Startselect, G3Geek) all pointing to same window.
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: '2023 outlier risk: In 2023, announcement was May 29 (after May 27
+    deadline equivalent) with sale starting June 2. This happened once in 4 years,
+    giving ~20-25% base rate for a delay past the deadline.'
+  logit: -1.2
+  confidence: 0.7
+  effective_logit: -0.84
+- description: Even a 1-day slip from May 26 to May 27 still resolves YES. The deadline
+    is end of May 27 UTC, and blog posts typically publish at 5 AM PDT (12 PM UTC).
+    Extra buffer.
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+tentative_estimate:
+  logit: 1.5
+  probability: 0.82
+anchor: 'Historical base rate: In 4 years of data (2022-2025), Days of Play blog announcement
+  fell on or before May 27 in 2 of 4 years (50%). However, this is misleading because
+  the calendar differs each year — the announcement is tied to the 4th Tuesday of
+  May, which falls on different dates. In 2026, the 4th Tuesday is May 26, making
+  it structurally more likely to fall within the deadline.'
+assessment: 'The question asks whether Sony will publish a Days of Play 2026 announcement
+  on the PlayStation Blog by May 27, 2026.
+
+
+  STRONG YES signals:
+
+  - Days of Play is an established annual tradition (~9 years running), always announced
+  on PlayStation Blog
+
+  - The Days of Play landing page has already been updated with "2026" in the title
+
+  - The 4th Tuesday of May 2026 is May 26, fitting the dominant pattern perfectly
+
+  - Even if announcement slips to May 27, it still counts (deadline is end of May
+  27 UTC)
+
+  - Industry consensus points to event starting week of May 26
+
+
+  NO scenario:
+
+  - A 2023-style delay where the sale starts in early June instead of late May, pushing
+  the announcement to May 28+
+
+  - 2023 was the only year in recent history where this happened (1/4 = 25%)
+
+  - But in 2023, the 4th Tuesday was May 23, making a May 29 announcement a full 6-day
+  offset
+
+  - In 2026, even a similar 6-day offset from the 4th Tuesday (May 26) would land
+  on June 1 — that''s the NO scenario
+
+
+  The calendar alignment strongly favors YES in 2026. The 4th Tuesday (May 26) + 1
+  day buffer (May 27) = 2 days within deadline. For the announcement to miss, Sony
+  would need to delay beyond their typical pattern by more than they have in any recent
+  year except 2023.'
+calibration_notes: 'Raw historical base rate (2/4 years ≤ May 27) = 50%, but this
+  ignores the calendar structure. When adjusted for the 4th-Tuesday pattern, the probability
+  is significantly higher in 2026 because the 4th Tuesday falls on May 26. The 82%
+  estimate reflects: high confidence in the event happening (~97%), very high confidence
+  in blog announcement (~98%), and ~85% confidence in timing within deadline given
+  the favorable calendar.'
+key_uncertainties: 'Main uncertainty is whether 2026 follows the dominant pattern
+  (4th Tuesday announcement) or has a 2023-like delay. Secondary uncertainty: could
+  Sony change their announcement strategy (e.g., skip blog post, announce only via
+  social media)? This seems very unlikely given consistent practice.'
+tool_audit: 'Research tool: Very helpful, provided comprehensive historical data with
+  exact dates and URLs. Web search: Confirmed no announcement yet, found corroborating
+  industry speculation. Metaculus question fetch: Confirmed question details. All
+  tools performed well with no failures.'
+update_triggers: 1. A PlayStation Blog post appearing before May 27 → YES confirmed.
+  2. Sony announcing Days of Play via social media only with no blog post → would
+  need to assess if blog post follows. 3. No announcement by May 25 → would slightly
+  lower probability but still expect May 26 announcement. 4. An announcement on May
+  28+ → NO confirmed.
+process_reflection: The research sub-agent was excellent here — it went directly to
+  the PlayStation Blog RSS feed and tag pages to get authoritative data on historical
+  announcement dates, which is exactly what was needed. The web search corroborated
+  that no announcement has been made yet. The code sandbox was useful for calendar
+  calculations to understand the day-of-week pattern. No significant friction in the
+  process. The decomposition into calendar-based analysis (4th Tuesday pattern) was
+  the key insight that moved the estimate from a naive 50% base rate to a more informed
+  ~82%.
+computed:
+  factor_count: 5
+  factor_sum: 3.4
+  tentative_logit: 1.5
+  logit_gap: -1.9
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Days of Play has been an annual event every year since ~2017, always
+      announced on PlayStation Blog. 100% historical occurrence rate. Landing page
+      already updated for 2026.
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: 'Calendar alignment: The 4th Tuesday of May 2026 is May 26, perfectly
+      within the May 27 deadline. In 3/4 recent years (2022, 2024, 2025), announcements
+      fell on the 4th Tuesday of May.'
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Industry outlets unanimously expect event week of May 26, based on
+      'last Wednesday of May' pattern. Multiple credible sources (PlayStation LifeStyle,
+      Startselect, G3Geek) all pointing to same window.
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: '2023 outlier risk: In 2023, announcement was May 29 (after May 27
+      deadline equivalent) with sale starting June 2. This happened once in 4 years,
+      giving ~20-25% base rate for a delay past the deadline.'
+    logit: -1.2
+    confidence: 0.7
+    effective_logit: -0.84
+  - description: Even a 1-day slip from May 26 to May 27 still resolves YES. The deadline
+      is end of May 27 UTC, and blog posts typically publish at 5 AM PDT (12 PM UTC).
+      Extra buffer.
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  dominant_factor: Days of Play has been an annual event every year since ~2017, always
+    announced on PlayStation Blog. 100% historical occurrence rate. Landing page already
+    updated for 2026.
+  dominant_effective_logit: 2.375
+  factor_implied_probability: 0.9677045353015494
+  tentative_probability: 0.82
+  gap_pp: -14.770453530154947
+  sources:
+  - '[(Metaculus) Will Sony officially announce the start date of PlayStation Days
+    of Play 2026 on the PlayStation Blog by May 27, 2026?](https://www.metaculus.com/questions/43534)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43534
+- **Question ID**: 43531
+- **Session Duration**: 607.7s (10.1 min)
+- **Cost**: $10.1206 total (orchestrator $2.5533 + sub-agents $7.5673)
+- **Tokens**: 9,824 total (28 in, 9,796 out)
+  - Cache: 448,277 read, 61,107 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43534_20260518_104542/20260518-104542.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 7ms | — |
+| get_metaculus_questions | 1 | 0 | 495ms | — |
+| premortem | 1 | 0 | 94280ms | $1.6099 |
+| reflection | 1 | 0 | 16ms | — |
+| research | 1 | 0 | 274025ms | $5.8778 |
+| web_search | 2 | 0 | 19081ms | $0.0797 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Sony officially announce the start date of PlayStation Days...
