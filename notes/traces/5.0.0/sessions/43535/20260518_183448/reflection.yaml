@@ -1,0 +1,205 @@
+---
+timestamp: 2026-05-18 18:46:10 UTC
+question_type: numeric
+factors:
+- description: Golden Week period (before price hike fully kicked in) already showed
+    ~93-107k/week, establishing a floor for elevated demand conditions
+  supports:
+    center: 100000.0
+    low: 85000.0
+    high: 115000.0
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Price hike urgency (LAST week before 20% increase) creates extreme
+    demand; reports of 'hysteria', 'reminiscent of launch', long lines, and sell-outs
+  supports:
+    center: 145000.0
+    low: 120000.0
+    high: 175000.0
+  logit: 1.5
+  confidence: 0.75
+  effective_logit: 1.125
+- description: 'Supply constraint: retailers implementing purchase restrictions (Bic
+    Camera credit card only), sell-outs reported, inventory depletion from May 11-17
+    panic buying week'
+  supports:
+    center: 100000.0
+    low: 70000.0
+    high: 130000.0
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+- description: Post-launch weeks 2-3 (153k, 140k) establish upper bound for sustained
+    weekly Japan throughput when Nintendo was actively prioritizing supply
+  supports:
+    center: 147000.0
+    low: 130000.0
+    high: 165000.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Short supply chain (China/Vietnam to Japan = 2-5 days), giving Nintendo
+    ~10 days from announcement to redirect inventory; but not enough time for new
+    production
+  supports:
+    center: 120000.0
+    low: 90000.0
+    high: 155000.0
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  center: 128000.0
+  low: 74000.0
+  high: 181000.0
+anchor: Golden Week period average of ~100k/week as baseline for elevated-demand period,
+  before price hike urgency fully manifested
+assessment: "The May 18-24 week represents a unique confluence: the absolute last\
+  \ week before a 20% price hike on a hugely popular gaming console, with confirmed\
+  \ reports of panic buying and sell-outs. Demand is essentially uncapped (everyone\
+  \ who was planning to buy in the next year wants to buy THIS week). The binding\
+  \ constraint is supply.\n\nKey supply analysis:\n- Normal Japan throughput: ~45-60k/week\n\
+  - Golden Week elevated throughput: ~93-107k/week\n- Maximum sustained throughput\
+  \ (post-launch): 140-153k/week\n- Time from announcement to this week: 10 days (enough\
+  \ for logistics redirect, not for new production)\n\nThe most likely range is 100-150k,\
+  \ with the median around 128k. The distribution is slightly right-skewed because\
+  \ the ceiling (post-launch maximums) is further from the median than the floor (supply\
+  \ depletion). \n\nKey uncertainties: We don't have the May 11-17 data yet - that\
+  \ week was the first full week of panic buying and would tell us a lot about how\
+  \ much inventory was burned through. Sell-out reports suggest some depletion, but\
+  \ retailers implementing restrictions (rather than saying 'sold out') suggests stock\
+  \ isn't completely gone."
+calibration_notes: 'My P10-P90 range of 74k-181k spans roughly 2.5x. This seems appropriate
+  given: (a) we have no data on the May 11-17 week, (b) supply dynamics are hard to
+  predict, (c) post-launch weeks show 140-153k is achievable but not guaranteed. The
+  median of 128k is meaningfully above the Golden Week average (~100k) but below the
+  post-launch maximums (140-153k), reflecting that supply is constrained but demand
+  pull is very strong.'
+key_uncertainties: 1. How much inventory remains after the May 11-17 panic buying
+  week? 2. Did Nintendo successfully redirect supply to Japan in the 10 days since
+  announcement? 3. Are sell-out reports widespread or limited to a few high-profile
+  retailers?
+tool_audit: '- research() provided excellent Famitsu historical data and price hike
+  details
+
+  - web_search found critical launch week data (947k launch, 153k/140k weeks 2-3)
+  and retailer restriction reports
+
+  - fetch_url confirmed retailer restrictions (Bic Camera credit card requirement,
+  Yodobashi tactics)
+
+  - May 11-17 Famitsu data NOT YET PUBLISHED - this is a key data gap
+
+  - No prediction market data found for this specific question'
+process_reflection: 'The forecasting tools worked well for this question. research()
+  provided comprehensive structured data. The scenario mixture approach with Monte
+  Carlo feels appropriate for this supply-constrained question where the key uncertainty
+  (inventory levels going into the week) is genuinely unobservable from public data.
+  One limitation: I couldn''t find any leaked/early data for the May 11-17 week, which
+  would significantly narrow my uncertainty.'
+computed:
+  factor_count: 5
+  factor_sum: 1.905
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Golden Week period (before price hike fully kicked in) already showed
+      ~93-107k/week, establishing a floor for elevated demand conditions
+    supports:
+      center: 100000.0
+      low: 85000.0
+      high: 115000.0
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Price hike urgency (LAST week before 20% increase) creates extreme
+      demand; reports of 'hysteria', 'reminiscent of launch', long lines, and sell-outs
+    supports:
+      center: 145000.0
+      low: 120000.0
+      high: 175000.0
+    logit: 1.5
+    confidence: 0.75
+    effective_logit: 1.125
+  - description: 'Supply constraint: retailers implementing purchase restrictions
+      (Bic Camera credit card only), sell-outs reported, inventory depletion from
+      May 11-17 panic buying week'
+    supports:
+      center: 100000.0
+      low: 70000.0
+      high: 130000.0
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  - description: Post-launch weeks 2-3 (153k, 140k) establish upper bound for sustained
+      weekly Japan throughput when Nintendo was actively prioritizing supply
+    supports:
+      center: 147000.0
+      low: 130000.0
+      high: 165000.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Short supply chain (China/Vietnam to Japan = 2-5 days), giving Nintendo
+      ~10 days from announcement to redirect inventory; but not enough time for new
+      production
+    supports:
+      center: 120000.0
+      low: 90000.0
+      high: 155000.0
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: Price hike urgency (LAST week before 20% increase) creates extreme
+    demand; reports of 'hysteria', 'reminiscent of launch', long lines, and sell-outs
+  dominant_effective_logit: 1.125
+  distribution_metrics:
+    implied_median: 122095.31013615734
+    implied_p10: 99455.3706505295
+    implied_p90: 146830.5597579425
+    median_gap: 5904.689863842665
+    median_gap_pct: 12.463675554845926
+    spread_ratio: 2.2585661823407315
+    precision: 0.8359375
+  sources:
+  - '[(Metaculus) How many Nintendo Switch 2 units will Famitsu report sold in Japan
+    during the week of May 18–24, 2026?](https://www.metaculus.com/questions/43535)'
+  - '[Switch 2 price increase in Japan causes hysteria, as stores restrict console
+    sales](https://www.notebookcheck.net/Switch-2-price-increase-in-Japan-causes-hysteria-as-stores-restrict-console-sales.1293250.0.html)'
+  - '[Some Japanese Retailers Are Now Heavily Restricting Nintendo Switch 2 Purchases](https://www.thegamer.com/switch-2-nintendo-japan-price-hike-retailers/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43535
+- **Question ID**: 43532
+- **Session Duration**: 866.8s (14.4 min)
+- **Cost**: $12.4537 total (orchestrator $3.5732 + sub-agents $8.8805)
+- **Tokens**: 14,349 total (38 in, 14,311 out)
+  - Cache: 646,287 read, 81,592 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43535_20260518_183448/20260518-183448.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0489 |
+| execute_code | 3 | 0 | 99ms | — |
+| fetch_url | 2 | 0 | 11376ms | — |
+| get_metaculus_questions | 1 | 0 | 288ms | — |
+| premortem | 1 | 0 | 130187ms | $2.6515 |
+| reflection | 1 | 0 | 6ms | — |
+| research | 1 | 0 | 276649ms | $5.8770 |
+| web_search | 7 | 0 | 17421ms | $0.3030 |
+
+### Sources Consulted
+
+- [(Metaculus) How many Nintendo Switch 2 units will Famitsu report sold in Jap...
+- [Switch 2 price increase in Japan causes hysteria, as stores restrict console...
+- [Some Japanese Retailers Are Now Heavily Restricting Nintendo Switch 2 Purcha...
