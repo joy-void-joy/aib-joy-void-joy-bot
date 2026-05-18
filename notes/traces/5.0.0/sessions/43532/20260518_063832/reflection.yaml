@@ -1,0 +1,229 @@
+---
+timestamp: 2026-05-18 06:52:33 UTC
+question_type: binary
+factors:
+- description: 'Base rate from comparable SCOTUS A-dockets: 0 out of 4 comparable
+    cases had ANY post-stay-grant entries within first month (22A902, 24A910, 24A966,
+    23A470). Bayesian estimate with uninformative prior gives ~13-17% mean.'
+  logit: -1.5
+  confidence: 0.8
+  effective_logit: -1.2000000000000002
+- description: 'Direct comparable: 22A902 (prior mifepristone stay, April 2023) had
+    ZERO post-stay entries despite similar profile (high-profile, many amici, politically
+    charged). This is the most informative single datapoint.'
+  logit: -0.8
+  confidence: 0.9
+  effective_logit: -0.7200000000000001
+- description: No news or indications of any pending filings, motions to vacate, or
+    supplemental authority letters. No party appears to be planning activity on this
+    specific docket.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Case is procedurally at the Fifth Circuit now. All action moves there.
+    SCOTUS A-docket has no pending briefing, no scheduled oral argument, no motion
+    awaiting decision.
+  logit: -0.7
+  confidence: 0.85
+  effective_logit: -0.595
+- description: High-profile case with 40+ amici and many parties slightly increases
+    probability of some minor administrative filing (late amicus processing, counsel
+    withdrawal, supplemental letter). Low threshold - ANY entry counts.
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: 13-day window (May 18-30) is a reasonably long period, giving more
+    opportunity for something to happen vs a shorter window.
+  logit: 0.2
+  confidence: 0.4
+  effective_logit: 0.08000000000000002
+tentative_estimate:
+  logit: -1.6
+  probability: 0.17
+anchor: 'Base rate from 4 comparable SCOTUS emergency stay A-dockets: 0/4 had post-stay
+  entries within ~1 month. Bayesian Beta(1,5) mean = 17%, median = 13%.'
+assessment: 'This question asks whether ANY new entry will appear on SCOTUS docket
+  25A1207 between May 18-30, 2026. The stay was granted May 14, and the docket has
+  been dormant since.
+
+
+  The empirical evidence is quite clear: A-dockets go dormant after stay grants. I
+  examined 4 comparable cases (22A902 mifepristone 2023, 24A910 Dept of Ed, 24A966
+  NLRB, 23A470 Idaho EMTALA) and found ZERO had any entries within the first month
+  after the stay was granted. The most informative comparable is 22A902, which is
+  literally the prior iteration of this same mifepristone controversy - it had zero
+  post-stay entries despite similar high-profile nature and many amici.
+
+
+  The case is now procedurally at the Fifth Circuit. All substantive action moves
+  there. There''s no pending briefing, no scheduled hearing, no motion awaiting decision
+  at SCOTUS. The only things that could create a qualifying entry are:
+
+  1. A party filing a motion to vacate/modify the stay (unlikely without changed circumstances)
+
+  2. A supplemental authority letter (rare; requires relevant new legal development)
+
+  3. Late-processed amicus filing (unlikely - all were processed May 4-8)
+
+  4. Counsel withdrawal/substitution (possible with many attorneys but would typically
+  go in counsel section, not Proceedings and Orders)
+
+  5. Some administrative or clerical entry
+
+
+  The resolution criteria specify only entries in the ''Proceedings and Orders'' table
+  count - not counsel section changes. This narrows the qualifying events further.
+
+
+  Against the NO case: the question was published today, suggesting the question author
+  may have reason to think something could happen. The case is exceptionally politically
+  charged. With many parties and counsel, minor filings are not impossible. But none
+  of these rise above mild evidence.
+
+
+  My estimate of ~17% YES reflects the Bayesian uncertainty from a small sample (0/4)
+  plus a slight upward adjustment for the many parties and political stakes, offset
+  by the strong signal from the most direct comparable.'
+calibration_notes: 'Anchor is 13-17% from Bayesian base rate (0/4 comparables). My
+  tentative estimate of 17% sits at the upper end, reflecting the case''s exceptional
+  profile. Hedging check: 17% is not near 50%, so no hedging concern. This is a clear
+  lean toward NO based on strong empirical evidence.'
+key_uncertainties: '1. Small sample of comparables (only 4 cases examined) - if the
+  true base rate is higher than 0/4 suggests, the probability could be 25-30%.
+
+  2. Whether any party is planning an unexpected filing that wouldn''t show up in
+  news searches.
+
+  3. Whether the political dynamics of this case create unprecedented SCOTUS docket
+  activity.
+
+  4. Whether the SCOTUS clerk processes any late or corrective entry in this window.'
+tool_audit: 'Useful: fetch_url (directly read the SCOTUS docket and 4 comparable dockets
+  - critical for this question), web_search (found relevant news coverage and comparable
+  cases), research() (good background on SCOTUS A-docket patterns and case details).
+
+
+  Empty but informative: web search for pending filings/motions returned nothing,
+  which is itself evidence for NO.
+
+
+  No failures encountered.'
+update_triggers: '- News of any party announcing plans to file a motion at SCOTUS
+
+  - Louisiana filing a motion to vacate or modify the stay
+
+  - A major legal or political development related to mifepristone (Congressional
+  action, FDA action)
+
+  - Any entry appearing on the companion docket 25A1208 (would suggest similar activity
+  on 25A1207)'
+process_reflection: This question was well-suited to the tools available. Direct docket
+  fetching was the key capability - being able to read the actual SCOTUS docket pages
+  and comparable cases provided the core evidence. The research() tool gave good background
+  on A-docket patterns. The main limitation was the small number of comparables I
+  could examine - I checked 4-5 cases but ideally would have checked 15-20 to get
+  a more robust base rate. A specialized SCOTUS docket search tool or a legal research
+  database (Westlaw, PACER) would have helped identify more comparables systematically.
+computed:
+  factor_count: 6
+  factor_sum: -2.585
+  tentative_logit: -1.6
+  logit_gap: 0.9849999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Base rate from comparable SCOTUS A-dockets: 0 out of 4 comparable
+      cases had ANY post-stay-grant entries within first month (22A902, 24A910, 24A966,
+      23A470). Bayesian estimate with uninformative prior gives ~13-17% mean.'
+    logit: -1.5
+    confidence: 0.8
+    effective_logit: -1.2000000000000002
+  - description: 'Direct comparable: 22A902 (prior mifepristone stay, April 2023)
+      had ZERO post-stay entries despite similar profile (high-profile, many amici,
+      politically charged). This is the most informative single datapoint.'
+    logit: -0.8
+    confidence: 0.9
+    effective_logit: -0.7200000000000001
+  - description: No news or indications of any pending filings, motions to vacate,
+      or supplemental authority letters. No party appears to be planning activity
+      on this specific docket.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Case is procedurally at the Fifth Circuit now. All action moves there.
+      SCOTUS A-docket has no pending briefing, no scheduled oral argument, no motion
+      awaiting decision.
+    logit: -0.7
+    confidence: 0.85
+    effective_logit: -0.595
+  - description: High-profile case with 40+ amici and many parties slightly increases
+      probability of some minor administrative filing (late amicus processing, counsel
+      withdrawal, supplemental letter). Low threshold - ANY entry counts.
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: 13-day window (May 18-30) is a reasonably long period, giving more
+      opportunity for something to happen vs a shorter window.
+    logit: 0.2
+    confidence: 0.4
+    effective_logit: 0.08000000000000002
+  dominant_factor: 'Base rate from comparable SCOTUS A-dockets: 0 out of 4 comparable
+    cases had ANY post-stay-grant entries within first month (22A902, 24A910, 24A966,
+    23A470). Bayesian estimate with uninformative prior gives ~13-17% mean.'
+  dominant_effective_logit: -1.2000000000000002
+  factor_implied_probability: 0.07011005622141818
+  tentative_probability: 0.17
+  gap_pp: 9.988994377858184
+  sources:
+  - '[(Metaculus) Will the U.S. Supreme Court docket for Danco Laboratories v. Louisiana
+    (No. 25A1207) show any new docket entry dated between May 18, 2026 and May 30,
+    2026 (inclusive)?](https://www.metaculus.com/questions/43532)'
+  - '[Docket for 25A1207](https://www.supremecourt.gov/docket/docketfiles/html/public/25a1207.html)'
+  - '[Docket for 25A1208](https://www.supremecourt.gov/docket/docketfiles/html/public/25a1208.html)'
+  - '[Docket for 22A902](https://www.supremecourt.gov/docket/docketfiles/html/public/22a902.html)'
+  - '[Docket for 23A435](https://www.supremecourt.gov/docket/docketfiles/html/public/23a435.html)'
+  - '[Docket for 24A910](https://www.supremecourt.gov/docket/docketfiles/html/public/24a910.html)'
+  - '[Docket for 25A312](https://www.supremecourt.gov/docket/docketfiles/html/public/25a312.html)'
+  - '[Docket for 23A470](https://www.supremecourt.gov/docket/docketfiles/html/public/23a470.html)'
+  - '[Docket for 24A966](https://www.supremecourt.gov/docket/docketfiles/html/public/24a966.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43532
+- **Question ID**: 43529
+- **Session Duration**: 1009.5s (16.8 min)
+- **Cost**: $13.1588 total (orchestrator $3.1978 + sub-agents $9.9610)
+- **Tokens**: 12,833 total (37 in, 12,796 out)
+  - Cache: 539,773 read, 76,155 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43532_20260518_063832/20260518-063832.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2694 |
+| execute_code | 1 | 0 | 1477ms | — |
+| fetch_url | 8 | 0 | 13524ms | — |
+| get_metaculus_questions | 1 | 0 | 266ms | — |
+| premortem | 1 | 0 | 100241ms | $2.0210 |
+| reflection | 1 | 0 | 497ms | — |
+| research | 1 | 0 | 385896ms | $7.4049 |
+| web_search | 5 | 0 | 17481ms | $0.2658 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the U.S. Supreme Court docket for Danco Laboratories v. Lou...
+- [Docket for 25A1207](https://www.supremecourt.gov/docket/docketfiles/html/pub...
+- [Docket for 25A1208](https://www.supremecourt.gov/docket/docketfiles/html/pub...
+- [Docket for 22A902](https://www.supremecourt.gov/docket/docketfiles/html/publ...
+- [Docket for 23A435](https://www.supremecourt.gov/docket/docketfiles/html/publ...
+- [Docket for 24A910](https://www.supremecourt.gov/docket/docketfiles/html/publ...
+- [Docket for 25A312](https://www.supremecourt.gov/docket/docketfiles/html/publ...
+- [Docket for 23A470](https://www.supremecourt.gov/docket/docketfiles/html/publ...
+- [Docket for 24A966](https://www.supremecourt.gov/docket/docketfiles/html/publ...
