@@ -1,0 +1,201 @@
+---
+timestamp: 2026-05-18 03:30:20 UTC
+question_type: numeric
+factors:
+- description: Recent regime (Mar-May 2026) averages ~393 kb/d with std ~123 kb/d,
+    establishing the baseline for current import levels
+  supports:
+    center: 393.0
+    low: 270.0
+    high: 520.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Upward trend in monthly averages: Mar ~350, Apr ~385, suggesting gradual
+    increase as more licenses take effect'
+  supports:
+    center: 430.0
+    low: 380.0
+    high: 500.0
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Mean reversion tendency: after high weeks (549->194, 499->310), the
+    next week tends to drop significantly. Last data point was 588 (the highest ever)'
+  supports:
+    center: 350.0
+    low: 200.0
+    high: 450.0
+  logit: -0.5
+  confidence: 0.5
+  conditional: If the week ending May 15 was low (absorbed the reversion), May 22
+    may be independent
+  effective_logit: -0.25
+- description: Very high week-to-week volatility (std of changes ~175 kb/d) driven
+    by lumpy VLCC/Aframax tanker arrivals
+  supports:
+    center: 400.0
+    low: 200.0
+    high: 600.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Negative lag-1 autocorrelation (-0.178) suggests mild mean reversion,
+    but forecast is 2 weeks ahead from last observation, diluting this effect
+  supports:
+    center: 390.0
+    low: 300.0
+    high: 500.0
+  logit: -0.3
+  confidence: 0.4
+  effective_logit: -0.12
+- description: Favorable licensing environment (GL 46-50A) and 1.23M bpd total Venezuelan
+    exports provide structural support for sustained US imports around 300-500 kb/d
+  supports:
+    center: 420.0
+    low: 300.0
+    high: 550.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+tentative_estimate:
+  center: 421.0
+  low: 258.0
+  high: 577.0
+anchor: Recent regime (Mar-May 2026) mean of ~393 kb/d with empirical standard deviation
+  of ~123 kb/d
+assessment: 'This is a highly volatile weekly time series driven by lumpy tanker arrivals.
+  The recent regime (post-licensing ramp-up from March 2026) shows imports averaging
+  ~393 kb/d with extreme week-to-week swings of 100-350 kb/d. The last observation
+  (588 kb/d for week ending May 8) was the highest ever recorded. While there''s a
+  mild negative autocorrelation suggesting mean reversion after extreme weeks, the
+  forecast is for a week 2 weeks later, so the reversion effect is diluted. I used
+  a mixture model with three scenarios: mean reversion (40%, center 370), typical
+  week (40%, center 400), and continued high (20%, center 480). The resulting distribution
+  has median 421 and P10-P90 range of 258-577, which aligns well with the observed
+  range of 194-588 in the recent regime.'
+calibration_notes: The P5-P95 range (212-620) captures all observed values in the
+  recent regime (194-588), with the P1 at 127 allowing for disruption scenarios. The
+  distribution width (P10-P90 span of ~319 kb/d) is consistent with observed volatility.
+  The center at 421 is slightly above the regime mean of 393, reflecting the mild
+  upward trend in monthly averages.
+key_uncertainties: 1. No data for week ending May 15 (released May 20, after question
+  close) - this intermediate week is unknown. 2. Tanker scheduling is the primary
+  driver and is effectively unpredictable. 3. Whether the 588 outlier represents a
+  new higher level or a one-time spike.
+tool_audit: research() successfully retrieved comprehensive EIA weekly data back to
+  January 2026 and contextual information about Venezuelan exports. Monte Carlo simulation
+  in execute_code produced well-calibrated distributions. No tool failures.
+process_reflection: The research sub-agent was very effective at gathering the full
+  historical weekly series and contextual background. The Monte Carlo simulation approach
+  worked well for this type of volatile time series. The main limitation is that no
+  tanker-tracking data (Kpler, Vortexa) is available through our tools, which would
+  be the most informative signal for this kind of forecast. The bootstrapping from
+  observed data was a good complement to the parametric approach.
+computed:
+  factor_count: 6
+  factor_sum: 1.6300000000000001
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Recent regime (Mar-May 2026) averages ~393 kb/d with std ~123 kb/d,
+      establishing the baseline for current import levels
+    supports:
+      center: 393.0
+      low: 270.0
+      high: 520.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Upward trend in monthly averages: Mar ~350, Apr ~385, suggesting
+      gradual increase as more licenses take effect'
+    supports:
+      center: 430.0
+      low: 380.0
+      high: 500.0
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Mean reversion tendency: after high weeks (549->194, 499->310),
+      the next week tends to drop significantly. Last data point was 588 (the highest
+      ever)'
+    supports:
+      center: 350.0
+      low: 200.0
+      high: 450.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+    conditional: If the week ending May 15 was low (absorbed the reversion), May 22
+      may be independent
+  - description: Very high week-to-week volatility (std of changes ~175 kb/d) driven
+      by lumpy VLCC/Aframax tanker arrivals
+    supports:
+      center: 400.0
+      low: 200.0
+      high: 600.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Negative lag-1 autocorrelation (-0.178) suggests mild mean reversion,
+      but forecast is 2 weeks ahead from last observation, diluting this effect
+    supports:
+      center: 390.0
+      low: 300.0
+      high: 500.0
+    logit: -0.3
+    confidence: 0.4
+    effective_logit: -0.12
+  - description: Favorable licensing environment (GL 46-50A) and 1.23M bpd total Venezuelan
+      exports provide structural support for sustained US imports around 300-500 kb/d
+    supports:
+      center: 420.0
+      low: 300.0
+      high: 550.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  dominant_factor: Recent regime (Mar-May 2026) averages ~393 kb/d with std ~123 kb/d,
+    establishing the baseline for current import levels
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 396.9831223628692
+    implied_p10: 282.48945147679325
+    implied_p90: 513.5021097046413
+    median_gap: 24.01687763713079
+    median_gap_pct: 10.396347031963469
+    spread_ratio: 1.3808767123287675
+    precision: 0.7577197149643705
+  sources:
+  - '[(Metaculus) What will weekly U.S. crude oil imports from Venezuela be for the
+    week ending May 22, 2026, as reported by EIA (thousand barrels per day)?](https://www.metaculus.com/questions/43531)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43531
+- **Question ID**: 43528
+- **Session Duration**: 1278.1s (21.3 min)
+- **Cost**: $17.1818 total (orchestrator $2.7747 + sub-agents $14.4071)
+- **Tokens**: 9,889 total (29 in, 9,860 out)
+  - Cache: 552,556 read, 64,316 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43531_20260518_031144/20260518-031144.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 112ms | — |
+| get_metaculus_questions | 1 | 0 | 267ms | — |
+| premortem | 1 | 0 | 114613ms | $1.7521 |
+| reflection | 1 | 0 | 14ms | — |
+| research | 1 | 0 | 955915ms | $12.6551 |
+
+### Sources Consulted
+
+- [(Metaculus) What will weekly U.S. crude oil imports from Venezuela be for th...
