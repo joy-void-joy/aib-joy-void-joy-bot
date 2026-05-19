@@ -1,0 +1,305 @@
+---
+timestamp: 2026-05-19 08:57:48 UTC
+question_type: multiple_choice
+factors:
+- description: 'New Datafolha poll confirmed: fieldwork May 20-22, release May 22,
+    explicitly includes Lula vs Flávio second-round scenario. Multiple independent
+    sources confirm this.'
+  supports: Lula leads
+  logit: 0.3
+  confidence: 0.95
+  effective_logit: 0.285
+- description: Dark Horse scandal (Flávio-Vorcaro leaked audio) broke after May 12-13
+    fieldwork. New poll is first to fully capture its impact. Flávio's own allies
+    expect a poll drop but bet on it being 'manageable'.
+  supports: Lula leads
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: AtlasIntel included leaked audio in poll and found no impact on results.
+    This suggests scandal may not move numbers.
+  supports: Tied
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Government programs (Desenrola Fies, end of import tax) launched after
+    May 12-13 fieldwork, providing mild positive for Lula.
+  supports: Lula leads
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: Race has been within margin of error for months across all pollsters.
+    Underlying fundamentals extremely tight at ~45-45.
+  supports: Tied
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Discrete percentage reporting means 'Tied' requires exact equality.
+    With polling noise and any true shift, most outcomes will show one candidate ahead.
+  supports: Lula leads
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: 'Flávio''s resilient base: Even with scandal, his core supporters (anti-Lula,
+    anti-corruption) may not shift. Bolsonarista movement is deeply entrenched.'
+  supports: Flávio Bolsonaro leads
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  probabilities:
+    Lula leads: 0.54
+    Flávio Bolsonaro leads: 0.27
+    Tied: 0.15
+    No qualifying Datafolha poll released: 0.04
+anchor: 'Base rate: 3 recent Datafolha polls show 1 Lula leads, 1 Flávio leads, 1
+  tied. Without scandal, each outcome roughly equally likely (~30-33% each). Scandal
+  shifts toward Lula.'
+assessment: 'The key finding is that a new Datafolha poll is confirmed for release
+  around May 22, 2026 (fieldwork May 20-22). Multiple independent Brazilian media
+  sources report this, and it explicitly includes the Lula vs Flávio second-round
+  scenario. This makes P(no poll) very low (~4%).
+
+
+  For the poll outcome, the central tension is:
+
+  - PRO Lula: Dark Horse scandal is a clear negative for Flávio, his own allies expect
+  a drop, and additional pro-Lula developments (Desenrola Fies, end of import tax)
+
+  - CONTRA: AtlasIntel found no impact from the audio, the Bolsonarista base is resilient,
+  the race has been stuck at ~45-45 for months
+
+  - NEUTRAL: The discrete nature of reported percentages means even a tiny shift breaks
+  the tie, but the shift could go either way with polling noise
+
+
+  My Monte Carlo simulation, modeling scandal impact as uncertain (0-3pp shift toward
+  Lula with high variance), consistently shows Lula leads as the most likely outcome
+  (47-63% across scenarios), with Flávio leads second (20-34%), and Tied third (12-17%).
+
+
+  The weighted estimate of P(Lula leads) = 54% reflects that the scandal is expected
+  to give Lula a mild edge, but there''s substantial uncertainty about whether it
+  actually moves numbers.'
+calibration_notes: My anchor was roughly equal probability across the three poll outcomes
+  (based on the 3 recent Datafolha polls showing one of each). The scandal shifts
+  me toward Lula leads by about 20pp from the baseline. The P(Tied) is constrained
+  by the discrete nature of reported percentages - landing on exact equality requires
+  the reported numbers to be identical, which is less likely than either candidate
+  being ahead. P(No poll) is very low at 4% given confirmed plans, but not zero to
+  account for delays or cancellations.
+key_uncertainties: '1. Whether the Dark Horse scandal actually moves poll numbers
+  (AtlasIntel says no, Flávio''s allies say mild drop)
+
+  2. Whether the planned May 22 release actually happens or gets delayed past May
+  31
+
+  3. Whether polling noise in this specific sample happens to favor Lula or Flávio
+
+  4. Whether the reported Datafolha numbers include the specific Lula vs Flávio second-round
+  scenario (confirmed by multiple sources but could change)'
+tool_audit: research() returned comprehensive data on polling trends and confirmed
+  the existence of the upcoming poll. web_search found critical information about
+  the planned May 22 Datafolha release. fetch_url confirmed details from multiple
+  sources. execute_code ran Monte Carlo simulations with sensitivity analysis. One
+  research sub-agent failed to find Dark Horse scandal details due to tool availability
+  issues, but the other sub-agent and direct searches compensated.
+update_triggers: '- Actual release of the Datafolha poll (resolves question)
+
+  - News that Datafolha cancelled or delayed the May 20-22 fieldwork
+
+  - Major new development in the Dark Horse scandal before May 22
+
+  - Another major Datafolha poll release later in May that supersedes the May 22 one'
+process_reflection: The research tool worked well for this question, returning comprehensive
+  polling data. The web search was critical for discovering the confirmed upcoming
+  poll - this was the key finding that dramatically changes the forecast (from high
+  P(no poll) to very low P(no poll)). The Monte Carlo simulation helped discipline
+  my thinking about discrete outcomes. The main friction was that one research sub-agent
+  couldn't access web search tools, but redundancy across agents and direct tools
+  compensated.
+computed:
+  factor_count: 7
+  factor_sum: 2.245
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'New Datafolha poll confirmed: fieldwork May 20-22, release May 22,
+      explicitly includes Lula vs Flávio second-round scenario. Multiple independent
+      sources confirm this.'
+    supports: Lula leads
+    logit: 0.3
+    confidence: 0.95
+    effective_logit: 0.285
+  - description: Dark Horse scandal (Flávio-Vorcaro leaked audio) broke after May
+      12-13 fieldwork. New poll is first to fully capture its impact. Flávio's own
+      allies expect a poll drop but bet on it being 'manageable'.
+    supports: Lula leads
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: AtlasIntel included leaked audio in poll and found no impact on results.
+      This suggests scandal may not move numbers.
+    supports: Tied
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Government programs (Desenrola Fies, end of import tax) launched
+      after May 12-13 fieldwork, providing mild positive for Lula.
+    supports: Lula leads
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: Race has been within margin of error for months across all pollsters.
+      Underlying fundamentals extremely tight at ~45-45.
+    supports: Tied
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Discrete percentage reporting means 'Tied' requires exact equality.
+      With polling noise and any true shift, most outcomes will show one candidate
+      ahead.
+    supports: Lula leads
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: 'Flávio''s resilient base: Even with scandal, his core supporters
+      (anti-Lula, anti-corruption) may not shift. Bolsonarista movement is deeply
+      entrenched.'
+    supports: Flávio Bolsonaro leads
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: Dark Horse scandal (Flávio-Vorcaro leaked audio) broke after May
+    12-13 fieldwork. New poll is first to fully capture its impact. Flávio's own allies
+    expect a poll drop but bet on it being 'manageable'.
+  dominant_effective_logit: 0.6
+  outcome_breakdown:
+  - outcome: Lula leads
+    factor_count: 4
+    logit_sum: 1.2449999999999999
+    factors:
+    - description: 'New Datafolha poll confirmed: fieldwork May 20-22, release May
+        22, explicitly includes Lula vs Flávio second-round scenario. Multiple independent
+        sources confirm this.'
+      supports: Lula leads
+      logit: 0.3
+      confidence: 0.95
+      effective_logit: 0.285
+    - description: Dark Horse scandal (Flávio-Vorcaro leaked audio) broke after May
+        12-13 fieldwork. New poll is first to fully capture its impact. Flávio's own
+        allies expect a poll drop but bet on it being 'manageable'.
+      supports: Lula leads
+      logit: 1.0
+      confidence: 0.6
+      effective_logit: 0.6
+    - description: Government programs (Desenrola Fies, end of import tax) launched
+        after May 12-13 fieldwork, providing mild positive for Lula.
+      supports: Lula leads
+      logit: 0.3
+      confidence: 0.4
+      effective_logit: 0.12
+    - description: Discrete percentage reporting means 'Tied' requires exact equality.
+        With polling noise and any true shift, most outcomes will show one candidate
+        ahead.
+      supports: Lula leads
+      logit: 0.3
+      confidence: 0.8
+      effective_logit: 0.24
+  - outcome: Tied
+    factor_count: 2
+    logit_sum: 0.75
+    factors:
+    - description: AtlasIntel included leaked audio in poll and found no impact on
+        results. This suggests scandal may not move numbers.
+      supports: Tied
+      logit: 0.8
+      confidence: 0.5
+      effective_logit: 0.4
+    - description: Race has been within margin of error for months across all pollsters.
+        Underlying fundamentals extremely tight at ~45-45.
+      supports: Tied
+      logit: 0.5
+      confidence: 0.7
+      effective_logit: 0.35
+  - outcome: Flávio Bolsonaro leads
+    factor_count: 1
+    logit_sum: 0.25
+    factors:
+    - description: 'Flávio''s resilient base: Even with scandal, his core supporters
+        (anti-Lula, anti-corruption) may not shift. Bolsonarista movement is deeply
+        entrenched.'
+      supports: Flávio Bolsonaro leads
+      logit: 0.5
+      confidence: 0.5
+      effective_logit: 0.25
+  mc_distribution_metrics:
+    implied_probabilities:
+      Lula leads: 0.44106582923058885
+      No qualifying Datafolha poll released: 0.127000895414107
+      Tied: 0.2688608977014891
+      Flávio Bolsonaro leads: 0.16307237765381502
+    tentative_probabilities:
+      Lula leads: 0.54
+      Flávio Bolsonaro leads: 0.27
+      Tied: 0.15
+      No qualifying Datafolha poll released: 0.04
+    per_option_gap_pp:
+      Lula leads: 9.89341707694112
+      No qualifying Datafolha poll released: -8.7000895414107
+      Tied: -11.886089770148908
+      Flávio Bolsonaro leads: 10.692762234618499
+    max_gap_pp: -11.886089770148908
+    max_gap_option: Tied
+  sources:
+  - '[(Metaculus) In the next Datafolha presidential second-round poll (Lula vs. Flávio
+    Bolsonaro) released between May 18, 2026 and May 31, 2026, will Lula lead, trail,
+    or tie Flávio Bolsonaro — or will no such poll be released?](https://www.metaculus.com/questions/43538)'
+  - '[Opinion polling for the 2026 Brazilian presidential election - Wikipedia](https://en.wikipedia.org/wiki/Opinion_polling_for_the_2026_Brazilian_presidential_election)'
+  - '[Brazil Presidential Election Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/brazil-presidential-election)'
+  - '[Datafolha divulga pesquisa de intenções de voto para presidente](https://www.gazetadopovo.com.br/eleicoes/2026/pesquisa-eleitoral-2026/datafolha-presidente-maio-2026/)'
+  - '[Datafolha mede impacto do caso Flávio/Vorcaro em nova pesquisa](https://www.foxelite.com.br/2026/05/datafolha-mede-impacto-do-caso.html)'
+  - '[Datafolha inclui Michelle Bolsonaro em pesquisa presidencial após crise envolvendo
+    Flávio - Imirante.com](https://imirante.com/noticias/brasil/2026/05/18/ipolitica-datafolha-inclui-michelle-bolsonaro-em-pesquisa-presidencial-apos-crise-envolvendo-flavio)'
+  - '[Datafolha avalia impacto de escândalo Vorcaro-Bolsonaro nas eleições de 2026](https://www.ocafezinho.com/2026/05/16/datafolha-avalia-impacto-de-escandalo-vorcaro-bolsonaro-nas-eleicoes-de-2026/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43538
+- **Question ID**: 43535
+- **Session Duration**: 953.7s (15.9 min)
+- **Cost**: $15.9739 total (orchestrator $3.6674 + sub-agents $12.3065)
+- **Tokens**: 15,067 total (30 in, 15,037 out)
+  - Cache: 691,393 read, 80,110 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43538_20260519_084440/20260519-084440.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1106 |
+| execute_code | 3 | 0 | 1347ms | — |
+| fetch_url | 4 | 0 | 13010ms | — |
+| get_metaculus_questions | 1 | 0 | 296ms | — |
+| polymarket_price | 1 | 0 | 681ms | — |
+| premortem | 1 | 0 | 128201ms | $2.2064 |
+| reflection | 1 | 0 | 19ms | — |
+| research | 1 | 0 | 412651ms | $9.8418 |
+| web_search | 4 | 0 | 17236ms | $0.1477 |
+| wikipedia | 1 | 0 | 193ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) In the next Datafolha presidential second-round poll (Lula vs. F...
+- [Opinion polling for the 2026 Brazilian presidential election - Wikipedia](ht...
+- [Brazil Presidential Election Predictions & Odds 2026 | Polymarket](https://p...
+- [Datafolha divulga pesquisa de intenções de voto para presidente](https://www...
+- [Datafolha mede impacto do caso Flávio/Vorcaro em nova pesquisa](https://www....
+- [Datafolha inclui Michelle Bolsonaro em pesquisa presidencial após crise envo...
+- [Datafolha avalia impacto de escândalo Vorcaro-Bolsonaro nas eleições de 2026...
