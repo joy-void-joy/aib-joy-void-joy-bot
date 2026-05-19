@@ -1,0 +1,172 @@
+---
+timestamp: 2026-05-19 18:04:01 UTC
+question_type: binary
+factors:
+- description: Protocol is paused with $0 volume/fees — TVL flat at $6.2M for 7 weeks.
+    Without relaunch, TVL stays far below $50M.
+  logit: -2.5
+  confidence: 0.95
+  effective_logit: -2.375
+- description: No specific relaunch date announced. 'May or June' is vague. Last update
+    was May 5 with no timeline details. Multiple prerequisites (audits, governance
+    votes) still pending.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: Even if relaunch happens, needs 8x TVL increase ($6.2M to $50M+) in
+    days. Euler took months to recover TVL. Most hacked protocols fade.
+  logit: -1.0
+  confidence: 0.75
+  effective_logit: -0.75
+- description: Tether + partners committed up to $147.5M in recovery funding. $20M
+    market-making facility for day-one liquidity. Could front-load capital if relaunch
+    happens.
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Drift had strong pre-hack fundamentals ($500M+ TVL, $47M/month revenue).
+    Tether backing gives relaunch credibility. Some capital could flow quickly.
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  logit: -3.1
+  probability: 0.043
+anchor: Post-hack DeFi protocol achieving 8x TVL increase within a 2-week window,
+  given paused state and no confirmed relaunch date. Base rate near zero for spontaneous
+  TVL recovery; conditional on relaunch happening, TVL recovery to $50M+ within days
+  has historical precedent below 30%.
+assessment: 'The question essentially requires two things to happen: (1) Drift must
+  relaunch its perpetuals DEX within the May 17-31 window, and (2) TVL must reach
+  $50M after relaunch. Both are individually unlikely within this timeframe.
+
+
+  The protocol is completely paused — $0 in fees, volume, and trading activity for
+  7 weeks. TVL has been flat at $6.2-7.2M. No relaunch date has been announced; only
+  a vague ''May or June'' window. The official updates page shows nothing after May
+  5. Audits by OtterSec and Asymmetric have not been publicly confirmed complete.
+  Multiple governance votes are still needed.
+
+
+  Even conditional on relaunch, reaching $50M TVL is not guaranteed. The Tether funding
+  is structured as a revenue-linked credit facility ($100M), ecosystem grants, and
+  market-maker loans — these don''t all become TVL on day one. The $20M market-making
+  facility plus partner capital might contribute $20-40M, but user deposits would
+  need to make up the difference, and post-hack trust recovery is slow.
+
+
+  P(relaunch by May 31) ≈ 16%, P(TVL > $50M | relaunch) ≈ 22%, combined ≈ 3.6%. Adding
+  edge cases brings total to ~4%.'
+calibration_notes: Status quo strongly favors NO — flat TVL, paused protocol. Anchor
+  is near-zero for spontaneous recovery. The main driver of YES probability is the
+  conditional path through relaunch + rapid capital deployment, which is plausible
+  but requires multiple things to go right in a tight timeframe.
+key_uncertainties: Whether audits are actually near completion (silence could mean
+  working, not stalled). Whether Tether would deposit capital directly as protocol
+  collateral on day one. Whether there's an unannounced relaunch date already set.
+tool_audit: 'DeFiLlama API: Excellent — provided exact daily TVL data confirming flat
+  $6.2M. Web search: Good — found relaunch timeline articles, funding structure details,
+  audit status. fetch_url: Good — extracted specific details from Drift updates and
+  news articles. research() sub-agent: Failed — could not access web tools, returned
+  no useful data.'
+update_triggers: Announcement of audit completion, specific relaunch date, governance
+  vote passage, sudden TVL spike on DeFiLlama, any Drift team communication about
+  imminent relaunch.
+process_reflection: The research() sub-agent completely failed for this question —
+  it couldn't access any web tools. Direct web_search and fetch_url were much more
+  useful. The DeFiLlama API was the single most valuable data source, providing concrete
+  TVL data. The question is well-suited to conditional decomposition (P(relaunch)
+  × P(TVL|relaunch)), which the scaffolding supports well through the reflection factors.
+computed:
+  factor_count: 5
+  factor_sum: -3.67
+  tentative_logit: -3.1
+  logit_gap: 0.5699999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Protocol is paused with $0 volume/fees — TVL flat at $6.2M for 7
+      weeks. Without relaunch, TVL stays far below $50M.
+    logit: -2.5
+    confidence: 0.95
+    effective_logit: -2.375
+  - description: No specific relaunch date announced. 'May or June' is vague. Last
+      update was May 5 with no timeline details. Multiple prerequisites (audits, governance
+      votes) still pending.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: Even if relaunch happens, needs 8x TVL increase ($6.2M to $50M+)
+      in days. Euler took months to recover TVL. Most hacked protocols fade.
+    logit: -1.0
+    confidence: 0.75
+    effective_logit: -0.75
+  - description: Tether + partners committed up to $147.5M in recovery funding. $20M
+      market-making facility for day-one liquidity. Could front-load capital if relaunch
+      happens.
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Drift had strong pre-hack fundamentals ($500M+ TVL, $47M/month revenue).
+      Tether backing gives relaunch credibility. Some capital could flow quickly.
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: Protocol is paused with $0 volume/fees — TVL flat at $6.2M for
+    7 weeks. Without relaunch, TVL stays far below $50M.
+  dominant_effective_logit: -2.375
+  factor_implied_probability: 0.024843544141003693
+  tentative_probability: 0.043
+  gap_pp: 1.8156455858996303
+  sources:
+  - '[(Metaculus) Will Drift Protocol''s TVL on DeFiLlama exceed $50 million on any
+    day between May 17, 2026 and May 31, 2026?](https://www.metaculus.com/questions/43540)'
+  - '[api.llama.fi](https://api.llama.fi/protocol/drift-trade)'
+  - '[Drift''s Comeback: Can a $127.5M Tether Lifeline and a May Relaunch Restore
+    Trust After the $285M Hack?](https://www.ainvest.com/news/drift-comeback-127-5m-tether-lifeline-relaunch-restore-trust-285m-hack-2604/)'
+  - '[Incident Recovery Update – April 16, 2026 | Drift Updates](https://www.drift.trade/updates/incident-recovery-update-april-16-2026-now)'
+  - '[Drift Plans to Relaunch Exchange in May or June 2026](https://intellectia.ai/news/crypto/drift-plans-to-relaunch-exchange-in-may-or-june-2026)'
+  - '[Drift Updates | The Latest from Drift](https://www.drift.trade/updates)'
+  - '[How Solana Exchange Drift Plans to Repay Users After $295 Million Crypto Hack
+    - Decrypt](https://decrypt.co/366897/how-solana-exchange-drift-repay-users-295-million-crypto-hack)'
+  - '[Recovery Plan for Affected Users | Drift Updates](https://www.drift.trade/updates/recovery-plan-for-affected-users)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43540
+- **Question ID**: 43537
+- **Session Duration**: 681.8s (11.4 min)
+- **Cost**: $8.5843 total (orchestrator $3.2534 + sub-agents $5.3309)
+- **Tokens**: 10,141 total (40 in, 10,101 out)
+  - Cache: 698,232 read, 77,220 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43540_20260519_175449/20260519-175449.log`
+
+### Tool Calls
+
+- **Total**: 23 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2436 |
+| execute_code | 2 | 0 | 141ms | — |
+| fetch_url | 7 | 0 | 16175ms | — |
+| get_metaculus_questions | 1 | 0 | 356ms | — |
+| premortem | 1 | 0 | 94403ms | $2.8426 |
+| reflection | 1 | 0 | 115ms | — |
+| research | 1 | 0 | 76302ms | $1.7978 |
+| web_search | 10 | 0 | 18965ms | $0.4470 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Drift Protocol's TVL on DeFiLlama exceed $50 million on any...
+- [api.llama.fi](https://api.llama.fi/protocol/drift-trade)
+- [Drift's Comeback: Can a $127.5M Tether Lifeline and a May Relaunch Restore T...
+- [Incident Recovery Update – April 16, 2026 | Drift Updates](https://www.drift...
+- [Drift Plans to Relaunch Exchange in May or June 2026](https://intellectia.ai...
+- [Drift Updates | The Latest from Drift](https://www.drift.trade/updates)
+- [How Solana Exchange Drift Plans to Repay Users After $295 Million Crypto Hac...
+- [Recovery Plan for Affected Users | Drift Updates](https://www.drift.trade/up...
