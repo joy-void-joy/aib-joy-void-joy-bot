@@ -1,0 +1,142 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question details for post #43542, which asks whether Uganda will report a second laboratory-confirmed Ebola Bundibugyo virus case by May 31, 2026. The resolution window is **May 17–31, 2026**, with primary sources being WHO AFRO outbreak updates and Africa CDC newsroom. The fine print specifies: \"If the reporting source provides a single cumulative confirmed-case count for Uganda, a value of 2 or more resolves YES.\"\n\nI launched two parallel research queries: one specifically about Uganda's second case and one about the broader DRC outbreak. The first research query was highly productive, returning a comprehensive synthesis citing WHO DON602, BBC, Reuters, CNN, Wikipedia, and other sources. The second research query failed to retrieve live web data but provided historical context.\n\nI then conducted a web search for \"Uganda second Ebola Bundibugyo confirmed case May 16 2026\" and fetched the WHO DON602 report directly, as well as the CDC HAN-00530 and the Wikipedia article on the 2026 Ituri Province Ebola epidemic.\n\n## Key Evidence\n\n- **WHO DON602 (May 16, 2026)**: The primary resolution source explicitly reports **2 confirmed cases** of Ebola Bundibugyo in Uganda — the original imported case (elderly man, admitted May 11, died May 14, confirmed May 15) and a **second imported case confirmed May 16 in Kampala**, an individual returning from DRC, epidemiologically unlinked to the first case.\n- **Fine print alignment**: The resolution criteria state \"a cumulative confirmed-case count for Uganda of 2 or more resolves YES\" — WHO DON602 clearly satisfies this.\n- **Wikipedia**: The article on the \"2026 Ituri Province Ebola epidemic\" corroborates imported cases (plural) in Kampala, Uganda.\n- **CDC HAN-00530 (May 19, 2026)**: This advisory only mentions **one patient** in its Uganda description (\"health authorities confirmed Bundibugyo virus disease in a patient\"), creating a minor discrepancy with WHO DON602. However, this appears to be simplification rather than contradiction.\n- **Question description contradiction**: The question background states \"no further laboratory-confirmed Ebola cases have been reported in Uganda\" as of May 15–16, yet the WHO DON602 from May 16 documents a second case. This suggests the question author was working from information that predated the second confirmation.\n- **Timing**: The second case was confirmed May 16, one day before the resolution window starts (May 17). The WHO DON602 report documenting both cases remains publicly available and referenced throughout the May 17–31 window.\n\n## Conclusion\n\nI concluded with **95% probability YES**. The WHO DON602 — a primary resolution source — unambiguously documents 2 confirmed cases in Uganda. The fine print explicitly covers cumulative counts of 2+. I pulled back from a higher estimate (~99%) to account for genuine uncertainty about whether the question author intended the question to be forward-looking (given the contradiction in the description) and the possibility that Metaculus resolution could be non-standard if the author disputes. The CDC HAN's mention of only one case adds minor uncertainty, but appears to be a simplification rather than a denial of the second case.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Could not directly fetch WHO AFRO regional outbreak updates (the actual primary resolution source specified in the criteria) — relied on WHO HQ DON602 instead."
+    ],
+    "subtle_bugs": [
+      "The second research query returned no live data about the DRC outbreak, falling back to cached data from early April 2026. This was not flagged as an error but provided no useful current information.",
+      "The research agent's synthesis attributed second-case confirmation to Reuters/CNN/BBC but these claims were not individually verified through direct fetches — the corroboration claim is partially based on the research agent's synthesis rather than primary source verification."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Verified whether the qualifying event (second confirmed case) had already been reported by primary resolution sources, then assessed probability of clean resolution.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the question author's apparent unawareness of the second case (contradicted in the question description) could lead to non-standard resolution interpretation."
+  },
+  "risk_flags": [
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The CDC HAN-00530 from May 19 — a post-resolution-window-start source — only mentions one patient in its Uganda description. The agent noted this but dismissed it as 'simplification' without strong justification. If the CDC, with access to the same WHO data, chose to describe only one case, this could indicate the second case was less firmly established than WHO DON602 suggests.",
+      "severity": "minor"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The resolution criteria specify WHO AFRO outbreak updates and Africa CDC newsroom as 'primary resolution sources.' The agent primarily verified against WHO HQ DON602, not WHO AFRO specifically. While DON602 is a WHO document, the criteria point to a specific sub-domain (afro.who.int), and the regional vs. HQ reporting could differ on the second case count.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The question was published May 19, after the second case was allegedly confirmed May 16, yet the question description says 'no further laboratory-confirmed Ebola cases have been reported in Uganda.' If the question author — who presumably checked these sources before publishing — was unaware of the second case, the information landscape may be more ambiguous than the agent assumes. 95% may be slightly high given this genuine discrepancy.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "92%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Identified the critical finding early — the second confirmed case was already documented in WHO DON602 before the resolution window opened — and structured the entire analysis around this pivotal fact.",
+    "Carefully noted the contradiction between the question description ('no further confirmed cases') and the WHO DON602 report, and appropriately treated this as a source of resolution uncertainty rather than ignoring it.",
+    "Fetched the WHO DON602 and CDC HAN directly to verify the research agent's synthesis rather than relying solely on the synthesized report.",
+    "The premortem counterargument was genuinely strong: the question wouldn't have been published if the author knew it was already resolved, and the CDC HAN only mentions one case. This shows good adversarial reasoning.",
+    "Appropriately pulled back from the factor-implied ~99.4% to 95% to account for the genuine ambiguity in question intent and the description contradiction."
+  ],
+  "weaknesses": [
+    "Did not directly fetch or verify WHO AFRO outbreak updates (afro.who.int), which are explicitly named as a primary resolution source. The agent relied on WHO HQ DON602 instead, which is related but not identical.",
+    "Did not check Africa CDC newsroom (africacdc.org), the other primary resolution source, to verify whether it reports 1 or 2 confirmed Uganda cases.",
+    "Did not check prediction markets (Polymarket, Metaculus community prediction was null) for additional calibration signal.",
+    "The research agent's claims about Reuters/CNN/BBC confirming the second case were not individually verified — direct URL fetches were only done for WHO DON602, CDC HAN, and Wikipedia.",
+    "Did not investigate whether the WHO DON602 might have been updated or revised after initial publication, which was identified as a relevant scenario in the premortem but not actually checked."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Always fetch the specific primary resolution sources named in the criteria (WHO AFRO at afro.who.int, Africa CDC newsroom) rather than relying on related but non-identical sources.",
+    "When a question description contradicts the resolution source, attempt to fetch an archived/cached version of the resolution source to check if it was revised after initial publication.",
+    "When the research agent synthesizes claims attributed to specific outlets (Reuters, CNN, etc.), verify at least 1-2 of these with direct URL fetches rather than trusting the synthesis entirely.",
+    "Check whether Metaculus community prediction is available or whether any community comments on the question page shed light on the resolution ambiguity."
+  ]
+}
