@@ -1,0 +1,222 @@
+---
+timestamp: 2026-05-20 16:14:09 UTC
+question_type: numeric
+factors:
+- description: 58 confirmed launches through May 20, 2026 (57 F9 + 1 FH) from Wikipedia
+  supports:
+    center: 58.0
+    low: 58.0
+    high: 58.0
+  logit: 3.0
+  confidence: 1.0
+  effective_logit: 3.0
+- description: 5 scheduled Starlink launches May 21-31 on rocketlaunch.org (May 21,
+    23, 25, 27, 31)
+  supports:
+    center: 63.0
+    low: 62.0
+    high: 64.0
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: Globalstar 2-R delayed from May 18/20, TBD - could add 1 more launch
+  supports:
+    center: 64.0
+    low: 63.0
+    high: 64.0
+  logit: 0.5
+  confidence: 0.55
+  effective_logit: 0.275
+- description: Potential unscheduled launches (SpaceX often adds missions with short
+    notice)
+  supports:
+    center: 64.0
+    low: 63.0
+    high: 66.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: May 31 Starlink launch at risk of slipping past deadline
+  supports:
+    center: 63.0
+    low: 62.0
+    high: 63.0
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+- description: Small probability (~2.5%) of fleet grounding due to anomaly, which
+    would reduce remaining launches significantly
+  supports:
+    center: 59.0
+    low: 58.0
+    high: 60.0
+  logit: -0.5
+  confidence: 0.3
+  effective_logit: -0.15
+tentative_estimate:
+  center: 63.0
+  low: 61.0
+  high: 65.0
+anchor: 58 confirmed + 5 scheduled = 63 as central estimate (direct count from Wikipedia
+  + rocketlaunch.org manifest)
+assessment: "This is largely a near-term counting problem. 58 launches are already\
+  \ confirmed through May 20. The remaining uncertainty is purely about how many launches\
+  \ occur in the final 11 days (May 21-31). \n\nFive Starlink missions are publicly\
+  \ scheduled for this window (May 21, 23, 25, 27, 31), plus a delayed Globalstar\
+  \ mission (TBD). The most likely outcome is 4-6 additional launches, yielding a\
+  \ total of 62-64. \n\nMonte Carlo simulation with per-launch Bernoulli probabilities,\
+  \ Globalstar uncertainty, potential unscheduled additions, and a small anomaly/grounding\
+  \ risk produces: median 63, mean 63.3, P10=62, P90=65.\n\nSanity checks:\n- 2026\
+  \ monthly average (Jan-Apr): 13.0. If May matches, total = 65 (at the high end of\
+  \ our distribution, consistent since May has been slightly slower).\n- 2025 through\
+  \ May 20 was 59, 2026 is 58 - very comparable pace.\n- Shotwell's 140-145 guidance\
+  \ implies ~12/month average, consistent with 11-12 in May."
+calibration_notes: Distribution is appropriately tight because most of the uncertainty
+  is already resolved (58/~63 launches have already occurred or are scheduled). Only
+  ~5 launches are uncertain, and most of those have high individual probability. Downside
+  tail from anomaly risk and upside from unscheduled additions.
+key_uncertainties: '1. Will the May 31 Starlink launch happen before midnight UTC?
+  (30% chance of slipping)
+
+  2. Will Globalstar 2-R fly before June 1? (45% chance it doesn''t)
+
+  3. Any unscheduled additions? (Poisson with λ=0.5)
+
+  4. Fleet grounding risk (~2.5%)'
+tool_audit: 'Research tool: Successfully retrieved YTD count of 58 and monthly breakdown.
+  Second research query about schedule had tool issues.
+
+  Web search: Provided SpaceFlight Now and rocketlaunch.org data showing 3-5 scheduled
+  launches.
+
+  Fetch URL: Successfully retrieved rocketlaunch.org schedule (5 launches May 21-31)
+  and SpaceFlight Now (3 confirmed + 1 TBD).
+
+  Wikipedia fetch: Article not found for the 2026 list (different URL format), but
+  main article confirmed 651 total lifetime launches.
+
+  Code execution: Monte Carlo ran successfully.'
+process_reflection: This question is well-suited to the current tooling. The research
+  subagent provided excellent YTD data. The main friction was that the Wikipedia article
+  had a different URL than expected, and one research subagent couldn't access web
+  tools. Direct fetch of rocketlaunch.org filled the gap. The per-launch Bernoulli
+  approach feels right for this type of near-term counting problem where most outcomes
+  are already determined.
+computed:
+  factor_count: 6
+  factor_sum: 4.865
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 58 confirmed launches through May 20, 2026 (57 F9 + 1 FH) from Wikipedia
+    supports:
+      center: 58.0
+      low: 58.0
+      high: 58.0
+    logit: 3.0
+    confidence: 1.0
+    effective_logit: 3.0
+  - description: 5 scheduled Starlink launches May 21-31 on rocketlaunch.org (May
+      21, 23, 25, 27, 31)
+    supports:
+      center: 63.0
+      low: 62.0
+      high: 64.0
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: Globalstar 2-R delayed from May 18/20, TBD - could add 1 more launch
+    supports:
+      center: 64.0
+      low: 63.0
+      high: 64.0
+    logit: 0.5
+    confidence: 0.55
+    effective_logit: 0.275
+  - description: Potential unscheduled launches (SpaceX often adds missions with short
+      notice)
+    supports:
+      center: 64.0
+      low: 63.0
+      high: 66.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: May 31 Starlink launch at risk of slipping past deadline
+    supports:
+      center: 63.0
+      low: 62.0
+      high: 63.0
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  - description: Small probability (~2.5%) of fleet grounding due to anomaly, which
+      would reduce remaining launches significantly
+    supports:
+      center: 59.0
+      low: 58.0
+      high: 60.0
+    logit: -0.5
+    confidence: 0.3
+    effective_logit: -0.15
+  dominant_factor: 58 confirmed launches through May 20, 2026 (57 F9 + 1 FH) from
+    Wikipedia
+  dominant_effective_logit: 3.0
+  distribution_metrics:
+    implied_median: 60.30080572963294
+    implied_p10: 59.8379588182632
+    implied_p90: 60.72157564905998
+    median_gap: 2.699194270367059
+    median_gap_pct: 305.47112462006186
+    spread_ratio: 4.526849037487344
+    precision: 0.06349206349206349
+  sources:
+  - '[(Metaculus) How many Falcon 9 and Falcon Heavy launches will SpaceX conduct
+    between January 1, 2026 and May 31, 2026?](https://www.metaculus.com/questions/43549)'
+  - '[en.wikipedia.org](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_Heavy_launches_(2026))'
+  - '[List of Falcon 9 and Falcon Heavy launches - Wikipedia](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_Heavy_launches)'
+  - '[Launch Schedule](https://spaceflightnow.com/launch-schedule/)'
+  - '[List of spaceflight launches in April–June 2026](https://en.wikipedia.org/wiki/List_of_spaceflight_launches_in_April%E2%80%93June_2026)'
+  - '[Falcon 9 - Wikipedia](https://en.wikipedia.org/wiki/Falcon_9)'
+  - '[Falcon 9 Launch Schedule](https://rocketlaunch.org/launch-schedule/spacex/falcon-9)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43549
+- **Question ID**: 43546
+- **Session Duration**: 685.7s (11.4 min)
+- **Cost**: $22.4064 total (orchestrator $3.0785 + sub-agents $19.3279)
+- **Tokens**: 10,346 total (40 in, 10,306 out)
+  - Cache: 682,133 read, 68,361 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43549_20260520_160521/20260520-160521.log`
+
+### Tool Calls
+
+- **Total**: 30 calls
+- **Errors**: 2 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0958 |
+| execute_code | 5 | 0 | 458ms | — |
+| fetch_url | 6 | 1 ⚠️ | 4933ms | — |
+| get_coherence_links | 1 | 0 | 283ms | — |
+| get_metaculus_questions | 2 | 0 | 976ms | — |
+| premortem | 1 | 0 | 118806ms | $1.6476 |
+| reflection | 1 | 0 | 76ms | — |
+| research | 3 | 0 | 304253ms | $17.3829 |
+| web_search | 5 | 0 | 27472ms | $0.2016 |
+| wikipedia | 6 | 1 ⚠️ | 194ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many Falcon 9 and Falcon Heavy launches will SpaceX conduct ...
+- [en.wikipedia.org](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_...
+- [List of Falcon 9 and Falcon Heavy launches - Wikipedia](https://en.wikipedia...
+- [Launch Schedule](https://spaceflightnow.com/launch-schedule/)
+- [List of spaceflight launches in April–June 2026](https://en.wikipedia.org/wi...
+- [Falcon 9 - Wikipedia](https://en.wikipedia.org/wiki/Falcon_9)
+- [Falcon 9 Launch Schedule](https://rocketlaunch.org/launch-schedule/spacex/fa...
