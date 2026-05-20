@@ -1,0 +1,147 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question (#43551) to understand the resolution criteria precisely: the June 30, 2026 hearing in `U.S. v. Maduro Moros` (case `1:11-cr-00205-AKH`, SDNY) must be moved to a different calendar date or vacated, as reflected on the public docket or credible sources, on or before May 31, 2026. The default is NO if no change is observed.\n\nI then used the research sub-agent tool (`mcp__research__research`) and coherence links tool to gather background on the case. The first research entry had limited utility — it could not access live web sources and only had pre-2025 knowledge (when Maduro was still a fugitive). The second research entry was much more comprehensive, providing a detailed timeline from the January 3, 2026 capture through the May 2026 pretrial phase.\n\nI ran three parallel web searches targeting:\n1. \"Maduro SDNY hearing June 30 2026 rescheduled\"\n2. \"United States v Maduro Moros 1:11-cr-00205 docket May 2026\"\n3. \"Maduro trial SDNY May 2026 latest news\"\n\nThese returned results from Latin Times, CourtListener, Wikipedia, Reuters, AP, NBC, CNN, and others — none indicating any rescheduling of the June 30 hearing.\n\nI then fetched two key URLs directly:\n- **CourtListener docket** (`courtlistener.com/docket/72102079/`): Confirmed the most recent entries are **Entry 309 (May 4, 2026)** — a memo endorsement setting the next conference for June 30 at 12:00 PM and excluding time — and **Entry 308 (May 1, 2026)** — a defense counsel letter. No subsequent filings.\n- **Latin Times article**: Confirmed the hearing timeline — first hearing Jan 5, second hearing rescheduled from mid-March to March 26, third hearing set for June 30.\n\nI also searched Reuters and AP specifically for May 2026 Maduro hearing news and found no indication of rescheduling.\n\n## Key Evidence\n\n- **The June 30 hearing was set on May 4, 2026** — only **16 days** before the forecast date — by mutual agreement via a joint letter from both parties. This is a strong stability signal.\n- **No docket activity since May 4**: The most recent entries are entries 308-309 from May 1-4. No motions, letters, or orders filed since.\n- **Case in quiet pretrial phase**: The OFAC/legal fees dispute (which drove the prior rescheduling) has been resolved. Defense motions to dismiss were withdrawn without prejudice. Time is excluded under the Speedy Trial Act until June 30.\n- **Only ~11 days remain** (May 20-31) for a reschedule to occur before the resolution deadline.\n- **Prior rescheduling occurred**: The mid-March hearing was postponed to March 26, establishing precedent but in a different context (active fees dispute).\n- **Judge Hellerstein is 92 years old** — a tail risk for health-related disruption.\n- **No news of plea negotiations, diplomatic deals, or emergency motions** visible in any source.\n- **Case complexity**: Argentina extradition request, SAMs, fugitive co-defendants, and diplomatic dimensions create more channels for unexpected developments, but none have visible precursors.\n\n## Conclusion\n\nI estimated **13% probability of YES**. The anchor was a base rate of ~15-20% for a recently-set federal hearing being rescheduled within an 11-day window (compared to ~20-30% overall rescheduling rate for federal criminal hearings, reduced by the short window and recent mutual agreement). Seven factors were analyzed — four pushing toward NO (recent mutual agreement, short window, quiet phase, no catalysts) and three pushing toward YES (prior rescheduling precedent, case complexity, judge's age). The factor-implied probability was ~5%, but I adjusted upward to ~13% to account for correlated downward factors and genuine tail risks in this extraordinary case. The internal premortem reviewer's independent estimate was 8-12%, and I calibrated between 15% (initial) and 8-12% (reviewer) to arrive at 13%.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Direct PACER access would have provided authoritative, real-time docket information rather than relying on CourtListener's RECAP mirror which may lag"
+    ],
+    "subtle_bugs": [
+      "The first research sub-agent (coherence links entry) returned only pre-2025 knowledge and explicitly stated it could not access web sources, providing stale information about Maduro being a fugitive. This didn't mislead the agent since the second research entry was current, but it wasted tokens.",
+      "The Latin Times article fetch returned an ambiguous publication date (copyright 2025 but content about events in 2026), though the agent didn't rely on the date."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Docket analysis via CourtListener and multi-source news search to assess probability of hearing rescheduling within an 11-day window.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether undisclosed negotiations, sealed filings, or unexpected events (judicial health, diplomatic developments) could force a schedule change within the narrow 11-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The factor-implied probability from the agent's own reflection tool was ~5%, but the agent adjusted upward to 13%. While the agent acknowledged correlated factors, the 8pp gap between factor-implied and final estimate is large and the justification ('tail risks in extraordinary case') is somewhat hand-wavy. The premortem reviewer independently estimated 8-12%, closer to the factor-implied value.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check PACER directly for the most authoritative, real-time docket information. CourtListener's RECAP archive may lag behind actual filings. A filing made between May 4 and May 20 could exist on PACER but not yet appear on CourtListener.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The agent cited a base rate of '20-30% for federal criminal hearings getting rescheduled' without sourcing this figure. This appears to be an estimated/assumed rate rather than a data-backed one. The adjusted '15-20%' for the specific scenario is also unsourced.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "10%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Directly fetched the CourtListener docket to confirm the most recent entries (May 1-4, 2026) and verify the June 30 hearing remains on calendar — this was the most probative data point and the agent correctly identified it as such",
+    "Ran four distinct web searches with varied query formulations to comprehensively check for rescheduling news, including site-restricted searches on Reuters and AP",
+    "Properly understood and engaged with the resolution criteria, including the fine print about time-only changes not counting and the default NO assumption",
+    "Self-aware about correlated factors: explicitly noted that factors 1, 3, and 7 draw on the same underlying evidence (quiet docket since May 4)",
+    "Strong premortem counterargument that named specific mechanisms (Ker-Frisbie motions, sealed entries, diplomatic deals, judge health) with concrete probability-shifting thresholds",
+    "Calibrated downward from 15% to 13% after the internal reviewer estimated 8-12%, showing responsive calibration"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi, Manifold) for any related markets on the Maduro case or hearing schedule",
+    "The base rate of '20-30% for federal criminal hearing rescheduling' was asserted without citation — this is a key anchor point that should be grounded in data",
+    "Did not attempt to access PACER directly, which would provide the authoritative real-time docket; relied on CourtListener's RECAP mirror which can lag",
+    "One of the two research sub-agent calls returned only pre-2025 information (Maduro still a fugitive), wasting tokens without adding value — the agent could have detected this earlier and avoided relying on it",
+    "Did not search for any news about Judge Hellerstein's recent health or schedule, despite identifying his age as a specific risk factor"
+  ],
+  "pipeline": {
+    "issues": [
+      "One of the two research sub-agent results (coherence links) returned only pre-2025 knowledge despite the query being about May 2026 events, wasting tokens on stale information",
+      "The Latin Times fetch_url returned ambiguous metadata (copyright 2025 for a 2026 article), though this didn't affect the forecast"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets for related contracts on high-profile cases — even if no exact match exists, adjacent markets can inform tail risk calibration",
+    "When citing base rates for hearing rescheduling, either find empirical data (e.g., from Federal Judicial Center statistics) or explicitly flag the rate as an assumption",
+    "Search specifically for Judge Hellerstein's recent court appearances or health when identifying age as a risk factor — this would either confirm or reduce the tail risk estimate",
+    "When using the research sub-agent and one result returns stale data, note this explicitly and consider whether a follow-up search is needed to fill the gap",
+    "Consider that a PACER check (if available) would be more authoritative than CourtListener for confirming the absence of recent filings"
+  ]
+}
