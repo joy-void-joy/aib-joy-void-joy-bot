@@ -1,0 +1,236 @@
+---
+timestamp: 2026-05-20 02:07:58 UTC
+question_type: numeric
+factors:
+- description: Current confirmed count of 26 IPOs through May 19 on SA listing page
+    establishes a hard floor
+  supports:
+    center: 40.0
+    low: 34.0
+    high: 50.0
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: 7 known upcoming IPOs from IPOScoop for May 20-21 (LCLN, BWGC, EMI,
+    OPTH, RIKU, CNXU, DRIL), ~80% likely to appear on SA
+  supports:
+    center: 32.0
+    low: 30.0
+    high: 34.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Historical daily rate of ~2.0 IPOs/trading day extrapolated over 7
+    remaining trading days suggests ~14 more
+  supports:
+    center: 40.0
+    low: 35.0
+    high: 47.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Memorial Day (May 25) reduces activity in last week - some slowdown
+    expected
+  supports:
+    center: 38.0
+    low: 33.0
+    high: 42.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: RC multiplier of 2-3x applied to RC's projected ~20-22 full-month count
+    suggests SA could reach 40-55
+  supports:
+    center: 45.0
+    low: 40.0
+    high: 55.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Possible stats page methodology captures additional listings not on
+    listing page (SPACs, micro-listings)
+  supports:
+    center: 44.0
+    low: 40.0
+    high: 55.0
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+tentative_estimate:
+  center: 40.0
+  low: 34.0
+  high: 49.0
+anchor: 'Historical May IPO counts on SA statistics page: May 2025 = 33, May 2024
+  = 14. 2026 has been more active than 2024 but variable. Current count of 26 through
+  65% of trading days points to ~40.'
+assessment: 'May 2026 already has 26 confirmed IPOs through May 19 on the Stock Analysis
+  listing page, with 7 remaining trading days. At the observed daily rate of ~2.0
+  IPOs/day, linear projection gives ~40. IPOScoop shows 7 specific IPOs scheduled
+  for May 20-21, suggesting the near-term pipeline is active. The Memorial Day holiday
+  (May 25) will reduce activity in the final week.
+
+
+  Key uncertainty: whether the SA statistics page will show a higher count than the
+  listing page due to broader methodology. Evidence suggests the listing page is accurate
+  for 2026 (2026 monthly figures described as "in line" with historical stats page
+  ranges). The RC multiplier (2-3x) at current observed ratio of ~2.0x supports a
+  full-month total of 40-44.
+
+
+  Multiple estimation methods converge:
+
+  - Linear projection: 40
+
+  - MC Model (conservative): median 40
+
+  - MC Model (with stats bonus): median 43
+
+  - RC-based (2.0x): 40-44
+
+  - RC-based (2.5x): 50-55
+
+
+  Central estimate: ~40-41, with right skew from the possibility of higher stats page
+  counts.'
+calibration_notes: The floor is effectively 26 (current confirmed count), though practically
+  it will be 30+ given known upcoming IPOs. The ceiling is plausibly 55-60 if the
+  stats page methodology captures substantially more listings. The P10-P90 range of
+  34-49 spans ~15 units, which is reasonable given we're 65% through the month with
+  7 trading days of uncertainty.
+key_uncertainties: 1. Whether SA statistics page count matches listing page count
+  for 2026 (biggest source of upside uncertainty). 2. IPO rate in the Memorial Day
+  week (May 26-29). 3. Whether additional IPOs get retroactively added for earlier
+  May dates.
+tool_audit: 'fetch_url: Successfully retrieved data from stockanalysis.com/ipos/ (26
+  May entries), /ipos/2026/ (monthly breakdown), /ipos/2025/ and /ipos/2024/ (historical
+  data, but likely undercount due to pagination). Statistics page fetch didn''t show
+  2026 monthly breakdown. IPOScoop provided useful upcoming IPO calendar data. web_search
+  returned relevant results. Code execution for Monte Carlo worked well.'
+process_reflection: 'The web scraping approach had a key limitation: the LLM-based
+  extraction from paginated listing pages likely undercounted historical years (2025
+  showed 210 vs 347 actual). This created a confusing discrepancy that required significant
+  analytical effort to resolve. For numeric IPO counting questions, having a direct
+  API or structured data source would be much more efficient. The Monte Carlo simulation
+  approach worked well once parameters were established. The multiple-model comparison
+  was helpful for triangulating.'
+computed:
+  factor_count: 6
+  factor_sum: 3.95
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current confirmed count of 26 IPOs through May 19 on SA listing page
+      establishes a hard floor
+    supports:
+      center: 40.0
+      low: 34.0
+      high: 50.0
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: 7 known upcoming IPOs from IPOScoop for May 20-21 (LCLN, BWGC, EMI,
+      OPTH, RIKU, CNXU, DRIL), ~80% likely to appear on SA
+    supports:
+      center: 32.0
+      low: 30.0
+      high: 34.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Historical daily rate of ~2.0 IPOs/trading day extrapolated over
+      7 remaining trading days suggests ~14 more
+    supports:
+      center: 40.0
+      low: 35.0
+      high: 47.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Memorial Day (May 25) reduces activity in last week - some slowdown
+      expected
+    supports:
+      center: 38.0
+      low: 33.0
+      high: 42.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: RC multiplier of 2-3x applied to RC's projected ~20-22 full-month
+      count suggests SA could reach 40-55
+    supports:
+      center: 45.0
+      low: 40.0
+      high: 55.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Possible stats page methodology captures additional listings not
+      on listing page (SPACs, micro-listings)
+    supports:
+      center: 44.0
+      low: 40.0
+      high: 55.0
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  dominant_factor: Current confirmed count of 26 IPOs through May 19 on SA listing
+    page establishes a hard floor
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 38.20879120879121
+    implied_p10: 33.62637362637363
+    implied_p90: 45.28571428571429
+    median_gap: 1.7912087912087884
+    median_gap_pct: 15.36286522148913
+    spread_ratio: 1.2865221489161163
+    precision: 0.375
+  sources:
+  - '[(Metaculus) How many companies will be listed as May 2026 IPOs on Stock Analysis''s
+    IPO Statistics page?](https://www.metaculus.com/questions/43543)'
+  - '[IPO Statistics and Charts](https://stockanalysis.com/ipos/statistics/)'
+  - '[200 Most Recent IPOs](https://stockanalysis.com/ipos/)'
+  - '[All 2025 IPOs - A Complete List](https://stockanalysis.com/ipos/2025/)'
+  - '[All 2026 IPOs (so far](https://stockanalysis.com/ipos/2026/)'
+  - '[All 2024 IPOs - A Complete List](https://stockanalysis.com/ipos/2024/)'
+  - '[IPO Calendar - Upcoming IPOs](https://stockanalysis.com/ipos/calendar/)'
+  - '[IPO Calendar](https://www.iposcoop.com/ipo-calendar/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43543
+- **Question ID**: 43540
+- **Session Duration**: 846.4s (14.1 min)
+- **Cost**: $7.3369 total (orchestrator $4.5920 + sub-agents $2.7449)
+- **Tokens**: 24,694 total (44 in, 24,650 out)
+  - Cache: 903,852 read, 73,961 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43543_20260520_015635/20260520-015635.log`
+
+### Tool Calls
+
+- **Total**: 21 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.3346 |
+| execute_code | 8 | 0 | 1020ms | — |
+| fetch_url | 7 | 0 | 13089ms | — |
+| get_coherence_links | 1 | 0 | 290ms | — |
+| get_metaculus_questions | 1 | 0 | 362ms | — |
+| premortem | 1 | 0 | 97650ms | $2.3142 |
+| reflection | 1 | 0 | 9ms | — |
+| web_search | 2 | 0 | 51233ms | $0.0961 |
+
+### Sources Consulted
+
+- [(Metaculus) How many companies will be listed as May 2026 IPOs on Stock Anal...
+- [IPO Statistics and Charts](https://stockanalysis.com/ipos/statistics/)
+- [200 Most Recent IPOs](https://stockanalysis.com/ipos/)
+- [All 2025 IPOs - A Complete List](https://stockanalysis.com/ipos/2025/)
+- [All 2026 IPOs (so far](https://stockanalysis.com/ipos/2026/)
+- [All 2024 IPOs - A Complete List](https://stockanalysis.com/ipos/2024/)
+- [IPO Calendar - Upcoming IPOs](https://stockanalysis.com/ipos/calendar/)
+- [IPO Calendar](https://www.iposcoop.com/ipo-calendar/)
