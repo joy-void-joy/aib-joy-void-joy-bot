@@ -1,0 +1,185 @@
+---
+timestamp: 2026-05-20 10:32:08 UTC
+question_type: binary
+factors:
+- description: House and Senate conference offers bracket the $50M threshold - House
+    at $25M, Senate at $75M. The $50M midpoint is the natural focal point in split-the-difference
+    negotiations.
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Governor DeSantis recommended $115M for Florida Forever, providing
+    political cover and upward pressure on the compromise toward the Senate's position.
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'House showed strong resistance to Florida Forever: started at $0,
+    only moved to $25M in conference. House typically has more leverage in FL budget
+    negotiations.'
+  logit: -0.6
+  confidence: 0.7
+  effective_logit: -0.42
+- description: Historical recent funding was ~$100M/year (FY22-23, FY23-24, FY24-25),
+    suggesting $50M+ is within normal range and not an unreasonable ask.
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Rural & Family Lands trade dynamic: House wants $75M, Senate wants
+    $0. A package deal trading between these programs could push Florida Forever above
+    $50M.'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: Risk that budget doesn't pass by May 31 at all, which would resolve
+    NO. Special session has 9 days left, no conference report filed yet, and significant
+    gaps remain across multiple areas.
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Senate originally only proposed $35-50M in their passed bill, suggesting
+    their conference offer of $75M is inflated. True Senate priority may be closer
+    to $50M.
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+tentative_estimate:
+  logit: -0.2
+  probability: 0.45
+anchor: 'Base rate for legislative conference compromise landing above midpoint of
+  negotiating range: ~50% (by definition, the midpoint is where compromises center).
+  Adjusted down slightly for House resistance and budget passage risk.'
+assessment: 'This is a threshold question about whether a budget line item will meet
+  a $50M threshold. The key negotiating positions are House $25M vs Senate $75M, making
+  $50M the exact midpoint. The Governor''s $115M recommendation provides some upward
+  pressure, but the House has shown strong resistance (starting at $0). The question
+  reduces to: will the conference compromise land at or above the midpoint of the
+  negotiating range? This is genuinely close to a coin flip, with slight lean toward
+  NO due to House resistance being the stronger signal (they control appropriations
+  more directly) and the small but real risk of budget failure.'
+calibration_notes: 'The $50M threshold being at the exact midpoint of the $25M-$75M
+  range means this should be close to 50/50 absent other information. The House resistance
+  and budget failure risk pull it slightly below 50%. The Governor''s support and
+  recent historical funding push slightly above. Net effect: close to 50% with a slight
+  lean toward NO. Monte Carlo simulation using beta distributions gives 41-55% depending
+  on assumed skew. Scenario analysis gives 45-63%. I''m going with 45% as a balanced
+  estimate.'
+key_uncertainties: 1. Whether the Rural/Family Lands and Florida Forever programs
+  get traded off in a package deal. 2. Whether the budget chairs (Hooper/McClure)
+  will favor House or Senate position on this item. 3. Whether the conference report
+  gets filed in time (needs 72-hour cooling off before May 29). 4. Whether there are
+  supplemental Florida Forever line items beyond the main 'acquisition of environmentally
+  unique lands' that could push the total above $50M.
+tool_audit: Research tool returned useful background but couldn't access real-time
+  legislative data. Web search found multiple relevant articles confirming the $25M/$75M
+  conference positions. The Florida Senate appropriations page confirmed no conference
+  report has been filed yet. The Invading Sea and WGCU/WUSF articles provided good
+  detail on the negotiating positions. No tool failures, but the research sub-agent
+  lacked web access in one session.
+process_reflection: This question is fundamentally about modeling a negotiation outcome,
+  which is difficult to do precisely. The Monte Carlo approach using continuous distributions
+  and the discrete scenario analysis gave different results (41-46% vs 63%), which
+  highlights the challenge. The scenario analysis may overweight specific narratives
+  (package deals). The continuous distribution is probably more appropriate but may
+  not capture focal points. The research tools worked well for establishing the known
+  positions but couldn't provide real-time updates from today's negotiations.
+computed:
+  factor_count: 7
+  factor_sum: -0.13
+  tentative_logit: -0.2
+  logit_gap: -0.07
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: House and Senate conference offers bracket the $50M threshold - House
+      at $25M, Senate at $75M. The $50M midpoint is the natural focal point in split-the-difference
+      negotiations.
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Governor DeSantis recommended $115M for Florida Forever, providing
+      political cover and upward pressure on the compromise toward the Senate's position.
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'House showed strong resistance to Florida Forever: started at $0,
+      only moved to $25M in conference. House typically has more leverage in FL budget
+      negotiations.'
+    logit: -0.6
+    confidence: 0.7
+    effective_logit: -0.42
+  - description: Historical recent funding was ~$100M/year (FY22-23, FY23-24, FY24-25),
+      suggesting $50M+ is within normal range and not an unreasonable ask.
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Rural & Family Lands trade dynamic: House wants $75M, Senate wants
+      $0. A package deal trading between these programs could push Florida Forever
+      above $50M.'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: Risk that budget doesn't pass by May 31 at all, which would resolve
+      NO. Special session has 9 days left, no conference report filed yet, and significant
+      gaps remain across multiple areas.
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Senate originally only proposed $35-50M in their passed bill, suggesting
+      their conference offer of $75M is inflated. True Senate priority may be closer
+      to $50M.
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  dominant_factor: 'House showed strong resistance to Florida Forever: started at
+    $0, only moved to $25M in conference. House typically has more leverage in FL
+    budget negotiations.'
+  dominant_effective_logit: -0.42
+  factor_implied_probability: 0.4675456936126812
+  tentative_probability: 0.45
+  gap_pp: -1.7545693612681212
+  sources:
+  - '[(Metaculus) Will the Florida FY 2026-27 General Appropriations Act include at
+    least $50 million in appropriations for the Florida Forever program?](https://www.metaculus.com/questions/43547)'
+  - '[Budget conference: Senate, House make strides on environment, ag, but dozens
+    of gaps remain](https://floridapolitics.com/archives/796823-budget-conference-senate-house-make-strides-on-environment-ag-but-dozens-of-gaps-remain/)'
+  - '[Florida''s Legislature is dismantling the popular Florida Forever program |
+    The Invading Sea](https://www.theinvadingsea.com/2026/05/11/florida-forever-land-conservation-easements-grwoth-legislature-state-budget-parks/)'
+  - '[House and Senate budget talks remain unsettled on Everglades, citrus](https://www.wgcu.org/government-politics/2026-05-15/house-and-senate-budget-talks-remain-unsettled-on-everglades-citrus)'
+  - '[The Florida Senate](https://www.flsenate.gov/session/appropriations)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43547
+- **Question ID**: 43544
+- **Session Duration**: 747.2s (12.5 min)
+- **Cost**: $8.9690 total (orchestrator $3.4205 + sub-agents $5.5485)
+- **Tokens**: 11,378 total (41 in, 11,337 out)
+  - Cache: 764,152 read, 75,915 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43547_20260520_102201/20260520-102201.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1250 |
+| execute_code | 3 | 0 | 98ms | — |
+| fetch_url | 4 | 0 | 10951ms | — |
+| get_metaculus_questions | 1 | 0 | 460ms | — |
+| premortem | 1 | 0 | 107974ms | $2.2376 |
+| reflection | 1 | 0 | 9ms | — |
+| research | 1 | 0 | 141721ms | $2.8175 |
+| web_search | 9 | 0 | 23816ms | $0.3684 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the Florida FY 2026-27 General Appropriations Act include a...
+- [Budget conference: Senate, House make strides on environment, ag, but dozens...
+- [Florida's Legislature is dismantling the popular Florida Forever program | T...
+- [House and Senate budget talks remain unsettled on Everglades, citrus](https:...
+- [The Florida Senate](https://www.flsenate.gov/session/appropriations)
