@@ -1,0 +1,242 @@
+---
+timestamp: 2026-05-20 05:32:31 UTC
+question_type: numeric
+factors:
+- description: House position anchors the lower bound at $113.575B, Senate at $115.026B
+    - conference must land between or near these positions
+  supports:
+    center: 114.3
+    low: 113.58
+    high: 115.03
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Historical pattern: Florida conference reports consistently favor
+    the higher chamber''s position (Senate this year at $115.0B). In 6 recent years,
+    conference always landed near or above the higher chamber.'
+  supports:
+    center: 114.9
+    low: 114.5
+    high: 115.5
+  logit: 1.0
+  confidence: 0.65
+  effective_logit: 0.65
+- description: Both chambers agreed on $51.98B GR framework - this constrains the
+    core spending. The $1.45B gap is in trust funds/federal funds, where compromise
+    is more mechanical.
+  supports:
+    center: 114.3
+    low: 113.8
+    high: 114.8
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Political dynamics: House pushing fiscal restraint, regular session
+    failed over spending disagreements. This year''s dynamic may differ from historical
+    pattern of ''higher chamber wins.'''
+  supports:
+    center: 114.0
+    low: 113.5
+    high: 114.5
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Governor DeSantis wants $117B - executive pressure pushes budget upward,
+    but Legislature has shown independence
+  supports:
+    center: 115.0
+    low: 114.5
+    high: 116.0
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: ~15% risk of no deal by May 31 - fallback resolves to most recent single-chamber
+    version (likely $113.575B or $115.026B), creating bimodal tail risk
+  supports:
+    center: 114.3
+    low: 113.575
+    high: 115.026
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'FY25-26 precedent: conference exceeded BOTH chambers'' as-filed positions
+    ($116.5B vs House $113.0B and Senate $115.1B), suggesting potential for overshoot'
+  supports:
+    center: 115.5
+    low: 115.0
+    high: 116.5
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+tentative_estimate:
+  center: 114.6
+  low: 113.7
+  high: 115.4
+anchor: 'Midpoint of House ($113.575B) and Senate ($115.026B) positions: $114.3B.
+  Conference reports historically split but lean toward higher chamber.'
+assessment: 'The FY 2026-27 Florida budget is in conference during Special Session
+  2026E (May 12-29). The House position is $113.575B and the Senate position is $115.026B,
+  a gap of ~$1.45B. Historical analysis of 6 recent Florida budget cycles shows that
+  conference reports consistently land near or above the higher chamber''s position.
+  However, this year has unique dynamics: the regular session failed, the House is
+  pushing fiscal restraint, and the GR framework is already fixed at $51.98B.
+
+
+  The most likely outcome is a conference report between $114.0B and $115.5B, with
+  the center slightly above the midpoint (~$114.5-114.6B) due to the historical Senate-lean
+  pattern. There''s a ~15% risk of no deal by May 31, which would resolve to a single-chamber
+  version (bimodal at $113.575B or $115.026B). There''s also a small chance (~5-10%)
+  of the conference exceeding both positions, based on FY25-26 precedent.
+
+
+  Key uncertainty: whether the historical pattern of "higher chamber wins" holds in
+  a politically contentious year where the budget already failed once in regular session.'
+calibration_notes: Distribution is centered at $114.6B with 80% CI of roughly $113.9-115.2B.
+  This is narrower than the full House-Senate range but appropriately reflects the
+  constraint that conference must find compromise. The tails extend to ~$113.5B (no
+  deal/House wins) and ~$116.0B (conference overshoots like FY25-26). The width seems
+  well-calibrated given the mechanical nature of budget conference - the total can't
+  deviate wildly from the two chamber positions.
+key_uncertainties: 1. Where exactly will the conference compromise land within the
+  $113.6-115.0B range? 2. Will the budget pass at all before May 31? 3. If no deal,
+  which chamber's version becomes the fallback?
+tool_audit: research() - Very productive, returned detailed data on bill totals, legislative
+  history, and conference status from official Florida Senate sources. web_search/fetch_url
+  for flsenate.gov - partial success, got some content but not the full bill page
+  details. execute_code - Successful for Monte Carlo simulation and historical analysis.
+  Historical conference report totals are approximate and not directly verified from
+  official sources.
+update_triggers: 1. Conference report filed (would give exact number). 2. News of
+  breakdown in negotiations. 3. Session extension or new special session called. 4.
+  Agreement announced by legislative leadership.
+process_reflection: The research tool performed well for gathering Florida legislative
+  data. The main limitation was that approximate conference report totals from past
+  years could not be precisely verified - they came from news coverage rather than
+  official enrolled bill documents. The simulation framework worked well for modeling
+  the multi-scenario outcome. Having access to the actual flsenate.gov bill page data
+  was valuable. A tool that could parse structured legislative data (bill status,
+  appropriation totals) from state legislature websites would be helpful for this
+  type of question.
+computed:
+  factor_count: 7
+  factor_sum: 2.2449999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: House position anchors the lower bound at $113.575B, Senate at $115.026B
+      - conference must land between or near these positions
+    supports:
+      center: 114.3
+      low: 113.58
+      high: 115.03
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Historical pattern: Florida conference reports consistently favor
+      the higher chamber''s position (Senate this year at $115.0B). In 6 recent years,
+      conference always landed near or above the higher chamber.'
+    supports:
+      center: 114.9
+      low: 114.5
+      high: 115.5
+    logit: 1.0
+    confidence: 0.65
+    effective_logit: 0.65
+  - description: Both chambers agreed on $51.98B GR framework - this constrains the
+      core spending. The $1.45B gap is in trust funds/federal funds, where compromise
+      is more mechanical.
+    supports:
+      center: 114.3
+      low: 113.8
+      high: 114.8
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Political dynamics: House pushing fiscal restraint, regular session
+      failed over spending disagreements. This year''s dynamic may differ from historical
+      pattern of ''higher chamber wins.'''
+    supports:
+      center: 114.0
+      low: 113.5
+      high: 114.5
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Governor DeSantis wants $117B - executive pressure pushes budget
+      upward, but Legislature has shown independence
+    supports:
+      center: 115.0
+      low: 114.5
+      high: 116.0
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: ~15% risk of no deal by May 31 - fallback resolves to most recent
+      single-chamber version (likely $113.575B or $115.026B), creating bimodal tail
+      risk
+    supports:
+      center: 114.3
+      low: 113.575
+      high: 115.026
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'FY25-26 precedent: conference exceeded BOTH chambers'' as-filed
+      positions ($116.5B vs House $113.0B and Senate $115.1B), suggesting potential
+      for overshoot'
+    supports:
+      center: 115.5
+      low: 115.0
+      high: 116.5
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  dominant_factor: House position anchors the lower bound at $113.575B, Senate at
+    $115.026B - conference must land between or near these positions
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 114.47933227344993
+    implied_p10: 113.88958664546901
+    implied_p90: 115.15791732909382
+    median_gap: 0.1206677265500673
+    median_gap_pct: 9.513901075483437
+    spread_ratio: 1.3403444558650177
+    precision: 0.014834205933682398
+  sources:
+  - '[(Metaculus) What will be the total appropriation (in $ billions) of Florida''s
+    FY 2026-27 General Appropriations Act as passed by the Legislature before May
+    31, 2026?](https://www.metaculus.com/questions/43545)'
+  - '[The Florida Senate](https://www.flsenate.gov/Session/Bill/2026E/5001)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43545
+- **Question ID**: 43542
+- **Session Duration**: 1351.2s (22.5 min)
+- **Cost**: $20.1357 total (orchestrator $3.2193 + sub-agents $16.9164)
+- **Tokens**: 11,460 total (30 in, 11,430 out)
+  - Cache: 670,797 read, 72,289 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43545_20260520_051305/20260520-051305.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0510 |
+| execute_code | 6 | 0 | 240ms | — |
+| fetch_url | 1 | 0 | 11920ms | — |
+| get_metaculus_questions | 1 | 0 | 429ms | — |
+| premortem | 1 | 0 | 125874ms | $2.0880 |
+| reflection | 1 | 0 | 14ms | — |
+| research | 2 | 0 | 468881ms | $14.7773 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the total appropriation (in $ billions) of Florida'...
+- [The Florida Senate](https://www.flsenate.gov/Session/Bill/2026E/5001)
