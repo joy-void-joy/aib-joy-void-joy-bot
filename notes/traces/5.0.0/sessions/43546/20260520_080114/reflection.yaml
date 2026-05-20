@@ -1,0 +1,164 @@
+---
+timestamp: 2026-05-20 08:14:19 UTC
+question_type: binary
+factors:
+- description: 'IMD official forecast: onset May 26 ±4 days (window May 22-30), entirely
+    within May 31 deadline. For NO, need forecast error ≥+6 days.'
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: 'IMD forecast track record: 20/21 correct (2005-2025). Only 1 year
+    exceeded ±4 day error range. Probability of error ≥+6 is historically very low.'
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 'Monsoon already advancing on track as of May 19: reached SE Arabian
+    Sea, Comorin area, Andaman & Nicobar. Consistent with late May Kerala arrival.'
+  logit: 0.8
+  confidence: 0.8
+  effective_logit: 0.6400000000000001
+- description: El Niño developing (82% chance per NOAA) could potentially delay onset.
+    However, IMD already incorporated ENSO state into May 15 forecast.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Below-normal seasonal rainfall predicted (92% LPA), but this relates
+    to total rainfall amount, not onset timing specifically.
+  logit: -0.1
+  confidence: 0.3
+  effective_logit: -0.03
+tentative_estimate:
+  logit: 2.6
+  probability: 0.93
+anchor: 'Historical climatological base rate: ~44% of years have onset on or before
+  May 31 (normal June 1, SD 7 days). But conditional on IMD''s May 26 forecast with
+  ±4 day error, the probability rises dramatically.'
+assessment: "The IMD issued its official forecast on May 15, 2026, predicting monsoon\
+  \ onset over Kerala on May 26 with ±4 day model error (window May 22-30). This entire\
+  \ window falls before the May 31 deadline. For the question to resolve NO, the actual\
+  \ onset would need to be June 1 or later, requiring a forecast error of +6 days\
+  \ or more—well beyond the stated ±4 day range. \n\nQuantitative analysis using multiple\
+  \ methods (empirical normal distribution, t-distribution, historical miss rates)\
+  \ gives P(YES) ranging from 0.93 to 0.98. The t-distribution approach (most conservative,\
+  \ accounting for small sample heavy tails) gives ~0.93. The monsoon advance is on\
+  \ track as of May 19 (already at SE Arabian Sea and Comorin area), consistent with\
+  \ the forecast timeline.\n\nThe El Niño factor is real but already priced into IMD's\
+  \ forecast model. The recent 6-year verification shows IMD forecasts have been directionally\
+  \ correct, especially for early onset years (2022, 2024, 2025 all forecast as early,\
+  \ all verified as early).\n\nMain risk: An unexpected stalling of the monsoon advance\
+  \ between now and May 31 due to unfavorable synoptic conditions not captured in\
+  \ the statistical model. But this would need to be extreme enough to push onset\
+  \ 6+ days late from the forecast."
+calibration_notes: Anchor is the unconditional historical base rate of ~44% (onset
+  ≤ May 31). The IMD forecast is the dominant update, shifting the probability strongly
+  toward YES. The t-distribution method gives ~93% as a conservative bound. The on-track
+  monsoon advance provides mild additional support. No evidence of systematic hedging—the
+  93% reflects genuine strong evidence rather than avoidance of commitment.
+key_uncertainties: 'Main uncertainty: Is the ±4 day stated model error truly an RMSE/SD,
+  or is it more like a max observed range? If it''s max range, SD ≈ 2 and P(YES) ≈
+  99%. If it''s true SD, P(YES) ≈ 93%. The small sample (6 years of detailed data,
+  21 years total) makes it hard to precisely characterize the tail behavior of forecast
+  errors.'
+tool_audit: 'Useful: research() provided comprehensive background from IMD sources
+  and news articles. web_search found the official IMD press release PDF. fetch_url
+  successfully retrieved the Down to Earth article and the IMD press release PDF.
+  execute_code computed distributional analysis. Empty/misleading: wonderslate.com
+  article was AI-generated speculation about future events (correctly identified and
+  discarded). Failures: IMD main website gave limited content via fetch; Zee News
+  returned 403.'
+update_triggers: 1. IMD issues updated guidance pushing expected onset to June or
+  later. 2. Synoptic conditions show monsoon stalling or retreating from positions
+  already gained. 3. Major unexpected weather pattern disruption (e.g., cyclone formation
+  disrupting monsoon flow).
+process_reflection: 'The research sub-agent had tool issues but still provided useful
+  historical context. Direct web search was more effective for finding current 2026-specific
+  information. The IMD press release PDF was the most valuable source. The computation
+  tools worked well for quantitative analysis. One friction point: distinguishing
+  real vs. AI-generated news articles required extra verification steps.'
+computed:
+  factor_count: 5
+  factor_sum: 3.685
+  tentative_logit: 2.6
+  logit_gap: -1.085
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'IMD official forecast: onset May 26 ±4 days (window May 22-30),
+      entirely within May 31 deadline. For NO, need forecast error ≥+6 days.'
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: 'IMD forecast track record: 20/21 correct (2005-2025). Only 1 year
+      exceeded ±4 day error range. Probability of error ≥+6 is historically very low.'
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 'Monsoon already advancing on track as of May 19: reached SE Arabian
+      Sea, Comorin area, Andaman & Nicobar. Consistent with late May Kerala arrival.'
+    logit: 0.8
+    confidence: 0.8
+    effective_logit: 0.6400000000000001
+  - description: El Niño developing (82% chance per NOAA) could potentially delay
+      onset. However, IMD already incorporated ENSO state into May 15 forecast.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Below-normal seasonal rainfall predicted (92% LPA), but this relates
+      to total rainfall amount, not onset timing specifically.
+    logit: -0.1
+    confidence: 0.3
+    effective_logit: -0.03
+  dominant_factor: 'IMD official forecast: onset May 26 ±4 days (window May 22-30),
+    entirely within May 31 deadline. For NO, need forecast error ≥+6 days.'
+  dominant_effective_logit: 2.375
+  factor_implied_probability: 0.9755172725647345
+  tentative_probability: 0.93
+  gap_pp: -4.551727256473448
+  sources:
+  - '[(Metaculus) Will the India Meteorological Department declare southwest monsoon
+    onset over Kerala on or before May 31, 2026?](https://www.metaculus.com/questions/43546)'
+  - '[Monsoon Information](https://mausam.imd.gov.in/responsive/monsooninformation.php)'
+  - '[IMD weather update: Monsoon 2026 to reach Kerala early, heatwave alerts issued
+    for Delhi, UP and Rajasthan](https://zeenews.india.com/india/monsoon-2026-kerala-onset-may-26-delhi-heatwave-alert-3048136.html)'
+  - '[Kerala monsoon onset declared on May 24, 2026 - earliest since 2009](https://www.wonderslate.com/gptsirdaily/noteDetail/7679)'
+  - '[Southwest monsoon has arrived in Andaman and Nicobar; to hit Kerala on May 26:
+    IMD](https://www.downtoearth.org.in/climate-change/southwest-monsoon-has-arrived-in-andaman-and-nicobar-to-hit-kerala-on-may-26-imd)'
+  - '[internal.imd.gov.in](https://internal.imd.gov.in/press_release/20260515_pr_4981.pdf)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43546
+- **Question ID**: 43543
+- **Session Duration**: 941.2s (15.7 min)
+- **Cost**: $9.6054 total (orchestrator $3.2458 + sub-agents $6.3596)
+- **Tokens**: 12,174 total (48 in, 12,126 out)
+  - Cache: 639,879 read, 73,374 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43546_20260520_080114/20260520-080114.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 1 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0752 |
+| execute_code | 2 | 0 | 710ms | — |
+| fetch_url | 5 | 1 ⚠️ | 7381ms | — |
+| get_metaculus_questions | 1 | 0 | 342ms | — |
+| premortem | 1 | 0 | 108603ms | $2.1732 |
+| reflection | 1 | 0 | 7269ms | — |
+| research | 1 | 0 | 298249ms | $3.9547 |
+| web_search | 4 | 0 | 44920ms | $0.1565 |
+
+### Sources Consulted
+
+- [(Metaculus) Will the India Meteorological Department declare southwest monso...
+- [Monsoon Information](https://mausam.imd.gov.in/responsive/monsooninformation...
+- [IMD weather update: Monsoon 2026 to reach Kerala early, heatwave alerts issu...
+- [Kerala monsoon onset declared on May 24, 2026 - earliest since 2009](https:/...
+- [Southwest monsoon has arrived in Andaman and Nicobar; to hit Kerala on May 2...
+- [internal.imd.gov.in](https://internal.imd.gov.in/press_release/20260515_pr_4...
