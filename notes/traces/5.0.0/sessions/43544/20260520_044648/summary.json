@@ -1,0 +1,120 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question details for question 43544 — a binary question asking whether Nintendo (`7974.T`) would close at or above ¥7,200 on Friday, May 29, 2026. The resolution criteria specified Yahoo Finance's historical data page as the primary source.\n\nI then ran two parallel research queries:\n1. **Current stock price and recent trading data** — Retrieved comprehensive data showing `7974.T` closed at **¥7,507** on May 20, 2026 (the forecast date), with a recent trading history from April 20 through May 20.\n2. **Nintendo Switch 2 sales momentum and price hike impact** — Retrieved detailed context on Switch 2 sales (19.86M units shipped in FY2025-26), the announced price hikes (Japan +20% effective May 25, US +$50 effective Sep 1), and the disappointing FY2027 guidance (-11.4% revenue, -17% unit shipments).\n\nI also confirmed the current price via a web search on Yahoo Finance, which returned `current_price: 7507.0` along with a useful **shock alert**: after comparable +4.7% daily spikes, the median 10-day forward return was +0.14% with 50% positive outcomes — essentially a neutral signal.\n\n## Key Evidence\n\n- **Current price ¥7,507** is **4.26% above** the ¥7,200 target\n- **7 trading days** until resolution (May 21, 22, 25, 26, 27, 28, 29)\n- **Extremely high daily volatility**: 3.21% daily (51% annualized), computed from 18 trading days of data spanning April 20–May 20\n- **Clear downtrend**: 3-month decline of ~11%, 12-month decline of ~33%, stock 49% below 52-week high of ¥14,795\n- **Recent sharp bounce**: ¥6,864 (May 14 low) → ¥7,507 (May 20), a +9.4% recovery in 4 trading days\n- **May 11 crash**: volume spiked to 35.9M shares (3x normal) on post-earnings/price-hike shock\n- **Japan price hike on May 25** falls within the forecast window — potential sentiment catalyst\n- **Yahoo shock alert**: after comparable +4.7% spikes, essentially random walk forward expectations\n\n## Quantitative Modeling\n\nI ran four rounds of Monte Carlo simulations (500,000 paths each) in a sandbox:\n\n1. **Full-period parameters** (bearish drift -0.695%/day): P(≥7,200) = **46.8%**\n2. **Recent recovery period** (bullish drift +2.24%/day): P(≥7,200) = **99.9%**\n3. **Zero drift, full-period volatility**: P(≥7,200) = **68.8%**\n4. **Bootstrap from empirical returns**: P(≥7,200) = **47.8%**\n5. **Drift sensitivity**: -50bps → 53.2%, -30bps → 59.6%, -10bps → 66.0%, 0bps → 68.9%, +10bps → 71.7%, +30bps → 77.0%\n\nI also ran a **fat-tailed model** (t-distribution, df=4, drift=-15bps): P(≥7,200) = **65.5%**, and computed a weighted blend across drift scenarios: **64.5%**.\n\nI explicitly separated **pre-shock** (Apr 20–May 7: mean -1.54%/day, std 1.3%) and **post-bounce** (May 14–20: mean +2.24%/day, std 2.45%) regimes, recognizing the full-period data spans a structural break.\n\n## Conclusion\n\nI settled on **65% probability** that Nintendo closes at or above ¥7,200 on May 29. This represents a modest downward adjustment from the 69% zero-drift anchor, reflecting residual bearish pressure from the multi-month downtrend, the Japan price hike event risk on May 25, and the disappointing FY2027 guidance. The Yahoo shock alert data (50/50 forward returns) and the weighted Monte Carlo results (64.5%) both corroborate this estimate. The premortem gate approved the forecast without requiring adjustment.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market data checked (Polymarket, Kalshi) — could have provided market-implied probabilities for comparison"
+    ],
+    "subtle_bugs": [
+      "The research tool returned a beta of 0.158 for Nintendo, which seems anomalously low for a stock with 51% annualized realized volatility — this may be a stale or miscalculated Yahoo Finance figure, but it wasn't used in the forecast so no impact."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation with empirical volatility from 18-day price history, regime-aware drift calibration, and Yahoo Finance shock alert base rate.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the post-shock recovery represents a sustained regime shift or a dead-cat bounce, which determines the appropriate drift parameter for forward simulation."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market data (Polymarket, Kalshi, Manifold) was consulted despite these platforms frequently having markets on stock price thresholds.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "Volatility estimated from only 18 trading days (Apr 20–May 20) which spans a structural break (pre-shock, shock, recovery). The full-period vol of 3.21% is regime-contaminated. The agent recognized this but still used it as the primary vol input for all simulations.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "64%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Ran Monte Carlo with 500,000 paths across 5+ drift scenarios, providing a well-characterized probability distribution rather than a point estimate",
+    "Explicitly separated pre-shock, shock, and post-bounce regimes when analyzing the 18-day price history, avoiding naive use of the contaminated full-period drift",
+    "Used the Yahoo Finance shock alert (comparable +4.7% spike events → 50/50 forward returns) as an empirical base rate to calibrate drift assumptions",
+    "Tested fat-tailed distributions (t-dist, df=4) alongside normal distributions for robustness — both converged on ~65%",
+    "Correctly computed 7 trading days between May 20 and May 29, accounting for weekends",
+    "Premortem gate performed thorough factor-by-factor verification against source data and identified the mild double-counting issue between Factor 1 and Factor 8"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Kalshi) for market-implied probabilities on this question or similar Nintendo price thresholds",
+    "The 18-day volatility window includes a structural break — using a shorter post-bounce window for vol estimation might have been more appropriate for forward simulation, though the agent discussed this tradeoff",
+    "Factor framework exhibits mild double-counting: Factor 1 (4.26% price buffer) and Factor 8 (Monte Carlo results) encode the same information since the buffer is the primary input to the simulation. The premortem caught this but the agent didn't restructure the factors.",
+    "Did not explore options-implied volatility or any derivatives-based measure of expected movement, which would have provided a market-calibrated forward vol estimate"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets (Polymarket, Kalshi) for market-implied probabilities when available — these can serve as a useful calibration anchor",
+    "Consider using options-implied volatility rather than historical realized vol for forward simulations, especially when the historical window spans regime changes",
+    "Restructure factor framework to avoid double-counting: the Monte Carlo output should be the anchor, with factors representing adjustments to the simulation's assumptions rather than restating its inputs",
+    "When a structural break exists in the data window, consider running the simulation with regime-specific volatility (e.g., post-bounce vol of 2.45%) as an additional scenario rather than only using the full-period vol"
+  ]
+}

@@ -1,0 +1,177 @@
+---
+timestamp: 2026-05-20 04:56:06 UTC
+question_type: binary
+factors:
+- description: Current price ¥7,507 is 4.26% above target of ¥7,200 - significant
+    buffer relative to daily vol
+  logit: 0.8
+  confidence: 0.95
+  effective_logit: 0.76
+- description: Extremely high recent volatility (3.2% daily, 51% annualized) means
+    the buffer could evaporate quickly
+  logit: -0.5
+  confidence: 0.85
+  effective_logit: -0.425
+- description: 'Stock in clear multi-month downtrend (3M: -11%, 12M: -33%), 49% below
+    52-week high'
+  logit: -0.4
+  confidence: 0.7
+  effective_logit: -0.27999999999999997
+- description: Recent sharp bounce from 52-week lows (¥6,864 to ¥7,507, +9.4% in 4
+    days) suggests buying interest and support
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Yahoo shock alert: after comparable +4.7% spikes, median 10-day forward
+    return is +0.14%, 50% positive - essentially neutral'
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+- description: Japan price hike effective May 25 could create short-term sentiment
+    uncertainty
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+- description: FY2027 guidance disappointed (-11.4% revenue, -17% unit shipments)
+    - bearish fundamental backdrop already priced in
+  logit: -0.1
+  confidence: 0.6
+  effective_logit: -0.06
+- description: Monte Carlo simulations consistently show 60-69% probability across
+    reasonable drift assumptions
+  logit: 0.6
+  confidence: 0.85
+  effective_logit: 0.51
+tentative_estimate:
+  logit: 0.6
+  probability: 0.65
+anchor: Stock threshold question with current price 4.26% above target and 7 trading
+  days. With ~3.2% daily vol, a random walk gives ~69% probability of staying above.
+  This is the base rate from the zero-drift simulation.
+assessment: Nintendo (7974.T) currently trades at ¥7,507, comfortably above the ¥7,200
+  target. The key question is whether 7 trading days of high-volatility movement (3.2%/day)
+  will erode this 4.26% buffer. The stock recently bounced sharply from 52-week lows
+  after a post-earnings shock, and the Yahoo shock alert data suggests essentially
+  neutral forward returns after comparable spikes. However, the stock is in a broader
+  downtrend, and the Japan price hike effective May 25 introduces some near-term event
+  risk. The Monte Carlo simulations consistently produce probabilities in the 60-69%
+  range depending on drift assumptions. A zero-drift model gives 69%, while a mildly
+  bearish drift (-15bps/day) gives ~65%. I estimate the true drift is slightly negative
+  given the broader downtrend but not as severe as the full-period average which includes
+  the shock. My weighted estimate across drift scenarios is ~65%.
+calibration_notes: Anchor is 69% from zero-drift simulation. Adjusting modestly downward
+  for residual bearish pressure from the broader downtrend. The 4.26% buffer is meaningful
+  but not huge given 51% annualized vol. Fat-tailed model gives similar results (65.5%),
+  providing robustness. Not hedging toward 50% - the current price being above target
+  gives a directional advantage.
+key_uncertainties: 1. Whether the post-shock recovery continues or fades - the bounce
+  could be a dead cat bounce. 2. Impact of Japan May 25 price hike on sentiment. 3.
+  Whether broader macro conditions (tariffs, oil prices) create additional selling
+  pressure. 4. Unknown news events in the next 7 trading days.
+tool_audit: 'Research sub-agent provided excellent data on current price (¥7,506-7,507
+  as of May 20), recent trading history, and fundamental context. Web search confirmed
+  the price and provided Yahoo Finance API data including shock alert (very useful:
+  comparable spike events show 50/50 forward returns). Monte Carlo simulations in
+  sandbox ran successfully with multiple scenarios. No tool failures.'
+update_triggers: 1. Sharp market-wide selloff driven by macro events would move estimate
+  toward NO. 2. Additional negative Nintendo-specific news (e.g., Switch 2 demand
+  weakness, further guidance cuts). 3. Strong positive catalysts (analyst upgrades,
+  better-than-expected pre-price-hike sales data) could push estimate higher.
+process_reflection: The stock data tools and research sub-agent worked well together.
+  The Yahoo Finance shock alert data was particularly useful for calibrating the drift
+  assumption. The sandbox for Monte Carlo was essential for quantifying the threshold
+  crossing probability. Process was smooth - good data availability for a liquid large-cap
+  stock.
+computed:
+  factor_count: 8
+  factor_sum: 0.5850000000000001
+  tentative_logit: 0.6
+  logit_gap: 0.014999999999999902
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current price ¥7,507 is 4.26% above target of ¥7,200 - significant
+      buffer relative to daily vol
+    logit: 0.8
+    confidence: 0.95
+    effective_logit: 0.76
+  - description: Extremely high recent volatility (3.2% daily, 51% annualized) means
+      the buffer could evaporate quickly
+    logit: -0.5
+    confidence: 0.85
+    effective_logit: -0.425
+  - description: 'Stock in clear multi-month downtrend (3M: -11%, 12M: -33%), 49%
+      below 52-week high'
+    logit: -0.4
+    confidence: 0.7
+    effective_logit: -0.27999999999999997
+  - description: Recent sharp bounce from 52-week lows (¥6,864 to ¥7,507, +9.4% in
+      4 days) suggests buying interest and support
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Yahoo shock alert: after comparable +4.7% spikes, median 10-day
+      forward return is +0.14%, 50% positive - essentially neutral'
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  - description: Japan price hike effective May 25 could create short-term sentiment
+      uncertainty
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  - description: FY2027 guidance disappointed (-11.4% revenue, -17% unit shipments)
+      - bearish fundamental backdrop already priced in
+    logit: -0.1
+    confidence: 0.6
+    effective_logit: -0.06
+  - description: Monte Carlo simulations consistently show 60-69% probability across
+      reasonable drift assumptions
+    logit: 0.6
+    confidence: 0.85
+    effective_logit: 0.51
+  dominant_factor: Current price ¥7,507 is 4.26% above target of ¥7,200 - significant
+    buffer relative to daily vol
+  dominant_effective_logit: 0.76
+  factor_implied_probability: 0.6422170929574377
+  tentative_probability: 0.65
+  gap_pp: 0.7782907042562348
+  sources:
+  - '[(Metaculus) Will Nintendo (7974.T) close at or above ¥7,200 on Friday, May 29,
+    2026?](https://www.metaculus.com/questions/43544)'
+  - '[Nintendo Co., Ltd. (7974.T) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/7974.T/)'
+  - '[Nintendo Co., Ltd. (7974.T) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/7974.T/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43544
+- **Question ID**: 43541
+- **Session Duration**: 751.3s (12.5 min)
+- **Cost**: $11.5820 total (orchestrator $2.6445 + sub-agents $8.9375)
+- **Tokens**: 9,750 total (27 in, 9,723 out)
+  - Cache: 449,199 read, 66,193 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43544_20260520_044648/20260520-044648.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 594ms | — |
+| get_metaculus_questions | 1 | 0 | 253ms | — |
+| premortem | 1 | 0 | 156846ms | $2.5497 |
+| reflection | 1 | 0 | 7ms | — |
+| research | 1 | 0 | 403802ms | $6.3500 |
+| stock_price | 2 | 0 | 458ms | — |
+| web_search | 1 | 0 | 14683ms | $0.0378 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Nintendo (7974.T) close at or above ¥7,200 on Friday, May 2...
+- [Nintendo Co., Ltd. (7974.T) Stock Price, News, Quote & History - Yahoo Finan...
+- [Nintendo Co., Ltd. (7974.T) Stock Historical Prices & Data - Yahoo Finance](...
