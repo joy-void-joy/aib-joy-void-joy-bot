@@ -1,0 +1,357 @@
+---
+timestamp: 2026-05-21 12:45:00 UTC
+question_type: binary
+factors:
+- description: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+    reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate for
+    10 remaining days at 3/year is ~8%.'
+  logit: -1.5
+  confidence: 0.8
+  effective_logit: -1.2000000000000002
+- description: 'Post-summit diplomatic sensitivity: Trump-Xi summit May 13-15 with
+    Taiwan as most contentious issue. Conducting a transit in the 2 weeks following
+    would be seen as deliberately provocative, which the administration typically
+    avoids right after summits.'
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: PLA intensified drills around Taiwan in spring 2026 increase the confrontation
+    risk of any transit, providing additional reason for restraint.
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: 'Allied burden-sharing: Japan, Australia, NZ, UK have all conducted
+    their own transits in 2026, reducing the perceived need for US-specific transits
+    to maintain the freedom of navigation principle.'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: '''Overdue'' factor: If last US transit was January 16-17, the gap
+    is now 125+ days. The average gap in 2025 was ~122 days. Being at/past the mean
+    gap increases the hazard rate for a periodic process.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Policy signaling incentive: NOT transiting for too long looks like
+    caving to Chinese pressure. Congressional hawks, defense establishment, and allies
+    all expect continued transits. The longer the gap, the more pressure builds.'
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: 'Ships are in position: USS George Washington returned to Yokosuka
+    May 18; USS Boxer ARG + 11th MEU operating in 7th Fleet area. No positioning constraint
+    on executing a transit.'
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: No transit detected in first 6 days of window (May 15-21). If one were
+    planned for the immediate post-summit period, it would likely have happened. This
+    is mild evidence against it happening in the remaining 10 days.
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+tentative_estimate:
+  logit: -1.1
+  probability: 0.25
+anchor: 'US Navy Taiwan Strait surface transit base rate under Trump 2.0: ~3/year
+  in 2025, 1 in 2026 YTD. For 10 remaining days, unconditional P ≈ 8% (from AEI analysis
+  and USNI tracking).'
+assessment: 'This question asks whether a US Navy surface warship will transit the
+  Taiwan Strait in the May 15-31, 2026 window. As of May 21 (question close date),
+  no transit has been confirmed in the first 6 days of the window, so the effective
+  question is about the remaining 10 days (May 22-31).
+
+
+  KEY DATA DISCREPANCY: The question description cites ''11 in 2025, 13 in 2024, 10
+  in 2023'' for transit frequency, but these appear to be ALL transits on the tracker
+  (US + allies + possibly aircraft). AEI analysis and detailed USNI tracking show
+  only ~3 US Navy surface transits in 2025 and 1 confirmed in 2026. This means the
+  US-specific base rate is much lower than the question description implies.
+
+
+  The pure base rate (3/year → ~8% for 10 days) is the starting point. Several factors
+  adjust this:
+
+
+  DOWNWARD: Post-summit diplomatic sensitivity is significant. The Trump-Xi summit
+  on May 13-15 put Taiwan front and center. Xi warned it could lead to a clash ''if
+  handled poorly.'' Conducting a transit in the 2 weeks after risks undercutting whatever
+  diplomatic progress was made. Additionally, PLA intensified drills raise confrontation
+  risk, and allied transits provide cover.
+
+
+  UPWARD: The 125+ day gap since the last confirmed US transit creates institutional
+  pressure. Ships are positioned in the region. Congressional hawks expect continued
+  transits. Not transiting for too long could be perceived as acquiescence.
+
+
+  These factors roughly offset, leaving me moderately above the pure base rate at
+  ~25%. The policy decision nature of transits (not random) introduces more variance
+  than a Poisson process would suggest - if the administration decides to go, it happens
+  quickly; if they''re holding off, the base rate overstates likelihood. The absence
+  of a transit in the first 6 days of the window is mild evidence the administration
+  is in ''hold'' mode.'
+calibration_notes: 'Anchor is ~8% (pure base rate for 10 days at 3/year). My estimate
+  of 25% is substantially above the anchor, driven by: (1) transit timing is a policy
+  decision, not random, so Poisson assumptions understate variance; (2) ''overdue''
+  pressure with 125+ day gap; (3) question framing suggests this is a live policy
+  decision. Risk of hedging: 25% feels like it could be lower given the strong post-summit
+  suppression signal, but genuinely uncertain about admin intentions.'
+key_uncertainties: 1. Whether the Trump administration made any implicit/explicit
+  commitments to Xi about Taiwan transits during the summit. 2. Whether there's an
+  unreported US transit from April 2026 (one research source mentions April 22 transit
+  by 'two US ships' but this isn't confirmed by the more detailed analysis). 3. Whether
+  the reduced transit frequency reflects deliberate policy or operational constraints.
+tool_audit: 'USEFUL: research() provided two detailed analyses with sourced data from
+  USNI, AEI, Reuters, and regional media. web_search confirmed no May 2026 transit
+  in search results. execute_code ran Monte Carlo with varying assumptions. EMPTY/FAILED:
+  fetch_url couldn''t load Taiwan Strait Transit Tracker (dynamic JavaScript content);
+  c7f.navy.mil returned 403. These are the two resolution sources and neither could
+  be checked directly. LIMITATION: Cannot access the live tracker data that would
+  definitively confirm or deny a transit.'
+update_triggers: '- Any news of a US Navy ship entering the Taiwan Strait area (would
+  push to 90%+). - Trump or Xi making public statements about transit agreements/restraints
+  (would push down to ~10%). - PLA conducting major naval exercises blocking the strait
+  (would push down to ~5%). - Congressional pressure or public criticism of the administration
+  for not conducting transits (would push up to ~35%).'
+process_reflection: The research() tool worked well for gathering historical data
+  and current context. The key limitation was inability to access the two primary
+  resolution sources (the Taiwan Strait Transit Tracker uses dynamic JS that fetch_url
+  can't render, and the 7th Fleet site blocked access). This means I'm relying on
+  secondary reporting which could have a lag. The Monte Carlo simulation was useful
+  as a sanity check but the result (~5%) felt too mechanical given this is a policy
+  decision, not a random process. The question's framing helped me understand the
+  author's perspective on uncertainty. The discrepancy between the question description's
+  transit counts (11 in 2025) and research findings (~3 US-specific in 2025) was an
+  important catch that significantly affects the base rate calculation.
+computed:
+  factor_count: 8
+  factor_sum: -1.55
+  tentative_logit: -1.1
+  logit_gap: 0.44999999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+      reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate
+      for 10 remaining days at 3/year is ~8%.'
+    logit: -1.5
+    confidence: 0.8
+    effective_logit: -1.2000000000000002
+  - description: 'Post-summit diplomatic sensitivity: Trump-Xi summit May 13-15 with
+      Taiwan as most contentious issue. Conducting a transit in the 2 weeks following
+      would be seen as deliberately provocative, which the administration typically
+      avoids right after summits.'
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: PLA intensified drills around Taiwan in spring 2026 increase the
+      confrontation risk of any transit, providing additional reason for restraint.
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: 'Allied burden-sharing: Japan, Australia, NZ, UK have all conducted
+      their own transits in 2026, reducing the perceived need for US-specific transits
+      to maintain the freedom of navigation principle.'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: '''Overdue'' factor: If last US transit was January 16-17, the gap
+      is now 125+ days. The average gap in 2025 was ~122 days. Being at/past the mean
+      gap increases the hazard rate for a periodic process.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Policy signaling incentive: NOT transiting for too long looks like
+      caving to Chinese pressure. Congressional hawks, defense establishment, and
+      allies all expect continued transits. The longer the gap, the more pressure
+      builds.'
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: 'Ships are in position: USS George Washington returned to Yokosuka
+      May 18; USS Boxer ARG + 11th MEU operating in 7th Fleet area. No positioning
+      constraint on executing a transit.'
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: No transit detected in first 6 days of window (May 15-21). If one
+      were planned for the immediate post-summit period, it would likely have happened.
+      This is mild evidence against it happening in the remaining 10 days.
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  dominant_factor: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+    reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate for
+    10 remaining days at 3/year is ~8%.'
+  dominant_effective_logit: -1.2000000000000002
+  factor_implied_probability: 0.1750862681640398
+  tentative_probability: 0.25
+  gap_pp: 7.4913731835960204
+  sources:
+  - '[(Metaculus) Will a U.S. Navy surface warship conduct a Taiwan Strait transit
+    between May 15, 2026 and May 31, 2026?](https://www.metaculus.com/questions/43557)'
+  - '[Taiwan Strait Transit Tracker - Taiwan Security Monitor](https://tsm.schar.gmu.edu/taiwan-strait-transit-tracker/)'
+  - '[c7f.navy.mil](https://www.c7f.navy.mil/Media/News/)'
+---
+timestamp: 2026-05-21 12:48:14 UTC
+question_type: binary
+factors:
+- description: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+    reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate for
+    10 remaining days at 3/year is ~8%.'
+  logit: -1.5
+  confidence: 0.8
+  effective_logit: -1.2000000000000002
+- description: 'Post-summit diplomatic sensitivity: Trump-Xi summit May 13-15 with
+    Taiwan as most contentious issue. Xi warned it could cause a clash. Conducting
+    a transit in the 2 weeks following would undermine diplomatic progress.'
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: PLA intensified drills around Taiwan in spring 2026 increase the confrontation
+    risk of any transit.
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: 'Allied burden-sharing: Japan, Australia, NZ conducted their own transits
+    in 2026, reducing the need for US-specific transits to maintain freedom of navigation.'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: '''Overdue'' factor: 125+ day gap since last confirmed US transit (Jan
+    16-17). But 2025 had a 142-day gap (Apr-Sep) without political forcing, so long
+    gaps are precedented under Trump 2.0.'
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: 'Policy signaling incentive: NOT transiting too long looks like concession.
+    But partially overlaps with the overdue factor above.'
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+- description: Ships are in position (George Washington at Yokosuka, Boxer ARG in
+    7th Fleet area). No operational constraint.
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: No transit detected in first 6 days of window (May 15-21). Suggests
+    administration is in 'hold' mode.
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+tentative_estimate:
+  logit: -1.5
+  probability: 0.18
+assessment: 'Revised estimate after premortem feedback. The quantitative evidence
+  consistently points to 8-17%: base rate of ~8% for 10 days, Monte Carlo with suppression
+  ~5%, factor-implied ~17.5%. My revised estimate of 18% aligns with the upper end
+  of the quantitative range. The slight upward departure from the factor sum reflects
+  the policy-decision nature of transits (not purely random), but I''m now disciplined
+  about not overweighting qualitative intuitions beyond what the factors support.
+  The premortem''s independent estimate of 12-18% serves as a useful external calibration
+  anchor.'
+tool_audit: 'Same as prior reflection. Research sub-agent provided well-sourced data.
+  Key limitation: couldn''t access the two primary resolution sources directly.'
+process_reflection: The premortem reviewer was valuable in catching my anchor divergence.
+  I had drifted from quantitative evidence toward narrative reasoning ('this feels
+  like it should be higher'). The structured factor framework + reflection metrics
+  + premortem pipeline caught this drift effectively.
+computed:
+  factor_count: 8
+  factor_sum: -1.79
+  tentative_logit: -1.5
+  logit_gap: 0.29000000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+      reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate
+      for 10 remaining days at 3/year is ~8%.'
+    logit: -1.5
+    confidence: 0.8
+    effective_logit: -1.2000000000000002
+  - description: 'Post-summit diplomatic sensitivity: Trump-Xi summit May 13-15 with
+      Taiwan as most contentious issue. Xi warned it could cause a clash. Conducting
+      a transit in the 2 weeks following would undermine diplomatic progress.'
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: PLA intensified drills around Taiwan in spring 2026 increase the
+      confrontation risk of any transit.
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: 'Allied burden-sharing: Japan, Australia, NZ conducted their own
+      transits in 2026, reducing the need for US-specific transits to maintain freedom
+      of navigation.'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: '''Overdue'' factor: 125+ day gap since last confirmed US transit
+      (Jan 16-17). But 2025 had a 142-day gap (Apr-Sep) without political forcing,
+      so long gaps are precedented under Trump 2.0.'
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: 'Policy signaling incentive: NOT transiting too long looks like concession.
+      But partially overlaps with the overdue factor above.'
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  - description: Ships are in position (George Washington at Yokosuka, Boxer ARG in
+      7th Fleet area). No operational constraint.
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: No transit detected in first 6 days of window (May 15-21). Suggests
+      administration is in 'hold' mode.
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  dominant_factor: 'US Navy surface transit frequency under Trump 2.0 is dramatically
+    reduced: ~3/year in 2025, only 1 confirmed in 2026 through May 21. Base rate for
+    10 remaining days at 3/year is ~8%.'
+  dominant_effective_logit: -1.2000000000000002
+  factor_implied_probability: 0.14307272348008082
+  tentative_probability: 0.18
+  gap_pp: 3.692727651991917
+  sources:
+  - '[(Metaculus) Will a U.S. Navy surface warship conduct a Taiwan Strait transit
+    between May 15, 2026 and May 31, 2026?](https://www.metaculus.com/questions/43557)'
+  - '[Taiwan Strait Transit Tracker - Taiwan Security Monitor](https://tsm.schar.gmu.edu/taiwan-strait-transit-tracker/)'
+  - '[c7f.navy.mil](https://www.c7f.navy.mil/Media/News/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43557
+- **Question ID**: 43554
+- **Session Duration**: 1061.1s (17.7 min)
+- **Cost**: $15.7846 total (orchestrator $3.0822 + sub-agents $12.7024)
+- **Tokens**: 14,488 total (27 in, 14,461 out)
+  - Cache: 447,554 read, 70,713 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43557_20260521_123054/20260521-123054.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 1 (8.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0203 |
+| execute_code | 1 | 0 | 476ms | — |
+| fetch_url | 2 | 1 ⚠️ | 4689ms | — |
+| get_metaculus_questions | 1 | 0 | 313ms | — |
+| premortem | 1 | 0 | 143108ms | $2.4450 |
+| reflection | 2 | 0 | 293ms | — |
+| research | 1 | 0 | 540996ms | $10.0928 |
+| web_search | 4 | 0 | 16476ms | $0.1443 |
+
+### Sources Consulted
+
+- [(Metaculus) Will a U.S. Navy surface warship conduct a Taiwan Strait transit...
+- [Taiwan Strait Transit Tracker - Taiwan Security Monitor](https://tsm.schar.g...
+- [c7f.navy.mil](https://www.c7f.navy.mil/Media/News/)
