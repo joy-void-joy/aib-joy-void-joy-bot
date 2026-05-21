@@ -1,0 +1,263 @@
+---
+timestamp: 2026-05-21 10:51:49 UTC
+question_type: numeric
+factors:
+- description: 'Current price level: Brent at ~$107/bbl on May 21, with 6 trading
+    days to resolution'
+  supports:
+    center: 107.0
+    low: 100.0
+    high: 114.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: US-Iran negotiations in 'final phase' per Trump, creating deal probability
+    that would crash prices toward $90-95 deferred futures level
+  supports:
+    center: 93.0
+    low: 85.0
+    high: 100.0
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: Iran's Supreme Leader directive against sending uranium abroad, hardening
+    negotiating position - reduces deal probability
+  supports:
+    center: 110.0
+    low: 105.0
+    high: 115.0
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: 'Crisis-period volatility: daily vol ~2.5% (annualized ~40%), much
+    higher than normal. Strait of Hormuz still effectively closed'
+  supports:
+    center: 107.0
+    low: 94.0
+    high: 120.0
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: 'Escalation risk: Fujairah attack May 5, Iran-US fire exchanges, fragile
+    ceasefire could collapse leading to $120-130+ spike'
+  supports:
+    center: 125.0
+    low: 115.0
+    high: 140.0
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: 'Supply fundamentals: IEA estimates 2M bpd loss, SPR releases of record
+    10M barrels/week, ADNOC says full recovery unlikely before late 2027'
+  supports:
+    center: 110.0
+    low: 105.0
+    high: 115.0
+  logit: 0.6
+  confidence: 0.8
+  effective_logit: 0.48
+- description: 'Recent price action: 6% drop May 19-20 on deal hopes, then 2% recovery
+    May 21 on doubts about deal - price discovery in $105-112 range'
+  supports:
+    center: 107.0
+    low: 102.0
+    high: 112.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+tentative_estimate:
+  center: 107.14
+  low: 94.31
+  high: 118.95
+anchor: Current market price of $107/bbl as of May 21, 2026. For short-horizon commodity
+  forecasts, the current price is the best anchor.
+assessment: 'This is a 6-trading-day forecast for Brent crude in the middle of the
+  most severe oil supply crisis since the 1970s. The Strait of Hormuz has been effectively
+  closed since February 28, 2026, following US-Israeli strikes on Iran.
+
+
+  The key driver is the binary geopolitical outcome: will a US-Iran deal be reached
+  by May 29? I model three scenarios:
+
+  1. Status quo/no deal (68%): Oil stays in the $100-115 range with crisis-level volatility
+
+  2. Deal reached (17%): Sharp drop toward $85-95 (deferred futures at $90-91)
+
+  3. Escalation (15%): Spike to $120-140+ if ceasefire collapses
+
+
+  Evidence for status quo being most likely: Iran''s Supreme Leader hardened position
+  on uranium, ADNOC says full recovery unlikely before late 2027, ceasefire described
+  as ''on the brink'' of collapse, Islamabad Talks already failed once.
+
+
+  Evidence for potential deal: Trump says ''final phase'', Iran reviewing latest US
+  proposal, some ships passing through Hormuz.
+
+
+  Evidence for escalation: Recent fire exchanges May 4-5, Iran attacked UAE facilities,
+  IRGC warnings about ships, dual blockade persists.
+
+
+  The Monte Carlo simulation produces a median of $107.14, close to the current price,
+  with a wide P10-P90 range ($94-$119) reflecting the scenario uncertainty. This seems
+  well-calibrated for a crisis-regime commodity.'
+calibration_notes: The P10-P90 range ($94-$119) is wider than pure random walk (~$100-$114)
+  due to scenario tails. The 52-week high was $126.41, so my P95 at $123 is not unreasonable.
+  The deferred futures at $90-91 anchor the downside for a deal scenario. My distribution
+  width seems appropriate for the level of uncertainty.
+key_uncertainties: 1. Will a US-Iran deal be reached in the next 8 days? This is the
+  dominant uncertainty. 2. If negotiations continue to stall, will there be a military
+  escalation? 3. How effective are SPR releases and alternative supply routes in moderating
+  prices?
+tool_audit: 'Research sub-agent: Very useful, provided comprehensive data on current
+  prices and geopolitical situation. Web search: Good for cross-referencing prices
+  and finding latest news. Investing.com fetch: Failed (JavaScript-rendered page),
+  but TradingEconomics and Fortune provided good price data. EIA spot prices provided
+  useful cross-reference. Monte Carlo simulation worked well for generating the distribution.'
+update_triggers: 1. Announcement of a US-Iran deal or ceasefire extension with Hormuz
+  reopening → massive downward move. 2. Resumption of US bombing campaign against
+  Iran → sharp upward spike. 3. Successful passage of multiple tankers through Hormuz
+  → moderate downward pressure.
+process_reflection: 'The scaffolding worked well for this numeric commodity forecast.
+  The research sub-agent was particularly useful for gathering the geopolitical context
+  in parallel. One friction point: getting exact settlement prices for specific dates
+  is hard from web searches - the primary sources (Investing.com, ICE) require JavaScript
+  rendering that the fetch tool can''t handle well. I had to reconstruct some settlement
+  prices from cross-references (Fortune morning prices, TradingEconomics snapshots,
+  EIA spot data). The Monte Carlo framework was straightforward to implement and the
+  scenario-based approach feels right for this binary geopolitical situation.'
+computed:
+  factor_count: 7
+  factor_sum: 3.845
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Current price level: Brent at ~$107/bbl on May 21, with 6 trading
+      days to resolution'
+    supports:
+      center: 107.0
+      low: 100.0
+      high: 114.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: US-Iran negotiations in 'final phase' per Trump, creating deal probability
+      that would crash prices toward $90-95 deferred futures level
+    supports:
+      center: 93.0
+      low: 85.0
+      high: 100.0
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: Iran's Supreme Leader directive against sending uranium abroad, hardening
+      negotiating position - reduces deal probability
+    supports:
+      center: 110.0
+      low: 105.0
+      high: 115.0
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: 'Crisis-period volatility: daily vol ~2.5% (annualized ~40%), much
+      higher than normal. Strait of Hormuz still effectively closed'
+    supports:
+      center: 107.0
+      low: 94.0
+      high: 120.0
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: 'Escalation risk: Fujairah attack May 5, Iran-US fire exchanges,
+      fragile ceasefire could collapse leading to $120-130+ spike'
+    supports:
+      center: 125.0
+      low: 115.0
+      high: 140.0
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: 'Supply fundamentals: IEA estimates 2M bpd loss, SPR releases of
+      record 10M barrels/week, ADNOC says full recovery unlikely before late 2027'
+    supports:
+      center: 110.0
+      low: 105.0
+      high: 115.0
+    logit: 0.6
+    confidence: 0.8
+    effective_logit: 0.48
+  - description: 'Recent price action: 6% drop May 19-20 on deal hopes, then 2% recovery
+      May 21 on doubts about deal - price discovery in $105-112 range'
+    supports:
+      center: 107.0
+      low: 102.0
+      high: 112.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  dominant_factor: 'Current price level: Brent at ~$107/bbl on May 21, with 6 trading
+    days to resolution'
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 107.70481144343303
+    implied_p10: 100.41612483745124
+    implied_p90: 115.27958387516254
+    median_gap: -0.5648114434330296
+    median_gap_pct: -3.7999999999999994
+    spread_ratio: 1.6577567804024502
+    precision: 0.2299794661190965
+  sources:
+  - '[(Metaculus) What will be the Brent crude oil front-month futures settlement
+    price on May 29, 2026?](https://www.metaculus.com/questions/43554)'
+  - '[2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[Brent Oil Futures Historical Prices - Investing.com](https://www.investing.com/commodities/brent-oil-historical-data)'
+  - '[2026 Iran war ceasefire - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran_war_ceasefire)'
+  - '[Current price of oil as of May 19, 2026 | Fortune](https://fortune.com/article/price-of-oil-05-19-2026/)'
+  - '[Current price of oil as of May 20, 2026 | Fortune](https://fortune.com/article/price-of-oil-05-20-2026/)'
+  - '[Brent Crude Oil Last Day Financ (BZ=F) Stock Price, News, Quote & History -
+    Yahoo Finance](https://finance.yahoo.com/quote/BZ=F/)'
+  - '[Brent Crude Oil Last Day Financ (BZ=F) Stock Historical Prices & Data - Yahoo
+    Finance](https://finance.yahoo.com/quote/BZ=F/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43554
+- **Question ID**: 43551
+- **Session Duration**: 936.1s (15.6 min)
+- **Cost**: $14.1214 total (orchestrator $3.7578 + sub-agents $10.3636)
+- **Tokens**: 13,932 total (39 in, 13,893 out)
+  - Cache: 750,088 read, 84,807 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43554_20260521_103919/20260521-103919.log`
+
+### Tool Calls
+
+- **Total**: 23 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0794 |
+| execute_code | 4 | 0 | 317ms | — |
+| fetch_url | 3 | 0 | 10380ms | — |
+| get_metaculus_questions | 1 | 0 | 278ms | — |
+| premortem | 1 | 0 | 145821ms | $3.4370 |
+| reflection | 1 | 0 | 14ms | — |
+| research | 1 | 0 | 368207ms | $6.5730 |
+| stock_price | 2 | 0 | 269ms | — |
+| web_search | 7 | 0 | 17963ms | $0.2743 |
+| wikipedia | 3 | 0 | 205ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the Brent crude oil front-month futures settlement ...
+- [2026 Strait of Hormuz crisis - Wikipedia](https://en.wikipedia.org/wiki/2026...
+- [Brent Oil Futures Historical Prices - Investing.com](https://www.investing.c...
+- [2026 Iran war ceasefire - Wikipedia](https://en.wikipedia.org/wiki/2026_Iran...
+- [Current price of oil as of May 19, 2026 | Fortune](https://fortune.com/artic...
+- [Current price of oil as of May 20, 2026 | Fortune](https://fortune.com/artic...
+- [Brent Crude Oil Last Day Financ (BZ=F) Stock Price, News, Quote & History - ...
+- [Brent Crude Oil Last Day Financ (BZ=F) Stock Historical Prices & Data - Yaho...
