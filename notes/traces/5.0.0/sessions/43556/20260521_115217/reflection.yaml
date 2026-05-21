@@ -1,0 +1,389 @@
+---
+timestamp: 2026-05-21 12:01:52 UTC
+question_type: numeric
+factors:
+- description: Pre-price-hike rush buying (kakekomi juyo) is a well-documented Japanese
+    consumer behavior pattern. A 20% price increase on a popular console creates very
+    strong urgency. Reports of long lines, sellouts, and purchase restrictions at
+    major Japanese retailers confirm this is happening.
+  supports:
+    center: 5700000.0
+    low: 5600000.0
+    high: 5800000.0
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: The week ending May 24 is the FINAL week before the May 25 price hike
+    takes effect. Urgency should peak this week, driving the highest single-week sales
+    of the surge period. Historical PS5 data shows pre-hike spikes are concentrated
+    in the final days.
+  supports:
+    center: 5720000.0
+    low: 5650000.0
+    high: 5850000.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Supply constraints are a binding factor. Multiple retailers face sellouts
+    and purchase restrictions. This caps the upside - demand exceeds supply, but Famitsu
+    tracks actual sales, not demand. Nintendo may have increased shipments but Japan
+    allocation has limits.
+  supports:
+    center: 5660000.0
+    low: 5550000.0
+    high: 5750000.0
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Golden Week (Apr 27-May 10) already showed 214k units over 2 weeks
+    (~107k/week), which is 2.1x the normal rate. This included both holiday boost
+    AND partial price-hike announcement effect (May 8 announcement, only 2-3 days
+    of post-announcement sales within that window).
+  supports:
+    center: 5580000.0
+    low: 5550000.0
+    high: 5610000.0
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Post-Golden Week return to work may reduce foot traffic compared to
+    holiday period, partially offsetting the urgency boost for Week 1 (May 11-17).
+  supports:
+    center: 5650000.0
+    low: 5580000.0
+    high: 5700000.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+tentative_estimate:
+  center: 5693000.0
+  low: 5577000.0
+  high: 5835000.0
+anchor: 'Golden Week 2-week baseline: 5,367,660 + 214,438 = 5,582,098 if sales continued
+  at GW rate. But May 11-24 should see higher urgency than GW period which only had
+  2-3 days of post-announcement buying.'
+assessment: 'The question asks for cumulative Switch 2 Japan sales through May 24,
+  starting from a known base of 5,367,660 as of May 10. The key driver is a 20% price
+  hike effective May 25, creating intense pre-hike rush buying.
+
+
+  Evidence strongly supports elevated sales well above normal rates (~50k/week). The
+  Golden Week period already showed 107k/week with only partial price-hike effect.
+  Multiple credible reports describe "launch-like" conditions, retailer purchase restrictions,
+  and sellouts.
+
+
+  The main uncertainty is the magnitude of the surge vs. supply constraints. My scenario
+  mixture weights: 15% conservative (~200k 2-week), 45% base case (~305k), 30% high
+  (~415k), 10% extreme (~500k). The median 2-week estimate is ~325k, bringing cumulative
+  to ~5.69M.
+
+
+  Key tension: Demand clearly exceeds supply (reports of sellouts), but we''re forecasting
+  actual units sold (supply-limited), not demand. Nintendo likely redirected some
+  inventory to Japan ahead of the hike but can''t fully meet surge demand.'
+calibration_notes: My P10 (5,577k) implies 2-week sales of ~210k, roughly equal to
+  the Golden Week 2-week total. Given strong evidence of even more intense demand,
+  this seems like a reasonable lower bound - it would require the surge to be no stronger
+  than Golden Week despite much more urgency. My P90 (5,835k) implies ~467k for 2
+  weeks, about 2.2x Golden Week or 1.13x holiday-season rate per week. This seems
+  achievable if supply is adequate.
+key_uncertainties: The biggest uncertainty is the supply constraint. If Nintendo aggressively
+  restocked Japan ahead of the hike, sales could reach 400-500k for the 2 weeks. If
+  retailers genuinely ran out mid-period, sales could be capped at 200-250k despite
+  massive demand. The reports of sellouts suggest the latter is a real possibility.
+tool_audit: research() provided excellent background data on weekly sales history,
+  price hike details, and historical precedents. web_search confirmed reports of buying
+  surge intensity. fetch_url provided qualitative detail about the hysteria but no
+  quantitative data for May 11-24 (not yet published). No tools failed; the main gap
+  is that the actual Famitsu data for May 11-24 hasn't been published yet.
+update_triggers: If the actual May 11-17 Famitsu data leaked (it should publish around
+  May 21-22), that would dramatically narrow uncertainty. Also if Nintendo made a
+  public statement about restocking or inventory levels.
+process_reflection: The scaffolding worked well for this question. research() efficiently
+  gathered historical sales data and price hike context. The Monte Carlo simulation
+  approach felt appropriate - I could model different scenarios with explicit weights
+  and get a full distribution. The main friction was the date discrepancy between
+  the question description (April 18 announcement) and research findings (May 8 announcement)
+  - I resolved this by treating the question text as authoritative. The scenario mixture
+  approach felt right for this type of question where the key uncertainty is about
+  surge magnitude rather than random noise.
+computed:
+  factor_count: 5
+  factor_sum: 2.9400000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Pre-price-hike rush buying (kakekomi juyo) is a well-documented Japanese
+      consumer behavior pattern. A 20% price increase on a popular console creates
+      very strong urgency. Reports of long lines, sellouts, and purchase restrictions
+      at major Japanese retailers confirm this is happening.
+    supports:
+      center: 5700000.0
+      low: 5600000.0
+      high: 5800000.0
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: The week ending May 24 is the FINAL week before the May 25 price
+      hike takes effect. Urgency should peak this week, driving the highest single-week
+      sales of the surge period. Historical PS5 data shows pre-hike spikes are concentrated
+      in the final days.
+    supports:
+      center: 5720000.0
+      low: 5650000.0
+      high: 5850000.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Supply constraints are a binding factor. Multiple retailers face
+      sellouts and purchase restrictions. This caps the upside - demand exceeds supply,
+      but Famitsu tracks actual sales, not demand. Nintendo may have increased shipments
+      but Japan allocation has limits.
+    supports:
+      center: 5660000.0
+      low: 5550000.0
+      high: 5750000.0
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Golden Week (Apr 27-May 10) already showed 214k units over 2 weeks
+      (~107k/week), which is 2.1x the normal rate. This included both holiday boost
+      AND partial price-hike announcement effect (May 8 announcement, only 2-3 days
+      of post-announcement sales within that window).
+    supports:
+      center: 5580000.0
+      low: 5550000.0
+      high: 5610000.0
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Post-Golden Week return to work may reduce foot traffic compared
+      to holiday period, partially offsetting the urgency boost for Week 1 (May 11-17).
+    supports:
+      center: 5650000.0
+      low: 5580000.0
+      high: 5700000.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  dominant_factor: Pre-price-hike rush buying (kakekomi juyo) is a well-documented
+    Japanese consumer behavior pattern. A 20% price increase on a popular console
+    creates very strong urgency. Reports of long lines, sellouts, and purchase restrictions
+    at major Japanese retailers confirm this is happening.
+  dominant_effective_logit: 1.7
+  distribution_metrics:
+    implied_median: 5673948.497854077
+    implied_p10: 5595922.746781115
+    implied_p90: 5763733.905579399
+    median_gap: 19051.502145922743
+    median_gap_pct: 11.352941176470544
+    spread_ratio: 1.5374424552429609
+    precision: 0.04531881257684876
+  sources:
+  - '[(Metaculus) What will Famitsu report as the cumulative lifetime Nintendo Switch
+    2 hardware sales in Japan through the week ending May 24, 2026?](https://www.metaculus.com/questions/43556)'
+  - '[Long Lines Reported in Japan as Consumers Rush to Buy Switch 2 Before Price
+    Increase](https://twistedvoxel.com/long-lines-reported-in-japan-as-consumers-rush-to-buy-switch-2-before-price-increase/)'
+  - '[Switch 2 price increase in Japan causes hysteria, as stores restrict console
+    sales](https://www.notebookcheck.net/Switch-2-price-increase-in-Japan-causes-hysteria-as-stores-restrict-console-sales.1293250.0.html)'
+  - '[Nintendo Switch 2 - Wikipedia](https://en.wikipedia.org/wiki/Nintendo_Switch_2)'
+---
+timestamp: 2026-05-21 12:06:01 UTC
+question_type: numeric
+factors:
+- description: Pre-price-hike rush buying (kakekomi juyo) with confirmed reports of
+    long lines, sellouts, and purchase restrictions at major Japanese retailers. 20%
+    price increase creates strong urgency.
+  supports:
+    center: 5620000.0
+    low: 5560000.0
+    high: 5700000.0
+  logit: 1.5
+  confidence: 0.85
+  effective_logit: 1.275
+- description: Supply constraints are a binding factor. Retailer sellouts and purchase
+    restrictions mean actual sales are supply-limited, not demand-limited. Nintendo
+    had limited time (~5 weeks from April 18 announcement) to increase Japan shipments.
+  supports:
+    center: 5570000.0
+    low: 5500000.0
+    high: 5650000.0
+  logit: -1.0
+  confidence: 0.75
+  effective_logit: -0.75
+- description: Golden Week (Apr 27-May 10) already showed 214k over 2 weeks with price-hike
+    awareness since April 18. This is the anchor for what a surge period looks like.
+    May 11-24 should be somewhat higher (closer to deadline, more urgency) but lacks
+    holiday traffic boost.
+  supports:
+    center: 5580000.0
+    low: 5550000.0
+    high: 5620000.0
+  logit: 0.8
+  confidence: 0.9
+  effective_logit: 0.7200000000000001
+- description: 'Prior forecast consistency: Q43535 estimated Week 2 (May 18-24) at
+    median ~128k units. Cross-question consistency requires this estimate to be compatible.'
+  supports:
+    center: 5595000.0
+    low: 5540000.0
+    high: 5660000.0
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: 'Upside risk: reports describe ''launch-like'' and ''hysteria'' conditions.
+    If Nintendo successfully restocked retailers, the final week could see 175-250k+
+    units, pushing cumulative well above 5.7M.'
+  supports:
+    center: 5750000.0
+    low: 5680000.0
+    high: 5850000.0
+  logit: 0.8
+  confidence: 0.5
+  conditional: If Nintendo increased Japan inventory allocation ahead of the price
+    hike
+  effective_logit: 0.4
+tentative_estimate:
+  center: 5606000.0
+  low: 5532000.0
+  high: 5724000.0
+anchor: 'Golden Week continuation rate: 5,367,660 + 214,438 = 5,582,098. This represents
+  the status quo if May 11-24 matched Golden Week''s 2-week pace. Likely modest increase
+  above this due to intensifying urgency closer to May 25 deadline.'
+assessment: Revised estimate accounts for cross-question consistency with prior Week
+  2 forecast (~128k median) and the April 18 announcement date meaning Golden Week
+  already reflected significant price-hike demand. The 2-week median of ~238k is modestly
+  above Golden Week's 214k, reflecting stronger urgency offset by lack of holiday
+  traffic and supply constraints. The scenario mixture (20% conservative, 45% base,
+  25% high, 10% extreme) captures the wide range of possible supply/demand outcomes.
+  Key tension remains between qualitative reports of extreme demand and quantitative
+  supply constraints.
+calibration_notes: P10 2-week sales of 165k is below GW's 214k - reasonable for a
+  supply-constrained scenario. P90 of 356k represents strong surge ~1.7x GW. Median
+  of 238k is 1.1x GW - conservative but consistent with prior forecasts and supply
+  constraint evidence.
+tool_audit: research() provided excellent sales history data. web_search confirmed
+  buying surge reports. Monte Carlo simulation worked well for scenario mixture. The
+  main data gap is the unpublished Famitsu May 11-17 data.
+process_reflection: 'The premortem reviewer caught an important cross-question inconsistency
+  that significantly improved the forecast. The date discrepancy analysis was also
+  valuable - it changed the interpretation of the Golden Week data. The forced adversarial
+  review process works well for catching these issues. One friction point: I had to
+  manually reconcile with a prior forecast rather than having an automated consistency
+  check.'
+computed:
+  factor_count: 5
+  factor_sum: 2.07
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Pre-price-hike rush buying (kakekomi juyo) with confirmed reports
+      of long lines, sellouts, and purchase restrictions at major Japanese retailers.
+      20% price increase creates strong urgency.
+    supports:
+      center: 5620000.0
+      low: 5560000.0
+      high: 5700000.0
+    logit: 1.5
+    confidence: 0.85
+    effective_logit: 1.275
+  - description: Supply constraints are a binding factor. Retailer sellouts and purchase
+      restrictions mean actual sales are supply-limited, not demand-limited. Nintendo
+      had limited time (~5 weeks from April 18 announcement) to increase Japan shipments.
+    supports:
+      center: 5570000.0
+      low: 5500000.0
+      high: 5650000.0
+    logit: -1.0
+    confidence: 0.75
+    effective_logit: -0.75
+  - description: Golden Week (Apr 27-May 10) already showed 214k over 2 weeks with
+      price-hike awareness since April 18. This is the anchor for what a surge period
+      looks like. May 11-24 should be somewhat higher (closer to deadline, more urgency)
+      but lacks holiday traffic boost.
+    supports:
+      center: 5580000.0
+      low: 5550000.0
+      high: 5620000.0
+    logit: 0.8
+    confidence: 0.9
+    effective_logit: 0.7200000000000001
+  - description: 'Prior forecast consistency: Q43535 estimated Week 2 (May 18-24)
+      at median ~128k units. Cross-question consistency requires this estimate to
+      be compatible.'
+    supports:
+      center: 5595000.0
+      low: 5540000.0
+      high: 5660000.0
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: 'Upside risk: reports describe ''launch-like'' and ''hysteria'' conditions.
+      If Nintendo successfully restocked retailers, the final week could see 175-250k+
+      units, pushing cumulative well above 5.7M.'
+    supports:
+      center: 5750000.0
+      low: 5680000.0
+      high: 5850000.0
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+    conditional: If Nintendo increased Japan inventory allocation ahead of the price
+      hike
+  dominant_factor: Pre-price-hike rush buying (kakekomi juyo) with confirmed reports
+    of long lines, sellouts, and purchase restrictions at major Japanese retailers.
+    20% price increase creates strong urgency.
+  dominant_effective_logit: 1.275
+  distribution_metrics:
+    implied_median: 5613018.207282914
+    implied_p10: 5556442.577030812
+    implied_p90: 5685406.162464987
+    median_gap: -7018.207282913849
+    median_gap_pct: -5.442006950478354
+    spread_ratio: 1.4887923544743644
+    precision: 0.03424901890831252
+  sources:
+  - '[(Metaculus) What will Famitsu report as the cumulative lifetime Nintendo Switch
+    2 hardware sales in Japan through the week ending May 24, 2026?](https://www.metaculus.com/questions/43556)'
+  - '[Long Lines Reported in Japan as Consumers Rush to Buy Switch 2 Before Price
+    Increase](https://twistedvoxel.com/long-lines-reported-in-japan-as-consumers-rush-to-buy-switch-2-before-price-increase/)'
+  - '[Switch 2 price increase in Japan causes hysteria, as stores restrict console
+    sales](https://www.notebookcheck.net/Switch-2-price-increase-in-Japan-causes-hysteria-as-stores-restrict-console-sales.1293250.0.html)'
+  - '[Nintendo Switch 2 - Wikipedia](https://en.wikipedia.org/wiki/Nintendo_Switch_2)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43556
+- **Question ID**: 43553
+- **Session Duration**: 848.0s (14.1 min)
+- **Cost**: $12.3274 total (orchestrator $4.6986 + sub-agents $7.6288)
+- **Tokens**: 19,215 total (43 in, 19,172 out)
+  - Cache: 1,059,922 read, 89,075 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43556_20260521_115217/20260521-115217.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0477 |
+| execute_code | 8 | 0 | 78ms | — |
+| fetch_url | 2 | 0 | 9223ms | — |
+| get_metaculus_questions | 1 | 0 | 474ms | — |
+| premortem | 1 | 0 | 146914ms | $3.2624 |
+| reflection | 2 | 0 | 14ms | — |
+| research | 1 | 0 | 232265ms | $4.1602 |
+| web_search | 4 | 0 | 16513ms | $0.1585 |
+| wikipedia | 1 | 0 | 251ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will Famitsu report as the cumulative lifetime Nintendo Swi...
+- [Long Lines Reported in Japan as Consumers Rush to Buy Switch 2 Before Price ...
+- [Switch 2 price increase in Japan causes hysteria, as stores restrict console...
+- [Nintendo Switch 2 - Wikipedia](https://en.wikipedia.org/wiki/Nintendo_Switch_2)
