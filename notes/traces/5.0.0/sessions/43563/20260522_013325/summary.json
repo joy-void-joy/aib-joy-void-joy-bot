@@ -1,0 +1,114 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details to understand the precise resolution criteria: Google must publicly communicate a specific calendar day (year, month, day) for Android 17 stable OTA rollout between May 17–30, 2026. Acceptable sources are official Google blogs, developer documentation, or keynotes. Vague timeframes (month, quarter, week) don't count.\n\nI then used the research tool to investigate two key questions: (1) current state of Android 17 release announcements in May 2026, and (2) historical patterns of how far in advance Google announces specific Android release dates.\n\n## Key Evidence\n\n- **Historical base rate (n=3)**: For Android 14 (Oct 4, 2023), Android 15 (Oct 15, 2024), and Android 16 (June 10, 2025), Google announced the specific release date on the day of release itself — **0 days advance notice** in all three cases. Google uses a \"graduated disclosure\" model: quarter → month → specific date on release day.\n\n- **Current status**: As of May 22, 2026, Google has only said \"Q2 2026\" and \"expected in June\" for Android 17 stable. No specific calendar date has been named in any official Google communication.\n\n- **Google I/O 2026 passed without a date**: The May 19–20 event — the prime venue for Android announcements — only confirmed \"expected in June\" framing. Android 17 QPR1 Beta 3 was released at I/O, but no stable release date was named.\n\n- **Beta 4 → stable timeline**: Beta 4 released April 16, 2026. Android 16's Beta 4 (April 17, 2025) → stable (June 10, 2025) gap was ~54 days, projecting Android 17 stable to approximately **June 10, 2026**.\n\n- **No upcoming events**: No Google hardware events or conferences scheduled before May 31 that could serve as an announcement venue.\n\n- **Web search confirmation**: Multiple searches on May 22 found no reports of a specific date being announced. Third-party countdown sites speculate \"June 15\" but these aren't sourced from Google.\n\n## Conclusion\n\nI concluded the probability is **8%** — very low but not negligible. The dominant factor is Google's extremely consistent pattern of never pre-announcing specific Android release dates (0/3 recent releases had advance notice). Google I/O was the last realistic venue and passed without a date. The \"expected in June\" language makes a pre-May 31 stable release unlikely. The 8% generously accounts for tail scenarios: Google breaking from pattern with a surprise blog post, or an unexpectedly early release in the final 8 days of the resolution window.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "First research query had no web search access, producing limited results based only on training data. The agent noted this limitation but it did not impact the forecast since the second query was comprehensive."
+    ]
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Historical base rate analysis of Google's Android release announcement patterns combined with current event verification via web search.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Google might break its consistent 3-release pattern of announcing specific dates only on release day."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "7%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Established a clear historical base rate (0/3 recent Android releases had pre-announced specific dates) with specific data points for each release",
+    "Correctly identified Google I/O 2026 as the prime venue that already passed without a date announcement, adding strong temporal evidence beyond the base rate",
+    "Calculated the Beta 4 → stable timeline projection (~54 days based on Android 16 precedent) to assess probability of early release",
+    "Cross-verified current status via both official developer documentation and tech press coverage",
+    "Acknowledged the tension between the question description's claim ('several weeks ahead') and the actual research findings showing 0 days advance notice",
+    "Appropriately generous final estimate (8%) versus the raw factor-implied probability (~1.2%), accounting for unknown unknowns in a principled way"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Metaculus community) for this question — though community_prediction was null in the API response",
+    "The question background mentions Google 'has announced exact Android stable release dates anywhere from several weeks ahead' for Android 14/15, which contradicts the agent's research finding 0 days. The agent noted this contradiction in the premortem but didn't resolve it — possibly the background is misleading or refers to indirect signals rather than formal announcements",
+    "No attempt to check the official Android Developers blog directly for any posts between May 20-22 that might have been missed by general web search"
+  ],
+  "pipeline": {
+    "issues": [
+      "First research query explicitly noted 'all web search tools were unavailable' — partial tool failure that didn't ultimately affect the forecast but represents a reliability concern"
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "All web searches and fetches are dated May 22, 2026, consistent with the trace generation date",
+      "No references to events after the forecast date",
+      "The question's resolution window extends to May 30, 2026 — the agent correctly treats this as a future uncertainty rather than a known outcome"
+    ]
+  },
+  "actionable_improvements": [
+    "Check Metaculus community prediction or prediction markets when available for calibration anchoring",
+    "When question background contradicts research findings, investigate the discrepancy more deeply rather than just noting it",
+    "Consider fetching the Google Blog and Android Developers Blog directly for the most recent posts to catch any announcements not yet indexed by search"
+  ]
+}
