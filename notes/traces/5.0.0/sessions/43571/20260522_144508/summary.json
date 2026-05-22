@@ -1,0 +1,144 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question details for question 43571, confirming the resolution criteria: Eatherly must be released from Montgomery County Jail custody at any point before 23:59 CT on May 30, 2026. Transfers between facilities don't count. I then attempted to use the `mcp__research__research` sub-agent, but both queries returned no results because the sub-agent's web search/fetch tools were blocked — a complete failure of that tool.\n\nI pivoted to direct web searches and URL fetches, running three parallel web searches covering the bond hearing outcome, custody status, and case background. This yielded critical findings from WSMV, ClarksvilleNow, Dexerto, and other local outlets.\n\n## Key Evidence\n\n- **Bond hearing (May 21)**: Bond was **reduced from $1.25M to $1M**. The case was bound over to the grand jury and moved from General Sessions to Circuit Court.\n- **Still in custody**: As of the May 21 hearing, Eatherly was escorted back to Montgomery County Jail. No news of release as of the forecast date (May 22).\n- **Critical crowdfunding restriction**: The court ruled that **no crowdfunding money raised after May 13** can be used for bond, subject to a Circuit Court sourcing hearing. The GiveSendGo campaign raised **$269,884.68**, but virtually all of it came after the May 13 arrest date.\n- **Unfinalized bond offer**: Someone reportedly offered to pay bond, but the \"deal is not finalized\" (per Dexerto). This is the single biggest swing factor.\n- **Flight risk indicators**: Detectives found a **bulletproof vest**, an **airline ticket to Istanbul departing May 22**, a rifle, shotgun, ammunition, and suspected marijuana at his home.\n- **Prior bond violation**: Eatherly was **already out on bond from a Nashville arrest** when the shooting occurred, which is why Tennessee law required bond be set at 2x the customary amount.\n- **May 26 hearing canceled**: The preliminary hearing was canceled when the case moved to Circuit Court, reducing near-term court opportunities.\n- **Bond conditions if posted**: GPS ankle monitor, weapon surrender, gag order, passport cancellation.\n- **Only 8 days remaining** (May 22–30) for a multi-step release process.\n\nI attempted to check the Montgomery County inmate roster API directly but it timed out. I also tried fetching ClarksvilleNow (401 error) and WKRN (403 error), though I obtained their content through alternative sources.\n\n## Conclusion\n\nI identified a base rate of roughly **15–20%** for defendants charged with attempted murder posting $1M+ bond within 2–3 weeks, then adjusted upward based on Eatherly's unusual financial support network. The primary pathway to release is a wealthy individual supporter posting **~$100K through a bondsman** using personal (non-crowdfunding) funds, potentially bypassing the sourcing hearing requirement. However, multiple barriers exist: the crowdfunding restriction eliminates the primary $270K funding source, the sourcing hearing adds procedural delay, flight risk indicators make courts and bondsmen cautious, and the canceled May 26 hearing reduces near-term court opportunities. I noted some double-counting in my initial factor analysis (crowdfunding restriction and sourcing hearing are the same barrier), which I corrected by setting my final estimate above the factor-implied 7%. My final probability was **25%** that Eatherly is released before May 31, 2026.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 9,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Could not access the Montgomery County inmate roster API (timed out), which is the definitive resolution source specified in the question criteria",
+      "No tool for checking social media (Twitter/X) for real-time updates on bond posting status"
+    ],
+    "subtle_bugs": [
+      "The research sub-agent reported success (0 errors) but returned completely empty results because its internal web tools were blocked — the tool didn't surface this as an error state, which could mislead agents that don't inspect the response content",
+      "PrimeTimer article contained misleading wording ('was released on a condition of $1.25 million bond') that the agent correctly identified as poorly-worded reporting, but fetch_url's summarization didn't flag this discrepancy"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Multi-source news analysis of bond hearing outcomes, crowdfunding restrictions, and flight risk evidence, with base rate anchoring from violent felony pretrial release statistics.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the unfinalized offer from someone to pay bond with personal (non-crowdfunding) funds will materialize and clear any procedural requirements within 8 days."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The factor-implied probability was 6.9% based on the agent's own factor weights, but the final estimate was set at 25% — a 3.6x multiplier justified primarily by intuition about double-counting and the unfinalized bond offer. While the double-counting correction is valid, a jump from 7% to 25% is large and the agent didn't rigorously quantify how much the correction should be.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent could not access the Montgomery County inmate roster API (the definitive resolution source per the question criteria) due to timeout. Also did not check Polymarket, Kalshi, or Manifold for prediction market pricing on this question despite it being a high-profile case.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "20%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent recovery from failed research sub-agent — quickly pivoted to direct web search and fetched multiple authoritative local news sources (WSMV, Dexerto, recentlyheard.com, Fox17)",
+    "Correctly identified the critical crowdfunding restriction (post-May 13 funds blocked) as the dominant barrier, which was the most important finding for the forecast",
+    "Caught and correctly dismissed the misleading PrimeTimer wording suggesting Eatherly had already been released",
+    "Self-identified the double-counting problem between crowdfunding restriction and sourcing hearing factors, and adjusted accordingly",
+    "Thorough evidence gathering: found body armor, Istanbul ticket, prior bond status, GiveSendGo amounts, bond conditions, and hearing cancellation details across multiple sources",
+    "Established a reasonable base rate (15-20% for violent felony defendants with $1M+ bonds posting within weeks) as an anchor"
+  ],
+  "weaknesses": [
+    "Did not attempt to check prediction markets (Polymarket, Kalshi, Manifold) for this high-profile question",
+    "The code sandbox was used only to print a text summary — no quantitative modeling (e.g., scenario tree with conditional probabilities) was performed despite the agent's extended reasoning about conditional probabilities",
+    "Factor-implied probability (7%) diverged sharply from final estimate (25%) with the correction justified mainly by qualitative reasoning rather than rigorous re-weighting",
+    "Failed to access the inmate roster API — could have tried alternative approaches (e.g., searching for cached roster data or using the Playwright-based fetch suggested by the tool error)",
+    "Did not search for social media or streaming community discussion that might have real-time updates on bond posting status"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__research__research sub-agent completely failed because its internal web tools were blocked, wasting a tool call and requiring the agent to redo all research directly",
+      "Inmate roster API (the definitive resolution source) timed out, preventing a direct status check",
+      "Two news sources (ClarksvilleNow, WKRN) returned HTTP 401/403 errors"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "When the research sub-agent fails, log it as a known issue and skip it immediately in similar sessions — the wasted call added latency",
+    "Build a scenario tree with explicit conditional probabilities (P(someone has personal funds) × P(sourcing hearing not required for personal funds) × P(bondsman accepts) × P(completes in 8 days)) to bridge the gap between factor analysis and final estimate",
+    "Always check prediction markets for questions with significant public interest — even if no market exists, confirming that is informative",
+    "When the inmate roster API times out, try the search_exa fallback suggested in the error message, or search for recent social media posts confirming custody status",
+    "Consider directly checking the GiveSendGo campaign page to see current fundraising totals and any updates about bond payment status"
+  ]
+}

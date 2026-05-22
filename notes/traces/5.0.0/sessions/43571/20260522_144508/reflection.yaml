@@ -1,0 +1,238 @@
+---
+timestamp: 2026-05-22 14:55:49 UTC
+question_type: binary
+factors:
+- description: Bond exists at $1M - he CAN legally be released if bond is posted.
+    Bond was not denied.
+  logit: 0.5
+  confidence: 1.0
+  effective_logit: 0.5
+- description: Someone reportedly offered to pay bond but 'deal not finalized' - indicates
+    active effort toward release
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Crowdfunding restriction: Post-May 13 GiveSendGo funds ($269K+) CANNOT
+    be used for bond, eliminating primary funding source'
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: Sourcing hearing requirement adds procedural delay - must clear Circuit
+    Court before bond can be posted
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: 'Flight risk indicators: Istanbul ticket for May 22, body armor, weapons
+    - court/bondsman may be extra cautious'
+  logit: -0.7
+  confidence: 0.8
+  effective_logit: -0.5599999999999999
+- description: Was already out on bond for Nashville arrest when shooting occurred
+    - significantly undermines credibility for release
+  logit: -0.8
+  confidence: 0.85
+  effective_logit: -0.68
+- description: May 26 hearing canceled, case moved to Circuit Court - fewer near-term
+    opportunities for court action on bond
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Only 8 days remaining (May 22-30) - limited time for multi-step process
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+- description: Strong online supporter base with demonstrated willingness to fundraise
+    - some individual supporters may have personal funds
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Family ties to Clarksville, owns business, no prior convictions - supports
+    eventual release but doesn't address immediate barriers
+  logit: 0.2
+  confidence: 0.6
+  effective_logit: 0.12
+tentative_estimate:
+  logit: -1.1
+  probability: 0.25
+anchor: 'Base rate for defendants charged with attempted murder posting $1M+ bond
+  within 2-3 weeks: roughly 15-20%. High bonds for violent felonies substantially
+  reduce pretrial release rates. However, Eatherly has unusual financial support networks
+  that increase the base probability somewhat.'
+assessment: 'The central question is whether Eatherly can post a $1M bond within 8
+  days despite significant legal and procedural barriers.
+
+
+  PRO-RELEASE: Bond was set (not denied), someone has reportedly offered to pay, and
+  $100K through a bondsman is theoretically achievable. His online following has demonstrated
+  financial support capability.
+
+
+  ANTI-RELEASE: The court''s restriction on post-May 13 crowdfunding money eliminates
+  the primary ~$270K funding pool. A sourcing hearing in Circuit Court is likely required,
+  adding procedural delay. The case just moved from General Sessions to Circuit Court,
+  creating administrative transition time. Flight risk indicators (Istanbul ticket,
+  body armor) and the fact he was already out on bond when the shooting occurred make
+  courts/bondsmen extra cautious. The May 26 hearing was canceled, so there''s no
+  scheduled court date to address bond issues.
+
+
+  The path to release requires multiple sequential steps: finding a non-crowdfunding
+  source, potentially clearing a sourcing hearing, securing a bondsman, and processing.
+  Each step has non-trivial failure probability. The 8-day window is tight for this
+  chain of events.
+
+
+  Most likely scenario: Eatherly remains in custody through May 30 (~75%). The crowdfunding
+  restriction and sourcing hearing requirement are the primary barriers that make
+  quick release difficult even with willing financial supporters.'
+calibration_notes: Anchor of ~15-20% for violent felony defendants with $1M+ bonds
+  posting within weeks, adjusted upward to ~25% due to unusual crowdfunding/supporter
+  network. The crowdfunding restriction partially negates this advantage, keeping
+  the estimate closer to base rates. Status quo strongly favors NO - he is currently
+  in custody and significant procedural hurdles exist.
+key_uncertainties: 1. Whether the 'someone who offered to pay' can finalize with non-crowdfunding
+  funds - this is the biggest swing factor. 2. Whether a sourcing hearing can be scheduled
+  and resolved within 8 days. 3. Whether the crowdfunding restriction applies only
+  to post-May 13 funds or requires sourcing approval for ALL bond payments. 4. Whether
+  a bondsman will take this case given flight risk indicators.
+tool_audit: 'web_search: Very useful, found multiple news sources with detailed hearing
+  information. fetch_url: Mostly useful - recentlyheard.com and dexerto.com provided
+  excellent detailed hearing coverage. ClarksvilleNow (401) and WKRN (403) were blocked.
+  research() sub-agent: Failed - web tools were unavailable to it. Inmate roster API:
+  Timed out. Metaculus question fetch: Worked, confirmed no community prediction available.'
+update_triggers: '- News of bond being posted would resolve YES immediately. - News
+  of bond offer falling through would push toward 15%. - A sourcing hearing being
+  scheduled would increase probability. - Additional charges or bond revocation would
+  push toward 5%.'
+process_reflection: The research() sub-agent was completely ineffective as its web
+  tools were blocked - I had to do all research directly via web_search and fetch_url,
+  which worked well. The scaffolding was smooth for this type of current-events question.
+  The main gap was inability to check the inmate roster API directly (timed out).
+  The question was published today and closes today, so there's no community prediction
+  to calibrate against. The factor framework worked well for organizing the pro/con
+  evidence.
+computed:
+  factor_count: 10
+  factor_sum: -2.6
+  tentative_logit: -1.1
+  logit_gap: 1.5
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Bond exists at $1M - he CAN legally be released if bond is posted.
+      Bond was not denied.
+    logit: 0.5
+    confidence: 1.0
+    effective_logit: 0.5
+  - description: Someone reportedly offered to pay bond but 'deal not finalized' -
+      indicates active effort toward release
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Crowdfunding restriction: Post-May 13 GiveSendGo funds ($269K+)
+      CANNOT be used for bond, eliminating primary funding source'
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: Sourcing hearing requirement adds procedural delay - must clear Circuit
+      Court before bond can be posted
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: 'Flight risk indicators: Istanbul ticket for May 22, body armor,
+      weapons - court/bondsman may be extra cautious'
+    logit: -0.7
+    confidence: 0.8
+    effective_logit: -0.5599999999999999
+  - description: Was already out on bond for Nashville arrest when shooting occurred
+      - significantly undermines credibility for release
+    logit: -0.8
+    confidence: 0.85
+    effective_logit: -0.68
+  - description: May 26 hearing canceled, case moved to Circuit Court - fewer near-term
+      opportunities for court action on bond
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Only 8 days remaining (May 22-30) - limited time for multi-step process
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  - description: Strong online supporter base with demonstrated willingness to fundraise
+      - some individual supporters may have personal funds
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Family ties to Clarksville, owns business, no prior convictions -
+      supports eventual release but doesn't address immediate barriers
+    logit: 0.2
+    confidence: 0.6
+    effective_logit: 0.12
+  dominant_factor: 'Crowdfunding restriction: Post-May 13 GiveSendGo funds ($269K+)
+    CANNOT be used for bond, eliminating primary funding source'
+  dominant_effective_logit: -1.35
+  factor_implied_probability: 0.06913842034334682
+  tentative_probability: 0.25
+  gap_pp: 18.08615796566532
+  sources:
+  - '[(Metaculus) Will Dalton Eatherly ("Chud the Builder") be released from Montgomery
+    County Jail custody before May 31, 2026?](https://www.metaculus.com/questions/43571)'
+  - '[Controversial streamer Dalton Eatherly, known as ‘Chud the Builder,’ has bond
+    reset to $1M in attempted homicide case now bound over to grand jury](https://www.wsmv.com/2026/05/21/controversial-streamer-dalton-eatherly-known-chud-builder-has-bond-reset-1m-attempted-homicide-case-now-bound-over-grand-jury/)'
+  - '[clarksvillenow.com](https://clarksvillenow.com/local/courthouse-shooters-bond-reset-at-1-million-detectives-find-body-armor-ticket-to-istanbul/)'
+  - '[wkrn.com](https://www.wkrn.com/news/local-news/clarksville/chud-the-builder-bond-hearing-2/)'
+  - '[Chud the Builder - Wikipedia](https://en.wikipedia.org/wiki/Chud_The_Builder)'
+  - '[How much did Chud The Builder raise through Give Send Go? Details explored as
+    YouTuber’s bail get set at $1.25 Million](https://www.primetimer.com/news/how-much-did-chud-the-builder-raise-through-give-send-go-details-explored-as-youtuber-s-bail-get-set-at-1-25-million)'
+  - '[UPDATE: Courthouse Shooter Bond Reset At $1 Million, Detectives Find Body Armor,
+    Ticket To Istanbul](https://recentlyheard.com/update-courthouse-shooter-bond-reset-at-1-million-detectives-find-body-armor-ticket-to-istanbul/)'
+  - '[Detectives reveal new evidence in ChudTheBuilder shooting including ticket to
+    Turkey & body armor - Dexerto](https://www.dexerto.com/entertainment/detectives-reveal-new-evidence-in-chudthebuilder-shooting-including-ticket-to-turkey-body-armor-3367053/)'
+  - '[''Chud the Builder’ Tennessee shooting case headed to grand jury, bond slightly
+    lowered](https://fox17.com/news/local/chud-the-builder-grand-jury-clarksville-courthouse-shooting-1-million-bond-nashville-tennessee)'
+  - '[Chud the Builder - Wikipedia](https://en.wikipedia.org/wiki/Eatherly,_Dalton)'
+  - '[api.mcgtn.org](https://api.mcgtn.org/publicinquiry/inmateroster/search)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43571
+- **Question ID**: 43568
+- **Session Duration**: 825.8s (13.8 min)
+- **Cost**: $6.3112 total (orchestrator $3.2075 + sub-agents $3.1037)
+- **Tokens**: 11,505 total (49 in, 11,456 out)
+  - Cache: 663,170 read, 72,150 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43571_20260522_144508/20260522-144508.log`
+
+### Tool Calls
+
+- **Total**: 27 calls
+- **Errors**: 3 (11.1%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1320 |
+| execute_code | 1 | 0 | 1ms | — |
+| fetch_url | 9 | 3 ⚠️ | 13117ms | — |
+| get_metaculus_questions | 1 | 0 | 283ms | — |
+| premortem | 1 | 0 | 120198ms | $1.4285 |
+| reflection | 1 | 0 | 30650ms | — |
+| research | 1 | 0 | 101196ms | $1.1756 |
+| web_search | 10 | 0 | 21035ms | $0.3675 |
+| wikipedia | 3 | 0 | 265ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Dalton Eatherly ("Chud the Builder") be released from Montg...
+- [Controversial streamer Dalton Eatherly, known as ‘Chud the Builder,’ has bon...
+- [clarksvillenow.com](https://clarksvillenow.com/local/courthouse-shooters-bon...
+- [wkrn.com](https://www.wkrn.com/news/local-news/clarksville/chud-the-builder-...
+- [Chud the Builder - Wikipedia](https://en.wikipedia.org/wiki/Chud_The_Builder)
+- [How much did Chud The Builder raise through Give Send Go? Details explored a...
+- [UPDATE: Courthouse Shooter Bond Reset At $1 Million, Detectives Find Body Ar...
+- [Detectives reveal new evidence in ChudTheBuilder shooting including ticket t...
+- ['Chud the Builder’ Tennessee shooting case headed to grand jury, bond slight...
+- [Chud the Builder - Wikipedia](https://en.wikipedia.org/wiki/Eatherly,_Dalton)
+- [api.mcgtn.org](https://api.mcgtn.org/publicinquiry/inmateroster/search)
