@@ -1,0 +1,180 @@
+---
+timestamp: 2026-05-22 13:22:16 UTC
+question_type: binary
+factors:
+- description: 'Historical base rate: Only 1 of 24 years (4.2%) that had no storm
+    by May 21 got a storm May 22-31 (2021 Ana on May 22). Recent 15-year rate is 1/11
+    (9.1%).'
+  logit: -2.5
+  confidence: 0.85
+  effective_logit: -2.125
+- description: 'NHC 7-day outlook (May 22): ''Tropical cyclone formation is not expected
+    during the next 7 days'' - covers through ~May 29, leaving only May 30-31 outside
+    the forecast window.'
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: El Niño Watch with 82% probability developing - suppressive for Atlantic
+    tropical activity, and NOAA forecasts below-normal season.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 4 consecutive years (2022-2025) without pre-season named storm, suggesting
+    the 2015-2021 active period may have been anomalous.
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: AI forecast model flagged a very low-confidence signal for late May
+    tropical development near U.S. East Coast - described as 'pretty low chance but
+    probably not zero'.
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: Two tropical waves being tracked in the Atlantic and Caribbean, plus
+    a mid-to-upper-level low NE of Bahamas - some atmospheric activity exists even
+    if not expected to develop.
+  logit: 0.2
+  confidence: 0.3
+  effective_logit: 0.06
+- description: Atlantic SSTs slightly above average (+0.27°C) could support development
+    if other conditions align, but much lower than the extremely warm 2024.
+  logit: 0.1
+  confidence: 0.4
+  effective_logit: 0.04000000000000001
+tentative_estimate:
+  logit: -3.0
+  probability: 0.05
+anchor: 'Conditional base rate: ~4.2% (1 out of 24 years with no storm by May 21 subsequently
+  got a storm May 22-31, from 30-year sample 1996-2025)'
+assessment: The question asks whether a named tropical or subtropical storm will form
+  in the Atlantic before June 1, 2026. Today is May 22, so the remaining window is
+  only ~9 days. The historical conditional base rate (given no storm by May 21) is
+  low at ~4.2% over 30 years. The NHC's authoritative 7-day outlook explicitly states
+  no formation is expected through ~May 29, which covers most of the remaining window.
+  El Niño conditions are developing, which suppresses Atlantic tropical activity.
+  A Google AI model has flagged a very low-confidence hint of possible development,
+  but NHC does not see it, and the signal is described as having a 'pretty low chance.'
+  The combination of short remaining time, NHC's definitive negative outlook, suppressive
+  ENSO conditions, and 4 consecutive years without pre-season storms all point strongly
+  toward NO.
+calibration_notes: The anchor of ~4.2% already reflects the conditional base rate.
+  The NHC 7-day outlook is a strong negative signal that should push below the base
+  rate. However, I shouldn't go too extreme - there's always some chance of surprise
+  rapid development in the final days (May 30-31) outside the 7-day window, or an
+  NHC outlook update. A probability around 4-5% seems appropriate.
+key_uncertainties: 1. Whether the NHC 7-day outlook will be updated to show formation
+  chances in a future update (outlooks are updated every 6 hours). 2. Whether the
+  AI-flagged signal materializes into something real in the May 27-31 timeframe. 3.
+  Whether the tropical waves currently being tracked develop faster than expected.
+tool_audit: 'Research tool: Excellent - provided comprehensive NHC outlook data and
+  historical pre-season storm data. Web search: Useful - found the Newsweek article
+  about AI model signal, confirming low-confidence hint. fetch_url: Good - recovered
+  Wikipedia page and NHC tropical weather discussion details. Code execution: Useful
+  for computing conditional base rates. All tools returned substantive data; no failures.'
+update_triggers: 1. NHC updating its outlook to show any non-zero formation probability.
+  2. Invest designation for any Atlantic disturbance. 3. Rapid strengthening of the
+  upper-level low NE of Bahamas.
+process_reflection: The scaffolding worked well for this question. Research sub-agents
+  efficiently gathered the NHC outlook and historical data. The main gap was that
+  the historical data from the research agent was from training data rather than live
+  sources (it noted web tools were unavailable), so the exact list of pre-season storms
+  might have minor inaccuracies - but the overall picture is consistent with the question's
+  own description. The question itself provided useful historical context which helped
+  validate the research.
+computed:
+  factor_count: 7
+  factor_sum: -3.755
+  tentative_logit: -3.0
+  logit_gap: 0.7549999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: Only 1 of 24 years (4.2%) that had no storm
+      by May 21 got a storm May 22-31 (2021 Ana on May 22). Recent 15-year rate is
+      1/11 (9.1%).'
+    logit: -2.5
+    confidence: 0.85
+    effective_logit: -2.125
+  - description: 'NHC 7-day outlook (May 22): ''Tropical cyclone formation is not
+      expected during the next 7 days'' - covers through ~May 29, leaving only May
+      30-31 outside the forecast window.'
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: El Niño Watch with 82% probability developing - suppressive for Atlantic
+      tropical activity, and NOAA forecasts below-normal season.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 4 consecutive years (2022-2025) without pre-season named storm, suggesting
+      the 2015-2021 active period may have been anomalous.
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: AI forecast model flagged a very low-confidence signal for late May
+      tropical development near U.S. East Coast - described as 'pretty low chance
+      but probably not zero'.
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: Two tropical waves being tracked in the Atlantic and Caribbean, plus
+      a mid-to-upper-level low NE of Bahamas - some atmospheric activity exists even
+      if not expected to develop.
+    logit: 0.2
+    confidence: 0.3
+    effective_logit: 0.06
+  - description: Atlantic SSTs slightly above average (+0.27°C) could support development
+      if other conditions align, but much lower than the extremely warm 2024.
+    logit: 0.1
+    confidence: 0.4
+    effective_logit: 0.04000000000000001
+  dominant_factor: 'Historical base rate: Only 1 of 24 years (4.2%) that had no storm
+    by May 21 got a storm May 22-31 (2021 Ana on May 22). Recent 15-year rate is 1/11
+    (9.1%).'
+  dominant_effective_logit: -2.125
+  factor_implied_probability: 0.022865390175743235
+  tentative_probability: 0.05
+  gap_pp: 2.713460982425677
+  sources:
+  - '[(Metaculus) Will a named tropical or subtropical storm form in the Atlantic
+    basin before June 1, 2026?](https://www.metaculus.com/questions/43569)'
+  - '[2026 Atlantic hurricane season](https://en.wikipedia.org/wiki/2026_Atlantic_hurricane_season)'
+  - '[Tropical storm could form near US in late May](https://www.newsweek.com/tropical-storm-chances-united-states-atlantic-hurricane-season-11951726)'
+  - '[Atlantic Tropical Weather Discussion](https://www.nhc.noaa.gov/text/MIATWDAT.shtml)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43569
+- **Question ID**: 43566
+- **Session Duration**: 617.8s (10.3 min)
+- **Cost**: $8.8723 total (orchestrator $2.2290 + sub-agents $6.6433)
+- **Tokens**: 6,069 total (27 in, 6,042 out)
+  - Cache: 419,419 read, 61,136 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43569_20260522_131430/20260522-131430.log`
+
+### Tool Calls
+
+- **Total**: 12 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0600 |
+| execute_code | 1 | 0 | 204ms | — |
+| fetch_url | 3 | 0 | 9216ms | — |
+| get_metaculus_questions | 1 | 0 | 552ms | — |
+| premortem | 1 | 0 | 102606ms | $1.8507 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 1 | 0 | 209918ms | $4.6199 |
+| web_search | 3 | 0 | 37829ms | $0.1126 |
+| wikipedia | 1 | 0 | 200ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will a named tropical or subtropical storm form in the Atlantic ...
+- [2026 Atlantic hurricane season](https://en.wikipedia.org/wiki/2026_Atlantic_...
+- [Tropical storm could form near US in late May](https://www.newsweek.com/trop...
+- [Atlantic Tropical Weather Discussion](https://www.nhc.noaa.gov/text/MIATWDAT...
