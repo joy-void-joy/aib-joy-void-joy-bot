@@ -1,0 +1,262 @@
+---
+timestamp: 2026-05-22 05:58:22 UTC
+question_type: numeric
+factors:
+- description: Deaths already at 148 as of May 21 (US CDC), with 10 days until resolution
+    deadline. Floor is high.
+  supports:
+    center: 148.0
+    low: 106.0
+    high: 148.0
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: 'Rapid case growth: 246→600+ suspected cases in 5 days (May 15-20).
+    103% surge in 96 hours. Exponential growth phase.'
+  supports:
+    center: 300.0
+    low: 250.0
+    high: 400.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: No vaccine for Bundibugyo species. Response limited to supportive care,
+    contact tracing, safe burials. Major constraint.
+  supports:
+    center: 320.0
+    low: 260.0
+    high: 450.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 'Operational constraints: insecurity, mining-related mobility, limited
+    testing, PPE shortages, weeks of undetected transmission before declaration.'
+  supports:
+    center: 330.0
+    low: 270.0
+    high: 500.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Massive international response: PHEIC declared May 16, PHECS May 18.
+    WHO deploying 35+ experts, 11.5t supplies. IFRC CHF 29M appeal. US CDC mobilized.'
+  supports:
+    center: 250.0
+    low: 200.0
+    high: 300.0
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Resolution depends on Africa CDC's reported figure, which may lag actual
+    deaths by 2-3 days. But question uses 'more inclusive' figure.
+  supports:
+    center: 270.0
+    low: 200.0
+    high: 350.0
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Spread to North Kivu (including Goma, 1M+ pop), Kinshasa, and cross-border
+    to Uganda. Risk of much larger outbreak.
+  supports:
+    center: 350.0
+    low: 280.0
+    high: 600.0
+  logit: 0.8
+  confidence: 0.5
+  conditional: If Goma/Kinshasa transmission established
+  effective_logit: 0.4
+- description: Bundibugyo CFR historically 25-50%. Current crude CFR ~25%. With 600+
+    cases, expected cumulative deaths from known cases alone ~150-200.
+  supports:
+    center: 280.0
+    low: 220.0
+    high: 380.0
+  logit: 0.5
+  confidence: 0.75
+  effective_logit: 0.375
+tentative_estimate:
+  center: 287.0
+  low: 209.0
+  high: 449.0
+anchor: 'Deaths as of May 21: 148. With 10 days remaining and ~10-14 deaths/day accruing
+  (accelerating), linear extrapolation gives ~248-288. Epidemic growth could push
+  this higher.'
+assessment: 'This is a rapidly growing Ebola outbreak with no vaccine available. Deaths
+  have grown from 80 (May 15) to 148 (May 21) - roughly 11 deaths/day. The outbreak
+  is in exponential growth phase with cases doubling every ~5 days. Key factors pushing
+  deaths higher: no vaccine, operational constraints, spread to multiple provinces.
+  Factors moderating: massive international response (PHEIC), contact tracing scaling
+  up. The resolution depends on what Africa CDC reports by May 31, which adds uncertainty
+  about whether they''ll have the latest data. Monte Carlo simulation using scenario-weighted
+  growth rates gives median ~287 deaths with wide tails reflecting genuine uncertainty
+  about epidemic trajectory.'
+calibration_notes: 'The simulation P10=209, P90=449 represents about a 2x range. This
+  seems appropriate given: (1) confirmed rapid growth, (2) but response scaling, (3)
+  uncertainty in Africa CDC reporting cadence. The lower tail includes a 7% chance
+  Africa CDC doesn''t update beyond May 18-22, giving figures of 106-190. Upper tail
+  reflects possibility of sustained exponential growth.'
+key_uncertainties: 1. How quickly will response interventions (contact tracing, isolation,
+  safe burials) slow transmission? 2. Will the outbreak establish sustained transmission
+  in Goma or other major cities? 3. How frequently will Africa CDC update their figures?
+  4. How complete is the current community death count?
+tool_audit: 'Useful: research() sub-agent found excellent data from ReliefWeb. web_search
+  found Wikipedia, ECDC, US CDC with latest figures. fetch_url extracted detailed
+  WHO DON report. Empty/limited: Africa CDC website pages didn''t show latest outbreak
+  data directly. Failures: None.'
+update_triggers: 1. Africa CDC publishes new situation report with updated death count.
+  2. Confirmed sustained transmission in Goma or Kinshasa. 3. Announcement of experimental
+  vaccine/therapeutic trial. 4. Reports of dramatic slowing in new case counts.
+process_reflection: The research sub-agent was very effective at finding multiple
+  data points across sources. The main challenge was reconciling different death figures
+  from different sources on similar dates. The simulation approach worked well for
+  capturing epidemic dynamics uncertainty. The scenario-weighted model is more appropriate
+  than a single growth rate model given the high structural uncertainty about response
+  effectiveness.
+computed:
+  factor_count: 8
+  factor_sum: 4.3100000000000005
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Deaths already at 148 as of May 21 (US CDC), with 10 days until resolution
+      deadline. Floor is high.
+    supports:
+      center: 148.0
+      low: 106.0
+      high: 148.0
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: 'Rapid case growth: 246→600+ suspected cases in 5 days (May 15-20).
+      103% surge in 96 hours. Exponential growth phase.'
+    supports:
+      center: 300.0
+      low: 250.0
+      high: 400.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: No vaccine for Bundibugyo species. Response limited to supportive
+      care, contact tracing, safe burials. Major constraint.
+    supports:
+      center: 320.0
+      low: 260.0
+      high: 450.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 'Operational constraints: insecurity, mining-related mobility, limited
+      testing, PPE shortages, weeks of undetected transmission before declaration.'
+    supports:
+      center: 330.0
+      low: 270.0
+      high: 500.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Massive international response: PHEIC declared May 16, PHECS May
+      18. WHO deploying 35+ experts, 11.5t supplies. IFRC CHF 29M appeal. US CDC mobilized.'
+    supports:
+      center: 250.0
+      low: 200.0
+      high: 300.0
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Resolution depends on Africa CDC's reported figure, which may lag
+      actual deaths by 2-3 days. But question uses 'more inclusive' figure.
+    supports:
+      center: 270.0
+      low: 200.0
+      high: 350.0
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Spread to North Kivu (including Goma, 1M+ pop), Kinshasa, and cross-border
+      to Uganda. Risk of much larger outbreak.
+    supports:
+      center: 350.0
+      low: 280.0
+      high: 600.0
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+    conditional: If Goma/Kinshasa transmission established
+  - description: Bundibugyo CFR historically 25-50%. Current crude CFR ~25%. With
+      600+ cases, expected cumulative deaths from known cases alone ~150-200.
+    supports:
+      center: 280.0
+      low: 220.0
+      high: 380.0
+    logit: 0.5
+    confidence: 0.75
+    effective_logit: 0.375
+  dominant_factor: Deaths already at 148 as of May 21 (US CDC), with 10 days until
+    resolution deadline. Floor is high.
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 266.0621761658031
+    implied_p10: 212.53022452504317
+    implied_p90: 360.4317789291883
+    median_gap: 20.937823834196877
+    median_gap_pct: 14.156594850236456
+    spread_ratio: 1.6227009984235414
+    precision: 0.8362369337979094
+  sources:
+  - '[(Metaculus) How many deaths will be attributed to the 2026 Ebola Bundibugyo
+    outbreak in Ituri Province, DRC, as reported by Africa CDC by May 31, 2026?](https://www.metaculus.com/questions/43565)'
+  - '[2026 Ituri Province Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ituri_Province_Ebola_epidemic)'
+  - '[Ebola Virus Disease – Africa CDC](https://africacdc.org/disease/ebola/)'
+  - '[Ebola virus disease outbreak in the Democratic Republic of the Congo and Uganda](https://www.ecdc.europa.eu/en/ebola-virus-disease-outbreak-democratic-republic-congo-and-uganda-19-may-2026)'
+  - '[Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo &
+    Uganda](https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON602)'
+  - '[News – Africa CDC](https://africacdc.org/news/)'
+  - '[Africa CDC Declares the Ongoing Bundibugyo Ebola Outbreak a Public Health Emergency
+    of Continental Security – Africa CDC](https://africacdc.org/news-item/africa-cdc-declares-the-ongoing-bundibugyo-ebola-outbreak-a-public-health-emergency-of-continental-security/)'
+  - '[EBOLA BUNDIBUGYO VIRUS DISEASE OUTBREAK Democratic Republic of the Congo | Uganda
+    Weekly External Situation Report 01, Data as of 18 May 2026](https://www.afro.who.int/countries/democratic-republic-of-congo/publication/ebola-bundibugyo-virus-disease-outbreak-democratic-republic-congo-uganda-weekly-external-situation)'
+  - '[Ebola Disease: Current Situation](https://www.cdc.gov/ebola/situation-summary/index.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43565
+- **Question ID**: 43562
+- **Session Duration**: 1091.8s (18.2 min)
+- **Cost**: $10.5533 total (orchestrator $4.4519 + sub-agents $6.1014)
+- **Tokens**: 17,293 total (52 in, 17,241 out)
+  - Cache: 1,013,758 read, 87,328 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43565_20260522_054327/20260522-054327.log`
+
+### Tool Calls
+
+- **Total**: 28 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1817 |
+| execute_code | 6 | 0 | 2264ms | — |
+| fetch_url | 8 | 0 | 9525ms | — |
+| get_coherence_links | 1 | 0 | 555ms | — |
+| get_metaculus_questions | 1 | 0 | 365ms | — |
+| premortem | 1 | 0 | 148054ms | $2.4607 |
+| reflection | 1 | 0 | 10ms | — |
+| research | 1 | 0 | 383039ms | $3.2037 |
+| web_search | 6 | 0 | 16769ms | $0.2553 |
+| wikipedia | 3 | 0 | 232ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many deaths will be attributed to the 2026 Ebola Bundibugyo ...
+- [2026 Ituri Province Ebola epidemic - Wikipedia](https://en.wikipedia.org/wik...
+- [Ebola Virus Disease – Africa CDC](https://africacdc.org/disease/ebola/)
+- [Ebola virus disease outbreak in the Democratic Republic of the Congo and Uga...
+- [Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo &...
+- [News – Africa CDC](https://africacdc.org/news/)
+- [Africa CDC Declares the Ongoing Bundibugyo Ebola Outbreak a Public Health Em...
+- [EBOLA BUNDIBUGYO VIRUS DISEASE OUTBREAK Democratic Republic of the Congo | U...
+- [Ebola Disease: Current Situation](https://www.cdc.gov/ebola/situation-summar...

@@ -1,0 +1,157 @@
+{
+  "condensed_reasoning": "## Research\n\nI conducted extensive research on the 2026 Ebola Bundibugyo outbreak in Ituri Province, DRC, starting with the Metaculus question details and then gathering data from multiple authoritative sources. I used a research sub-agent that compiled findings from ReliefWeb (WHO SitRep 01, Project HOPE, IRC, MSF, CARE, IFRC reports), followed by direct web searches and URL fetches targeting Africa CDC, WHO, ECDC, US CDC, and Wikipedia.\n\nKey sources consulted:\n- **Africa CDC** May 15 press release (65 deaths, 246 suspected cases) and May 18 PHECS declaration (~106 deaths, ~395 suspected cases)\n- **WHO Disease Outbreak News** (80 deaths, 246 suspected cases as of May 15)\n- **ECDC** threat assessment (updated May 21: ~600 suspected cases, 139 deaths as of May 20)\n- **US CDC situation page** (the most current data: **148 suspected deaths, 575 suspected cases, 51 confirmed cases as of May 21**)\n- **Wikipedia** (543 suspected cases, 131+ deaths as of May 19)\n- Multiple NGO reports (IRC, MSF, CARE, Project HOPE) confirming rapid case growth\n\nI also attempted to access the Africa CDC news page directly and the Africa CDC Ebola disease page, but neither returned specific updated figures beyond the May 15 and May 18 releases.\n\n## Key Evidence\n\n**Death trajectory (using most inclusive figures per date):**\n- May 15: **80 deaths** (WHO DON broader figure)\n- May 18: **~106 deaths** (Africa CDC PHECS declaration)\n- May 19: **134 deaths** (CARE/MSF)\n- May 20: **139 deaths** (WHO DG briefing)\n- May 21: **148 deaths** (US CDC)\n\n**Growth rate analysis:**\n- Overall May 15–21: **~10.8%/day** compound growth\n- Recent May 18–21: **~11.8%/day**\n- Very recent May 19–21: **~5.1%/day** (suggesting possible deceleration or reporting batch effects)\n- Linear daily accrual: **~11 deaths/day** average, with variation\n\n**Critical context:**\n- No vaccine for Bundibugyo species — only supportive care available\n- PHEIC declared May 16, PHECS declared May 18 — massive international response mobilizing\n- Cases spreading to North Kivu (including Goma, 1M+ population) and cross-border to Uganda\n- Operational constraints: insecurity, mining-related mobility, limited PCR testing capacity, PPE shortages\n- Weeks of undetected transmission before declaration (likely started early April)\n- US funding cuts weakened surveillance in outbreak epicenter\n\n**Resolution mechanics:**\n- Resolution depends on Africa CDC's reported figure by May 31, not actual deaths\n- Africa CDC uses \"more inclusive\" figure per resolution criteria\n- Africa CDC has published on May 15 and May 18; likely will publish more given PHEIC/PHECS status\n- Reporting lag of 1-3 days expected\n\n## Modeling Approach\n\nI ran multiple Monte Carlo simulations with increasing refinement:\n\n1. **First simulation (100K runs):** Simple exponential growth with scenario-weighted initial rates and deceleration — median 277, SD 96\n2. **Case-based decomposition (200K runs):** Modeled deaths from existing unresolved cases + new case accrual + retroactive community death discovery — median 231, SD 31 (too narrow)\n3. **Combined growth model (200K runs):** Added low-probability scenarios for limited Africa CDC reporting — median 268, SD 122\n4. **Final refined model (200K runs):** Adjusted scenario probabilities: 2% no update beyond May 18 (106 deaths), 5% single update with May 22 data (~170), 18% rapid deceleration, 35% moderate, 22% sustained, 11% rapid growth, 7% explosive — **median 287, SD 112**\n\nI performed sensitivity analysis across different initial growth rate assumptions (4%–12%/day), checked adjusted estimates accounting for Africa CDC reporting undercount (80–95% of actual), and verified the distribution properties.\n\n## Conclusion\n\nI submitted a **median of 287 deaths** with an 80% confidence interval of **209–449**. The distribution is right-skewed, reflecting genuine upside risk from potential urban spread in Goma and continued exponential growth. The left tail includes small probability mass at ~106 (no Africa CDC update) and ~170 (single update). Key percentiles: P5=179, P25=243, P50=287, P75=354, P95=527. The question's upper bound is 500, and I estimated ~6.3% probability of exceeding that.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Could not access Polymarket/Kalshi/Manifold for prediction market prices on this question",
+      "Africa CDC news page content extraction was limited — tool could not parse individual article titles/links from the listing page"
+    ],
+    "subtle_bugs": [
+      "The research sub-agent's first query returned 'All web search and fetch tools are unavailable' — effectively a silent failure that was compensated by the second query succeeding",
+      "Africa CDC Ebola disease page fetch returned only 2019 outbreak data, not the current 2026 outbreak — the page apparently hadn't been updated, but this could mislead if it were the only source"
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Monte Carlo simulation with scenario-weighted epidemic growth rates, informed by multi-source epidemiological data tracking and resolution-criteria-aware reporting lag adjustments.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the massive international response (PHEIC/PHECS with 35+ WHO experts) will decelerate transmission fast enough to offset the ongoing exponential case growth in the 10 days remaining before resolution."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The P1 value of 105 (anchored to the Africa CDC May 18 figure of 106) assigns only ~2% probability that Africa CDC won't update beyond May 18, but given this is an active PHEIC/PHECS with massive media attention, the true probability may be even lower (<1%). More importantly, the P5 value of 179 assigns only 5% probability to being below ~180, but the agent's own analysis shows daily death accrual may have slowed to 5-9 deaths/day (May 19-21), which could yield only ~200 by May 31. The 80% CI of 209-449 seems somewhat wide but the center at 287 relies heavily on the assumption that the initial ~11%/day growth rate from May 15-21 partially continues.",
+      "severity": "minor"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The agent's Factor 7 claims 'Spread to North Kivu (including Goma, 1M+ pop), Kinshasa, and cross-border to Uganda' but the WHO DON explicitly states the Kinshasa case 'tested NEGATIVE for Bundibugyo virus on confirmatory testing.' The premortem caught this but the final submission still references Kinshasa spread in the factor descriptions. While the agent removed the Kinshasa reference from the final factor text, the modeling scenarios may have been influenced by this broader geographic spread assumption.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check prediction markets (Polymarket, Kalshi, Manifold) for any related Ebola outbreak markets. For a high-profile PHEIC event, prediction market prices could provide useful calibration signals. The agent also could not successfully access the WHO AFRO Weekly External Situation Report 01 PDF content (only the page header was returned), missing potentially detailed epidemiological data.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "260-290 median, broadly consistent with agent's 287",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Exceptional data gathering from 10+ authoritative sources (WHO, US CDC, ECDC, Africa CDC, MSF, CARE, IRC, Project HOPE, Wikipedia) with careful cross-referencing of figures across sources",
+    "Constructed a clear death trajectory timeline (80→106→134→139→148) from May 15-21 with growth rate analysis showing both compound and linear perspectives",
+    "Ran 4 progressively refined Monte Carlo simulations (100K-200K samples each), iterating from a simple exponential growth model to a scenario-weighted model with reporting-lag adjustments",
+    "Correctly identified and modeled the resolution-criteria-specific risk that Africa CDC might not update frequently enough, assigning appropriate small probability to fallback figures",
+    "Performed sensitivity analysis across 5 different initial growth rates (4%-12%/day) and checked adjusted estimates for Africa CDC reporting undercount",
+    "Strong premortem counterargument that constructively challenged the estimate from the downside, noting daily death accrual may have already plateaued at ~10/day",
+    "Appropriately right-skewed distribution reflecting genuine epidemic tail risk from potential urban spread to Goma"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets for related Ebola outbreak questions, which could have provided useful calibration for a high-profile PHEIC event",
+    "The case-based decomposition model (simulation 3, median 231) was dismissed as 'too narrow' without rigorous justification for preferring the growth-rate model — the narrower distribution may actually better reflect the limited remaining time horizon",
+    "Africa CDC's direct web pages were not successfully parsed for current outbreak data; the agent relied entirely on secondary sources (US CDC, ECDC) for the most recent figures rather than the primary resolution source",
+    "The modeling used somewhat arbitrary scenario weights (18%/35%/22%/11%/7%) without deriving them from historical Ebola outbreak trajectories or other empirical basis",
+    "Did not systematically compare the 2026 outbreak trajectory against the 2007 Bundibugyo Uganda outbreak or 2012 DRC Bundibugyo outbreak to calibrate expected death curves"
+  ],
+  "pipeline": {
+    "issues": [
+      "One of two research sub-agent queries failed silently ('All web search and fetch tools were unavailable') but the other succeeded, so net impact was minimal",
+      "Africa CDC direct website fetches returned stale/incomplete data — the agent had to rely on secondary sources (ECDC, US CDC) for the latest figures rather than the primary resolution source"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets (Polymarket, Kalshi, Manifold) for Ebola-related questions as a calibration reference, especially for high-profile PHEIC events",
+    "When the primary resolution source (Africa CDC) cannot be directly accessed, explicitly flag this limitation and assess how much the forecast depends on secondary-source interpretation",
+    "Derive scenario weights from historical Ebola outbreak data rather than ad hoc assignment — e.g., what fraction of past outbreaks showed rapid deceleration vs sustained growth 2 weeks after major response deployment",
+    "When multiple simulation approaches give different medians (231 vs 287), perform a structured comparison explaining why one is preferred rather than simply discarding the narrower result",
+    "Consider the question's upper bound (500) more carefully in the modeling — the submitted P95 of 527 exceeds the question bound, which may affect resolution scoring"
+  ]
+}
