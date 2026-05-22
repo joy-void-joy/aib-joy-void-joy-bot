@@ -1,0 +1,193 @@
+---
+timestamp: 2026-05-22 20:50:06 UTC
+question_type: binary
+factors:
+- description: Ships already in Eastern Med actively heading for Suez as of May 21
+    - transit imminent
+  logit: 2.5
+  confidence: 0.9
+  effective_logit: 2.25
+- description: Naval News 2-week Djibouti timeline implies Suez transit ~May 24-25,
+    well before May 30 deadline
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Suez Canal confirmed operational for military transits (French CSG
+    transited May 6)
+  logit: 1.0
+  confidence: 0.95
+  effective_logit: 0.95
+- description: Italian Navy posting social media updates showing ships heading to
+    Suez - high transparency
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: Both ships must transit (either breaking down = NO) - doubles individual
+    ship risk
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Phased approach could mean deliberate delay in Eastern Med, but evidence
+    contradicts this
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Political/operational disruption risk (hold order, recall, mission
+    change)
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Red Sea security concerns (Houthi threat) could cause pause at Suez
+  logit: -0.2
+  confidence: 0.4
+  effective_logit: -0.08000000000000002
+tentative_estimate:
+  logit: 2.2
+  probability: 0.88
+anchor: 'Ships are actively transiting toward Suez with a clear mission timeline.
+  Base rate for a military deployment completing a planned transit leg when already
+  underway: ~90%+'
+assessment: The Italian Navy minehunters Crotone and Rimini departed Augusta on May
+  15 and as of May 21 are confirmed in the Eastern Mediterranean heading toward the
+  Suez Canal, escorted by frigate Marceglia. The Naval News 2-week timeline to Djibouti
+  implies Suez transit around May 24-25. The Suez Canal is open for military transits
+  (French CSG went through May 6). There's a comfortable 8-day buffer before the May
+  30 deadline. The main risks are mechanical failure (both ships must transit), political
+  hold order, or some unforeseen disruption. The 'phased approach' mentioned by Defence
+  Minister Crosetto suggested initial Eastern Med positioning followed by Red Sea
+  movement, but the May 21 reports confirm ships are already transitioning to the
+  Red Sea phase. Probability is high (~88%) with the ~12% NO risk allocated primarily
+  to disruption events rather than timing.
+calibration_notes: Anchor is ~90%+ for a military deployment completing a planned
+  transit leg when already underway. My estimate of 88% is slightly below anchor due
+  to the both-ships requirement and residual disruption risks. Not hedging toward
+  50% - the evidence is strong and directional.
+key_uncertainties: 1. Whether the 'phased approach' involves a deliberate multi-week
+  stay in Eastern Med before Suez transit (evidence suggests no). 2. Whether both
+  ships remain operational and together throughout transit. 3. Whether any political
+  development causes a hold or recall order.
+tool_audit: 'Research tool: Successfully retrieved Naval News deployment article with
+  key 2-week timeline estimate. Web search: Found multiple Italian-language articles
+  confirming May 21 position in Eastern Med heading for Suez. fetch_url: Successfully
+  extracted dates and details from agenzianova and lanazione articles. One fetch_url
+  (blueconomy) returned 403. AIS tracking research returned no data (military ships
+  suppress AIS in threat zones). Code sandbox: Successfully ran Monte Carlo and scenario
+  analysis.'
+update_triggers: 1. Report of mechanical breakdown on either ship. 2. Italian government
+  announcement recalling ships or halting deployment. 3. Suez Canal closure or blockage.
+  4. Report confirming Suez transit (would push to ~98%).
+process_reflection: The research pipeline worked well for this question. The Italian-language
+  search was particularly valuable - English searches returned mostly background context,
+  while Italian searches found the critical May 21 updates showing the ships actively
+  heading for Suez. The research sub-agent correctly identified the Naval News source
+  with the 2-week timeline but confused Crotone/Rimini (Gaeta-class minehunters) with
+  FREMM frigates in the AIS tracking query - a hallucination. The code sandbox was
+  useful for formalizing the scenario analysis but the Monte Carlo was somewhat unnecessary
+  given the overwhelming timing evidence.
+computed:
+  factor_count: 8
+  factor_sum: 4.065
+  tentative_logit: 2.2
+  logit_gap: -1.8650000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Ships already in Eastern Med actively heading for Suez as of May
+      21 - transit imminent
+    logit: 2.5
+    confidence: 0.9
+    effective_logit: 2.25
+  - description: Naval News 2-week Djibouti timeline implies Suez transit ~May 24-25,
+      well before May 30 deadline
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Suez Canal confirmed operational for military transits (French CSG
+      transited May 6)
+    logit: 1.0
+    confidence: 0.95
+    effective_logit: 0.95
+  - description: Italian Navy posting social media updates showing ships heading to
+      Suez - high transparency
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: Both ships must transit (either breaking down = NO) - doubles individual
+      ship risk
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Phased approach could mean deliberate delay in Eastern Med, but evidence
+      contradicts this
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Political/operational disruption risk (hold order, recall, mission
+      change)
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Red Sea security concerns (Houthi threat) could cause pause at Suez
+    logit: -0.2
+    confidence: 0.4
+    effective_logit: -0.08000000000000002
+  dominant_factor: Ships already in Eastern Med actively heading for Suez as of May
+    21 - transit imminent
+  dominant_effective_logit: 2.25
+  factor_implied_probability: 0.9831266085626459
+  tentative_probability: 0.88
+  gap_pp: -10.31266085626459
+  sources:
+  - '[(Metaculus) Will Italian Navy minehunters Crotone and Rimini transit the Suez
+    Canal into the Red Sea before May 31, 2026?](https://www.metaculus.com/questions/43574)'
+  - '[Il gruppo cacciamine della Marina militare in navigazione verso Suez scortato
+    dalla fregata Marceglia](https://www.agenzianova.com/news/il-gruppo-cacciamine-della-marina-militare-in-navigazione-verso-suez-scortato-dalla-fregata-marceglia/)'
+  - '[Nave Marceglia scorta i cacciamine Rimini e Crotone verso Suez](https://blueconomy.com/it/difesa-marina/flotte-militari/marceglia-scorta-cacciamine-rimini-crotone/)'
+  - '[Partiti i due cacciamine, Rimini e Crotone in mare: navigano verso il Canale
+    di Suez](https://www.lanazione.it/la-spezia/cronaca/cacciamine-nihlpzbj)'
+  - '[Italian Minehunters Depart Augusta for Hormuz Mission as Rome Prepares for Post-Ceasefire
+    Gulf Operations](https://www.itamilradar.com/2026/05/16/italian-minehunters-depart-augusta-for-hormuz-mission-as-rome-prepares-for-post-ceasefire-gulf-operations/)'
+  - '[French Carrier Strike Group Transits Suez Amid Hormuz Tensions - Naval News](https://www.navalnews.com/naval-news/2026/05/french-carrier-strike-group-transits-suez-amid-hormuz-tensions/)'
+  - '[Lerici-class minehunter - Wikipedia](https://en.wikipedia.org/wiki/Lerici-class_minehunter)'
+  - '[Category:Minehunters of the Italian Navy - Wikipedia](https://en.wikipedia.org/wiki/Category:Minehunters_of_the_Italian_Navy)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43574
+- **Question ID**: 43571
+- **Session Duration**: 1042.1s (17.4 min)
+- **Cost**: $10.8977 total (orchestrator $3.5432 + sub-agents $7.3545)
+- **Tokens**: 13,171 total (39 in, 13,132 out)
+  - Cache: 693,834 read, 80,905 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43574_20260522_203555/20260522-203555.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 1 (5.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1054 |
+| execute_code | 2 | 0 | 139ms | — |
+| fetch_url | 5 | 1 ⚠️ | 8350ms | — |
+| get_metaculus_questions | 1 | 0 | 295ms | — |
+| premortem | 1 | 0 | 122731ms | $2.1634 |
+| reflection | 1 | 0 | 1610ms | — |
+| research | 1 | 0 | 397688ms | $4.7711 |
+| web_search | 7 | 0 | 20272ms | $0.3147 |
+| wikipedia | 2 | 0 | 220ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Italian Navy minehunters Crotone and Rimini transit the Sue...
+- [Il gruppo cacciamine della Marina militare in navigazione verso Suez scortat...
+- [Nave Marceglia scorta i cacciamine Rimini e Crotone verso Suez](https://blue...
+- [Partiti i due cacciamine, Rimini e Crotone in mare: navigano verso il Canale...
+- [Italian Minehunters Depart Augusta for Hormuz Mission as Rome Prepares for P...
+- [French Carrier Strike Group Transits Suez Amid Hormuz Tensions - Naval News]...
+- [Lerici-class minehunter - Wikipedia](https://en.wikipedia.org/wiki/Lerici-cl...
+- [Category:Minehunters of the Italian Navy - Wikipedia](https://en.wikipedia.o...
