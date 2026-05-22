@@ -1,0 +1,213 @@
+---
+timestamp: 2026-05-22 19:55:54 UTC
+question_type: binary
+factors:
+- description: IMD official forecast shows 44-46°C for Safdarjung specifically for
+    May 25-28 (verified by matching May 22 observed value of 43.3°C in same table).
+    This range includes 45°C+ outcomes.
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: IMD explicitly forecasts 'heat wave conditions very likely during next
+    6 days' and 'HEAT WAVE CONDITIONS AT A FEW PLACES' for May 23-28. Heat wave by
+    actual max temp is defined as ≥45°C.
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: ECMWF, ICON, and Best Match NWP models all show 42-43°C for May 25-28,
+    well below 45°C threshold. Three independent models agree.
+  logit: -1.5
+  confidence: 0.7
+  effective_logit: -1.0499999999999998
+- description: 'Historical base rate: Only ~10-18% chance of ≥45°C at Safdarjung during
+    May 25-31 in current climate (1 out of 11 years 2015-2025)'
+  logit: -1.0
+  confidence: 0.5
+  effective_logit: -0.5
+- description: El Niño developing (82% probability) and below-normal monsoon forecast
+    favor prolonged and intensified heat, no monsoon relief for Delhi until late June
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Safdarjung already recorded 44.6°C on May 7, 2026, showing the station
+    CAN approach 45°C this season. Current departure +3.1°C with expected intensification
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: 'Sharp temperature drop expected May 29-30 (all models agree: ~35-39°C)
+    due to pre-monsoon weather disturbance - effectively eliminates May 29-31 from
+    the window'
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+- description: Safdarjung consistently runs 1-2°C cooler than other Delhi stations
+    (Ridge, Mungeshpur). Ridge hit 45.3°C on May 21 while Safdarjung was only 43.6°C
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: News reports state 'Delhi boils at 46°C' and minimum temp hit 31.9°C
+    (warmest May night in 14 years), indicating exceptional heat conditions
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  logit: 0.36
+  probability: 0.59
+anchor: 'Historical base rate: ~15% (1 out of 11 years 2015-2025 had Safdarjung ≥45°C
+  during May 25-31; current climate estimate 10-18%). This is the unconditional climatological
+  probability without forecast information.'
+assessment: "This question hinges on whether Delhi Safdarjung will reach an extreme\
+  \ but not unprecedented temperature threshold during the climatologically hottest\
+  \ week of the year. \n\nPRO (YES): IMD's own official forecast bulletin specifically\
+  \ for Safdarjung shows 44-46°C for May 25-28. IMD forecasters have local expertise\
+  \ and see the NWP model outputs before issuing their forecast - they chose to forecast\
+  \ higher than models. Heat wave conditions are officially expected. El Niño conditions\
+  \ and record warm nights suggest exceptional heat. Safdarjung already hit 44.6°C\
+  \ this season.\n\nCON (NO): Three independent NWP models (ECMWF, ICON, Best Match)\
+  \ consistently show 42-43°C, well below 45°C. The historical base rate is only 10-18%.\
+  \ Safdarjung runs cooler than other Delhi stations by 1-2°C. The sharp cooling May\
+  \ 29-30 eliminates 3 of the 7 days. NWP models are calibrated and have good track\
+  \ records.\n\nThe key tension: IMD forecasters vs. NWP models. IMD has local expertise\
+  \ but sometimes overpredicts in ranges. NWP models might underpredict urban heat\
+  \ extremes. My compromise weights IMD's forecast significantly (they are the domain\
+  \ experts issuing this specific forecast) while acknowledging the models suggest\
+  \ lower temperatures.\n\nMonte Carlo simulation with center 44.0-44.5°C and sigma\
+  \ 1.5°C gives ~58-73% for May 25-28. Blending across model uncertainty scenarios\
+  \ gives ~59%."
+calibration_notes: The anchor base rate of 15% gets a large update from the IMD's
+  specific forecast of 44-46°C. Moving from 15% to 59% represents a significant update
+  justified by the IMD's explicit forecast. The NWP model disagreement keeps me from
+  going higher. Status quo would be NO (most years don't reach 45°C), but the active
+  heatwave forecast shifts this.
+key_uncertainties: 1. Whether IMD's 44-46°C range represents the central forecast
+  for Safdarjung or a broader range for Delhi. 2. Whether NWP models or IMD forecasters
+  are more accurate for extreme heat events. 3. Whether the May 29-30 cooling event
+  will arrive as forecast or be delayed.
+tool_audit: research() tool was highly effective - returned multi-model forecast data,
+  historical statistics, and current conditions. IMD PDF was successfully fetched
+  and contained critical official forecast data. Web search found relevant news articles
+  confirming the heatwave context. IMD city weather page (city.imd.gov.in) failed
+  to load actual data, but the PDF bulletin was much more informative. Open-Meteo
+  API data from research agent provided precise NWP model forecasts.
+update_triggers: 1. May 23-24 observed temperatures at Safdarjung - if they reach
+  45°C or exceed the IMD forecast range, P(YES) increases significantly. 2. If the
+  May 29-30 cooling arrives early (May 28) or late (May 31). 3. Updated IMD or NWP
+  model forecasts in coming days.
+process_reflection: The research() tool worked excellently here, pulling multi-model
+  NWP data and historical statistics in a single call. The IMD PDF fetch was critical
+  - it provided the official forecast table that is the single most important piece
+  of evidence. The main friction was uncertainty about how to interpret the IMD's
+  range forecast (44-46°C) - whether it's a confidence interval or a min-max. The
+  Monte Carlo simulation approach worked well for this threshold question, though
+  the results are quite sensitive to the assumed center temperature. A tool that could
+  pull IMD station-specific forecasts directly would be valuable.
+computed:
+  factor_count: 9
+  factor_sum: 0.7100000000000002
+  tentative_logit: 0.36
+  logit_gap: -0.3500000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: IMD official forecast shows 44-46°C for Safdarjung specifically for
+      May 25-28 (verified by matching May 22 observed value of 43.3°C in same table).
+      This range includes 45°C+ outcomes.
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: IMD explicitly forecasts 'heat wave conditions very likely during
+      next 6 days' and 'HEAT WAVE CONDITIONS AT A FEW PLACES' for May 23-28. Heat
+      wave by actual max temp is defined as ≥45°C.
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: ECMWF, ICON, and Best Match NWP models all show 42-43°C for May 25-28,
+      well below 45°C threshold. Three independent models agree.
+    logit: -1.5
+    confidence: 0.7
+    effective_logit: -1.0499999999999998
+  - description: 'Historical base rate: Only ~10-18% chance of ≥45°C at Safdarjung
+      during May 25-31 in current climate (1 out of 11 years 2015-2025)'
+    logit: -1.0
+    confidence: 0.5
+    effective_logit: -0.5
+  - description: El Niño developing (82% probability) and below-normal monsoon forecast
+      favor prolonged and intensified heat, no monsoon relief for Delhi until late
+      June
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Safdarjung already recorded 44.6°C on May 7, 2026, showing the station
+      CAN approach 45°C this season. Current departure +3.1°C with expected intensification
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: 'Sharp temperature drop expected May 29-30 (all models agree: ~35-39°C)
+      due to pre-monsoon weather disturbance - effectively eliminates May 29-31 from
+      the window'
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  - description: Safdarjung consistently runs 1-2°C cooler than other Delhi stations
+      (Ridge, Mungeshpur). Ridge hit 45.3°C on May 21 while Safdarjung was only 43.6°C
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: News reports state 'Delhi boils at 46°C' and minimum temp hit 31.9°C
+      (warmest May night in 14 years), indicating exceptional heat conditions
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: IMD official forecast shows 44-46°C for Safdarjung specifically
+    for May 25-28 (verified by matching May 22 observed value of 43.3°C in same table).
+    This range includes 45°C+ outcomes.
+  dominant_effective_logit: 1.2000000000000002
+  factor_implied_probability: 0.6704011598088687
+  tentative_probability: 0.59
+  gap_pp: -8.040115980886874
+  sources:
+  - '[(Metaculus) Will Delhi''s Safdarjung station record a maximum temperature of
+    45°C or higher on any day between May 25 and May 31, 2026?](https://www.metaculus.com/questions/43572)'
+  - '[Local Weather Report](https://city.imd.gov.in/citywx/city_weather.php?id=42182)'
+  - '[IMD Alert: Delhi Boils At 46°C As Heatwave Tightens Grip Across India; Rajasthan,
+    Punjab On Alert | Check Forecast](https://www.republicworld.com/india/breaking-imd-heatwave-alert-delhi-boils-at-46c-severe-heat-forecasted-for-punjab-rajasthan-and-northwest-india-for-next-7-days-full-prediction-2026-05-22-125256)'
+  - '[Delhi Heatwave 2026: National Capital Records Warmest May Night in 14 Years
+    as IMD Issues Orange Alert Till May 27](https://sundayguardianlive.com/india/delhi-heatwave-2026-national-capital-record-warmest-may-night-in-14-years-as-imd-issues-orange-alert-till-may-27-delhi-weather-195148/)'
+  - '[mausam.imd.gov.in](https://mausam.imd.gov.in/newdelhi/mcdata/delhi_forecast.pdf)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43572
+- **Question ID**: 43569
+- **Session Duration**: 969.2s (16.2 min)
+- **Cost**: $23.9408 total (orchestrator $4.9812 + sub-agents $18.9596)
+- **Tokens**: 19,119 total (41 in, 19,078 out)
+  - Cache: 1,046,634 read, 105,586 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43572_20260522_194343/20260522-194343.log`
+
+### Tool Calls
+
+- **Total**: 37 calls
+- **Errors**: 1 (2.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2360 |
+| execute_code | 7 | 0 | 112ms | — |
+| fetch_url | 10 | 1 ⚠️ | 9480ms | — |
+| get_metaculus_questions | 2 | 0 | 426ms | — |
+| premortem | 2 | 0 | 149162ms | $5.3498 |
+| reflection | 2 | 0 | 2706ms | — |
+| research | 2 | 0 | 280198ms | $12.9221 |
+| web_search | 12 | 0 | 27140ms | $0.4518 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Delhi's Safdarjung station record a maximum temperature of ...
+- [Local Weather Report](https://city.imd.gov.in/citywx/city_weather.php?id=42182)
+- [IMD Alert: Delhi Boils At 46°C As Heatwave Tightens Grip Across India; Rajas...
+- [Delhi Heatwave 2026: National Capital Records Warmest May Night in 14 Years ...
+- [mausam.imd.gov.in](https://mausam.imd.gov.in/newdelhi/mcdata/delhi_forecast....
