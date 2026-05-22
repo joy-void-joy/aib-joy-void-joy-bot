@@ -1,0 +1,151 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for post #43567, confirming the resolution criteria: the House of Representatives plenary must pass the Cabinet-submitted retrial reform bill (刑事訴訟法の一部を改正する法律案) before 23:59 JST on May 30, 2026, as verified on the official Shugiin bill tracking page.\n\nI then used the `mcp__research__research` tool with two queries — one in English and one in Japanese — to gather comprehensive legislative history. The first query returned mostly background knowledge (Hakamada case, historical context) but acknowledged tool limitations on real-time data. The second query was far more productive, returning a detailed chronology from multiple authoritative sources including **NHK**, **Nikkei**, **Japan Times**, **Jiji Press**, **Mainichi**, **Nippon.com**, and the official **Shugiin** bill text page.\n\nI then verified the bill status directly by fetching the official **Shugiin bill tracking page** (`shugiin.go.jp/internet/itdb_gian.nsf/html/gian/menu.htm`), which confirmed the bill's status as **衆議院で審議中** (Under deliberation in the House of Representatives) — not yet passed.\n\nI ran additional web searches in both English and Japanese to find any evidence of accelerated timelines or scheduled votes, and confirmed the LDP's seat count via Wikipedia and multiple news sources.\n\nI used the **code sandbox** to perform a calendar analysis, confirming that May 26 falls on a Tuesday, May 30 is a Saturday, and there are exactly **4 working days** (May 26-29) between deliberation start and the deadline.\n\n## Key Evidence\n\n- **NHK confirmed** that House of Representatives deliberation (審議入り) is scheduled to begin **May 26, 2026** — just 4 working days before the May 30 deadline\n- **Bill status** on the official Shugiin page: 衆議院で審議中 (under deliberation, not passed)\n- **Bill classification**: 重要広範議案 (Important and Broad Bill) requiring PM attendance at questioning, which mandates extensive procedural steps (趣旨説明, 代表質疑, committee sessions, plenary vote)\n- **Government's stated timeline**: Justice Minister Hiraguchi said \"aiming for passage this session\" (今国会で成立できるよう), referring to the Diet session ending **July 17, 2026** — no urgency for May 30\n- **Opposition counter-proposal** submitted May 15 by three parties, signaling expectations of extended deliberation\n- **LDP supermajority**: 316/465 seats (two-thirds), giving procedural power to force votes if desired\n- **Cross-party support**: Over half of Diet members belong to the retrial reform league\n- **No evidence** anywhere of any plan, agreement, or scheduling to rush the bill by May 30\n\n## Conclusion\n\nI concluded that passing an Important and Broad Bill through all required stages (plenary introduction, committee referral, committee deliberation, committee vote, plenary vote) in just 4 working days would be essentially unprecedented in Japanese Diet history. The government itself is not targeting May 30 — their goal is the full session ending July 17. The 5% probability accounts for unknown unknowns: behind-the-scenes agreements, procedural shortcuts, or earlier-than-reported deliberation progress that could accelerate the timeline beyond what public reporting indicates.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "search_exa": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No tool for checking Japanese Diet committee agendas directly (法務委員会 schedule)",
+      "No prediction market lookup tool used (Polymarket/Manifold/Kalshi)"
+    ],
+    "subtle_bugs": [
+      "First research query returned a response acknowledging 'web search and fetch tools are currently unavailable' yet still produced output based on training knowledge — this could mislead if treated as current data, though the agent handled it appropriately"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Timeline analysis combining confirmed NHK schedule data, official bill status verification, and Japanese legislative procedural requirements against the 4-working-day constraint.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether behind-the-scenes party agreements or procedural shortcuts could compress the normally multi-week Important and Broad Bill deliberation process into 4 working days."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi, Manifold) for any existing market on this question. For a Metaculus question with only 3 forecasters, external prediction market data could provide useful signal.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Agent claims passing an Important and Broad Bill in 4 days would be 'essentially unprecedented' but provides no specific historical comparison case. The base rate claim is asserted rather than empirically demonstrated. However, the directional conclusion appears sound.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "4%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Verified bill status directly from the official Shugiin bill tracking page, not just relying on news reports",
+    "Searched in both English and Japanese to maximize coverage of Japanese legislative sources (NHK, Nikkei, Jiji, Mainichi)",
+    "Used code sandbox to perform precise calendar analysis confirming exactly 4 working days between deliberation start and deadline",
+    "Correctly identified the 重要広範議案 classification and its procedural implications (PM attendance requirement, extended deliberation norms)",
+    "Carefully distinguished between the government's actual stated timeline (session end July 17) vs. the question's deadline (May 30)",
+    "Constructed a thoughtful premortem with specific, concrete counterarguments (behind-the-scenes 国対 agreements, committee-level deliberation already underway, Saturday session possibility)",
+    "Appropriately adjusted mechanical factor-implied probability (~1.2%) upward to 5% to account for unknown unknowns, rather than being overconfident at the extreme low end"
+  ],
+  "weaknesses": [
+    "First research query returned mostly background knowledge with a 'tools unavailable' caveat, wasting some tokens on already-known Hakamada case history",
+    "Failed to fetch the NHK article URL directly (got connection error), missing potential details about the deliberation schedule",
+    "Did not check prediction markets (Polymarket, Manifold) for any existing market on this question",
+    "Did not attempt to find specific historical precedents for how quickly 重要広範議案 bills have moved through committee — claimed it was 'unprecedented' without citing a concrete comparison case",
+    "Minor Diet session numbering confusion (217th vs 221st) was noted but not fully resolved",
+    "Did not check whether the 法務委員会 (Judicial Affairs Committee) meeting on May 22 (visible in Shugiin TV schedule) was handling preliminary work on this bill specifically"
+  ],
+  "pipeline": {
+    "issues": [
+      "First research query returned degraded results with 'tools unavailable' caveat, producing training-knowledge-based output rather than live web data — though the second query compensated",
+      "NHK URL fetch failed with connection error, requiring reliance on pre-extracted data from research tool"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets as a standard step, even for niche political questions — they may have relevant markets or analogous ones",
+    "When claiming historical precedent ('unprecedented'), attempt to find at least one concrete comparison case to ground the claim empirically",
+    "When a fetch_url fails, try alternative URL formats or use web search to find cached/alternative versions of the same article",
+    "For Japanese legislative questions, directly check the 法務委員会 agenda rather than inferring from general Diet TV schedules"
+  ]
+}
