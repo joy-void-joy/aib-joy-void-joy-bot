@@ -1,0 +1,118 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question metadata (post 43564), which provided comprehensive background on the Imperial House Law amendment process, including the resolution criteria requiring a formal bill (法律案) to appear on the official Diet bill listing by May 31, 2026 (JST).\n\nI then launched a research query covering both English and Japanese search terms (`皇室典範 国会 法律案 提出`), which returned a detailed research report with a structured timeline of events from February through May 22, 2026, sourced from Nikkei, Asahi, NHK, and the official Diet bill registry (shugiin.go.jp).\n\n## Key Evidence\n\n- **Zero bills on the official registry**: I directly fetched the 217th Diet session bill listing at `shugiin.go.jp` and confirmed **0 bills** related to the Imperial House Law (皇室典範) among 66 member bills, 59 cabinet bills, and 13 treaties.\n- **Legislative consensus not yet presented**: As of May 22, the Speakers' \"legislative consensus\" (立法府の総意) proposal had **not yet been formally presented** to parties. Asahi (May 15) reported it would come \"as early as next week\" (来週にも), and the May 22 Asahi report said it was expected \"soon\" (近く示される).\n- **Multiple sequential steps remain**: The Komeito source (May 15) explicitly outlined the remaining process: (1) Speakers present consensus → (2) parties take back for review → (3) plenary meeting discussion → (4) report to PM → (5) government drafts bill → (6) formal submission.\n- **Media expects June submission**: FNN and other Japanese outlets (per the Metaculus question background) explicitly reported submission most likely in **June 2026**, not May.\n- **Only 9 days remaining**: May 22 to May 31 = 9 calendar days for a multi-step process.\n- **Parties still disagree**: Technical details remained unresolved — LDP demanded three amendments, disagreements persisted on spousal/child status for female members who retain imperial status.\n- **Strong political will exists**: Speaker Mori aimed for passage this session (ending July 17), and LDP Policy Research Council Chair Kobayashi pledged \"reliable amendment this session\" on May 18. However, this targets the session end, not May 31.\n\nI also searched Japanese-language sources specifically for timeline information and fetched the Komeito party press conference page to confirm the sequential steps required before bill submission.\n\n## Conclusion\n\nI concluded that the probability of formal bill submission by May 31, 2026 is approximately **3%**. The process was still at the pre-consensus presentation stage as of May 22, with at least 5 sequential steps remaining before formal submission. All media sources indicated June as the expected timeline. The 9-day window was far too compressed for a multi-party legislative process where disagreements still existed. My premortem considered the strongest YES case — a Diet-member-submitted bill (衆法) bypassing government drafting — but found no evidence of any such initiative. The political will for passage this session (July 17 end) was real but did not indicate any acceleration toward a May deadline.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market tool or check was performed — Polymarket/Kalshi could have had relevant markets on Japanese legislative timelines"
+    ],
+    "subtle_bugs": [
+      "The research tool's second query returned a transparent 'unable to access web tools' failure but still provided a response object marked as successful (successful_count: 2) — potentially misleading if not read carefully"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Direct verification of official Diet bill registry combined with Japanese media timeline analysis and legislative process step mapping.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the multi-step legislative process could be unexpectedly compressed or bypassed via a Diet-member-submitted bill within 9 days."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "3%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Directly verified the official Diet bill registry (shugiin.go.jp) to confirm zero Imperial House Law bills — primary source check, not just relying on secondary reporting",
+    "Fetched the Komeito press conference page to extract the specific sequential steps remaining in the legislative process, providing concrete evidence for the timeline assessment",
+    "Research was conducted in both English and Japanese, covering Nikkei, Asahi, NHK, and official government sources",
+    "Premortem identified the strongest counterargument (Diet-member-submitted bill bypassing government drafting process) and explicitly noted no evidence supported this scenario",
+    "Correctly distinguished between political will for passage this session (July 17) versus the specific May 31 deadline the question asks about",
+    "Factor analysis was well-structured with appropriate confidence weights, and the agent explicitly acknowledged some double-counting between factors 2 and 4"
+  ],
+  "weaknesses": [
+    "Second research query ('Japan Diet 217th session bill schedule') failed to access web tools and returned only training-data background — this was noted transparently but still represents wasted effort",
+    "Did not independently verify the FNN report claiming June submission — relied on the Metaculus question background as a proxy source rather than fetching the FNN article directly",
+    "Did not check prediction markets (Polymarket, Metaculus community prediction was null) for additional signal on this question",
+    "The factor logits sum to a much more extreme probability (~0.12%) than the 3% estimate, creating a large unexplained gap; while the agent noted this and adjusted upward as a 'floor,' the anchor-adjustment framework was somewhat ad hoc"
+  ],
+  "pipeline": {
+    "issues": [
+      "Second research query (Japan Diet 217th session bill schedule) returned training-data-only response due to web tool unavailability, but was still counted as successful in the API response — slightly misleading metadata"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets even for niche political questions — Metaculus community prediction was null, but Polymarket or Manifold might have had a relevant market",
+    "When a research sub-query fails to access web tools, retry with a different formulation rather than accepting the training-data fallback",
+    "Explicitly formalize the anchor-adjustment framework when factor sums diverge significantly from the tentative estimate (0.12% vs 3%) — articulate why the floor exists rather than asserting it"
+  ]
+}
