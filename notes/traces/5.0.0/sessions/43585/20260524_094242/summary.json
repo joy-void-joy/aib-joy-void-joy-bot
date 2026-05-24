@@ -1,0 +1,148 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for question 43585, which asks whether Flávio Bolsonaro will remain the highest-polling non-Lula candidate in **every** national first-round 2026 Brazilian presidential poll with fieldwork ending between May 18–31, 2026. The resolution source is the English Wikipedia opinion polling article, using stimulated first-round scenarios from TSE-registered polls by nationally recognized institutes.\n\nI then used the research tool to pull comprehensive polling data, obtaining two detailed reports covering the pre- and post-Banco Master scandal polling landscape. I fetched the Wikipedia polling article directly, searched for specific polls from Gerp, Vox Brasil, Vetor, and Futura, and downloaded the Vox Brasil PDF report from Poder360 to extract exact first-round numbers.\n\n## Key Evidence\n\nI identified **5 qualifying polls** with fieldwork ending in the May 18–31 window (as of May 24):\n\n- **AtlasIntel** (May 13–18): Flávio **34.3%**, next non-Lula: Santos at **6.9%** → gap **27.4pp**\n- **Vox Brasil** (May 17–19): Flávio **32.1%**, next non-Lula: Caiado at **5.9%** → gap **26.2pp**\n- **Futura** (May 15–20/21): Flávio **35.6%**, next non-Lula: Zema at **3.9%** → gap **31.7pp**\n- **Gerp** (May 19–22): Flávio **38%**, next non-Lula at **3%** → gap **35pp**\n- **Datafolha** (May 20–22): Flávio **31%**, next non-Lula: Caiado at **4%** → gap **27pp**\n\nThe **Banco Master scandal** (leaked May 13) dropped Flávio 2–6 points in first-round support versus Lula, but critically did **not** boost any alternative non-Lula candidate above single digits. The structural two-way race (Lula vs. Flávio) remained intact.\n\nI investigated the **Michelle Bolsonaro scenario risk**: the Futura poll tested Michelle in a separate scenario from Flávio (not together), and per the fine print, only scenarios featuring Flávio count for resolution. I verified this directly via fetch_url of the Gazeta do Povo article.\n\nI ran a code-based risk decomposition estimating compound NO probability at ~3.1%, and a reflection checkpoint that showed factor-implied probability of ~99.9% but appropriately adjusted down to 94% to account for factor redundancy and unknown unknowns.\n\n## Conclusion\n\nI concluded at **94% YES**. The minimum gap between Flávio and any other non-Lula candidate across all 5 polls was **26 percentage points** — structurally impossible to close in the remaining 7 days. The 6% NO probability accounts for exotic poll scenarios (Michelle + Flávio tested together where Michelle wins), resolution ambiguities around \"nationally recognized institute,\" Wikipedia editorial timing, and general unknown unknowns.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 11,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No ability to query TSE poll registration database directly to identify all upcoming registered polls in the May 24-31 window",
+      "Wikipedia table extraction failed — agent couldn't parse the actual polling tables from the HTML, relying instead on research tool summaries"
+    ],
+    "subtle_bugs": [
+      "The Wikipedia fetch_url returned only the article introduction text without any of the polling data tables, forcing reliance on secondary sources and the research tool's cached summaries. The agent didn't flag this limitation.",
+      "Agent's self-reported tool audit in the reflection ('All tools worked well. No failures') contradicted actual tool errors, as noted by the premortem checker."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Comprehensive poll-by-poll verification of all qualifying surveys in the resolution window, combined with structural gap analysis and risk decomposition for remaining days.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether any poll released May 24-31 will test an unusual first-round scenario (e.g., Michelle + Flávio together) where Flávio is not the highest non-Lula candidate."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi, Manifold) for a relevant market on this question or related Brazilian election outcomes.",
+      "severity": "minor"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "Agent noted Vox Brasil fieldwork as May 17-19, meaning fieldwork ended May 19 (within window). But the resolution criteria requires fieldwork ENDING between May 18-31. If the Vox fieldwork actually ended May 19, it qualifies. However, the agent didn't carefully verify whether May 17 start date means any fieldwork occurred before May 18 could be an issue — the criteria is about fieldwork ENDING date, which the agent correctly used.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The risk decomposition code assigned only 5% probability to any poll testing Michelle + Flávio in the same scenario, and 20% conditional probability that Michelle would beat Flávio. Given the fine print states 'if Flávio is featured in multiple scenarios within the same poll, all must satisfy the condition,' the real risk may be slightly higher if a pollster includes a scenario with both where Michelle draws more of the Bolsonaro base. However, the 26+ point gap makes this a very marginal concern.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "93-95%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Systematically identified and verified all 5 qualifying polls through multiple independent sources (Gazeta do Povo, Poder360, Vox Brasil PDF report, Wikipedia research summaries)",
+    "Downloaded and read the actual Vox Brasil PDF report to extract first-round numbers that weren't available in article text — showed initiative in overcoming data gaps",
+    "Correctly analyzed the Futura poll's three scenarios and determined that Michelle and Flávio are tested separately, directly addressing the key risk factor",
+    "Recognized and explicitly addressed the fine print about multiple scenarios within the same poll needing to all satisfy the condition",
+    "Identified the key insight that the Banco Master scandal hurt Flávio vs Lula but did NOT change his relative position vs other non-Lula candidates — this is the crux of the forecast",
+    "Used code-based risk decomposition to formalize the residual NO probability, arriving at a well-calibrated 94%"
+  ],
+  "weaknesses": [
+    "Did not check any prediction markets for relevant Brazilian election or polling questions",
+    "Self-reported tool audit was inaccurate ('All tools worked well. No failures') despite Wikipedia fetch failures — this was caught by the premortem but indicates imprecise self-monitoring",
+    "The Gerp fieldwork date discrepancy (May 18-21 from Poder360 vs May 19-22 from Gazeta do Povo) was noted in thinking but never resolved — both sources reference the same TSE registration number",
+    "Did not attempt to query the TSE poll registration system to identify polls scheduled for release May 24-31, which would have better quantified the remaining poll volume risk",
+    "The reflection tool showed factors summing to 99.9% implied probability vs 94% estimate — agent correctly noted factor redundancy but the framework's factor-based approach was not well-suited to this question type where all evidence points the same direction"
+  ],
+  "pipeline": {
+    "issues": [
+      "Wikipedia fetch_url failed to extract polling table data, returning only introductory text — this is a recurring limitation with table-heavy Wikipedia articles",
+      "Agent self-reported 'no failures' in tool audit despite fetch_url issues — self-assessment was inaccurate",
+      "Gerp fieldwork dates reported inconsistently across sources (May 18-21 vs May 19-22) — agent noted this but didn't fully resolve the discrepancy"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets for relevant questions, even for niche topics — Polymarket or Manifold may have Brazilian election markets",
+    "When Wikipedia fetch_url fails to extract table data, try the Portuguese Wikipedia article (pt.wikipedia.org) or use a different extraction method rather than relying solely on research tool summaries",
+    "Query the TSE poll registration portal directly to identify upcoming registered polls in the remaining window, providing better quantification of the number of future qualifying polls",
+    "Improve self-monitoring accuracy in tool audit reflections — track actual errors encountered rather than reporting from memory"
+  ]
+}
