@@ -1,0 +1,282 @@
+---
+timestamp: 2026-06-01 13:41:29 UTC
+question_type: numeric
+factors:
+- description: June 1 close at 1377 CNY/t after +7.1% surge on 'Shanxi vows to tackle
+    safety violations' - near limit-up move front-loads upside
+  supports:
+    center: 1377.0
+    low: 1350.0
+    high: 1400.0
+  logit: 1.0
+  confidence: 0.95
+  effective_logit: 0.95
+- description: 109 mines halted in Shanxi (~4% of national coking coal output), mining
+    slow to resume per Mysteel (May 29). State Council investigation + hidden tunnels
+    discovery extend enforcement timeline
+  supports:
+    center: 1400.0
+    low: 1350.0
+    high: 1500.0
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: 'Post-shock mean reversion tendency: price already up 19.5% from accident
+    low (1152.5→1377). Large single-session moves near daily limit often partially
+    retrace'
+  supports:
+    center: 1300.0
+    low: 1220.0
+    high: 1370.0
+  logit: -0.8
+  confidence: 0.6
+  effective_logit: -0.48
+- description: 'Citic Futures analyst: if no sweeping crackdown, coal production will
+    likely rebound rapidly after initial inspections - bearish signal'
+  supports:
+    center: 1280.0
+    low: 1200.0
+    high: 1350.0
+  logit: -0.6
+  confidence: 0.5
+  effective_logit: -0.3
+- description: Summer power demand season approaching - Beijing prioritizing adequate
+    supply creates cross-pressure that may limit further safety enforcement upside
+  supports:
+    center: 1330.0
+    low: 1250.0
+    high: 1400.0
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: Annual safety campaign starts June 1 - structural bullish factor for
+    the forecast horizon. New investigations could expand scope of shutdowns
+  supports:
+    center: 1420.0
+    low: 1370.0
+    high: 1550.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Elevated crisis-period volatility (~3-3.5% daily vs normal ~2%) widens
+    distribution, making extreme outcomes more likely in either direction
+  supports:
+    center: 1360.0
+    low: 1150.0
+    high: 1600.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 1358.0
+  low: 1202.0
+  high: 1550.0
+anchor: 'Current price anchor: 1377 CNY/tonne (June 1 close from MacroMicro/Sina).
+  This is the most recent observable price and serves as the natural center for a
+  short-horizon commodity forecast.'
+assessment: 'The DCE coking coal JM2609 contract surged 7.1% on June 1 to close at
+  1,377 CNY/tonne following Shanxi''s announcement of intensified safety enforcement.
+  This came on top of a cumulative ~19.5% rally from the post-accident low of 1,152.5
+  on May 25.
+
+
+  Key tension: The supply shock is genuine (109 mines halted, ~4% of national output)
+  and the political dynamics (State Council investigation, hidden tunnels discovery,
+  annual safety campaign starting June 1) suggest enforcement won''t wind down quickly.
+  However, the price has already captured a large portion of the supply shock premium,
+  and the government''s competing priority of ensuring summer power supply creates
+  a natural ceiling on further enforcement.
+
+
+  The weighted-scenario simulation yields a median of ~1,358 (slight pullback from
+  the post-surge close) with a wide distribution reflecting crisis-period volatility.
+  The P10-P90 range of 1,202-1,550 spans roughly ±13% from the median, appropriate
+  for 9 trading days at elevated volatility.
+
+
+  Three scenarios:
+
+  1. Consolidation (45%): Gradual mine restarts, price consolidates 1,290-1,450
+
+  2. Extended enforcement (30%): Inspections intensify, price pushes to 1,400-1,600+
+
+  3. Rapid normalization (25%): Government prioritizes supply, price retraces to 1,200-1,350
+
+
+  The slightly negative expected drift (-0.12%/day weighted) reflects that post-shock
+  rallies in Chinese commodity futures tend to partially revert within 1-2 weeks,
+  but the ongoing fundamental supply disruption limits downside.'
+calibration_notes: 'Anchor is current price 1377. My median of 1358 implies ~1.4%
+  pullback over 9 days - this is a mild mean-reversion assumption. The P10-P90 range
+  of 1202-1550 spans 25.2% of current price, which for 9 days at ~3% daily vol (random
+  walk: ±9%) is wider than pure random walk due to scenario uncertainty. This seems
+  appropriately calibrated for crisis-period commodity futures.'
+key_uncertainties: '1. Whether safety inspections expand or contract in scope during
+  the first two weeks of June
+
+  2. Any new mine accidents or safety incidents that could amplify the crackdown
+
+  3. Government signals about prioritizing supply vs safety - any explicit policy
+  statements
+
+  4. Steel demand indicators that could shift underlying coking coal fundamentals
+
+  5. Whether the June 1 limit-up move triggers additional speculative momentum or
+  profit-taking'
+tool_audit: 'USEFUL: research() sub-agent retrieved detailed Sina Finance API data
+  with full OHLCV history for JM2609, JM2606, JM0 - this was critical for establishing
+  the current price (1377) and recent trajectory. web_search found key news articles
+  about the Shanxi mine disaster and market impact. fetch_url successfully extracted
+  detailed analyst views and supply disruption estimates from mining.com and discoveryalert.com.au.
+  execute_code ran Monte Carlo simulations effectively.
+
+
+  EMPTY: The second research query about the mine restart timeline couldn''t find
+  web data due to sub-agent tool limitations. MacroMicro fetch only returned the current
+  value without historical data.
+
+
+  FAILURES: None.'
+update_triggers: '1. Government announcement of expanded mine inspections or lifting
+  of suspensions
+
+  2. New mine accident or safety incident in Shanxi or elsewhere
+
+  3. Daily price moves that hit the limit-up or limit-down threshold
+
+  4. Official production data showing degree of supply recovery
+
+  5. Steel mill demand signals (inventory levels, operating rates)'
+process_reflection: 'The research sub-agent''s Sina Finance API approach was excellent
+  - it found structured data that would have been hard to extract manually. The scenario-based
+  Monte Carlo approach felt appropriate for this crisis-period commodity forecast.
+  One friction point: I couldn''t easily get a longer historical price series for
+  JM futures to compute a more robust normal-period volatility estimate. The tools
+  worked well together for this commodity price forecast. The question was well-structured
+  with clear resolution criteria.'
+computed:
+  factor_count: 7
+  factor_sum: 1.25
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: June 1 close at 1377 CNY/t after +7.1% surge on 'Shanxi vows to tackle
+      safety violations' - near limit-up move front-loads upside
+    supports:
+      center: 1377.0
+      low: 1350.0
+      high: 1400.0
+    logit: 1.0
+    confidence: 0.95
+    effective_logit: 0.95
+  - description: 109 mines halted in Shanxi (~4% of national coking coal output),
+      mining slow to resume per Mysteel (May 29). State Council investigation + hidden
+      tunnels discovery extend enforcement timeline
+    supports:
+      center: 1400.0
+      low: 1350.0
+      high: 1500.0
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: 'Post-shock mean reversion tendency: price already up 19.5% from
+      accident low (1152.5→1377). Large single-session moves near daily limit often
+      partially retrace'
+    supports:
+      center: 1300.0
+      low: 1220.0
+      high: 1370.0
+    logit: -0.8
+    confidence: 0.6
+    effective_logit: -0.48
+  - description: 'Citic Futures analyst: if no sweeping crackdown, coal production
+      will likely rebound rapidly after initial inspections - bearish signal'
+    supports:
+      center: 1280.0
+      low: 1200.0
+      high: 1350.0
+    logit: -0.6
+    confidence: 0.5
+    effective_logit: -0.3
+  - description: Summer power demand season approaching - Beijing prioritizing adequate
+      supply creates cross-pressure that may limit further safety enforcement upside
+    supports:
+      center: 1330.0
+      low: 1250.0
+      high: 1400.0
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: Annual safety campaign starts June 1 - structural bullish factor
+      for the forecast horizon. New investigations could expand scope of shutdowns
+    supports:
+      center: 1420.0
+      low: 1370.0
+      high: 1550.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Elevated crisis-period volatility (~3-3.5% daily vs normal ~2%) widens
+      distribution, making extreme outcomes more likely in either direction
+    supports:
+      center: 1360.0
+      low: 1150.0
+      high: 1600.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: June 1 close at 1377 CNY/t after +7.1% surge on 'Shanxi vows to
+    tackle safety violations' - near limit-up move front-loads upside
+  dominant_effective_logit: 0.95
+  distribution_metrics:
+    implied_median: 1365.6382978723404
+    implied_p10: 1312.9787234042553
+    implied_p90: 1438.4802431610942
+    median_gap: -7.638297872340445
+    median_gap_pct: -6.086219423589263
+    spread_ratio: 2.772874788084282
+    precision: 0.25625920471281294
+  sources:
+  - '[(Metaculus) What will be the closing price of the most-active Dalian Commodity
+    Exchange coking coal (JM) futures contract on June 12, 2026?](https://www.metaculus.com/questions/43739)'
+  - '[China - Coking Coal Futures [JM] | Series | MacroMicro](https://en.macromicro.me/series/3997/china-coking-coal-futures)'
+  - '[China coking coal prices extend gains after Shanxi mine disaster](https://www.mining.com/web/china-coking-coal-prices-extend-gains-after-shanxi-mine-disaster/)'
+  - '[FLASH: A coking coal mine in Shanxi...](https://www.mysteel.net/news/5122913-flash-a-coking-coal-mine-in-shanxi-enters-3-day-maintenance)'
+  - '[Shanxi Coal Mine Disaster: Impact on Steel, Power and Chemicals](https://discoveryalert.com.au/shanxi-coal-disaster-steel-power-chemicals-2026/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43739
+- **Question ID**: 43769
+- **Session Duration**: 716.4s (11.9 min)
+- **Cost**: $9.7661 total (orchestrator $3.5766 + sub-agents $6.1895)
+- **Tokens**: 13,463 total (41 in, 13,422 out)
+  - Cache: 776,117 read, 74,943 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43739_20260601_133213/20260601-133213.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1084 |
+| execute_code | 6 | 0 | 183ms | — |
+| fetch_url | 4 | 0 | 12605ms | — |
+| get_metaculus_questions | 1 | 0 | 483ms | — |
+| premortem | 1 | 0 | 117019ms | $2.4141 |
+| reflection | 1 | 0 | 21ms | — |
+| research | 1 | 0 | 181621ms | $3.4830 |
+| web_search | 5 | 0 | 15395ms | $0.1841 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the closing price of the most-active Dalian Commodi...
+- [China - Coking Coal Futures [JM] | Series | MacroMicro](https://en.macromicr...
+- [China coking coal prices extend gains after Shanxi mine disaster](https://ww...
+- [FLASH: A coking coal mine in Shanxi...](https://www.mysteel.net/news/5122913...
+- [Shanxi Coal Mine Disaster: Impact on Steel, Power and Chemicals](https://dis...
