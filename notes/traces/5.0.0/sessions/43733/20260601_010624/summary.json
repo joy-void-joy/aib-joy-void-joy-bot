@@ -1,0 +1,103 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for post #43733, confirming the resolution criteria: the Bloomberg tanker-tracking 4-week average for Russia's seaborne crude oil exports ending June 7, 2026, reported by Julian Lee. The question's bounds are 2.0–4.2 mb/d.\n\nI then ran two parallel research queries:\n1. **Russia seaborne crude exports May 2026 Bloomberg tanker tracking** — which returned the critical anchor figure: **Bloomberg's 4-week average ending May 24, 2026 was 3.66 mb/d**, the highest of 2026, from a May 27 Bloomberg article.\n2. **Russia Baltic port Primorsk Ust-Luga recovery May-June 2026** — which returned detailed context on the March drone strike campaign (~40% capacity loss), the April–May recovery trajectory, and ongoing Ukrainian strikes as of May 30-31.\n\n## Key Evidence\n\n- **Bloomberg 4-week average ending May 24: 3.66 mb/d** (highest of 2026)\n- **Bloomberg 4-week average ending May 17: 3.65 mb/d**\n- **Bloomberg 4-week average ending April 26: 3.52 mb/d**\n- **Single week ending April 26: 3.79 mb/d** (from question background)\n- I back-calculated individual weekly values: W5 (week ending May 24) ≈ **3.83 mb/d**, and the average of W2–W4 ≈ **3.60 mb/d**, placing W4 at approximately **3.65 mb/d**.\n- The target 4-week period ending June 7 covers W4 (May 17), W5 (May 24), W6 (May 31), W7 (June 7) — meaning **2 of 4 weeks are already substantially observed**.\n- **Strait of Hormuz disruption** (since Feb 28, 2026) redirected Asian buyers (95% of Russian exports) toward Russian crude; India imports up ~70% since February.\n- **Ukrainian drone strikes** continue as of May 30-31; March precedent showed a single week dropping to 2.32 mb/d.\n- **Baltic ports** recovering but not at full capacity: Primorsk ~1.1M bpd, Ust-Luga ~0.6M bpd.\n- **Refinery outages** (~25% capacity) freeing crude for export.\n\n## Quantitative Modeling\n\nI ran a **Monte Carlo simulation (100,000 iterations)** with three scenarios:\n- **Base case** (50% weight): W6/W7 modeled with 80-82% normal weeks (~N(3.70, 0.15)), 12-13% partial disruption, 3-5% major disruption\n- **Optimistic** (30% weight): Higher base, less drone risk\n- **Pessimistic** (20% weight): More drone risk, lower base\n\nI also ran **scenario/sensitivity analysis** showing that with W4≈3.65 and W5=3.83 fixed, even extreme outcomes are bounded: two 2.3 mb/d weeks → avg 3.02; two 4.0 mb/d weeks → avg 3.87.\n\nThe combined distribution: **P10=3.50, P50=3.69, P90=3.78, Mean=3.66**.\n\n## Conclusion\n\nI submitted a median forecast of **3.69 mb/d** with a relatively tight distribution (P10–P90: 3.50–3.78), justified by:\n1. The strong anchor from the most recent Bloomberg 4-week average (3.66) sharing most constituent weeks with the target period\n2. Two of four weeks already observed at elevated levels\n3. Continued structural demand support from the Hormuz disruption\n4. Downside tail from drone strike risk, appropriately weighted at ~15-18% probability for partial/major disruption in each remaining week",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to real-time Kpler/Vortexa tanker-tracking data to confirm W6 (week ending May 31) which was nearly complete at forecast time",
+      "No prediction market data checked (Polymarket, Kalshi) for this specific commodity question"
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Monte Carlo simulation anchored on most recent Bloomberg 4-week average (3.66 mb/d) with back-calculated weekly values and drone-strike disruption scenarios.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Ukrainian drone strikes cause a sharp single-week disruption in the week ending June 7, pulling the 4-week average significantly below the current trajectory."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The P10-P90 range is only 0.28 mb/d (3.50-3.78). While 2 of 4 weeks are substantially observed, the agent's own scenario analysis shows that a single 2.3 mb/d week (March precedent) would produce a 4-week average of ~3.36-3.40, which falls below P1 (3.29) in the submitted distribution. The left tail may be too thin given active drone strikes as of May 30-31.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Kalshi, Manifold) for any related contracts on Russian oil exports or related commodities, though such markets may not exist for this specific metric.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "3.66-3.70 mb/d median, with P10 closer to 3.45",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent use of back-calculation from rolling 4-week averages to derive individual weekly values (W5=3.83 mb/d), which provided strong constraints on the target period",
+    "Monte Carlo simulation with 100K iterations and three weighted scenarios (base/optimistic/pessimistic) produced a well-calibrated distribution",
+    "Scenario analysis explicitly computed bounds: with 2 weeks locked in, even extreme weeks produce a bounded range (3.02-3.87), demonstrating thorough understanding of the data structure",
+    "Research queries were well-targeted and returned the exact Bloomberg anchor figure (3.66 mb/d ending May 24) plus detailed context on drone strikes and port recovery",
+    "Premortem identified the right counterargument (drone strike tail risk) and honestly assessed that the left tail might be underweighted",
+    "Clear reasoning chain from anchor (3.66) through adjustment factors to final estimate (3.69), with only a modest +0.03 shift justified by upward trend and structural demand"
+  ],
+  "weaknesses": [
+    "The submitted percentile values (e.g., P1=3.29) are slightly rounded/adjusted from the Monte Carlo output (P1=3.288) — the rounding is harmless but introduces minor inconsistency",
+    "W4 estimate of ~3.65 is treated as near-certain despite being derived from constraint algebra that allows a range of 3.55-3.75; this uncertainty is partially captured in the simulation but could be more explicitly modeled",
+    "The 4-week window alignment could be ambiguous — the agent assumes weeks ending May 17, 24, 31, June 7 but Bloomberg's exact week boundaries (Saturday vs Sunday ending) are not confirmed",
+    "No prediction market data was consulted, though this is understandable given the niche nature of the question"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Widen the left tail slightly — P5 should probably be ~3.35 rather than 3.42, given the March 2026 precedent of a 2.32 mb/d week and continued active drone strikes",
+    "Explicitly model uncertainty in W4 as a wider distribution (e.g., Uniform(3.55, 3.75)) rather than Normal(3.65, 0.05)",
+    "Check whether any prediction markets cover Russian oil exports or related metrics (e.g., Brent crude) to provide an additional calibration anchor",
+    "Verify Bloomberg's exact week-ending convention (typically Saturday) to ensure the 4-week window is correctly aligned"
+  ]
+}
