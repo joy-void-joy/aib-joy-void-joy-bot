@@ -1,0 +1,243 @@
+---
+timestamp: 2026-06-01 14:29:28 UTC
+question_type: binary
+factors:
+- description: Kennedy Center spokesperson explicitly signaled intent to appeal ('confident
+    that on appeal the court will uphold the Board's will')
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: 14-day compliance deadline (~June 12) creates extreme urgency to seek
+    stay - if they don't, Trump's name must be physically removed, which is politically
+    unacceptable
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Trump administration pattern of extremely aggressive emergency stay
+    practice (15-25+ emergency motions in D.C. Circuit in Jan-Apr 2025 alone)
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: D.C. Circuit granted administrative stay in parallel White House ballroom
+    case, showing willingness to pause enforcement
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Administrative stays are near-automatic (~80%) when sought in the D.C.
+    Circuit - just a procedural pause while considering full motion
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Multiple distinct parts of ruling can each be stayed - ANY stay of
+    ANY part resolves YES, increasing probability
+  logit: 0.5
+  confidence: 0.75
+  effective_logit: 0.375
+- description: Status quo is NO - no filing yet as of June 1 (though zero business
+    days have elapsed since May 29 Friday ruling)
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: Interior Secretary Burgum hedging ('I'm not sure if that's going to
+    be appealed or not') - less definitive than spokesperson
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: Trump rhetoric focuses on political solutions ('transfer to Congress')
+    rather than legal strategy, suggesting possible non-legal path
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: Merits on renaming issue very strong for plaintiff (clear statutory
+    text 'Congress gave the Kennedy Center its name, only Congress can change it')
+    - weakens stay application
+  logit: -0.6
+  confidence: 0.7
+  effective_logit: -0.42
+- description: 'Tight timeline: even if appeal filed, courts must act before June
+    13 - but D.C. Circuit emergency procedure is fast (days not weeks)'
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+tentative_estimate:
+  logit: 0.6
+  probability: 0.65
+anchor: 'Base rate for government obtaining at least an administrative stay of district
+  court injunction when actively pursued in the D.C. Circuit, conditional on high-profile
+  Trump administration case with compliance deadline: ~50-60% (combining ~80% filing
+  probability × ~70% stay probability)'
+assessment: 'This question turns on two sequential probabilities: (1) Will the defendants
+  actually file an appeal and seek an emergency stay before June 13? and (2) If they
+  do, will any court grant even a temporary/administrative stay?
+
+
+  On (1): Very strong signals of intent to appeal from the Kennedy Center spokesperson,
+  and the 14-day compliance deadline (~June 12) creates extreme urgency. The Trump
+  administration has a well-established pattern of aggressive emergency stay practice.
+  However, Burgum''s hedging and Trump''s "transfer to Congress" rhetoric introduce
+  some uncertainty about whether they''ll pursue legal vs political remedies. Zero
+  business days have elapsed since the Friday ruling, so the absence of filings is
+  uninformative. I estimate ~80-85% probability of filing.
+
+
+  On (2): Administrative stays in the D.C. Circuit are near-automatic when there''s
+  an irreversible compliance deadline at stake. The D.C. Circuit just granted one
+  in the White House ballroom case. Even though the merits on the renaming issue are
+  weak for defendants, an administrative stay is procedural, not merits-based. Multiple
+  distinct parts of the ruling (renaming, name removal, closure) each offer a potential
+  target for a stay, and ANY partial stay resolves YES. I estimate ~75-80% probability
+  of at least an administrative stay if a motion is filed.
+
+
+  Combined: P(YES) ≈ 0.82 × 0.78 ≈ 0.64, plus a small probability (~2%) of other paths
+  (stipulated stay, etc.), giving ~65%.
+
+
+  Key uncertainty: Whether the administration will pursue legal remedy vs. political
+  remedy vs. simple defiance of the court order.'
+calibration_notes: 'Anchor is roughly 55% (base rate for government emergency stay
+  success in D.C. Circuit). Factors push toward YES because of the compliance deadline
+  urgency and high-profile personal stakes for Trump. The 65% estimate is modestly
+  above the anchor, reflecting the specific urgency of this case. Not near 50% - genuine
+  evidence points toward YES. Hedging check: this isn''t a lazy 50% split; the evidence
+  genuinely supports ~65% YES.'
+key_uncertainties: 1. Whether the administration pursues legal (appeal+stay) vs. political
+  (transfer to Congress) vs. defiance strategy. 2. Whether the D.C. Circuit would
+  grant even an administrative stay given the weakness of the merits on the renaming
+  issue. 3. Whether DOJ or private counsel handles the appeal, affecting speed and
+  strategy. 4. Whether the Board itself might voluntarily rescind some decisions,
+  mooting the case.
+tool_audit: Research tool provided excellent comprehensive data on the case facts,
+  timeline, and D.C. Circuit emergency stay patterns. Web search found relevant articles
+  but no post-May 31 developments. CourtListener docket confirmed no filings after
+  May 29. Newsweek fetch provided useful parallel (ballroom case administrative stay).
+  WaPo fetch timed out. No tool failures but limited ability to find breaking developments
+  from June 1.
+update_triggers: 1. Filing of notice of appeal on PACER/CourtListener → increases
+  to ~80%. 2. Filing of emergency stay motion → increases to ~85%. 3. Joint status
+  report on June 5 indicating compliance → decreases to ~20%. 4. D.C. Circuit docket
+  entry for this case → strong signal. 5. News report that DOJ will not appeal → decreases
+  to ~10%. 6. Board voluntarily rescinds renaming → NO (moot per fine print).
+process_reflection: The research tool was very effective for gathering comprehensive
+  case facts. The web search struggled to find truly breaking news from today (June
+  1) about any new filings - this is a limitation when the question depends on very
+  recent procedural developments. The CourtListener docket check was valuable for
+  confirming no filings yet. The parallel between the White House ballroom case (where
+  D.C. Circuit did grant an administrative stay) was a useful finding from the Newsweek
+  article. The main friction was that some relevant articles (WaPo) timed out on fetch.
+computed:
+  factor_count: 11
+  factor_sum: 3.1350000000000002
+  tentative_logit: 0.6
+  logit_gap: -2.535
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Kennedy Center spokesperson explicitly signaled intent to appeal
+      ('confident that on appeal the court will uphold the Board's will')
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: 14-day compliance deadline (~June 12) creates extreme urgency to
+      seek stay - if they don't, Trump's name must be physically removed, which is
+      politically unacceptable
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Trump administration pattern of extremely aggressive emergency stay
+      practice (15-25+ emergency motions in D.C. Circuit in Jan-Apr 2025 alone)
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: D.C. Circuit granted administrative stay in parallel White House
+      ballroom case, showing willingness to pause enforcement
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Administrative stays are near-automatic (~80%) when sought in the
+      D.C. Circuit - just a procedural pause while considering full motion
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Multiple distinct parts of ruling can each be stayed - ANY stay of
+      ANY part resolves YES, increasing probability
+    logit: 0.5
+    confidence: 0.75
+    effective_logit: 0.375
+  - description: Status quo is NO - no filing yet as of June 1 (though zero business
+      days have elapsed since May 29 Friday ruling)
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: Interior Secretary Burgum hedging ('I'm not sure if that's going
+      to be appealed or not') - less definitive than spokesperson
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: Trump rhetoric focuses on political solutions ('transfer to Congress')
+      rather than legal strategy, suggesting possible non-legal path
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: Merits on renaming issue very strong for plaintiff (clear statutory
+      text 'Congress gave the Kennedy Center its name, only Congress can change it')
+      - weakens stay application
+    logit: -0.6
+    confidence: 0.7
+    effective_logit: -0.42
+  - description: 'Tight timeline: even if appeal filed, courts must act before June
+      13 - but D.C. Circuit emergency procedure is fast (days not weeks)'
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  dominant_factor: 14-day compliance deadline (~June 12) creates extreme urgency to
+    seek stay - if they don't, Trump's name must be physically removed, which is politically
+    unacceptable
+  dominant_effective_logit: 1.2000000000000002
+  factor_implied_probability: 0.9583135945459759
+  tentative_probability: 0.65
+  gap_pp: -30.831359454597585
+  sources:
+  - '[(Metaculus) Will any court stay or reverse part of Judge Cooper''s Kennedy Center
+    ruling before June 14, 2026?](https://www.metaculus.com/questions/43740)'
+  - '[washingtonpost.com](https://www.washingtonpost.com/style/2026/05/30/trumps-kennedy-center-plans-were-blocked-by-judge-what-happens-next/)'
+  - '[Federal judge halts Kennedy Center shutdown, orders Trump’s name removed](https://www.courthousenews.com/federal-judge-halts-kennedy-center-shutdown-orders-trumps-name-removed/)'
+  - '[BEATTY v. TRUMP, 1:25-cv-04480 - CourtListener.com](https://www.courtlistener.com/docket/72069932/beatty-v-trump/)'
+  - '[Trump slams federal judges over ballroom delay, Kennedy Center setback](https://www.newsweek.com/trump-blasts-judges-after-ballroom-kennedy-center-setbacks-12014446)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43740
+- **Question ID**: 43770
+- **Session Duration**: 1323.1s (22.1 min)
+- **Cost**: $24.0828 total (orchestrator $3.1538 + sub-agents $20.9290)
+- **Tokens**: 11,940 total (28 in, 11,912 out)
+  - Cache: 553,844 read, 76,227 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43740_20260601_140958/20260601-140958.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 1 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1390 |
+| fetch_url | 4 | 1 ⚠️ | 23968ms | — |
+| get_coherence_links | 1 | 0 | 468ms | — |
+| get_metaculus_questions | 1 | 0 | 354ms | — |
+| premortem | 1 | 0 | 109650ms | $2.0877 |
+| reflection | 1 | 0 | 30084ms | — |
+| research | 1 | 0 | 544017ms | $18.4843 |
+| web_search | 6 | 0 | 46051ms | $0.2179 |
+
+### Sources Consulted
+
+- [(Metaculus) Will any court stay or reverse part of Judge Cooper's Kennedy Ce...
+- [washingtonpost.com](https://www.washingtonpost.com/style/2026/05/30/trumps-k...
+- [Federal judge halts Kennedy Center shutdown, orders Trump’s name removed](ht...
+- [BEATTY v. TRUMP, 1:25-cv-04480 - CourtListener.com](https://www.courtlistene...
+- [Trump slams federal judges over ballroom delay, Kennedy Center setback](http...
