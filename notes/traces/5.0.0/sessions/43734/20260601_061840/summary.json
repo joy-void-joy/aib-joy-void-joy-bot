@@ -1,0 +1,131 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details, confirming the resolution criteria: the number **N** in TrueAchievements' headline \"All [N] game reveals and updates from the Xbox Games Showcase 2026.\" The event is confirmed for **June 7, 2026** (6 days from my forecast date), with a Gears of War: E-Day Direct following the main showcase.\n\nI used the research tool to gather comprehensive context about the Xbox Games Showcase 2026, including:\n- Official Xbox Podcast confirmation from Matt Booty (Xbox Chief Content Officer)\n- Confirmed game lineup: Halo: Campaign Evolved, Minecraft Dungeons II, Gears of War: E-Day, Call of Duty: MW4, Fable\n- Pure Xbox editorial predictions (Elite Series 3 Controller, backwards compatible games, OG Xbox IP revival, limited edition hardware)\n- Community predictions from NeoGAF\n\nI then fetched the actual TrueAchievements 2025 recap article, confirming the full list of 31 items — which included hardware items (ASUS ROG Xbox Ally handheld) and non-game segments. I also retrieved the 2024 TrueAchievements recap, which listed **33 distinct items** (though the question background states \"~30\").\n\n## Key Evidence\n\n- **Historical TrueAchievements headline counts:** 26 (2023), ~30 (2024 per question, though article showed 33), 31 (2025)\n- **Upward trend:** +4 from 2023→2024, +1 from 2024→2025 — suggesting possible plateau\n- **Upward factors for 2026:** 25th anniversary celebration, heavy first-party content, hardware announcements likely counted, robust confirmed lineup\n- **Downward factors:** Gears Direct is single-game deep-dive (vs 2025's multi-game Direct adding 2+ items), \"focus on next 12 months\" narrows scope, CoD:MW4 already revealed pre-show\n- **Counting methodology:** TrueAchievements includes hardware SKUs and non-game items (Play Anywhere) in their count\n\n## Modeling\n\nI ran Monte Carlo simulations with scenario-mixture models:\n- 1% cancellation (resolves 0)\n- ~30% anniversary blowout scenario (center ~36)\n- ~65% standard large show (center ~32)\n- ~4% smaller/focused show (center ~27)\n\nI also ran a more conservative alternative model centered on 31 and blended the two. The final percentile values were manually calibrated from these simulation outputs.\n\n## Conclusion\n\nI settled on a **median of 32** with an **80% CI of [28, 35]**. This represents a modest +1 from 2025's confirmed 31, reflecting anniversary upside partially offset by the single-game Gears Direct and scope constraints. The distribution has a small left tail to 0 (cancellation) and a right tail to ~41 (anniversary blowout). Self-assessed confidence: 0.45, appropriate for predicting an editorial counting decision with only 3 historical data points.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market data was checked (Polymarket, Kalshi, Manifold) — this could have provided market-implied estimates for comparison"
+    ],
+    "subtle_bugs": [
+      "The research tool's second query (TrueAchievements 2025 recap details) returned an error stating 'All web access tools were unavailable' but the data was still available from other sources, so impact was negligible",
+      "The 2024 TrueAchievements article count discrepancy (33 in article vs ~30 in question background) was handled reasonably but creates ambiguity about the true historical trend"
+    ]
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Monte Carlo scenario-mixture simulation calibrated from 3 years of historical TrueAchievements headline counts plus qualitative factor analysis of 2026-specific conditions.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether TrueAchievements' counting methodology and the single-game Gears Direct format will push the 2026 count above or below the 2025 baseline of 31."
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The agent uses 30 for the 2024 count (from question background) but the actual TrueAchievements 2024 article listed 33 items. If 2024 was truly 33, the trend is 26→33→31 (declining recently), not 26→30→31 (consistently rising). The agent acknowledges this discrepancy but ultimately uses the lower figure for trend analysis.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market data was checked. For a Metaculus question with discrete numeric resolution, Polymarket or Manifold might have had relevant markets or comparable questions that could inform the estimate.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "31-32, median 31",
+    "agrees_with_agent": true,
+    "divergence_reason": "I weight the Gears Direct single-game format slightly more heavily as a downward factor (losing 1-2 items vs 2025's multi-game Direct), which pulls my center closer to 31. But the difference is within one unit and well within uncertainty bounds."
+  },
+  "strengths": [
+    "Fetched actual TrueAchievements articles for both 2025 (confirming the 31-item list) and 2024 (finding 33 items), rather than relying solely on question background info",
+    "Ran multiple Monte Carlo simulations with scenario mixtures, tested sensitivity with conservative alternative model, and blended results — quantitatively rigorous for a 3-datapoint problem",
+    "Identified the critical insight that the 2026 Gears Direct is a single-game deep-dive vs 2025's multi-game Direct, which directly affects item count",
+    "Strong premortem identified specific mechanisms (CoD pre-revealed, plateau evidence, Gears Direct = 1 item) that could make the true answer lower than the median estimate",
+    "Appropriate self-calibration confidence (0.45) reflecting the fundamental uncertainty of predicting editorial decisions with limited data"
+  ],
+  "weaknesses": [
+    "Did not check prediction markets (Polymarket, Manifold) which could have provided additional calibration or revealed community consensus",
+    "The 2024 count ambiguity (30 vs 33) is acknowledged but not fully resolved — the agent could have searched more specifically for whether TrueAchievements published a numbered headline for 2024 or only a different-format article",
+    "No attempt to estimate showcase duration for 2026, which historically correlates with item count (longer show = more items)",
+    "The cancellation probability of 1% for an event 6 days away that is fully confirmed with streaming infrastructure seems slightly high — 0.1-0.5% would be more appropriate"
+  ],
+  "pipeline": {
+    "issues": [
+      "One research sub-query failed due to web tools being unavailable in that session, though the main query succeeded — suggests intermittent tool availability",
+      "No prediction market check was attempted despite this being a question that might have a market"
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets (Polymarket, Manifold, Metaculus community prediction) for additional calibration signals",
+    "Investigate whether the 2024 TrueAchievements article had a numbered headline (the different title format 'All reveals and Xbox Game Pass announcements' vs 'All N game reveals and updates' suggests TA may have changed methodology between 2024 and 2025)",
+    "Search for announced showcase duration or compare to historical duration-to-count ratios",
+    "Reduce cancellation tail probability for events confirmed within days (0.1-0.5% more appropriate than 1%)"
+  ]
+}
