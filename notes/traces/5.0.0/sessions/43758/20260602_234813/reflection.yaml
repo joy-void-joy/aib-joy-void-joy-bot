@@ -1,0 +1,189 @@
+---
+timestamp: 2026-06-02 23:54:00 UTC
+question_type: numeric
+factors:
+- description: 'Strong bearish trend: ETH down 25% from April''s $2,470 to $1,855,
+    with consistent lower highs and lower lows'
+  supports:
+    center: 1750.0
+    low: 1500.0
+    high: 1900.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Major crash on June 2 (-7.4%): BTC also fell 6%, ETF outflows of $1.42B,
+    risk-off sentiment across crypto'
+  supports:
+    center: 1700.0
+    low: 1400.0
+    high: 1900.0
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: 'Post-crash short-term mean reversion: After large single-day drops,
+    partial bounce is common in the following days'
+  supports:
+    center: 1900.0
+    low: 1700.0
+    high: 2100.0
+  logit: 0.7
+  confidence: 0.5
+  effective_logit: 0.35
+- description: 'Elevated volatility post-crash: Daily vol likely 3.5-5% vs normal
+    2-3%, widening distribution in both directions'
+  supports:
+    center: 1830.0
+    low: 1400.0
+    high: 2300.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Structural headwinds: Capital rotating from crypto to AI, bearish
+    ETH-specific sentiment (competition from Hyperliquid, governance debates)'
+  supports:
+    center: 1750.0
+    low: 1500.0
+    high: 2000.0
+  logit: 0.6
+  confidence: 0.6
+  effective_logit: 0.36
+tentative_estimate:
+  center: 1830.0
+  low: 1536.0
+  high: 2154.0
+anchor: Current price $1,855 as of June 3, 2026. No base rate per se for a numeric
+  price forecast - the current price IS the anchor.
+assessment: ETH is in a clear downtrend, having fallen from $2,470 in April to $1,855
+  now, with a sharp -7.4% crash on June 2 driven by broad crypto selloff (BTC below
+  $70K, $1.42B ETF outflows). The 10-day forecast horizon to June 12 must balance
+  the bearish trend against short-term post-crash bounce potential. Monte Carlo simulation
+  with a 4-scenario mixture (bear continuation 30%, stabilization 35%, recovery bounce
+  25%, further crash 10%) centered around $1,830 with P10=$1,536 and P90=$2,154. The
+  distribution is slightly wider than a pure random walk at typical ETH volatility
+  (~70% annualized), which is appropriate given the post-crash elevated volatility
+  regime.
+calibration_notes: 'Distribution width check: P10-P90 range of $618 on a $1,855 base
+  = ±17% range over 10 days. At 70% annualized vol (typical ETH), random walk 80%
+  CI would be ±$275 = $550 wide. My $618 range is wider, which is appropriate given
+  the post-crash elevated vol regime and directional drift uncertainty. The slight
+  downward skew (median $1,830 vs current $1,855) reflects the established bearish
+  trend.'
+key_uncertainties: 1. Whether the June 2 crash marks a temporary bottom with bounce,
+  or the beginning of a deeper selloff. 2. Broader crypto market direction (BTC leadership).
+  3. Whether the ETF outflow trend accelerates or reverses. 4. Any macro catalyst
+  (Fed, regulation) that could move crypto sharply either direction.
+tool_audit: 'web_search: Very useful - retrieved current ETH price (~$1,855), recent
+  crash details, and historical price data. fetch_url: Useful - got CoinGecko historical
+  data and Yahoo Finance crash details. get_metaculus_questions: Provided question
+  metadata. execute_code: Essential for Monte Carlo simulation with 200K paths across
+  4 scenarios.'
+update_triggers: BTC recovering above $70K (bullish for ETH), ETH breaking below $1,700
+  (further crash), major regulatory news, significant ETF flow reversal, macro shock
+  (rate decision, geopolitical event).
+process_reflection: 'This was a straightforward short-horizon financial forecast.
+  The scaffolding worked well: web search quickly found current prices and crash context,
+  code execution ran the Monte Carlo efficiently. One friction point: getting the
+  exact live ETH price required triangulating across multiple sources since CoinGecko''s
+  June 2 close wasn''t finalized yet and June 3 data wasn''t posted. A dedicated crypto
+  price API tool would be ideal. The scenario mixture approach works well for post-crash
+  environments where the distribution of outcomes is genuinely multimodal.'
+computed:
+  factor_count: 5
+  factor_sum: 2.88
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Strong bearish trend: ETH down 25% from April''s $2,470 to $1,855,
+      with consistent lower highs and lower lows'
+    supports:
+      center: 1750.0
+      low: 1500.0
+      high: 1900.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Major crash on June 2 (-7.4%): BTC also fell 6%, ETF outflows of
+      $1.42B, risk-off sentiment across crypto'
+    supports:
+      center: 1700.0
+      low: 1400.0
+      high: 1900.0
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: 'Post-crash short-term mean reversion: After large single-day drops,
+      partial bounce is common in the following days'
+    supports:
+      center: 1900.0
+      low: 1700.0
+      high: 2100.0
+    logit: 0.7
+    confidence: 0.5
+    effective_logit: 0.35
+  - description: 'Elevated volatility post-crash: Daily vol likely 3.5-5% vs normal
+      2-3%, widening distribution in both directions'
+    supports:
+      center: 1830.0
+      low: 1400.0
+      high: 2300.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Structural headwinds: Capital rotating from crypto to AI, bearish
+      ETH-specific sentiment (competition from Hyperliquid, governance debates)'
+    supports:
+      center: 1750.0
+      low: 1500.0
+      high: 2000.0
+    logit: 0.6
+    confidence: 0.6
+    effective_logit: 0.36
+  dominant_factor: 'Major crash on June 2 (-7.4%): BTC also fell 6%, ETF outflows
+    of $1.42B, risk-off sentiment across crypto'
+  dominant_effective_logit: 1.02
+  distribution_metrics:
+    implied_median: 1760.2430555555557
+    implied_p10: 1476.736111111111
+    implied_p90: 1985.4166666666667
+    median_gap: 69.75694444444434
+    median_gap_pct: 13.713310580204755
+    spread_ratio: 1.2149078498293513
+    precision: 0.3377049180327869
+  sources:
+  - '[(Metaculus) What will Ethereum''s closing price be on June 12, 2026?](https://www.metaculus.com/questions/43758)'
+  - '[Ethereum Price History: Download ETH Historical Data | CoinGecko](https://www.coingecko.com/en/coins/ethereum/historical_data)'
+  - '[Bitcoin and ethereum prices today, June 2, 2026: Bitcoin slides below $70,000](https://finance.yahoo.com/personal-finance/investing/article/bitcoin-and-ethereum-prices-today-june-2-2026-bitcoins-lowest-open-since-april-prices-falling-further-132451193.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43758
+- **Question ID**: 43788
+- **Session Duration**: 534.9s (8.9 min)
+- **Cost**: $7.3746 total (orchestrator $3.7244 + sub-agents $3.6502)
+- **Tokens**: 13,292 total (43 in, 13,249 out)
+  - Cache: 899,400 read, 73,653 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43758_20260602_234813/20260602-234813.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0533 |
+| execute_code | 9 | 0 | 72ms | — |
+| fetch_url | 2 | 0 | 9782ms | — |
+| get_metaculus_questions | 1 | 0 | 3554ms | — |
+| premortem | 1 | 0 | 133676ms | $3.3646 |
+| reflection | 1 | 0 | 10ms | — |
+| web_search | 5 | 0 | 18159ms | $0.2323 |
+
+### Sources Consulted
+
+- [(Metaculus) What will Ethereum's closing price be on June 12, 2026?](https:/...
+- [Ethereum Price History: Download ETH Historical Data | CoinGecko](https://ww...
+- [Bitcoin and ethereum prices today, June 2, 2026: Bitcoin slides below $70,00...
