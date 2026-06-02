@@ -1,0 +1,212 @@
+---
+timestamp: 2026-06-02 00:19:58 UTC
+question_type: binary
+factors:
+- description: SpaceX IPO targeting $1.8T+ valuation, well above Tesla's current $1.56T.
+    Even at IPO price alone (before first-day pop), SpaceX would be ~$240B larger
+    than Tesla.
+  logit: -2.0
+  confidence: 0.9
+  effective_logit: -1.8
+- description: 'Polymarket data: P(SpaceX closing mcap > $1.8T) = 89.5%, P(>$2T) =
+    47%. Synthetic contracts imply ~$2.4T. The market expects SpaceX to close well
+    above Tesla.'
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: First-day IPO pop is typical for mega-IPOs (historically 10-38% for
+    comparable deals). This would push SpaceX even further above Tesla. A first-day
+    POP increases the gap.
+  logit: -0.5
+  confidence: 0.75
+  effective_logit: -0.375
+- description: Capital rotation from Tesla to SpaceX IPO could depress Tesla's price
+    on June 12, widening the gap. Barron's warned about this; Tesla already dropped
+    4.6% on June 1.
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Tail risk: SpaceX could IPO below range or have a disastrous first
+    day (IPO mispricing, market crash, regulatory issue). P(SpaceX < $1.56T) ≈ 3.8%
+    from Polymarket-calibrated distribution.'
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Tesla volatility provides some upside optionality (could rally 10-15%
+    by June 12 from current $415.88). But median Tesla path trends slightly down to
+    ~$1.55T.
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  logit: -3.0
+  probability: 0.05
+anchor: 'Unconditional probability that a smaller-valued company exceeds a larger
+  one on a specific day: ~50% in general, but here SpaceX is expected to be $400B+
+  larger, making it a significant disadvantage for Tesla. Base rate: ~5% (from Polymarket-implied
+  probability of SpaceX closing below Tesla''s current level)'
+assessment: "This question asks whether Tesla's market cap will exceed SpaceX's on\
+  \ SpaceX's first trading day (expected June 12, 2026). \n\nTesla currently has a\
+  \ market cap of ~$1.56T. SpaceX is targeting an IPO valuation of \"at least $1.8T\"\
+  \ (reduced from $2T), and Polymarket data shows the expected first-day CLOSING market\
+  \ cap has a median of ~$2.0T, with only ~10.5% chance of falling below $1.8T. \n\
+  \nThe gap between the two companies' market caps is already large (~$240B+), and\
+  \ it will likely widen further due to: (1) typical first-day IPO pop, (2) potential\
+  \ capital rotation from Tesla to SpaceX. \n\nFor Tesla to win, we need a combination\
+  \ of: SpaceX IPO pricing/performing very poorly (closing well below target) AND/OR\
+  \ Tesla rallying significantly in the next 8 trading days. Monte Carlo simulations\
+  \ across multiple sensitivity analyses consistently produce P(Tesla > SpaceX) in\
+  \ the 3-6% range, with a central estimate of ~4.3%.\n\nThe main pathways for YES\
+  \ resolution are:\n1. SpaceX IPO prices far below the $1.8T target AND trades down\
+  \ on day 1 (very unusual for mega-IPOs)\n2. A major market crash hits before/on\
+  \ June 12 that hurts SpaceX more than Tesla\n3. Some SpaceX-specific catastrophic\
+  \ event damages the IPO\n\nAll of these are low-probability tail events."
+calibration_notes: Monte Carlo gives 4.3% as central estimate. Sensitivity analysis
+  shows 3-6% range across assumptions. Polymarket data directly implies P(SpaceX <
+  $1.56T) ≈ 3.8%. Adding Tesla's upside optionality gets us to ~5%. This seems well-calibrated
+  against market data.
+key_uncertainties: '1. SpaceX IPO pricing is not yet set (roadshow starts ~June 4).
+  Final pricing could surprise.
+
+  2. Whether Tesla experiences capital rotation drag or benefit from Musk buzz.
+
+  3. Macro market conditions between now and June 12.
+
+  4. How to count shares outstanding for SpaceX market cap (all classes? including
+  restricted shares?).'
+tool_audit: 'Research agent: Excellent results on SpaceX IPO details, Tesla current
+  data, and share structure. Polymarket: Provided good probability thresholds for
+  SpaceX closing market cap. Web search: Found Motley Fool article confirming $1.8T
+  target (reduced from $2T). Monte Carlo simulation: Clean execution, consistent results
+  across sensitivities.'
+update_triggers: '1. SpaceX IPO pricing announced significantly below $1.5T range
+
+  2. Tesla rallies above $450/share before June 12
+
+  3. SpaceX IPO delayed past June 14
+
+  4. Major market correction (5%+ drop in indices)'
+process_reflection: The forecasting pipeline worked well for this question. The research
+  agent gathered comprehensive data quickly. The Polymarket data was very useful for
+  calibrating the SpaceX market cap distribution. The main friction was that the Polymarket
+  API returns aggregated event-level probabilities rather than individual contract-level
+  probabilities - I had to piece together the bracket data from multiple sources and
+  snippets. A dedicated prediction market tool that could fetch all contracts within
+  an event would help.
+computed:
+  factor_count: 6
+  factor_sum: -2.9
+  tentative_logit: -3.0
+  logit_gap: -0.10000000000000009
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: SpaceX IPO targeting $1.8T+ valuation, well above Tesla's current
+      $1.56T. Even at IPO price alone (before first-day pop), SpaceX would be ~$240B
+      larger than Tesla.
+    logit: -2.0
+    confidence: 0.9
+    effective_logit: -1.8
+  - description: 'Polymarket data: P(SpaceX closing mcap > $1.8T) = 89.5%, P(>$2T)
+      = 47%. Synthetic contracts imply ~$2.4T. The market expects SpaceX to close
+      well above Tesla.'
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: First-day IPO pop is typical for mega-IPOs (historically 10-38% for
+      comparable deals). This would push SpaceX even further above Tesla. A first-day
+      POP increases the gap.
+    logit: -0.5
+    confidence: 0.75
+    effective_logit: -0.375
+  - description: Capital rotation from Tesla to SpaceX IPO could depress Tesla's price
+      on June 12, widening the gap. Barron's warned about this; Tesla already dropped
+      4.6% on June 1.
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Tail risk: SpaceX could IPO below range or have a disastrous first
+      day (IPO mispricing, market crash, regulatory issue). P(SpaceX < $1.56T) ≈ 3.8%
+      from Polymarket-calibrated distribution.'
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Tesla volatility provides some upside optionality (could rally 10-15%
+      by June 12 from current $415.88). But median Tesla path trends slightly down
+      to ~$1.55T.
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: SpaceX IPO targeting $1.8T+ valuation, well above Tesla's current
+    $1.56T. Even at IPO price alone (before first-day pop), SpaceX would be ~$240B
+    larger than Tesla.
+  dominant_effective_logit: -1.8
+  factor_implied_probability: 0.05215356307841774
+  tentative_probability: 0.05
+  gap_pp: -0.21535630784177348
+  sources:
+  - '[(Metaculus) Will Tesla''s market capitalization close above SpaceX''s market
+    capitalization on SpaceX''s first day of public trading?](https://www.metaculus.com/questions/43743)'
+  - '[Tesla, Inc. (TSLA) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/TSLA/)'
+  - '[Tesla, Inc. (TSLA) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/TSLA/history/)'
+  - '[SpaceX IPO Closing Market Cap Predictions & Odds | Polymarket](https://pam.polymarket.com/event/spacex-ipo-closing-market-cap/will-spacexs-market-cap-be-between-800b-and-900b-at-market-close-on-ipo-day)'
+  - '[SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap)'
+  - '[SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-above)'
+  - '[SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-by)'
+  - '[What will SpaceX''s public ticker be? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/what-will-spacexs-public-ticker-be)'
+  - '[SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-higher-strikes)'
+  - '[Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://polymarket.com/event/largest-ipo-by-market-cap-in-2026-287)'
+  - '[What will SpaceX’s IPO valuation be? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/what-will-spacexs-ipo-valuation-be)'
+  - '[When will SpaceX officially announce an IPO?](https://kalshi.com/markets/kxipospacex/when-will-spacex-ipo/kxipospacex)'
+  - '[SpaceX Just Lowered Its IPO Valuation Target by $200 Billion | The Motley Fool](https://www.fool.com/investing/2026/06/01/spacex-lowered-ipo-valuation-target-by-200-billion/)'
+  - '[SpaceX IPO Closing Market Cap (Higher Strikes) Prediction... | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-higher-strikes/will-spacexs-market-cap-be-less-than-1pt0t-at-market-close-on-ipo-day-281)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43743
+- **Question ID**: 43773
+- **Session Duration**: 946.6s (15.8 min)
+- **Cost**: $17.6924 total (orchestrator $4.8353 + sub-agents $12.8571)
+- **Tokens**: 15,289 total (40 in, 15,249 out)
+  - Cache: 1,061,915 read, 111,902 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43743_20260602_000746/20260602-000746.log`
+
+### Tool Calls
+
+- **Total**: 42 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0299 |
+| execute_code | 5 | 0 | 3787ms | — |
+| fetch_url | 3 | 0 | 3838ms | — |
+| get_coherence_links | 1 | 0 | 461ms | — |
+| get_metaculus_questions | 1 | 0 | 435ms | — |
+| kalshi_price | 1 | 0 | 9824ms | — |
+| polymarket_price | 21 | 0 | 707ms | — |
+| premortem | 1 | 0 | 154557ms | $4.4204 |
+| reflection | 1 | 0 | 473ms | — |
+| research | 1 | 0 | 325590ms | $8.1874 |
+| stock_price | 2 | 0 | 444ms | — |
+| web_search | 5 | 0 | 19547ms | $0.2195 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Tesla's market capitalization close above SpaceX's market c...
+- [Tesla, Inc. (TSLA) Stock Price, News, Quote & History - Yahoo Finance](https...
+- [Tesla, Inc. (TSLA) Stock Historical Prices & Data - Yahoo Finance](https://f...
+- [SpaceX IPO Closing Market Cap Predictions & Odds | Polymarket](https://pam.p...
+- [SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://...
+- [SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymark...
+- [SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket...
+- [What will SpaceX's public ticker be? Predictions & Odds 2026 | Polymarket](h...
+- [SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymark...
+- [Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://...
+- [What will SpaceX’s IPO valuation be? Predictions & Odds 2026 | Polymarket](h...
+- [When will SpaceX officially announce an IPO?](https://kalshi.com/markets/kxi...
+- [SpaceX Just Lowered Its IPO Valuation Target by $200 Billion | The Motley Fo...
+- [SpaceX IPO Closing Market Cap (Higher Strikes) Prediction... | Polymarket](h...
