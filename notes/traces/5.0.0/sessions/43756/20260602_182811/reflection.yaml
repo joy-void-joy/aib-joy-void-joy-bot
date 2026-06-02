@@ -1,0 +1,258 @@
+---
+timestamp: 2026-06-02 18:51:01 UTC
+question_type: discrete
+factors:
+- description: Current confirmed count is 16 (floor). This is the minimum resolution
+    value.
+  supports:
+    center: 16.0
+    low: 16.0
+    high: 16.0
+  logit: 2.0
+  confidence: 1.0
+  effective_logit: 2.0
+- description: Plant relies on single 330kV backup line since March 24 (over 2 months).
+    Main 750kV Dniprovska line not repaired. Infrastructure extremely fragile - grid
+    in 'worst condition' since IAEA monitoring began.
+  supports:
+    center: 17.0
+    low: 16.0
+    high: 18.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Recent inter-event rate: 4 events in 45 days (April 14 to May 29)
+    gives ~0.068 events/day. Over 11-12 effective days remaining, expected ~0.75-0.82
+    additional events.'
+  supports:
+    center: 17.0
+    low: 16.0
+    high: 18.0
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Drone attack on Reactor 6 building on May 30-31 and 160+ UAVs recorded
+    near nuclear sites indicate elevated military activity, which historically correlates
+    with power line disruptions.
+  supports:
+    center: 17.0
+    low: 17.0
+    high: 19.0
+  logit: 0.6
+  confidence: 0.5
+  effective_logit: 0.3
+- description: 32-day gap between 15th and 16th events (April 26 to May 28-29) suggests
+    rate may have slowed compared to April clustering. Could indicate intermittent
+    stabilization of the backup line.
+  supports:
+    center: 16.0
+    low: 16.0
+    high: 17.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: IAEA reporting lag of 24-48 hours means events after ~June 12-13 may
+    not be captured by the June 14 deadline, reducing effective window to ~11 days.
+  supports:
+    center: 16.0
+    low: 16.0
+    high: 17.0
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+tentative_estimate:
+  center: 16.6
+  low: 16.0
+  high: 18.0
+anchor: 'Base rate: 0.068 events/day from recent 4 events in 45 days (April 14 to
+  May 29, 2026), with significant rate uncertainty (Gamma(3, 48) posterior).'
+assessment: 'This is a discrete counting question with a known floor of 16. The key
+  question is how many additional complete off-site power losses will occur and be
+  reported by June 14, 2026.
+
+
+  Monte Carlo simulation with rate uncertainty (Gamma posterior on Poisson rate, incorporating
+  4 censored days since last event) yields:
+
+  - P(16) ≈ 57-59% (no additional events)
+
+  - P(17) ≈ 28-29% (one additional event)
+
+  - P(18) ≈ 9-10% (two additional events)
+
+  - P(19) ≈ 3% (three additional events)
+
+  - P(20+) ≈ 1%
+
+
+  The distribution is heavily right-skewed with the mode at 16 but meaningful probability
+  mass at 17-18. The main tension is between:
+
+  - The high fragility of the single backup line and elevated military activity (pushing
+  toward more events)
+
+  - The recent 32-day gap suggesting some stabilization, and the short remaining time
+  window (pushing toward fewer events)
+
+
+  The probability of at least one additional event is ~41%, meaning the count will
+  more likely than not remain at 16, but 17 is a strong secondary outcome.'
+calibration_notes: Model uses Bayesian rate uncertainty (Gamma posterior) which naturally
+  widens the distribution. The 99th percentile at 20 seems reasonable - would require
+  ~4 events in 11 days, which happened in April (3 events in 12 days). The low tail
+  is hard-bounded at 16 (known count). The simulation accounts for the 4 days of censored
+  observation since the last event.
+key_uncertainties: '1. Whether military activity near ZNPP intensifies or moderates
+  in the next 12 days
+
+  2. Whether the backup 330kV Ferosplavna-1 line experiences any additional disconnections
+
+  3. Whether IAEA-brokered ceasefire for repairs materializes (would reduce rate significantly)
+
+  4. Small sample size for rate estimation (only 3 recent inter-event intervals)'
+tool_audit: 'Useful: research() provided detailed IAEA timeline and count data; web_search
+  confirmed specific event counts (13th, 14th, 15th, 16th); fetch_url retrieved GlobalSecurity
+  mirrors of IAEA updates (since IAEA.org returned 403). Execute_code ran Monte Carlo
+  successfully. Empty/failed: IAEA.org direct URLs returned HTTP 403 consistently.'
+process_reflection: The research sub-agent provided good foundational data but had
+  some inconsistencies between the two research queries (one said 10 total events
+  through 2025, the other said 11). The question description itself was the most reliable
+  data source for the recent timeline. The IAEA website being blocked (403) was a
+  friction point, but GlobalSecurity mirrors and news articles filled the gap. The
+  Monte Carlo approach with Gamma-Poisson conjugate model worked well for this type
+  of count data with rate uncertainty.
+computed:
+  factor_count: 6
+  factor_sum: 3.15
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current confirmed count is 16 (floor). This is the minimum resolution
+      value.
+    supports:
+      center: 16.0
+      low: 16.0
+      high: 16.0
+    logit: 2.0
+    confidence: 1.0
+    effective_logit: 2.0
+  - description: Plant relies on single 330kV backup line since March 24 (over 2 months).
+      Main 750kV Dniprovska line not repaired. Infrastructure extremely fragile -
+      grid in 'worst condition' since IAEA monitoring began.
+    supports:
+      center: 17.0
+      low: 16.0
+      high: 18.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Recent inter-event rate: 4 events in 45 days (April 14 to May 29)
+      gives ~0.068 events/day. Over 11-12 effective days remaining, expected ~0.75-0.82
+      additional events.'
+    supports:
+      center: 17.0
+      low: 16.0
+      high: 18.0
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Drone attack on Reactor 6 building on May 30-31 and 160+ UAVs recorded
+      near nuclear sites indicate elevated military activity, which historically correlates
+      with power line disruptions.
+    supports:
+      center: 17.0
+      low: 17.0
+      high: 19.0
+    logit: 0.6
+    confidence: 0.5
+    effective_logit: 0.3
+  - description: 32-day gap between 15th and 16th events (April 26 to May 28-29) suggests
+      rate may have slowed compared to April clustering. Could indicate intermittent
+      stabilization of the backup line.
+    supports:
+      center: 16.0
+      low: 16.0
+      high: 17.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: IAEA reporting lag of 24-48 hours means events after ~June 12-13
+      may not be captured by the June 14 deadline, reducing effective window to ~11
+      days.
+    supports:
+      center: 16.0
+      low: 16.0
+      high: 17.0
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  dominant_factor: Current confirmed count is 16 (floor). This is the minimum resolution
+    value.
+  dominant_effective_logit: 2.0
+  distribution_metrics:
+    implied_median: 16.39808153477218
+    implied_p10: 16.071942446043163
+    implied_p90: 16.99040767386091
+    median_gap: 0.20191846522781987
+    median_gap_pct: 21.98433420365553
+    spread_ratio: 2.177545691906
+    precision: 0.12048192771084336
+  sources:
+  - '[(Metaculus) How many cumulative losses of all off-site power at the Zaporizhzhia
+    Nuclear Power Plant will the IAEA have reported as of June 14, 2026?](https://www.metaculus.com/questions/43756)'
+  - '[Zaporizhzhia Nuclear Power Plant crisis - Wikipedia](https://en.wikipedia.org/wiki/Zaporizhzhia_Nuclear_Power_Plant_crisis)'
+  - '[Update 347 – IAEA Director General Statement on Situation in Ukraine](https://www.iaea.org/newscenter/pressreleases/update-347-iaea-director-general-statement-on-situation-in-ukraine)'
+  - '[Update 348 – IAEA Director General Statement on Situation in Ukraine](https://www.iaea.org/newscenter/pressreleases/update-348-iaea-director-general-statement-on-situation-in-ukraine)'
+  - '[Update 351](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/05/ukraine-260522-iaea01.htm)'
+  - '[Zaporizhzhia NPP temporarily lost all external power for the sixteenth time
+    - IAEA](https://unn.ua/en/news/zaporizhzhia-npp-temporarily-lost-all-external-power-for-the-sixteenth-time-iaea)'
+  - '[Zaporizhzhia NPP loses external power — again. Fifteenth blackout since the
+    full-scale invasion](https://euromaidanpress.com/2026/04/30/zaporizhzhia-npp-loses-external-power-again-fifteenth-blackout-since-the-full-scale-invasion/)'
+  - '[Temporary power loss at ZNPP - Nuclear Engineering International](https://neimagazine.com/news/temporary-power-loss-at-znpp/)'
+  - '[Update 347](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/04/ukraine-260417-iaea01.htm)'
+  - '[Update 348](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/04/ukraine-260430-iaea01.htm)'
+  - '[Update 352 – IAEA Director General Statement on Ukraine](https://www.iaea.org/newscenter/pressreleases/update-352-iaea-director-general-statement-on-ukraine)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43756
+- **Question ID**: 43786
+- **Session Duration**: 1543.5s (25.7 min)
+- **Cost**: $30.1543 total (orchestrator $4.1381 + sub-agents $26.0162)
+- **Tokens**: 17,235 total (41 in, 17,194 out)
+  - Cache: 845,648 read, 84,238 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43756_20260602_182811/20260602-182811.log`
+
+### Tool Calls
+
+- **Total**: 24 calls
+- **Errors**: 3 (12.5%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1451 |
+| execute_code | 4 | 0 | 399ms | — |
+| fetch_url | 9 | 3 ⚠️ | 6369ms | — |
+| get_metaculus_questions | 1 | 0 | 311ms | — |
+| premortem | 1 | 0 | 107750ms | $2.5458 |
+| reflection | 1 | 0 | 1550ms | — |
+| research | 1 | 0 | 960063ms | $23.0693 |
+| web_search | 5 | 0 | 16900ms | $0.2560 |
+| wikipedia | 2 | 0 | 208ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many cumulative losses of all off-site power at the Zaporizh...
+- [Zaporizhzhia Nuclear Power Plant crisis - Wikipedia](https://en.wikipedia.or...
+- [Update 347 – IAEA Director General Statement on Situation in Ukraine](https:...
+- [Update 348 – IAEA Director General Statement on Situation in Ukraine](https:...
+- [Update 351](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/05/...
+- [Zaporizhzhia NPP temporarily lost all external power for the sixteenth time ...
+- [Zaporizhzhia NPP loses external power — again. Fifteenth blackout since the ...
+- [Temporary power loss at ZNPP - Nuclear Engineering International](https://ne...
+- [Update 347](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/04/...
+- [Update 348](https://www.globalsecurity.org/wmd/library/news/ukraine/2026/04/...
+- [Update 352 – IAEA Director General Statement on Ukraine](https://www.iaea.or...
