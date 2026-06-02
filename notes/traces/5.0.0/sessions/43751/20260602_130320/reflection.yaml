@@ -1,0 +1,196 @@
+---
+timestamp: 2026-06-02 13:14:20 UTC
+question_type: numeric
+factors:
+- description: Data update cadence is monthly, not weekly. CDC page says 'typically
+    released on a monthly basis.' Last update was May 20, next expected June 17-20,
+    likely AFTER June 12 resolution date.
+  supports:
+    center: 1194.0
+    low: 1194.0
+    high: 1200.0
+  logit: 1.5
+  confidence: 0.7
+  effective_logit: 1.0499999999999998
+- description: If an update DOES occur by June 12, 4-5 weeks of new data would add
+    ~40-65 outbreaks at the 30th percentile. This season has been tracking at/below
+    the historical median.
+  supports:
+    center: 1238.0
+    low: 1220.0
+    high: 1260.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Season is in sharp late-spring decline. Week of May 1 had 19 outbreaks;
+    by late May this drops to 7-12/week historically. Very little incremental activity
+    even if data updates.
+  supports:
+    center: 1235.0
+    low: 1215.0
+    high: 1255.0
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+- description: Question author expects '~5 additional weekly updates' - suggests they
+    may know something about update cadence that I don't, or may be mistaken.
+  supports:
+    center: 1248.0
+    low: 1230.0
+    high: 1270.0
+  logit: -0.5
+  confidence: 0.4
+  effective_logit: -0.2
+- description: Hard floor at 1194 (cumulative count can only increase). This creates
+    strong left-truncation.
+  supports:
+    center: 1194.0
+    low: 1194.0
+    high: 1194.0
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+tentative_estimate:
+  center: 1218.0
+  low: 1194.0
+  high: 1255.0
+anchor: Current cumulative count of 1,194 outbreaks as of May 7, 2026. Historical
+  late-season additions (May-July) are typically 100-170 total, but the question of
+  how much additional data will be published by June 12 dominates the forecast.
+assessment: This question has a highly bimodal structure driven by whether CDC updates
+  the NoroSTAT data before June 12. The CDC page explicitly states data is released
+  "on a monthly basis." The last update was May 20 (showing data through May 7). The
+  next monthly update would logically be around June 17-20, which falls AFTER the
+  resolution date. I estimate ~45% probability of no update, which would leave the
+  value at exactly 1,194. If an update does occur, 4-5 additional weeks of data at
+  this season's below-median trajectory would add ~40-65 outbreaks (median ~45). The
+  bimodal nature creates a median around 1218 with a very long left tail at 1194.
+calibration_notes: 'The main uncertainty is NOT about outbreak activity (which follows
+  well-established seasonal patterns) but about DATA PUBLICATION timing. This makes
+  the question more about CDC operational behavior than epidemiology. The distribution
+  is bimodal: ~45% at 1194 and ~55% in the 1220-1260 range.'
+key_uncertainties: 1. Whether CDC publishes a data update between now (June 2) and
+  June 12 - this is the dominant uncertainty. 2. If they do update, how many weeks
+  of new data will be included. 3. Whether the question author has inside knowledge
+  about the update schedule.
+tool_audit: 'research() returned excellent data: full weekly historical distributions,
+  current season data, genotype information. fetch_url on the CDC page confirmed data
+  is still through May 7 as of June 2. The critical finding was from the data table
+  page which explicitly states ''Data from the NoroSTAT network are typically released
+  online on a monthly basis.'' Monte Carlo simulation worked well for modeling the
+  bimodal structure.'
+update_triggers: CDC publishing a data update to the NoroSTAT page before June 12
+  would immediately shift the distribution to the 1220-1270 range. Conversely, if
+  June 12 arrives with no update, the value is almost certainly 1194.
+process_reflection: 'This question turned out to be primarily about CDC data publication
+  timing rather than epidemiology. The research tools effectively gathered the historical
+  weekly data, but the key insight came from fetching the actual CDC pages and discovering
+  the monthly update cadence. The simulation framework handled the bimodal structure
+  well. One process gap: I couldn''t easily access Wayback Machine to determine the
+  exact historical update pattern of the CDC page, which would have been very informative
+  for estimating P(update by June 12).'
+computed:
+  factor_count: 5
+  factor_sum: 2.0999999999999996
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Data update cadence is monthly, not weekly. CDC page says 'typically
+      released on a monthly basis.' Last update was May 20, next expected June 17-20,
+      likely AFTER June 12 resolution date.
+    supports:
+      center: 1194.0
+      low: 1194.0
+      high: 1200.0
+    logit: 1.5
+    confidence: 0.7
+    effective_logit: 1.0499999999999998
+  - description: If an update DOES occur by June 12, 4-5 weeks of new data would add
+      ~40-65 outbreaks at the 30th percentile. This season has been tracking at/below
+      the historical median.
+    supports:
+      center: 1238.0
+      low: 1220.0
+      high: 1260.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Season is in sharp late-spring decline. Week of May 1 had 19 outbreaks;
+      by late May this drops to 7-12/week historically. Very little incremental activity
+      even if data updates.
+    supports:
+      center: 1235.0
+      low: 1215.0
+      high: 1255.0
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  - description: Question author expects '~5 additional weekly updates' - suggests
+      they may know something about update cadence that I don't, or may be mistaken.
+    supports:
+      center: 1248.0
+      low: 1230.0
+      high: 1270.0
+    logit: -0.5
+    confidence: 0.4
+    effective_logit: -0.2
+  - description: Hard floor at 1194 (cumulative count can only increase). This creates
+      strong left-truncation.
+    supports:
+      center: 1194.0
+      low: 1194.0
+      high: 1194.0
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  dominant_factor: Data update cadence is monthly, not weekly. CDC page says 'typically
+    released on a monthly basis.' Last update was May 20, next expected June 17-20,
+    likely AFTER June 12 resolution date.
+  dominant_effective_logit: 1.0499999999999998
+  distribution_metrics:
+    implied_median: 1219.78
+    implied_p10: 1208.98
+    implied_p90: 1234.7
+    median_gap: -1.7799999999999727
+    median_gap_pct: -6.920684292379358
+    spread_ratio: 2.371695178849142
+    precision: 0.05008210180623974
+  sources:
+  - '[(Metaculus) How many cumulative norovirus outbreaks will CDC NoroSTAT report
+    for the 2025–2026 season as of June 12, 2026?](https://www.metaculus.com/questions/43751)'
+  - '[NoroSTAT Data](https://www.cdc.gov/norovirus/php/reporting/norostat-data.html)'
+  - '[NoroSTAT Data Table](https://www.cdc.gov/norovirus/php/reporting/norostat-data-table.html)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43751
+- **Question ID**: 43781
+- **Session Duration**: 805.1s (13.4 min)
+- **Cost**: $15.1404 total (orchestrator $4.5112 + sub-agents $10.6292)
+- **Tokens**: 20,509 total (44 in, 20,465 out)
+  - Cache: 1,008,776 read, 78,002 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43751_20260602_130320/20260602-130320.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0821 |
+| execute_code | 10 | 0 | 2579ms | — |
+| fetch_url | 2 | 0 | 6385ms | — |
+| get_metaculus_questions | 1 | 0 | 481ms | — |
+| premortem | 1 | 0 | 107803ms | $2.2463 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 1 | 0 | 285862ms | $8.3007 |
+
+### Sources Consulted
+
+- [(Metaculus) How many cumulative norovirus outbreaks will CDC NoroSTAT report...
+- [NoroSTAT Data](https://www.cdc.gov/norovirus/php/reporting/norostat-data.html)
+- [NoroSTAT Data Table](https://www.cdc.gov/norovirus/php/reporting/norostat-da...
