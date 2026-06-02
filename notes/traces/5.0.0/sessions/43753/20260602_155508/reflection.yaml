@@ -1,0 +1,177 @@
+---
+timestamp: 2026-06-02 16:04:49 UTC
+question_type: binary
+factors:
+- description: 'Climatological base rate: Week 2 of June at IAH historically averages
+    1.26 inches (mean) with median 0.62 inches. Gamma distribution fit gives P(>2.00)
+    = 20.8%. Multiple simulation approaches confirm 21-24%.'
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: CPC 30-day and 6-10 day outlooks favor above-normal precipitation for
+    June and Jun 7-11 respectively. The 6-10 day outlook has high confidence (4/5)
+    and directly covers the first days of the window.
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: CPC 8-14 day outlook (Jun 9-15) shows slight tilt toward above-normal
+    precipitation over southern Plains including Houston, with moderate confidence
+    (3/5).
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+- description: NWS Area Forecast Discussion explicitly forecasts transition to ridge-dominated,
+    hotter, drier regime starting June 8 - exactly when our window begins. QPF shows
+    only trace amounts.
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+- description: May 2026 very wet (8.84 inches), high soil moisture, dewpoints 74-76°F
+    maintaining Gulf moisture flux - supports convective potential even under ridge.
+  logit: 0.15
+  confidence: 0.5
+  effective_logit: 0.075
+- description: NWS daily PoPs for Jun 8-9 near normal (21-37%), not elevated. No organized
+    weather systems or tropical disturbances targeting the area.
+  logit: -0.15
+  confidence: 0.5
+  effective_logit: -0.075
+tentative_estimate:
+  logit: -1.15
+  probability: 0.24
+anchor: 'Climatological base rate: 21% (P(Jun 8-14 weekly precip > 2.00 inches) from
+  Gamma distribution fit to 1991-2020 normals for IAH: mean=1.26 in, median=0.62 in,
+  shape=0.528)'
+assessment: 'The question asks whether Houston IAH will record >2.00 inches during
+  June 8-14, 2026. This is a threshold question on a continuous precipitation variable.
+
+
+  The climatological base rate is solidly ~21% based on multiple simulation approaches
+  (Gamma fit, daily model, regime-switching model). The threshold of 2.00 inches over
+  7 days is above the mean (1.26 in) and well above the median (0.62 in) for this
+  specific week.
+
+
+  Current forecast signals are mixed: CPC outlooks favor above-normal precipitation
+  for June overall and for the 6-10/8-14 day periods, but the NWS deterministic forecast
+  shows a transition to ridge dominance starting exactly on June 8. The active weather
+  pattern (upper-level low) is expected to drive rain June 5-7, with the ridge building
+  afterward.
+
+
+  The positive CPC signal and negative NWS ridge signal roughly offset each other,
+  though the CPC outlook covers a wider probability envelope. I estimate a small net
+  positive adjustment of ~2-3 percentage points above the pure climatological rate,
+  landing at approximately 24%.
+
+
+  Key uncertainty: at 6-12 days out, weather forecasts have limited deterministic
+  skill for precipitation in subtropical environments dominated by convective processes.
+  A single organized thunderstorm complex could easily produce 2+ inches in one day.'
+calibration_notes: Anchor is 21% from fitted Gamma distribution. My estimate of 24%
+  is only slightly above the anchor, reflecting the mixed but marginally positive
+  forecast signals. The 2.00-inch threshold is above both the mean and median, making
+  YES the less likely outcome. No hedging toward 50% - the evidence supports a probability
+  in the low-to-mid 20s.
+key_uncertainties: 1. Whether the ridge forecast for Jun 8+ materializes as expected
+  or if the active pattern lingers. 2. Convective precipitation is inherently chaotic
+  - a single MCS could dump 2+ inches in hours. 3. Skill of 6-12 day deterministic
+  precipitation forecasts is very low for point locations in convective environments.
+tool_audit: 'research() returned excellent data on: historical climate normals (mean,
+  median, percentiles for Jun 8-14 week), current NWS forecast details (QPF, PoP,
+  AFD), CPC outlooks (6-10, 8-14 day, monthly, seasonal). All three research queries
+  succeeded. Code execution worked well for Gamma fitting and Monte Carlo simulations.
+  No tool failures.'
+update_triggers: 1. Updated NWS/GFS/ECMWF model runs showing organized precip systems
+  targeting Houston Jun 8-14. 2. A tropical disturbance forming in the Gulf. 3. Updated
+  CPC outlooks shifting the precipitation signal. 4. Ridge pattern verification/failure
+  in early June.
+process_reflection: The research tool provided exceptionally thorough data from NOAA
+  ACIS, NWS API, CPC outlooks - exactly what was needed. The scaffolding worked well
+  for this precipitation threshold question. The main friction was that I couldn't
+  directly access historical daily data to count exceedances empirically; I had to
+  rely on distributional fitting from summary statistics. A tool that directly queried
+  NOAA ACIS or NCEI for station-level daily data would have been valuable for ground-truthing
+  the Gamma fit.
+computed:
+  factor_count: 6
+  factor_sum: 0.07999999999999999
+  tentative_logit: -1.15
+  logit_gap: -1.23
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Climatological base rate: Week 2 of June at IAH historically averages
+      1.26 inches (mean) with median 0.62 inches. Gamma distribution fit gives P(>2.00)
+      = 20.8%. Multiple simulation approaches confirm 21-24%.'
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: CPC 30-day and 6-10 day outlooks favor above-normal precipitation
+      for June and Jun 7-11 respectively. The 6-10 day outlook has high confidence
+      (4/5) and directly covers the first days of the window.
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: CPC 8-14 day outlook (Jun 9-15) shows slight tilt toward above-normal
+      precipitation over southern Plains including Houston, with moderate confidence
+      (3/5).
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  - description: NWS Area Forecast Discussion explicitly forecasts transition to ridge-dominated,
+      hotter, drier regime starting June 8 - exactly when our window begins. QPF shows
+      only trace amounts.
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  - description: May 2026 very wet (8.84 inches), high soil moisture, dewpoints 74-76°F
+      maintaining Gulf moisture flux - supports convective potential even under ridge.
+    logit: 0.15
+    confidence: 0.5
+    effective_logit: 0.075
+  - description: NWS daily PoPs for Jun 8-9 near normal (21-37%), not elevated. No
+      organized weather systems or tropical disturbances targeting the area.
+    logit: -0.15
+    confidence: 0.5
+    effective_logit: -0.075
+  dominant_factor: NWS Area Forecast Discussion explicitly forecasts transition to
+    ridge-dominated, hotter, drier regime starting June 8 - exactly when our window
+    begins. QPF shows only trace amounts.
+  dominant_effective_logit: -0.2
+  factor_implied_probability: 0.5199893401555818
+  tentative_probability: 0.24
+  gap_pp: -27.998934015558184
+  sources:
+  - '[(Metaculus) Will Houston Intercontinental Airport (IAH) record more than 2.00
+    inches of total precipitation during June 8–14, 2026?](https://www.metaculus.com/questions/43753)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43753
+- **Question ID**: 43783
+- **Session Duration**: 721.7s (12.0 min)
+- **Cost**: $15.3004 total (orchestrator $2.5288 + sub-agents $12.7716)
+- **Tokens**: 9,759 total (27 in, 9,732 out)
+  - Cache: 420,895 read, 62,250 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43753_20260602_155508/20260602-155508.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 373ms | — |
+| get_metaculus_questions | 1 | 0 | 561ms | — |
+| premortem | 1 | 0 | 88028ms | $2.2199 |
+| reflection | 1 | 0 | 15ms | — |
+| research | 1 | 0 | 413851ms | $10.5518 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Houston Intercontinental Airport (IAH) record more than 2.0...

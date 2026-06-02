@@ -1,0 +1,107 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for question 43753, confirming the resolution criteria: the sum of daily PCPN values at IAH for June 8–14 must exceed 2.00 inches per the NWS CF6 product. The question closes June 2, 2026 at 17:17 UTC with resolution on June 15.\n\nI then ran three parallel research queries:\n1. **Historical climate data** for IAH June precipitation — returned comprehensive NOAA ACIS data including weekly breakdowns, 1991–2020 normals, percentile distributions, and extreme records\n2. **NWS forecast details** for June 8–14, 2026 — retrieved NWS API forecasts, gridpoint QPF data, CPC 6-10 and 8-14 day outlooks, and the Area Forecast Discussion\n3. **CPC seasonal outlooks** — retrieved 30-day (June 2026) and JJA seasonal outlooks plus ENSO context\n\nAll three research queries succeeded, providing extensive data.\n\n## Key Evidence\n\n**Climatological base rate:**\n- June Week 2 (Jun 8–14) at IAH: **mean = 1.26 inches**, **median = 0.62 inches** (1991–2020 normals)\n- The large mean-median gap indicates strong right-skewness — many dry weeks, few very wet weeks\n- Monthly June normal: 6.00 inches mean, 4.48 inches median, std = 4.72 inches\n\n**Current forecast signals — bullish:**\n- CPC 30-day outlook (issued May 31): above-normal precipitation favored for Gulf Coast states including Texas\n- CPC 6-10 day outlook (Jun 7–11): above-normal precipitation, **confidence 4/5** — covers first part of target window\n- CPC 8-14 day outlook (Jun 9–15): slight tilt above-normal for southern Plains, **confidence 3/5**\n- May 2026 was very wet (8.84 inches), soil moisture high, dewpoints 74–76°F\n\n**Current forecast signals — bearish:**\n- NWS Area Forecast Discussion: explicitly forecasts **transition to ridge-dominated, hotter, drier regime starting June 8** — exactly when the window begins\n- NWS QPF: only **trace amounts (~0.02 inches)** for June 8, **0.00 inches** for June 9–10\n- Daily PoPs: 21–37% for June 8–9, near normal\n\n## Quantitative Modeling\n\nI ran four independent simulation approaches:\n\n1. **Gamma distribution CDF** — fitted Gamma(shape=0.528, scale=2.387) matching mean=1.26 and median=0.62. `P(>2.00) = 20.8%`\n2. **Daily independent exponential Monte Carlo** (200K simulations) — daily P(rain)=33%, mean rain day = 0.545 in. `P(>2.00) = 21.0%`\n3. **Regime-switching model** — 35% active regime (higher P(rain), higher amounts) + 65% dry regime. `P(>2.00) = 23.8%`\n4. **Scenario-weighted analysis** — weighted across above-normal (35%), climatological (40%), below-normal (25%) scenarios. `P(>2.00) = 21.1%`\n\nAll approaches converge on **~21% base rate**. I also ran sensitivity analysis showing how the probability changes with mean shifts (+10% to +50%).\n\n## Conclusion\n\nI set my anchor at the **21% climatological base rate** and applied small adjustments for the mixed forecast signals. The CPC above-normal signals provide a modest upward push, while the NWS ridge-dominated regime forecast provides a downward pull. These roughly offset with a slight net positive tilt, yielding a **final estimate of 24%**. The key uncertainty is the inherent unpredictability of subtropical convective precipitation at 6–12 day lead times — a single organized thunderstorm could produce 2+ inches in hours.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Direct access to NOAA ACIS/NCEI station-level daily data for empirical exceedance counting",
+      "Ensemble model precipitation plume data (GFS/ECMWF ensembles) for 6-12 day probabilistic QPF",
+      "Prediction market price data (Polymarket, Kalshi, Manifold)"
+    ],
+    "subtle_bugs": [
+      "The research tool returned weekly mean/median data attributed to NOAA ACIS, but it's unclear whether these weekly breakdowns are official NOAA products or were computed by the research sub-agent from daily data — provenance is ambiguous"
+    ]
+  },
+  "classification": {
+    "question_domain": "science/climate",
+    "approach": "Gamma distribution fit to 1991-2020 weekly climate normals with Monte Carlo validation and adjustment for current NWS/CPC forecast signals.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Convective precipitation in subtropical environments is inherently chaotic at 6-12 day lead times — a single organized thunderstorm event could resolve YES regardless of synoptic regime."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No ensemble model precipitation data (GFS/ECMWF probabilistic QPF) was consulted. These would provide the most directly informative 6-12 day precipitation probability forecasts and could meaningfully shift the estimate in either direction.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market prices were checked. The Metaculus community prediction was null, and no external markets (Polymarket, Kalshi) were searched.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "22-26%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent quantitative modeling: four independent simulation approaches (Gamma CDF, daily exponential MC, regime-switching MC, scenario-weighted) all converging on ~21% base rate, providing strong triangulation",
+    "Thorough data collection: retrieved weekly-resolution climate normals for the exact Jun 8-14 window, not just monthly averages, and multiple forecast products (NWS API, CPC 6-10/8-14 day, 30-day, seasonal, AFD, WPC)",
+    "Gamma distribution fitting was methodologically sound — using mean/median ratio to derive shape parameter, verifying the fit, and recognizing the strong right-skewness of tropical convective precipitation",
+    "Balanced treatment of conflicting forecast signals: CPC above-normal outlooks vs NWS ridge-dominated regime forecast, with explicit reasoning about why they partially offset",
+    "Strong premortem/counterargument: genuinely argued the probability should be higher (30-40%) with substantive meteorological reasoning about ridge behavior in humid environments and heavy-tail underestimation",
+    "Self-aware about limitations: explicitly noted that NWS deterministic forecasts at Day 6-12 have very low skill for point-location convective precipitation, appropriately limiting the weight given to QPF"
+  ],
+  "weaknesses": [
+    "Did not access actual year-by-year historical data for Jun 8-14 to empirically count exceedances — the 21% base rate relies entirely on distributional fitting from summary statistics (mean and median), which the agent itself acknowledges as a limitation",
+    "The Gamma distribution shape parameter derivation uses an approximation for the median-to-mean ratio that becomes less accurate for very small shape parameters (k=0.528); the fitted median was 0.600 vs target 0.62, a small but notable discrepancy",
+    "No prediction market data was checked (Polymarket, Kalshi, Metaculus community) — the community_prediction was null, but no effort was made to find external market prices",
+    "The regime-switching model parameters (35% active, 65% dry, specific rain probabilities and amounts) appear somewhat arbitrary and are not calibrated to historical data — they happen to reproduce reasonable aggregate statistics but the decomposition is not validated",
+    "Did not consult ensemble model data (GFS/ECMWF ensemble precipitation plumes) which would be the most directly informative forecast product for this question at 6-12 day range"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Access NWS ensemble model data (GEFS, NAEFS) for probabilistic precipitation forecasts at the 6-12 day range — these would provide the strongest signal beyond climatology",
+    "Retrieve actual year-by-year Jun 8-14 precipitation totals from NOAA ACIS to empirically validate the Gamma distribution fit rather than relying solely on mean/median matching",
+    "Check prediction markets or Metaculus community forecasts when available as an additional calibration anchor",
+    "Consider using a zero-inflated Gamma or mixed distribution that separately models the probability of a completely dry week vs. the conditional precipitation amount distribution"
+  ]
+}
