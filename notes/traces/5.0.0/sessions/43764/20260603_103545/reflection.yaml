@@ -1,0 +1,283 @@
+---
+timestamp: 2026-06-03 10:48:16 UTC
+question_type: numeric
+factors:
+- description: IPO price confirmed at $135/share × ~12.5B shares = $1.69-1.75T target
+    valuation. This sets the floor anchor for the market cap.
+  supports:
+    center: 1.75
+    low: 1.69
+    high: 1.75
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: Polymarket prediction markets imply median first-day close of ~$2.0T
+    with P(>$1.8T)=89.5% and P(>$2.0T)=47%. High-volume markets with real money at
+    stake.
+  supports:
+    center: 2.0
+    low: 1.8
+    high: 2.2
+  logit: 2.0
+  confidence: 0.85
+  effective_logit: 1.7
+- description: 'Historical mega-IPO first-day pops: >$10B deals average 8-12%. Saudi
+    Aramco +10%, Alibaba +38%, Facebook +0.6%, Visa +28%. Supports moderate pop.'
+  supports:
+    center: 1.96
+    low: 1.75
+    high: 2.4
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Only 4% free float with 30% retail allocation (3x normal). Limited
+    supply + massive demand could amplify upward price pressure.
+  supports:
+    center: 2.1
+    low: 1.9
+    high: 2.5
+  logit: 1.0
+  confidence: 0.65
+  effective_logit: 0.65
+- description: SpaceX is unprofitable (net loss $4.9B FY2025, Q1 2026 loss $4.28B)
+    trading at 94x revenue. Fundamental overvaluation risk limits upside.
+  supports:
+    center: 1.85
+    low: 1.5
+    high: 2.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: World's largest IPO ever ($75B raise). Unprecedented scale creates
+    execution risk and market absorption uncertainty.
+  supports:
+    center: 1.9
+    low: 1.5
+    high: 2.3
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: 'Strong institutional demand: BlackRock $10B cornerstone, Goldman Sachs-led
+    underwriting, 11 banks. Demand well-supported.'
+  supports:
+    center: 2.05
+    low: 1.9
+    high: 2.2
+  logit: 0.8
+  confidence: 0.75
+  effective_logit: 0.6000000000000001
+- description: Elon Musk denied reports of lowered valuation target. Musk refuting
+    bearish narratives suggests confidence in demand.
+  supports:
+    center: 2.0
+    low: 1.85
+    high: 2.15
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  center: 1.99
+  low: 1.79
+  high: 2.2
+anchor: IPO target valuation of $1.75T, with historical mega-IPO average first-day
+  pop of ~10-12% implying ~$1.93-1.96T as naive anchor. Polymarket-calibrated median
+  at $2.0T.
+assessment: 'The SpaceX IPO is confirmed for June 12, 2026, with pricing at $135/share
+  and target valuation of $1.75T. This is the largest IPO in history by a massive
+  margin ($75B vs Saudi Aramco''s $25.6B record). The key question is the first-day
+  pop.
+
+
+  Polymarket data provides the strongest anchor: median close ~$2.0T, with 89.5% probability
+  above $1.8T and 47% above $2.0T. This implies a median pop of ~14% from IPO price,
+  which is in line with historical mega-IPO performance adjusted upward for: (1) unprecedented
+  retail demand with 30% allocation, (2) only 4% free float creating supply constraints,
+  (3) SpaceX/Musk brand enthusiasm.
+
+
+  The distribution is right-skewed with meaningful left tail risk (3-4% chance of
+  falling below $1.56T) and right tail potential (1-2% chance of exceeding $3T). The
+  3-component mixture model matches all Polymarket constraint points exactly.
+
+
+  Key tensions: The fundamental valuation (94x revenue for an unprofitable company)
+  vs. the massive demand and limited supply. The unprecedented scale of the deal creates
+  both opportunities (institutional demand) and risks (market absorption).'
+calibration_notes: Distribution is anchored on Polymarket data with $490K+ volume
+  on the 'above' markets. Median of $1.99T represents ~14% pop from IPO price, consistent
+  with historical mega-IPO average of 10-12% adjusted for SpaceX-specific factors
+  (limited float, retail demand). The P10-P90 range of $1.79T-$2.20T captures the
+  core uncertainty. Fat tails (P1=$1.24T, P99=$3.13T) capture extreme scenarios including
+  failed IPO (-29%) and extreme pop (+79%).
+key_uncertainties: 1. Exact final share count and pricing (confirmed at $135 but could
+  adjust). 2. Market conditions on trading day (broader market sentiment). 3. Whether
+  the extreme retail demand actually materializes on day 1. 4. Whether institutional
+  investors flip shares immediately or hold.
+tool_audit: research() returned excellent data from 3 parallel queries covering IPO
+  details, analyst estimates, and historical IPO performance. Polymarket data from
+  web_search was very informative with multiple market types (brackets, thresholds,
+  timing). fetch_url successfully retrieved detailed data from BitMEX (confirmed $135
+  IPO price), Yahoo Finance (Musk refuting lower valuation), and SpaceXChart. All
+  tools performed well; no failures.
+update_triggers: 1. Change in IPO pricing from $135/share. 2. Market crash or major
+  correction before June 12. 3. Regulatory or legal challenges to the IPO. 4. Major
+  SpaceX operational failure (Starship explosion, Starlink outage). 5. Broader tech
+  IPO sentiment shift (OpenAI/Anthropic IPO performance).
+process_reflection: The research() tool was excellent for this question type - IPO
+  forecasting requires broad data gathering across multiple domains. The Polymarket
+  integration in web_search was very helpful, providing structured probability data.
+  The Monte Carlo simulation via execute_code allowed proper distribution calibration.
+  The main friction point was not being able to see all individual Polymarket bracket
+  probabilities (only got aggregate/group data), which limited my ability to reconstruct
+  the full implied distribution. A dedicated Polymarket sub-market extractor would
+  help.
+computed:
+  factor_count: 8
+  factor_sum: 5.15
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: IPO price confirmed at $135/share × ~12.5B shares = $1.69-1.75T target
+      valuation. This sets the floor anchor for the market cap.
+    supports:
+      center: 1.75
+      low: 1.69
+      high: 1.75
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: Polymarket prediction markets imply median first-day close of ~$2.0T
+      with P(>$1.8T)=89.5% and P(>$2.0T)=47%. High-volume markets with real money
+      at stake.
+    supports:
+      center: 2.0
+      low: 1.8
+      high: 2.2
+    logit: 2.0
+    confidence: 0.85
+    effective_logit: 1.7
+  - description: 'Historical mega-IPO first-day pops: >$10B deals average 8-12%. Saudi
+      Aramco +10%, Alibaba +38%, Facebook +0.6%, Visa +28%. Supports moderate pop.'
+    supports:
+      center: 1.96
+      low: 1.75
+      high: 2.4
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Only 4% free float with 30% retail allocation (3x normal). Limited
+      supply + massive demand could amplify upward price pressure.
+    supports:
+      center: 2.1
+      low: 1.9
+      high: 2.5
+    logit: 1.0
+    confidence: 0.65
+    effective_logit: 0.65
+  - description: SpaceX is unprofitable (net loss $4.9B FY2025, Q1 2026 loss $4.28B)
+      trading at 94x revenue. Fundamental overvaluation risk limits upside.
+    supports:
+      center: 1.85
+      low: 1.5
+      high: 2.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: World's largest IPO ever ($75B raise). Unprecedented scale creates
+      execution risk and market absorption uncertainty.
+    supports:
+      center: 1.9
+      low: 1.5
+      high: 2.3
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: 'Strong institutional demand: BlackRock $10B cornerstone, Goldman
+      Sachs-led underwriting, 11 banks. Demand well-supported.'
+    supports:
+      center: 2.05
+      low: 1.9
+      high: 2.2
+    logit: 0.8
+    confidence: 0.75
+    effective_logit: 0.6000000000000001
+  - description: Elon Musk denied reports of lowered valuation target. Musk refuting
+      bearish narratives suggests confidence in demand.
+    supports:
+      center: 2.0
+      low: 1.85
+      high: 2.15
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: IPO price confirmed at $135/share × ~12.5B shares = $1.69-1.75T
+    target valuation. This sets the floor anchor for the market cap.
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 1.9235200000000001
+    implied_p10: 1.75576
+    implied_p90: 2.11
+    median_gap: 0.06647999999999987
+    median_gap_pct: 18.766937669376663
+    spread_ratio: 1.157407407407408
+    precision: 0.2060301507537689
+  sources:
+  - '[(Metaculus) What will SpaceX''s (SPCX) market capitalization be at the close
+    of its first trading day on Nasdaq?](https://www.metaculus.com/questions/43764)'
+  - '[SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-above)'
+  - '[SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap)'
+  - '[SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-by)'
+  - '[What will SpaceX''s public ticker be? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/what-will-spacexs-public-ticker-be)'
+  - '[In which month will SpaceX IPO? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/in-which-month-will-spacex-ipo)'
+  - '[SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-higher-strikes)'
+  - '[Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://polymarket.com/event/largest-ipo-by-market-cap-in-2026-287)'
+  - '[SpaceX IPO Date Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-date-182)'
+  - '[Did SpaceX Lower Its IPO Valuation Target? Here''s What Elon Musk Said](https://finance.yahoo.com/markets/stocks/articles/did-spacex-lower-ipo-valuation-142257607.html)'
+  - '[SPCX Stock — SpaceX IPO Date, Price, Valuation & Live Chart](https://spacexchart.com/)'
+  - '[SpaceX IPO Guide: S-1 Breakdown, Valuation & Trading Strategy | BitMEX](https://www.bitmex.com/blog/spacex-ipo-guide)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43764
+- **Question ID**: 43794
+- **Session Duration**: 997.0s (16.6 min)
+- **Cost**: $16.0454 total (orchestrator $4.5775 + sub-agents $11.4679)
+- **Tokens**: 18,221 total (40 in, 18,181 out)
+  - Cache: 921,902 read, 97,627 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43764_20260603_103545/20260603-103545.log`
+
+### Tool Calls
+
+- **Total**: 29 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1060 |
+| execute_code | 5 | 0 | 12243ms | — |
+| fetch_url | 6 | 0 | 7045ms | — |
+| get_coherence_links | 1 | 0 | 438ms | — |
+| get_metaculus_questions | 1 | 0 | 264ms | — |
+| polymarket_price | 11 | 0 | 614ms | — |
+| premortem | 1 | 0 | 188930ms | $3.9058 |
+| reflection | 1 | 0 | 760ms | — |
+| research | 1 | 0 | 301671ms | $7.3619 |
+| web_search | 2 | 0 | 17383ms | $0.0942 |
+
+### Sources Consulted
+
+- [(Metaculus) What will SpaceX's (SPCX) market capitalization be at the close ...
+- [SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymark...
+- [SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://...
+- [SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket...
+- [What will SpaceX's public ticker be? Predictions & Odds 2026 | Polymarket](h...
+- [In which month will SpaceX IPO? Predictions & Odds 2026 | Polymarket](https:...
+- [SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymark...
+- [Largest IPO by market cap in 2026? Predictions & Odds | Polymarket](https://...
+- [SpaceX IPO Date Predictions & Odds 2026 | Polymarket](https://polymarket.com...
+- [Did SpaceX Lower Its IPO Valuation Target? Here's What Elon Musk Said](https...
+- [SPCX Stock — SpaceX IPO Date, Price, Valuation & Live Chart](https://spacexc...
+- [SpaceX IPO Guide: S-1 Breakdown, Valuation & Trading Strategy | BitMEX](http...
