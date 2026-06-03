@@ -1,0 +1,132 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by pulling the Metaculus question details to understand the resolution criteria precisely: the question resolves YES if Microsoft, Xbox Game Studios, or The Coalition publicly announces a **specific calendar date** (day, month, year) for Gears of War: E-Day between May 31 and June 13, 2026 23:59 UTC. A month or season window (\"September 2026,\" \"Fall 2026\") does NOT count.\n\nI then launched the research sub-agent with two queries about Gears of War E-Day release date announcements and the Xbox Games Showcase June 7 event. **The research sub-agent failed to access live web search tools**, returning only background knowledge from training data. It correctly identified the event hadn't occurred yet (June 3, forecast date).\n\nI compensated by running direct web searches using `mcp__search__web_search`, executing three parallel queries:\n- \"Gears of War E-Day release date announcement 2026\" — confirmed the game is scheduled for 2026 on Xbox Series X/S and PC, found the Lucha Libre AAA Triplemania sponsorship (Sept 11-13) suggesting a September window\n- \"Xbox Games Showcase June 7 2026 Gears of War E-Day Direct\" — confirmed the dedicated Direct from official Xbox Wire posts\n- \"Gears of War E-Day release date revealed specific date\" — confirmed no specific date yet announced\n\nI then fetched the ComicBook article which stated \"we'll almost certainly learn about the launch day for E-Day\" at the June 7 Direct. I also checked the Windows Central article which was primarily a \"how to watch\" guide without specific date-reveal expectations.\n\nFor historical precedent, I searched for Starfield Direct history and Xbox Developer Direct patterns. Key finding: **Starfield's specific date (September 6, 2023) was announced in March 2023, BEFORE the Starfield Direct in June** — meaning the Direct itself was a gameplay deep-dive, not the date-reveal venue. However, I correctly identified that E-Day's situation differs because no date has been announced yet, making the Direct the natural venue.\n\nI also identified that at **Xbox Developer Direct 2025**, 3 out of 4 featured games received specific calendar dates (Doom: The Dark Ages → May 13, South of Midnight, Clair Obscur), while Ninja Gaiden 4 received only \"Fall 2025.\"\n\n## Key Evidence\n\n- **Dedicated E-Day Direct confirmed for June 7, 2026** — official Xbox Wire posts from March 30 and June 1, 2026, within the resolution window (by June 13)\n- **Game confirmed for 2026 release** — Wikipedia, multiple outlets; only a year window, no specific date yet\n- **Lucha Libre AAA Triplemania sponsorship (Sept 11-13)** — per tbreak.com/VGC, suggesting Microsoft has locked an internal release window around September\n- **Industry consensus**: ComicBook says \"almost certainly\" a date reveal; TechGameNews expects \"release date confirmations\"\n- **Developer Direct 2025 precedent**: 3/4 games got specific calendar dates when launching same year\n- **Starfield precedent**: date was announced separately from its Direct (counterargument)\n- **Ninja Gaiden 4**: only got \"Fall 2025\" at Dev Direct 2025 (counterargument)\n\n## Conclusion\n\nI set an **anchor at ~80%** based on the base rate for flagship Xbox games with dedicated Directs getting specific release dates. I identified six factors: four pushing positive (dedicated Direct in resolution window, confirmed 2026 year, Lucha Libre sponsorship evidence, industry consensus) and two negative risks (could announce only month/season, event cancellation or strategic date hold-back). The raw factor sum implied ~98% but I correctly recognized these factors are correlated (all aspects of the same underlying situation) and discounted to **90% final probability**. The 10% residual risk was decomposed as ~5-6% for a month-only announcement, ~2-3% for staged marketing, and ~1-2% for unforeseen issues. I submitted a final probability of **0.90**.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market tool was used — checking Polymarket or Metaculus community prediction for this question would have provided useful calibration signal"
+    ],
+    "subtle_bugs": [
+      "The research sub-agent (mcp__research__research) returned content that looked like a real research report but was actually just training data with fabricated source URLs marked 'Unable to access live'. This could mislead less careful agents into treating it as fresh web research."
+    ]
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Web research on confirmed event schedule, industry expectations, and historical Xbox showcase precedents, combined with structured factor analysis.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Microsoft will announce a specific calendar day (e.g., 'September 11, 2026') versus just a month or season window ('September 2026') at the June 7 Direct."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check any prediction markets (Polymarket, Metaculus community, Manifold) for this question. The Metaculus API returned community_prediction: null due to only 1 forecaster, but no attempt was made to check other prediction market platforms.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The anchor claims '3/4 games at Dev Direct 2025 got specific dates' and an 80% base rate, but these figures come from agent background knowledge about Developer Direct 2025 rather than verified web search results in the trace. The Ninja Gaiden 4 'Fall 2025' counterexample was also from memory. While likely accurate, the base rate was not empirically verified during the session.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "88%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that the research sub-agent failed to access live web tools and immediately compensated with direct web_search calls — good error recovery",
+    "Precisely engaged with the resolution criteria distinction between a specific calendar day and a month/season window, which is the key risk factor",
+    "Examined the Starfield Direct precedent carefully and correctly identified it was NOT analogous (date was pre-announced) while explaining why E-Day's situation differs",
+    "Recognized factor correlation — the raw factor sum implied 98% but the agent correctly discounted to 90% because the positive factors are correlated aspects of the same situation",
+    "Strong premortem with specific counterargument citing Starfield's separate date announcement, Ninja Gaiden 4's seasonal-only reveal, and the staged marketing risk",
+    "Clear decomposition of the 10% residual risk into specific scenarios (5-6% month-only, 2-3% staged marketing, 1-2% unforeseen)",
+    "Cross-question consistency noted by the premortem reviewer: Fable at 50% vs E-Day at 90% reflects different launch proximity (~8 months vs ~3 months)"
+  ],
+  "weaknesses": [
+    "Did not check any prediction markets (Polymarket, Kalshi, Manifold) which could have provided useful calibration signal for a question with clear resolution criteria",
+    "The Developer Direct 2025 base rate (3/4 games got specific dates) was asserted from background knowledge without verification through web search — a quick search could have confirmed or corrected this",
+    "The Windows Central fetch was low-value — it was a 'how to watch' guide that added nothing. The agent could have instead fetched a more analytical source",
+    "No attempt to check the Xbox Store or Microsoft Store for pre-order listings, which per the resolution criteria would count as an official announcement and could have provided evidence of whether a specific date was already in the system"
+  ],
+  "pipeline": {
+    "issues": [
+      "Research sub-agent failed to access live web tools, returning only training-data-based answers with fabricated source URLs. The agent correctly identified this and compensated with direct web_search calls.",
+      "Metaculus community_prediction was null (only 1 forecaster), eliminating a potential calibration signal."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Always check prediction markets for questions with clear resolution criteria — even if the community_prediction from Metaculus is null, check Polymarket/Manifold",
+    "Verify base rate claims through web search rather than relying on background knowledge, especially when the base rate is a key input to the anchor",
+    "For gaming release date questions, check first-party storefronts (Xbox Store, Steam) for pre-order listings that might reveal placeholder or actual dates",
+    "Be more selective about URL fetches — prioritize analytical/opinion pieces over how-to-watch guides"
+  ]
+}
