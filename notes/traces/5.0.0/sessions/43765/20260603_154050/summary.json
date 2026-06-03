@@ -1,0 +1,152 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question (post_id 43765) to understand the resolution criteria precisely: a specific calendar date (day/month/year) must be announced officially by 23:59 UTC on June 13, 2026, from Microsoft/Xbox, Halo Studios, or PlayStation. Crucially, announcements of only a month (\"July 2026\") or season (\"Summer 2026\") do **not** count.\n\nI then ran two research queries in parallel — one on the Halo release date situation and one on the Xbox Games Showcase 2026 schedule. The first sub-agent had tool failures and could only provide training-data-based knowledge (which was largely useless for a June 2026 question), but the second sub-agent returned comprehensive, sourced research on the Showcase format, expected lineup, and historical patterns.\n\nI followed up with multiple web searches targeting:\n- Current state of the Halo store page (confirmed it still shows \"Available 2026\" with no specific date)\n- Leaks and insider reports about the release date\n- Whether the Xbox Games Showcase had already happened (it had not; it's scheduled for June 7)\n- Official Microsoft/Halo channels for any date announcement\n\nI also fetched the Xbox store page directly to confirm no date had been posted yet.\n\n## Key Evidence\n\n- **Xbox Games Showcase**: Confirmed for **June 7, 2026** — 4 days after the forecast date and 6 days before the resolution deadline of June 13. This is THE venue for Xbox date reveals.\n- **Store page status**: Xbox store still shows only \"Available 2026\" with no specific date as of June 3.\n- **Multiple convergent leaks**: grunt.api (dataminer) decoded equations pointing to July 28 launch with July 23 early access; Korean retailer survey; insider Graczdari (who correctly predicted prior Microsoft dates) pointing to late July; wccftech rated it 95% likely.\n- **Development status**: Insider Rebs Gaming reported the game is \"content-complete\" — tweaks and polish remaining, but playable start to finish.\n- **Franchise significance**: Halo's 25th anniversary year, first multiplatform Halo title, Xbox's marquee 2026 release.\n- **Historical base rates**: Only ~12-15% of ALL games at Xbox Showcases get specific dates, BUT this includes early-stage titles years from launch. For near-launch flagships (within 3-5 months), the rate is much higher — examples include Forza Horizon 5, Starfield, CoD BO6 all being dated when shown near launch.\n- **Resolution criteria nuance**: The critical risk is Microsoft announcing \"July 2026\" or \"Summer 2026\" without a specific day — this would NOT satisfy the resolution criteria.\n\n## Quantitative Modeling\n\nI ran a probability decomposition in a code sandbox:\n- **P(appears at Showcase)** = 0.95\n- **P(specific date | appears)** = 0.82\n- **P(date before Showcase)** = 0.03\n- **P(date via other channel if not at Showcase)** = 0.15 of remaining probability\n- **Total P(YES)** = ~**0.838**\n\nA sensitivity analysis showed the total ranging from 0.741 (if P(date|appears)=0.70) to 0.902 (if P(date|appears)=0.90).\n\n## Conclusion\n\nI submitted a final probability of **83% YES**. The dominant driver is the Xbox Games Showcase falling squarely within the resolution window, combined with the game being near-complete and leaks converging on a late July launch. The primary downside risk is the specific-day requirement — Microsoft could announce a vaguer window that doesn't qualify. The premortem reviewer independently estimated 78-83% and approved the forecast.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market data was checked (Polymarket, Kalshi, Manifold) — a relevant market on this question or Halo's release date could have provided additional calibration signal."
+    ],
+    "subtle_bugs": [
+      "The first research sub-agent completely failed to access web tools and returned only training-data-based speculation, providing essentially zero useful information for a question about events in June 2026. The agent correctly identified and compensated for this, but it wasted one of two research query slots."
+    ]
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Probability decomposition combining Xbox Showcase appearance likelihood with conditional probability of specific-date announcement, supported by web search verification of current status and leak analysis.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Microsoft will announce a specific calendar day (e.g., 'July 28') versus a vaguer window ('July 2026' or 'Summer 2026') that would not satisfy the resolution criteria."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market data was consulted. For a question with 6 forecasters on Metaculus (community_prediction was null/unavailable), checking Polymarket or Manifold could have provided an additional calibration signal, especially given this is a time-sensitive event-driven question.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The anchor of '75-85% for near-launch flagships being dated at major publisher showcases' is described as based on 'Xbox Showcase 2020-2024 data showing games like Forza Horizon 5, Starfield, CoD BO6.' However, this is a very small sample (3-4 games) and the agent acknowledges it's 'not directly sourced as a statistic' but rather an inference. The true base rate could be higher (near 100% for this specific sub-class) or lower if there are counterexamples the agent didn't find.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The agent assigns P(appears at Showcase) = 0.95 based on reports it's 'expected to appear' and is a flagship title, but no official confirmation of its inclusion in the Showcase lineup was found. The research entry says 'Expected to appear; reports suggest July 2026 launch' — this is based on speculation and leaks, not official confirmation. A slightly lower P(appears) (e.g., 0.85-0.90) might be warranted.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "80%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified and engaged with the critical resolution criteria nuance: a specific day/month/year is required, and 'July 2026' or 'Summer 2026' would NOT qualify. This risk was properly weighted as the main downside factor.",
+    "Ran an explicit probability decomposition in a code sandbox with sensitivity analysis across different P(date|appears) values, grounding the estimate in transparent math rather than pure intuition.",
+    "Directly fetched the Xbox store page to confirm current status ('Available 2026'), establishing ground truth rather than relying on assumptions.",
+    "Properly contextualized the 12-15% overall showcase dating rate by noting it's biased by early-stage titles, then constructed a more relevant conditional base rate for near-launch flagships.",
+    "Identified multiple independent leak sources (grunt.api dataminer, Korean retailer, insider Graczdari) to triangulate the July 28 date, rather than relying on a single leak.",
+    "The premortem check was substantive — it independently verified every factual claim against trace evidence and produced its own probability estimate (78-83%) that confirmed the agent's range."
+  ],
+  "weaknesses": [
+    "Did not check any prediction markets (Polymarket, Kalshi, Manifold) for a relevant market on Halo's release date or this specific question — a missed calibration opportunity.",
+    "One of two research sub-agents completely failed (tool unavailability), wasting a research query slot. The agent compensated well with direct web searches, but this was an efficiency loss.",
+    "The anchor base rate of '75-85% for near-launch flagships' was constructed from a very small sample (3-4 historical examples) without explicit acknowledgment of the small-sample uncertainty.",
+    "Did not attempt to check the Halo Waypoint page directly via fetch_url, only the Xbox store page. Since Halo Waypoint is listed as an official resolution channel, confirming its current state would have been thorough."
+  ],
+  "pipeline": {
+    "issues": [
+      "One of two parallel research sub-agents experienced complete tool failure — 'all web search and fetch tools are unavailable in this session' — and returned only training-data-based speculation that was largely useless for a June 2026 question. This is a reliability issue with the research tool's sub-agent provisioning.",
+      "The Metaculus community_prediction was null despite 6 forecasters being listed, which meant no crowd signal was available for comparison."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add prediction market checks (Polymarket, Kalshi, Manifold) as a standard step for event-driven questions — especially when Metaculus community prediction is unavailable.",
+    "When the research tool's sub-agent fails, consider re-running the failed query as a direct web search rather than proceeding with only the successful sub-agent's data.",
+    "Fetch all official resolution-criteria channels (in this case both the Xbox store page AND Halo Waypoint) to confirm current state, not just one.",
+    "For small-sample base rates, explicitly note the sample size and consider widening the confidence interval around the anchor."
+  ]
+}
