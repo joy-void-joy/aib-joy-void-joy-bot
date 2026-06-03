@@ -1,0 +1,218 @@
+---
+timestamp: 2026-06-03 19:56:32 UTC
+question_type: numeric
+factors:
+- description: Current verified value is 52.4M as of June 1, 2026 - this is the floor
+    for the resolution
+  supports:
+    center: 52.4
+    low: 52.4
+    high: 52.4
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: CRT publishes bulletins every 3-7 days (May 13, 19, 26, 29 pattern).
+    Latest bulletin in May 31-Jun 13 window will likely be from June 7-13, covering
+    ~7-12 days of new registrations
+  supports:
+    center: 55.0
+    low: 53.0
+    high: 57.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Recent daily registration rate has been declining: 250K/day (mid-May)
+    to 160K/day (late May). Without acceleration this implies only 1.5-2.5M additional
+    by mid-June'
+  supports:
+    center: 54.5
+    low: 53.5
+    high: 55.5
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Deadline pressure (June 30) should accelerate registrations in June.
+    CRT official claims target will be met. Media frenzy increasing awareness. Typical
+    last-minute surge pattern.
+  supports:
+    center: 56.0
+    low: 54.0
+    high: 60.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Operators can do bulk auto-registration of postpaid lines (drove 742K/day
+    in Apr-May). Telcel at only 19% registered - large potential for another bulk
+    event
+  supports:
+    center: 58.0
+    low: 55.0
+    high: 65.0
+  logit: 0.5
+  confidence: 0.4
+  conditional: If major operator does bulk registration before June 13
+  effective_logit: 0.2
+- description: If bulletin is published early in window (June 3-6) and no later bulletin
+    follows, figure would be only ~52.4-53.5M
+  supports:
+    center: 53.0
+    low: 52.4
+    high: 54.0
+  logit: -0.5
+  confidence: 0.3
+  conditional: If CRT stops publishing bulletins after early June
+  effective_logit: -0.15
+tentative_estimate:
+  center: 55.1
+  low: 53.5
+  high: 58.3
+anchor: Starting from verified 52.4M as of June 1, projecting 7-12 days forward at
+  historical daily rates of 160-250K/day with acceleration. Monte Carlo simulation
+  provides the distribution.
+assessment: The question asks for the registered lines count from the most recent
+  CRT bulletin published May 31-June 13. As of June 1, the verified count is 52.4M.
+  CRT publishes bulletins every 3-7 days, so the latest bulletin in the window should
+  be from approximately June 7-13, covering ~7-12 days of additional registrations.
+  The daily rate has recently been 160-250K/day, but deadline pressure (June 30) should
+  accelerate this. Monte Carlo simulation with multiple scenarios yields a median
+  of ~55.1M with P10-P90 range of 53.5-58.3M. The right tail extends to ~62M+ in the
+  scenario where operators do another bulk auto-registration push.
+calibration_notes: The simulation accounts for multiple timing scenarios (when the
+  latest bulletin is published), multiple rate acceleration scenarios, and the possibility
+  of operator bulk registration events. The lower bound is constrained by the current
+  52.4M value. The upper tail reflects the possibility of another bulk auto-registration
+  event similar to the April-May jump.
+key_uncertainties: 1. Whether operators (especially Telcel) will do another bulk auto-registration
+  before June 13. 2. Exact timing of the latest CRT bulletin in the window. 3. Whether
+  registration rate actually accelerates in early June or continues declining.
+tool_audit: research() - excellent, provided comprehensive data with verified sources.
+  web_search - useful for cross-referencing and finding additional sources. fetch_url
+  - partially useful (CRT portal returned empty due to Cloudflare; WRadio article
+  confirmed 52.4M figure). execute_code - essential for Monte Carlo simulation.
+update_triggers: 1. New CRT bulletin published with updated figure. 2. News of operator
+  bulk auto-registration event. 3. Reports of system outages or crashes from surge
+  demand. 4. Extension announcement (would slow registrations).
+process_reflection: The research tool was very effective at gathering comprehensive
+  data. The main friction was the discrepancy between the two research entries (69.7M
+  vs 52.4M) - the first research agent likely hallucinated the 69.7M figure, which
+  required verification via direct URL fetch. The CRT portal was blocked by Cloudflare,
+  preventing direct access to official bulletins. The simulation approach feels appropriate
+  for this type of trending-value-at-future-date question.
+computed:
+  factor_count: 6
+  factor_sum: 3.9299999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current verified value is 52.4M as of June 1, 2026 - this is the
+      floor for the resolution
+    supports:
+      center: 52.4
+      low: 52.4
+      high: 52.4
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: CRT publishes bulletins every 3-7 days (May 13, 19, 26, 29 pattern).
+      Latest bulletin in May 31-Jun 13 window will likely be from June 7-13, covering
+      ~7-12 days of new registrations
+    supports:
+      center: 55.0
+      low: 53.0
+      high: 57.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Recent daily registration rate has been declining: 250K/day (mid-May)
+      to 160K/day (late May). Without acceleration this implies only 1.5-2.5M additional
+      by mid-June'
+    supports:
+      center: 54.5
+      low: 53.5
+      high: 55.5
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Deadline pressure (June 30) should accelerate registrations in June.
+      CRT official claims target will be met. Media frenzy increasing awareness. Typical
+      last-minute surge pattern.
+    supports:
+      center: 56.0
+      low: 54.0
+      high: 60.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Operators can do bulk auto-registration of postpaid lines (drove
+      742K/day in Apr-May). Telcel at only 19% registered - large potential for another
+      bulk event
+    supports:
+      center: 58.0
+      low: 55.0
+      high: 65.0
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+    conditional: If major operator does bulk registration before June 13
+  - description: If bulletin is published early in window (June 3-6) and no later
+      bulletin follows, figure would be only ~52.4-53.5M
+    supports:
+      center: 53.0
+      low: 52.4
+      high: 54.0
+    logit: -0.5
+    confidence: 0.3
+    effective_logit: -0.15
+    conditional: If CRT stops publishing bulletins after early June
+  dominant_factor: Current verified value is 52.4M as of June 1, 2026 - this is the
+    floor for the resolution
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 53.93380614657211
+    implied_p10: 53.00000000000001
+    implied_p90: 55.29787234042553
+    median_gap: 1.1661938534278917
+    median_gap_pct: 50.75102880658443
+    spread_ratio: 2.088888888888898
+    precision: 0.08711433756805802
+  sources:
+  - '[(Metaculus) How many mobile lines in Mexico (in millions) will be registered
+    with CURP according to the most recent CRT bulletin published on or before June
+    13, 2026?](https://www.metaculus.com/questions/43767)'
+  - '[gob.mx](https://www.gob.mx/crt/prensa)'
+  - '[Padrón de telefonia movil: Alrededor de 92 millones de lineas siguen sin registrarse](https://wradio.com.mx/2026/06/01/padron-de-telefonia-movil-alrededor-de-92-millones-de-lineas-siguen-sin-registrarse/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43767
+- **Question ID**: 43797
+- **Session Duration**: 1113.0s (18.6 min)
+- **Cost**: $13.7109 total (orchestrator $4.0543 + sub-agents $9.6566)
+- **Tokens**: 13,331 total (41 in, 13,290 out)
+  - Cache: 931,498 read, 88,517 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43767_20260603_194121/20260603-194121.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0508 |
+| execute_code | 5 | 0 | 638ms | — |
+| fetch_url | 2 | 0 | 16379ms | — |
+| get_metaculus_questions | 1 | 0 | 2429ms | — |
+| premortem | 1 | 0 | 139714ms | $3.1674 |
+| reflection | 1 | 0 | 1938ms | — |
+| research | 1 | 0 | 492303ms | $6.1720 |
+| web_search | 6 | 0 | 20909ms | $0.2664 |
+
+### Sources Consulted
+
+- [(Metaculus) How many mobile lines in Mexico (in millions) will be registered...
+- [gob.mx](https://www.gob.mx/crt/prensa)
+- [Padrón de telefonia movil: Alrededor de 92 millones de lineas siguen sin reg...
