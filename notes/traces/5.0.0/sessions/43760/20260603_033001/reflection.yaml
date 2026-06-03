@@ -1,0 +1,217 @@
+---
+timestamp: 2026-06-03 03:49:08 UTC
+question_type: binary
+factors:
+- description: Current mNAV is ~1.19-1.25, requiring a ~17-20% decline to breach 1.0.
+    This is a large move for a 5-day window.
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: 'Structural mechanics: mNAV = (MC + Fixed_Debt) / BTC_Reserve. The
+    ~$21B debt/preferred component means correlated BTC+MSTR drops actually INCREASE
+    mNAV, not decrease it. Only MSTR-specific underperformance relative to BTC can
+    push mNAV down.'
+  logit: -2.0
+  confidence: 0.95
+  effective_logit: -1.9
+- description: MSTR and BTC are highly correlated (rho ~0.7-0.9). Simulation shows
+    P(mNAV<1.0) ranges from 0.01% (rho=0.9) to 2.35% (rho=0.5). Even with fat tails
+    and bearish drift, probability stays below 2.5% for all reasonable correlations.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: 'Bearish momentum: BTC crashed 11% in 5 days (from $74K to $66K), MSTR
+    down 15% in 5 trading days. BTC ETF outflows of $2.4B in May. Strategy sold 32
+    BTC (first sale since 2022), breaking narrative.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: June 8 shareholder vote on STRK dividend frequency change. Could be
+    an MSTR-specific catalyst if it reveals solvency/liquidity concerns.
+  logit: 0.3
+  confidence: 0.3
+  effective_logit: 0.09
+- description: 'Historical precedent: mNAV briefly dipped to 0.97 in Nov 2025. But
+    that was from a lower starting level (~1.0-1.3 range). Going from 1.20+ to below
+    1.0 in 5 days would be unprecedented.'
+  logit: -1.0
+  confidence: 0.7
+  effective_logit: -0.7
+- description: MSTR is already down 70% from 52-week high and near its 52-week low
+    ($104.17). Shock alert data shows after -9.1% daily drops, 60.7% of 10-day forward
+    returns are positive with median +3.84%.
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Model uncertainty: My simulation uses simplified bivariate normal/t
+    returns with fixed correlation. Real markets can have regime shifts, correlation
+    breakdowns, and discrete jumps not captured in the model.'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+tentative_estimate:
+  logit: -3.5
+  probability: 0.03
+anchor: 'Base rate: For a metric to drop ~17-20% in a 5-day window requires a 3+ sigma
+  event in mNAV. Historically, mNAV has briefly gone below 1.0 once in recent months
+  (Nov 2025), but from a closer starting point. Anchor: ~2% considering some tail
+  risk.'
+assessment: 'The question asks whether MSTR''s mNAV (Enterprise Value / BTC Reserve)
+  will close below 1.0 on any trading day June 8-12, 2026. Current mNAV is approximately
+  1.19-1.25.
+
+
+  The key structural insight is that mNAV has a "debt floor" effect: the ~$21B fixed
+  component (debt + preferred - cash) in the numerator means that when BTC and MSTR
+  crash together, mNAV actually INCREASES because the fixed portion becomes proportionally
+  larger. Only when MSTR dramatically underperforms BTC does mNAV decrease.
+
+
+  For mNAV < 1.0, MSTR would need to drop ~25% with BTC flat, or drop ~15-20% while
+  BTC rises 5-10%. Both scenarios require extreme decorrelation between MSTR and BTC,
+  which contradicts their typically high correlation (rho ~0.7-0.9).
+
+
+  Monte Carlo simulations with 500K paths, fat-tailed distributions, and bearish drift
+  consistently show P(mNAV < 1.0) at 0.3-2.4% depending on the correlation parameter.
+  The median minimum mNAV over the 5-day window is ~1.16, and even the 1st percentile
+  is ~1.00-1.03.
+
+
+  The main risk factor is an MSTR-specific event (more BTC sales, negative shareholder
+  vote June 8, solvency concerns) that causes MSTR to crash while BTC holds or recovers.
+  However, even a 20% MSTR decline with BTC flat only produces mNAV = 1.025, still
+  above 1.0.
+
+
+  Probability estimate: ~3%, reflecting simulation results of 0.3-2.4% plus a small
+  allowance for model uncertainty and discrete event risk.'
+calibration_notes: 'Anchor of ~2% based on tail-event probability for 17-20% mNAV
+  decline in 5 days. My estimate of 3% is slightly above this to account for model
+  uncertainty and the current extreme bearish environment. The hedging check: this
+  is NOT a 50/50 uncertainty - the structural mechanics strongly favor NO. The 3%
+  is driven by genuine tail risk, not vague uncertainty.'
+key_uncertainties: 1. Exact correlation between MSTR and BTC during the forecast window
+  (the single most important parameter). 2. The exact fixed EV component ($19.5B vs
+  $21.35B makes a meaningful difference). 3. Whether any MSTR-specific catalyst (June
+  8 shareholder vote, more BTC sales, solvency concerns) could cause a sharp decorrelation.
+  4. Fat-tail behavior in extreme scenarios not captured by t-distribution model.
+tool_audit: 'Useful: Yahoo Finance API data (MSTR price history, vol, beta, shock
+  alert), CoinGecko API (BTC price, holdings data), BitcoinTreasuries.net (capital
+  structure data), research() sub-agent (comprehensive background). Empty/unhelpful:
+  strategy.com direct access (JavaScript-rendered, couldn''t extract live mNAV). No
+  failures.'
+update_triggers: 1. MSTR announces large BTC sale or forced liquidation → would move
+  probability up significantly. 2. BTC crashes another 20%+ → counterintuitively might
+  not change mNAV much if MSTR follows. 3. MSTR-specific regulatory action or solvency
+  crisis → major upward revision. 4. BTC bounces strongly while MSTR stays depressed
+  → would increase probability.
+process_reflection: 'The forecasting pipeline worked well for this question. The research()
+  tool provided comprehensive data on MSTR capital structure, BTC trends, and mNAV
+  history. The sandbox code execution was essential for Monte Carlo simulation and
+  sensitivity analysis. The key insight (debt component causes mNAV to rise when both
+  crash) only emerged through the mathematical modeling, not narrative reasoning.
+  One gap: couldn''t access strategy.com directly to verify current live mNAV. The
+  Yahoo Finance shock_alert data was a nice bonus for calibrating post-crash expectations.'
+computed:
+  factor_count: 8
+  factor_sum: -4.885
+  tentative_logit: -3.5
+  logit_gap: 1.3849999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current mNAV is ~1.19-1.25, requiring a ~17-20% decline to breach
+      1.0. This is a large move for a 5-day window.
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: 'Structural mechanics: mNAV = (MC + Fixed_Debt) / BTC_Reserve. The
+      ~$21B debt/preferred component means correlated BTC+MSTR drops actually INCREASE
+      mNAV, not decrease it. Only MSTR-specific underperformance relative to BTC can
+      push mNAV down.'
+    logit: -2.0
+    confidence: 0.95
+    effective_logit: -1.9
+  - description: MSTR and BTC are highly correlated (rho ~0.7-0.9). Simulation shows
+      P(mNAV<1.0) ranges from 0.01% (rho=0.9) to 2.35% (rho=0.5). Even with fat tails
+      and bearish drift, probability stays below 2.5% for all reasonable correlations.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: 'Bearish momentum: BTC crashed 11% in 5 days (from $74K to $66K),
+      MSTR down 15% in 5 trading days. BTC ETF outflows of $2.4B in May. Strategy
+      sold 32 BTC (first sale since 2022), breaking narrative.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: June 8 shareholder vote on STRK dividend frequency change. Could
+      be an MSTR-specific catalyst if it reveals solvency/liquidity concerns.
+    logit: 0.3
+    confidence: 0.3
+    effective_logit: 0.09
+  - description: 'Historical precedent: mNAV briefly dipped to 0.97 in Nov 2025. But
+      that was from a lower starting level (~1.0-1.3 range). Going from 1.20+ to below
+      1.0 in 5 days would be unprecedented.'
+    logit: -1.0
+    confidence: 0.7
+    effective_logit: -0.7
+  - description: MSTR is already down 70% from 52-week high and near its 52-week low
+      ($104.17). Shock alert data shows after -9.1% daily drops, 60.7% of 10-day forward
+      returns are positive with median +3.84%.
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Model uncertainty: My simulation uses simplified bivariate normal/t
+      returns with fixed correlation. Real markets can have regime shifts, correlation
+      breakdowns, and discrete jumps not captured in the model.'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  dominant_factor: 'Structural mechanics: mNAV = (MC + Fixed_Debt) / BTC_Reserve.
+    The ~$21B debt/preferred component means correlated BTC+MSTR drops actually INCREASE
+    mNAV, not decrease it. Only MSTR-specific underperformance relative to BTC can
+    push mNAV down.'
+  dominant_effective_logit: -1.9
+  factor_implied_probability: 0.007502412100460322
+  tentative_probability: 0.03
+  gap_pp: 2.249758789953968
+  sources:
+  - '[(Metaculus) Will Strategy''s (MSTR) mNAV close below 1.0 on any trading day
+    between June 8 and June 12, 2026?](https://www.metaculus.com/questions/43760)'
+  - '[Strategy Inc (MSTR) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/MSTR/history/)'
+  - '[Strategy Inc (MSTR) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/MSTR/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43760
+- **Question ID**: 43790
+- **Session Duration**: 1356.0s (22.6 min)
+- **Cost**: $20.4790 total (orchestrator $5.3928 + sub-agents $15.0862)
+- **Tokens**: 31,763 total (39 in, 31,724 out)
+  - Cache: 826,598 read, 94,563 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43760_20260603_033001/20260603-033001.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 1280ms | — |
+| get_metaculus_questions | 1 | 0 | 260ms | — |
+| premortem | 1 | 0 | 152882ms | $2.8281 |
+| reflection | 1 | 0 | 6ms | — |
+| research | 1 | 0 | 561934ms | $12.1313 |
+| stock_price | 2 | 0 | 306ms | — |
+| web_search | 3 | 0 | 15905ms | $0.1269 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Strategy's (MSTR) mNAV close below 1.0 on any trading day b...
+- [Strategy Inc (MSTR) Stock Historical Prices & Data - Yahoo Finance](https://...
+- [Strategy Inc (MSTR) Stock Price, News, Quote & History - Yahoo Finance](http...
