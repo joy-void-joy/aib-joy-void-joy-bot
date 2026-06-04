@@ -1,0 +1,294 @@
+---
+timestamp: 2026-06-04 07:17:32 UTC
+question_type: discrete
+factors:
+- description: 'May 2026 base rate: 9 distinct refineries struck over 31 days (0.29/day),
+    projecting ~3.8 for 13 days'
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 7.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Already 1 confirmed refinery (Ilsky) in first 3 days, establishing
+    floor
+  supports:
+    center: 3.0
+    low: 1.0
+    high: 5.0
+  logit: 0.5
+  confidence: 1.0
+  effective_logit: 0.5
+- description: Logistics lockdown campaign announced May 27 suggests sustained/accelerating
+    tempo
+  supports:
+    center: 5.0
+    low: 3.0
+    high: 8.0
+  logit: 0.7
+  confidence: 0.6
+  effective_logit: 0.42
+- description: High overdispersion in weekly data (0 to 5 per week in May) - clustering
+    creates bimodal risk
+  supports:
+    center: 3.0
+    low: 0.0
+    high: 8.0
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: Ukraine increasingly targeting non-refinery infrastructure (terminals,
+    depots, pumping stations) which dilutes refinery-specific strike rate
+  supports:
+    center: 3.0
+    low: 1.0
+    high: 5.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Wikipedia reporting lag may miss some late-window (June 11-13) strikes
+  supports:
+    center: 3.0
+    low: 2.0
+    high: 4.0
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Russia claimed 354 drones intercepted on June 3 - air defense may filter
+    out some attacks
+  supports:
+    center: 3.0
+    low: 1.0
+    high: 5.0
+  logit: -0.4
+  confidence: 0.4
+  effective_logit: -0.16000000000000003
+- description: No ceasefire in effect; Trump-brokered Jan 2026 energy ceasefire collapsed
+    by late March
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 7.0
+  logit: 0.5
+  confidence: 0.9
+  effective_logit: 0.45
+tentative_estimate:
+  center: 3.0
+  low: 1.0
+  high: 7.0
+anchor: 'May 2026 empirical rate: 9 distinct refineries in 31 days = ~3.8 per 13-day
+  period. Source: Moscow Times/Reuters reporting on May refinery strikes.'
+assessment: 'The question asks about distinct Russian oil refineries (specifically
+  crude oil refining plants) struck by Ukrainian drones between June 1-13, 2026, as
+  reported on the Wikipedia timeline article.
+
+
+  Key evidence:
+
+  1. May 2026 saw 9 distinct refineries struck over 31 days (Kirishi, Ryazan, Moscow,
+  Yaroslavl, Nizhny Novgorod, Syzran, Volgograd, Saratov, Novoshakhtinsky)
+
+  2. As of June 3, 1 refinery (Ilsky) is confirmed struck in the June 1-13 window
+
+  3. Several non-refinery targets were also hit (St. Petersburg oil terminal, Zenzevatka
+  pumping station, Armavir oil depot) - these don''t count
+
+  4. The campaign tempo has been accelerating in 2026, with the "logistics lockdown"
+  announcement
+
+  5. No ceasefire is in effect
+
+
+  The Monte Carlo simulation using a Poisson-gamma mixture model calibrated to May
+  2026 data produces a median of 3, with P10=1 and P90=7. The negative binomial model
+  gives similar results. The high overdispersion in weekly data (0 to 5 refineries
+  per week in May) means there''s genuine tail risk in both directions.
+
+
+  The distribution is right-skewed: the floor is 1 (already confirmed), but intense
+  strike weeks could push to 7+ distinct refineries. The question specifically excludes
+  terminals, depots, and pumping stations, which reduces the count relative to total
+  oil infrastructure strikes.'
+calibration_notes: Anchor (3.8 per 13 days from May rate) is close to my center estimate
+  of 3-4. The confirmed floor of 1 refinery in 3 days is consistent with the May daily
+  rate. Distribution width (P10-P90 = 1 to 7) reflects the high observed variance
+  in weekly strike counts. Not hedging toward center - the evidence genuinely supports
+  asymmetric uncertainty with a right tail.
+key_uncertainties: 1. Whether the current striking of non-refinery targets (terminals,
+  depots) represents a temporary shift or a sustained reallocation away from refineries.
+  2. The clustering pattern - May had a week with 0 refineries and a week with 5.
+  June 4-13 could easily be in either regime. 3. Wikipedia capture rate for late-window
+  strikes.
+tool_audit: 'Useful: ISW daily assessments (June 1-3) provided excellent granular
+  strike data; web search found specific June 2 Ilsky strike and June 3 St. Petersburg
+  terminal strike; research() sub-agent compiled comprehensive May 2026 data. Empty/limited:
+  Wikipedia fetch returned only the article title without the detailed timeline content.
+  The Wikipedia timeline article text could not be extracted directly, which is the
+  actual resolution source. Failures: None.'
+update_triggers: 1. Any announcement of a ceasefire (would reduce count sharply).
+  2. Reports of multiple refinery strikes in a single night during the window. 3.
+  Evidence of significant Russian air defense improvements reducing hit rates.
+process_reflection: The research tools worked well for gathering the strike data from
+  multiple angles (ISW, news sources, research sub-agent). The main gap was that the
+  Wikipedia article - the actual resolution source - returned only a brief extract
+  rather than the full day-by-day timeline. A Wikipedia-specific content extraction
+  tool would have been invaluable. The fetch_url tool struggled with the long Wikipedia
+  article. The Monte Carlo simulation approach was appropriate for this discrete-count
+  question with overdispersed data.
+computed:
+  factor_count: 8
+  factor_sum: 1.8199999999999998
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'May 2026 base rate: 9 distinct refineries struck over 31 days (0.29/day),
+      projecting ~3.8 for 13 days'
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 7.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Already 1 confirmed refinery (Ilsky) in first 3 days, establishing
+      floor
+    supports:
+      center: 3.0
+      low: 1.0
+      high: 5.0
+    logit: 0.5
+    confidence: 1.0
+    effective_logit: 0.5
+  - description: Logistics lockdown campaign announced May 27 suggests sustained/accelerating
+      tempo
+    supports:
+      center: 5.0
+      low: 3.0
+      high: 8.0
+    logit: 0.7
+    confidence: 0.6
+    effective_logit: 0.42
+  - description: High overdispersion in weekly data (0 to 5 per week in May) - clustering
+      creates bimodal risk
+    supports:
+      center: 3.0
+      low: 0.0
+      high: 8.0
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: Ukraine increasingly targeting non-refinery infrastructure (terminals,
+      depots, pumping stations) which dilutes refinery-specific strike rate
+    supports:
+      center: 3.0
+      low: 1.0
+      high: 5.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Wikipedia reporting lag may miss some late-window (June 11-13) strikes
+    supports:
+      center: 3.0
+      low: 2.0
+      high: 4.0
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Russia claimed 354 drones intercepted on June 3 - air defense may
+      filter out some attacks
+    supports:
+      center: 3.0
+      low: 1.0
+      high: 5.0
+    logit: -0.4
+    confidence: 0.4
+    effective_logit: -0.16000000000000003
+  - description: No ceasefire in effect; Trump-brokered Jan 2026 energy ceasefire
+      collapsed by late March
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 7.0
+    logit: 0.5
+    confidence: 0.9
+    effective_logit: 0.45
+  dominant_factor: 'May 2026 base rate: 9 distinct refineries struck over 31 days
+    (0.29/day), projecting ~3.8 for 13 days'
+  dominant_effective_logit: 0.85
+  distribution_metrics:
+    implied_median: 3.7039473684210527
+    implied_p10: 1.6842105263157894
+    implied_p90: 6.427631578947368
+    median_gap: -0.7039473684210527
+    median_gap_pct: -14.840499306518726
+    spread_ratio: 1.2649098474341194
+    precision: 2.0
+  sources:
+  - '[(Metaculus) How many distinct Russian oil refineries will be publicly reported
+    as struck by Ukrainian drones between June 1, 2026 and June 13, 2026?](https://www.metaculus.com/questions/43775)'
+  - '[Timeline of the Russo-Ukrainian war (1 January 2026 – present](https://en.wikipedia.org/wiki/Timeline_of_the_Russo-Ukrainian_war_(1_January_2026_%E2%80%93_present))'
+  - '[Russo-Ukrainian war - Wikipedia](https://en.wikipedia.org/wiki/Russo-Ukrainian_war)'
+  - '[Outline of the Russo-Ukrainian war - Wikipedia](https://en.wikipedia.org/wiki/Outline_of_the_Russo-Ukrainian_war)'
+  - '[Ryazan refinery - Wikipedia](https://en.wikipedia.org/wiki/Ryazan_refinery)'
+  - '[Russo-Ukrainian war (2022–present) - Wikipedia](https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine)'
+  - '[Ukrainian Drones Hit Ilsky Oil Refinery for 16th Time: June 2026 | News | informedclearly](https://informedclearly.com/en/war/54050/ukrainian-drones-ilsky-oil-refinery-2026)'
+  - '[Ukrainian drone attacks hit multiple Russian targets, including refinery](https://www.aljazeera.com/news/2026/5/31/ukrainian-drone-attacks-hit-multiple-russian-targets-including-refinery)'
+  - '[Ukrainian drones strike St. Petersburg, hours before ‘Putin’s Davos’ opens |
+    CNN](https://www.cnn.com/2026/06/03/europe/ukraine-drone-attack-russia-st-petersburg-intl-hnk)'
+  - '[Ukrainian drones strike a St. Petersburg oil terminal ahead of Putin visit](https://www.npr.org/2026/06/03/nx-s1-5844793/ukrainian-drones-hit-st-petersburg)'
+  - '[Crimea short of fuel as Ukraine expands attacks on Russian oil facilities |
+    CNN](https://www.cnn.com/2026/06/01/europe/crimea-fuel-ukraine-russian-oil-intl)'
+  - '[Russian Offensive Campaign Assessment, June 1, 2026](https://understandingwar.org/research/russia-ukraine/russian-offensive-campaign-assessment-june-1-2026/)'
+  - '[Russian Offensive Campaign Assessment, June 2, 2026](https://understandingwar.org/research/russia-ukraine/russian-offensive-campaign-assessment-june-2-2026/)'
+  - '[Russian Offensive Campaign Assessment, June 3, 2026](https://understandingwar.org/research/russia-ukraine/russian-offensive-campaign-assessment-june-3-2026/)'
+  - '[Drone Strikes Force Central Russian Refineries to Halt or Cut Output – Reuters
+    - The Moscow Times](https://www.themoscowtimes.com/2026/05/20/drone-strikes-force-central-russian-refineries-to-halt-or-cut-output-reuters-a92805)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43775
+- **Question ID**: 43805
+- **Session Duration**: 1279.6s (21.3 min)
+- **Cost**: $19.7328 total (orchestrator $4.9137 + sub-agents $14.8191)
+- **Tokens**: 16,816 total (54 in, 16,762 out)
+  - Cache: 1,249,507 read, 95,011 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43775_20260604_065928/20260604-065928.log`
+
+### Tool Calls
+
+- **Total**: 37 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.3436 |
+| execute_code | 6 | 0 | 741ms | — |
+| fetch_url | 10 | 0 | 10560ms | — |
+| get_metaculus_questions | 1 | 0 | 461ms | — |
+| premortem | 1 | 0 | 154442ms | $3.9689 |
+| reflection | 1 | 0 | 10ms | — |
+| research | 1 | 0 | 382512ms | $10.0923 |
+| web_search | 11 | 0 | 27500ms | $0.4143 |
+| wikipedia | 6 | 0 | 277ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many distinct Russian oil refineries will be publicly report...
+- [Timeline of the Russo-Ukrainian war (1 January 2026 – present](https://en.wi...
+- [Russo-Ukrainian war - Wikipedia](https://en.wikipedia.org/wiki/Russo-Ukraini...
+- [Outline of the Russo-Ukrainian war - Wikipedia](https://en.wikipedia.org/wik...
+- [Ryazan refinery - Wikipedia](https://en.wikipedia.org/wiki/Ryazan_refinery)
+- [Russo-Ukrainian war (2022–present) - Wikipedia](https://en.wikipedia.org/wik...
+- [Ukrainian Drones Hit Ilsky Oil Refinery for 16th Time: June 2026 | News | in...
+- [Ukrainian drone attacks hit multiple Russian targets, including refinery](ht...
+- [Ukrainian drones strike St. Petersburg, hours before ‘Putin’s Davos’ opens |...
+- [Ukrainian drones strike a St. Petersburg oil terminal ahead of Putin visit](...
+- [Crimea short of fuel as Ukraine expands attacks on Russian oil facilities | ...
+- [Russian Offensive Campaign Assessment, June 1, 2026](https://understandingwa...
+- [Russian Offensive Campaign Assessment, June 2, 2026](https://understandingwa...
+- [Russian Offensive Campaign Assessment, June 3, 2026](https://understandingwa...
+- [Drone Strikes Force Central Russian Refineries to Halt or Cut Output – Reute...
