@@ -1,0 +1,244 @@
+---
+timestamp: 2026-06-05 17:46:31 UTC
+question_type: discrete
+factors:
+- description: NHC 7-day outlook (June 5) says 'no formation expected' through ~June
+    12, covering most of the window
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 0.0
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: Multiple numerical models (ECMWF, GFS, Google AI) converging on Central
+    American Gyre development in Gulf around June 13-15
+  supports:
+    center: 7.0
+    low: 4.0
+    high: 12.0
+  logit: 1.5
+  confidence: 0.65
+  effective_logit: 0.9750000000000001
+- description: ECMWF ensemble gives 35-50% probability of TD-level circulation by
+    June 15; Dr. Maue gives >50% by June 15
+  supports:
+    center: 8.0
+    low: 4.0
+    high: 14.0
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: 'Historical base rate: NHC flagged Gulf disturbances during June 8-14
+    in 4/11 years (36%)'
+  supports:
+    center: 4.0
+    low: 0.0
+    high: 12.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 2026 season predicted below-normal (El Nino developing) with enhanced
+    wind shear
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 4.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Development timing is late in window (June 13-15) so even if disturbance
+    forms, only last 2-3 days would count
+  supports:
+    center: 4.0
+    low: 2.0
+    high: 8.0
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  center: 0.0
+  low: 0.0
+  high: 11.0
+anchor: 'Historical base rate: 36% of years (4/11, 2015-2025) see NHC flag a Gulf
+  disturbance with nonzero formation chance during June 8-14. Conditional on flagging,
+  average ~8 TWOs count. Unconditional mean ~3.'
+assessment: 'This is a zero-inflated distribution. The dominant scenario (~59%) is
+  that nothing develops in the Gulf during June 8-14 and the answer is 0. But there''s
+  a meaningful probability (~41%) that the Central American Gyre pattern flagged by
+  multiple models materializes, leading NHC to mention a Gulf disturbance with nonzero
+  formation chances in the later TWOs of the window.
+
+
+  Key evidence:
+
+  1. CURRENT CONDITIONS: NHC says nothing for 7 days as of June 5. This is strong
+  evidence against early-window activity (June 8-11).
+
+  2. MODEL SIGNALS: ECMWF, GFS, and Google AI models all converge on Gulf development
+  around June 13-15 via Central American Gyre mechanism. This is a well-known early-season
+  formation pattern.
+
+  3. TIMING: Even if development occurs, it''s most likely to be flagged in the last
+  1-3 days of the window (June 12-14), limiting the TWO count.
+
+  4. THRESHOLD: The question requires only nonzero formation chance - NHC often flags
+  areas with 10-20% chances several days before peak development.
+
+  5. SEASON CONTEXT: Below-normal 2026 season due to El Niño, but this mainly affects
+  peak season (Aug-Oct), not early June.
+
+
+  The Monte Carlo simulation naturally produces a bimodal distribution with a large
+  mass at 0 and a secondary cluster around 4-12 when something does develop.'
+calibration_notes: 'Anchor divergence: The 36% historical base rate would suggest
+  ~64% P(0). My model gives ~59% P(0), slightly lower because the model signals push
+  the probability up from base rate. This is a modest adjustment (+~5pp) which seems
+  reasonable given the convergent model signals. The distribution center at 0 (median=0)
+  reflects that the most likely single outcome is zero Gulf mentions.'
+key_uncertainties: '1. Will the Central American Gyre pattern actually materialize
+  in the Gulf? Models at 8-10 day range have substantial uncertainty.
+
+  2. If it does materialize, will NHC flag it with nonzero formation chances before
+  June 15, or will they wait until it''s more organized?
+
+  3. The boundary between ''near the Gulf'' and ''in the Gulf'' - a system in the
+  western Caribbean might or might not count depending on exact wording.'
+tool_audit: 'Research tool: Returned excellent historical data on NHC TWOs and year-by-year
+  analysis of Gulf activity during June 8-14. web_search: Found current weather model
+  discussions including Dr. Maue''s analysis and model probability maps. fetch_url:
+  Successfully retrieved detailed model forecasts from clickorlando.com and saludastandard-sentinel.com.
+  accuweather.com returned 403. execute_code: Monte Carlo simulation ran successfully
+  for distribution construction.'
+update_triggers: 1. NHC updates their TWO to mention any Gulf disturbance (would significantly
+  increase the count forecast). 2. Weather models lose the Gulf development signal
+  in subsequent runs (would push toward 0). 3. A tropical wave enters the Gulf unexpectedly
+  before June 12 (would push toward high counts).
+process_reflection: 'The research() tool was extremely useful for this question -
+  it efficiently gathered both current NHC conditions and historical frequency data.
+  The web search turned up valuable near-real-time weather model discussions that
+  were crucial for updating from the base rate. The Monte Carlo framework worked well
+  for this zero-inflated distribution. One gap: I couldn''t easily access archived
+  NHC TWOs from prior years to directly count qualifying TWOs, so I had to rely on
+  the research agent''s year-by-year analysis.'
+computed:
+  factor_count: 6
+  factor_sum: -0.07500000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: NHC 7-day outlook (June 5) says 'no formation expected' through ~June
+      12, covering most of the window
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 0.0
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: Multiple numerical models (ECMWF, GFS, Google AI) converging on Central
+      American Gyre development in Gulf around June 13-15
+    supports:
+      center: 7.0
+      low: 4.0
+      high: 12.0
+    logit: 1.5
+    confidence: 0.65
+    effective_logit: 0.9750000000000001
+  - description: ECMWF ensemble gives 35-50% probability of TD-level circulation by
+      June 15; Dr. Maue gives >50% by June 15
+    supports:
+      center: 8.0
+      low: 4.0
+      high: 14.0
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: 'Historical base rate: NHC flagged Gulf disturbances during June
+      8-14 in 4/11 years (36%)'
+    supports:
+      center: 4.0
+      low: 0.0
+      high: 12.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 2026 season predicted below-normal (El Nino developing) with enhanced
+      wind shear
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 4.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Development timing is late in window (June 13-15) so even if disturbance
+      forms, only last 2-3 days would count
+    supports:
+      center: 4.0
+      low: 2.0
+      high: 8.0
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: NHC 7-day outlook (June 5) says 'no formation expected' through
+    ~June 12, covering most of the window
+  dominant_effective_logit: -1.35
+  distribution_metrics:
+    implied_median: 3.6751592356687897
+    implied_p10: 1.7834394904458597
+    implied_p90: 7.210191082802547
+    median_gap: -3.6751592356687897
+    median_gap_pct: -67.72300469483568
+    spread_ratio: 2.0269953051643195
+  sources:
+  - '[(Metaculus) How many Atlantic Tropical Weather Outlooks issued by the NHC between
+    June 8-14, 2026 will mention an area of disturbed weather in the Gulf of Mexico
+    with a nonzero formation chance?](https://www.metaculus.com/questions/43783)'
+  - '[Chances growing for June tropical development in the Gulf. Here’s the latest](https://www.clickorlando.com/weather/2026/06/05/chances-growing-for-june-tropical-development-in-the-gulf-heres-the-latest/)'
+  - '[European and Google Models Signal Potential Tropical Development Over the Gulf
+    of Mexico by Mid June 2026 as Hurricane Season Monitoring Intensifies - Saluda
+    Standard Sentinel](https://saludastandard-sentinel.com/european-and-google-models-signal-potential-tropical-development-over-the-gulf-of-mexico-by-mid-june-2026-as-hurricane-season-monitoring-intensifies/)'
+  - '[GFS and Euro Models Both Signal Potential Tropical System Development in the
+    Gulf by June 5 Raising Early Awareness for the Gulf Coast as Long Range Uncertainty
+    Remains High - Saluda Standard Sentinel](https://saludastandard-sentinel.com/gfs-and-euro-models-both-signal-potential-tropical-system-development-in-the-gulf-by-june-5-raising-early-awareness-for-the-gulf-coast-as-long-range-uncertainty-remains-high/)'
+  - '[June 4, 2026 Thursday Tropical Update](https://weather.substack.com/p/june-4-2026-thursday-tropical-update)'
+  - '[accuweather.com](https://www.accuweather.com/en/hurricane/2026-atlantic-hurricane-season-is-here-but-when-will-the-first-storm-form/1896722)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43783
+- **Question ID**: 43813
+- **Session Duration**: 1054.9s (17.6 min)
+- **Cost**: $16.2334 total (orchestrator $3.5229 + sub-agents $12.7105)
+- **Tokens**: 11,413 total (41 in, 11,372 out)
+  - Cache: 817,799 read, 76,943 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43783_20260605_173147/20260605-173147.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 1 (5.9%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1067 |
+| execute_code | 4 | 0 | 1414ms | — |
+| fetch_url | 5 | 1 ⚠️ | 10920ms | — |
+| get_metaculus_questions | 1 | 0 | 271ms | — |
+| premortem | 1 | 0 | 126886ms | $3.0189 |
+| reflection | 1 | 0 | 30066ms | — |
+| research | 1 | 0 | 523156ms | $9.4352 |
+| web_search | 4 | 0 | 18467ms | $0.1497 |
+
+### Sources Consulted
+
+- [(Metaculus) How many Atlantic Tropical Weather Outlooks issued by the NHC be...
+- [Chances growing for June tropical development in the Gulf. Here’s the latest...
+- [European and Google Models Signal Potential Tropical Development Over the Gu...
+- [GFS and Euro Models Both Signal Potential Tropical System Development in the...
+- [June 4, 2026 Thursday Tropical Update](https://weather.substack.com/p/june-4...
+- [accuweather.com](https://www.accuweather.com/en/hurricane/2026-atlantic-hurr...
