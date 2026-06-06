@@ -1,0 +1,263 @@
+---
+timestamp: 2026-06-06 18:18:06 UTC
+question_type: discrete
+factors:
+- description: Currently zero disturbances flagged in Atlantic TWOs as of June 6,
+    2026 - all five most recent TWOs say 'no formation expected'. This is a strong
+    signal for the immediate near-term, though conditions can change quickly.
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 10.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: El Niño developing (98% probability for peak season, Niño-3.4 at +1.0°C)
+    with below-normal seasonal outlook. Suppresses Atlantic tropical cyclone formation
+    via increased wind shear. However, El Niño's shear effect is less pronounced in
+    early June in the Gulf/Caribbean.
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 20.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Historical base rate: NHC flagged nonzero probabilities during June
+    8-14 in only ~36% of years (2015-2025). About 55-64% of years are completely quiet
+    during this window. June is among the least active hurricane months.'
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 30.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 'ECMWF ensemble signal from June 1: ~20% of members showed Gulf development
+    by Days 12-15 (June 12-15). Dr. Ryan Maue noted this was ''better than climatological
+    odds''. This is within the question''s resolution window.'
+  supports:
+    center: 20.0
+    low: 0.0
+    high: 50.0
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: Multiple tropical waves currently tracking westward in the Atlantic
+    (at 18W, 31W, 56W, 65W, 81W). While none currently developing, some could interact
+    with favorable conditions in the Gulf/Caribbean by mid-June.
+  supports:
+    center: 10.0
+    low: 0.0
+    high: 40.0
+  logit: -0.3
+  confidence: 0.4
+  effective_logit: -0.12
+- description: When NHC does flag disturbances in early June, 7-day probabilities
+    are typically low (20-50%). High (>60%) probabilities are uncommon. A named storm
+    was present/forming during June 8-14 in only ~18% of recent years.
+  supports:
+    center: 20.0
+    low: 10.0
+    high: 50.0
+  logit: 0.5
+  confidence: 0.7
+  conditional: If any disturbance is flagged
+  effective_logit: 0.35
+tentative_estimate:
+  center: 0.0
+  low: 0.0
+  high: 50.0
+anchor: 'Historical base rate: ~36% of years (2015-2025) see any nonzero 7-day formation
+  probability in NHC Atlantic TWOs during June 8-14. When nonzero, typical max values
+  are 20-50%.'
+assessment: 'This is a discrete question about the maximum 7-day formation probability
+  across all NHC Atlantic TWOs during June 8-14, 2026. The distribution is heavily
+  right-skewed with a large mass at 0.
+
+
+  Key tensions:
+
+  1. The Atlantic is completely quiet now (June 6) with no disturbances flagged. This
+  strongly favors a 0 outcome.
+
+  2. However, June 8 is only 2 days away and conditions can change quickly, especially
+  in the Gulf/Caribbean.
+
+  3. ECMWF ensemble signals from June 1 showed ~20% of members developing something
+  in the Gulf by mid-June.
+
+  4. El Niño is developing but its suppressive effects are more impactful for peak
+  season (Aug-Oct) than early June.
+
+  5. Historical base rate: ~36% of years see any nonzero TWO probability during this
+  week, but with El Niño and current quiet conditions, I adjust down to ~40%.
+
+
+  My distribution:
+
+  - P(0) ≈ 60% - most likely outcome by far
+
+  - P(10) ≈ 8%, P(20) ≈ 8.8% - low category flagging
+
+  - P(30) ≈ 7.2% - still low category
+
+  - P(40-50) ≈ 9.2% - medium category
+
+  - P(60+) ≈ 6.8% - high category (rare in early June)
+
+
+  Expected value ≈ 13.6. Median = 0. P90 = 50.'
+calibration_notes: The distribution is appropriately right-skewed with heavy mass
+  at 0, reflecting that most early June weeks pass without any flagged disturbances.
+  The right tail extends to 80+ at P99 to account for the possibility of a rapidly
+  developing Gulf system. Sensitivity analysis across p_zero = 0.50, 0.60, 0.70 shows
+  the expected value ranges from 10.2 to 17.0, with P90 between 40-50 across scenarios.
+  This gives me moderate confidence the base case is well-calibrated.
+key_uncertainties: 1. Whether any of the 5 tropical waves currently in the Atlantic
+  will interact with favorable Gulf/Caribbean conditions by June 8-14. 2. Whether
+  the ECMWF ensemble signal for mid-June Gulf development materializes. 3. How quickly
+  El Niño's wind shear effects manifest in the Gulf/Caribbean during early June.
+tool_audit: 'Useful: research() returned comprehensive current NHC TWO data and historical
+  climatology. web_search found current TWO page and Maue''s tropical update. fetch_url
+  successfully extracted current discussion and Maue''s analysis. Empty/unhelpful:
+  NHC TWO archive page didn''t render content (interactive page). Historical search
+  for specific June 8-14 TWO values returned generic results rather than archived
+  TWO text. Failed: None - all tools returned results.'
+update_triggers: '- NHC flags a disturbance in the next TWO (before window opens June
+  8) - would shift P(0) down significantly. - GFS/ECMWF operational runs show coherent
+  Gulf development signal - would increase P(nonzero) and shift conditional distribution
+  higher. - Rapid intensification of any tracked tropical wave in the Caribbean.'
+process_reflection: The research() tool was excellent - three parallel questions returned
+  thorough, well-sourced findings in one call. The NHC TWO archive page was interactive
+  and didn't render via fetch_url, which is a known limitation. For future tropical
+  cyclone questions, having a tool that could directly query the NHC API for historical
+  TWO products by date range would be very valuable. The discrete nature of this question
+  (values in 10% increments from 0-100) makes it a natural for explicit probability
+  mass function construction rather than continuous distribution fitting.
+computed:
+  factor_count: 6
+  factor_sum: 2.5100000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Currently zero disturbances flagged in Atlantic TWOs as of June 6,
+      2026 - all five most recent TWOs say 'no formation expected'. This is a strong
+      signal for the immediate near-term, though conditions can change quickly.
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 10.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: El Niño developing (98% probability for peak season, Niño-3.4 at
+      +1.0°C) with below-normal seasonal outlook. Suppresses Atlantic tropical cyclone
+      formation via increased wind shear. However, El Niño's shear effect is less
+      pronounced in early June in the Gulf/Caribbean.
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 20.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Historical base rate: NHC flagged nonzero probabilities during June
+      8-14 in only ~36% of years (2015-2025). About 55-64% of years are completely
+      quiet during this window. June is among the least active hurricane months.'
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 30.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 'ECMWF ensemble signal from June 1: ~20% of members showed Gulf development
+      by Days 12-15 (June 12-15). Dr. Ryan Maue noted this was ''better than climatological
+      odds''. This is within the question''s resolution window.'
+    supports:
+      center: 20.0
+      low: 0.0
+      high: 50.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: Multiple tropical waves currently tracking westward in the Atlantic
+      (at 18W, 31W, 56W, 65W, 81W). While none currently developing, some could interact
+      with favorable conditions in the Gulf/Caribbean by mid-June.
+    supports:
+      center: 10.0
+      low: 0.0
+      high: 40.0
+    logit: -0.3
+    confidence: 0.4
+    effective_logit: -0.12
+  - description: When NHC does flag disturbances in early June, 7-day probabilities
+      are typically low (20-50%). High (>60%) probabilities are uncommon. A named
+      storm was present/forming during June 8-14 in only ~18% of recent years.
+    supports:
+      center: 20.0
+      low: 10.0
+      high: 50.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+    conditional: If any disturbance is flagged
+  dominant_factor: Currently zero disturbances flagged in Atlantic TWOs as of June
+    6, 2026 - all five most recent TWOs say 'no formation expected'. This is a strong
+    signal for the immediate near-term, though conditions can change quickly.
+  dominant_effective_logit: 1.2000000000000002
+  distribution_metrics:
+    implied_median: 4.061538461538461
+    implied_p10: 1.0769230769230769
+    implied_p90: 25.200000000000003
+    median_gap: -4.061538461538461
+    median_gap_pct: -16.83673469387755
+    spread_ratio: 2.072704081632653
+  sources:
+  - '[(Metaculus) What will be the highest 7-day tropical cyclone formation probability
+    assigned by the National Hurricane Center to any Atlantic basin disturbance in
+    a Tropical Weather Outlook issued between 00:00 UTC June 8, 2026 and 23:59 UTC
+    June 14, 2026?](https://www.metaculus.com/questions/43789)'
+  - '[Atlantic Tropical Weather Discussion](https://www.nhc.noaa.gov/text/MIATWDAT.shtml)'
+  - '[NATIONAL HURRICANE CENTER and CENTRAL PACIFIC HURRICANE CENTER](https://www.nhc.noaa.gov/archive/xgtwo/gtwo_archive.php?text)'
+  - '[Maximally Divergent Intervals for Anomaly Detection](https://arxiv.org/pdf/1610.06761)'
+  - '[June 1, 2026 Monday Tropical Update](https://weather.substack.com/p/june-1-2026-monday-tropical-update)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43789
+- **Question ID**: 43819
+- **Session Duration**: 1037.1s (17.3 min)
+- **Cost**: $20.2846 total (orchestrator $2.9206 + sub-agents $17.3640)
+- **Tokens**: 10,155 total (27 in, 10,128 out)
+  - Cache: 503,521 read, 74,950 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43789_20260606_180338/20260606-180338.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0862 |
+| execute_code | 2 | 0 | 111ms | — |
+| fetch_arxiv | 1 | 0 | 234ms | — |
+| fetch_url | 3 | 0 | 12828ms | — |
+| get_metaculus_questions | 1 | 0 | 273ms | — |
+| premortem | 1 | 0 | 115588ms | $2.7965 |
+| reflection | 1 | 0 | 11ms | — |
+| research | 1 | 0 | 592626ms | $14.3597 |
+| web_search | 3 | 0 | 20170ms | $0.1215 |
+
+### Sources Consulted
+
+- [(Metaculus) What will be the highest 7-day tropical cyclone formation probab...
+- [Atlantic Tropical Weather Discussion](https://www.nhc.noaa.gov/text/MIATWDAT...
+- [NATIONAL HURRICANE CENTER and CENTRAL PACIFIC HURRICANE CENTER](https://www....
+- [Maximally Divergent Intervals for Anomaly Detection](https://arxiv.org/pdf/1...
+- [June 1, 2026 Monday Tropical Update](https://weather.substack.com/p/june-1-2...
