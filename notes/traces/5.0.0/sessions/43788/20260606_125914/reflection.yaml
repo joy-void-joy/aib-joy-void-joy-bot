@@ -1,0 +1,199 @@
+---
+timestamp: 2026-06-06 13:11:49 UTC
+question_type: binary
+factors:
+- description: 'Strong outflow momentum: 13-day streak totaling $4.4B just ended,
+    with the single positive day (+$3M) being negligible vs. average outflow days
+    ($100-800M). June 5 possibly saw -$326M, resuming outflows.'
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: Bitcoin at 365-day low ($61K), down 51% from ATH, actively declining
+    -17% in 7 days. Falling prices drive further institutional selling and risk-management
+    outflows.
+  logit: -1.0
+  confidence: 0.85
+  effective_logit: -0.85
+- description: 'No near-term catalyst: FOMC meeting is June 15-16 (week after question
+    period). No scheduled event to trigger flow reversal during June 8-12.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Institutional selling structural: Q1 2026 13F data showed institutional
+    positions reduced 17% (from 313K to 261K BTC). Not just sentiment-driven.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Extreme fear and oversold conditions: Fear & Greed at 12 for 4 days,
+    RSI below 18. Historically, extreme fear readings often mark near-bottom conditions
+    and can precede flow reversals.'
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Selling exhaustion after record streak: 13-day streak was the longest
+    ever. The break on June 4 suggests some exhaustion. Historical pattern: major
+    outflow episodes followed by larger inflow surges.'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Analysts note outflows are ''cyclical not structural'': Standard Chartered
+    says ''Bitcoin bottom near, buy zone''. Core institutional demand base ($55B cumulative
+    inflows) intact.'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  logit: -1.4
+  probability: 0.2
+anchor: 'Historical base rate: ~60-65% of weeks since Bitcoin ETF launch (Jan 2024)
+  had net positive flows. But during identified outflow phases, the rate drops dramatically.
+  In the current outflow phase (3+ weeks of sustained outflows), I estimate ~15-20%
+  of weeks would be positive based on the pattern of brief pauses within extended
+  outflow periods.'
+assessment: "The evidence strongly favors continued outflows (NO resolution). The\
+  \ 13-day outflow streak that just ended was massive ($4.4B), and the single positive\
+  \ day was barely positive ($3M). Bitcoin continues making new lows, institutional\
+  \ selling appears partly structural (13F data), and no near-term catalyst exists\
+  \ for the question week.\n\nHowever, there's genuine uncertainty because: (1) extreme\
+  \ fear/oversold readings historically mark bottoms, (2) selling exhaustion after\
+  \ record streaks is real, (3) the flow reversal could happen suddenly with just\
+  \ one large inflow day.\n\nMonte Carlo simulations across multiple scenarios produce\
+  \ probabilities ranging from 0.4% (if recent intensity persists) to 25% (with significant\
+  \ mean-reversion). The weighted average across scenarios is ~13%, and a regime-shift\
+  \ mixture model gives ~19%. \n\nI'm targeting ~20% to account for the possibility\
+  \ of mean-reversion while respecting the strong outflow momentum."
+calibration_notes: 'Anchor for outflow-phase weeks: ~15-20% positive. My estimate
+  of 20% is at the high end of this, reflecting the extreme oversold conditions and
+  streak-breaking signal. The Monte Carlo results support the 15-20% range across
+  most reasonable parameterizations. I''m not hedging toward 50% - the evidence clearly
+  favors continued outflows.'
+key_uncertainties: 1. Whether June 5 actually resumed outflows (-$326M) or was closer
+  to flat (data source conflict). 2. Whether a macro catalyst emerges over the weekend
+  or early next week. 3. Whether the 'selling exhaustion' narrative materializes into
+  actual institutional dip-buying. 4. How quickly the flow regime can shift - historical
+  episodes suggest it can be sudden but typically takes weeks.
+tool_audit: "Useful: research() provided excellent Bitcoin price/market data. web_search\
+  \ and fetch_url provided ETF flow data from multiple sources (Farside, bitbo, CoinDesk,\
+  \ BeInCrypto). Monte Carlo simulations helped quantify the probability under different\
+  \ assumptions. \n\nData conflicts: Farside data extracted via fetch_url conflicted\
+  \ with bitbo.io data for the same dates (June 3 showed -$396M vs +$7M). CoinDesk\
+  \ provided the most reliable narrative timeline. The research sub-agent couldn't\
+  \ access web tools for ETF flow data, but direct search/fetch worked.\n\nEmpty:\
+  \ get_coherence_links returned no related questions."
+update_triggers: 1. Bitcoin price stabilization or recovery above $65K. 2. A single
+  day of large inflows ($200M+) before the question week. 3. Dovish Fed commentary
+  or soft economic data. 4. Large institutional buyer announcement (like a corporate
+  treasury adoption).
+process_reflection: The data source conflicts were the biggest challenge - Farside
+  vs bitbo vs CoinDesk all gave somewhat different daily totals for the same dates.
+  This is a real issue when precision matters for a threshold question. The web fetch
+  tool did well extracting tabular data from Farside and bitbo. The research sub-agent
+  failed on web access for the ETF flow data but succeeded for Bitcoin price data
+  via APIs. The simulation framework worked well for turning qualitative assessment
+  into quantitative probability ranges. The scenario weighting approach was useful
+  for capturing uncertainty about the flow regime.
+computed:
+  factor_count: 7
+  factor_sum: -2.05
+  tentative_logit: -1.4
+  logit_gap: 0.6499999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Strong outflow momentum: 13-day streak totaling $4.4B just ended,
+      with the single positive day (+$3M) being negligible vs. average outflow days
+      ($100-800M). June 5 possibly saw -$326M, resuming outflows.'
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: Bitcoin at 365-day low ($61K), down 51% from ATH, actively declining
+      -17% in 7 days. Falling prices drive further institutional selling and risk-management
+      outflows.
+    logit: -1.0
+    confidence: 0.85
+    effective_logit: -0.85
+  - description: 'No near-term catalyst: FOMC meeting is June 15-16 (week after question
+      period). No scheduled event to trigger flow reversal during June 8-12.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Institutional selling structural: Q1 2026 13F data showed institutional
+      positions reduced 17% (from 313K to 261K BTC). Not just sentiment-driven.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Extreme fear and oversold conditions: Fear & Greed at 12 for 4 days,
+      RSI below 18. Historically, extreme fear readings often mark near-bottom conditions
+      and can precede flow reversals.'
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Selling exhaustion after record streak: 13-day streak was the longest
+      ever. The break on June 4 suggests some exhaustion. Historical pattern: major
+      outflow episodes followed by larger inflow surges.'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Analysts note outflows are ''cyclical not structural'': Standard
+      Chartered says ''Bitcoin bottom near, buy zone''. Core institutional demand
+      base ($55B cumulative inflows) intact.'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: 'Strong outflow momentum: 13-day streak totaling $4.4B just ended,
+    with the single positive day (+$3M) being negligible vs. average outflow days
+    ($100-800M). June 5 possibly saw -$326M, resuming outflows.'
+  dominant_effective_logit: -1.35
+  factor_implied_probability: 0.11405238127979088
+  tentative_probability: 0.2
+  gap_pp: 8.594761872020912
+  sources:
+  - '[(Metaculus) Will US spot Bitcoin ETFs record net inflows for the trading week
+    ending Friday, June 12, 2026?](https://www.metaculus.com/questions/43788)'
+  - '[Farside Investors](https://farside.co.uk/bitcoin-etf-flow-all-data/)'
+  - '[BitcoinTreasuries.com](https://bitbo.io/treasuries/etf-flows/)'
+  - '[Bitcoin ETFs Record Largest-Ever $3.4B Sell-Off](https://coinfomania.com/bitcoin-etf-outflows-june-2026-record-selloff/)'
+  - '[Bitcoin’s $3.4 Billion ETF Bleed Looks More Cyclical Than Structural | Investing.com](https://www.investing.com/analysis/bitcoins-34-billion-etf-bleed-looks-more-cyclical-than-structural-200681474)'
+  - '[Bitcoin and ether spot exchange-traded funds end record multibillion outflow
+    streak](https://www.coindesk.com/markets/2026/06/05/bitcoin-and-ether-etfs-end-record-multi-billion-outflow-streak)'
+  - '[Bitcoin ETF Outflows June 2026: 13-Day $4.4B Record](https://bitcoinfoundation.org/news/crypto-etfs-news/etf-outflows-june-first-week/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43788
+- **Question ID**: 43818
+- **Session Duration**: 961.5s (16.0 min)
+- **Cost**: $10.6301 total (orchestrator $3.4081 + sub-agents $7.2220)
+- **Tokens**: 14,296 total (38 in, 14,258 out)
+  - Cache: 597,209 read, 76,928 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43788_20260606_125914/20260606-125914.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.3940 |
+| execute_code | 2 | 0 | 789ms | — |
+| fetch_url | 6 | 0 | 15226ms | — |
+| get_coherence_links | 1 | 0 | 283ms | — |
+| get_metaculus_questions | 1 | 0 | 421ms | — |
+| premortem | 1 | 0 | 166889ms | $3.3890 |
+| reflection | 1 | 0 | 13ms | — |
+| research | 1 | 0 | 208905ms | $3.2197 |
+| web_search | 5 | 0 | 34230ms | $0.2193 |
+
+### Sources Consulted
+
+- [(Metaculus) Will US spot Bitcoin ETFs record net inflows for the trading wee...
+- [Farside Investors](https://farside.co.uk/bitcoin-etf-flow-all-data/)
+- [BitcoinTreasuries.com](https://bitbo.io/treasuries/etf-flows/)
+- [Bitcoin ETFs Record Largest-Ever $3.4B Sell-Off](https://coinfomania.com/bit...
+- [Bitcoin’s $3.4 Billion ETF Bleed Looks More Cyclical Than Structural | Inves...
+- [Bitcoin and ether spot exchange-traded funds end record multibillion outflow...
+- [Bitcoin ETF Outflows June 2026: 13-Day $4.4B Record](https://bitcoinfoundati...
