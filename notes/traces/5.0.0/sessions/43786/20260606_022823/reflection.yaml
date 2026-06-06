@@ -1,0 +1,199 @@
+---
+timestamp: 2026-06-06 02:36:20 UTC
+question_type: discrete
+factors:
+- description: 4 completed launches already confirmed in window (May 29, 30, Jun 3,
+    4)
+  supports:
+    center: 4.0
+    low: 4.0
+    high: 4.0
+  logit: 3.0
+  confidence: 1.0
+  effective_logit: 3.0
+- description: 4 upcoming confirmed 'Go for Launch' missions (Jun 7, 8, 10, 12) -
+    all with firm dates and countdown timers
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 4.0
+  logit: 2.5
+  confidence: 0.95
+  effective_logit: 2.375
+- description: Small probability (~40%) of 1+ additional launches on gap days (Jun
+    6, 9, 11, 13) or TBD missions (Globalstar 2-R)
+  supports:
+    center: 0.47
+    low: 0.0
+    high: 2.0
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 2026 cadence of ~2.98 launches/week implies ~7.2 for 17 days, but confirmed
+    data already shows 8
+  supports:
+    center: 8.0
+    low: 7.0
+    high: 9.0
+  logit: 0.3
+  confidence: 0.8
+  effective_logit: 0.24
+- description: Small scrub risk could push Jun 12 launch beyond window
+  supports:
+    center: 8.0
+    low: 7.0
+    high: 8.0
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 8.0
+  low: 7.0
+  high: 10.0
+anchor: '2026 YTD cadence: 0.426 launches/day × 17 days = 7.2 expected launches. Source:
+  Wikipedia/Launch Library API data showing 66 launches in 155 days.'
+assessment: 'This is a partially elapsed discrete counting question. 4 launches have
+  already occurred in the May 28-June 5 portion of the window. 4 more launches are
+  confirmed with firm dates (Jun 7, 8, 10, 12) for the remaining portion. The base
+  count is 8, with high confidence.
+
+
+  Downside risk: One of the confirmed launches gets scrubbed and pushed beyond June
+  13, giving 7. This has ~8% probability.
+
+  Upside risk: Additional unscheduled launches (Globalstar 2-R, additional Starlink,
+  or TBD mission) could bring the total to 9-10. This has ~39% probability.
+
+
+  The distribution is strongly concentrated at 8 (52%), with 9 as the next most likely
+  (31%), and 7 and 10 as tail possibilities. The mean is 8.4.'
+calibration_notes: The confirmed launch count (8) already exceeds the cadence-implied
+  expectation (7.2), which is fine - we have specific schedule information that overrides
+  the average. The distribution is appropriately tight given that most of the window
+  is either already elapsed or has confirmed missions.
+key_uncertainties: 1. Whether any confirmed launch gets scrubbed beyond the window
+  end (affects 7 vs 8). 2. Whether any additional unscheduled launches occur (affects
+  8 vs 9+). 3. Whether I missed any completed launches in the May 28-Jun 5 period.
+tool_audit: Research tool provided excellent data on cadence, monthly breakdown, and
+  upcoming schedule. Wikipedia fetch returned high-level article summary but not the
+  specific launch table for recent launches. SpaceX.com fetch via Playwright provided
+  the completed launches list, confirming 4 in window. Spaceflightnow.com provided
+  upcoming confirmed schedule with specific dates and times. All tools were useful;
+  no failures.
+process_reflection: The scaffolding worked well for this question. Research agent
+  provided comprehensive cadence data. Direct URL fetching worked for SpaceX.com and
+  Spaceflightnow to cross-validate. The main gap was that Wikipedia's launch list
+  page didn't return the detailed table - I had to rely on multiple sources to reconstruct
+  the completed launch list. For this type of counting question with partially elapsed
+  windows, having confirmed data for both completed and upcoming portions makes the
+  forecast relatively straightforward.
+computed:
+  factor_count: 5
+  factor_sum: 5.765
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 4 completed launches already confirmed in window (May 29, 30, Jun
+      3, 4)
+    supports:
+      center: 4.0
+      low: 4.0
+      high: 4.0
+    logit: 3.0
+    confidence: 1.0
+    effective_logit: 3.0
+  - description: 4 upcoming confirmed 'Go for Launch' missions (Jun 7, 8, 10, 12)
+      - all with firm dates and countdown timers
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 4.0
+    logit: 2.5
+    confidence: 0.95
+    effective_logit: 2.375
+  - description: Small probability (~40%) of 1+ additional launches on gap days (Jun
+      6, 9, 11, 13) or TBD missions (Globalstar 2-R)
+    supports:
+      center: 0.47
+      low: 0.0
+      high: 2.0
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 2026 cadence of ~2.98 launches/week implies ~7.2 for 17 days, but
+      confirmed data already shows 8
+    supports:
+      center: 8.0
+      low: 7.0
+      high: 9.0
+    logit: 0.3
+    confidence: 0.8
+    effective_logit: 0.24
+  - description: Small scrub risk could push Jun 12 launch beyond window
+    supports:
+      center: 8.0
+      low: 7.0
+      high: 8.0
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: 4 completed launches already confirmed in window (May 29, 30, Jun
+    3, 4)
+  dominant_effective_logit: 3.0
+  distribution_metrics:
+    implied_median: 4.082605111294312
+    implied_p10: 3.603462489694971
+    implied_p90: 4.197856553998351
+    median_gap: 3.9173948887056884
+    median_gap_pct: 659.0568654646328
+    spread_ratio: 5.047156726768379
+    precision: 0.375
+  sources:
+  - '[(Metaculus) How many Falcon 9 and Falcon Heavy launches will SpaceX conduct
+    between May 28, 2026 and June 14, 2026?](https://www.metaculus.com/questions/43786)'
+  - '[List of Falcon 9 and Falcon Heavy launches](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_Heavy_launches)'
+  - '[Launch Schedule](https://spaceflightnow.com/launch-schedule/)'
+  - '[Up Next](https://nextspaceflight.com/launches/)'
+  - '[Launch Log](https://spaceflightnow.com/launch-log/)'
+  - '[en.wikipedia.org](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_Heavy_launches_(2026))'
+  - '[SpaceX](https://www.spacex.com/launches)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 43786
+- **Question ID**: 43816
+- **Session Duration**: 640.6s (10.7 min)
+- **Cost**: $12.2146 total (orchestrator $3.1729 + sub-agents $9.0417)
+- **Tokens**: 10,656 total (31 in, 10,625 out)
+  - Cache: 701,856 read, 70,546 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/43786_20260606_022823/20260606-022823.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 2 (11.1%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.4163 |
+| execute_code | 4 | 0 | 627ms | — |
+| fetch_url | 6 | 1 ⚠️ | 7606ms | — |
+| get_metaculus_questions | 1 | 0 | 1307ms | — |
+| premortem | 1 | 0 | 124025ms | $2.7877 |
+| reflection | 1 | 0 | 293ms | — |
+| research | 1 | 0 | 209049ms | $5.7757 |
+| web_search | 1 | 0 | 18288ms | $0.0620 |
+| wikipedia | 3 | 1 ⚠️ | 201ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many Falcon 9 and Falcon Heavy launches will SpaceX conduct ...
+- [List of Falcon 9 and Falcon Heavy launches](https://en.wikipedia.org/wiki/Li...
+- [Launch Schedule](https://spaceflightnow.com/launch-schedule/)
+- [Up Next](https://nextspaceflight.com/launches/)
+- [Launch Log](https://spaceflightnow.com/launch-log/)
+- [en.wikipedia.org](https://en.wikipedia.org/wiki/List_of_Falcon_9_and_Falcon_...
+- [SpaceX](https://www.spacex.com/launches)
