@@ -1,0 +1,194 @@
+---
+timestamp: 2026-06-15 22:31:58 UTC
+question_type: binary
+factors:
+- description: Active wildfires already burning near Antalya (Kundu, Belek, Aksu areas)
+    with hotel and residential evacuations underway as of mid-June 2026
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: African heatwave building with peak temperatures of 38-40°C forecast
+    for June 23-29 - overlaps almost perfectly with the question window
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Strong winds reported, which are the primary cause of firefighter deaths
+    in Turkey (wind shifts trapped and killed 10 in 2025 Eskisehir fire)
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: Exceptionally wet antecedent conditions in 2026 (137-231% of normal
+    precipitation) reduce early-season fuel dryness and fire severity
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Deaths are episodic and rare even in active fire years - Turkey had
+    ~1,459 fires in June 2025 but only 3 deaths (one event on June 29), and 6,800
+    fires total in 2025 with only 17 deaths
+  logit: -0.3
+  confidence: 0.8
+  effective_logit: -0.24
+- description: 'Trend toward more severe fire seasons: 2024 and 2025 both had June
+    death events (2024: June 21 in window; 2025: June 29 just outside), climate change
+    extending fire season'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  logit: -1.1
+  probability: 0.25
+anchor: 'Historical base rate: ~15% (1 of 6 years 2020-2025 had a wildfire death event
+  in the exact June 18-28 window; Poisson model gives 11-14%)'
+assessment: "The question asks whether at least one wildfire-related death will be\
+  \ reported in Turkey in an 11-day window (June 18-28, 2026). \n\nHistorical base\
+  \ rate: Looking at 2020-2025 data, Turkey had wildfire deaths in June in 2 of 6\
+  \ years (2024: 12 deaths around June 21; 2025: 3 deaths on June 29). Only the 2024\
+  \ event (June 21) falls within the June 18-28 window, giving a raw frequency of\
+  \ 1/6 = 16.7%. Poisson modeling of death-event rates gives 11-14%.\n\nCurrent conditions\
+  \ are elevated vs. average: The question description reports active wildfires near\
+  \ Antalya with evacuations, an African heatwave, and strong winds. A heat pulse\
+  \ peaking June 23-29 overlaps perfectly with the question window. This resembles\
+  \ 2024 and 2025 more than quiet years (2020, 2022, 2023).\n\nKey mitigating factors:\
+  \ (1) 2026 had exceptional precipitation (137-231% of normal), reducing fuel dryness\
+  \ early in the season. (2) Deaths are extremely rare per-fire - even in 2025 with\
+  \ 1,459 June fires, only one death-event occurred. (3) No deaths have been reported\
+  \ in Turkey yet in June 2026. (4) The research sub-agent could not independently\
+  \ confirm the June 2026 Antalya fires described in the question.\n\nKey risk factors:\
+  \ (1) Active fires already burning. (2) Strong winds - the primary mechanism for\
+  \ firefighter deaths. (3) Heat intensifying into the window period. (4) Last two\
+  \ years both had June deaths, suggesting elevated baseline.\n\nI estimate ~25% probability,\
+  \ reflecting elevated conditions relative to the ~15% base rate but acknowledging\
+  \ that deaths remain rare episodic events even amid active fire activity."
+calibration_notes: 'Anchor: ~15% from 1/6 historical frequency. Current estimate of
+  25% represents a moderate upward update from the base. The estimate doesn''t seem
+  hedged toward 50% - it takes a clear position that NO is more likely than YES, which
+  is appropriate given the episodic rarity of deaths. The 2024 event (June 21, in
+  window) and 2025 event (June 29, barely outside) bracket the window nicely.'
+key_uncertainties: 1. Whether the fires described in the question background are actually
+  occurring right now or are speculative framing. 2. How much the wet antecedent conditions
+  mitigate early-season risk given the heatwave. 3. The very small sample size (6
+  years) makes any base rate estimate noisy. 4. Whether current conditions will produce
+  the specific unlucky circumstances (wind shifts, trapped crews) that cause deaths.
+tool_audit: Research sub-agent provided excellent historical death data by year and
+  month (2020-2025). It also confirmed no June 2026 deaths have been reported yet.
+  Web search found articles about Kundu/Belek fires but dates were ambiguous - some
+  appear to be September 2025. The temperature/heatwave research was very useful with
+  specific forecast data. Monte Carlo code execution worked well for base rate calculations.
+update_triggers: '- Report of a wildfire death in Turkey between now and June 28 (immediate
+  resolution to YES). - A major wildfire blowup in the Antalya/Aegean region during
+  the forecast window would push toward 50%+. - Rain or wind shift bringing cooler/wetter
+  conditions would push toward 10-15%.'
+process_reflection: The research tool was excellent for gathering historical data.
+  The main friction was in confirming current conditions - the question description
+  describes specific ongoing fires and evacuations, but the research sub-agent couldn't
+  confirm them from news sources. This could be a recency issue (fires too recent
+  to be indexed) or the question may have been written with speculative framing. The
+  web search also returned many 2021 and 2025 results mixed in with potentially 2026
+  ones, making it hard to determine dates for some articles. A tool that could parse
+  article dates more reliably would help.
+computed:
+  factor_count: 6
+  factor_sum: 0.44999999999999996
+  tentative_logit: -1.1
+  logit_gap: -1.55
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Active wildfires already burning near Antalya (Kundu, Belek, Aksu
+      areas) with hotel and residential evacuations underway as of mid-June 2026
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: African heatwave building with peak temperatures of 38-40°C forecast
+      for June 23-29 - overlaps almost perfectly with the question window
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Strong winds reported, which are the primary cause of firefighter
+      deaths in Turkey (wind shifts trapped and killed 10 in 2025 Eskisehir fire)
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: Exceptionally wet antecedent conditions in 2026 (137-231% of normal
+      precipitation) reduce early-season fuel dryness and fire severity
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Deaths are episodic and rare even in active fire years - Turkey had
+      ~1,459 fires in June 2025 but only 3 deaths (one event on June 29), and 6,800
+      fires total in 2025 with only 17 deaths
+    logit: -0.3
+    confidence: 0.8
+    effective_logit: -0.24
+  - description: 'Trend toward more severe fire seasons: 2024 and 2025 both had June
+      death events (2024: June 21 in window; 2025: June 29 just outside), climate
+      change extending fire season'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Active wildfires already burning near Antalya (Kundu, Belek, Aksu
+    areas) with hotel and residential evacuations underway as of mid-June 2026
+  dominant_effective_logit: 0.35
+  factor_implied_probability: 0.610639233949222
+  tentative_probability: 0.25
+  gap_pp: -36.063923394922206
+  sources:
+  - '[(Metaculus) Will a wildfire-related death be reported in Turkey between June
+    18 and June 28, 2026?](https://www.metaculus.com/questions/44066)'
+  - '[2026 Chilean wildfires](https://en.wikipedia.org/wiki/2026_Chilean_wildfires)'
+  - '[Wildfires in 2026](https://en.wikipedia.org/wiki/Wildfires_in_2026)'
+  - '[2023 Kazakhstan wildfires](https://en.wikipedia.org/wiki/2023_Kazakhstan_wildfires)'
+  - '[Infernal Wildfire Devours Antalya, Belek And Kundu: Are You Safe - Travel And
+    Tour World](https://www.travelandtourworld.com/news/article/infernal-wildfire-devours-antalya-belek-and-kundu-are-you-safe/)'
+  - '[2026 United Nations Climate Change Conference](https://en.wikipedia.org/wiki/2026_United_Nations_Climate_Change_Conference)'
+  - '[Turkiye: Wildfire Breaks Out in Kundu Area of Antalya | Sada Elbalad](https://see.news/turkiye-wildfire-breaks-out-in-kundu-area-of-antalya)'
+  - '[Flames approach five-star hotel resort after huge forest fire breaks out](https://www.nationalworld.com/europe/titanic-deluxe-belek-fire-very-smokey-around-turkey-five-star-hotel-resort-after-large-forest-fire-antalya-5327769)'
+  - '[Devastating fire rips through holiday hotspot with tourists forced to evacuate
+    hotels](https://www.gbnews.com/news/world/turkey-fires-antalya-holiday-hotspor-tourists-evacuate-hotels)'
+  - '[amoledo.com](https://amoledo.com/en/news/28797-2526-forest-fire-turkey-spread-hotels-antalya-tourists-were-evacuated)'
+  - '[Massive series of fires engulf Turkey](https://en.mehrnews.com/news/236671/Massive-series-of-fires-engulf-Turkey)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44066
+- **Question ID**: 44091
+- **Session Duration**: 1217.5s (20.3 min)
+- **Cost**: $25.0753 total (orchestrator $3.7155 + sub-agents $21.3598)
+- **Tokens**: 13,027 total (40 in, 12,987 out)
+  - Cache: 787,277 read, 83,197 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44066_20260615_221430/20260615-221430.log`
+
+### Tool Calls
+
+- **Total**: 24 calls
+- **Errors**: 2 (8.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0910 |
+| execute_code | 2 | 0 | 729ms | — |
+| fetch_url | 6 | 2 ⚠️ | 5788ms | — |
+| get_coherence_links | 1 | 0 | 345ms | — |
+| get_metaculus_questions | 1 | 0 | 507ms | — |
+| premortem | 1 | 0 | 110927ms | $2.3683 |
+| reflection | 1 | 0 | 641ms | — |
+| research | 1 | 0 | 667274ms | $18.6639 |
+| web_search | 6 | 0 | 18059ms | $0.2367 |
+| wikipedia | 5 | 0 | 258ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will a wildfire-related death be reported in Turkey between June...
+- [2026 Chilean wildfires](https://en.wikipedia.org/wiki/2026_Chilean_wildfires)
+- [Wildfires in 2026](https://en.wikipedia.org/wiki/Wildfires_in_2026)
+- [2023 Kazakhstan wildfires](https://en.wikipedia.org/wiki/2023_Kazakhstan_wil...
+- [travelandtourworld.com](https://www.travelandtourworld.com/news/article/infe...
+- [2026 United Nations Climate Change Conference](https://en.wikipedia.org/wiki...
+- [Turkiye: Wildfire Breaks Out in Kundu Area of Antalya | Sada Elbalad](https:...
+- [Flames approach five-star hotel resort after huge forest fire breaks out](ht...
+- [Devastating fire rips through holiday hotspot with tourists forced to evacua...
+- [amoledo.com](https://amoledo.com/en/news/28797-2526-forest-fire-turkey-sprea...
+- [Massive series of fires engulf Turkey](https://en.mehrnews.com/news/236671/M...
