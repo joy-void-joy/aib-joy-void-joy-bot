@@ -1,0 +1,240 @@
+---
+timestamp: 2026-06-15 13:41:18 UTC
+question_type: binary
+factors:
+- description: 'Strong historical precedent: SC declared SRAG emergencies in June
+    2022, April 2024, and June 2025 (3 of last 4 years). The June pattern is particularly
+    relevant.'
+  logit: 1.2
+  confidence: 0.85
+  effective_logit: 1.02
+- description: Current ICU occupancy (93%, ~100 beds free) is at the same level that
+    triggered the June 2025 decree. SRAG cases rising for 6+ consecutive weeks with
+    no stabilization signal. RSV, Influenza A, and Rhinovirus all increasing concurrently.
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: Low vaccination coverage (~38% of priority groups, 1.2M unvaccinated)
+    creates vulnerability to worsening respiratory crisis and political pressure to
+    act.
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Programa Leito Garantido (Lei nº 19.738/2026, March 2026) provides
+    permanent mechanism to contract private ICU beds at 97% occupancy - designed to
+    replace need for emergency decrees. This is a structural institutional change.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: No decree has been issued as of June 15 despite conditions being at
+    the same level (93% ICU) that triggered the June 12, 2025 decree. This silence
+    suggests the government is deliberately relying on Leito Garantido instead.
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: 2026 SRAG cases are 15.2% lower year-over-year through SE 16 (April),
+    suggesting somewhat less severe season than 2025, though growth accelerated in
+    May-June.
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: Narrow 13-day remaining window (June 15-27) limits time for conditions
+    to deteriorate enough to trigger a decree. Government is also opening beds incrementally
+    (16 new ICU beds announced) without declaring emergency.
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Election year (October 2026 gubernatorial election) may make government
+    prefer to use Leito Garantido (policy success narrative) over emergency decree
+    (crisis narrative).
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  logit: -1.2
+  probability: 0.23
+anchor: 'Historical base rate: In years 2022-2025, SC declared SRAG emergency decrees
+  in 3 of 4 years (~75% annual probability). But this question covers only a 15-day
+  window, and the Leito Garantido program is a structural change that didn''t exist
+  in prior years.'
+assessment: The core tension is between strong historical precedent (near-annual SRAG
+  emergency decrees) and a genuine structural change (the Leito Garantido program
+  enacted in March 2026). The conditions in June 2026 (93% ICU occupancy, rising SRAG
+  cases, low vaccination) are similar to those that triggered the June 2025 decree.
+  However, the critical difference is that the state now has a permanent mechanism
+  (Leito Garantido) to contract private ICU beds when occupancy hits 97%, which was
+  the primary function emergency decrees served. The fact that the government has
+  NOT issued a decree despite identical conditions is the strongest evidence that
+  they're relying on this new tool. The remaining 13-day window creates genuine uncertainty
+  - conditions could rapidly deteriorate, especially as winter begins June 21 - but
+  the government would likely first activate Leito Garantido before escalating to
+  an emergency decree. A decree becomes plausible mainly in a scenario where ICU occupancy
+  spikes above 97% AND Leito Garantido proves insufficient, or where political pressure
+  forces action.
+calibration_notes: The anchor of 75% annual probability is high, but this is a 15-day
+  window with a structural policy change. The factor sum implies roughly 23-25%, which
+  feels right. I'm not hedging toward 50% - the evidence clearly favors NO given the
+  Leito Garantido factor and absence of a decree so far.
+key_uncertainties: 1. Rate of ICU occupancy increase over next 13 days - could spike
+  rapidly with onset of winter. 2. Whether Leito Garantido actually replaces the political/bureaucratic
+  need for a formal emergency declaration. 3. Regional ICU crises (some macro-regions
+  at 99%) that could force statewide action. 4. Whether new Fiocruz InfoGripe bulletins
+  (SE 23, 24) will show continued escalation.
+tool_audit: research() provided excellent epidemiological data from Fiocruz InfoGripe
+  bulletins via its sub-agent, though web search/fetch tools were unavailable within
+  the research agent. Direct web_search provided critical confirmation that all decree
+  search results reference 2025 or 2024 decrees, not 2026. fetch_url worked well for
+  NDMais article but timed out for official SC government sites (estado.sc.gov.br,
+  saude.sc.gov.br). The DOE-SC (official gazette) uses a redirect that couldn't be
+  followed. get_metaculus_questions and get_coherence_links worked normally; no community
+  prediction or coherence links available.
+update_triggers: ICU occupancy reaching 97%+ statewide; Leito Garantido activation
+  triggering media attention; Florianópolis or major macro-region ICU reaching 100%
+  occupancy; New InfoGripe bulletin showing SC at risk or high-risk level; Government
+  officials publicly discussing emergency measures.
+process_reflection: This question required extensive Portuguese-language research
+  across Brazilian government and news sources. The search tools worked well for finding
+  relevant articles but struggled with accessing official SC government portals (timeouts).
+  The biggest challenge was distinguishing between 2025 and 2026 articles in search
+  results since many 2025 decree articles lack explicit year markers in snippets.
+  The research() tool's sub-agent couldn't access web search, which was a significant
+  limitation. Direct web_search filled this gap. A tool for searching Brazilian official
+  gazettes (Diários Oficiais) would be extremely useful for this type of question.
+computed:
+  factor_count: 8
+  factor_sum: -0.6449999999999999
+  tentative_logit: -1.2
+  logit_gap: -0.555
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Strong historical precedent: SC declared SRAG emergencies in June
+      2022, April 2024, and June 2025 (3 of last 4 years). The June pattern is particularly
+      relevant.'
+    logit: 1.2
+    confidence: 0.85
+    effective_logit: 1.02
+  - description: Current ICU occupancy (93%, ~100 beds free) is at the same level
+      that triggered the June 2025 decree. SRAG cases rising for 6+ consecutive weeks
+      with no stabilization signal. RSV, Influenza A, and Rhinovirus all increasing
+      concurrently.
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: Low vaccination coverage (~38% of priority groups, 1.2M unvaccinated)
+      creates vulnerability to worsening respiratory crisis and political pressure
+      to act.
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Programa Leito Garantido (Lei nº 19.738/2026, March 2026) provides
+      permanent mechanism to contract private ICU beds at 97% occupancy - designed
+      to replace need for emergency decrees. This is a structural institutional change.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: No decree has been issued as of June 15 despite conditions being
+      at the same level (93% ICU) that triggered the June 12, 2025 decree. This silence
+      suggests the government is deliberately relying on Leito Garantido instead.
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: 2026 SRAG cases are 15.2% lower year-over-year through SE 16 (April),
+      suggesting somewhat less severe season than 2025, though growth accelerated
+      in May-June.
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: Narrow 13-day remaining window (June 15-27) limits time for conditions
+      to deteriorate enough to trigger a decree. Government is also opening beds incrementally
+      (16 new ICU beds announced) without declaring emergency.
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Election year (October 2026 gubernatorial election) may make government
+      prefer to use Leito Garantido (policy success narrative) over emergency decree
+      (crisis narrative).
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: Programa Leito Garantido (Lei nº 19.738/2026, March 2026) provides
+    permanent mechanism to contract private ICU beds at 97% occupancy - designed to
+    replace need for emergency decrees. This is a structural institutional change.
+  dominant_effective_logit: -1.275
+  factor_implied_probability: 0.34411715879218635
+  tentative_probability: 0.23
+  gap_pp: -11.411715879218635
+  sources:
+  - '[(Metaculus) Will Santa Catarina declare a public-health state of emergency for
+    SRAG before June 28, 2026?](https://www.metaculus.com/questions/44064)'
+  - '[2026 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/2026_Santa_Catarina_gubernatorial_election)'
+  - '[2026 Santa Catarina general election](https://en.wikipedia.org/wiki/2026_Santa_Catarina_general_election)'
+  - '[2025 Santa Catarina hot air balloon crash](https://en.wikipedia.org/wiki/2025_Santa_Catarina_hot_air_balloon_crash)'
+  - '[dive.sc.gov.br](https://www.dive.sc.gov.br/index.php/noticias-todas/832-casos-de-srag-apresentam-tendencia-de-queda-em-santa-catarina)'
+  - '[Síndrome respiratória aumenta em SC e coloca estado em nível de alerta, aponta
+    Fiocruz](https://ndmais.com.br/saude/sindrome-respiratoria-aumenta-em-sc-e-coloca-estado-em-nivel-de-alerta/)'
+  - '[gcd.com.br](https://www.gcd.com.br/santa-catarina/santa-catarina-tem-944-dos-leitos-de-uti-ocupados-em-meio-ao-aumento-de-doencas-respiratorias/)'
+  - '[Santa Catarina abre mais 13 leitos de UTI para atender casos respiratórios graves](https://dive.sc.gov.br/index.php/noticias-todas/827-santa-catarina-abre-mais-13-leitos-de-uti-para-atender-casos-respiratorios-graves)'
+  - '[estado.sc.gov.br](https://estado.sc.gov.br/noticias/casos-de-sindrome-respiratoria-aguda-grave-apresentam-tendencia-de-queda-em-santa-catarina/)'
+  - '[saude.sc.gov.br](https://www.saude.sc.gov.br/index.php/noticias-geral)'
+  - '[Redirect](https://doe.sea.sc.gov.br/)'
+  - '[Santa Catarina Hospital](https://en.wikipedia.org/wiki/Santa_Catarina_Hospital)'
+  - '[Ipua%C3%A7u](https://en.wikipedia.org/wiki/Ipua%C3%A7u)'
+  - '[It%C3%A1, Santa Catarina](https://en.wikipedia.org/wiki/It%C3%A1,_Santa_Catarina)'
+  - '[Casos de Síndrome Respiratória Aguda Grave apresentam tendência de queda em
+    SC - Perfil Multi](https://perfilmulti.com.br/54567/casos-de-sindrome-respiratoria-aguda-grave-apresentam-tendencia-de-queda-em-santa-catarina/)'
+  - '[2022 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/2022_Santa_Catarina_gubernatorial_election)'
+  - '[2018 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/2018_Santa_Catarina_gubernatorial_election)'
+  - '[2026 Campeonato Catarinense](https://en.wikipedia.org/wiki/2026_Campeonato_Catarinense)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44064
+- **Question ID**: 44089
+- **Session Duration**: 1974.8s (32.9 min)
+- **Cost**: $37.5035 total (orchestrator $4.1437 + sub-agents $33.3598)
+- **Tokens**: 13,020 total (48 in, 12,972 out)
+  - Cache: 838,540 read, 101,988 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44064_20260615_131132/20260615-131132.log`
+
+### Tool Calls
+
+- **Total**: 45 calls
+- **Errors**: 4 (8.9%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1013 |
+| execute_code | 3 | 0 | 102ms | — |
+| fetch_url | 8 | 4 ⚠️ | 23102ms | — |
+| get_coherence_links | 1 | 0 | 456ms | — |
+| get_metaculus_questions | 2 | 0 | 287ms | — |
+| premortem | 2 | 0 | 117810ms | $4.7269 |
+| reflection | 2 | 0 | 45828ms | — |
+| research | 2 | 0 | 829495ms | $28.0948 |
+| web_search | 11 | 0 | 61083ms | $0.4369 |
+| wikipedia | 14 | 0 | 393ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Santa Catarina declare a public-health state of emergency f...
+- [2026 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/20...
+- [2026 Santa Catarina general election](https://en.wikipedia.org/wiki/2026_San...
+- [2025 Santa Catarina hot air balloon crash](https://en.wikipedia.org/wiki/202...
+- [dive.sc.gov.br](https://www.dive.sc.gov.br/index.php/noticias-todas/832-caso...
+- [Síndrome respiratória aumenta em SC e coloca estado em nível de alerta, apon...
+- [gcd.com.br](https://www.gcd.com.br/santa-catarina/santa-catarina-tem-944-dos...
+- [Santa Catarina abre mais 13 leitos de UTI para atender casos respiratórios g...
+- [estado.sc.gov.br](https://estado.sc.gov.br/noticias/casos-de-sindrome-respir...
+- [saude.sc.gov.br](https://www.saude.sc.gov.br/index.php/noticias-geral)
+- [Redirect](https://doe.sea.sc.gov.br/)
+- [Santa Catarina Hospital](https://en.wikipedia.org/wiki/Santa_Catarina_Hospital)
+- [Ipua%C3%A7u](https://en.wikipedia.org/wiki/Ipua%C3%A7u)
+- [It%C3%A1, Santa Catarina](https://en.wikipedia.org/wiki/It%C3%A1,_Santa_Cata...
+- [Casos de Síndrome Respiratória Aguda Grave apresentam tendência de queda em ...
+- [2022 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/20...
+- [2018 Santa Catarina gubernatorial election](https://en.wikipedia.org/wiki/20...
+- [2026 Campeonato Catarinense](https://en.wikipedia.org/wiki/2026_Campeonato_C...
