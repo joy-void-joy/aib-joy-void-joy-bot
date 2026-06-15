@@ -1,0 +1,153 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the full Metaculus question (post_id 44063) to understand the resolution criteria precisely: the question resolves YES if the IEC reports more than 250,000 **new (first-time)** voter registrations from the 20-21 June 2026 weekend, as distinct from re-registrations or address updates. Resolution deadline: 26 June 2026.\n\nI then issued three parallel research queries covering: (1) June 2026 weekend results (confirming the event hadn't yet occurred as of 15 June), (2) historical IEC registration weekend data, and (3) 2026 municipal election voter registration statistics. The research tool returned comprehensive results from SABC News, EWN, PMG parliamentary briefings, Wikipedia, Ipsos, and other sources.\n\n## Key Evidence\n\n**General election benchmarks (the anchor):**\n- A prior major national registration weekend produced **490,520** first-time registrations (cited in the question itself)\n- The November 2023 general election registration weekend produced **568,374** new registrations out of 2,904,037 total transactions (PMG meeting 38023)\n- Combined 2019 general election weekends: **1,194,314** new registrations (~597k per weekend)\n\n**The 250k threshold in context:**\n- 250,000 is approximately **47%** of the average general election single-weekend benchmark (~530k)\n- This sets a moderate bar — requiring only about half of general election performance\n\n**Factors favoring YES:**\n- Strong IEC mobilization: **70,000+ staff** recruited, youth-targeted \"Get Up, Show Up, Vote\" campaign\n- Deputy President Mashatile personally led ANC registration drives\n- HSRC study: ~50% of eligible South Africans (~20 million) not registered — massive potential pool\n- **24,000 registration stations** across 4,488 wards (comparable infrastructure to general elections)\n- 508 political parties competing, creating party-level mobilization incentives\n\n**Factors favoring NO:**\n- Municipal elections historically draw less interest: turnout 46-58% vs ~66% for general elections\n- Question description explicitly warns municipal weekends \"typically attract fewer new registrants\"\n- Online self-registration absorbed **376,140** new registrations Jan-May 2026\n- Only **38%** of South Africans think local government is doing a good job (Ipsos, March 2026)\n- 2021 municipal turnout was **45.8%**, the historic low\n\n**Critical data gap:** No specific municipal election registration weekend new-voter numbers exist for 2011 or 2016 (the two non-COVID normal municipal election cycles). The 2021 municipal election had only one weekend due to COVID and its target was not achieved. This means the entire forecast rests on estimating a municipal/general discount factor.\n\n## Quantitative Modeling\n\nI ran Monte Carlo simulations across 5 approaches:\n\n1. **Discount model**: General election base × municipal discount factor (mean 0.55, std 0.10) → P(>250k) = **71.7%**, mean ~292k\n2. **Station visit model**: Estimated ~2M municipal station visits × 16.5% new registration rate → P(>250k) = **84.0%**, mean ~329k\n3. **Combined model** (equal-weighted mix of 1 & 2) → P(>250k) = **77.8%**, mean ~310k\n4. **Direct normal estimate** (mean 310k, std 80k) → P(>250k) = **77.3%**\n5. **Lognormal model** (median ~310k, 30% CV) → P(>250k) = **76.3%**\n\nAverage across all models: **77.4%**, range 71.7%-84.0%.\n\nThe sensitivity analysis showed the critical dependence on the municipal discount factor: at 0.40 discount → P(>250k) = 28%; at 0.55 → 71%; at 0.65 → 90%.\n\n## Conclusion\n\nI settled on **73% YES**, slightly below the model average of 77.4%. This conservative adjustment reflects: (1) the complete absence of direct municipal registration weekend benchmarks, (2) the online absorption effect may be underweighted in my models, and (3) the question description's explicit framing that municipal weekends \"typically attract fewer\" registrants. The median expected new registration count is **~290-330k**, placing the 250k threshold below the central estimate but within the uncertainty range where a miss is plausible.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 5,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market data was checked (Polymarket, Manifold, Kalshi) — though markets for this niche South African election question may not exist",
+      "Could not access the IEC website directly (Cloudflare blocked) — would have provided the most authoritative historical data"
+    ],
+    "subtle_bugs": [
+      "The premortem noted the agent claimed 'No tool failures' in its tool_audit narrative, but metrics showed 1 error from 2 fetch_url calls. This is a minor self-assessment inaccuracy that did not affect the forecast."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Monte Carlo simulation across 5 models estimating municipal election registration as a discount from general election benchmarks.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "No direct historical data exists for municipal election registration weekend new-voter counts, so the entire forecast depends on an estimated municipal/general discount factor."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check any prediction markets (Polymarket, Manifold, Kalshi) for this question. While markets may not exist for this niche question, the check was not attempted.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The station visit model (P(>250k)=84%) used a municipal/general visit ratio centered at 0.70, which may be too generous. Municipal turnout ratios (46-58% vs 66%) suggest a visit discount closer to 0.60-0.65, which would bring this model's estimate closer to the other models. The agent weighted this model equally with more conservative models.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The 2019 general election figure of 1,194,314 across 'both weekends' was divided by 2 to get ~597k per weekend, but the first weekend typically draws more than the second. The agent acknowledged this asymmetry in comments but still used the average. This inflates the general election per-weekend benchmark slightly when combined with the 490k and 568k figures, though the agent primarily used the 490-570k range.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "70%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent use of multiple modeling approaches (5 distinct Monte Carlo models) with consistent results across all of them, providing robust probability estimation.",
+    "Thorough historical data collection: found specific new-registration figures for 2019 (1,194,314 combined) and November 2023 (568,374) general election weekends from PMG parliamentary briefings — not easily accessible data.",
+    "Honest identification of the critical data gap: no direct municipal election registration weekend new-voter numbers exist for any election cycle, and the agent appropriately flagged this as the key uncertainty.",
+    "Good sensitivity analysis showing how the probability varies with the municipal discount factor (from 28% at 0.40 to 95% at 0.70), making the forecast's dependence on this parameter transparent.",
+    "Thoughtful counterargument in the premortem that constructs a specific, coherent failure scenario (40-45% discount + online absorption + apathy).",
+    "Appropriate conservatism: settled on 73% despite model average of 77.4%, with clear reasoning for the downward adjustment."
+  ],
+  "weaknesses": [
+    "Did not check prediction markets — even a quick check would confirm whether any market exists for this question or related South African election outcomes.",
+    "The station visit model's visit ratio of 0.70 (municipal/general) appears generous given that actual municipal turnout ratios are closer to 0.70-0.88 of general turnout, but registration interest for municipal elections could plausibly be lower than the turnout ratio implies. This model's higher P(>250k)=84% pulled the average up.",
+    "Online absorption effect modeled as a small additive adjustment (-0.05) rather than as a multiplicative reduction in the available pool. With 376k already registered online in 5 months, this represents a meaningful fraction of the ~490-570k general election weekend benchmark that may not be available for in-person registration.",
+    "No attempt to estimate the second-weekend effect: some potential registrants may defer to the August 2026 weekend, reducing June numbers. This was mentioned in narrative but not explicitly modeled."
+  ],
+  "pipeline": {
+    "issues": [
+      "IEC website (elections.org.za) was blocked by Cloudflare during research, forcing reliance on secondary sources (PMG, Wikipedia, news outlets). This may have caused missed granular historical data.",
+      "The agent did not check prediction markets, though this is likely a gap with no available market for this niche question."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add a prediction market check step, even for niche questions — confirming no market exists is informative.",
+    "Model online absorption as a multiplicative pool reduction rather than a small additive discount. If 376k of the most motivated potential registrants already registered online, the remaining pool's propensity to register in-person is likely lower.",
+    "For the station visit model, calibrate the municipal/general visit ratio more carefully using the turnout ratio data (46-58% vs 66%), rather than centering at 0.70.",
+    "Explicitly model the first-weekend vs second-weekend split to account for deferrals to the August registration weekend."
+  ]
+}
