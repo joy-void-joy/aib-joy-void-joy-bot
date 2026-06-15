@@ -1,0 +1,187 @@
+---
+timestamp: 2026-06-15 03:46:26 UTC
+question_type: binary
+factors:
+- description: TLE-based propagation predicts perigee ~266 km on June 26, well above
+    255 km threshold. The TLE is very recent (June 14, 12 days before resolution).
+  logit: -1.8
+  confidence: 0.9
+  effective_logit: -1.62
+- description: Russian SONIKS prediction (Aug 10 reentry) aligns with TLE-based decay
+    rate, supporting the NO outcome
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: English SONIKS prediction (Jul 7 reentry) implies 2.6x faster decay,
+    which would put perigee at ~247 km on June 26 (YES). This represents a legitimate
+    alternative model.
+  logit: 1.0
+  confidence: 0.4
+  effective_logit: 0.4
+- description: Possible geomagnetic storm in 11-day window (~15-20% probability of
+    G2+ storm) could temporarily increase drag by 1.5-3x
+  logit: 0.5
+  confidence: 0.3
+  effective_logit: 0.15
+- description: Satellite reportedly doing station-keeping, but could stop maneuvering
+    due to propulsion issues or mission decisions, accelerating decay
+  logit: 0.3
+  confidence: 0.25
+  effective_logit: 0.075
+- description: Solar Cycle 25 is past peak but still elevated, meaning atmospheric
+    density at 280 km is higher than historical average
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: If satellite already decayed before June 26, question resolves YES.
+    But all models predict reentry well after June 26.
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+tentative_estimate:
+  logit: -2.6
+  probability: 0.07
+anchor: 'No established base rate for satellite perigee crossing a specific threshold.
+  Using the TLE-based physical model as anchor: perigee ~266 km predicted on June
+  26, which is 11 km above the 255 km threshold. The probability depends entirely
+  on the uncertainty in the decay rate.'
+assessment: 'The satellite''s perigee on June 14 was ~274 km (from latest TLE). The
+  question asks if it will drop below 255 km by June 26, requiring a 19 km drop in
+  ~12 days. The current TLE-based decay rate of ~0.65 km/day would only produce ~8
+  km of drop (to ~266 km), well above the threshold. The Russian SONIKS prediction
+  (Aug 10 reentry) aligns with this rate.
+
+
+  However, the English SONIKS prediction (Jul 7 reentry) requires ~2.6x faster decay
+  and would produce a YES outcome. This represents model uncertainty in atmospheric
+  drag predictions.
+
+
+  The key question is: how much weight to give the English SONIKS model vs. the TLE-based
+  extrapolation? The TLE is a direct measurement from June 14, making it very reliable
+  for the current state. But forward projections depend on uncertain atmospheric conditions.
+
+
+  Monte Carlo simulations consistently show probability in the 1-8% range depending
+  on how much tail risk (storms, atmospheric uncertainty, satellite malfunction) is
+  modeled. My best estimate is ~7%, reflecting the genuine possibility that the English
+  SONIKS model captures something the TLE extrapolation misses, but weighting against
+  it because current empirical data strongly favors the slower decay rate.'
+calibration_notes: The TLE Taylor expansion and physics-based propagation both independently
+  predict ~266 km. The 255 km threshold is at roughly the 1st-5th percentile of the
+  distribution depending on uncertainty assumptions. A 7% probability means I'm giving
+  ~7% weight to scenarios where decay is dramatically faster than current measurements
+  suggest.
+key_uncertainties: 1. Whether the English SONIKS model uses materially different (and
+  possibly more accurate) atmospheric forecasts than the TLE-based projection. 2.
+  Solar activity and geomagnetic storm probability over the 11-day window. 3. Whether
+  the satellite will continue station-keeping maneuvers. 4. Possible N2YO display
+  lag showing cached/stale values.
+tool_audit: research() - very useful, provided comprehensive TLE data, orbital history,
+  SONIKS predictions, and atmospheric physics. fetch_url on N2YO - returned raw TLE
+  but the LLM incorrectly computed altitudes from it (said 320/337 when actual is
+  274/287). execute_code - essential for orbital mechanics calculations and Monte
+  Carlo. No tool failures.
+update_triggers: 1. A major geomagnetic storm (G3+) hitting Earth before June 26 would
+  increase drag significantly. 2. New TLE data showing accelerated decay (higher n_dot).
+  3. News about the satellite losing maneuver capability. 4. Solar flare/CME directed
+  at Earth.
+process_reflection: 'The orbital decay modeling required significant domain knowledge.
+  The tools worked well together - research() provided the raw data, code execution
+  allowed proper TLE parsing and physics-based propagation. One friction point: the
+  N2YO fetch tool''s LLM miscomputed orbital altitudes from the TLE (it got 320/337
+  km when the actual values are 274/287 km), which could have been misleading if I
+  hadn''t verified with code. The subforecast tool wasn''t needed since this question
+  is well-suited for direct computation.'
+computed:
+  factor_count: 7
+  factor_sum: -1.8050000000000002
+  tentative_logit: -2.6
+  logit_gap: -0.7949999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: TLE-based propagation predicts perigee ~266 km on June 26, well above
+      255 km threshold. The TLE is very recent (June 14, 12 days before resolution).
+    logit: -1.8
+    confidence: 0.9
+    effective_logit: -1.62
+  - description: Russian SONIKS prediction (Aug 10 reentry) aligns with TLE-based
+      decay rate, supporting the NO outcome
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: English SONIKS prediction (Jul 7 reentry) implies 2.6x faster decay,
+      which would put perigee at ~247 km on June 26 (YES). This represents a legitimate
+      alternative model.
+    logit: 1.0
+    confidence: 0.4
+    effective_logit: 0.4
+  - description: Possible geomagnetic storm in 11-day window (~15-20% probability
+      of G2+ storm) could temporarily increase drag by 1.5-3x
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+  - description: Satellite reportedly doing station-keeping, but could stop maneuvering
+      due to propulsion issues or mission decisions, accelerating decay
+    logit: 0.3
+    confidence: 0.25
+    effective_logit: 0.075
+  - description: Solar Cycle 25 is past peak but still elevated, meaning atmospheric
+      density at 280 km is higher than historical average
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: If satellite already decayed before June 26, question resolves YES.
+      But all models predict reentry well after June 26.
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  dominant_factor: TLE-based propagation predicts perigee ~266 km on June 26, well
+    above 255 km threshold. The TLE is very recent (June 14, 12 days before resolution).
+  dominant_effective_logit: -1.62
+  factor_implied_probability: 0.14124350744507486
+  tentative_probability: 0.07
+  gap_pp: -7.124350744507485
+  sources:
+  - '[(Metaculus) Will Rassvet-3 No. 10 (NORAD 68369) have a perigee below 255 km
+    on June 26, 2026?](https://www.metaculus.com/questions/44053)'
+  - '[Technical details for satellite RASSVET-3 10](https://www.n2yo.com/satellite/?s=68369)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44053
+- **Question ID**: 44078
+- **Session Duration**: 1339.2s (22.3 min)
+- **Cost**: $14.5098 total (orchestrator $4.0943 + sub-agents $10.4155)
+- **Tokens**: 18,958 total (33 in, 18,925 out)
+  - Cache: 846,921 read, 74,882 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44053_20260615_032652/20260615-032652.log`
+
+### Tool Calls
+
+- **Total**: 67 calls
+- **Errors**: 4 (6.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1817 |
+| execute_code | 18 | 1 ⚠️ | 11626ms | — |
+| fetch_arxiv | 9 | 2 ⚠️ | 2148ms | — |
+| fetch_url | 8 | 1 ⚠️ | 9662ms | — |
+| get_metaculus_questions | 1 | 0 | 654ms | — |
+| premortem | 1 | 0 | 130956ms | $2.3190 |
+| reflection | 1 | 0 | 9ms | — |
+| research | 1 | 0 | 775196ms | $7.4869 |
+| search_arxiv | 1 | 0 | 8636ms | — |
+| search_exa | 3 | 0 | 1802ms | — |
+| web_search | 12 | 0 | 19536ms | $0.4279 |
+| wikipedia | 12 | 0 | 906ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Rassvet-3 No. 10 (NORAD 68369) have a perigee below 255 km ...
+- [Technical details for satellite RASSVET-3 10](https://www.n2yo.com/satellite...
