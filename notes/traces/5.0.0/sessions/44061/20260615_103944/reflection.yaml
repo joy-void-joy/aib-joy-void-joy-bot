@@ -1,0 +1,168 @@
+---
+timestamp: 2026-06-15 10:48:34 UTC
+question_type: binary
+factors:
+- description: 'Base rate: 50K+ Downdetector peak events for Facebook/Instagram occur
+    ~2-4 times per year historically. In a 13-day window, unconditional P ≈ 7-13%.'
+  logit: -1.8
+  confidence: 0.7
+  effective_logit: -1.26
+- description: 'Clustering/infrastructure instability: Users reported ''third time
+    this week'' around June 12, suggesting mid-June infrastructure fragility. Root
+    cause of June 12 outage not publicly disclosed.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: 'Post-outage stabilization: Services have been operational for 2-3
+    days since June 12 mega-outage. Meta likely implemented emergency monitoring and
+    fixes.'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Very high threshold: 50,000+ peak is rare even among notable outages.
+    Most 2026 outages (March 3: ~11K, April: ~14-18K) were well below threshold.'
+  logit: -0.5
+  confidence: 0.8
+  effective_logit: -0.4
+- description: '2026 data shows lower rate: Only 1 event above 50K in ~5.5 months
+    of 2026 data, suggesting annual rate may be closer to 2/yr than 4/yr.'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Remaining window still substantial: ~11 days remain in the resolution
+    window, giving ample time for a new event to occur.'
+  logit: 0.2
+  confidence: 0.8
+  effective_logit: 0.16000000000000003
+tentative_estimate:
+  logit: -2.1
+  probability: 0.11
+anchor: 'Historical base rate: ~10% (3 events/yr × 13 days / 365 = ~10.7%)'
+assessment: 'The question asks about a 50K+ peak Downdetector event for Facebook or
+  Instagram in a 13-day window (June 14-26, 2026). The June 12 mega-outage (132K+
+  peak) does NOT count as it started before the window. Services have been stable
+  since June 14.
+
+
+  Base rate analysis: Historical data suggests 2-4 such events per year, giving an
+  unconditional 13-day probability of ~7-13%. The 2026 data (only 1 qualifying event
+  in 5.5 months) points toward the lower end. A mild clustering adjustment for mid-June
+  infrastructure instability moves the estimate up slightly, but is partially offset
+  by likely post-outage stabilization efforts by Meta.
+
+
+  The 50,000 threshold is genuinely high - most outages peak well below this even
+  when they make the news. This pulls the estimate down from what a naive ''will there
+  be any outage'' probability would suggest.
+
+
+  My estimate of ~11% (logit -2.1) reflects a base rate around 8-10% with a slight
+  upward push from clustering, moderated by the high threshold and post-outage monitoring.'
+calibration_notes: 'Anchor is 10% based on midpoint historical rate of 3/yr. Final
+  estimate of 11% is very close to anchor - the clustering uplift and stabilization
+  downdraft roughly cancel, with a slight net upward push. 2026 data suggests rate
+  may be lower (closer to 2/yr → 7%), which would pull estimate down. Hedging check:
+  11% is a reasonably confident ''unlikely but plausible'' estimate, not artificially
+  compressed toward 50%.'
+key_uncertainties: 1. True annual rate of 50K+ events - could be 1.5-4/yr depending
+  on measurement. 2. Whether June clustering reflects an ongoing infrastructure issue
+  or was resolved. 3. Whether Meta's post-outage response reduces or increases near-term
+  risk.
+tool_audit: Research tool successfully provided detailed data on the June 12 outage
+  and current platform status. Historical base rate data was less precise (sub-agent
+  couldn't access live web tools for frequency data). Web search confirmed current
+  operational status. Downdetector live data not directly accessible but proxied through
+  news and status monitoring sites.
+update_triggers: 1. Reports of a new Facebook/Instagram outage in the June 14-26 window.
+  2. Reports of Meta infrastructure issues or engineering incidents. 3. Evidence that
+  the June 12 root cause was not actually fixed.
+process_reflection: The research tool worked well for the June 12 event details but
+  the historical frequency sub-agent couldn't access live tools, so the base rate
+  estimate relies partly on training data. Direct web search helped confirm current
+  status. The main friction was establishing precise base rates for 50K+ events -
+  this specific threshold isn't commonly tracked in easily-findable datasets.
+computed:
+  factor_count: 6
+  factor_sum: -1.53
+  tentative_logit: -2.1
+  logit_gap: -0.5700000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Base rate: 50K+ Downdetector peak events for Facebook/Instagram
+      occur ~2-4 times per year historically. In a 13-day window, unconditional P
+      ≈ 7-13%.'
+    logit: -1.8
+    confidence: 0.7
+    effective_logit: -1.26
+  - description: 'Clustering/infrastructure instability: Users reported ''third time
+      this week'' around June 12, suggesting mid-June infrastructure fragility. Root
+      cause of June 12 outage not publicly disclosed.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: 'Post-outage stabilization: Services have been operational for 2-3
+      days since June 12 mega-outage. Meta likely implemented emergency monitoring
+      and fixes.'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Very high threshold: 50,000+ peak is rare even among notable outages.
+      Most 2026 outages (March 3: ~11K, April: ~14-18K) were well below threshold.'
+    logit: -0.5
+    confidence: 0.8
+    effective_logit: -0.4
+  - description: '2026 data shows lower rate: Only 1 event above 50K in ~5.5 months
+      of 2026 data, suggesting annual rate may be closer to 2/yr than 4/yr.'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Remaining window still substantial: ~11 days remain in the resolution
+      window, giving ample time for a new event to occur.'
+    logit: 0.2
+    confidence: 0.8
+    effective_logit: 0.16000000000000003
+  dominant_factor: 'Base rate: 50K+ Downdetector peak events for Facebook/Instagram
+    occur ~2-4 times per year historically. In a 13-day window, unconditional P ≈
+    7-13%.'
+  dominant_effective_logit: -1.26
+  factor_implied_probability: 0.17799368578624647
+  tentative_probability: 0.11
+  gap_pp: -6.799368578624647
+  sources:
+  - '[(Metaculus) Will Facebook or Instagram have a major outage (50,000+ peak Downdetector
+    reports) between June 14 and June 26, 2026?](https://www.metaculus.com/questions/44061)'
+  - '[2021 Facebook outage](https://en.wikipedia.org/wiki/2021_Facebook_outage)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44061
+- **Question ID**: 44086
+- **Session Duration**: 667.3s (11.1 min)
+- **Cost**: $13.7332 total (orchestrator $2.1978 + sub-agents $11.5354)
+- **Tokens**: 7,058 total (26 in, 7,032 out)
+  - Cache: 359,949 read, 60,272 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44061_20260615_103944/20260615-103944.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 116ms | — |
+| get_metaculus_questions | 1 | 0 | 281ms | — |
+| premortem | 1 | 0 | 104212ms | $2.0166 |
+| reflection | 1 | 0 | 3ms | — |
+| research | 1 | 0 | 375374ms | $9.4457 |
+| web_search | 2 | 0 | 16178ms | $0.0732 |
+| wikipedia | 1 | 0 | 197ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Facebook or Instagram have a major outage (50,000+ peak Dow...
+- [2021 Facebook outage](https://en.wikipedia.org/wiki/2021_Facebook_outage)
