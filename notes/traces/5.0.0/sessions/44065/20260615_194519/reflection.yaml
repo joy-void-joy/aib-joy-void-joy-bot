@@ -1,0 +1,192 @@
+---
+timestamp: 2026-06-15 19:55:09 UTC
+question_type: binary
+factors:
+- description: 'Current price buffer: SPCX at ~$189 vs $160.95 threshold, a 17.4%
+    buffer providing significant cushion'
+  logit: 1.2
+  confidence: 0.95
+  effective_logit: 1.14
+- description: 'Extreme volatility: 3-4% free float, Parkinson daily vol ~8.5-10%,
+    capable of 20-30% daily swings. 8-day vol ~28% could easily erase the buffer'
+  logit: -0.8
+  confidence: 0.85
+  effective_logit: -0.68
+- description: 'Price above analyst targets: Current $189 exceeds most consensus targets
+    ($150-165), near Oppenheimer''s max $190 target, massively above Morningstar $63
+    and CFRA $115. Mean reversion pressure.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Tiny float constrains supply: Only 3-4% of shares outstanding are
+    floating, no lockup expiry before June 26 (tied to earnings milestones). Supply
+    shortage supports price.'
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Index inclusion catalysts: MSCI fast-track rules for large IPOs and
+    possible Nasdaq-100 consideration could trigger forced institutional buying'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Historical IPO mean reversion: Many mega-IPOs (Facebook, Uber, ARM)
+    fell below first-day close within 2 weeks, though buffer is from current price,
+    not IPO-day close'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Options trading starts June 16: Could increase liquidity and volatility;
+    gamma effects could amplify moves in either direction'
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+tentative_estimate:
+  logit: 0.55
+  probability: 0.63
+anchor: 'IPO stocks maintaining above first-day close at trading day 10: roughly 50-55%
+  base rate for hot IPOs, but current price is 17% above threshold which provides
+  significant buffer. Starting from ~55%.'
+assessment: SPCX closed at ~$189 on June 15 (day 2), up 17.4% from the $160.95 threshold.
+  The question is whether the stock will remain above $160.95 on June 26 (8 trading
+  days away). Monte Carlo simulations across multiple volatility (7-15% daily) and
+  drift (-0.5% to +0.5% daily) scenarios consistently produce P(above) in the 53-82%
+  range, with weighted central estimate around 64-66%. The key tension is between
+  (1) the large 17.4% buffer from current price and (2) the extraordinary volatility
+  that could erase this buffer. The stock is already above most analyst targets, suggesting
+  some mean reversion pressure, but the tiny float and lockup structure prevent supply
+  from entering the market. My simulation-based estimate of ~63-65% seems well-calibrated
+  given these competing forces.
+calibration_notes: The base rate for a stock maintaining above its IPO-day close after
+  10 trading days is roughly 50-55% for hot IPOs. But the question isn't asking about
+  maintaining the IPO-day close from the IPO-day close level - it's asking about maintaining
+  that level from a price that's already 17% higher. This significantly shifts the
+  probability upward. However, the extreme volatility (8-10% daily) means 8-day cumulative
+  moves of 25-30% are well within one standard deviation, so a 17% drawdown is not
+  extreme. My estimate of 63% represents roughly 0.55 logit, which is above the 50%
+  anchor but not dramatically so, reflecting genuine uncertainty.
+key_uncertainties: 1. Daily volatility estimate - only 2 trading days of data, Parkinson
+  estimate ranges from 7-10%. If true vol is higher (12-15%), P(above) drops significantly.
+  2. Drift direction - whether momentum continues or mean reversion dominates is the
+  key swing factor. 3. Whether index inclusion announcements come before June 26.
+  4. Broader market conditions over next 8 trading days.
+tool_audit: 'Useful: Yahoo Finance API data (current price, historical data), CNBC
+  quote data (real-time price), web search (analyst targets, lockup structure, options
+  timing). Polymarket data found but not directly applicable to this binary question.
+  Research sub-agent returned stale pre-IPO data (training cutoff issue) - not useful
+  for this question. Monte Carlo simulation via sandbox was the primary analytical
+  tool.'
+update_triggers: 1. Index inclusion announcement (MSCI or Nasdaq-100) -> push probability
+  up 10-15pp. 2. Major negative Musk/SpaceX news -> push down 10-20pp. 3. Stock drops
+  10%+ tomorrow -> would narrow buffer and lower probability. 4. Broader market crash
+  -> correlated risk.
+process_reflection: The research sub-agent was not helpful here since its training
+  data predated the SpaceX IPO. Direct web search was essential. The Yahoo Finance
+  API data integration was excellent - it provided structured current price data in
+  the search results. The sandbox for Monte Carlo simulation worked well. The main
+  challenge was estimating volatility with only 2 data points - I had to rely on Parkinson
+  range-based estimates and stated volatility expectations from the question text.
+computed:
+  factor_count: 7
+  factor_sum: 0.47999999999999987
+  tentative_logit: 0.55
+  logit_gap: 0.07000000000000017
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Current price buffer: SPCX at ~$189 vs $160.95 threshold, a 17.4%
+      buffer providing significant cushion'
+    logit: 1.2
+    confidence: 0.95
+    effective_logit: 1.14
+  - description: 'Extreme volatility: 3-4% free float, Parkinson daily vol ~8.5-10%,
+      capable of 20-30% daily swings. 8-day vol ~28% could easily erase the buffer'
+    logit: -0.8
+    confidence: 0.85
+    effective_logit: -0.68
+  - description: 'Price above analyst targets: Current $189 exceeds most consensus
+      targets ($150-165), near Oppenheimer''s max $190 target, massively above Morningstar
+      $63 and CFRA $115. Mean reversion pressure.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Tiny float constrains supply: Only 3-4% of shares outstanding are
+      floating, no lockup expiry before June 26 (tied to earnings milestones). Supply
+      shortage supports price.'
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Index inclusion catalysts: MSCI fast-track rules for large IPOs
+      and possible Nasdaq-100 consideration could trigger forced institutional buying'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Historical IPO mean reversion: Many mega-IPOs (Facebook, Uber, ARM)
+      fell below first-day close within 2 weeks, though buffer is from current price,
+      not IPO-day close'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Options trading starts June 16: Could increase liquidity and volatility;
+      gamma effects could amplify moves in either direction'
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  dominant_factor: 'Current price buffer: SPCX at ~$189 vs $160.95 threshold, a 17.4%
+    buffer providing significant cushion'
+  dominant_effective_logit: 1.14
+  factor_implied_probability: 0.617747874769249
+  tentative_probability: 0.63
+  gap_pp: 1.2252125230751032
+  sources:
+  - '[(Metaculus) Will SpaceX (SPCX) close above its $160.95 IPO-day close on June
+    26, 2026?](https://www.metaculus.com/questions/44065)'
+  - '[Space Exploration Technologies Corp. Class A Common Stock (SPCX) Stock Price,
+    News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/SPCX/)'
+  - '[finance.yahoo.com](https://finance.yahoo.com/quote/SPCX/history/)'
+  - '[SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap)'
+  - '[SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-above)'
+  - '[What will SpaceX''s public ticker be? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/what-will-spacexs-public-ticker-be)'
+  - '[SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-by)'
+  - '[SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymarket](https://polymarket.com/event/spacex-ipo-closing-market-cap-higher-strikes)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44065
+- **Question ID**: 44090
+- **Session Duration**: 765.2s (12.8 min)
+- **Cost**: $10.0811 total (orchestrator $3.7217 + sub-agents $6.3594)
+- **Tokens**: 14,068 total (40 in, 14,028 out)
+  - Cache: 747,963 read, 82,508 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44065_20260615_194519/20260615-194519.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 5 | 0 | 1199ms | — |
+| fetch_url | 2 | 0 | 193ms | — |
+| get_coherence_links | 1 | 0 | 446ms | — |
+| get_metaculus_questions | 1 | 0 | 283ms | — |
+| polymarket_price | 5 | 0 | 633ms | — |
+| premortem | 1 | 0 | 117833ms | $2.6448 |
+| reflection | 1 | 0 | 32968ms | — |
+| research | 1 | 0 | 154331ms | $3.4832 |
+| stock_price | 3 | 0 | 411ms | — |
+| web_search | 6 | 0 | 19475ms | $0.2314 |
+
+### Sources Consulted
+
+- [(Metaculus) Will SpaceX (SPCX) close above its $160.95 IPO-day close on June...
+- [Space Exploration Technologies Corp. Class A Common Stock (SPCX) Stock Price...
+- [finance.yahoo.com](https://finance.yahoo.com/quote/SPCX/history/)
+- [SpaceX IPO Closing Market Cap Predictions & Odds 2026 | Polymarket](https://...
+- [SpaceX IPO closing market cap above ___ ? Predictions & O... 2026 | Polymark...
+- [What will SpaceX's public ticker be? Predictions & Odds 2026 | Polymarket](h...
+- [SpaceX IPO by ___ ? Predictions & Odds 2026 | Polymarket](https://polymarket...
+- [SpaceX IPO Closing Market Cap (Lower Strikes) Predictions... 2026 | Polymark...
