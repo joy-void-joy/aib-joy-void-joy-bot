@@ -1,0 +1,138 @@
+---
+timestamp: 2026-06-16 08:09:17 UTC
+question_type: binary
+factors:
+- description: Multiple days (June 6, 7, 8) already show FINAL ERA5 data with anomalies
+    of +1.53°C above pre-industrial, well above the +1.50°C threshold. The data source
+    is the exact CSV underlying the Copernicus Climate Pulse dashboard.
+  logit: 3.5
+  confidence: 0.95
+  effective_logit: 3.3249999999999997
+- description: Three days have margins of +0.026 to +0.033°C above threshold - large
+    enough to survive minor data revisions, and the data is marked 'Final' status
+    (not preliminary)
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: 'Small risk: the ERA5 CSV values could differ from what Climate Pulse
+    actually displays on resolution day June 27, or there could be a technical dashboard
+    outage, but fine print allows ERA5-based data as backup'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: 'Small risk: the +0.88°C offset could be applied differently by the
+    question resolver, but the resolution criteria explicitly state this fixed offset'
+  logit: -0.1
+  confidence: 0.3
+  effective_logit: -0.03
+tentative_estimate:
+  logit: 4.0
+  probability: 0.97
+anchor: 'Based on the existing data: 4 days already exceed the threshold with finalized
+  data, making this essentially a definitional/already-happened question. Prior ~97%.'
+assessment: 'This question has effectively already resolved YES based on existing
+  data. The Copernicus Climate Pulse ERA5 daily data shows that June 6 (+0.651°C),
+  June 7 (+0.653°C), and June 8 (+0.646°C) all had 1991-2020 anomalies that, when
+  combined with the fixed +0.88°C pre-industrial offset, exceed +1.5°C. These are
+  marked as ''Final'' status data. The margins are +0.026 to +0.033°C above threshold
+  - small in absolute terms but meaningful given that the data is finalized. The only
+  remaining risks are: (1) the Climate Pulse dashboard displays different values than
+  the underlying CSV on resolution day, (2) the question resolver interprets the criteria
+  differently, or (3) some unforeseen data issue. All of these are very unlikely given
+  the explicit resolution criteria and the fact that the fine print allows ERA5-based
+  data as backup.'
+calibration_notes: This is not a predictive question about future events - it's effectively
+  a definitional question about whether existing data satisfies the criteria. The
+  data clearly does. The only discount from 99%+ is for unlikely data/interpretation
+  issues.
+key_uncertainties: Could the Climate Pulse dashboard show different values than the
+  underlying CSV? Could there be a data revision even on 'Final' status data? These
+  seem very unlikely.
+tool_audit: research() successfully retrieved exact daily CSV data from ECMWF source
+  file - extremely useful. fetch_url on Climate Pulse returned no data (JavaScript-rendered
+  dashboard). ENSO research provided good context but isn't critical since data already
+  shows exceedance.
+process_reflection: The research tool was extremely effective at extracting the raw
+  CSV data underlying the dashboard, which is exactly what was needed. The direct
+  fetch of the Climate Pulse dashboard failed because it's JavaScript-rendered, but
+  this didn't matter since we got the source data. For questions like this where data
+  already exists, the main challenge is verifying the data matches what the resolution
+  source will show.
+computed:
+  factor_count: 4
+  factor_sum: 4.495
+  tentative_logit: 4.0
+  logit_gap: -0.4950000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Multiple days (June 6, 7, 8) already show FINAL ERA5 data with anomalies
+      of +1.53°C above pre-industrial, well above the +1.50°C threshold. The data
+      source is the exact CSV underlying the Copernicus Climate Pulse dashboard.
+    logit: 3.5
+    confidence: 0.95
+    effective_logit: 3.3249999999999997
+  - description: Three days have margins of +0.026 to +0.033°C above threshold - large
+      enough to survive minor data revisions, and the data is marked 'Final' status
+      (not preliminary)
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: 'Small risk: the ERA5 CSV values could differ from what Climate Pulse
+      actually displays on resolution day June 27, or there could be a technical dashboard
+      outage, but fine print allows ERA5-based data as backup'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: 'Small risk: the +0.88°C offset could be applied differently by the
+      question resolver, but the resolution criteria explicitly state this fixed offset'
+    logit: -0.1
+    confidence: 0.3
+    effective_logit: -0.03
+  dominant_factor: Multiple days (June 6, 7, 8) already show FINAL ERA5 data with
+    anomalies of +1.53°C above pre-industrial, well above the +1.50°C threshold. The
+    data source is the exact CSV underlying the Copernicus Climate Pulse dashboard.
+  dominant_effective_logit: 3.3249999999999997
+  factor_implied_probability: 0.9889585931657289
+  tentative_probability: 0.97
+  gap_pp: -1.8958593165728899
+  sources:
+  - '[(Metaculus) Will a daily global surface air temperature anomaly of at least
+    +1.5°C above pre-industrial be recorded between June 1 and June 26, 2026 (per
+    Copernicus Climate Pulse)?](https://www.metaculus.com/questions/44075)'
+  - '[Climate Pulse - Near real-time updates of global climate variables](https://pulse.climate.copernicus.eu/)'
+  - '[sites.ecmwf.int](https://sites.ecmwf.int/data/climatepulse/data/series/era5_daily_series_2t_global.csv)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44075
+- **Question ID**: 44100
+- **Session Duration**: 520.8s (8.7 min)
+- **Cost**: $10.0139 total (orchestrator $1.8651 + sub-agents $8.1488)
+- **Tokens**: 4,746 total (25 in, 4,721 out)
+  - Cache: 301,494 read, 56,450 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44075_20260616_080233/20260616-080233.log`
+
+### Tool Calls
+
+- **Total**: 8 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0202 |
+| execute_code | 2 | 0 | 118ms | — |
+| fetch_url | 2 | 0 | 6382ms | — |
+| get_metaculus_questions | 1 | 0 | 466ms | — |
+| premortem | 1 | 0 | 87521ms | $1.8424 |
+| reflection | 1 | 0 | 463ms | — |
+| research | 1 | 0 | 315834ms | $6.2862 |
+
+### Sources Consulted
+
+- [(Metaculus) Will a daily global surface air temperature anomaly of at least ...
+- [Climate Pulse - Near real-time updates of global climate variables](https://...
+- [sites.ecmwf.int](https://sites.ecmwf.int/data/climatepulse/data/series/era5_...
