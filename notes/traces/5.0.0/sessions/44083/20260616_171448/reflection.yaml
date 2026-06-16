@@ -1,0 +1,248 @@
+---
+timestamp: 2026-06-16 17:23:28 UTC
+question_type: numeric
+factors:
+- description: Current count is 172 as of June 15, with 8 session days remaining (June
+    16-18, 22-26)
+  supports:
+    center: 184.0
+    low: 178.0
+    high: 193.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: YTD average pace of 7-8 votes/week suggests ~12 additional votes over
+    1.6 effective weeks
+  supports:
+    center: 184.0
+    low: 180.0
+    high: 188.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: 'Post-vote-a-rama slowdown: only 1 vote in last 2 session days (June
+    12-15), suggesting a pause'
+  supports:
+    center: 181.0
+    low: 177.0
+    high: 186.0
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Pre-recess nomination processing: Senate often batches nominations
+    before July recess, which could increase rate'
+  supports:
+    center: 187.0
+    low: 183.0
+    high: 195.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: At least 1 vote happening today (June 16) on motion to proceed to S.J.
+    Res. 190
+  supports:
+    center: 184.0
+    low: 182.0
+    high: 186.0
+  logit: 0.3
+  confidence: 0.95
+  effective_logit: 0.285
+- description: Small probability (~2-3%) of another vote-a-rama or unusual burst of
+    votes, which would add 15-25 votes
+  supports:
+    center: 200.0
+    low: 190.0
+    high: 215.0
+  logit: 0.3
+  confidence: 0.15
+  effective_logit: 0.045
+tentative_estimate:
+  center: 184.0
+  low: 178.0
+  high: 193.0
+anchor: YTD average of 7-8 votes/week × 1.6 weeks remaining + 172 current = ~184 votes.
+  Monthly rates ranged from 0.85/day (May) to 1.77/day (April), giving 179-186 for
+  8 session days at those extremes.
+assessment: 'The question asks how many roll-call votes the Senate will have held
+  by June 26, 2026. Current count is 172 as of June 15.
+
+
+  Key analysis:
+
+  1. **Session days**: 8 remaining (June 16-18, 22-26). June 19 is Juneteenth/recess.
+  Recess starts June 29.
+
+  2. **Pace**: YTD average is ~7-8 votes/week (~1.3-1.6/day). Monthly variation is
+  substantial - May had only 0.85/day while April had 1.77/day.
+
+  3. **Recent trend**: After the vote-a-rama burst (36 votes in ~7 days), pace has
+  dropped sharply to ~0.5 votes/day over June 12-15. This is normal post-burst cooldown.
+
+  4. **Upcoming business**: Senate is currently processing judicial nominations. A
+  CRA vote (S.J. Res. 190) is in progress today. Pre-recess weeks often see batches
+  of nomination votes.
+
+  5. **Monte Carlo**: Two independent simulations converge on median ~184, P10 ~178,
+  P90 ~193.
+
+
+  The distribution is slightly right-skewed because of the small probability of an
+  unusual burst (emergency legislation, large nomination batch). The lower tail is
+  bounded by the current 172 count plus the near-certainty of at least a few votes
+  this week.'
+calibration_notes: My estimate of 184 median aligns well with the simple calculation
+  of 172 + (1.6 weeks × 7.5 votes/week) = 184. The post-vote-a-rama slowdown could
+  pull this slightly lower, but pre-recess nomination processing could pull it higher.
+  These roughly cancel out. The P10-P90 range of 178-193 spans ~15 votes, which reflects
+  the substantial week-to-week variation in Senate activity (May had 4.25/week vs
+  April's 9.75/week).
+key_uncertainties: 1. Whether the Senate will process a large batch of nominations
+  before the July recess (could add 5-10 extra votes). 2. Whether any major legislation
+  comes to the floor for amendment votes. 3. Whether the June 22-26 week is actually
+  a full session week or gets shortened.
+tool_audit: 'Research sub-agent: Successfully retrieved current vote count (172),
+  monthly breakdown, and vote categories. Senate schedule research failed due to tool
+  unavailability. Direct web fetch of senate.gov returned 403 errors. GovTop provided
+  useful real-time floor information showing today''s activity. GovTrack vote 173
+  page returned 404 (hasn''t happened yet). Senate calendar PDF was successfully read.'
+process_reflection: The research tool was very effective at getting the current vote
+  count and historical data. Senate.gov being behind a 403 is a persistent issue -
+  the GovTop aggregator was a useful workaround. The inability to see the actual Senate
+  calendar colors (red vs black dates) in the PDF was handled by cross-referencing
+  with the question text. The Monte Carlo simulation was straightforward and both
+  model variants converged, giving confidence in the result.
+computed:
+  factor_count: 6
+  factor_sum: 2.48
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current count is 172 as of June 15, with 8 session days remaining
+      (June 16-18, 22-26)
+    supports:
+      center: 184.0
+      low: 178.0
+      high: 193.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: YTD average pace of 7-8 votes/week suggests ~12 additional votes
+      over 1.6 effective weeks
+    supports:
+      center: 184.0
+      low: 180.0
+      high: 188.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: 'Post-vote-a-rama slowdown: only 1 vote in last 2 session days (June
+      12-15), suggesting a pause'
+    supports:
+      center: 181.0
+      low: 177.0
+      high: 186.0
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Pre-recess nomination processing: Senate often batches nominations
+      before July recess, which could increase rate'
+    supports:
+      center: 187.0
+      low: 183.0
+      high: 195.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: At least 1 vote happening today (June 16) on motion to proceed to
+      S.J. Res. 190
+    supports:
+      center: 184.0
+      low: 182.0
+      high: 186.0
+    logit: 0.3
+    confidence: 0.95
+    effective_logit: 0.285
+  - description: Small probability (~2-3%) of another vote-a-rama or unusual burst
+      of votes, which would add 15-25 votes
+    supports:
+      center: 200.0
+      low: 190.0
+      high: 215.0
+    logit: 0.3
+    confidence: 0.15
+    effective_logit: 0.045
+  dominant_factor: Current count is 172 as of June 15, with 8 session days remaining
+    (June 16-18, 22-26)
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 184.18506493506493
+    implied_p10: 179.40584415584416
+    implied_p90: 190.77435064935065
+    median_gap: -0.18506493506492916
+    median_gap_pct: -1.6278737683849267
+    spread_ratio: 1.3194345280594038
+    precision: 0.08152173913043478
+  sources:
+  - '[(Metaculus) How many roll-call votes will the U.S. Senate have held in the 2nd
+    session of the 119th Congress by June 27, 2026?](https://www.metaculus.com/questions/44083)'
+  - '[senate.gov](https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu_119_2.htm)'
+  - '[senate.gov](https://www.senate.gov/legislative/schedule.htm)'
+  - '[Votes in the 119th Congress](https://www.c-span.org/congress/votes/?chamber=senate)'
+  - '[senate.gov](https://www.senate.gov/legislative/2026_schedule.htm)'
+  - '[frac.org](https://frac.org/wp-content/uploads/Senate-Calendar-2026.pdf)'
+  - '[Votes in Congress](https://www.govtrack.us/congress/votes#702)'
+  - '[congress.gov](https://www.congress.gov/on-senate-floor-today)'
+  - '[govtrack.us](https://www.govtrack.us/congress/votes/119-2026/s173)'
+  - '[🇺🇸 Senate Floor](https://gov.mtopgroup.com/art1/live/senate)'
+  - '[🇺🇸 Senate Floor](https://gov.mtopgroup.com/art1/live/senate?votes)'
+  - '[119th United States Congress](https://en.wikipedia.org/wiki/119th_United_States_Congress)'
+  - '[List of bills in the 119th United States Congress](https://en.wikipedia.org/wiki/List_of_bills_in_the_119th_United_States_Congress)'
+  - '[2026 United States elections](https://en.wikipedia.org/wiki/2026_United_States_elections)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44083
+- **Question ID**: 44108
+- **Session Duration**: 801.2s (13.4 min)
+- **Cost**: $16.6422 total (orchestrator $3.7154 + sub-agents $12.9268)
+- **Tokens**: 14,522 total (52 in, 14,470 out)
+  - Cache: 856,283 read, 71,729 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44083_20260616_171448/20260616-171448.log`
+
+### Tool Calls
+
+- **Total**: 30 calls
+- **Errors**: 5 (16.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1846 |
+| execute_code | 6 | 0 | 1040ms | — |
+| fetch_url | 10 | 5 ⚠️ | 4218ms | — |
+| get_coherence_links | 1 | 0 | 460ms | — |
+| get_metaculus_questions | 2 | 0 | 954ms | — |
+| premortem | 1 | 0 | 157938ms | $2.0445 |
+| reflection | 2 | 0 | 836ms | — |
+| research | 2 | 0 | 408478ms | $10.5967 |
+| web_search | 3 | 0 | 14746ms | $0.1010 |
+| wikipedia | 3 | 0 | 228ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many roll-call votes will the U.S. Senate have held in the 2...
+- [senate.gov](https://www.senate.gov/legislative/LIS/roll_call_lists/vote_menu...
+- [senate.gov](https://www.senate.gov/legislative/schedule.htm)
+- [Votes in the 119th Congress](https://www.c-span.org/congress/votes/?chamber=...
+- [senate.gov](https://www.senate.gov/legislative/2026_schedule.htm)
+- [frac.org](https://frac.org/wp-content/uploads/Senate-Calendar-2026.pdf)
+- [Votes in Congress](https://www.govtrack.us/congress/votes#702)
+- [congress.gov](https://www.congress.gov/on-senate-floor-today)
+- [govtrack.us](https://www.govtrack.us/congress/votes/119-2026/s173)
+- [🇺🇸 Senate Floor](https://gov.mtopgroup.com/art1/live/senate)
+- [🇺🇸 Senate Floor](https://gov.mtopgroup.com/art1/live/senate?votes)
+- [119th United States Congress](https://en.wikipedia.org/wiki/119th_United_Sta...
+- [List of bills in the 119th United States Congress](https://en.wikipedia.org/...
+- [2026 United States elections](https://en.wikipedia.org/wiki/2026_United_Stat...
