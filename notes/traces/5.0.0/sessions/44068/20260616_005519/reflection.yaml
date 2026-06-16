@@ -1,0 +1,244 @@
+---
+timestamp: 2026-06-16 00:59:44 UTC
+question_type: discrete
+factors:
+- description: Current yield at ~4.47%, anchoring the center of the distribution
+  supports:
+    center: 4.47
+    low: 4.45
+    high: 4.49
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: FOMC expected to hold rates and shift to neutral stance - mildly hawkish,
+    pushing yields slightly higher
+  supports:
+    center: 4.49
+    low: 4.45
+    high: 4.55
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Hawkish surprise scenario (18% prob): Warsh signals inflation concern,
+    aggressive SEP'
+  supports:
+    center: 4.55
+    low: 4.48
+    high: 4.65
+  logit: 0.8
+  confidence: 0.4
+  conditional: If FOMC surprises hawkish
+  effective_logit: 0.32000000000000006
+- description: 'Dovish surprise scenario (12% prob): Warsh more accommodative than
+    expected'
+  supports:
+    center: 4.41
+    low: 4.35
+    high: 4.47
+  logit: 0.5
+  confidence: 0.3
+  conditional: If FOMC surprises dovish
+  effective_logit: 0.15
+- description: US-Iran deal reduces energy/inflation pressures - already partially
+    reflected in recent yield decline
+  supports:
+    center: 4.46
+    low: 4.4
+    high: 4.5
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Recent regime mean ~4.505% with std ~0.045% provides mean-reversion
+    anchor slightly above current level
+  supports:
+    center: 4.505
+    low: 4.46
+    high: 4.55
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: Daily volatility of ~4.1 bps over 7 trading days creates ~10.8 bps
+    random walk uncertainty
+  supports:
+    center: 4.49
+    low: 4.34
+    high: 4.64
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+tentative_estimate:
+  center: 4.49
+  low: 4.34
+  high: 4.64
+anchor: Current yield of 4.47-4.48% as of June 15-16, 2026. Over recent regime (since
+  May 20), mean is 4.505% with daily std of 4.5 bps.
+assessment: 'The 10-year Treasury yield resolves on June 25, 2026, about 7 business
+  days away. Current level is ~4.47%. The key event is the FOMC meeting June 16-17,
+  the first chaired by Kevin Warsh. Markets overwhelmingly expect a rate hold but
+  anticipate a shift from easing bias to neutral stance, which is mildly hawkish for
+  yields.
+
+
+  The Monte Carlo simulation with scenario-weighted FOMC outcomes produces a median
+  of 4.489% with P10=4.34% and P90=4.64%. The distribution is slightly right-skewed
+  due to hawkish tail scenarios. The center is pulled slightly above the current yield
+  due to the expected neutral stance shift.
+
+
+  Key uncertainty is the FOMC communication - Warsh''s first press conference could
+  move markets in either direction. The US-Iran deal reducing energy prices is a dovish
+  factor but appears already reflected in the recent decline from 4.55 to 4.45 area.
+
+
+  The model''s P10-P90 range of ~30 bps is appropriately wider than the pure random-walk
+  range (~28 bps) due to FOMC event risk.'
+calibration_notes: The distribution width is grounded in empirical daily volatility
+  (4.1 bps) scaled by sqrt(7 days) = 10.8 bps for the random walk component, plus
+  FOMC event risk adding ~3-5 bps of additional uncertainty. The P10-P90 range of
+  30 bps is consistent with recent monthly trading range of ~29 bps (4.38-4.67). The
+  slight upward bias from current level reflects the expected hawkish policy stance
+  shift.
+key_uncertainties: 1. FOMC communication tone - Warsh's first press conference is
+  the single largest uncertainty driver. 2. Whether the neutral stance shift is already
+  priced in or will move markets. 3. Any unexpected economic data releases between
+  now and June 25.
+tool_audit: 'FRED DGS10 data: excellent, provided full recent history and regime stats.
+  CNBC quotes: useful for real-time cross-validation. FXStreet FOMC preview: good
+  for scenario framing. TradingEconomics: confirmed current yield. Web search: provided
+  good contextual information on FOMC expectations and US-Iran deal.'
+process_reflection: This question is well-suited to quantitative modeling. The FRED
+  data with regime stats was very helpful. The scenario-based Monte Carlo approach
+  naturally handles the FOMC event risk. The main friction was getting the very latest
+  data point (June 13/15/16) - FRED lags by a day or two, so I had to triangulate
+  with market quotes. Overall the tooling worked well for this type of financial time-series
+  forecast.
+computed:
+  factor_count: 7
+  factor_sum: 2.275
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current yield at ~4.47%, anchoring the center of the distribution
+    supports:
+      center: 4.47
+      low: 4.45
+      high: 4.49
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: FOMC expected to hold rates and shift to neutral stance - mildly
+      hawkish, pushing yields slightly higher
+    supports:
+      center: 4.49
+      low: 4.45
+      high: 4.55
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Hawkish surprise scenario (18% prob): Warsh signals inflation concern,
+      aggressive SEP'
+    supports:
+      center: 4.55
+      low: 4.48
+      high: 4.65
+    logit: 0.8
+    confidence: 0.4
+    effective_logit: 0.32000000000000006
+    conditional: If FOMC surprises hawkish
+  - description: 'Dovish surprise scenario (12% prob): Warsh more accommodative than
+      expected'
+    supports:
+      center: 4.41
+      low: 4.35
+      high: 4.47
+    logit: 0.5
+    confidence: 0.3
+    effective_logit: 0.15
+    conditional: If FOMC surprises dovish
+  - description: US-Iran deal reduces energy/inflation pressures - already partially
+      reflected in recent yield decline
+    supports:
+      center: 4.46
+      low: 4.4
+      high: 4.5
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Recent regime mean ~4.505% with std ~0.045% provides mean-reversion
+      anchor slightly above current level
+    supports:
+      center: 4.505
+      low: 4.46
+      high: 4.55
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: Daily volatility of ~4.1 bps over 7 trading days creates ~10.8 bps
+      random walk uncertainty
+    supports:
+      center: 4.49
+      low: 4.34
+      high: 4.64
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  dominant_factor: Current yield at ~4.47%, anchoring the center of the distribution
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 4.481029126213592
+    implied_p10: 4.445689320388349
+    implied_p90: 4.521650485436893
+    median_gap: 0.008970873786408262
+    median_gap_pct: 11.809815950920969
+    spread_ratio: 3.949386503067507
+    precision: 0.06681514476614694
+  sources:
+  - '[(Metaculus) What will the 10-year U.S. Treasury constant maturity yield be on
+    June 25, 2026?](https://www.metaculus.com/questions/44068)'
+  - '[Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted
+    on an Investment Basis](https://fred.stlouisfed.org/series/DGS10)'
+  - '[10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (T10Y2Y)
+    | FRED | St. Louis Fed](https://fred.stlouisfed.org/series/T10Y2Y)'
+  - '[Check out ''s stock price (US10Y) in real time](https://www.cnbc.com/quotes/US10Y)'
+  - '[Kevin Warsh opens first Fed meeting June 16 with rate hold expected | FXStreet](https://www.fxstreet.com/analysis/kevin-warsh-opens-first-fed-meeting-june-16-with-rate-hold-expected-202606151326)'
+  - '[U.S. Department of the Treasury](https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=2026)'
+  - '[US 10 Year Treasury Note YieldQuote - Chart - Historical Data - News](https://tradingeconomics.com/united-states/government-bond-yield)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44068
+- **Question ID**: 44093
+- **Session Duration**: 416.3s (6.9 min)
+- **Cost**: $5.9135 total (orchestrator $3.0154 + sub-agents $2.8981)
+- **Tokens**: 10,557 total (40 in, 10,517 out)
+  - Cache: 658,013 read, 66,078 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44068_20260616_005519/20260616-005519.log`
+
+### Tool Calls
+
+- **Total**: 20 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1480 |
+| execute_code | 6 | 0 | 769ms | — |
+| fetch_url | 5 | 0 | 7884ms | — |
+| fred_series | 3 | 0 | 590ms | — |
+| get_metaculus_questions | 1 | 0 | 447ms | — |
+| premortem | 1 | 0 | 108220ms | $2.6400 |
+| reflection | 1 | 0 | 312ms | — |
+| web_search | 3 | 0 | 17803ms | $0.1100 |
+
+### Sources Consulted
+
+- [(Metaculus) What will the 10-year U.S. Treasury constant maturity yield be o...
+- [Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quote...
+- [10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity (...
+- [Check out 's stock price (US10Y) in real time](https://www.cnbc.com/quotes/U...
+- [Kevin Warsh opens first Fed meeting June 16 with rate hold expected | FXStre...
+- [U.S. Department of the Treasury](https://home.treasury.gov/resource-center/d...
+- [US 10 Year Treasury Note YieldQuote - Chart - Historical Data - News](https:...
