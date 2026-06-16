@@ -1,0 +1,151 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for post #44085, which provided rich background on the CHP (Republican People's Party of Turkey) \"absolute nullity crisis.\" The question asks whether a competent CHP organ will officially issue a convening notice fixing a date for an extraordinary congress between June 13–27, 2026.\n\nI then attempted to use the `mcp__research__research` tool with two queries, but both sub-agent calls returned only background knowledge through early 2025 — the web search/fetch tools were unavailable within that sub-agent session. This forced me to fall back to direct web searches.\n\nI ran multiple rounds of `mcp__search__web_search` and `mcp__search__fetch_url` calls — in English and Turkish — to piece together the current situation. Key sources included:\n- **Hürriyet Daily News** articles on Özel allies resigning from the Party Assembly and rival camps canceling group meetings\n- **NTV Haber** (June 16, 2026) confirming 900 signatures collected, 15-day period ended, signatures to be submitted Wednesday\n- **IGF Haber** quoting CHP Deputy Group Chair Murat Emir on submitting ~900 signatures and the July 20 election deadline\n- **Habertürk** article mentioning a September 21 extraordinary congress date (matching 900 signatures)\n- **Hürriyet** analysis of three critical stages in the congress process\n- **Wikipedia** articles on the 2016 MHP Extraordinary Congress (closest historical precedent) and the CHP absolute nullity crisis\n\n## Key Evidence\n\n**Supporting YES:**\n- **~900 delegate signatures** collected (well above ~550 threshold), with **111 of 138 MPs** backing the congress via a June 12 declaration targeting July 12\n- Signatures scheduled for formal submission to CHP HQ on **June 17–18**\n- **Extreme urgency**: party risks being barred from elections if no congress by late July (July 20 deadline)\n- Resolution criteria **explicitly allows delegate-issued notices** under the statute's notarized-signature procedure, not just party leadership notices\n- Legal scholars like Prof. Ersan Şen argue current management cannot prevent a delegate-initiated congress\n\n**Supporting NO:**\n- **Kılıçdaroğlu camp controls HQ** and will refuse — spokesman Müslüm Sarı stated congress is \"not possible\" under current circumstances; disciplinary actions launched against 9 Özel-aligned MPs\n- The formal **Sulh Hukuk Mahkemesi** (civil court) route to appoint a convening committee likely takes longer than 10 days — the **MHP 2016 precedent** saw the process take months with court battles\n- A court could issue an **emergency injunction** voiding any delegate-issued notice within the window, leveraging the existing interim injunction on the annulled congress\n- **Habertürk article** mentions **September 21** as the congress target date with matching 900 signatures — if this is the actual plan, no urgency to issue notice before June 27\n- Credible English-language sources might characterize a delegate-issued notice as a \"political declaration\" rather than an \"official\" convening notice\n\n**Historical precedent (MHP 2016):**\n- Dissidents collected signatures for an extraordinary congress initially planned for May 15, 2016\n- Judiciary conflicts between different courts delayed proceedings\n- First congress eventually held June 19; second congress never held after further judicial intervention\n- Total timeline from signature collection to congress: approximately 1–3 months\n\n## Conclusion\n\nI ran a structured factor analysis with 8 factors. The factor sum implied ~41% probability. My initial intuitive estimate was 55%, but after the premortem review flagged the 14pp override as concerning — particularly highlighting the September 21 target date as an underweighted downside — I adjusted downward to **48%**.\n\nThe final estimate of **48% YES** reflects that the Özel camp has overwhelming political support and clear intent, but faces multiple sequential obstacles: Kılıçdaroğlu's refusal, slow court processes, potential emergency injunctions, and ambiguity about whether the actual target is July 12 or September 21. The status quo (no notice) persists unless these hurdles are cleared within an extremely tight 11-day window, and the MHP 2016 precedent suggests such processes typically take much longer.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 11,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 10,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Turkish legal database access for verifying CHP statute articles and court filing timelines",
+      "Prediction market data for Turkish political questions",
+      "Ability to determine article publication dates from Turkish news sources"
+    ],
+    "subtle_bugs": [
+      "mcp__research__research reported 0% error rate but returned no usable current data due to sub-agent tool unavailability — misleading success status",
+      "Hürriyet Daily News search page fetched only cookie/privacy policy content rather than actual search results, wasting a fetch_url call"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Multi-source web research in English and Turkish combining legal analysis, historical precedent (MHP 2016), and political dynamics assessment with structured factor decomposition.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the Özel camp's actual target is July 12 (requiring notice by June 27) or September 21 (removing urgency for this window), combined with whether the legal process can complete fast enough if July is the real target."
+  },
+  "risk_flags": [
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The Habertürk article explicitly states '900 civarında delegenin imzasıyla 21 Eylül'de yapılacak olağanüstü kurultay' — matching the current 900-signature situation exactly. The agent assigned only 0.4 confidence to this factor despite it being a direct match, and never resolved the publication date to determine whether it describes the current plan or a prior one.",
+      "severity": "major"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The agent's factors sum to -0.35 logit (implying ~41%), and the premortem independently assessed 40-45%. The final 48% estimate still overrides the factor analysis by 7pp, justified primarily by the delegate self-issuance pathway — but the agent's own conditional probability calculation for that pathway (75% × 75% × 85% ≈ 48%) already accounts for it and doesn't support going above ~45% when combined with the September 21 downside scenario.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The CHP party statute PDF (media.chp.org.tr/regulations/kurultay-yonetmeligi.pdf) appeared in search results but was never fetched. This document could have clarified whether delegates can self-issue a convening notice or must go through the General Chairman/courts, which is the crux of the timing question.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "42%",
+    "agrees_with_agent": true,
+    "divergence_reason": "I weight the September 21 target date evidence more heavily — the Habertürk article's description exactly matches the current signature count, suggesting it may be the actual plan. If the Özel camp is targeting September, the probability of a notice before June 27 drops to ~15-20%, and even at only 35% probability of September being the real target, this pulls the overall estimate to ~40-43%. The agent's 48% is directionally consistent but slightly high."
+  },
+  "strengths": [
+    "Thorough multilingual research: searched in both English and Turkish, accessing Turkish-language sources (NTV Haber, IGF Haber, Cumhuriyet, Habertürk) that provided critical details unavailable in English coverage",
+    "Identified the MHP 2016 extraordinary congress as a directly relevant historical precedent and used it to calibrate expectations about legal process timelines",
+    "Careful reading of resolution criteria: correctly identified that delegate-issued notices qualify, that notices count even if later challenged, and that court orders within the window can void them",
+    "Discovered the September 21 target date in the Habertürk article — a significant piece of evidence that contradicts the July 12 urgency narrative and was appropriately weighted",
+    "Honest self-correction: started at 55-60%, engaged with the premortem's criticism of the 14pp factor override, and adjusted down to 48% — showing genuine calibration responsiveness",
+    "Good factor decomposition with 8 distinct, well-sourced factors covering political support, urgency, legal pathways, institutional obstacles, and credibility risks"
+  ],
+  "weaknesses": [
+    "The mcp__research__research tool failed to access live web data (sub-agent tools unavailable), wasting a tool call and forcing manual research — the agent adapted but lost time",
+    "Excessive deliberation in thinking blocks: the agent cycled through probability estimates repeatedly (60%, 55%, 50%, 62%, 58%, 55%, 48%) across thousands of words of internal reasoning, showing significant indecision rather than structured analysis",
+    "Did not attempt to access the CHP party statute directly (the PDF link at media.chp.org.tr was found in search results but never fetched) to verify the exact legal mechanism for delegate-initiated congress notices",
+    "Did not check prediction markets (Polymarket, Manifold) for any relevant market on CHP congress — though such markets may not exist for Turkish political questions",
+    "The September 21 vs July 12 date discrepancy was never fully resolved — the agent could not determine the publication date of the Habertürk article, leaving a critical ambiguity unresolved",
+    "Stockholm Center for Freedom article returned 403, and no alternative attempt was made to access cached/archived version of that content"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__research__research sub-agent could not access web tools, returning only pre-2025 knowledge for a June 2026 question — significant capability degradation",
+      "Hürriyet Daily News search page rendered only privacy/cookie content rather than article results, likely due to JavaScript rendering requirements",
+      "Extensive deliberation in thinking blocks (~3000+ words of probability cycling) suggests the agent would benefit from a more structured probability decomposition framework to reduce indecision"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Implement a structured probability tree early in deliberation (e.g., scenario branches with explicit conditional probabilities) to avoid the ~3000-word cycling between estimates seen in the thinking blocks",
+    "When a critical ambiguity is identified (September 21 vs July 12), prioritize resolving it — in this case by fetching the Habertürk article to determine its publication date and exact context",
+    "Fetch primary legal documents (CHP statute PDF) when they appear in search results and the question hinges on legal mechanisms",
+    "When mcp__research__research fails to return current data, note this as a pipeline issue and move to direct searches immediately rather than processing the stale results",
+    "Check prediction markets even for niche political questions — a quick Manifold or Polymarket search takes minimal time and could provide valuable signal"
+  ]
+}
