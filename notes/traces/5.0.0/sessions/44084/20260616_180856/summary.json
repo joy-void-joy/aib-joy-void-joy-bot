@@ -1,0 +1,126 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by fetching the Metaculus question details (Q44084), which provided comprehensive background on the TMC rebel MPs' letter (dated May 18, 2026) seeking recognition as a separate group, the June 15 appointment with Speaker Om Birla, and the constitutional framework under the Tenth Schedule.\n\nI then ran two parallel research queries via the `mcp__research__research` tool, but the sub-agent had no access to live web sources and could only provide background context from training data. This was a significant limitation — the research tool produced lengthy reports that added little beyond what was already in the Metaculus question description.\n\nI then pivoted to direct web searches using `mcp__search__web_search`, running three parallel queries. This was far more productive, returning current news articles from:\n- **Northeast Today** (June 15, 2026): 19 rebel TMC MPs met Speaker, claimed merger with NCPI\n- **The Federal** (June 16, 2026): Speaker will hear both factions before deciding\n- **India TV News** (June 16, 2026): Speaker begins process, likely to seek legal opinion from law ministry\n- **The Statesman**: Decision expected before Monsoon Session (July)\n\nI fetched the full content of three key articles (Northeast Today, The Federal, India TV News) to extract specific procedural details. A fourth fetch (Outlook India) failed with a connection error.\n\nI conducted additional searches on:\n- The AAP-BJP Rajya Sabha merger precedent (April 2026), finding it was accepted \"promptly\" by Chairman Radhakrishnan\n- Historical anti-defection law precedents and timelines\n- The latest TMC-NCPI merger developments\n\n## Key Evidence\n\n- **Speaker's stated process**: As of June 16, Speaker Birla committed to hearing both factions before deciding. The Mamata-led faction has only received an email — no hearing scheduled yet.\n- **Legal opinion pending**: The Speaker is \"likely to seek legal opinion from the Union law ministry, which will consult a senior law officer\" (The Federal, India TV News).\n- **Reported timeline**: Multiple sources consistently report the decision is expected \"before the Monsoon Session\" (third week of July), not before end of June.\n- **Constitutional novelty**: Expert PDT Achary noted the Tenth Schedule only recognizes party-level mergers. A former Election Commission officer called the NCPI merger strategy an \"innovation\" not provided for in law.\n- **AAP-BJP precedent**: The Rajya Sabha Chairman accepted the AAP merger \"promptly\" in April 2026, but this was a different presiding officer (Chairman, not Speaker) with a less contested claim.\n- **Political incentives**: BJP has clear motivation for quick recognition; Speaker Birla is BJP-affiliated.\n- **Judicial risk**: TMC indicated it may seek judicial intervention, creating incentive for a legally defensible (slower) process.\n- **Only 11 days remaining** until the June 27 deadline.\n\n## Conclusion\n\nI concluded that formal recognition by June 27 is very unlikely at **8% probability**. The multi-step process the Speaker has publicly committed to (hear both factions, obtain legal opinion, issue formal order) would typically take weeks. The reported timeline of \"before Monsoon Session\" (July) aligns with this assessment. The 8% residual accounts for the tail risk that BJP political pressure could compress the timeline dramatically, overriding the stated procedures. I explicitly acknowledged that my eight factors were correlated (all pointing toward procedural delay) and adjusted upward from the raw factor-implied ~0.3% to 8% to account for this correlation and the genuine political incentive for fast action.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 7,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 6,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "The mcp__research__research sub-agent lacked web access, making it largely redundant for current events questions. A more direct web research tool would have been more efficient."
+    ],
+    "subtle_bugs": [
+      "The research tool sub-agent produced confident-sounding analysis despite explicitly noting it had no live data access, which could mislead if taken at face value. The agent correctly identified this limitation and pivoted to web search."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Multi-source news analysis of Speaker's stated procedural timeline and constitutional framework, combined with AAP-BJP merger precedent comparison.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether BJP political pressure could compress the Speaker's multi-step procedural timeline from weeks to days."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The agent's factor-implied probability was ~0.3% (factor sum -5.835), and while the agent adjusted upward to 8%, the eight factors are heavily correlated — they all point to procedural delay from overlapping sources (The Federal, India TV News). The true independent information content may warrant somewhat higher than 8%, perhaps 10-12%, given the AAP-BJP Rajya Sabha precedent of prompt acceptance and the strong BJP political motivation.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "8-10%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent source triangulation: consulted 5+ distinct Indian news outlets (Northeast Today, The Federal, India TV News, The Statesman, Business Standard, Organiser) to confirm the Speaker's stated process and timeline",
+    "Properly identified and engaged with the resolution criteria fine print, correctly noting what does and does not count as formal recognition",
+    "Drew a useful comparison to the AAP-BJP Rajya Sabha merger precedent (April 2026) while correctly noting it involved a different presiding officer (Chairman vs Speaker) and a less contested claim",
+    "Explicitly recognized factor correlation in the thinking section and adjusted probability upward from raw factor-implied 0.3% to 8% — a thoughtful calibration move",
+    "Strong premortem with specific, falsifiable trigger conditions that would change the forecast (e.g., hearing scheduled within days, legal opinion expedited, Mamata faction boycotting)",
+    "Correctly pivoted from the low-value research sub-agent to direct web search when initial results were inadequate"
+  ],
+  "weaknesses": [
+    "Token waste on the mcp__research__research tool which returned ~3000 tokens of background information the agent already had from the Metaculus question description",
+    "Did not search for prediction market prices on Polymarket, Kalshi, or Manifold for this question, which could have provided additional calibration signal",
+    "The anchor of '~10% base rate' for Speaker recognition within 11 days is stated without justification — no historical cases were identified where a Speaker acted this quickly on a contested merger, making the base rate essentially a guess",
+    "Did not attempt to verify whether any political events or parliamentary business before June 27 might create urgency (e.g., scheduled votes, committee meetings)"
+  ],
+  "pipeline": {
+    "issues": [
+      "The mcp__research__research tool consumed significant tokens (~3000+ in response) but provided minimal value since its sub-agent had no web access for this current-events question. This represents token waste.",
+      "One URL fetch failed (outlookindia.com) but the agent handled it gracefully by moving on."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Skip the mcp__research__research tool for time-sensitive current events questions and go directly to web search",
+    "Check prediction markets (Polymarket, Metaculus community prediction, Manifold) as a calibration reference when available",
+    "When stating a base rate anchor, either cite specific historical cases or explicitly acknowledge it as an estimated prior rather than an empirical rate",
+    "For questions with short resolution windows, specifically search for upcoming events that could create urgency (parliamentary calendar, scheduled votes, political events)"
+  ]
+}
