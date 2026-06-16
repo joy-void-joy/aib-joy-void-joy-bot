@@ -1,0 +1,263 @@
+---
+timestamp: 2026-06-16 02:58:34 UTC
+question_type: numeric
+factors:
+- description: US-Iran deal announced as 'complete' on June 14, signing ceremony June
+    19 in Geneva - strong downward pressure on prices as geopolitical risk premium
+    unwinds
+  supports:
+    center: 80.0
+    low: 75.0
+    high: 85.0
+  logit: 1.5
+  confidence: 0.75
+  effective_logit: 1.125
+- description: Current market Brent at ~$83.24 on June 16, already down from $95+
+    a week ago - momentum favors continued decline or stabilization near current levels
+  supports:
+    center: 83.0
+    low: 78.0
+    high: 88.0
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: IRGC has NOT endorsed the deal and controls the Strait - implementation
+    risk could cause prices to bounce back up
+  supports:
+    center: 90.0
+    low: 85.0
+    high: 100.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: EIA data lag means resolution value is from ~June 18-20, not current;
+    deal signing June 19 is within this window, creating event risk
+  supports:
+    center: 84.0
+    low: 75.0
+    high: 100.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Prediction markets: 75% probability deal is signed before June 26
+    (Metaculus), 81.5% by July 31 (Polymarket) - deal is likely but not certain'
+  supports:
+    center: 82.0
+    low: 78.0
+    high: 90.0
+  logit: 0.8
+  confidence: 0.75
+  effective_logit: 0.6000000000000001
+- description: Extremely high annualized volatility of 41.5% means daily moves of
+    2.6% are normal - wide uncertainty even over short horizons
+  supports:
+    center: 83.0
+    low: 74.0
+    high: 95.0
+  logit: 0.5
+  confidence: 0.85
+  effective_logit: 0.425
+- description: If June 24 EIA release is delayed (5% chance), resolution falls back
+    to June 17 release showing June 12-13 data (~$85-87)
+  supports:
+    center: 86.0
+    low: 85.0
+    high: 88.0
+  logit: 0.3
+  confidence: 0.5
+  conditional: If June 24 release is delayed
+  effective_logit: 0.15
+tentative_estimate:
+  center: 83.5
+  low: 78.0
+  high: 92.0
+anchor: 'Current market Brent price: $83.24/bbl on June 16, 2026. EIA last published
+  value: $95.00 on June 8. Random walk from $83.24 over 3-4 trading days with 2.61%
+  daily vol gives a symmetric distribution centered on $83.24 with P10~$78 and P90~$89.'
+assessment: 'The Brent crude oil price question resolves based on the most recent
+  EIA daily spot price visible on June 27. Due to EIA''s ~2 business day publication
+  lag, the resolution value will likely come from the June 24 weekly release showing
+  data through approximately June 19-20.
+
+
+  Key dynamics:
+
+  1. **Deal signing June 19**: Trump announced the deal is "complete" on June 14,
+  with a signing ceremony in Geneva on June 19. This event falls exactly within the
+  window that will likely determine the resolution value.
+
+  2. **Price trajectory**: Brent has dropped from ~$126 peak (late April) to ~$95-97
+  (early June) to ~$83 (June 16) - a massive decline driven by deal expectations.
+
+  3. **Asymmetric risk**: Downside from here is limited ($72.50 pre-war baseline is
+  a floor), but upside risk from deal collapse is large (could spike back to $95-105+).
+
+  4. **Volatility is extreme**: At 41.5% annualized, daily swings of 2.6% ($2.15/bbl)
+  are normal. Over 3-4 days, a $5-10 move is quite plausible.
+
+
+  The Monte Carlo simulation, weighted by scenario probabilities (60% deal signed
+  smoothly, 18% signed with complications, 12% delayed, 7% collapses, 3% extreme),
+  produces a median of ~$83.5 with P10=$78.3 and P90=$91.9. The distribution is right-skewed
+  because deal collapse/delay scenarios produce sharp upward spikes.
+
+
+  The base case model and pessimistic sensitivity (50% deal signed instead of 78%)
+  give similar downside (P10 ~$78) but differ substantially on the upside tail (P90
+  $92 vs $97).'
+calibration_notes: The 80% CI width of ~$13.60 (base case) is wider than a pure random
+  walk (~$11.10) but appropriate given the binary deal-signing event within the forecast
+  window. The blended model gives P90 of ~$95, which may be more appropriate given
+  genuine uncertainty about deal probability. I'm using the base case which gives
+  somewhat more weight to the deal succeeding, consistent with prediction market probabilities
+  (75-81.5%).
+key_uncertainties: 1. Whether the June 19 signing ceremony actually happens on schedule.
+  2. Whether IRGC endorses the deal (they control the Strait). 3. Exact EIA data lag
+  - which specific trading days will be in the June 24 release. 4. Whether the June
+  24 release is published on schedule before June 27 16:00 UTC.
+tool_audit: 'Research sub-agent: Very useful - retrieved current market prices ($83.24-83.31),
+  comprehensive geopolitical context, EIA API data, and prediction market probabilities.
+  EIA website fetch: Useful - confirmed most recent published data (through June 8
+  at $95.00) and next release dates. Web search: Useful for confirming current prices
+  and forecasts. Trading Economics forecast ($87.96 end Q2) provides external reference.
+  Code execution: Essential for Monte Carlo simulation.'
+update_triggers: 1. Deal signing confirmed or cancelled on June 19. 2. IRGC statement
+  endorsing or rejecting the deal. 3. Any military escalation in the Strait of Hormuz.
+  4. EIA release schedule changes.
+process_reflection: 'The research sub-agent was extremely thorough and saved significant
+  time. The EIA data lag is the most challenging aspect of this forecast - it introduces
+  a structural uncertainty about which specific dates will appear in the resolution
+  data. The scenario-based Monte Carlo approach handles the binary deal-signing event
+  well. One friction point: the discrepancy between EIA API values and EIA website
+  values for the same dates (e.g., $97.46 vs $95.00 for June 8) is unexplained and
+  could affect the forecast if systematic. I used the website values since those are
+  the resolution source.'
+computed:
+  factor_count: 7
+  factor_sum: 4.03
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: US-Iran deal announced as 'complete' on June 14, signing ceremony
+      June 19 in Geneva - strong downward pressure on prices as geopolitical risk
+      premium unwinds
+    supports:
+      center: 80.0
+      low: 75.0
+      high: 85.0
+    logit: 1.5
+    confidence: 0.75
+    effective_logit: 1.125
+  - description: Current market Brent at ~$83.24 on June 16, already down from $95+
+      a week ago - momentum favors continued decline or stabilization near current
+      levels
+    supports:
+      center: 83.0
+      low: 78.0
+      high: 88.0
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: IRGC has NOT endorsed the deal and controls the Strait - implementation
+      risk could cause prices to bounce back up
+    supports:
+      center: 90.0
+      low: 85.0
+      high: 100.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: EIA data lag means resolution value is from ~June 18-20, not current;
+      deal signing June 19 is within this window, creating event risk
+    supports:
+      center: 84.0
+      low: 75.0
+      high: 100.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Prediction markets: 75% probability deal is signed before June 26
+      (Metaculus), 81.5% by July 31 (Polymarket) - deal is likely but not certain'
+    supports:
+      center: 82.0
+      low: 78.0
+      high: 90.0
+    logit: 0.8
+    confidence: 0.75
+    effective_logit: 0.6000000000000001
+  - description: Extremely high annualized volatility of 41.5% means daily moves of
+      2.6% are normal - wide uncertainty even over short horizons
+    supports:
+      center: 83.0
+      low: 74.0
+      high: 95.0
+    logit: 0.5
+    confidence: 0.85
+    effective_logit: 0.425
+  - description: If June 24 EIA release is delayed (5% chance), resolution falls back
+      to June 17 release showing June 12-13 data (~$85-87)
+    supports:
+      center: 86.0
+      low: 85.0
+      high: 88.0
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+    conditional: If June 24 release is delayed
+  dominant_factor: US-Iran deal announced as 'complete' on June 14, signing ceremony
+    June 19 in Geneva - strong downward pressure on prices as geopolitical risk premium
+    unwinds
+  dominant_effective_logit: 1.125
+  distribution_metrics:
+    implied_median: 83.04590570719603
+    implied_p10: 77.57444168734492
+    implied_p90: 90.66997518610422
+    median_gap: 0.4540942928039726
+    median_gap_pct: 3.4675509237328455
+    spread_ratio: 1.0690667929891045
+    precision: 0.16766467065868262
+  sources:
+  - '[(Metaculus) What will the most recent EIA daily Brent crude spot price be when
+    checked in late June 2026?](https://www.metaculus.com/questions/44071)'
+  - '[Spot Prices for Crude Oil and Petroleum Products](https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm)'
+  - '[2026%E2%80%932028 world oil market chronology](https://en.wikipedia.org/wiki/2026%E2%80%932028_world_oil_market_chronology)'
+  - '[Brent crude oilPrice - Chart - Historical Data - News](https://tradingeconomics.com/commodity/brent-crude-oil)'
+  - '[Brent Crude Oil Futures Contracts | Oilprice.com](https://oilprice.com/futures/brent/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44071
+- **Question ID**: 44096
+- **Session Duration**: 773.2s (12.9 min)
+- **Cost**: $11.3770 total (orchestrator $3.1572 + sub-agents $8.2198)
+- **Tokens**: 13,322 total (28 in, 13,294 out)
+  - Cache: 534,821 read, 72,398 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44071_20260616_024925/20260616-024925.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0681 |
+| execute_code | 3 | 0 | 1505ms | — |
+| fetch_url | 3 | 0 | 11264ms | — |
+| get_metaculus_questions | 1 | 0 | 416ms | — |
+| premortem | 1 | 0 | 169044ms | $2.7823 |
+| reflection | 1 | 0 | 14ms | — |
+| research | 1 | 0 | 251927ms | $5.3037 |
+| web_search | 2 | 0 | 15302ms | $0.0657 |
+| wikipedia | 1 | 0 | 241ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) What will the most recent EIA daily Brent crude spot price be wh...
+- [Spot Prices for Crude Oil and Petroleum Products](https://www.eia.gov/dnav/p...
+- [2026%E2%80%932028 world oil market chronology](https://en.wikipedia.org/wiki...
+- [Brent crude oilPrice - Chart - Historical Data - News](https://tradingeconom...
+- [Brent Crude Oil Futures Contracts | Oilprice.com](https://oilprice.com/futur...
