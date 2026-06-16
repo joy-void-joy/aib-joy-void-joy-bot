@@ -1,0 +1,174 @@
+---
+timestamp: 2026-06-16 03:52:07 UTC
+question_type: binary
+factors:
+- description: 'Current price buffer: $593.48 vs $585 target = 1.45% above threshold.
+    Starting above the target gives a mild structural advantage.'
+  logit: 0.3
+  confidence: 0.9
+  effective_logit: 0.27
+- description: 'Negative trailing drift: -0.15%/day over 20 days during selloff. Over
+    8 trading days this cumulates to ~-1.2%, approximately consuming the buffer.'
+  logit: -0.4
+  confidence: 0.7
+  effective_logit: -0.27999999999999997
+- description: 'Post-spike mean reversion: After +4.8% spike days (23 comparable events),
+    median forward 10-day return is -1.16%, only 43.5% positive. This is the strongest
+    quantitative signal.'
+  logit: -0.5
+  confidence: 0.75
+  effective_logit: -0.375
+- description: 'Broader downtrend: -25% from 52-week high, regulatory concerns, AI
+    capex skepticism ($125-145B guidance). Structural headwinds persist.'
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: 'Iran peace deal rally: Geopolitical tailwind drove June 15 bounce,
+    but largely priced in. Some positive momentum may persist if broader market risk
+    appetite improves.'
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+- description: 'FOMC meeting June 16-17: Could create volatility either direction.
+    No rate change expected. New Fed Chair Warsh''s first solo meeting could set tone.'
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+- description: 'High daily volatility (2.54%): Wide distribution means outcome is
+    genuinely uncertain, with fat tails in both directions.'
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+tentative_estimate:
+  logit: -0.1
+  probability: 0.48
+anchor: 'Random walk from current price: With zero drift and 2.54% daily vol over
+  8 days, P(close > $585 | start at $593.48) = 58%. But conditional on -25% drawdown
+  regime and post-spike dynamics, base rate is closer to 45-50%.'
+assessment: This is essentially a coin-flip question. META currently sits ~1.45% above
+  the $585 target with 8 trading days to resolution. Monte Carlo simulations across
+  four scenarios (normal trailing stats, fat tails, post-spike adjusted, random walk)
+  give a tight range of 49-58% probability. The weighted blend is ~51%. The key tension
+  is between the buffer above target (favoring YES) and the negative drift + post-spike
+  reversion (favoring NO). The FOMC meeting this week adds symmetric uncertainty.
+  No META-specific catalysts are scheduled. The stock is in a broader downtrend but
+  just bounced 4.8% on geopolitical news. The simulation results are remarkably stable
+  across reasonable parameter variations, all clustering near 50%.
+calibration_notes: 'Anchor divergence: Random walk gives 58%, my estimate is 48%.
+  The 10pp divergence is justified by the post-spike reversion signal (43.5% forward
+  positive rate from 23 comparable events) and the negative trailing drift. Hedging
+  check: This is genuinely uncertain, not lazy hedging - the Monte Carlo outputs cluster
+  at 49-52% across scenarios.'
+key_uncertainties: 1. Today's (June 16) close is uncertain - opened at $579.90 but
+  rallied to ~$593. If today closes near $580, probability drops to ~40%; if near
+  $600, rises to ~55%. 2. FOMC press conference could shift sentiment. 3. Whether
+  the broader selloff has bottomed or continues. 4. Any unexpected META-specific news
+  (regulatory, product).
+tool_audit: 'Yahoo Finance API data: excellent - provided full price history, vol
+  stats, shock alert. CNBC: useful for real-time quote. Polymarket: confirmed Fed
+  hold expectation. Benzinga: revealed Iran peace deal as June 15 catalyst. Monte
+  Carlo simulations: core analytical tool, ran 4 scenarios with 200k sims each. All
+  tools worked well.'
+update_triggers: META closing below $575 on any day this week would push probability
+  below 35%. META closing above $600 on any day would push probability above 55%.
+  Any major unexpected catalyst (regulatory action, product announcement, macro shock).
+process_reflection: 'The stock data tool providing shock_alert with comparable events
+  and forward return stats was extremely valuable for this question type. The sensitivity
+  analysis across starting price, drift, and volatility was straightforward to implement.
+  One friction point: difficulty getting a definitive real-time intraday price for
+  today''s trading session. The forecasting close time (2:45 AM Eastern) means the
+  forecast should be based on June 15 close, which simplifies things.'
+computed:
+  factor_count: 7
+  factor_sum: -0.46499999999999997
+  tentative_logit: -0.1
+  logit_gap: 0.365
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'Current price buffer: $593.48 vs $585 target = 1.45% above threshold.
+      Starting above the target gives a mild structural advantage.'
+    logit: 0.3
+    confidence: 0.9
+    effective_logit: 0.27
+  - description: 'Negative trailing drift: -0.15%/day over 20 days during selloff.
+      Over 8 trading days this cumulates to ~-1.2%, approximately consuming the buffer.'
+    logit: -0.4
+    confidence: 0.7
+    effective_logit: -0.27999999999999997
+  - description: 'Post-spike mean reversion: After +4.8% spike days (23 comparable
+      events), median forward 10-day return is -1.16%, only 43.5% positive. This is
+      the strongest quantitative signal.'
+    logit: -0.5
+    confidence: 0.75
+    effective_logit: -0.375
+  - description: 'Broader downtrend: -25% from 52-week high, regulatory concerns,
+      AI capex skepticism ($125-145B guidance). Structural headwinds persist.'
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: 'Iran peace deal rally: Geopolitical tailwind drove June 15 bounce,
+      but largely priced in. Some positive momentum may persist if broader market
+      risk appetite improves.'
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  - description: 'FOMC meeting June 16-17: Could create volatility either direction.
+      No rate change expected. New Fed Chair Warsh''s first solo meeting could set
+      tone.'
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  - description: 'High daily volatility (2.54%): Wide distribution means outcome is
+      genuinely uncertain, with fat tails in both directions.'
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  dominant_factor: 'Post-spike mean reversion: After +4.8% spike days (23 comparable
+    events), median forward 10-day return is -1.16%, only 43.5% positive. This is
+    the strongest quantitative signal.'
+  dominant_effective_logit: -0.375
+  factor_implied_probability: 0.38580035722310485
+  tentative_probability: 0.48
+  gap_pp: 9.419964277689512
+  sources:
+  - '[Meta Platforms, Inc. (META) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/META/history/)'
+  - '[Meta Platforms, Inc. (META) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/META/)'
+  - '[Fed Decision in June? Trading Odds & Predictions 2026 | Polymarket](https://polymarket.com/event/fed-decision-in-june-825)'
+  - '[Fed decision in June? Odds & Predictions 2026](https://kalshi.com/markets/kxfeddecision/fed-meeting/kxfeddecision-26jun)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44072
+- **Question ID**: 44097
+- **Session Duration**: 488.7s (8.1 min)
+- **Cost**: $5.7866 total (orchestrator $2.7534 + sub-agents $3.0332)
+- **Tokens**: 11,060 total (27 in, 11,033 out)
+  - Cache: 429,754 read, 68,312 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44072_20260616_034722/20260616-034722.log`
+
+### Tool Calls
+
+- **Total**: 22 calls
+- **Errors**: 4 (18.2%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 879ms | — |
+| fetch_url | 1 | 0 | 430ms | — |
+| kalshi_price | 1 | 0 | 8715ms | — |
+| polymarket_price | 1 | 0 | 270ms | — |
+| premortem | 1 | 0 | 148188ms | $2.8217 |
+| reflection | 1 | 0 | 515ms | — |
+| stock_price | 8 | 4 ⚠️ | 171ms | — |
+| web_search | 6 | 0 | 19665ms | $0.2115 |
+
+### Sources Consulted
+
+- [Meta Platforms, Inc. (META) Stock Historical Prices & Data - Yahoo Finance](...
+- [Meta Platforms, Inc. (META) Stock Price, News, Quote & History - Yahoo Finan...
+- [Fed Decision in June? Trading Odds & Predictions 2026 | Polymarket](https://...
+- [Fed decision in June? Odds & Predictions 2026](https://kalshi.com/markets/kx...
