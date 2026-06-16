@@ -1,0 +1,203 @@
+---
+timestamp: 2026-06-16 02:32:54 UTC
+question_type: binary
+factors:
+- description: 'Historical base rate: Meta publishes technical root-cause explanations
+    for only ~13-25% of significant outages (2-3 out of ~15). For short outages ≤3
+    hours, only 1/6 got a post-mortem (16.7%)'
+  logit: -1.0
+  confidence: 0.85
+  effective_logit: -0.85
+- description: 'Post-2021 regression to opacity: Since Oct 2021, Meta has had 3 significant
+    outages (Nov 2022, March 2024, Dec 2024) with ZERO public post-mortems. The transparency
+    trend is moving away from disclosure.'
+  logit: -0.8
+  confidence: 0.8
+  effective_logit: -0.6400000000000001
+- description: '4-day silence is a strong negative signal: All historical Meta post-mortems
+    were published within 1-2 days. Being 4 days out with no statement, and CNET getting
+    no response, suggests Meta has decided not to publish.'
+  logit: -1.2
+  confidence: 0.85
+  effective_logit: -1.02
+- description: 'Outage severity below post-mortem threshold: The June 2026 outage
+    was ~2 hours with 132K peak reports. The two most recent post-mortems were for
+    much more severe events (6 hours/10.6M reports, 14-24 hours). This outage is comparable
+    to March 2024 which got no post-mortem.'
+  logit: -0.8
+  confidence: 0.8
+  effective_logit: -0.6400000000000001
+- description: 'Broader resolution criteria: The question accepts not just blog posts
+    but also on-the-record spokesperson statements naming a technical category. A
+    journalist could eventually get Meta to say ''authentication failure'' on the
+    record.'
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: '11 days remain in resolution window: While the typical post-mortem
+    timeline is 1-2 days, there''s time for a delayed statement, possibly prompted
+    by media/regulatory pressure or user concern about the mass-logout aspect.'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: 'Mass logout generated unusual user panic: The ''Am I hacked?'' reaction
+    was distinctive and generated significant media coverage, which could pressure
+    Meta into a more detailed explanation than usual.'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  logit: -1.8
+  probability: 0.14
+anchor: 'Historical base rate for Meta publishing technical root-cause explanations
+  for significant outages: ~13-25% overall (2-3 out of ~15 events). For outages ≤3
+  hours: ~17% (1 out of 6). Post-2021: 0% (0 out of 3).'
+assessment: 'The evidence strongly favors NO resolution. Meta has a well-documented
+  pattern of NOT publishing technical root-cause explanations for medium-severity
+  outages. The June 2026 outage (~2 hours, 132K peak reports) is well below the severity
+  threshold that historically triggered post-mortems (the October 2021 BGP outage
+  was 6 hours with 10.6M reports; March 2019 was 14-24 hours).
+
+
+  Most critically, 4 days have passed with complete silence from Meta. When Meta does
+  publish post-mortems, they do so within 1-2 days. The 4-day gap is a strong negative
+  update. CNET reported reaching out to Meta with no response.
+
+
+  Since October 2021, Meta has had zero public post-mortems for any outage, including
+  the March 2024 and December 2024 events that were comparable in scale. The trend
+  is clearly toward less transparency, not more.
+
+
+  The main upside risk is the broader resolution criteria — the question accepts on-the-record
+  spokesperson statements naming a technical category, not just engineering blog posts.
+  Over 11 remaining days, it''s conceivable that persistent media pressure could extract
+  something like ''the outage was caused by an authentication system failure'' on
+  the record. However, Meta''s pattern of silence for medium-severity outages makes
+  even this unlikely.
+
+
+  I estimate ~14% probability of YES.'
+calibration_notes: 'Anchor is the conditional base rate for medium-severity/short
+  outages: ~17% overall, 0% post-2021. The 4-day silence further reduces the probability.
+  The broader resolution criteria and remaining time provide mild upside. Final estimate
+  of 14% is slightly above the post-2021 base rate of 0% to account for the resolution
+  criteria breadth and remaining time.'
+key_uncertainties: 1. Whether media pressure (especially around the 'mass logout'
+  panic narrative) will force Meta's hand on an explanation. 2. Whether the broader
+  resolution criteria (spokesperson statement naming a category) could be triggered
+  by a journalist eventually getting a more detailed comment. 3. Whether there are
+  regulatory pressures we're not aware of that could compel disclosure.
+tool_audit: 'Research tool: Excellent, provided comprehensive historical data on Meta
+  outage patterns and current outage status. Web search: Useful for confirming no
+  post-mortem has been published. Fetch URL for engineering.fb.com: Limited utility,
+  couldn''t see actual blog post listings. Coherence links: Empty, no related questions
+  found.'
+update_triggers: '- Meta publishes an engineering blog post about the outage → YES
+  immediately. - A credible outlet reports an on-the-record Meta spokesperson naming
+  a specific technical cause → YES. - Week passes with continued silence → probability
+  drops further toward 5-8%.'
+process_reflection: The research tool was highly effective for this question, returning
+  both current event data and historical patterns in a structured format. The web
+  search confirmed no post-mortem had been published. The main limitation was that
+  the engineering.fb.com fetch didn't return actual blog post listings, but the web
+  search for site-specific results filled this gap. The question is well-structured
+  with clear resolution criteria, making analysis straightforward.
+computed:
+  factor_count: 7
+  factor_sum: -2.7100000000000004
+  tentative_logit: -1.8
+  logit_gap: 0.9100000000000004
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: Meta publishes technical root-cause explanations
+      for only ~13-25% of significant outages (2-3 out of ~15). For short outages
+      ≤3 hours, only 1/6 got a post-mortem (16.7%)'
+    logit: -1.0
+    confidence: 0.85
+    effective_logit: -0.85
+  - description: 'Post-2021 regression to opacity: Since Oct 2021, Meta has had 3
+      significant outages (Nov 2022, March 2024, Dec 2024) with ZERO public post-mortems.
+      The transparency trend is moving away from disclosure.'
+    logit: -0.8
+    confidence: 0.8
+    effective_logit: -0.6400000000000001
+  - description: '4-day silence is a strong negative signal: All historical Meta post-mortems
+      were published within 1-2 days. Being 4 days out with no statement, and CNET
+      getting no response, suggests Meta has decided not to publish.'
+    logit: -1.2
+    confidence: 0.85
+    effective_logit: -1.02
+  - description: 'Outage severity below post-mortem threshold: The June 2026 outage
+      was ~2 hours with 132K peak reports. The two most recent post-mortems were for
+      much more severe events (6 hours/10.6M reports, 14-24 hours). This outage is
+      comparable to March 2024 which got no post-mortem.'
+    logit: -0.8
+    confidence: 0.8
+    effective_logit: -0.6400000000000001
+  - description: 'Broader resolution criteria: The question accepts not just blog
+      posts but also on-the-record spokesperson statements naming a technical category.
+      A journalist could eventually get Meta to say ''authentication failure'' on
+      the record.'
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: '11 days remain in resolution window: While the typical post-mortem
+      timeline is 1-2 days, there''s time for a delayed statement, possibly prompted
+      by media/regulatory pressure or user concern about the mass-logout aspect.'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: 'Mass logout generated unusual user panic: The ''Am I hacked?'' reaction
+      was distinctive and generated significant media coverage, which could pressure
+      Meta into a more detailed explanation than usual.'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: '4-day silence is a strong negative signal: All historical Meta
+    post-mortems were published within 1-2 days. Being 4 days out with no statement,
+    and CNET getting no response, suggests Meta has decided not to publish.'
+  dominant_effective_logit: -1.02
+  factor_implied_probability: 0.062385851379994375
+  tentative_probability: 0.14
+  gap_pp: 7.761414862000564
+  sources:
+  - '[(Metaculus) Will Meta publish an official technical root-cause explanation for
+    the June 12, 2026 outage before June 27, 2026?](https://www.metaculus.com/questions/44070)'
+  - '[Engineering at Meta](https://engineering.fb.com/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44070
+- **Question ID**: 44095
+- **Session Duration**: 781.4s (13.0 min)
+- **Cost**: $9.6575 total (orchestrator $2.3213 + sub-agents $7.3362)
+- **Tokens**: 7,329 total (27 in, 7,302 out)
+  - Cache: 417,769 read, 61,150 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44070_20260616_022220/20260616-022220.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0203 |
+| execute_code | 2 | 0 | 1ms | — |
+| fetch_url | 1 | 0 | 8898ms | — |
+| get_coherence_links | 1 | 0 | 246ms | — |
+| get_metaculus_questions | 1 | 0 | 420ms | — |
+| premortem | 1 | 0 | 106235ms | $1.8132 |
+| reflection | 1 | 0 | 13ms | — |
+| research | 1 | 0 | 452343ms | $5.3941 |
+| web_search | 3 | 0 | 17286ms | $0.1086 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Meta publish an official technical root-cause explanation f...
+- [Engineering at Meta](https://engineering.fb.com/)
