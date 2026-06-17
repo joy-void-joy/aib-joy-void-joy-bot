@@ -1,0 +1,179 @@
+---
+timestamp: 2026-06-17 07:08:09 UTC
+question_type: binary
+factors:
+- description: 'Recent World Cup knockout red card rate is very low (2018/2022: ~6%
+    of matches had ≥1 red card)'
+  logit: -1.2
+  confidence: 0.8
+  effective_logit: -0.96
+- description: Historical long-term knockout stage rate is significantly higher (~28%
+    of matches had ≥1 red card, 1998-2022 average)
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: New disciplinary rules (mouth-covering, captain-only approach, expanded
+    VAR) could increase red cards
+  logit: 0.4
+  confidence: 0.4
+  effective_logit: 0.16000000000000003
+- description: '2026 group stage data so far: only 3 red cards in ~24 matches (all
+    in one match), suggesting new rules haven''t dramatically elevated rate'
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Knockout stage intensity: elimination pressure, extra time possibility,
+    tactical fouling historically produces ~2x group stage rate'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Question description claims ~20 red cards by June 13, but actual data
+    shows only 3 — LLM-generated question contains inaccurate background
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+tentative_estimate:
+  logit: -1.5
+  probability: 0.18
+anchor: 'Historical base rate: ~28% of World Cup knockout matches from 1998-2022 had
+  at least one red card (Poisson estimate from 40 red cards in 112 knockout matches).
+  Recent tournaments (2018-2022) show dramatically lower rate of ~6%.'
+assessment: 'This is a threshold question: will a single knockout match produce at
+  least one red card? The key tension is between the very low recent rates (2018/2022
+  had ~6% of knockout matches with red cards) and the historical long-term average
+  (~28%). New disciplinary rules exist but haven''t produced elevated red card rates
+  in the 2026 tournament so far — only 3 red cards total in ~24 Matchday 1 matches,
+  all concentrated in the opening match. The question description''s claim of ~20
+  red cards by June 13 is factually incorrect based on my research (LLM-generated
+  question with hallucinated statistics). The Monte Carlo simulation and scenario
+  analysis both converge around 18-19%. The knockout stage multiplier (~2x group stage)
+  is well-established historically. My estimate of ~18% represents a compromise between
+  the very low recent baseline (~6%) and the structural factors that push the rate
+  higher (knockout intensity, new rules).'
+calibration_notes: 'Anchor divergence: My estimate (18%) sits between the long-term
+  average (28%) and the very recent rate (6%), weighted toward the recent trend. The
+  strong downward trend from 2006-2022 is the most informative signal. New rules provide
+  modest upward pressure but haven''t materialized in the 2026 data so far. Not hedging
+  toward 50% — the evidence clearly supports a probability well below coin-flip.'
+key_uncertainties: 1. How many more red cards will accumulate in the remaining ~72
+  group stage matches (Matchdays 2-3) before June 28? If the rate jumps significantly,
+  the knockout estimate should also increase. 2. Whether the new rules produce a delayed
+  uptick as referees become more aggressive with enforcement in later rounds. 3. Which
+  specific teams play in Match 73 — some teams are historically more prone to red
+  cards.
+tool_audit: 'Useful: research() sub-agent provided accurate red card counts and historical
+  data. web_search provided confirmation articles. execute_code enabled Monte Carlo
+  and scenario analysis. Failed/empty: ESPN discipline stats page couldn''t be fetched
+  (no content extracted). ESPN article page also returned no content. The question
+  description contains inaccurate data (claimed ~20 red cards when actual is 3).'
+update_triggers: '- If 10+ more red cards are issued in Matchdays 2-3 (pushing total
+  above 13), I''d move up to ~25%. - If 0-2 more red cards are issued, I''d move down
+  to ~12%. - If one of the teams involved is known for aggressive play (e.g., South
+  Africa based on their 2 red cards in the opening match), I''d adjust upward modestly.'
+process_reflection: The research tools worked well for gathering historical and current
+  data. The code sandbox enabled proper quantitative analysis. The main friction point
+  was the question description containing clearly inaccurate information (claiming
+  ~20 red cards when the actual count is 3), which required verification rather than
+  trust. The ESPN stats page failing to render was a minor issue. The workflow of
+  research → computation → reflection feels appropriate for this question type.
+computed:
+  factor_count: 6
+  factor_sum: -0.6599999999999999
+  tentative_logit: -1.5
+  logit_gap: -0.8400000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Recent World Cup knockout red card rate is very low (2018/2022:
+      ~6% of matches had ≥1 red card)'
+    logit: -1.2
+    confidence: 0.8
+    effective_logit: -0.96
+  - description: Historical long-term knockout stage rate is significantly higher
+      (~28% of matches had ≥1 red card, 1998-2022 average)
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: New disciplinary rules (mouth-covering, captain-only approach, expanded
+      VAR) could increase red cards
+    logit: 0.4
+    confidence: 0.4
+    effective_logit: 0.16000000000000003
+  - description: '2026 group stage data so far: only 3 red cards in ~24 matches (all
+      in one match), suggesting new rules haven''t dramatically elevated rate'
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Knockout stage intensity: elimination pressure, extra time possibility,
+      tactical fouling historically produces ~2x group stage rate'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Question description claims ~20 red cards by June 13, but actual
+      data shows only 3 — LLM-generated question contains inaccurate background
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  dominant_factor: 'Recent World Cup knockout red card rate is very low (2018/2022:
+    ~6% of matches had ≥1 red card)'
+  dominant_effective_logit: -0.96
+  factor_implied_probability: 0.3407396115486146
+  tentative_probability: 0.18
+  gap_pp: -16.07396115486146
+  sources:
+  - '[(Metaculus) Will a red card be shown in the FIFA World Cup 2026 Round of 32
+    match played on June 28, 2026?](https://www.metaculus.com/questions/44090)'
+  - '[2026 FIFA World Cup Group G](https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_G)'
+  - '[2026 FIFA World Cup Group B](https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_B)'
+  - '[2026 FIFA World Cup Group D](https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_D)'
+  - '[2026 FIFA World Cup Group A](https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_A)'
+  - '[2026 FIFA World Cup seeding](https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_seeding)'
+  - '[2011 FIFA Beach Soccer World Cup disciplinary record](https://en.wikipedia.org/wiki/2011_FIFA_Beach_Soccer_World_Cup_disciplinary_record)'
+  - '[FIFA World Cup Discipline Stats, 2026 Season - ESPN](https://www.espn.com/soccer/stats/_/league/FIFA.WORLD/season/2026/view/discipline)'
+  - '[FIFA World Cup 2026 stats: 3 red cards, Jiménez 47, South Korea''s 3 in a row](https://www.espn.com/soccer/story/_/id/49035302/fifa-world-cup-2026-stats-3-red-cards-raul-jimenez-47-korea-republic-3-row)'
+  - '[Most Red Cards in a Single World Cup Tournament](https://www.fourfourtwo.com/competition/most-red-cards-in-a-single-world-cup-tournament)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44090
+- **Question ID**: 44115
+- **Session Duration**: 1087.4s (18.1 min)
+- **Cost**: $31.8724 total (orchestrator $3.3930 + sub-agents $28.4794)
+- **Tokens**: 13,079 total (30 in, 13,049 out)
+  - Cache: 672,499 read, 74,940 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44090_20260617_065335/20260617-065335.log`
+
+### Tool Calls
+
+- **Total**: 68 calls
+- **Errors**: 2 (2.9%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1336 |
+| execute_code | 5 | 0 | 361ms | — |
+| fetch_url | 9 | 2 ⚠️ | 6735ms | — |
+| get_coherence_links | 2 | 0 | 441ms | — |
+| get_metaculus_questions | 3 | 0 | 1178ms | — |
+| polymarket_price | 9 | 0 | 382ms | — |
+| premortem | 3 | 0 | 132089ms | $7.3869 |
+| reflection | 3 | 0 | 200ms | — |
+| research | 4 | 0 | 275802ms | $20.4224 |
+| web_search | 15 | 0 | 20150ms | $0.5365 |
+| wikipedia | 15 | 0 | 267ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will a red card be shown in the FIFA World Cup 2026 Round of 32 ...
+- [2026 FIFA World Cup Group G](https://en.wikipedia.org/wiki/2026_FIFA_World_C...
+- [2026 FIFA World Cup Group B](https://en.wikipedia.org/wiki/2026_FIFA_World_C...
+- [2026 FIFA World Cup Group D](https://en.wikipedia.org/wiki/2026_FIFA_World_C...
+- [2026 FIFA World Cup Group A](https://en.wikipedia.org/wiki/2026_FIFA_World_C...
+- [2026 FIFA World Cup seeding](https://en.wikipedia.org/wiki/2026_FIFA_World_C...
+- [2011 FIFA Beach Soccer World Cup disciplinary record](https://en.wikipedia.o...
+- [FIFA World Cup Discipline Stats, 2026 Season - ESPN](https://www.espn.com/so...
+- [FIFA World Cup 2026 stats: 3 red cards, Jiménez 47, South Korea's 3 in a row...
+- [Most Red Cards in a Single World Cup Tournament](https://www.fourfourtwo.com...
