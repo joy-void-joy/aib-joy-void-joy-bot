@@ -1,0 +1,214 @@
+---
+timestamp: 2026-06-17 12:54:12 UTC
+question_type: binary
+factors:
+- description: 'April 2026 already crossed threshold: W+S (6.28 TWh, 22.9%) > Coal
+    (5.76 TWh, 21.0%) for first time ever. Margin of +0.52 TWh establishes momentum.'
+  logit: 0.8
+  confidence: 0.9
+  effective_logit: 0.7200000000000001
+- description: Exceptional 2026 precipitation (137-231% of normal) driving record
+    hydro output that displaces coal. Hydro was 42.4% in April - highest in decades.
+    In wet years hydro stays strong through May.
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: Solar output typically rises from April to May (longer days, higher
+    sun angle). With ~27 GW installed capacity, May solar should be 3.8-4.5 TWh vs
+    April's 3.61 TWh.
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: 'Historical pattern: coal typically INCREASES from April to May (5
+    of 6 years, avg +0.67 TWh). Demand rises with warming temps, and coal fills incremental
+    demand.'
+  logit: -0.7
+  confidence: 0.6
+  effective_logit: -0.42
+- description: 'Simple historical analogy: applying historical Apr→May margin changes
+    to 2026''s +0.52 margin gives YES in only 3/6 years (50%).'
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: New domestic coal purchase guarantee at 75 USD/MWh (effective 2026)
+    could incentivize more coal generation even when hydro is abundant.
+  logit: -0.4
+  confidence: 0.4
+  effective_logit: -0.16000000000000003
+- description: Electricity demand increases from April to May with warmer weather
+    and early cooling load, which can increase the call on coal.
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: Wind+solar capacity at record ~40 GW (up from ~35 GW a year ago). Structural
+    growth in renewables capacity squeezes coal's market share over time.
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+tentative_estimate:
+  logit: 0.5
+  probability: 0.63
+anchor: 'Conditional base rate: 50% from historical analogy (applying 6 years of Apr→May
+  margin changes to 2026''s +0.52 margin, 3/6 years yield YES). This treats all years
+  equally without accounting for 2026''s exceptional hydro conditions.'
+assessment: "The question hinges on whether May 2026 repeats April 2026's historic\
+  \ first crossing of wind+solar above coal. The April margin was thin (+0.52 TWh).\
+  \ \n\nThe central factor is hydro: exceptional 2026 precipitation produced record\
+  \ hydro (42% share in April), which directly displaced coal. Historical data shows\
+  \ May hydro is usually within ±3% of April hydro (5 of 6 years), with only 2021\
+  \ (a drought year, opposite of 2026) showing a large drop. Given 2026's exceptional\
+  \ wet conditions, May hydro should remain very strong.\n\nHowever, coal historically\
+  \ increases from April to May (avg +0.67 TWh) as demand rises. The Monte Carlo simulation\
+  \ gives ~65% P(YES) under base assumptions, with hydro being the dominant variable.\
+  \ The weighted scenario analysis gives ~62%. Solar's seasonal increase partially\
+  \ offsets coal's typical increase.\n\nKey tension: the April margin is thin, and\
+  \ historical patterns favor coal increasing. But 2026's exceptional hydro conditions\
+  \ are unprecedented and likely to persist through May, keeping coal suppressed.\
+  \ The net assessment is moderately favorable for YES but with genuine uncertainty."
+calibration_notes: Anchor is 50% from historical analogy. Monte Carlo and structural
+  analysis push toward 63-65%, mainly because 2026's exceptional hydro conditions
+  are unlike any historical year. The adjustment from 50% to 63% is moderate and supported
+  by the hydro analysis. Not hedging toward 50% - genuine evidence from hydro conditions
+  supports the upward shift.
+key_uncertainties: '1. May 2026 hydro output (dominant variable - ranges from 28%
+  to 74% P(YES) depending on hydro)
+
+  2. Total electricity demand in May (higher demand = more coal = lower P(YES))
+
+  3. Whether coal purchase guarantees materially increase coal dispatch in spring
+  2026
+
+  4. May 2026 actual data exists (EPIAS) but we cannot access it; Ember may not have
+  published yet'
+tool_audit: 'Useful: Ember CSV download (confirmed April data, verified no May data
+  available). Research agents provided good historical context. Monte Carlo simulation
+  framework effective.
+
+  Empty: First research agent claimed May 2026 Ember data was available with specific
+  numbers - likely hallucinated since CSV download confirmed data only through April
+  2026.
+
+  Failed: Ember API returned 403 (access denied). Could not access EPIAS transparency
+  platform data.'
+update_triggers: '1. Publication of Ember May 2026 data (would resolve question immediately)
+
+  2. Access to EPIAS daily/hourly generation data for May 2026
+
+  3. News reports about Turkey''s May 2026 electricity mix
+
+  4. Any evidence of unusual weather events (heatwave, drought) in Turkey during May
+  2026'
+process_reflection: 'The research tool produced conflicting results - one agent confidently
+  reported May 2026 data that doesn''t appear to exist in the actual Ember CSV. This
+  was a significant risk that required direct verification via code execution. The
+  ability to download and parse the actual CSV was crucial for catching this hallucination.
+  The Monte Carlo simulation framework was very helpful for quantifying uncertainty.
+  Missing tool: direct access to Turkey''s EPIAS transparency platform API would have
+  been transformative - the actual May 2026 hourly generation data exists there.'
+computed:
+  factor_count: 8
+  factor_sum: 1.26
+  tentative_logit: 0.5
+  logit_gap: -0.76
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'April 2026 already crossed threshold: W+S (6.28 TWh, 22.9%) > Coal
+      (5.76 TWh, 21.0%) for first time ever. Margin of +0.52 TWh establishes momentum.'
+    logit: 0.8
+    confidence: 0.9
+    effective_logit: 0.7200000000000001
+  - description: Exceptional 2026 precipitation (137-231% of normal) driving record
+      hydro output that displaces coal. Hydro was 42.4% in April - highest in decades.
+      In wet years hydro stays strong through May.
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: Solar output typically rises from April to May (longer days, higher
+      sun angle). With ~27 GW installed capacity, May solar should be 3.8-4.5 TWh
+      vs April's 3.61 TWh.
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: 'Historical pattern: coal typically INCREASES from April to May (5
+      of 6 years, avg +0.67 TWh). Demand rises with warming temps, and coal fills
+      incremental demand.'
+    logit: -0.7
+    confidence: 0.6
+    effective_logit: -0.42
+  - description: 'Simple historical analogy: applying historical Apr→May margin changes
+      to 2026''s +0.52 margin gives YES in only 3/6 years (50%).'
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: New domestic coal purchase guarantee at 75 USD/MWh (effective 2026)
+      could incentivize more coal generation even when hydro is abundant.
+    logit: -0.4
+    confidence: 0.4
+    effective_logit: -0.16000000000000003
+  - description: Electricity demand increases from April to May with warmer weather
+      and early cooling load, which can increase the call on coal.
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: Wind+solar capacity at record ~40 GW (up from ~35 GW a year ago).
+      Structural growth in renewables capacity squeezes coal's market share over time.
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  dominant_factor: Exceptional 2026 precipitation (137-231% of normal) driving record
+    hydro output that displaces coal. Hydro was 42.4% in April - highest in decades.
+    In wet years hydro stays strong through May.
+  dominant_effective_logit: 0.84
+  factor_implied_probability: 0.7790261077798122
+  tentative_probability: 0.63
+  gap_pp: -14.902610777981218
+  sources:
+  - '[(Metaculus) Will wind and solar together generate more electricity than coal
+    in Türkiye in May 2026?](https://www.metaculus.com/questions/44098)'
+  - '[Electricity Data Explorer | Ember](https://ember-energy.org/data/electricity-data-explorer/)'
+  - '[Electricity in Turkey](https://en.wikipedia.org/wiki/Electricity_in_Turkey)'
+  - '[api.ember-energy.org](https://api.ember-energy.org/v1/electricity-generation/monthly?entity=Turkey&start_date=2026-04&end_date=2026-06)'
+  - '[Wind power in Turkey](https://en.wikipedia.org/wiki/Wind_power_in_Turkey)'
+  - '[Türkiye | Ember](https://ember-energy.org/countries-and-regions/turkiye/)'
+  - '[Electricity Generation Company (Turkey](https://en.wikipedia.org/wiki/Electricity_Generation_Company_(Turkey))'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44098
+- **Question ID**: 44123
+- **Session Duration**: 1770.0s (29.5 min)
+- **Cost**: $32.1747 total (orchestrator $6.0756 + sub-agents $26.0991)
+- **Tokens**: 28,123 total (46 in, 28,077 out)
+  - Cache: 1,360,918 read, 102,813 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44098_20260617_122849/20260617-122849.log`
+
+### Tool Calls
+
+- **Total**: 29 calls
+- **Errors**: 1 (3.4%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0514 |
+| execute_code | 10 | 0 | 310ms | — |
+| fetch_url | 3 | 1 ⚠️ | 8018ms | — |
+| get_metaculus_questions | 1 | 0 | 10246ms | — |
+| premortem | 1 | 0 | 157915ms | $3.5556 |
+| reflection | 1 | 0 | 136ms | — |
+| research | 1 | 0 | 904182ms | $22.2714 |
+| web_search | 6 | 0 | 20471ms | $0.2207 |
+| wikipedia | 6 | 0 | 240ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will wind and solar together generate more electricity than coal...
+- [Electricity Data Explorer | Ember](https://ember-energy.org/data/electricity...
+- [Electricity in Turkey](https://en.wikipedia.org/wiki/Electricity_in_Turkey)
+- [api.ember-energy.org](https://api.ember-energy.org/v1/electricity-generation...
+- [Wind power in Turkey](https://en.wikipedia.org/wiki/Wind_power_in_Turkey)
+- [Türkiye | Ember](https://ember-energy.org/countries-and-regions/turkiye/)
+- [Electricity Generation Company (Turkey](https://en.wikipedia.org/wiki/Electr...
