@@ -1,0 +1,221 @@
+---
+timestamp: 2026-06-17 02:02:16 UTC
+question_type: numeric
+factors:
+- description: Outbreak actively growing with no vaccine/treatment - deaths were 91
+    on June 6 and 192 on June 14 (doubling in 8 days). No licensed countermeasure
+    for BDBV means outbreak will continue.
+  supports:
+    center: 320.0
+    low: 260.0
+    high: 420.0
+  logit: 1.5
+  confidence: 0.9
+  effective_logit: 1.35
+- description: Case growth rate already decelerating from ~7%/day to ~4.5%/day (June
+    6-14). Death growth will follow case deceleration with lag. International response
+    scaling up (IASC, $518M response plan).
+  supports:
+    center: 275.0
+    low: 240.0
+    high: 320.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: 'DON publication timing uncertainty: most likely 2 more DONs before
+    June 27 (DON608 ~June 18-20, DON609 ~June 24-27), but the data cutoff is 2-3 days
+    before publication. If only DON608 qualifies, deaths much lower (~230-260) vs
+    DON609 (~290-400).'
+  supports:
+    center: 290.0
+    low: 230.0
+    high: 400.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'Response struggling: MSF says outbreak ''outpacing response'', Oxfam
+    says scale likely underestimated, conflict environment, poor water/sanitation,
+    low contact tracing rate (72%). These factors suggest death growth remains high.'
+  supports:
+    center: 340.0
+    low: 280.0
+    high: 450.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: Rising CFR from 17.7% to 23.8% over June 6-14 increases deaths even
+    if case growth slows. CFR likely stabilizes around 25-27%.
+  supports:
+    center: 310.0
+    low: 270.0
+    high: 370.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+tentative_estimate:
+  center: 290.0
+  low: 236.0
+  high: 399.0
+anchor: 'No strong prior anchor for this specific question type. Starting from the
+  trajectory extrapolation: deaths doubling roughly every 7-8 days from 192 on June
+  14 would give ~384 by June 22, but deceleration is expected.'
+assessment: 'This is a rapidly growing Ebola outbreak with no vaccine/treatment. The
+  question resolves to the confirmed DRC death count in the latest WHO DON published
+  by June 27. The latest DON (DON607, June 13) reported 136 deaths as of June 10.
+  MoH data as of June 14 shows 192 deaths. We expect 1-2 more DONs before the deadline.
+
+
+  The key tension is between:
+
+  1. Continued rapid death growth (~8-9%/day exponential) which would push deaths
+  to 300-400+ by the DON609 data cutoff
+
+  2. Evidence that case growth is already decelerating (from 7% to 4.5%/day), which
+  death growth will follow with a lag
+
+  3. DON publication timing: ~80% chance DON609 qualifies (data cutoff ~June 22-25),
+  ~20% chance only DON608 (cutoff ~June 16-18)
+
+
+  Monte Carlo simulation (200K runs) mixing multiple growth models gives median ~290,
+  with P10=236 and P90=399. The distribution is right-skewed reflecting the possibility
+  of sustained high growth.'
+calibration_notes: 'The lower bound of 91 is the fallback to DON607 if no new DON
+  is published, which is extremely unlikely given the PHEIC status and weekly DON
+  pattern. The simulation gives essentially 0% probability of this. Distribution seems
+  well-calibrated: P10=236 corresponds to a scenario where only DON608 qualifies with
+  a June 16-17 cutoff, P90=399 corresponds to DON609 with sustained high growth.'
+key_uncertainties: '1. DON publication timing and data cutoff dates are the largest
+  source of uncertainty
+
+  2. Whether death growth rate has already started declining (lagging the observed
+  case deceleration)
+
+  3. Potential for response to dramatically slow transmission vs outbreak overwhelming
+  response capacity'
+tool_audit: research() - Excellent, returned comprehensive outbreak data with timeline
+  and sources. web_search - Useful for finding latest DON and ECDC data. fetch_url
+  - Successfully extracted key data from WHO DON607 and ECDC pages. execute_code -
+  Essential for Monte Carlo simulation and growth analysis.
+process_reflection: The research tool worked well for this outbreak question, pulling
+  from ReliefWeb and WHO sources systematically. The main friction was inability to
+  directly check the WHO DON listing page (it returned only introductory text). The
+  Monte Carlo framework handles the compound uncertainty (growth rate × DON timing
+  × data cutoff) well. A dedicated epidemic modeling tool would help - something that
+  could fit SIR/SEIR models to case data automatically.
+computed:
+  factor_count: 5
+  factor_sum: 3.63
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Outbreak actively growing with no vaccine/treatment - deaths were
+      91 on June 6 and 192 on June 14 (doubling in 8 days). No licensed countermeasure
+      for BDBV means outbreak will continue.
+    supports:
+      center: 320.0
+      low: 260.0
+      high: 420.0
+    logit: 1.5
+    confidence: 0.9
+    effective_logit: 1.35
+  - description: Case growth rate already decelerating from ~7%/day to ~4.5%/day (June
+      6-14). Death growth will follow case deceleration with lag. International response
+      scaling up (IASC, $518M response plan).
+    supports:
+      center: 275.0
+      low: 240.0
+      high: 320.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: 'DON publication timing uncertainty: most likely 2 more DONs before
+      June 27 (DON608 ~June 18-20, DON609 ~June 24-27), but the data cutoff is 2-3
+      days before publication. If only DON608 qualifies, deaths much lower (~230-260)
+      vs DON609 (~290-400).'
+    supports:
+      center: 290.0
+      low: 230.0
+      high: 400.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'Response struggling: MSF says outbreak ''outpacing response'', Oxfam
+      says scale likely underestimated, conflict environment, poor water/sanitation,
+      low contact tracing rate (72%). These factors suggest death growth remains high.'
+    supports:
+      center: 340.0
+      low: 280.0
+      high: 450.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: Rising CFR from 17.7% to 23.8% over June 6-14 increases deaths even
+      if case growth slows. CFR likely stabilizes around 25-27%.
+    supports:
+      center: 310.0
+      low: 270.0
+      high: 370.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  dominant_factor: Outbreak actively growing with no vaccine/treatment - deaths were
+    91 on June 6 and 192 on June 14 (doubling in 8 days). No licensed countermeasure
+    for BDBV means outbreak will continue.
+  dominant_effective_logit: 1.35
+  distribution_metrics:
+    implied_median: 310.1101928374656
+    implied_p10: 257.1349862258953
+    implied_p90: 398.34710743801656
+    median_gap: -20.110192837465604
+    median_gap_pct: -14.241123683183792
+    spread_ratio: 1.154291845493562
+    precision: 0.5620689655172414
+  sources:
+  - '[(Metaculus) How many confirmed Ebola (Bundibugyo virus) deaths will the WHO
+    report in the DRC as of its latest update near June 28, 2026?](https://www.metaculus.com/questions/44088)'
+  - '[2026 Central Africa Ebola epidemic](https://en.wikipedia.org/wiki/2026_Central_Africa_Ebola_epidemic)'
+  - '[2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_epidemic)'
+  - '[Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo &
+    Uganda](https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON607)'
+  - '[Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](https://www.ecdc.europa.eu/en/ebola-outbreak-democratic-republic-congo-and-uganda)'
+  - '[Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44088
+- **Question ID**: 44113
+- **Session Duration**: 981.0s (16.4 min)
+- **Cost**: $13.8307 total (orchestrator $5.0183 + sub-agents $8.8124)
+- **Tokens**: 20,139 total (47 in, 20,092 out)
+  - Cache: 1,266,396 read, 85,926 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44088_20260617_014904/20260617-014904.log`
+
+### Tool Calls
+
+- **Total**: 28 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0877 |
+| execute_code | 10 | 0 | 1708ms | — |
+| fetch_url | 4 | 0 | 7561ms | — |
+| get_metaculus_questions | 1 | 0 | 439ms | — |
+| premortem | 1 | 0 | 130866ms | $2.8512 |
+| reflection | 1 | 0 | 10ms | — |
+| research | 1 | 0 | 285330ms | $5.7099 |
+| web_search | 4 | 0 | 18188ms | $0.1636 |
+| wikipedia | 6 | 0 | 256ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many confirmed Ebola (Bundibugyo virus) deaths will the WHO ...
+- [2026 Central Africa Ebola epidemic](https://en.wikipedia.org/wiki/2026_Centr...
+- [2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_ep...
+- [Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo &...
+- [Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](h...
+- [Disease Outbreak News](https://www.who.int/emergencies/disease-outbreak-news)

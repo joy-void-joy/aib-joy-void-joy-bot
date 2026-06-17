@@ -1,0 +1,151 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details for Q44088, which asks for cumulative confirmed Ebola (Bundibugyo virus) deaths in the DRC from the latest WHO Disease Outbreak News (DON) published on or before June 27, 2026. The question has a lower bound of **91** and an open upper bound of **400**.\n\nI then used the research tool to gather comprehensive outbreak data, which returned an extensive timeline from multiple sources (ReliefWeb, WHO, ECDC, Save the Children, MSF, Oxfam). One of the two research queries failed to find live data (all tools were unavailable for that sub-query), but the second returned rich data.\n\nI confirmed the latest WHO DON is **DON607** (published June 13, data as of June 10): **136 confirmed deaths** and **676 confirmed cases** in DRC. The latest MoH data (via ECDC, June 14) shows **808 confirmed cases** and **192 confirmed deaths**.\n\nI ran web searches to check for DON608 but found none as of June 17.\n\n## Key Evidence\n\n- **Death trajectory**: 17 (May 27) → 43 (May 31) → 48 (June 2) → 91 (June 6) → 136 (June 10) → 181 (June 13) → 192 (June 14)\n- **Daily death growth rates**: Declining from ~26%/day (late May) → ~17% → ~10.6% → ~9.0% → ~6.1% (single-day, noisy)\n- **Case growth deceleration**: From ~7.0%/day (June 6-10) to ~4.6%/day (June 10-14) — a leading indicator that death growth will follow\n- **Rising CFR**: 17.7% (June 6) → 20.1% (June 10) → 23.8% (June 14)\n- **No vaccine or treatment** for Bundibugyo virus\n- **Response struggling**: MSF says outbreak \"outpacing response,\" Oxfam says scale \"likely underestimated,\" only 72% contact tracing rate, conflict environment\n- **DON publication pattern**: DON605 (May 29), DON606 (June 8), DON607 (June 13) — intervals of 10 and 5 days\n\nI fitted an exponential model to June 6-14 death data: **deaths = 92.8 × exp(0.0928 × t)**, implying ~9.7%/day growth and ~7.5-day doubling time. I also fitted a linear model at 12.8 deaths/day. Both models validated well against known data.\n\nI ran sensitivity analyses across three growth scenarios (low 5%/day, mid 7%/day, high 8%/day) and verified projections at key DON data cutoff dates.\n\n## Modeling\n\nI ran a Monte Carlo simulation with **200K iterations** mixing four growth models:\n- **Model A (35%)**: Death-based exponential with moderate deceleration\n- **Model B (30%)**: Case-driven projection with rising CFR\n- **Model C (20%)**: Sustained high growth (outbreak worsening)\n- **Model D (15%)**: Rapid deceleration (strong response effect)\n\nDON publication timing was modeled probabilistically: DON608 around June 18-20 (skewed later since none published by June 17), DON609 5-8 days after DON608. Data cutoffs are 2-3 days before publication.\n\nResults: ~**80% of simulations** have DON609 qualifying (data cutoff ~June 22-25), ~**20%** have only DON608 (cutoff ~June 16-18), and essentially **0%** fall back to DON607.\n\n## Conclusion\n\nI concluded with a **median of 290 confirmed deaths**, with P10=236 and P90=399. The distribution is moderately right-skewed. Key percentiles: P1=214, P5=227, P25=257, P50=290, P75=340, P95=441, P99=536. The primary source of uncertainty is the DON publication timing (which DON qualifies before June 27 and its data cutoff date), followed by the death growth trajectory.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No SIR/SEIR epidemic modeling capability — would help fit proper epidemiological models to case data",
+      "Cannot access WHO DON listing page dynamically to check for newly published DONs",
+      "No access to DRC MoH daily sitreps (insp.cd) which would provide the most current death figures"
+    ],
+    "subtle_bugs": [
+      "The WHO DON listing page fetch returned only introductory text, not the actual article list — this meant the agent couldn't definitively confirm no DON608 existed beyond the search results",
+      "One of the two research sub-queries returned only historical data (2007, 2012 outbreaks) due to tool unavailability, wasting a query slot"
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Monte Carlo simulation (200K runs) mixing four growth models (exponential decay, case-based CFR, sustained growth, rapid deceleration) with probabilistic DON publication timing.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Which WHO DON will be the latest published by June 27 and what data cutoff date it will use, creating a bimodal distribution depending on whether DON609 qualifies."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The simulation gives P(result < 200) = 0.0% and P(DON607 fallback) = 0.0%. While DON607 fallback is indeed very unlikely, the model assigns zero probability to scenarios where deaths as reported in a DON could be below 200 — but if DON608 has a data cutoff of June 15-16 (2 days before an early June 18 publication), deaths could plausibly be around 200-210 given MoH reported 192 on June 14.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check prediction markets (Polymarket, Metaculus community prediction) for this question. The Metaculus question showed 'community_prediction: null' (possibly too few forecasters), but Polymarket or other platforms may have had relevant markets on Ebola death counts.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The agent's latest confirmed death figure is 192 as of June 14 (from ECDC updated June 16). By the time the forecast was generated (June 17), 2-3 more days of MoH data would have been available but the agent could not access the DRC MoH daily sitreps (insp.cd). This means the simulation starts from a 3-day-old anchor.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "275-300 median, roughly agreeing with agent's 290",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Excellent multi-model Monte Carlo approach: mixed 4 distinct growth models (exponential with deceleration, case-based CFR, sustained high growth, rapid deceleration) weighted by plausibility, producing a robust ensemble forecast",
+    "Correctly identified the dual-layer uncertainty: both the epidemiological trajectory AND the DON publication timing matter for resolution, and modeled both probabilistically",
+    "Strong data collection: assembled 7 distinct data points on the death trajectory from May 27 to June 14 from multiple sources (WHO DON, MoH, ECDC, Save the Children, OCHA)",
+    "Validated exponential fit against known data points before projecting forward — Model A predicted 188 for June 14 (actual: 192), Model B predicted 192 exactly",
+    "Identified case growth deceleration (7% → 4.5%/day) as a leading indicator for death trajectory, using it to temper the death-based exponential projection",
+    "Ran comprehensive sensitivity analysis across low/mid/high growth scenarios at key DON data cutoff dates, producing a useful summary table",
+    "Thorough premortem with genuine counterargument about case deceleration being a leading indicator, not a token exercise"
+  ],
+  "weaknesses": [
+    "Did not check any prediction markets or Metaculus community forecast for calibration against crowd wisdom",
+    "The 4 growth model weights (35/30/20/15) appear somewhat arbitrary — no explicit justification for why sustained high growth gets 20% vs rapid deceleration at 15%",
+    "DON publication timing model assumed DON frequency stays at 5-8 day intervals, but did not consider that WHO might shift to more frequent updates (e.g., 3-4 day intervals) during a PHEIC with rapidly escalating numbers, or conversely that operational constraints could delay publications",
+    "The simulation assigns 0% probability to outcomes below ~200, but the low tail should include some probability mass for scenarios where WHO reporting methodology changes or revises death counts downward",
+    "Single-day growth rate (June 13→14: 6.1%) was noted as noisy but still used as evidence of deceleration — this could reflect weekend reporting effects rather than true trajectory change",
+    "Did not attempt to access the DRC MoH daily situation reports (insp.cd) directly, which would have provided the most current figures closer to the June 17 forecast date"
+  ],
+  "pipeline": {
+    "issues": [
+      "One research sub-query failed with 'all web search and fetch tools were unavailable', returning only historical data instead of current outbreak info",
+      "WHO DON listing page (https://www.who.int/emergencies/disease-outbreak-news) could not be parsed — returned only header text, preventing direct confirmation of latest DON"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets (Polymarket, Kalshi, Manifold) for any Ebola-related markets to cross-validate the estimate",
+    "Try fetching the DRC MoH daily sitreps from insp.cd to get data closer to the forecast date, reducing the 3-day lag in the starting anchor",
+    "Add a small but non-zero probability tail below 200 to account for DON reporting methodology surprises or data revisions",
+    "Consider building an SIR/SEIR model to better capture epidemiological dynamics rather than relying on purely statistical growth extrapolation",
+    "Explicitly justify model mixture weights with reasoning about why each scenario has its assigned probability, rather than using intuitive round numbers"
+  ]
+}
