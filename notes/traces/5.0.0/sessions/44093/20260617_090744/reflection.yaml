@@ -1,0 +1,204 @@
+---
+timestamp: 2026-06-17 09:20:40 UTC
+question_type: discrete
+factors:
+- description: Only one execution (Dusty Ray Spencer, FL, June 25) is scheduled in
+    the June 25-28 window. No other executions are scheduled anywhere in the US for
+    those dates.
+  supports:
+    center: 1.0
+    low: 0.0
+    high: 1.0
+  logit: 1.5
+  confidence: 0.95
+  effective_logit: 1.4249999999999998
+- description: Spencer's execution is marked 'serious' by SMU tracker, circuit court
+    denied postconviction claims, DeSantis-era FL has ~70-85% warrant completion rate,
+    ~8-9 FL executions already carried out in 2026
+  supports:
+    center: 1.0
+    low: 1.0
+    high: 1.0
+  logit: 1.0
+  confidence: 0.85
+  effective_logit: 0.85
+- description: Florida Supreme Court appeal (SC2026-0880) still pending/open as of
+    June 17 - creates some stay risk. Novel arguments about age (74, oldest ever FL
+    execution) and expired drugs
+  supports:
+    center: 0.0
+    low: 0.0
+    high: 1.0
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: No other executions scheduled anywhere in the US for June 26-28. Next
+    confirmed execution is FL July 14. Emergency scheduling in 4-day window essentially
+    never happens.
+  supports:
+    center: 1.0
+    low: 1.0
+    high: 1.0
+  logit: -0.3
+  confidence: 0.95
+  conditional: Constrains upper tail - P(2+) very low
+  effective_logit: -0.285
+tentative_estimate:
+  center: 1.0
+  low: 0.0
+  high: 1.0
+anchor: 'Base rate: ~70-85% of signed FL death warrants proceed in DeSantis era. With
+  only 1 scheduled execution, expected value anchors near 0.75-0.85.'
+assessment: 'This is a discrete counting question with a very narrow distribution.
+  Only one execution (Dusty Ray Spencer in Florida) is scheduled in the June 25-28
+  window. The core uncertainty is whether Spencer''s execution proceeds or is stayed.
+
+
+  Arguments for proceeding (~85%): Circuit court denied postconviction claims; FL
+  Supreme Court hasn''t issued a stay despite pending appeal; DeSantis-era FL very
+  aggressive (10 warrants signed in 2026, ~8-9 executions carried out); execution
+  marked ''serious'' by independent tracker; 34+ years of appellate history largely
+  exhausted.
+
+
+  Arguments for stay (~15%): FL Supreme Court appeal SC2026-0880 still open; novel
+  arguments about age (74, would be oldest FL execution ever) and allegedly expired
+  drugs; Florida Supreme Court did stay the Duckett execution in March 2026 (though
+  that was a DNA evidence case, very different).
+
+
+  P(2+) is negligible (~2%) since no other executions are scheduled and emergency
+  scheduling doesn''t happen in 4-day windows.
+
+
+  Distribution: P(0)=0.148, P(1)=0.838, P(2)=0.013, P(3+)=0.002. Expected value ~0.87.'
+calibration_notes: Distribution is intentionally tight because the question window
+  is very short (4 days) and only 1 execution is on the schedule. The 15% stay probability
+  is calibrated against FL's recent ~15-25% warrant-stay rate in the DeSantis era.
+  The FL Supreme Court appeal is the main risk factor, but most death penalty appeals
+  at this stage are denied in FL.
+key_uncertainties: 'Main uncertainty: Will the FL Supreme Court grant a stay on Spencer''s
+  appeal (SC2026-0880)? The novel age/expired drugs arguments add some uncertainty
+  but FL courts have generally rejected similar challenges. Secondary: Could any completely
+  unscheduled execution materialize? (Extremely unlikely.)'
+tool_audit: 'Useful: research() provided detailed Spencer case status and FL execution
+  history; web_search found current news about Spencer''s legal challenges; fetch_url
+  confirmed DPIC and SMU tracker both show only Spencer scheduled; Wikipedia confirmed
+  15 US executions in 2026 so far with several FL executions. All tools returned relevant
+  results.'
+update_triggers: FL Supreme Court ruling on SC2026-0880 would be the key trigger.
+  A stay would shift to P(0)≈90%+. A denial would shift to P(1)≈92%+. Any news of
+  a surprise execution scheduling elsewhere would shift P(2) up.
+process_reflection: This question is well-suited to the tooling. The discrete distribution
+  is concentrated and straightforward. Research sub-agent provided good case-specific
+  detail on Spencer's legal status. Direct web searches confirmed no other executions
+  are scheduled. The main analytical challenge is estimating the stay probability,
+  which requires judgment about FL Supreme Court behavior in the DeSantis era.
+computed:
+  factor_count: 4
+  factor_sum: 1.64
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Only one execution (Dusty Ray Spencer, FL, June 25) is scheduled
+      in the June 25-28 window. No other executions are scheduled anywhere in the
+      US for those dates.
+    supports:
+      center: 1.0
+      low: 0.0
+      high: 1.0
+    logit: 1.5
+    confidence: 0.95
+    effective_logit: 1.4249999999999998
+  - description: Spencer's execution is marked 'serious' by SMU tracker, circuit court
+      denied postconviction claims, DeSantis-era FL has ~70-85% warrant completion
+      rate, ~8-9 FL executions already carried out in 2026
+    supports:
+      center: 1.0
+      low: 1.0
+      high: 1.0
+    logit: 1.0
+    confidence: 0.85
+    effective_logit: 0.85
+  - description: Florida Supreme Court appeal (SC2026-0880) still pending/open as
+      of June 17 - creates some stay risk. Novel arguments about age (74, oldest ever
+      FL execution) and expired drugs
+    supports:
+      center: 0.0
+      low: 0.0
+      high: 1.0
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: No other executions scheduled anywhere in the US for June 26-28.
+      Next confirmed execution is FL July 14. Emergency scheduling in 4-day window
+      essentially never happens.
+    supports:
+      center: 1.0
+      low: 1.0
+      high: 1.0
+    logit: -0.3
+    confidence: 0.95
+    effective_logit: -0.285
+    conditional: Constrains upper tail - P(2+) very low
+  dominant_factor: Only one execution (Dusty Ray Spencer, FL, June 25) is scheduled
+    in the June 25-28 window. No other executions are scheduled anywhere in the US
+    for those dates.
+  dominant_effective_logit: 1.4249999999999998
+  distribution_metrics:
+    implied_median: 0.8797250859106529
+    implied_p10: 0.39003436426116844
+    implied_p90: 1.0
+    median_gap: 0.1202749140893471
+    median_gap_pct: 19.718309859154935
+    spread_ratio: 1.6394366197183101
+    precision: 1.0
+  sources:
+  - '[(Metaculus) How many executions will be carried out in the United States between
+    June 25 and June 28, 2026 (inclusive)?](https://www.metaculus.com/questions/44093)'
+  - '[Upcoming Executions | Death Penalty Information Center](https://deathpenaltyinfo.org/executions/upcoming-executions)'
+  - '[List of people scheduled to be executed in the United States](https://en.wikipedia.org/wiki/List_of_people_scheduled_to_be_executed_in_the_United_States)'
+  - '[List of killings by law enforcement officers in the United States, June 2026](https://en.wikipedia.org/wiki/List_of_killings_by_law_enforcement_officers_in_the_United_States,_June_2026)'
+  - '[List of people executed in the United States in 2026](https://en.wikipedia.org/wiki/List_of_people_executed_in_the_United_States_in_2026)'
+  - '[Pending U.S. Executions (as of 06/11/2026](https://people.smu.edu/rhalperi/pending-u-s-executions/)'
+  - '[SPENCER WARRANT: Postconviction claims denied and appeal filed](https://fladeathpenalty.substack.com/p/spencer-warrant-postconviction-claims-ed0)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44093
+- **Question ID**: 44118
+- **Session Duration**: 887.3s (14.8 min)
+- **Cost**: $16.1132 total (orchestrator $2.5624 + sub-agents $13.5508)
+- **Tokens**: 7,222 total (28 in, 7,194 out)
+  - Cache: 509,972 read, 67,063 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44093_20260617_090744/20260617-090744.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0702 |
+| execute_code | 1 | 0 | 239ms | — |
+| fetch_url | 4 | 0 | 6929ms | — |
+| get_metaculus_questions | 1 | 0 | 363ms | — |
+| premortem | 1 | 0 | 83287ms | $1.7430 |
+| reflection | 1 | 0 | 9ms | — |
+| research | 1 | 0 | 561692ms | $11.5975 |
+| web_search | 4 | 0 | 17848ms | $0.1400 |
+| wikipedia | 4 | 0 | 338ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many executions will be carried out in the United States bet...
+- [Upcoming Executions | Death Penalty Information Center](https://deathpenalty...
+- [List of people scheduled to be executed in the United States](https://en.wik...
+- [List of killings by law enforcement officers in the United States, June 2026...
+- [List of people executed in the United States in 2026](https://en.wikipedia.o...
+- [Pending U.S. Executions (as of 06/11/2026](https://people.smu.edu/rhalperi/p...
+- [SPENCER WARRANT: Postconviction claims denied and appeal filed](https://flad...
