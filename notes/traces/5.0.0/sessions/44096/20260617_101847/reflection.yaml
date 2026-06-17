@@ -1,0 +1,242 @@
+---
+timestamp: 2026-06-17 10:28:52 UTC
+question_type: discrete
+factors:
+- description: 'Bear market regime: 13.6% positive flow days during late May-mid June
+    outflow period (3/22 days). BTC is -48.5% from ATH, institutional 13F positions
+    reduced 17%.'
+  supports:
+    center: 0.8
+    low: 0.0
+    high: 2.0
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: 'Full May-June base rate: 9/32 = 28.1% positive days, suggesting ~1.4
+    expected positive days out of 5. This is the most neutral anchor.'
+  supports:
+    center: 1.4
+    low: 0.0
+    high: 3.0
+  logit: -0.5
+  confidence: 0.9
+  effective_logit: -0.45
+- description: 'Recent improvement in flows: 2 of last 5 trading days positive (40%).
+    BTC bounced from $59K low to ~$65K. Fear & Greed recovering from 8 to 22.'
+  supports:
+    center: 2.0
+    low: 1.0
+    high: 3.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: 'FOMC meeting TODAY (June 17): BTC has fallen 6-30% after each of last
+    6 FOMC meetings. 97.4% chance rates held at 3.50-3.75%. Dot plot is key uncertainty
+    - could be dovish or hawkish.'
+  supports:
+    center: 1.2
+    low: 0.0
+    high: 3.0
+  logit: -0.5
+  confidence: 0.5
+  effective_logit: -0.25
+- description: 'US-Iran ceasefire agreement: positive for risk assets, could support
+    sentiment and potentially Bitcoin price recovery next week.'
+  supports:
+    center: 2.0
+    low: 1.0
+    high: 3.0
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+- description: 'Extreme Fear contrarian signal: Fear & Greed at 22 for 10+ consecutive
+    days; historically extreme fear often precedes relief rallies. Analysts note ''cyclical
+    not structural'' outflows.'
+  supports:
+    center: 2.0
+    low: 1.0
+    high: 4.0
+  logit: 0.5
+  confidence: 0.4
+  effective_logit: 0.2
+tentative_estimate:
+  center: 1.5
+  low: 0.0
+  high: 3.0
+anchor: 28.1% per-day positive rate from combined May-June 2026 data (9/32 days),
+  implying ~1.4 expected positive days out of 5 under Binomial assumption.
+assessment: "This is a discrete question about how many of 5 trading days (June 22-26)\
+  \ will have net positive US spot Bitcoin ETF flows.\n\nKey data points:\n- May 2026:\
+  \ 6/20 (30%) positive days\n- June 2026 through Jun 16: 3/12 (25%) positive days\
+  \  \n- Bear regime (late May - mid June): only 3/22 (13.6%) positive days\n- Recent\
+  \ 5 days: 2/5 (40%) positive - showing some improvement\n- Combined May-June: 9/32\
+  \ (28.1%) positive days\n\nThe critical near-term event is today's FOMC meeting.\
+  \ BTC has historically sold off after recent FOMC meetings, but the market is already\
+  \ in extreme fear territory and a US-Iran ceasefire provides some positive backdrop.\n\
+  \nUsing a scenario-based Monte Carlo simulation blended with Beta-Binomial models:\n\
+  - P(0 days) ≈ 22%, P(1 day) ≈ 31.5%, P(2 days) ≈ 25.5%, P(3 days) ≈ 14%, P(4 days)\
+  \ ≈ 5.6%, P(5 days) ≈ 1.3%\n- Mean ≈ 1.53 positive days\n\nThe distribution is right-skewed\
+  \ with mode at 1 day. This reflects the bear market environment where outflows dominate\
+  \ but with meaningful probability of improvement if FOMC/macro turns positive."
+calibration_notes: The scenario-based model (mean 1.53) is slightly above the simple
+  Beta-Binomial based on all May-Jun data (mean 1.47) because it incorporates possibility
+  of regime change. The pure bear-regime Beta-Binomial gives mean 0.83, which is too
+  low given recent improvement. The blend across models gives appropriate width for
+  regime uncertainty.
+key_uncertainties: 1. FOMC dot plot outcome (today) - could shift BTC ±10% and dramatically
+  alter flow direction for next week. 2. Whether the recent flow improvement (2/5
+  positive days) represents a regime shift or noise. 3. Whether extreme fear reversal
+  will materialize into buying pressure. 4. Day-to-day autocorrelation in flows (not
+  well captured by independent day assumption).
+tool_audit: 'Useful: Farside data fetch (got complete daily flow data for May-June),
+  CoinGecko price data via research sub-agent, Fear & Greed Index data, FOMC analysis
+  from crypto news sites. Empty/limited: June 17 flow data not yet available (market
+  still open), no prediction market pricing found for this specific question. No tool
+  failures.'
+update_triggers: 1. FOMC dot plot signals more rate cuts than expected → shift distribution
+  rightward. 2. BTC drops below $60K again → shift distribution leftward significantly.
+  3. Major risk-off event between now and June 22 → more outflows expected.
+process_reflection: 'The research sub-agent was very effective at gathering comprehensive
+  market data. The Farside URL fetch worked well for getting exact daily flow numbers.
+  The scenario-based Monte Carlo approach feels appropriate for this type of question
+  where the regime is uncertain. One limitation: I couldn''t find any prediction market
+  pricing for this specific ETF flow question to cross-validate. The FOMC meeting
+  happening today creates significant uncertainty that''s hard to resolve without
+  waiting for the outcome.'
+computed:
+  factor_count: 6
+  factor_sum: -1.095
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Bear market regime: 13.6% positive flow days during late May-mid
+      June outflow period (3/22 days). BTC is -48.5% from ATH, institutional 13F positions
+      reduced 17%.'
+    supports:
+      center: 0.8
+      low: 0.0
+      high: 2.0
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: 'Full May-June base rate: 9/32 = 28.1% positive days, suggesting
+      ~1.4 expected positive days out of 5. This is the most neutral anchor.'
+    supports:
+      center: 1.4
+      low: 0.0
+      high: 3.0
+    logit: -0.5
+    confidence: 0.9
+    effective_logit: -0.45
+  - description: 'Recent improvement in flows: 2 of last 5 trading days positive (40%).
+      BTC bounced from $59K low to ~$65K. Fear & Greed recovering from 8 to 22.'
+    supports:
+      center: 2.0
+      low: 1.0
+      high: 3.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: 'FOMC meeting TODAY (June 17): BTC has fallen 6-30% after each of
+      last 6 FOMC meetings. 97.4% chance rates held at 3.50-3.75%. Dot plot is key
+      uncertainty - could be dovish or hawkish.'
+    supports:
+      center: 1.2
+      low: 0.0
+      high: 3.0
+    logit: -0.5
+    confidence: 0.5
+    effective_logit: -0.25
+  - description: 'US-Iran ceasefire agreement: positive for risk assets, could support
+      sentiment and potentially Bitcoin price recovery next week.'
+    supports:
+      center: 2.0
+      low: 1.0
+      high: 3.0
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  - description: 'Extreme Fear contrarian signal: Fear & Greed at 22 for 10+ consecutive
+      days; historically extreme fear often precedes relief rallies. Analysts note
+      ''cyclical not structural'' outflows.'
+    supports:
+      center: 2.0
+      low: 1.0
+      high: 4.0
+    logit: 0.5
+    confidence: 0.4
+    effective_logit: 0.2
+  dominant_factor: 'Bear market regime: 13.6% positive flow days during late May-mid
+    June outflow period (3/22 days). BTC is -48.5% from ATH, institutional 13F positions
+    reduced 17%.'
+  dominant_effective_logit: -1.275
+  distribution_metrics:
+    implied_median: 1.299474605954466
+    implied_p10: 0.30823117338003503
+    implied_p90: 2.6234676007005255
+    median_gap: 0.20052539404553404
+    median_gap_pct: 8.661119515885018
+    spread_ratio: 1.2957639939485626
+    precision: 2.0
+  sources:
+  - '[(Metaculus) How many of the 5 trading days from June 22 to 26, 2026 will U.S.
+    spot Bitcoin ETFs record net positive flows, per Farside Investors?](https://www.metaculus.com/questions/44096)'
+  - '[Farside Investors](https://farside.co.uk/btc/)'
+  - '[Farside Investors](https://farside.co.uk/bitcoin-etf-flow-all-data/)'
+  - '[ProShares](https://en.wikipedia.org/wiki/ProShares)'
+  - '[Grayscale Investments](https://en.wikipedia.org/wiki/Grayscale_Investments)'
+  - '[Invesco QQQ](https://en.wikipedia.org/wiki/Invesco_QQQ)'
+  - '[VanEck](https://en.wikipedia.org/wiki/VanEck)'
+  - '[Ark Invest](https://en.wikipedia.org/wiki/Ark_Invest)'
+  - '[Flow Traders](https://en.wikipedia.org/wiki/Flow_Traders)'
+  - '[Texas Strategic Bitcoin Reserve](https://en.wikipedia.org/wiki/Texas_Strategic_Bitcoin_Reserve)'
+  - '[CPI on June 10 and the FOMC on June 17, Bitcoin''s Next Big Move Will Be Decided
+    in the Next 7 Days](https://cryptonews.com/news/june-cpi-fomc-dots-reprice-bitcoin-2026/)'
+  - '[Bitcoin Strongly Breaks $65,000, How This Week’s FOMC Decision Will Influence
+    the Outlook?](https://www.tradingkey.com/analysis/cryptocurrencies/btc/261967259-crypto-bitcoin-btc-fed-fomc-iran-kevin-warsh-rate-cut-tradingkey)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44096
+- **Question ID**: 44121
+- **Session Duration**: 836.3s (13.9 min)
+- **Cost**: $11.9318 total (orchestrator $3.7517 + sub-agents $8.1801)
+- **Tokens**: 14,398 total (40 in, 14,358 out)
+  - Cache: 775,360 read, 80,597 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44096_20260617_101847/20260617-101847.log`
+
+### Tool Calls
+
+- **Total**: 30 calls
+- **Errors**: 2 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.3310 |
+| execute_code | 4 | 0 | 550ms | — |
+| fetch_url | 4 | 0 | 16808ms | — |
+| get_coherence_links | 1 | 0 | 447ms | — |
+| get_metaculus_questions | 1 | 0 | 324ms | — |
+| premortem | 1 | 0 | 179154ms | $2.7381 |
+| reflection | 1 | 0 | 12ms | — |
+| research | 1 | 0 | 199397ms | $4.9461 |
+| web_search | 4 | 0 | 24618ms | $0.1649 |
+| wikipedia | 13 | 2 ⚠️ | 361ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) How many of the 5 trading days from June 22 to 26, 2026 will U.S...
+- [Farside Investors](https://farside.co.uk/btc/)
+- [Farside Investors](https://farside.co.uk/bitcoin-etf-flow-all-data/)
+- [ProShares](https://en.wikipedia.org/wiki/ProShares)
+- [Grayscale Investments](https://en.wikipedia.org/wiki/Grayscale_Investments)
+- [Invesco QQQ](https://en.wikipedia.org/wiki/Invesco_QQQ)
+- [VanEck](https://en.wikipedia.org/wiki/VanEck)
+- [Ark Invest](https://en.wikipedia.org/wiki/Ark_Invest)
+- [Flow Traders](https://en.wikipedia.org/wiki/Flow_Traders)
+- [Texas Strategic Bitcoin Reserve](https://en.wikipedia.org/wiki/Texas_Strateg...
+- [CPI on June 10 and the FOMC on June 17, Bitcoin's Next Big Move Will Be Deci...
+- [Bitcoin Strongly Breaks $65,000, How This Week’s FOMC Decision Will Influenc...
