@@ -1,0 +1,257 @@
+---
+timestamp: 2026-06-17 18:53:39 UTC
+question_type: binary
+factors:
+- description: 'Pre-ceasefire base rate: ~7.5 fatal incidents in 106 days (1 every
+    ~14 days). For 11 remaining days, P(≥1) ≈ 54% at this rate.'
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: Ceasefire announced June 14, US lifting naval blockade, deal signing
+    set for June 19 in Switzerland. Genuine reduction in attack incentives.
+  logit: -1.5
+  confidence: 0.7
+  effective_logit: -1.0499999999999998
+- description: Iran ACTIVELY firing multiple drones at ships every night since ceasefire
+    signed (June 14-17 confirmed). Not a true ceasefire for maritime attacks.
+  logit: 1.0
+  confidence: 0.9
+  effective_logit: 0.9
+- description: Israeli strikes on Beirut June 18 threaten to collapse the deal. Iran
+    made Lebanon a condition. IRGC has not endorsed ceasefire.
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: US successfully intercepting all Iranian drones so far (3+ nights).
+    Strong defensive capability reducing lethality of ongoing attacks.
+  logit: -1.0
+  confidence: 0.75
+  effective_logit: -0.75
+- description: 3 days (June 14-17) have passed with no confirmed fatal incident in
+    the window. Survival information updates downward.
+  logit: -0.4
+  confidence: 0.9
+  effective_logit: -0.36000000000000004
+- description: Commercial traffic near zero (Strait effectively closed ~108 days).
+    Fewer transiting targets, though 2,000 stranded ships remain.
+  logit: -0.6
+  confidence: 0.7
+  effective_logit: -0.42
+- description: Uncleared naval mines in the Strait of Hormuz. Mine-clearing operations
+    have not yet begun. Independent risk vector.
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: Previous ceasefires in this conflict (April 8, April 17, May 6) have
+    all broken down quickly, often within days.
+  logit: 0.6
+  confidence: 0.8
+  effective_logit: 0.48
+tentative_estimate:
+  logit: 0.2
+  probability: 0.55
+anchor: 'Pre-ceasefire fatal incident rate: ~7.5 fatal shipping incidents in 106 days
+  of crisis (Feb 28 - June 14). For a full 14-day window at this rate, P(≥1) ≈ 63%.
+  For remaining 11 days, P ≈ 54%. Source: IMO confirmed 46 attacks and 14 seafarer
+  fatalities; estimating ~7.5 distinct fatal events.'
+assessment: 'This is a question about whether an active conflict zone will produce
+  a fatal shipping attack in a ~2-week window, with a ceasefire as the main countervailing
+  factor.
+
+
+  **For YES:**
+
+  - The pre-ceasefire rate strongly favors at least one fatal incident in 14 days
+
+  - Iran is ACTIVELY attacking ships every night with drones despite the ceasefire
+
+  - Israeli strikes on Beirut (June 18) directly threaten the deal''s survival
+
+  - IRGC has not endorsed the ceasefire
+
+  - All previous ceasefires in this conflict have failed within days-weeks
+
+  - Uncleared mines persist in the strait
+
+  - 2,000 stranded ships and 20,000 mariners remain exposed
+
+
+  **For NO:**
+
+  - A genuine ceasefire/deal was announced June 14 with deal signing set for June
+  19
+
+  - US lifting its naval blockade removes a major source of attacks (MT Settebello
+  was a US strike)
+
+  - US forces have intercepted ALL Iranian drones for 3+ consecutive nights
+
+  - Commercial traffic is near zero, reducing the pool of transiting targets
+
+  - 3 days have already passed without a fatal incident
+
+
+  **Monte Carlo results:** Sensitivity analysis across ceasefire reduction assumptions
+  (30-70%) and collapse probabilities (3-8%/day) gives P(YES) range of 35-52%, with
+  a central estimate around 42-48%. The refined day-by-day simulation with escalating
+  collapse probability gives 42%.
+
+
+  I adjust slightly upward from the model output to ~55% to account for: (1) the concrete
+  June 18 Israeli Beirut strikes which create near-term ceasefire collapse risk, (2)
+  model uncertainty in the fatal incident count, and (3) the nightly drone attacks
+  representing active, ongoing hostility rather than theoretical risk.'
+calibration_notes: 'Anchor: 54% (pre-ceasefire rate for 11 remaining days). My estimate
+  of 55% implies the ceasefire has essentially NO net effect, which is aggressive.
+  The models suggest 42-48% is more calibrated. However, the ceasefire is extremely
+  fragile - Iran continues nightly attacks, IRGC hasn''t endorsed it, and Israeli
+  strikes threaten collapse. I''m weighting toward the higher end of my model range.'
+key_uncertainties: '1. Will the Israeli Beirut strikes collapse the ceasefire? This
+  is the most critical near-term uncertainty.
+
+  2. How effective is US drone interception over 10+ nights? Even a 95% success rate
+  means a likely breakthrough.
+
+  3. Are there unreported incidents from June 14-17 that could already resolve this
+  YES?
+
+  4. How many of the 14 pre-ceasefire deaths were from distinct incidents? (affects
+  base rate)
+
+  5. Will any ships attempt to transit the mined strait under the deal?'
+tool_audit: 'Useful: web_search (found critical Wikipedia articles, news reports,
+  UKMTO incident), fetch_url (Wikipedia and UN News articles gave precise dates),
+  research() (comprehensive background on the crisis). The first research() call was
+  very thorough; the second failed due to tool unavailability but the first compensated.
+  execute_code provided clean Monte Carlo results. get_metaculus_questions confirmed
+  resolution criteria. Empty/limited: get_coherence_links returned nothing. UKMTO
+  website couldn''t be directly accessed. The Hormuz Strait Monitor timeline was very
+  useful.'
+update_triggers: '- Confirmed fatal attack on a commercial vessel in the Gulf (immediate
+  YES)
+
+  - Israeli strikes escalate in Lebanon, causing Iran to withdraw from the deal
+
+  - Iran explicitly resumes full maritime attacks
+
+  - Deal signing on June 19 proceeds smoothly (would lower to ~35-40%)
+
+  - Mine-clearing operations begin (would slightly lower probability)
+
+  - Iran halts nightly drone attacks (strong signal ceasefire is working, lower to
+  ~30%)'
+process_reflection: 'The research tools worked well for this question - the combination
+  of web search and fetch_url provided a comprehensive picture of the crisis. The
+  Monte Carlo simulation in execute_code was valuable for testing sensitivity to assumptions.
+  Main friction: I spent significant time deliberating between my computational estimates
+  (35-48%) and my intuitive assessment (~55%), going back and forth. The reflection
+  tool checkpoint should help anchor this. The research() tool''s first call was excellent
+  but the second call failed due to tool unavailability, which is a common issue.
+  Having a dedicated crisis timeline source (Hormuz Strait Monitor) was very helpful.'
+computed:
+  factor_count: 9
+  factor_sum: 0.8000000000000003
+  tentative_logit: 0.2
+  logit_gap: -0.6000000000000003
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Pre-ceasefire base rate: ~7.5 fatal incidents in 106 days (1 every
+      ~14 days). For 11 remaining days, P(≥1) ≈ 54% at this rate.'
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: Ceasefire announced June 14, US lifting naval blockade, deal signing
+      set for June 19 in Switzerland. Genuine reduction in attack incentives.
+    logit: -1.5
+    confidence: 0.7
+    effective_logit: -1.0499999999999998
+  - description: Iran ACTIVELY firing multiple drones at ships every night since ceasefire
+      signed (June 14-17 confirmed). Not a true ceasefire for maritime attacks.
+    logit: 1.0
+    confidence: 0.9
+    effective_logit: 0.9
+  - description: Israeli strikes on Beirut June 18 threaten to collapse the deal.
+      Iran made Lebanon a condition. IRGC has not endorsed ceasefire.
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: US successfully intercepting all Iranian drones so far (3+ nights).
+      Strong defensive capability reducing lethality of ongoing attacks.
+    logit: -1.0
+    confidence: 0.75
+    effective_logit: -0.75
+  - description: 3 days (June 14-17) have passed with no confirmed fatal incident
+      in the window. Survival information updates downward.
+    logit: -0.4
+    confidence: 0.9
+    effective_logit: -0.36000000000000004
+  - description: Commercial traffic near zero (Strait effectively closed ~108 days).
+      Fewer transiting targets, though 2,000 stranded ships remain.
+    logit: -0.6
+    confidence: 0.7
+    effective_logit: -0.42
+  - description: Uncleared naval mines in the Strait of Hormuz. Mine-clearing operations
+      have not yet begun. Independent risk vector.
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: Previous ceasefires in this conflict (April 8, April 17, May 6) have
+      all broken down quickly, often within days.
+    logit: 0.6
+    confidence: 0.8
+    effective_logit: 0.48
+  dominant_factor: 'Pre-ceasefire base rate: ~7.5 fatal incidents in 106 days (1 every
+    ~14 days). For 11 remaining days, P(≥1) ≈ 54% at this rate.'
+  dominant_effective_logit: 1.2000000000000002
+  factor_implied_probability: 0.6899744811276125
+  tentative_probability: 0.55
+  gap_pp: -13.997448112761246
+  sources:
+  - '[(Metaculus) Will a commercial vessel be sunk or suffer a fatal attack in the
+    Persian Gulf, Strait of Hormuz, or Gulf of Oman between June 14 and June 28, 2026?](https://www.metaculus.com/questions/44101)'
+  - '[2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[2026 Strait of Hormuz campaign](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_campaign)'
+  - '[2026 United States naval blockade of Iran](https://en.wikipedia.org/wiki/2026_United_States_naval_blockade_of_Iran)'
+  - '[Crisis Timeline: The Strait of Hormuz War 2026](https://hormuzstraitmonitor.com/crisis-timeline/)'
+  - '[Three seafarers killed in Hormuz strike as UN warns of widening fallout](https://news.un.org/en/story/2026/06/1167697)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44101
+- **Question ID**: 44126
+- **Session Duration**: 1183.5s (19.7 min)
+- **Cost**: $18.2693 total (orchestrator $4.2883 + sub-agents $13.9810)
+- **Tokens**: 21,341 total (38 in, 21,303 out)
+  - Cache: 667,517 read, 90,065 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44101_20260617_183732/20260617-183732.log`
+
+### Tool Calls
+
+- **Total**: 26 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0723 |
+| execute_code | 2 | 0 | 4460ms | — |
+| fetch_url | 3 | 0 | 9522ms | — |
+| get_coherence_links | 1 | 0 | 556ms | — |
+| get_metaculus_questions | 1 | 0 | 279ms | — |
+| premortem | 1 | 0 | 152937ms | $3.8251 |
+| reflection | 1 | 0 | 5ms | — |
+| research | 1 | 0 | 369903ms | $9.7908 |
+| web_search | 8 | 0 | 18576ms | $0.2928 |
+| wikipedia | 8 | 0 | 850ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will a commercial vessel be sunk or suffer a fatal attack in the...
+- [2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_H...
+- [2026 Strait of Hormuz campaign](https://en.wikipedia.org/wiki/2026_Strait_of...
+- [2026 United States naval blockade of Iran](https://en.wikipedia.org/wiki/202...
+- [Crisis Timeline: The Strait of Hormuz War 2026](https://hormuzstraitmonitor....
+- [Three seafarers killed in Hormuz strike as UN warns of widening fallout](htt...
