@@ -1,0 +1,127 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by pulling the full Metaculus question details (post 44102), which gave me the resolution criteria, background, and fine print. The question asks whether Riot Games will make an **official public announcement** confirming a \"League of Legends Classic\" experience between June 13–28, 2026. Key distinction: leaks, player statements, and third-party reporting do not count.\n\nI then dispatched two research sub-agents to investigate \"Riot Games League of Legends Classic server announcement June 2026\" and \"Doinb Uzi League of Legends classic nostalgia server rumor 2026.\" Both sub-agents reported that their web search/fetch tools were unavailable, so they could only provide background context from training data (cutoff early 2025). This was a notable limitation — I had to fall back on direct web search and URL fetch calls.\n\nI ran three parallel web searches:\n1. \"Riot Games League of Legends Classic server official announcement June 2026\"\n2. \"League of Legends Classic nostalgia server Doinb Uzi rumor 2026\"\n3. `site:leagueoflegends.com classic server 2026`\n\nThese returned multiple gaming news articles (games.gg, PCGamesN, rdy.gg, techsciencetoday) all covering the **rumor** — none reporting an official Riot announcement. I also found the official Riot Games news page and LoL news page in results.\n\n## Key Evidence\n\nI fetched and analyzed three critical pages:\n\n- **games.gg article**: Confirmed Doinb said classic server launches \"next month\" (July), he's planning to stream it with former Weibo Gaming teammates. **Uzi** said \"it should be coming soon\" but went quiet. Crucially: **\"Riot has not commented on any of this.\"** Also noted WoW Classic streamer **Esfand** visited Riot HQ on June 6 for a mystery event.\n\n- **leagueoflegends.com/en-us/news/**: Headlines were MSI 2026, ARAM: Mayhem, Patch 26.12 notes, community events, and merch. **Zero mention** of any classic server or nostalgia mode.\n\n- **riotgames.com/en/news**: Headlines included 2XKO PVE mode, TFT tech upgrade, Locke cinematic, Pride 2026, Valorant. **Zero mention** of classic server.\n\nAdditional searches for `\"League of Legends Classic\" official announcement Riot Games confirmed 2026` and `Riot Games LoL classic server confirmed leak update latest news` returned the same rumor articles and official pages with no classic server content. The riftdaily.com article returned HTTP 454 (unavailable).\n\n**Summary of evidence:**\n- **No official Riot announcement** exists anywhere as of June 17, 2026\n- **Doinb** (regarded as reliable leaker) points to **July** launch, not June announcement\n- **Uzi** implies **NDA** — \"still can't talk about it\"\n- Riot's **confirmed 2026 slate**: Locke champion (June 24), MSI 2026, League Next client overhaul (H2)\n- Riot's **historical stance**: shut down Chronoshift, called classic servers \"not worth the development effort\"\n- Only **11 days** remain until the June 28 deadline\n- **Esfand's Riot HQ visit** (June 6) is a weak signal that could relate to classic content or to Locke\n\n## Conclusion\n\nI constructed 8 factors — 5 negative and 3 positive — using the logit framework. The factor sum implied ~2.2% probability, but I adjusted upward to **9%** to account for the possibility that a July launch would necessitate a late-June teaser/announcement. The premortem exercise built the strongest possible YES case (MSI timing, pre-launch announcement windows, Esfand visit) but concluded the evidence firmly favors NO.\n\nFinal probability: **9%**. The small YES probability is driven entirely by the scenario where Riot needs to tease a July launch in late June, but zero official signals exist with 11 days remaining.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 4,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to Chinese-language sources (Weibo, Bilibili) where the rumor originated and where early signals would most likely appear",
+      "No social media monitoring tool for checking @RiotGames/@LeagueOfLegends Twitter/X accounts for recent posts",
+      "No prediction market lookup tool — Polymarket/Manifold/Kalshi markets could provide additional calibration"
+    ],
+    "subtle_bugs": [
+      "mcp__research__research sub-agents reported having no web access but did not error — they returned plausible-sounding but entirely stale background information, which could mislead an agent that doesn't notice the limitation disclaimer"
+    ]
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Direct verification of official Riot channels plus analysis of rumor sources and timeline signals to assess probability of an official announcement within an 11-day window.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a rumored July launch would necessitate a late-June official announcement, given zero prior signals from Riot."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The rumor originates from Chinese streaming platforms (Doinb and Uzi's streams). The agent did not search Chinese-language sources (Weibo, Bilibili, NGA) or check Riot's Chinese/Tencent channels, which could contain signals not visible on English-language sites.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "Agent did not check prediction markets (Polymarket, Manifold, Kalshi) which could provide crowd-calibrated probabilities for comparison. For a question with 5 Metaculus forecasters and no community prediction shown, external market data would be valuable.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "8%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Directly verified both official Riot channels (riotgames.com/en/news and leagueoflegends.com/en-us/news) via URL fetch rather than relying on secondary reporting — this is the gold standard for 'has X been announced' questions",
+    "Correctly identified that Doinb's timeline (July launch) actually argues against a June announcement, not for it — a subtle but important distinction between 'something exists' and 'it will be announced in the resolution window'",
+    "Recognized the NDA implication from Uzi's 'still can't talk about it' as a timing signal, not just an existence signal",
+    "Built a substantive premortem/counterargument around MSI timing and Esfand's visit rather than a token effort, which helps calibrate the small YES probability",
+    "Transparently noted the gap between the factor-implied ~2.2% and the final 9%, explaining the override as accounting for the pre-launch announcement scenario",
+    "Checked multiple search queries with different phrasings to minimize the chance of missing a real announcement"
+  ],
+  "weaknesses": [
+    "Research sub-agents (mcp__research__research) had no web access and returned only stale training data — the agent lost a turn before recognizing this and falling back to direct search",
+    "Did not check Chinese-language sources (Weibo, Bilibili, NGA forums) or social media (Twitter/X for @RiotGames, @LeagueOfLegends) directly, which could contain more recent signals given the rumor originates from the Chinese LoL scene",
+    "Did not check prediction markets (Polymarket, Manifold, Kalshi) for a market on this question, which could provide additional calibration",
+    "The riftdaily.com article (which appeared at the top of multiple search results) returned HTTP 454 and the agent did not attempt alternative access or a cached version",
+    "Did not search for or check the PBE (Public Beta Environment) for any classic-server-related assets or files, which could be a leading indicator of an imminent announcement"
+  ],
+  "pipeline": {
+    "issues": [
+      "Research sub-agents (mcp__research__research) had no web search/fetch access during this session, returning only training-data background — the agent wasted a turn before recognizing this and switching to direct web search",
+      "riftdaily.com returned HTTP 454 on fetch; agent did not attempt a cached/alternate access method"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "When research sub-agents fail to access web tools, skip them immediately and go straight to direct web search to avoid wasting a turn",
+    "For questions originating from Chinese gaming community rumors, attempt to search Chinese-language sources or at least English-language coverage of Chinese platforms (e.g., search for 'Weibo Riot classic server' or 'Bilibili LoL classic')",
+    "Check prediction markets as a standard calibration step, especially when the question has few Metaculus forecasters",
+    "When a URL returns an error (like the riftdaily 454), try Google Cache or Wayback Machine as fallback",
+    "Check social media accounts directly — a quick search for recent @RiotGames or @LeagueOfLegends tweets mentioning 'classic' or 'nostalgia' could be done in one search query"
+  ]
+}
