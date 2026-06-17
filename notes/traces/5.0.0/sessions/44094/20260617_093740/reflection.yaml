@@ -1,0 +1,253 @@
+---
+timestamp: 2026-06-17 09:49:14 UTC
+question_type: binary
+factors:
+- description: RocketLaunch.Live shows specific launch date of June 18, 2026 for Rassvet-3
+    batch 2, based on NOTAM/airspace notices. When NOTAMs are filed near a launch
+    date, launches often proceed.
+  logit: 1.0
+  confidence: 0.6
+  effective_logit: 0.6
+- description: 'Prior postponement: The second batch was already pushed from April
+    24-28 to June, demonstrating schedule instability. Production bottlenecks caused
+    the first batch to slip from late 2025 to March 2026.'
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: 'Disagreement among trackers: Only one source (RocketLaunch.Live) shows
+    a specific June 18 date. Others (RocketLaunch.org, NextSpaceflight, SpaceLaunchSchedule)
+    show TBD or don''t list it. This suggests high uncertainty.'
+  logit: -0.7
+  confidence: 0.7
+  effective_logit: -0.48999999999999994
+- description: 'Generous remaining window: 10 days remain (June 18-27). Even if June
+    18 slips by a few days, the window accommodates minor delays.'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: Bureau 1440 operates without advance announcements - absence of official
+    confirmation is normal pattern, not necessarily a negative signal.
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'High Soyuz-2.1b reliability: If launch is attempted, probability of
+    reaching orbit is ~97%. Launch vehicle readiness is not the bottleneck.'
+  logit: 0.3
+  confidence: 0.9
+  effective_logit: 0.27
+- description: 'Strong institutional pressure to launch: Bureau 1440 needs ~10 launches
+    in 2026 (only 1 so far after nearly 3 months). Nearly 3 months since last launch
+    suggests satellite batch may be ready.'
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: 'Status quo persistence: The launch hasn''t happened despite being
+    expected for months. Pattern of delays continues. Independent observers are skeptical
+    of aggressive cadence.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  logit: -0.2
+  probability: 0.45
+anchor: 'Russian space launch NOTAM-based predictions: When NOTAMs are filed for Plesetsk,
+  launches happen within the NOTAM window roughly 60-70% of the time, but the April
+  2026 Rassvet NOTAM was a counter-example. Starting at ~50% given one active NOTAM
+  and one prior postponement.'
+assessment: 'This is a moderately uncertain question about whether a specific Russian
+  satellite launch will happen within a 15-day window (10 days remaining).
+
+
+  Evidence FOR (YES):
+
+  - One launch tracker (RocketLaunch.Live) shows a specific June 18 date based on
+  NOTAMs
+
+  - The question was published today, suggesting the question author sees signals
+  of imminent launch
+
+  - 3 months since last batch is reasonable production time
+
+  - Strong institutional/programmatic pressure to maintain cadence
+
+  - Generous 10-day remaining window accommodates minor slips
+
+  - High launch vehicle reliability (~97%)
+
+
+  Evidence AGAINST (NO):
+
+  - Already postponed once from April 24-28 → demonstrates willingness to delay
+
+  - Most trackers (3 of 4) show TBD, not a specific date
+
+  - Production bottlenecks are well-documented (first batch slipped from 2025 to 2026)
+
+  - No official Bureau 1440 announcement (though this is their normal pattern)
+
+  - Satellite loss from first batch may prompt additional quality checks
+
+  - Only 1 of planned ~10 launches completed in first 3 months of 2026 suggests cadence
+  problems
+
+
+  The key tension is between the NOTAM signal (moderately strong indicator of imminent
+  launch) and the pattern of delays (already postponed once, production issues documented).
+  The 10-day remaining window helps, but if there''s a serious production issue, the
+  launch could slip well beyond June 27.
+
+
+  I estimate ~45% probability, slightly favoring NO given the track record of delays
+  and mixed tracker signals.'
+calibration_notes: Anchor of ~50% based on NOTAM filing. Factors push slightly toward
+  NO (net negative logit) due to prior postponement and tracker disagreement. 45%
+  seems reasonable - genuine uncertainty with slight lean toward NO based on pattern
+  of delays. Not hedging toward 50% - the evidence genuinely splits.
+key_uncertainties: 1. Whether active NOTAMs exist for June 18 (the trackers disagree).
+  2. Whether the April postponement was a one-time issue or reflects ongoing production
+  problems. 3. Whether the 3-month gap since last launch indicates readiness or continued
+  delays.
+tool_audit: "Useful: research() provided good background on Bureau 1440 launch history\
+  \ and current constellation status. web_search found RocketLaunch.Live listing with\
+  \ June 18 date. fetch_url confirmed multiple tracker disagreement. \nEmpty/limited:\
+  \ The Wikipedia 2026 in spaceflight page extraction didn't return detailed launch\
+  \ tables. The second research query (Soyuz schedule) had tool failures and couldn't\
+  \ access real-time data.\nNo failures: All tools functioned correctly."
+update_triggers: 1. Actual NOTAM confirmation for Plesetsk airspace closure June 18.
+  2. Witness reports or social media posts from near Plesetsk indicating launch activity.
+  3. Bureau 1440 Telegram announcement (post-launch). 4. Orbital tracking detection
+  of new objects from Plesetsk.
+process_reflection: The research tool worked well for background but couldn't access
+  the most time-sensitive launch schedule data. The web_search + fetch_url combination
+  was essential for checking multiple launch trackers. The main friction was that
+  several pages (Wikipedia 2026 in spaceflight, NextSpaceflight upcoming) didn't render
+  their table content well through fetch_url, making it hard to get structured launch
+  schedule data. A specialized space launch tracker API would be very helpful for
+  these types of questions.
+computed:
+  factor_count: 8
+  factor_sum: 0.010000000000000009
+  tentative_logit: -0.2
+  logit_gap: -0.21000000000000002
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: RocketLaunch.Live shows specific launch date of June 18, 2026 for
+      Rassvet-3 batch 2, based on NOTAM/airspace notices. When NOTAMs are filed near
+      a launch date, launches often proceed.
+    logit: 1.0
+    confidence: 0.6
+    effective_logit: 0.6
+  - description: 'Prior postponement: The second batch was already pushed from April
+      24-28 to June, demonstrating schedule instability. Production bottlenecks caused
+      the first batch to slip from late 2025 to March 2026.'
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: 'Disagreement among trackers: Only one source (RocketLaunch.Live)
+      shows a specific June 18 date. Others (RocketLaunch.org, NextSpaceflight, SpaceLaunchSchedule)
+      show TBD or don''t list it. This suggests high uncertainty.'
+    logit: -0.7
+    confidence: 0.7
+    effective_logit: -0.48999999999999994
+  - description: 'Generous remaining window: 10 days remain (June 18-27). Even if
+      June 18 slips by a few days, the window accommodates minor delays.'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: Bureau 1440 operates without advance announcements - absence of official
+      confirmation is normal pattern, not necessarily a negative signal.
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'High Soyuz-2.1b reliability: If launch is attempted, probability
+      of reaching orbit is ~97%. Launch vehicle readiness is not the bottleneck.'
+    logit: 0.3
+    confidence: 0.9
+    effective_logit: 0.27
+  - description: 'Strong institutional pressure to launch: Bureau 1440 needs ~10 launches
+      in 2026 (only 1 so far after nearly 3 months). Nearly 3 months since last launch
+      suggests satellite batch may be ready.'
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: 'Status quo persistence: The launch hasn''t happened despite being
+      expected for months. Pattern of delays continues. Independent observers are
+      skeptical of aggressive cadence.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: 'Prior postponement: The second batch was already pushed from April
+    24-28 to June, demonstrating schedule instability. Production bottlenecks caused
+    the first batch to slip from late 2025 to March 2026.'
+  dominant_effective_logit: -0.8
+  factor_implied_probability: 0.502499979166875
+  tentative_probability: 0.45
+  gap_pp: -5.249997916687504
+  sources:
+  - '[(Metaculus) Will a second 2026 batch of Bureau 1440 Rassvet satellites reach
+    orbit before June 28, 2026?](https://www.metaculus.com/questions/44094)'
+  - '[Bureau 1440](https://en.wikipedia.org/wiki/Bureau_1440)'
+  - '[2026 in spaceflight](https://en.wikipedia.org/wiki/2026_in_spaceflight)'
+  - '[Plesetsk Cosmodrome Site 43](https://en.wikipedia.org/wiki/Plesetsk_Cosmodrome_Site_43)'
+  - '[List of R-7 launches (2025%E2%80%932029](https://en.wikipedia.org/wiki/List_of_R-7_launches_(2025%E2%80%932029))'
+  - '[List of R-7 launches (2020%E2%80%932024](https://en.wikipedia.org/wiki/List_of_R-7_launches_(2020%E2%80%932024))'
+  - '[Plesetsk Cosmodrome Launch Schedule](https://rocketlaunch.org/launch-schedule/plesetsk-cosmodrome)'
+  - '[Starlink Group 12-19](https://nextspaceflight.com/launches/details/7867)'
+  - '[Baikonur Cosmodrome Site 31](https://en.wikipedia.org/wiki/Baikonur_Cosmodrome_Site_31)'
+  - '[Soyuz MS-30](https://en.wikipedia.org/wiki/Soyuz_MS-30)'
+  - '[Vostochny Cosmodrome Site 1S](https://en.wikipedia.org/wiki/Vostochny_Cosmodrome_Site_1S)'
+  - '[Plesetsk Cosmodrome Site 35](https://en.wikipedia.org/wiki/Plesetsk_Cosmodrome_Site_35)'
+  - '[Rassvet-3 batch 2 (16 x) Mission (Soyuz-2](https://www.rocketlaunch.live/launch/rassvet-3-batch-2-16)'
+  - '[RFSA 16 x Rassvet-3 Soyuz 2.1b Rocket Launch](https://www.spacelaunchschedule.com/launch/soyuz-2-1b-16-x-rassvet-3-2/)'
+  - '[Up Next](https://nextspaceflight.com/launches)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44094
+- **Question ID**: 44119
+- **Session Duration**: 846.1s (14.1 min)
+- **Cost**: $21.1618 total (orchestrator $3.0279 + sub-agents $18.1339)
+- **Tokens**: 9,222 total (37 in, 9,185 out)
+  - Cache: 550,148 read, 80,708 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44094_20260617_093740/20260617-093740.log`
+
+### Tool Calls
+
+- **Total**: 59 calls
+- **Errors**: 1 (1.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1830 |
+| execute_code | 6 | 1 ⚠️ | 16427ms | — |
+| fetch_url | 9 | 0 | 7471ms | — |
+| get_coherence_links | 1 | 0 | 676ms | — |
+| get_metaculus_questions | 2 | 0 | 1619ms | — |
+| polymarket_price | 3 | 0 | 339ms | — |
+| premortem | 2 | 0 | 122447ms | $4.6591 |
+| reflection | 2 | 0 | 9ms | — |
+| research | 2 | 0 | 256146ms | $12.8611 |
+| web_search | 11 | 0 | 26414ms | $0.4307 |
+| wikipedia | 21 | 0 | 243ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will a second 2026 batch of Bureau 1440 Rassvet satellites reach...
+- [Bureau 1440](https://en.wikipedia.org/wiki/Bureau_1440)
+- [2026 in spaceflight](https://en.wikipedia.org/wiki/2026_in_spaceflight)
+- [Plesetsk Cosmodrome Site 43](https://en.wikipedia.org/wiki/Plesetsk_Cosmodro...
+- [List of R-7 launches (2025%E2%80%932029](https://en.wikipedia.org/wiki/List_...
+- [List of R-7 launches (2020%E2%80%932024](https://en.wikipedia.org/wiki/List_...
+- [Plesetsk Cosmodrome Launch Schedule](https://rocketlaunch.org/launch-schedul...
+- [Starlink Group 12-19](https://nextspaceflight.com/launches/details/7867)
+- [Baikonur Cosmodrome Site 31](https://en.wikipedia.org/wiki/Baikonur_Cosmodro...
+- [Soyuz MS-30](https://en.wikipedia.org/wiki/Soyuz_MS-30)
+- [Vostochny Cosmodrome Site 1S](https://en.wikipedia.org/wiki/Vostochny_Cosmod...
+- [Plesetsk Cosmodrome Site 35](https://en.wikipedia.org/wiki/Plesetsk_Cosmodro...
+- [Rassvet-3 batch 2 (16 x) Mission (Soyuz-2](https://www.rocketlaunch.live/lau...
+- [RFSA 16 x Rassvet-3 Soyuz 2.1b Rocket Launch](https://www.spacelaunchschedul...
+- [Up Next](https://nextspaceflight.com/launches)
