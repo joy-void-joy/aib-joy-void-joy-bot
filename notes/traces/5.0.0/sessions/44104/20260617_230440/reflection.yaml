@@ -1,0 +1,208 @@
+---
+timestamp: 2026-06-17 23:20:28 UTC
+question_type: binary
+factors:
+- description: 'Historical base rate: 47°C+ in June occurred once in 53 years (2024),
+    making this roughly a 2% annual event for all of June. For the specific Jun 18-28
+    window, perhaps ~1-1.5% unconditional'
+  logit: -3.5
+  confidence: 0.7
+  effective_logit: -2.4499999999999997
+- description: Current 16-day forecasts show max temperatures of 39-42°C in southeastern
+    Turkey (Cizre hottest at ~42°C), a full 5-6°C below the 47°C threshold. Short-range
+    forecasts (3-5 days) are highly reliable.
+  logit: -1.5
+  confidence: 0.9
+  effective_logit: -1.35
+- description: June 2026 running cooler than average (-2.5°C below seasonal norm per
+    easeweather), suggesting this is NOT an unusually hot June
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'MGM actual station readings can exceed model forecasts by 2-5°C (June
+    2024: MGM 47.8°C vs model 43.3°C = +4.5°C gap; June 2025: +0.8°C gap). This systematic
+    gap narrows the effective margin.'
+  logit: 0.8
+  confidence: 0.5
+  effective_logit: 0.4
+- description: 'Extended forecast uncertainty for days 8-11 (June 25-28): forecasts
+    could be off by 3-4°C, and these later days have the highest forecast temperatures
+    (~41°C). A 5-6°C exceedance is still unlikely but not impossible.'
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: '''African heatwave'' pattern flagged by meteorologists for summer
+    2026, but not showing in current forecasts for this specific window. Heat surge
+    appears to peak in early July (after resolution).'
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: 'Long-term warming trend: SE Turkey June avg max has risen +3.0-3.4°C
+    over 30 years, pushing extremes toward thresholds more often'
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  logit: -3.2
+  probability: 0.04
+anchor: 'Historical base rate: ~2% per year for 47°C+ anywhere in Turkey during all
+  of June (once in 53 years per question description). For the specific Jun 18-28
+  window (~37% of June, but the hotter portion), roughly 1.5% unconditional.'
+assessment: 'This question asks whether an extremely rare temperature threshold (47°C)
+  will be crossed during an 11-day window in late June 2026. The key evidence overwhelmingly
+  points toward NO:
+
+
+  1. **Historical rarity**: 47°C in June has occurred only once in 53 years (2024,
+  the "hottest June in 53 years"). Even accounting for climate change, this remains
+  a tail event.
+
+
+  2. **Current forecasts far below threshold**: The hottest forecasted temperature
+  for any southeastern Turkey location during Jun 18-28 is ~42°C at Cizre. This is
+  5°C below the threshold. Even accounting for model-to-station bias (which can be
+  1-5°C based on limited data), the gap is likely 1-4°C.
+
+
+  3. **Below-average June**: June 2026 has been running 2.5°C below the seasonal average,
+  further reducing the probability of extreme heat.
+
+
+  4. **Heat peak timing**: The forecast shows heat intensifying toward early July
+  (Cizre forecast 44.3°C on July 2), suggesting the major heat surge arrives AFTER
+  the resolution window.
+
+
+  5. **Quantitative model**: Monte Carlo simulation combining prior distribution of
+  June peaks, Bayesian updating with current forecast information, and station bias
+  yields 2-5% across sensitivity scenarios, with weighted average ~2.6%.
+
+
+  The main residual risk comes from extended forecast uncertainty (days 8-11) and
+  the possibility that the model-to-station gap is larger than expected. But bridging
+  a 5-6°C gap between forecast and threshold requires an extremely improbable combination
+  of forecast error and station bias.'
+calibration_notes: Anchor of ~1.5% is the unconditional base rate. Current forecasts
+  provide strong information that updates slightly upward (to ~4%) due to model uncertainty
+  in the extended range and station bias, but the below-average June so far partially
+  offsets. No hedging toward 50% - the evidence clearly supports a low probability.
+  The 4% estimate is at the lower end of the 2-5% range from the Monte Carlo analysis.
+key_uncertainties: '1. Model-to-station gap: Only 2 data points (June 2024: +4.5°C,
+  June 2025: +0.8°C) for this critical parameter. If the gap is consistently 3-4°C,
+  the effective margin narrows significantly. 2. Extended forecast reliability: Days
+  8-10 forecasts can change substantially. An unforeseen heat ridge could develop.
+  3. Whether ''African heatwave'' pattern materializes during the window rather than
+  after it.'
+tool_audit: 'Research tool: Very productive - returned comprehensive data from Open-Meteo
+  forecasts, historical archives, MGM API data, and wttr.in. Three parallel research
+  queries all succeeded. Web search: Returned mostly generic travel weather pages,
+  but one useful finding (easeweather noting June 2026 is cooler than average). Fetch
+  URL: Confirmed Daily Sabah article has no extreme heat signals. Coherence links:
+  Empty (no related questions). Code execution: Successfully ran Monte Carlo and sensitivity
+  analysis.'
+update_triggers: 1. Short-range forecasts (5-day) showing 44-45°C+ for Cizre/Şanlıurfa
+  would move probability to 15-25%. 2. Any actual reading above 44°C during the window
+  would indicate conditions approaching threshold. 3. GFS/ECMWF ensemble showing sudden
+  heat ridge development over southeastern Turkey.
+process_reflection: 'The research tool was excellent for this question, providing
+  both forecast data and historical context in a single call. The Monte Carlo simulation
+  framework was helpful for combining multiple uncertain parameters. Key friction:
+  the model-to-station gap is critical but I only have 2 data points, making the prior
+  distribution highly uncertain. A tool that could access MGM historical station data
+  directly would have been valuable. The decomposition approach (modeling the underlying
+  quantity first, then deriving the crossing probability) worked well for this threshold
+  question.'
+computed:
+  factor_count: 7
+  factor_sum: -3.15
+  tentative_logit: -3.2
+  logit_gap: -0.050000000000000266
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Historical base rate: 47°C+ in June occurred once in 53 years (2024),
+      making this roughly a 2% annual event for all of June. For the specific Jun
+      18-28 window, perhaps ~1-1.5% unconditional'
+    logit: -3.5
+    confidence: 0.7
+    effective_logit: -2.4499999999999997
+  - description: Current 16-day forecasts show max temperatures of 39-42°C in southeastern
+      Turkey (Cizre hottest at ~42°C), a full 5-6°C below the 47°C threshold. Short-range
+      forecasts (3-5 days) are highly reliable.
+    logit: -1.5
+    confidence: 0.9
+    effective_logit: -1.35
+  - description: June 2026 running cooler than average (-2.5°C below seasonal norm
+      per easeweather), suggesting this is NOT an unusually hot June
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'MGM actual station readings can exceed model forecasts by 2-5°C
+      (June 2024: MGM 47.8°C vs model 43.3°C = +4.5°C gap; June 2025: +0.8°C gap).
+      This systematic gap narrows the effective margin.'
+    logit: 0.8
+    confidence: 0.5
+    effective_logit: 0.4
+  - description: 'Extended forecast uncertainty for days 8-11 (June 25-28): forecasts
+      could be off by 3-4°C, and these later days have the highest forecast temperatures
+      (~41°C). A 5-6°C exceedance is still unlikely but not impossible.'
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: '''African heatwave'' pattern flagged by meteorologists for summer
+      2026, but not showing in current forecasts for this specific window. Heat surge
+      appears to peak in early July (after resolution).'
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: 'Long-term warming trend: SE Turkey June avg max has risen +3.0-3.4°C
+      over 30 years, pushing extremes toward thresholds more often'
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: 'Historical base rate: 47°C+ in June occurred once in 53 years
+    (2024), making this roughly a 2% annual event for all of June. For the specific
+    Jun 18-28 window, perhaps ~1-1.5% unconditional'
+  dominant_effective_logit: -2.4499999999999997
+  factor_implied_probability: 0.041091278200465015
+  tentative_probability: 0.04
+  gap_pp: -0.10912782004650137
+  sources:
+  - '[(Metaculus) Will Turkey record a temperature of 47°C or higher between June
+    18 and June 28, 2026?](https://www.metaculus.com/questions/44104)'
+  - '[Temperatures to rise across Türkiye as June heat sets in](https://www.dailysabah.com/turkiye/temperatures-to-rise-across-turkiye-as-june-heat-sets-in/news)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44104
+- **Question ID**: 44129
+- **Session Duration**: 1160.0s (19.3 min)
+- **Cost**: $18.5608 total (orchestrator $3.7055 + sub-agents $14.8553)
+- **Tokens**: 17,580 total (28 in, 17,552 out)
+  - Cache: 595,532 read, 79,752 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44104_20260617_230440/20260617-230440.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0230 |
+| execute_code | 3 | 0 | 531ms | — |
+| fetch_url | 1 | 0 | 8714ms | — |
+| get_coherence_links | 1 | 0 | 489ms | — |
+| get_metaculus_questions | 1 | 0 | 274ms | — |
+| premortem | 1 | 0 | 155970ms | $2.5445 |
+| reflection | 1 | 0 | 9ms | — |
+| research | 1 | 0 | 592771ms | $12.2446 |
+| web_search | 1 | 0 | 14841ms | $0.0432 |
+
+### Sources Consulted
+
+- [(Metaculus) Will Turkey record a temperature of 47°C or higher between June ...
+- [Temperatures to rise across Türkiye as June heat sets in](https://www.dailys...
