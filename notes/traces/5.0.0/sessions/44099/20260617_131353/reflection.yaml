@@ -1,0 +1,184 @@
+---
+timestamp: 2026-06-17 13:24:33 UTC
+question_type: numeric
+factors:
+- description: 20 completed MD1 matches show 3.1 goals/match, significantly above
+    historical 2.5 gpm. 48-team format creates structural mismatches (Germany 7-1
+    Curacao, Sweden 5-1 Tunisia)
+  supports:
+    center: 210.0
+    low: 195.0
+    high: 225.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Historical regression: World Cup group stages 2010-2022 averaged 2.50
+    gpm. MD1 tends to be slightly elevated vs later matchdays. Some early blowouts
+    are outliers.'
+  supports:
+    center: 195.0
+    low: 180.0
+    high: 210.0
+  logit: -0.8
+  confidence: 0.6
+  effective_logit: -0.48
+- description: 48-team format is genuinely new - weaker teams (Curacao, Cape Verde,
+    etc.) play all 3 matchdays, maintaining mismatch effect throughout. This is structural,
+    not noise.
+  supports:
+    center: 215.0
+    low: 200.0
+    high: 230.0
+  logit: 0.7
+  confidence: 0.7
+  effective_logit: 0.48999999999999994
+- description: MD3 dead rubber effect is reduced because 32/48 teams advance (top
+    2 + 8 best 3rd), so most MD3 matches still matter competitively
+  supports:
+    center: 210.0
+    low: 200.0
+    high: 220.0
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+- description: 62 goals already banked from 20 matches - this is known and reduces
+    overall uncertainty
+  supports:
+    center: 207.0
+    low: 185.0
+    high: 230.0
+  logit: 0.5
+  confidence: 0.95
+  effective_logit: 0.475
+tentative_estimate:
+  center: 207.0
+  low: 184.0
+  high: 231.0
+anchor: 'Historical WC group stage: ~2.5 gpm × 72 matches = ~180 goals. Adjusted for
+  48-team format mismatches: ~2.7 × 72 = ~194. But 62 goals already scored in 20 matches
+  shifts floor up.'
+assessment: The 2026 World Cup group stage has seen elevated scoring in its first
+  20 matches (3.1 gpm vs historical ~2.5). The key question is whether this persists
+  or regresses. The 48-team format creates genuine structural differences - weaker
+  teams like Curacao, Cape Verde, and Haiti are playing against top nations, producing
+  more blowouts. However, some regression toward the mean is likely for MD2 and MD3.
+  My Monte Carlo simulations using both scenario-mixture and refined single-model
+  approaches converge on a median of ~205-208 total goals, with an 80% CI of roughly
+  184-231. The already-banked 62 goals constrain the lower tail significantly.
+calibration_notes: The 62 goals in 20 matches is locked in. For remaining 52 matches,
+  even at the low end (2.3 gpm), total would be 182. At historical rate of 2.5, total
+  = 192. The median estimate of 207 implies remaining rate of ~2.79 gpm, which is
+  plausible given format effects. Distribution width of ~47 goals (P10-P90) seems
+  appropriate for 52 remaining matches with rate uncertainty.
+key_uncertainties: 'Main uncertainty: whether the elevated MD1 scoring rate (3.1)
+  reflects format-driven structural change or random variance. The 20-match sample
+  is moderate - could easily be 0.3 gpm off the true rate in either direction. Secondary:
+  matchday-specific effects (MD3 dynamics in the new format are completely unprecedented).'
+tool_audit: research() returned excellent detailed data on 20 completed matches with
+  individual scorelines. execute_code was essential for running Monte Carlo simulations.
+  Metaculus question data provided good context. No tool failures.
+process_reflection: 'The research tool performed well, finding detailed match-by-match
+  results. The Monte Carlo simulation framework works naturally for this kind of partial-data
+  extrapolation problem. One friction point: the initial research report found only
+  10 matches, but the second query found 20 - showing the value of parallel research
+  queries. The scenario mixture approach is well-suited for this kind of structural
+  uncertainty (is the format effect real?).'
+computed:
+  factor_count: 5
+  factor_sum: 1.4949999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 20 completed MD1 matches show 3.1 goals/match, significantly above
+      historical 2.5 gpm. 48-team format creates structural mismatches (Germany 7-1
+      Curacao, Sweden 5-1 Tunisia)
+    supports:
+      center: 210.0
+      low: 195.0
+      high: 225.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Historical regression: World Cup group stages 2010-2022 averaged
+      2.50 gpm. MD1 tends to be slightly elevated vs later matchdays. Some early blowouts
+      are outliers.'
+    supports:
+      center: 195.0
+      low: 180.0
+      high: 210.0
+    logit: -0.8
+    confidence: 0.6
+    effective_logit: -0.48
+  - description: 48-team format is genuinely new - weaker teams (Curacao, Cape Verde,
+      etc.) play all 3 matchdays, maintaining mismatch effect throughout. This is
+      structural, not noise.
+    supports:
+      center: 215.0
+      low: 200.0
+      high: 230.0
+    logit: 0.7
+    confidence: 0.7
+    effective_logit: 0.48999999999999994
+  - description: MD3 dead rubber effect is reduced because 32/48 teams advance (top
+      2 + 8 best 3rd), so most MD3 matches still matter competitively
+    supports:
+      center: 210.0
+      low: 200.0
+      high: 220.0
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  - description: 62 goals already banked from 20 matches - this is known and reduces
+      overall uncertainty
+    supports:
+      center: 207.0
+      low: 185.0
+      high: 230.0
+    logit: 0.5
+    confidence: 0.95
+    effective_logit: 0.475
+  dominant_factor: 20 completed MD1 matches show 3.1 goals/match, significantly above
+    historical 2.5 gpm. 48-team format creates structural mismatches (Germany 7-1
+    Curacao, Sweden 5-1 Tunisia)
+  dominant_effective_logit: 0.8
+  distribution_metrics:
+    implied_median: 207.48472505091647
+    implied_p10: 191.5580448065173
+    implied_p90: 223.60488798370667
+    median_gap: -0.48472505091646667
+    median_gap_pct: -1.5125516364790936
+    spread_ratio: 1.4666031140769002
+    precision: 0.22705314009661837
+  sources:
+  - '[(Metaculus) How many total goals will be scored across all 72 group-stage matches
+    of the 2026 FIFA World Cup?](https://www.metaculus.com/questions/44099)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44099
+- **Question ID**: 44124
+- **Session Duration**: 789.7s (13.2 min)
+- **Cost**: $11.5713 total (orchestrator $2.7996 + sub-agents $8.7717)
+- **Tokens**: 10,715 total (29 in, 10,686 out)
+  - Cache: 542,780 read, 63,121 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44099_20260617_131353/20260617-131353.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 1763ms | — |
+| get_metaculus_questions | 1 | 0 | 289ms | — |
+| premortem | 1 | 0 | 113012ms | $1.6688 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 1 | 0 | 455660ms | $7.1029 |
+
+### Sources Consulted
+
+- [(Metaculus) How many total goals will be scored across all 72 group-stage ma...
