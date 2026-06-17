@@ -1,0 +1,201 @@
+---
+timestamp: 2026-06-17 09:50:48 UTC
+question_type: binary
+factors:
+- description: Strait currently at ~0 transits per PortWatch (June 14 = 0 vessels).
+    7-day MA needs to reach 30 from near zero in 10 remaining days.
+  logit: -1.5
+  confidence: 0.95
+  effective_logit: -1.4249999999999998
+- description: Deal digitally signed June 14, formal signing scheduled June 19. Strong
+    political momentum and massive economic pressure to reopen.
+  logit: 1.0
+  confidence: 0.75
+  effective_logit: 0.75
+- description: IRGC has NOT endorsed the deal and declared 'complete closure' June
+    10-11, just days before deal. IRGC operationally controls the strait.
+  logit: -1.5
+  confidence: 0.85
+  effective_logit: -1.275
+- description: 500+ ships waiting to transit creating massive backlog surge potential
+    once opened. Could push daily transits to 50-100/day quickly.
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Mine clearing, insurance coverage, and safety concerns constrain ramp-up
+    speed even after political reopening. Bimco says 'several weeks' needed.
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: Polymarket P(7-day MA >= 60 by June 30) = 18.5% ($24.7M volume). Our
+    threshold is lower (30 vs 60) but deadline tighter (June 27 vs 30).
+  logit: -0.3
+  confidence: 0.85
+  effective_logit: -0.255
+- description: Fitch assessed broad Hormuz reopening unlikely before July 2026. Insurance
+    markets frozen.
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: PortWatch may systematically undercount traffic due to AIS spoofing/jamming
+    in conflict zone. Current 5-10 vessels/day under escort not showing in PortWatch.
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+tentative_estimate:
+  logit: -1.6
+  probability: 0.17
+anchor: 'Base rate: ~15-20% implied by Polymarket-calibrated Monte Carlo simulation.
+  Polymarket P(>=60 by June 30)=18.5% as anchor, adjusted for lower threshold (30
+  vs 60) and tighter deadline (June 27 vs 30). Metaculus decomposition gives ~12%.
+  Central estimate ~15-17%.'
+assessment: "This question asks whether the Strait of Hormuz 7-day moving average\
+  \ of daily ship transits will reach 30+ on any day from June 13-27. Currently traffic\
+  \ is at effectively zero per PortWatch, and June 13-17 are already past with near-zero\
+  \ counts. The formal deal signing is scheduled for June 19, with the MOU calling\
+  \ for \"immediate reopening.\" \n\nThe key tension: the deal exists and there's\
+  \ enormous economic/political pressure to reopen, but the IRGC (which operationally\
+  \ controls the strait) hasn't endorsed it, mines need clearing, insurance is frozen,\
+  \ and traffic hasn't moved since the announcement. Even the optimistic scenario\
+  \ (signing June 19, traffic starts June 20-21) leaves only 6-7 days for the 7-day\
+  \ MA to reach 30 - requiring rapid daily ramp from 0 to 30-50+.\n\nMonte Carlo simulation\
+  \ calibrated against Polymarket data gives 24-28%, while Metaculus-based decomposition\
+  \ gives ~12%. The discrepancy comes from different assumptions about ramp speed.\
+  \ PortWatch undercount in conflict zones adds additional downside. I converge on\
+  \ ~15-17%."
+calibration_notes: 'Polymarket anchor at 18.5% for the harder question (>=60 by June
+  30) suggests our easier threshold but tighter deadline should be roughly similar.
+  The Metaculus 40% for ''reopening'' doesn''t map directly to 30 7-day MA because
+  reopening ≠ 30 daily transits. Key hedging check: I''m between 12-28% range from
+  different methods - settling near middle at 17% seems reasonable rather than lazy.'
+key_uncertainties: 1. Will the June 19 signing actually happen? 2. Will IRGC comply
+  with the deal? 3. How fast can mine clearing enable safe passage? 4. Will PortWatch
+  capture transit activity given AIS disruptions? 5. How fast will shipowners actually
+  start transiting (insurance barrier)?
+tool_audit: research() provided excellent comprehensive data on the crisis, deal status,
+  and market context. web_search found critical Polymarket data ($24.7M volume market)
+  and Argus media report confirming zero traffic change post-deal. PortWatch direct
+  access wasn't available but third-party trackers (straits.live) confirmed 0 transits
+  on June 14. Metaculus coherence links returned empty. execute_code MC simulation
+  was useful for quantitative analysis and Polymarket calibration.
+update_triggers: '- June 19 signing succeeds or fails; - IRGC publicly endorses the
+  deal; - First major convoy reported transiting; - PortWatch data shows any increase
+  above 0; - Netanyahu escalation derails deal; - Mine clearing operations announced
+  as complete'
+process_reflection: The forecasting system worked well for this question. research()
+  provided outstanding comprehensive summaries saving significant time. The Polymarket
+  data integration was especially valuable as a calibration anchor. The main friction
+  was the timeout on the first comprehensive parameter sweep - had to simplify the
+  grid search. Having a tool that could directly pull PortWatch data would have been
+  very helpful. The simulation approach with Polymarket calibration was a strong methodology
+  - it let me reconcile bottom-up decomposition with market prices.
+computed:
+  factor_count: 8
+  factor_sum: -3.385
+  tentative_logit: -1.6
+  logit_gap: 1.7849999999999997
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Strait currently at ~0 transits per PortWatch (June 14 = 0 vessels).
+      7-day MA needs to reach 30 from near zero in 10 remaining days.
+    logit: -1.5
+    confidence: 0.95
+    effective_logit: -1.4249999999999998
+  - description: Deal digitally signed June 14, formal signing scheduled June 19.
+      Strong political momentum and massive economic pressure to reopen.
+    logit: 1.0
+    confidence: 0.75
+    effective_logit: 0.75
+  - description: IRGC has NOT endorsed the deal and declared 'complete closure' June
+      10-11, just days before deal. IRGC operationally controls the strait.
+    logit: -1.5
+    confidence: 0.85
+    effective_logit: -1.275
+  - description: 500+ ships waiting to transit creating massive backlog surge potential
+      once opened. Could push daily transits to 50-100/day quickly.
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Mine clearing, insurance coverage, and safety concerns constrain
+      ramp-up speed even after political reopening. Bimco says 'several weeks' needed.
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: Polymarket P(7-day MA >= 60 by June 30) = 18.5% ($24.7M volume).
+      Our threshold is lower (30 vs 60) but deadline tighter (June 27 vs 30).
+    logit: -0.3
+    confidence: 0.85
+    effective_logit: -0.255
+  - description: Fitch assessed broad Hormuz reopening unlikely before July 2026.
+      Insurance markets frozen.
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: PortWatch may systematically undercount traffic due to AIS spoofing/jamming
+      in conflict zone. Current 5-10 vessels/day under escort not showing in PortWatch.
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  dominant_factor: Strait currently at ~0 transits per PortWatch (June 14 = 0 vessels).
+    7-day MA needs to reach 30 from near zero in 10 remaining days.
+  dominant_effective_logit: -1.4249999999999998
+  factor_implied_probability: 0.0327675548421884
+  tentative_probability: 0.17
+  gap_pp: 13.723244515781161
+  sources:
+  - '[(Metaculus) Will Strait of Hormuz daily ship transits recover to a 7-day average
+    of 30 or more before June 28, 2026?](https://www.metaculus.com/questions/44095)'
+  - '[Strait of Hormuz traffic returns to normal by end of June? Trading Odds & Predictions
+    2026 | Polymarket](https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-end-of-june)'
+  - '[Strait of Hormuz traffic returns to normal by July 15? Trading Odds & Predictions
+    2026 | Polymarket](https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-july-15)'
+  - '[Will __ ships transit the Strait of Hormuz on any day by June 30? Trading Odds
+    & Predictions 2026 | Polymarket](https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-june-30)'
+  - '[2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)'
+  - '[Strait of Hormuz Closed | Live Tracker & Monitor](https://straits.live/)'
+  - '[Hormuz tanker traffic unchanged after US‑Iran deal | Latest Market News](https://www.argusmedia.com/en/news-and-insights/latest-market-news/2839545-hormuz-tanker-traffic-unchanged-after-us-iran-deal)'
+  - '[2026 Strait of Hormuz campaign](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_campaign)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44095
+- **Question ID**: 44120
+- **Session Duration**: 964.2s (16.1 min)
+- **Cost**: $22.6333 total (orchestrator $4.4994 + sub-agents $18.1339)
+- **Tokens**: 21,087 total (40 in, 21,047 out)
+  - Cache: 850,005 read, 87,746 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44095_20260617_093744/20260617-093744.log`
+
+### Tool Calls
+
+- **Total**: 59 calls
+- **Errors**: 1 (1.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1830 |
+| execute_code | 6 | 1 ⚠️ | 16427ms | — |
+| fetch_url | 9 | 0 | 7471ms | — |
+| get_coherence_links | 1 | 0 | 676ms | — |
+| get_metaculus_questions | 2 | 0 | 1619ms | — |
+| polymarket_price | 3 | 0 | 339ms | — |
+| premortem | 2 | 0 | 122447ms | $4.6591 |
+| reflection | 2 | 0 | 9ms | — |
+| research | 2 | 0 | 256146ms | $12.8611 |
+| web_search | 11 | 0 | 26414ms | $0.4307 |
+| wikipedia | 21 | 0 | 243ms | — |
+
+### Sources Consulted
+
+- [(Metaculus) Will Strait of Hormuz daily ship transits recover to a 7-day ave...
+- [Strait of Hormuz traffic returns to normal by end of June? Trading Odds & Pr...
+- [Strait of Hormuz traffic returns to normal by July 15? Trading Odds & Predic...
+- [Will __ ships transit the Strait of Hormuz on any day by June 30? Trading Od...
+- [2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_H...
+- [Strait of Hormuz Closed | Live Tracker & Monitor](https://straits.live/)
+- [Hormuz tanker traffic unchanged after US‑Iran deal | Latest Market News](htt...
+- [2026 Strait of Hormuz campaign](https://en.wikipedia.org/wiki/2026_Strait_of...
