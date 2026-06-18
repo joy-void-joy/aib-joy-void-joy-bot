@@ -1,0 +1,157 @@
+---
+timestamp: 2026-06-18 00:27:51 UTC
+question_type: binary
+factors:
+- description: 'Unconditional base rate: ~8 $1B+ liquidation days out of ~170 days
+    in 2026 so far = 4.7%/day. Over 4 days: ~17.5%'
+  logit: -1.5
+  confidence: 0.7
+  effective_logit: -1.0499999999999998
+- description: 'Currently in calm period: 24h liquidations at $130M (well below $1B),
+    IV compressing, funding rates neutral. Calm periods have near-zero $1B+ event
+    rate.'
+  logit: -1.0
+  confidence: 0.85
+  effective_logit: -0.85
+- description: 'Quarterly futures/options expiry June 26: ~$13B notional expiring,
+    35.6% of all BTC options OI. Structurally elevates volatility risk in the window.'
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'BTC spot 12.7% below max pain ($74K vs $64.6K): Large gap creates
+    directional hedging pressure that could amplify price moves around expiry.'
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+- description: 'Extreme fear (15/100) and significant leveraged positions unwound:
+    Post-correction, most weak hands already liquidated, reducing the pool of liquidatable
+    positions.'
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: 'Fat-tail crypto return distribution: Even in calm periods, crypto
+    can produce sudden 5%+ daily moves from news shocks, regulatory events, or cascading
+    liquidations.'
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  logit: -1.6
+  probability: 0.17
+anchor: 'Unconditional base rate: ~17.5% for 4-day window (from ~4.7% per day $1B+
+  rate in 2026, applied with independence assumption over 4 days)'
+assessment: 'The question asks whether any 24-hour period during June 25-28 will see
+  $1B+ total crypto liquidations on CoinGlass. Current conditions strongly favor NO:
+  24h liquidations are at ~$130M, IV is compressing, funding is neutral, and the market
+  has just gone through a major correction in early June. However, the quarterly expiry
+  on June 26 with ~$13B in notional creates structural risk, and BTC''s far position
+  below max pain could amplify any directional move. The 4-day window gives multiple
+  opportunities, but $1B+ events require ~5%+ daily BTC moves which are rare even
+  with elevated volatility. Monte Carlo simulation with fat-tail returns gives ~19.5%
+  in a scenario-weighted model; the mixture model conditioning on current calm state
+  gives ~15.2%. I settle on ~17%, reflecting the balance between current calm conditions
+  and the structural risk from the quarterly expiry.'
+calibration_notes: 'The unconditional base rate of ~17.5% is appropriate as a starting
+  point but doesn''t condition on current state. The market is currently in a calm
+  phase post-correction, which should push probability down. The quarterly expiry
+  partially offsets this. Net effect: slight downward adjustment from base rate. No
+  hedging bias detected - the estimate is driven by quantitative models.'
+key_uncertainties: 1. Whether the quarterly expiry triggers a volatile regime transition
+  or passes quietly. 2. Whether leveraged positions have rebuilt enough after the
+  early June washout to enable $1B+ liquidations. 3. External catalysts (macro news,
+  regulatory events, large fund movements) that could create sudden BTC moves.
+tool_audit: 'research() provided excellent data: BTC price/volatility ($64,618, 42%
+  vol), Deribit options data ($13B June 26 expiry), liquidation history (early June
+  events), sentiment data (Fear/Greed at 15). execute_code worked well for Monte Carlo
+  simulations and mixture models. No tools failed.'
+update_triggers: 1. BTC moving 5%+ in either direction before June 25. 2. Significant
+  increase in perpetual funding rates suggesting leverage buildup. 3. Major macro
+  event (Fed surprise, trade policy, geopolitical crisis). 4. CoinGlass 24h liquidations
+  rising above $500M before the window.
+process_reflection: The research sub-agents were very effective at gathering structured
+  data from Deribit API, CoinGecko, and aggregating liquidation history. The main
+  limitation was inability to get real-time CoinGlass data directly, though the secondary
+  sources provided good coverage. The forecasting framework worked well for this type
+  of threshold question - modeling the underlying quantity (liquidations) through
+  its driver (BTC price moves) and deriving the crossing probability was the right
+  approach.
+computed:
+  factor_count: 6
+  factor_sum: -1.5199999999999998
+  tentative_logit: -1.6
+  logit_gap: -0.0800000000000003
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Unconditional base rate: ~8 $1B+ liquidation days out of ~170 days
+      in 2026 so far = 4.7%/day. Over 4 days: ~17.5%'
+    logit: -1.5
+    confidence: 0.7
+    effective_logit: -1.0499999999999998
+  - description: 'Currently in calm period: 24h liquidations at $130M (well below
+      $1B), IV compressing, funding rates neutral. Calm periods have near-zero $1B+
+      event rate.'
+    logit: -1.0
+    confidence: 0.85
+    effective_logit: -0.85
+  - description: 'Quarterly futures/options expiry June 26: ~$13B notional expiring,
+      35.6% of all BTC options OI. Structurally elevates volatility risk in the window.'
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'BTC spot 12.7% below max pain ($74K vs $64.6K): Large gap creates
+      directional hedging pressure that could amplify price moves around expiry.'
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  - description: 'Extreme fear (15/100) and significant leveraged positions unwound:
+      Post-correction, most weak hands already liquidated, reducing the pool of liquidatable
+      positions.'
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: 'Fat-tail crypto return distribution: Even in calm periods, crypto
+      can produce sudden 5%+ daily moves from news shocks, regulatory events, or cascading
+      liquidations.'
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: 'Unconditional base rate: ~8 $1B+ liquidation days out of ~170
+    days in 2026 so far = 4.7%/day. Over 4 days: ~17.5%'
+  dominant_effective_logit: -1.0499999999999998
+  factor_implied_probability: 0.17946151940732685
+  tentative_probability: 0.17
+  gap_pp: -0.946151940732684
+  sources:
+  - '[(Metaculus) Will any single 24-hour period between June 25 and June 28, 2026
+    see total crypto liquidations exceeding $1 billion, per CoinGlass?](https://www.metaculus.com/questions/44105)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44105
+- **Question ID**: 44130
+- **Session Duration**: 667.4s (11.1 min)
+- **Cost**: $13.0342 total (orchestrator $2.4203 + sub-agents $10.6139)
+- **Tokens**: 8,557 total (26 in, 8,531 out)
+  - Cache: 390,053 read, 63,736 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44105_20260618_001939/20260618-001939.log`
+
+### Tool Calls
+
+- **Total**: 7 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 679ms | — |
+| get_metaculus_questions | 1 | 0 | 263ms | — |
+| premortem | 1 | 0 | 132575ms | $2.2279 |
+| reflection | 1 | 0 | 11ms | — |
+| research | 1 | 0 | 339879ms | $8.3861 |
+
+### Sources Consulted
+
+- [(Metaculus) Will any single 24-hour period between June 25 and June 28, 2026...
