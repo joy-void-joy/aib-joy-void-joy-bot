@@ -1,0 +1,123 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by parsing the resolution criteria carefully: the question asks whether the full U.S. Senate will hold **any** recorded floor vote on H.R. 3633 (the CLARITY Act) between June 13–28, 2026. This includes motions to proceed, cloture motions, amendment votes, or final passage votes — a meaningfully lower bar than passage itself.\n\nI retrieved the Metaculus question details (post_id 44106) and then launched two research queries: one specifically about the CLARITY Act floor vote schedule and one about the broader Senate calendar in June 2026. The research tool returned comprehensive data from the Congress.gov API confirming:\n\n- **H.R. 3633** passed the House 294–134 on July 17, 2025\n- Senate Banking Committee ordered it reported favorably 15–9 on May 14, 2026\n- Placed on Senate Legislative Calendar (Calendar No. 423) on June 1, 2026\n- **No floor vote date scheduled** as of last Congress.gov update (June 11, 2026)\n- The GENIUS Act (stablecoin bill) was already signed into law (July 18, 2025), so the CLARITY Act is the next major crypto bill pending\n\nI then conducted multiple web searches and URL fetches to gather current intelligence:\n\n## Key Evidence\n\n**Scheduling signals — strongly negative:**\n- No floor vote has been scheduled or announced as of June 18, 2026\n- Senate Majority Leader Thune has not committed to a date\n- Only ~10 calendar days remain before the June 28 deadline (recess begins ~June 29)\n\n**Unresolved policy obstacles:**\n- Sen. Angela Alsobrooks conditioned floor support on ethics provisions covering government officials' crypto holdings — no deal emerged\n- Illicit finance provisions demanded by Democrats remain unresolved\n- Two competing Senate versions need merging: Banking Committee's substitute amendment to H.R. 3633 vs. Agriculture Committee's S. 3755\n- DeFi treatment and stablecoin yield restrictions still under negotiation\n\n**Vote math:**\n- 60-vote filibuster threshold required\n- With Hawley and Paul expected NO, need at least **9 Democratic crossovers**\n- Only 2 Democrats (Gallego, Alsobrooks) voted YES in committee, both uncommitted to floor vote without changes\n\n**Expert/market consensus:**\n- Fox Business's Eleanor Terrett: July 4 passage \"realistically impossible\" (June 14)\n- Galaxy Research cut 2026 passage odds from 75% to 60%\n- DailyCoin analyst: **5%** for July 4 signing\n- Prediction markets: **14%** for passage before July (Yahoo Finance), **~55-60%** for passage by end of 2026 (Polymarket), **~38-50%** for passage before 2027 (Kalshi)\n- Galaxy Digital placed a **$10M** Kalshi bet on 2026 passage\n\n**Industry pressure:**\n- 200+ crypto companies sent letter to Thune/Schumer on June 7 urging vote \"without delay\"\n- White House targeted July 4 signing\n- Senator Lummis warned next viable legislative window is \"likely 2030\" if this window is missed\n\n## Conclusion\n\nMy initial estimate was 4%, but the internal premortem reviewer correctly identified a logical inconsistency: since a floor vote is a necessary precondition for passage, P(floor vote) ≥ P(passage before July). With prediction markets pricing passage-before-July at ~14%, my floor vote estimate could not logically be below that. I revised upward.\n\nUsing the DailyCoin analyst's 5% for July 4 signing and estimating P(signing | floor vote in this window) ≈ 30-40%, I derived P(floor vote) ≈ 12-17%. Adjusting downward for staleness of the 14% figure (likely declining as the window compresses) and the strong negative scheduling evidence, I settled on **7%**.\n\nThe final 7% estimate balances: the logical floor from prediction market-derived estimates (~10-14%), the overwhelming negative scheduling evidence (no vote announced, no leadership commitment, unresolved policy issues), and the modest uplift from the lower bar of \"any floor vote\" versus passage.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Direct access to Congress.gov bill action pages and Senate.gov floor schedule (both returned 403)",
+      "Real-time prediction market API access (Polymarket, Kalshi) for current odds rather than relying on stale news reporting of odds"
+    ],
+    "subtle_bugs": [
+      "The 14% passage-before-July figure from Yahoo Finance had no clear timestamp — it could have been from days or weeks earlier, making the logical floor argument built on it potentially fragile"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Multi-source legislative status assessment combining Congress.gov data, expert analyst quotes, prediction market odds, and Senate procedural analysis to estimate probability of floor action within a compressed 10-day window.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": true,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether Senate Majority Leader Thune could make a surprise decision to bring H.R. 3633 to the floor despite unresolved policy issues and no public scheduling signals."
+  },
+  "risk_flags": [
+    {
+      "category": "stale_data",
+      "evidence": "The 14% passage-before-July figure from Yahoo Finance has no clear date stamp. Polymarket odds for 2026 passage crashed from 75% to 50% 'in one week' per the same source. The 14% figure used as a logical floor for the entire estimate could be days or weeks old and materially lower by June 18.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The agent's final 7% is below its own derived anchor range of 10-14% (from the prediction market floor argument). The agent acknowledges P(floor vote) >= P(passage before July) = 14%, then derives an anchor of ~10% using the DailyCoin 5% figure, but then settles at 7% — below the bottom of both anchor derivations. The stated justification ('staleness/declining odds') is plausible but not quantified.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "8%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "The premortem tool caught a genuine logical error (4% estimate below the 14% prediction market floor for passage-before-July) and the agent properly revised upward — demonstrating effective self-correction in the pipeline",
+    "Thorough multi-source research: Congress.gov API, 5+ crypto news outlets, prediction market data from Polymarket/Kalshi via reporting, expert analyst quotes (Terrett, Galaxy Research, DailyCoin)",
+    "Correctly identified the resolution criteria's lower bar (any floor vote including failed cloture) as distinct from passage, and appropriately used this as a modest positive factor",
+    "Good derivation of the logical floor argument: P(floor vote) >= P(passage) since floor vote is a necessary precondition, providing a principled anchor",
+    "Correctly identified the key vote math: 9 Democratic crossovers needed (accounting for Hawley/Paul defections), with only 2 Democrats having voted YES in committee and both uncommitted"
+  ],
+  "weaknesses": [
+    "No direct access to live prediction market data — relied on news articles reporting Polymarket/Kalshi odds of uncertain recency, making the logical floor argument built on potentially stale figures",
+    "Failed to establish a base rate for how often bills placed on the Senate calendar without a scheduled vote actually receive a floor vote within 10 days — this would have been a valuable empirical anchor",
+    "The double-counting between Factors 5 and 8 (both using the 14% prediction market figure, one as negative evidence and one as a positive logical floor) was flagged by the premortem but not fully resolved in the final output",
+    "Final 7% estimate sits below the agent's own derived anchor range of 10-14%, with the gap justified only by a vague appeal to 'staleness/declining odds' rather than a quantified adjustment"
+  ],
+  "pipeline": {
+    "issues": [
+      "Congress.gov and Senate.gov direct URL fetches returned HTTP 403 (3 of 6 fetch_url calls failed), forcing reliance on cached/secondary sources",
+      "The prediction market odds figures (14% passage-before-July, 50% Kalshi, etc.) were sourced from news articles of uncertain recency rather than live market data"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Add a live prediction market API tool (Polymarket, Kalshi) to get current odds rather than relying on news articles of uncertain recency",
+    "Establish empirical base rates for Senate floor action: how often do bills on the legislative calendar with no announced vote date receive a floor vote within N days?",
+    "When the premortem identifies double-counting, explicitly restructure the factor list to eliminate the overlap before producing the final estimate",
+    "When the final estimate diverges from the derived anchor, quantify the adjustment rather than using vague justifications like 'staleness'"
+  ]
+}
