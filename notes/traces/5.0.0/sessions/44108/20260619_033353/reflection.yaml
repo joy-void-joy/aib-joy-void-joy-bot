@@ -1,0 +1,260 @@
+---
+timestamp: 2026-06-19 03:50:34 UTC
+question_type: multiple_choice
+factors:
+- description: XRP has the highest weekly volatility (~14% weekly) among the four
+    assets, giving it a structural advantage in winning any single-week return race.
+    Higher variance = more likely to be the extreme outlier.
+  supports: XRP
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: ETH is the only asset showing positive 7-day returns (+1.6%) while
+    all others are negative, indicating short-term relative momentum. ETH also has
+    near-term catalysts (staking ETFs, Glamsterdam upgrade devnet).
+  supports: Ethereum (ETH)
+  logit: 0.8
+  confidence: 0.65
+  effective_logit: 0.52
+- description: BNB has shown relative resilience (only -9.5% 30d vs -18-20% for others),
+    suggesting defensive quality or positive idiosyncratic flows. Lower volatility
+    gives it an edge in sell-off weeks (least negative = winner).
+  supports: BNB
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: BTC has the lowest weekly volatility (~9.7%) of the four, making it
+    structurally least likely to lead any single week's returns. As the largest-cap
+    asset, its percentage moves are dampened.
+  supports: Bitcoin (BTC)
+  logit: -0.8
+  confidence: 0.85
+  effective_logit: -0.68
+- description: Q2 derivatives expiry on June 26 (within the measurement window) creates
+    elevated volatility, which structurally favors higher-beta assets (ETH, XRP) over
+    lower-beta (BTC, BNB).
+  supports: XRP
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Post-FOMC hawkish environment suggests continued selling pressure,
+    which slightly favors lower-vol assets (BTC, BNB) for the 'least negative' win
+    condition. But the FOMC was June 17-18, and markets may stabilize by June 21.
+  supports: Bitcoin (BTC)
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  probabilities:
+    Bitcoin (BTC): 0.17
+    Ethereum (ETH): 0.27
+    BNB: 0.23
+    XRP: 0.33
+anchor: 'Naive prior: 25% each (4 equally weighted options). Structural adjustment
+  for volatility differences moves toward higher-vol assets.'
+assessment: 'This is fundamentally a question about which asset will have the highest
+  7-day percentage return over a specific week. Monte Carlo simulations with correlated
+  returns show that higher-volatility assets (XRP, ETH) have a structural advantage
+  in winning weekly return races because they have wider return distributions. XRP
+  consistently leads across scenario weights at ~30-33%, ETH at ~25-28%, BNB at ~22-25%,
+  and BTC at ~15-18%.
+
+
+  The key tension is between:
+
+  - Structural volatility advantage (favors XRP > ETH > BNB > BTC)
+
+  - Current momentum (favors ETH, which is the only positive 7d performer)
+
+  - Bear market environment (can favor lower-vol assets if selling continues)
+
+  - Near-term catalysts (ETH staking ETFs; XRP institutional adoption; BNB has no
+  unique catalysts)
+
+
+  The 7-day window is genuinely very noisy, making this closer to a 25% uniform distribution
+  than many forecasters might think. But the volatility asymmetry is a real structural
+  effect that tilts probabilities meaningfully.'
+key_uncertainties: '1. Whether the week June 21-28 will be an up or down week for
+  crypto broadly - this changes which assets benefit from their vol profiles.
+
+  2. Whether any idiosyncratic news (regulatory, technical, exchange-related) will
+  dominate returns for a single asset.
+
+  3. Whether ETH''s recent relative strength is momentum or mean-reversion territory.
+
+  4. Impact of Q2 derivatives expiry - could create large directional moves favoring
+  high-beta assets.'
+tool_audit: research() returned comprehensive price data from CoinGecko and CoinPaprika
+  APIs with good cross-validation. Catalyst research identified the key Q2 expiry
+  and FOMC events. execute_code ran Monte Carlo simulations successfully across multiple
+  scenarios. No tool failures encountered.
+process_reflection: 'The scaffolding worked well for this question type. Research
+  sub-agents provided excellent structured data. Monte Carlo simulation was the right
+  approach for this correlated multi-asset return problem. One gap: I don''t have
+  easy access to historical weekly return data for these specific 4 assets, which
+  would let me empirically calibrate the correlation and volatility assumptions rather
+  than estimating them. A dedicated crypto historical data tool would help.'
+computed:
+  factor_count: 6
+  factor_sum: 1.3599999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: XRP has the highest weekly volatility (~14% weekly) among the four
+      assets, giving it a structural advantage in winning any single-week return race.
+      Higher variance = more likely to be the extreme outlier.
+    supports: XRP
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: ETH is the only asset showing positive 7-day returns (+1.6%) while
+      all others are negative, indicating short-term relative momentum. ETH also has
+      near-term catalysts (staking ETFs, Glamsterdam upgrade devnet).
+    supports: Ethereum (ETH)
+    logit: 0.8
+    confidence: 0.65
+    effective_logit: 0.52
+  - description: BNB has shown relative resilience (only -9.5% 30d vs -18-20% for
+      others), suggesting defensive quality or positive idiosyncratic flows. Lower
+      volatility gives it an edge in sell-off weeks (least negative = winner).
+    supports: BNB
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: BTC has the lowest weekly volatility (~9.7%) of the four, making
+      it structurally least likely to lead any single week's returns. As the largest-cap
+      asset, its percentage moves are dampened.
+    supports: Bitcoin (BTC)
+    logit: -0.8
+    confidence: 0.85
+    effective_logit: -0.68
+  - description: Q2 derivatives expiry on June 26 (within the measurement window)
+      creates elevated volatility, which structurally favors higher-beta assets (ETH,
+      XRP) over lower-beta (BTC, BNB).
+    supports: XRP
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Post-FOMC hawkish environment suggests continued selling pressure,
+      which slightly favors lower-vol assets (BTC, BNB) for the 'least negative' win
+      condition. But the FOMC was June 17-18, and markets may stabilize by June 21.
+    supports: Bitcoin (BTC)
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: XRP has the highest weekly volatility (~14% weekly) among the four
+    assets, giving it a structural advantage in winning any single-week return race.
+    Higher variance = more likely to be the extreme outlier.
+  dominant_effective_logit: 0.96
+  outcome_breakdown:
+  - outcome: XRP
+    factor_count: 2
+    logit_sum: 1.16
+    factors:
+    - description: XRP has the highest weekly volatility (~14% weekly) among the four
+        assets, giving it a structural advantage in winning any single-week return
+        race. Higher variance = more likely to be the extreme outlier.
+      supports: XRP
+      logit: 1.2
+      confidence: 0.8
+      effective_logit: 0.96
+    - description: Q2 derivatives expiry on June 26 (within the measurement window)
+        creates elevated volatility, which structurally favors higher-beta assets
+        (ETH, XRP) over lower-beta (BTC, BNB).
+      supports: XRP
+      logit: 0.4
+      confidence: 0.5
+      effective_logit: 0.2
+  - outcome: Ethereum (ETH)
+    factor_count: 1
+    logit_sum: 0.52
+    factors:
+    - description: ETH is the only asset showing positive 7-day returns (+1.6%) while
+        all others are negative, indicating short-term relative momentum. ETH also
+        has near-term catalysts (staking ETFs, Glamsterdam upgrade devnet).
+      supports: Ethereum (ETH)
+      logit: 0.8
+      confidence: 0.65
+      effective_logit: 0.52
+  - outcome: BNB
+    factor_count: 1
+    logit_sum: 0.24
+    factors:
+    - description: BNB has shown relative resilience (only -9.5% 30d vs -18-20% for
+        others), suggesting defensive quality or positive idiosyncratic flows. Lower
+        volatility gives it an edge in sell-off weeks (least negative = winner).
+      supports: BNB
+      logit: 0.4
+      confidence: 0.6
+      effective_logit: 0.24
+  - outcome: Bitcoin (BTC)
+    factor_count: 2
+    logit_sum: -0.56
+    factors:
+    - description: BTC has the lowest weekly volatility (~9.7%) of the four, making
+        it structurally least likely to lead any single week's returns. As the largest-cap
+        asset, its percentage moves are dampened.
+      supports: Bitcoin (BTC)
+      logit: -0.8
+      confidence: 0.85
+      effective_logit: -0.68
+    - description: Post-FOMC hawkish environment suggests continued selling pressure,
+        which slightly favors lower-vol assets (BTC, BNB) for the 'least negative'
+        win condition. But the FOMC was June 17-18, and markets may stabilize by June
+        21.
+      supports: Bitcoin (BTC)
+      logit: 0.3
+      confidence: 0.4
+      effective_logit: 0.12
+  mc_distribution_metrics:
+    implied_probabilities:
+      XRP: 0.4750870044915267
+      Bitcoin (BTC): 0.08507199981710796
+      Ethereum (ETH): 0.25050977822968784
+      BNB: 0.1893312174616775
+    tentative_probabilities:
+      Bitcoin (BTC): 0.17
+      Ethereum (ETH): 0.27
+      BNB: 0.23
+      XRP: 0.33
+    per_option_gap_pp:
+      XRP: -14.508700449152666
+      Bitcoin (BTC): 8.492800018289206
+      Ethereum (ETH): 1.9490221770312177
+      BNB: 4.066878253832251
+    max_gap_pp: -14.508700449152666
+    max_gap_option: XRP
+  sources:
+  - '[(Metaculus) Which of BTC, ETH, BNB, and XRP will have the highest 7-day percentage
+    price gain over the week ending June 28, 2026?](https://www.metaculus.com/questions/44108)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44108
+- **Question ID**: 44133
+- **Session Duration**: 1181.7s (19.7 min)
+- **Cost**: $20.6550 total (orchestrator $2.6492 + sub-agents $18.0058)
+- **Tokens**: 9,044 total (29 in, 9,015 out)
+  - Cache: 529,936 read, 62,812 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44108_20260619_033353/20260619-033353.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 6 | 0 | 49ms | — |
+| get_metaculus_questions | 1 | 0 | 466ms | — |
+| premortem | 1 | 0 | 125477ms | $2.5493 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 1 | 0 | 848842ms | $15.4564 |
+
+### Sources Consulted
+
+- [(Metaculus) Which of BTC, ETH, BNB, and XRP will have the highest 7-day perc...

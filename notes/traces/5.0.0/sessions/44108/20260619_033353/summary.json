@@ -1,0 +1,112 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question details (post #44108), confirming this is a multiple-choice question asking which of `BTC`, `ETH`, `BNB`, or `XRP` will record the highest 7-day percentage price change from June 21–28, 2026, measured by CoinGecko daily closes.\n\nI then ran two parallel research queries:\n1. **Current prices & performance** — Cross-validated from CoinGecko, CoinPaprika, and Google Finance (all agreeing within 0.07% for BTC). Key snapshot as of June 19, 2026:\n   - `BTC`: **$62,700** (−1.4% 7d, −18.3% 30d)\n   - `ETH`: **$1,697** (**+1.6% 7d** — the only positive performer, −19.7% 30d)\n   - `BNB`: **$577.55** (−4.1% 7d, −9.5% 30d — most resilient)\n   - `XRP`: **$1.14** (−0.4% 7d, −15.3% 30d)\n\n2. **Catalysts for June 21–28** — Identified: Q2 derivatives expiry on June 26 (~$13B notional), post-FOMC hawkish environment (Warsh's first meeting June 17–18), Ethereum Glamsterdam upgrade in final devnet phase, ETH staking ETFs (BlackRock ETHB), XRP spot ETFs live with 30 institutional holders.\n\n## Key Evidence\n\n- **Volatility structure**: I modeled weekly volatilities from estimated annualized figures: `XRP` ~14%, `ETH` ~12%, `BNB` ~9%, `BTC` ~10%. Higher-volatility assets have wider return distributions and are structurally more likely to be the best (or worst) performer in any given week.\n\n- **Monte Carlo simulation**: I ran 100,000 correlated multivariate normal simulations across 5 scenarios (neutral, ETH outperformance, market bounce, continued selloff, higher correlations). Results were consistent:\n  - `XRP`: **30–33%** win probability across all scenarios\n  - `ETH`: **24–36%** (highest in ETH-outperformance scenario)\n  - `BNB`: **22–28%** (highest in selloff scenario where \"least negative\" wins)\n  - `BTC`: **13–28%** (highest in selloff scenario)\n\n- **Weighted average** across scenarios: BTC 17.9%, ETH 25.5%, BNB 24.8%, XRP 31.7%\n\n- **Qualitative adjustments**: I slightly boosted ETH (momentum + catalysts) and compressed BNB slightly (no unique catalysts), arriving at final probabilities.\n\n- **Premortem identified key risks**: BNB's defensive qualities may be underrated; XRP's vol may be dampened by institutional ETF ownership; ETH's momentum may already be spent.\n\n## Conclusion\n\nI submitted: **XRP 33%, ETH 27%, BNB 23%, BTC 17%**. The core insight is that higher-volatility assets structurally win more \"best weekly performer\" races. `XRP`'s ~14% weekly vol gives it a persistent structural edge. `ETH` benefits from being the only asset with positive 7-day momentum plus near-term catalysts. `BNB`'s defensive resilience helps in sell-off weeks. `BTC` is structurally disadvantaged as the lowest-vol asset. Confidence was set at 0.35, reflecting the genuinely noisy nature of single-week relative crypto returns.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to historical weekly return data for the 4 specific crypto assets — would have allowed empirical calibration of volatility and correlation parameters instead of estimation",
+      "No prediction market data checked (Polymarket, Kalshi) for existing markets on this question or similar crypto relative performance bets"
+    ],
+    "subtle_bugs": [
+      "The reflection tool's factor-implied softmax gave XRP 47.5% vs the agent's 33%, creating a ~14.5pp gap. The agent correctly identified this as a limitation of the softmax approach for MC questions about correlated asset returns, but the reflection tool's implicit recommendation could mislead less careful agents."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Monte Carlo simulation of correlated multivariate normal weekly returns with scenario-weighted probability aggregation.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Volatility parameters for all four assets are estimated rather than empirically measured from historical data, and a single week's relative crypto returns are dominated by unpredictable idiosyncratic events."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market odds were checked (Polymarket, Kalshi, Manifold) despite these platforms likely having relevant crypto performance markets. The agent also did not check community predictions on Metaculus (community_prediction was null, but no attempt was made to find similar resolved questions for base rates).",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "Volatility assumptions are all estimated (BTC 70%, ETH 85%, BNB 65%, XRP 100% annualized) rather than measured. The premortem's own verification noted BTC's measured 30d volatility was 42.32% (CoinGecko) and 55.9% (Deribit realized HV), both significantly below the 70% assumed. While the agent argues relative ordering matters more than absolute levels, if BTC vol is ~50% and XRP is ~80% rather than 70% and 100%, the vol spread narrows and the probability distribution would compress toward uniform.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "XRP at 33% is 8pp above the 25% uniform prior, driven primarily by assumed volatility differences. The agent's own premortem notes that XRP vol may be dampened by institutional ETF ownership (30 institutions, Goldman $153.8M), which could reduce its edge substantially. Without empirical weekly win-rate data, the 33% relies heavily on assumed volatility parameters.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "XRP 30%, ETH 26%, BNB 24%, BTC 20%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Used Monte Carlo simulation with 100K samples and correlated multivariate normals — the mathematically correct framework for 'which of N correlated assets has highest return' questions",
+    "Ran 5 distinct scenarios (neutral, ETH outperformance, bounce, selloff, high correlation) to test robustness of XRP's structural edge, finding it held at 30-33% across all",
+    "Iterated on volatility assumptions mid-analysis, reducing BNB from 80% to 65% annualized after observing its -9.5% 30d decline was much shallower than peers, showing self-correction",
+    "Correctly identified and resolved the gap between the reflection tool's softmax-implied probabilities (XRP 47.5%) and the simulation results (33%), trusting the more appropriate model",
+    "Strong premortem with specific quantitative counterarguments (e.g., if XRP vol drops to 80%, probability falls to ~25%) rather than vague concerns",
+    "Appropriately low confidence (0.35) reflecting genuine uncertainty in single-week relative crypto returns"
+  ],
+  "weaknesses": [
+    "All volatility parameters were assumed rather than empirically measured — the agent acknowledged this gap but did not attempt to compute realized volatility from the available 7d high/low data (e.g., BTC 7d range $62,304-$67,204 implies ~7.6% weekly range)",
+    "Did not check prediction markets (Polymarket, Kalshi) which may have had directly relevant markets on crypto relative performance",
+    "Did not look for historical empirical win frequencies — e.g., how often has XRP actually led weekly returns among these 4 assets over the past year — which would be the most direct base rate",
+    "The first execute_code call was essentially a print-statement framework setup rather than computation, wasting a sandbox call on what could have been thinking text",
+    "Correlation matrix values (0.65-0.85) were assumed without any empirical grounding; in a deep bear market these correlations may be higher (0.90+), which was only tested in one minor scenario weighted at 5%"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Compute realized volatility from available price data (7d high/low ranges were in the research results) rather than assuming annualized vol parameters",
+    "Check Polymarket/Kalshi for any existing crypto relative performance markets to anchor or cross-validate",
+    "Search for historical weekly return data to establish empirical base rates for how often each asset leads weekly returns",
+    "Weight the high-correlation scenario more heavily (>5%) given the deep bear market environment where correlations typically increase",
+    "Consolidate the first two execute_code calls — the framework-setup call added no computational value"
+  ]
+}
