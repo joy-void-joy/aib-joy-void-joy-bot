@@ -1,0 +1,141 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the Metaculus question (post ID 44055) to understand the exact resolution criteria: between June 13–28, 2026, Özgür Özel or his CHP allies must formally and publicly announce the founding of a new political party, reported by credible sources. Mere speculation, \"Plan B\" discussions, or taking over existing parties do not count.\n\nI then used the `mcp__research__research` tool with two queries covering Özel's new party stance and the CHP leadership crisis. The first query returned a comprehensive research report grounded in Wikipedia, turkiyetoday.com, and other sources. The second query partially failed — it acknowledged web tools were unavailable in that sub-session and returned only background information.\n\nI followed up with three `web_search` calls and one `fetch_url` on the Hürriyet Daily News CHP index page. The Hürriyet fetch returned only a cookie consent page (unhelpful), but the web searches returned highly relevant results from Turkish Minute, Daily Sabah, turkiyetoday.com, and others confirming the state of affairs.\n\n## Key Evidence\n\n**Against YES (new party founding):**\n- **Explicit denials**: Özel stated on May 27, 2026: *\"We have no intention of founding a new party. We will stand by Atatürk's party and fight.\"* Confirmed by multiple sources (turkiyetoday.com, turkishminute.com).\n- **Extraordinary congress path**: On June 11, 28 Özel-loyalist Party Assembly members resigned, dropping membership below quorum and triggering a mandatory extraordinary congress within 45 days (scheduled July 12). This gives Özel a viable path to reclaim CHP leadership.\n- **No preparations**: No founding documents filed, no Ministry of Interior registration — confirmed by Metaculus background and absence of any reporting to the contrary.\n- **Strong position**: Özel commands **111 of 138 CHP MPs (~80%)** and **74.5% of CHP voters** support him over Kılıçdaroğlu (MetroPOLL, May 2026).\n- **Timeline**: Only 13 days remain, and the extraordinary congress (July 12) falls after the deadline — no urgency to pivot.\n\n**For YES (minor):**\n- Abdulkadir Selvi reported that Özel allies discussed three options including founding a new party — showing it's not completely off the table.\n- Daily Sabah article says Özel \"mulls founding a new party,\" though this appears to be pro-government editorial framing rather than sourced reporting.\n- Courts could theoretically escalate by blocking the extraordinary congress, but no evidence this is imminent.\n\n**Base rate**: Turkish party splits (İYİ Party 2017, DEVA 2020, Future Party 2019) were all preceded by months of preparation, not 2-week timelines. Political leaders who publicly deny founding plans rarely reverse within two weeks.\n\n## Conclusion\n\nI concluded that the probability of Özel or his allies formally announcing a new party before June 28, 2026 is approximately **4%**. The overwhelming weight of evidence — explicit denials, a viable intra-CHP path, no preparations, strong factional position, and only 13 days remaining — points firmly to NO. The 4% residual accounts for Turkey's volatile judicial/political environment and the theoretical possibility of dramatic court intervention forcing a rapid pivot, while acknowledging that even such a scenario would likely push any founding announcement past the June 28 deadline.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "get_coherence_links": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 12,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 33,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction market lookup tool used (Polymarket/Kalshi/Manifold)",
+      "No Turkish-language search capability to access primary sources"
+    ],
+    "subtle_bugs": [
+      "The Hürriyet Daily News fetch returned cookie consent instead of actual news content — technically not an error but produced zero useful information from the resolution-designated source",
+      "Second research query acknowledged it couldn't access live web sources but still returned a 'successful' result, masking the partial failure"
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Multi-source news analysis combining explicit political statements, institutional mechanisms (extraordinary congress trigger), and base rate reasoning about party founding timelines in Turkey.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Turkish courts could take dramatic escalatory action (blocking extraordinary congress) that would force Özel to pivot from his stated strategy within the 13-day window."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "3-5%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Thoroughly parsed resolution criteria, correctly identifying all exclusions (speculation, Plan B discussions, mergers, congress developments) which prevented false positive reasoning",
+    "Identified and sourced the critical May 27 Özel denial quote from multiple independent outlets (turkiyetoday.com, turkishminute.com), establishing a strong factual anchor",
+    "Recognized the strategic significance of the June 11 Party Assembly resignations triggering mandatory extraordinary congress — this is the key mechanism that makes a new party unnecessary before June 28",
+    "Used the Abdulkadir Selvi / Pravda Turkey source to acknowledge the 'Plan B' discussions as a genuine (if minor) upside factor, avoiding tunnel vision toward NO",
+    "Premortem counterargument was substantive, identifying specific court intervention scenarios and noting that politicians sometimes deny plans right up until announcement (citing Davutoğlu and Babacan precedents)",
+    "Appropriately adjusted from the raw factor-sum-implied probability (~0.1%) to 4% to account for correlated factors and genuine tail risk — this shows calibration awareness"
+  ],
+  "weaknesses": [
+    "The Hürriyet Daily News fetch returned only a cookie consent page — this was the resolution-designated source and the agent did not attempt an alternative approach (e.g., searching for specific HDN articles via web search)",
+    "The second research query ('CHP leadership crisis Özgür Özel mutlak butlan June 2026 latest developments') failed to access live web sources and returned only background, yet the agent did not flag this as a significant gap or retry with a different approach",
+    "No prediction market check was performed — Polymarket, Kalshi, or Manifold might have had a relevant market that could have served as an independent calibration anchor",
+    "The Daily Sabah 'mulls founding a new party' framing was noted but not deeply investigated — fetching the actual article could have revealed whether this was editorial speculation or sourced reporting, which matters for the forecast",
+    "No Turkish-language source search was attempted, which could have yielded more granular reporting on behind-the-scenes preparations or court proceedings in the June 12-15 window"
+  ],
+  "pipeline": {
+    "issues": [
+      "The mcp__research__research second query silently degraded — it reported 'web tools unavailable in this session' but returned as successful, which could mislead the agent into thinking it had comprehensive coverage",
+      "The Hürriyet Daily News fetch failure (cookie consent wall) was not retried with an alternative approach",
+      "A previous session attempt for this question (shown in prediction_history) failed with 'CreditExhaustedError: You're out of extra usage' — indicating resource management issues in the pipeline"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Check prediction markets (Polymarket, Kalshi, Manifold) as an independent calibration anchor for political questions",
+    "When a key source fetch fails (Hürriyet Daily News), immediately try alternative approaches such as searching for specific articles from that outlet via web search",
+    "Flag partial research failures more prominently and attempt retry with reformulated queries",
+    "For questions about non-English-speaking countries, attempt searches in the local language to access primary sources and more recent reporting",
+    "Investigate ambiguous media framing (e.g., Daily Sabah's 'mulls founding a new party') by fetching the actual article rather than relying on search snippets"
+  ]
+}
