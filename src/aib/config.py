@@ -277,4 +277,5 @@ TOURNAMENTS: dict[str, int | str] = {
     "aib": "spring-aib-2026",
     "minibench": "minibench",
     "cup": 32921,
+    "futureeval": "summer-futureeval-2026",
 }

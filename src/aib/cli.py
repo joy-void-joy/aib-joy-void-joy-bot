@@ -1229,7 +1229,7 @@ def tournament(
     tournament_id: Annotated[
         str,
         typer.Argument(
-            help="Tournament ID or alias (aib, minibench, cup) or numeric ID"
+            help="Tournament ID or alias (futureeval, aib, minibench, cup) or numeric ID"
         ),
     ] = "aib",
     skip_existing: Annotated[
@@ -1306,7 +1306,7 @@ def loop(
     tournaments: Annotated[
         list[str] | None,
         typer.Argument(
-            help="Tournament IDs or aliases to loop over (default: aib minibench)"
+            help="Tournament IDs or aliases to loop over (default: futureeval minibench)"
         ),
     ] = None,
     interval: Annotated[
@@ -1335,7 +1335,7 @@ def loop(
     Use Ctrl+C to stop.
     """
     if tournaments is None:
-        tournaments = ["aib", "minibench"]
+        tournaments = ["futureeval", "minibench"]
 
     print(f"Starting forecast loop for tournaments: {', '.join(tournaments)}")
     print(f"Interval: {interval} minutes")
