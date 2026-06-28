@@ -1,0 +1,267 @@
+---
+timestamp: 2026-06-16 23:13:31 UTC
+question_type: discrete
+factors:
+- description: 'January 2026 reporting (RBC, NEST Centre, IES, UNN/ISW) all converged
+    on a 5-person all-federal part: Medvedev, Lavrov, Lysenko, Golovin, Poddubny'
+  supports:
+    center: 5.0
+    low: 5.0
+    high: 5.0
+  logit: 1.5
+  confidence: 0.7
+  effective_logit: 1.0499999999999998
+- description: 'Vedomosti (June 11, 2026) reports a ''federal five'': Lavrov, Sobyanin,
+    Bolilaya, Golovin, Poddubny — still favoring 5 but with different names than January
+    version'
+  supports:
+    center: 5.0
+    low: 5.0
+    high: 5.0
+  logit: 1.0
+  confidence: 0.8
+  effective_logit: 0.8
+- description: 'Kommersant (June 2026) reports a ''troika'' (3): Medvedev, Sobyanin,
+    Poddubny — backed by sociological research and focus groups showing voters prefer
+    compact format'
+  supports:
+    center: 3.0
+    low: 3.0
+    high: 4.0
+  logit: 1.0
+  confidence: 0.7
+  effective_logit: 0.7
+- description: 2021 precedent was 5 candidates (Shoigu, Lavrov, Protsenko, Kuznetsova,
+    Shmeleva), creating an established template
+  supports:
+    center: 5.0
+    low: 5.0
+    high: 5.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Wartime (SVO) context pushes for including military/SVO-related figures,
+    which favors a larger list
+  supports:
+    center: 5.0
+    low: 4.0
+    high: 6.0
+  logit: 0.5
+  confidence: 0.6
+  effective_logit: 0.3
+- description: Riddle analysis mentions an emergency fallback of Putin alone heading
+    the list if ratings slide further — very unlikely but non-zero tail risk for 1
+  supports:
+    center: 1.0
+    low: 1.0
+    high: 1.0
+  logit: -0.5
+  confidence: 0.3
+  effective_logit: -0.15
+- description: Kommersant mentions possible addition of Lysenko (woman) for gender
+    balance if troika is chosen, creating a 4-person variant
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 4.0
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+- description: Decision reported as not yet finalized as of June 17, 2026 (asferainfo),
+    creating genuine uncertainty between 3 and 5
+  supports:
+    center: 4.0
+    low: 3.0
+    high: 5.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+tentative_estimate:
+  center: 5.0
+  low: 3.0
+  high: 5.0
+anchor: 'Historical all-federal part sizes: 2003=3, 2007=1, 2011=1, 2016=1(?), 2021=5.
+  High variance with no clear trend. Median = 1, mean ≈ 2.2, but recent trend (2021)
+  was 5. No single base rate applies well.'
+assessment: 'This is a bimodal discrete distribution concentrated at 3 and 5. The
+  question asks how many candidates will be in the all-federal part of United Russia''s
+  State Duma election list, approved at the June 28, 2026 congress.
+
+
+  **Evidence for 5 (50% probability):**
+
+  - January 2026 reporting unanimously pointed to 5 (RBC, NEST, IES, UNN/ISW)
+
+  - Vedomosti (June 11) still reports 5, albeit with different names
+
+  - 2021 precedent was 5
+
+  - Wartime context creates pressure to include SVO-related figures
+
+
+  **Evidence for 3 (33% probability):**
+
+  - Kommersant reports sociological research and focus groups showing voters prefer
+  a compact 3-person format
+
+  - Historical familiarity (troika is a traditional Russian concept)
+
+  - The "troika" option emerged as a later alternative, possibly reflecting evolving
+  Kremlin thinking
+
+  - The Kommersant title "Избиратель любит троицу" (The voter loves a trinity) signals
+  data-driven reasoning
+
+
+  **Evidence for other values (17% combined):**
+
+  - 4: Possible if troika + woman for gender balance (7%)
+
+  - 1: Putin alone as emergency (2%)
+
+  - 6-10: Larger than typical, no source mentions this (7%)
+
+  - 2: Not mentioned by any source (1%)
+
+
+  The distribution is strongly bimodal with 83% of probability mass at 3 or 5. The
+  median is 5 and the mean is 4.3.'
+calibration_notes: 'This is a bimodal distribution, so standard calibration metrics
+  (spread ratio, median gap) are less meaningful. The key calibration question is:
+  what''s the relative probability of 3 vs 5? I''ve allocated 50/33 in favor of 5,
+  reflecting: (a) more sources report 5, (b) 5 was the earlier/longer-standing plan,
+  (c) 2021 precedent was 5. The 33% for 3 is substantial because Kommersant''s sociological
+  data is a strong signal.'
+key_uncertainties: 1. Whether the Kremlin will prioritize sociological data (favoring
+  3) or political representation/SVO messaging (favoring 5). 2. Whether Medvedev will
+  be included at all — his inclusion/exclusion changes the configuration. 3. Whether
+  Putin himself could intervene with a different format entirely.
+tool_audit: 'Useful: web_search returned key articles from asferainfo, UNN, Riddle,
+  and Kommersant/Vedomosti links. fetch_url successfully extracted details from asferainfo,
+  UNN, Riddle, Kommersant, and Vedomosti articles. research() provided good historical
+  context. Empty/timeout: RBC article timed out. The Metaculus question itself provided
+  good context in the description.'
+update_triggers: 1. Any new reporting between June 17-28 confirming the final decision.
+  2. Kremlin or party official statements about list composition. 3. Putin making
+  a public statement about the list or congress.
+process_reflection: This question is well-suited to the research + analysis pipeline.
+  The main challenge was the bimodal nature of the distribution — standard numeric
+  forecasting tools assume unimodal distributions, but this question has two clear
+  mass points (3 and 5). The scenario components approach in StructuredOutput is ideal
+  for this. The research sub-agent was helpful for historical context but didn't have
+  web search tools, so direct web search was essential for current reporting. Russian-language
+  search terms were critical for finding the most relevant sources.
+computed:
+  factor_count: 8
+  factor_sum: 3.2199999999999998
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'January 2026 reporting (RBC, NEST Centre, IES, UNN/ISW) all converged
+      on a 5-person all-federal part: Medvedev, Lavrov, Lysenko, Golovin, Poddubny'
+    supports:
+      center: 5.0
+      low: 5.0
+      high: 5.0
+    logit: 1.5
+    confidence: 0.7
+    effective_logit: 1.0499999999999998
+  - description: 'Vedomosti (June 11, 2026) reports a ''federal five'': Lavrov, Sobyanin,
+      Bolilaya, Golovin, Poddubny — still favoring 5 but with different names than
+      January version'
+    supports:
+      center: 5.0
+      low: 5.0
+      high: 5.0
+    logit: 1.0
+    confidence: 0.8
+    effective_logit: 0.8
+  - description: 'Kommersant (June 2026) reports a ''troika'' (3): Medvedev, Sobyanin,
+      Poddubny — backed by sociological research and focus groups showing voters prefer
+      compact format'
+    supports:
+      center: 3.0
+      low: 3.0
+      high: 4.0
+    logit: 1.0
+    confidence: 0.7
+    effective_logit: 0.7
+  - description: 2021 precedent was 5 candidates (Shoigu, Lavrov, Protsenko, Kuznetsova,
+      Shmeleva), creating an established template
+    supports:
+      center: 5.0
+      low: 5.0
+      high: 5.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Wartime (SVO) context pushes for including military/SVO-related figures,
+      which favors a larger list
+    supports:
+      center: 5.0
+      low: 4.0
+      high: 6.0
+    logit: 0.5
+    confidence: 0.6
+    effective_logit: 0.3
+  - description: Riddle analysis mentions an emergency fallback of Putin alone heading
+      the list if ratings slide further — very unlikely but non-zero tail risk for
+      1
+    supports:
+      center: 1.0
+      low: 1.0
+      high: 1.0
+    logit: -0.5
+    confidence: 0.3
+    effective_logit: -0.15
+  - description: Kommersant mentions possible addition of Lysenko (woman) for gender
+      balance if troika is chosen, creating a 4-person variant
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 4.0
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  - description: Decision reported as not yet finalized as of June 17, 2026 (asferainfo),
+      creating genuine uncertainty between 3 and 5
+    supports:
+      center: 4.0
+      low: 3.0
+      high: 5.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  dominant_factor: 'January 2026 reporting (RBC, NEST Centre, IES, UNN/ISW) all converged
+    on a 5-person all-federal part: Medvedev, Lavrov, Lysenko, Golovin, Poddubny'
+  dominant_effective_logit: 1.0499999999999998
+  distribution_metrics:
+    implied_median: 4.3977272727272725
+    implied_p10: 4.278409090909091
+    implied_p90: 4.681818181818182
+    median_gap: 0.6022727272727275
+    median_gap_pct: 149.2957746478874
+    spread_ratio: 4.957746478873241
+    precision: 0.4
+  sources:
+  - '[(Metaculus) How many candidates will be in the all-federal (central) part of
+    United Russia''s State Duma election list approved at its June 28, 2026 congress?](https://www.metaculus.com/questions/44087)'
+  - '[2026 Russian legislative election](https://en.wikipedia.org/wiki/2026_Russian_legislative_election)'
+  - '[United Russia - Wikipedia](https://en.wikipedia.org/wiki/United_Russia)'
+  - '[New Moscow constituency](https://en.wikipedia.org/wiki/New_Moscow_constituency)'
+  - '[List of Russian presidential candidates - Wikipedia](https://en.wikipedia.org/wiki/List_of_Russian_presidential_candidates)'
+  - '[Balashikha constituency](https://en.wikipedia.org/wiki/Balashikha_constituency)'
+  - '[2023 Moscow mayoral election](https://en.wikipedia.org/wiki/2023_Moscow_mayoral_election)'
+  - '[Medvedev is number one: Putin has identified the top five leaders of "United
+    Russia" for the State Duma elections - media](https://unn.ua/en/news/medvedev-is-number-one-putin-has-identified-the-top-five-leaders-of-united-russia-for-the-state-duma-elections-media)'
+  - '[Тройка или пятерка? Кто возглавит список “Единой России” на выборах в Госдуму](https://www.asferainfo.ru/news/134324-trojka-ili-paterka-kto-vozglavit-spisok-edinoj-rossii-na-vyborah-v-gosdumu)'
+  - '[United Russia’s Void – Riddle Russia](https://ridl.io/united-russia-s-void/)'
+  - '[Избиратель любит троицу](https://www.kommersant.ru/doc/8735939)'
+  - '[Кто может повести список «Единой России» на выборы в Госдуму](https://www.vedomosti.ru/politics/articles/2026/06/11/1205098-kto-mozhet-povesti)'
+  - '[rbc.ru](https://www.rbc.ru/politics/19/01/2026/696cfaca9a7947d68ec3dacb)'
+  - '[6th State Duma](https://en.wikipedia.org/wiki/6th_State_Duma)'
+  - '[7th State Duma](https://en.wikipedia.org/wiki/7th_State_Duma)'
+  - '[List of members of the 7th Russian State Duma](https://en.wikipedia.org/wiki/List_of_members_of_the_7th_Russian_State_Duma)'
+  - '[Sergey Neverov](https://en.wikipedia.org/wiki/Sergey_Neverov)'
+  - '[The Outlook for This Year’s Elections to the State Duma in Russia | Institute
+    of Central Europe](https://ies.lublin.pl/en/comments/the-outlook-for-this-years-elections-to-the-state-duma-in-russia/)'
+  - '[What to expect from Russia’s 2026 elections – New Eurasian Strategies Centre](https://nestcentre.org/how-the-kremlin-is-preparing-for-the-2026-state-duma-elections/)'
