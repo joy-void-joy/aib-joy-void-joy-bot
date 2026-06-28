@@ -1,0 +1,111 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by retrieving the full Metaculus question details for question 43578. The question asks whether Dalton Eatherly's case (stemming from a May 13, 2026 shooting outside the Montgomery County Courthouse in Clarksville, TN) would be bound over to the grand jury by May 30, 2026. Resolution criteria specified that a bind-over could occur via either a finding of probable cause at a preliminary hearing or a waiver of the preliminary hearing by the defendant.\n\nI first attempted to use the `research` MCP tool to gather both case-specific and base-rate information, but it **timed out after 100,000 seconds**. I then pivoted to direct web searches using three parallel queries: one for Eatherly's case status, one for Tennessee felony preliminary hearing statistics, and one for the Montgomery County court docket.\n\n## Key Evidence\n\nThe web search results were immediately decisive:\n\n- **WSMV** (Nashville NBC affiliate) published on **May 21, 2026**: headline explicitly states *\"...attempted homicide case now bound over to grand jury\"*\n- **Fox17/WZTV** (Nashville Fox affiliate via KRCR): reported that Eatherly **waived his preliminary hearing** and entered a not guilty plea, and the case was bound over to the grand jury on the same date\n- **Clarksville Now** (the specific resolution source named in the question criteria) published an article titled *\"5 highlights from courthouse shooting hearing: rules on high bail, grand jury\"* — though the full content was behind a **paywall (HTTP 401)**, the headline strongly confirms coverage of the bind-over\n- **Main Street Media of Tennessee**: *\"Dalton Eatherly's bond reduced, grand jury to receive the case\"*\n- **ABC3340**: confirmed the case was \"headed to grand jury, bond slightly lowered\"\n\nI attempted to fetch Clarksville Now articles directly three times, but all returned **HTTP 401** errors (paywall). However, I successfully fetched the WSMV and KRCR articles, which confirmed:\n- The bind-over occurred on **May 21, 2026** (9 days before the May 30 deadline)\n- Bond was reduced from **$1.25M to $1M**\n- Eatherly waived his preliminary hearing (per Fox17/WZTV)\n- A court order PDF filename contained \"052120261\" confirming the May 21, 2026 date\n\nOne minor note: the KRCR-fetched article referenced \"May 21, 2025\" — clearly a typo given the shooting occurred May 13, 2026. The court order PDF filename confirms 2026.\n\n## Conclusion\n\nI concluded at **0.99 probability (YES)**. The event has already occurred — confirmed by 5+ independent credible news sources including the named resolution source (Clarksville Now). The waiver of preliminary hearing is explicitly listed in both Tennessee law and the question's resolution criteria as constituting a bind-over. The 1% residual accounts for the infinitesimal possibility that all reporting is systematically wrong or that an obscure procedural technicality would invalidate the bind-over under the resolution criteria.",
+  "tool_audit": {
+    "by_tool": {
+      "get_metaculus_questions": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 6,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to court docket systems (montgomery.tncrtinfo.com) to verify the bind-over directly from official records rather than relying solely on news reporting"
+    ],
+    "subtle_bugs": [
+      "KRCR article fetch returned 'May 21, 2025' instead of 2026 — likely a typo in the original article that the fetch tool faithfully reproduced. Agent correctly identified this as a typo based on context."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Direct verification of whether the event already occurred via web search of credible news sources.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether any obscure procedural technicality could invalidate what 5+ independent news sources report as a completed bind-over."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "99%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Quickly pivoted from failed research tool to direct web search, finding decisive evidence on the first search attempt",
+    "Cross-verified the bind-over across 5+ independent credible news sources (WSMV, Fox17/WZTV, KRCR, Main Street Media, ABC3340, Clarksville Now headlines)",
+    "Correctly identified the year typo (2025 vs 2026) in the KRCR-fetched article and corroborated via the court order PDF filename",
+    "Carefully engaged with resolution criteria — verified that waiver of preliminary hearing constitutes bind-over per both Tennessee law and the question description",
+    "Attempted to access Clarksville Now (the named resolution source) multiple times, and while blocked by paywall, confirmed coverage via search result headlines",
+    "Appropriate calibration at 0.99 rather than 1.0, maintaining a small residual for systematic misreporting"
+  ],
+  "weaknesses": [
+    "Did not attempt search_exa for cached Clarksville Now content despite the fetch_url error messages explicitly suggesting it as a fallback",
+    "Did not check prediction markets (Metaculus community prediction was null, but Polymarket/Manifold were not searched) — though this is immaterial given the event already occurred",
+    "Base rate research for Tennessee preliminary hearing continuance rates was initiated but never used since the event had already occurred — minor token waste",
+    "The premortem's 'confidence_in_estimate' of 0.95 is somewhat confusing in context — it's unclear what this 0.95 represents relative to the 0.99 probability estimate"
+  ],
+  "pipeline": {
+    "issues": [
+      "mcp__research__research tool timed out after 100,000 seconds — this is a significant infrastructure issue, though the agent handled it gracefully by pivoting to direct search tools",
+      "Clarksville Now (the named resolution source) returned HTTP 401 on all 3 fetch attempts — paywall blocking is a recurring limitation for news-based questions"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "When fetch_url returns HTTP 401 with a suggestion to 'try search_exa for cached content', the agent should follow that suggestion to access paywalled content",
+    "For questions where the event has clearly already occurred, skip base rate research to save tokens and time",
+    "Consider checking the official court docket system (montgomery.tncrtinfo.com) directly when the question involves court proceedings, rather than relying solely on news reporting"
+  ]
+}
