@@ -2,6 +2,12 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.0.0 (2026-06-29)
+
+Default forecasting model upgraded to Claude Opus 4.8
+- config: default model claude-opus-4-6 → claude-opus-4-8
+- config: add summer-futureeval-2026 tournament (alias: futureeval) as default loop target alongside minibench
+
 ## v5.0.0 (2026-04-08)
 
 Hierarchical sub-agent architecture with persistent worldview store
