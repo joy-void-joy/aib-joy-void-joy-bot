@@ -1,0 +1,134 @@
+{
+  "condensed_reasoning": "## Research\n\nI treated this as a numeric question about cumulative confirmed Ebola (Bundibugyo) deaths in the DRC as reported by ECDC, resolving July 10, 2026. My first move was to check whether fresher data existed beyond the question text's anchor of **304 deaths on June 24**. I ran two web searches, which surfaced the ECDC outbreak page, Wikipedia's `2026 Ebola epidemic` article, and trackers like `ebola.fyi` and `ebolamap.org`. These converged on a much fresher figure: **360 confirmed DRC deaths** (1,274 confirmed cases), data date **June 27** per DRC Ministry of Health SITREP N044, reported June 28. I confirmed this with a `fetch_url` on the ECDC page, which also told me the page \"is updated as more information becomes available\" (near-daily, ~1-day lag; last updated June 29 at 13:10).\n\n## Key Evidence\n\n- **Firm anchor: 360 confirmed DRC deaths as of June 27.** Cumulative counts cannot decrease, so this is a hard floor.\n- **Trajectory:** I assembled a series deaths=`[202,247,277,291,304,360]` at June `[16,20,22,23,24,27]` and computed daily increments — ~11/day → 15/day → 18.7/day for the most recent 3-day window. Long-run June 16→27 averaged **~14.4/day**.\n- **Horizon:** With resolution at July 10 00:00 UTC and near-daily ECDC updates, the resolving report's data date is most likely **~July 7-8 (~11 days from June 27)**, with some chance an older/stalled report is used.\n- **Risk factors:** No approved Bundibugyo vaccine, active conflict zone, and \"fastest in DRC history\" framing → right-tail acceleration risk; conversely response measures and batch-effect fade → left-tail plateau.\n\n## Modeling\n\nI ran a **Monte Carlo simulation** (200K-300K samples) combining: a starting rate drawn from a lognormal, a scenario mixture (acceleration / mild growth / plateau-decline), Poisson daily noise, and horizon uncertainty (including ~15% mass on an older report). My first refined run gave a median **~518** (P10 454, P90 599).\n\nThe **premortem reviewer returned \"warn\"**, flagging that my intermediate death points (202, 247, 277, 291) appeared in no tool result, and that the +56 June 24→27 jump was likely a batch-confirmation artifact (the fresh worldview research dated 304 to June 26, making it +56 in one day). The documented Jun 13: 181 → Jun 27: 360 pair implies a cleaner **~12.8/day**.\n\n## Conclusion\n\nI accepted the critique and **re-centered the daily rate down to ~14.5/day**, re-running the Monte Carlo. Final distribution: **median ~502**, P10 444, P90 575, P1 410, P99 654. The upper bound 900 would require ~49/day for 11 days (negligible); the lower bound 304 is already below the firm current value of 360 and thus impossible. This aligned with the reviewer's independent estimate of ~505-515.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A tool to retrieve ECDC's historical page-update timestamps would have firmed up the horizon distribution (the single biggest driver of the central estimate) rather than relying on a one-time 'near-daily' inference.",
+      "No direct access to the SITREP N044 source (insp.cd) or a time series of prior SITREPs to validate the intermediate trajectory points."
+    ],
+    "subtle_bugs": [
+      "The trajectory series deaths=[202,247,277,291,304,360] at June [16,20,22,23,24,27] contains four intermediate points (202, 247, 277, 291) that appear in NO tool result — they were apparently fabricated/assumed, and inflated the apparent recent daily rate before the premortem corrected it.",
+      "The 304 figure was dated to June 24 in the MC code but the fresh research dated it to June 26, which when corrected reveals the +56 jump as a one-day batch artifact rather than a 3-day trend."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Monte Carlo simulation projecting a firm ECDC death anchor (360 on June 27) forward ~11 days using a scenario-mixture daily-rate model with Poisson noise and horizon uncertainty.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The data date of the ECDC report that will be the most recent on/before the July 10 resolution, compounded by whether the daily death rate accelerates, holds, or plateaus over the ~11-day horizon."
+  },
+  "risk_flags": [
+    {
+      "category": "computation_error",
+      "evidence": "The trajectory series deaths=[202,247,277,291,304,360] at June [16,20,22,23,24,27] includes intermediate points (202@Jun16, 247@Jun20, 277@Jun22, 291@Jun23) that appear in no tool result anywhere in the trace. These fabricated points produced the inflated ~18.7/day recent rate that drove the initial median to 518 before partial correction.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The 304 figure was coded as June 24 in the Monte Carlo, but the agent's own fresh research dated it to June 26 (ebolamap/Week 26 CDTR). This dating error masked that the +56 jump to 360 occurred over ~1 day (a batch artifact), not 3 days.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The horizon distribution assumes most likely ~July 7-8 data date, but if the resolving figure ends up being the July 8-9 ECDC report at sustained ~13-15/day, the actual value could land near/above the P75-P90 (538-575). The wide left tail (15% on older reports) may over-hedge downward given the page demonstrably updates near-daily.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "500-510 median, P10 ~445, P90 ~575",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Proactively distrusted the question text's stale anchor (304/June 24) and found the fresher 360/June 27 figure via search + fetch_url, corroborated across ECDC, Wikipedia, and ebola.fyi — a ~150-death upward correction that was the single most consequential research act.",
+    "Built a genuine Monte Carlo with a scenario mixture (acceleration/mild-growth/plateau), Poisson noise, and explicit horizon uncertainty rather than a point estimate, properly capturing the asymmetric epidemic dynamics.",
+    "Engaged honestly with the premortem 'warn': re-centered the daily rate from ~16 to ~14.5/day after the batch-artifact critique, shifting the median 518→502 to match the reviewer's independent estimate.",
+    "Correctly reasoned about hard bounds — 304 is impossible (cumulative already 360) and 900 would require an implausible 2.5x rate, so both creator bounds are effectively dead mass."
+  ],
+  "weaknesses": [
+    "Fabricated four intermediate trajectory points (202, 247, 277, 291) not present in any source, which inflated the perceived recent daily rate until the premortem caught it — the model should have been built only on documented anchors (181@Jun13, 304@Jun26, 360@Jun27).",
+    "Misdated the 304 figure to June 24 instead of June 26, directly causing the spurious 18.7/day 'recent rate' that anchored the first two simulation runs.",
+    "The horizon assumption (~11 days) drives most of the central estimate yet rests on a single qualitative 'updated as information becomes available' string; no attempt to verify actual ECDC update timestamps or distinguish the near-daily outbreak page from the weekly CDTR cadence.",
+    "Did not check prediction markets or look for any external modeled projection (e.g., the CDC MMWR scenario-projection paper it surfaced in search) to cross-validate the rate assumption."
+  ],
+  "pipeline": {
+    "issues": [
+      "No MCP errors, sandbox failures, or token waste observed — all 9 tool calls succeeded.",
+      "Minor prompt/process gap: the agent's worldview research (referenced by the premortem as containing 304@June26) was not visible as an explicit tool call in the trace, making it hard to audit where the intermediate trajectory points came from — they appear to have been invented in the execute_code step."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "This is a live forecast generated 2026-06-29 for a July 10, 2026 resolution, not a retrodict session.",
+      "All data accessed (ECDC June 29 page, SITREP N044 June 27) predates the generation timestamp; no post-resolution information was used."
+    ]
+  },
+  "actionable_improvements": [
+    "Build trajectory models only from data points that appear in actual tool results; never interpolate unsourced intermediate values that can distort rate estimates.",
+    "Carefully align data dates between sources before computing rates — the 304 June24-vs-June26 discrepancy was the root cause of the batch-artifact inflation.",
+    "When horizon (report data-date) is the dominant uncertainty, invest a tool call to verify the source's actual recent update timestamps rather than inferring cadence from a single descriptive sentence.",
+    "Cross-validate the daily-rate assumption against the available CDC MMWR modeled scenario projections that appeared in search results."
+  ]
+}

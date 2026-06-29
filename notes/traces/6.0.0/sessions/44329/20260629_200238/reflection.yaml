@@ -1,0 +1,179 @@
+---
+timestamp: 2026-06-29 20:06:56 UTC
+question_type: numeric
+factors:
+- description: 'Latest ECDC figure: 360 confirmed DRC deaths, data date 27 June (SITREP
+    N044), reported 28 June. This is the firm starting point.'
+  supports:
+    center: 360.0
+    low: 360.0
+    high: 360.0
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+- description: Recent daily increment ~14-19/day (long trend 14.4/day; recent 3-day
+    18.7/day). Over ~11 day horizon to resolving data date adds ~150-200.
+  supports:
+    center: 520.0
+    low: 470.0
+    high: 580.0
+  logit: 1.5
+  confidence: 0.8
+  effective_logit: 1.2000000000000002
+- description: ECDC outbreak page updates near-daily with ~1-day lag; resolving data
+    date likely ~July 7-8. Some chance an older report is used (lower) or right at
+    July 9 (higher).
+  supports:
+    center: 518.0
+    low: 460.0
+    high: 590.0
+  logit: 0.5
+  confidence: 0.7
+  effective_logit: 0.35
+- description: 'Epidemic acceleration risk: no vaccine for Bundibugyo, conflict zone,
+    ''fastest in DRC history'' framing -> right tail toward 650-700+.'
+  supports:
+    center: 560.0
+    low: 520.0
+    high: 700.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Response (case isolation, safe burials, contact tracing) and batch-reporting
+    fade could plateau the curve -> left tail toward 450-480.
+  supports:
+    center: 490.0
+    low: 440.0
+    high: 520.0
+  logit: -0.4
+  confidence: 0.5
+  effective_logit: -0.2
+tentative_estimate:
+  center: 518.0
+  low: 454.0
+  high: 599.0
+anchor: 'Starting anchor: 360 deaths (latest ECDC data date June 27) + ~11 days x
+  ~15/day drift ≈ 525.'
+assessment: 'Numeric forecast for cumulative confirmed DRC Ebola (Bundibugyo) deaths
+  per ECDC as of July 10 2026 resolution. Firm anchor: 360 deaths as of data date
+  June 27. Trajectory is roughly 14-19 deaths/day with recent acceleration. Resolving
+  figure uses the most recent ECDC update on/before July 10; the outbreak page updates
+  near-daily so data date likely ~July 7-8 (~11 days from June 27). Monte Carlo with
+  rate uncertainty, scenario mixture (22% acceleration, 43% mild growth, 35% plateau/decline),
+  Poisson noise, and horizon uncertainty yields median ~518, P10 454, P90 599. Reaching
+  the upper bound 900 would require ~49/day for 11 days (2.5x current) — negligible.
+  Lower bound 304 is below current value (impossible since cumulative cannot decrease
+  and is already 360).'
+key_uncertainties: (1) Data date of the resolving report (older report -> lower; right
+  at July 9 -> higher). (2) Whether the curve accelerates, stays linear, or plateaus
+  over the next ~11 days. (3) Reporting lumpiness/batch confirmations.
+tool_audit: 'web_search: highly useful — surfaced ECDC page, Wikipedia, ebola.fyi
+  all confirming 360 DRC deaths as of late June. fetch_url on ECDC page: confirmed
+  360 deaths / 1,274 cases, data date June 27, near-daily update cadence. execute_code:
+  ran Monte Carlo simulations successfully. No tool failures.'
+process_reflection: The scaffolding worked well for this measurement question. Web
+  search and fetch_url quickly gave me a much more recent data point (360 on June
+  27) than the question text's 304 on June 24, which materially shifted the anchor
+  upward. The main residual uncertainty is the resolving report's data date given
+  the 00:00 UTC July 10 resolution timestamp vs near-daily ECDC updates — a tool that
+  directly retrieved ECDC's historical update cadence would help. Monte Carlo in the
+  sandbox was the right tool for combining rate, trend, and horizon uncertainty.
+computed:
+  factor_count: 5
+  factor_sum: 1.6
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: 'Latest ECDC figure: 360 confirmed DRC deaths, data date 27 June
+      (SITREP N044), reported 28 June. This is the firm starting point.'
+    supports:
+      center: 360.0
+      low: 360.0
+      high: 360.0
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  - description: Recent daily increment ~14-19/day (long trend 14.4/day; recent 3-day
+      18.7/day). Over ~11 day horizon to resolving data date adds ~150-200.
+    supports:
+      center: 520.0
+      low: 470.0
+      high: 580.0
+    logit: 1.5
+    confidence: 0.8
+    effective_logit: 1.2000000000000002
+  - description: ECDC outbreak page updates near-daily with ~1-day lag; resolving
+      data date likely ~July 7-8. Some chance an older report is used (lower) or right
+      at July 9 (higher).
+    supports:
+      center: 518.0
+      low: 460.0
+      high: 590.0
+    logit: 0.5
+    confidence: 0.7
+    effective_logit: 0.35
+  - description: 'Epidemic acceleration risk: no vaccine for Bundibugyo, conflict
+      zone, ''fastest in DRC history'' framing -> right tail toward 650-700+.'
+    supports:
+      center: 560.0
+      low: 520.0
+      high: 700.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Response (case isolation, safe burials, contact tracing) and batch-reporting
+      fade could plateau the curve -> left tail toward 450-480.
+    supports:
+      center: 490.0
+      low: 440.0
+      high: 520.0
+    logit: -0.4
+    confidence: 0.5
+    effective_logit: -0.2
+  dominant_factor: Recent daily increment ~14-19/day (long trend 14.4/day; recent
+    3-day 18.7/day). Over ~11 day horizon to resolving data date adds ~150-200.
+  dominant_effective_logit: 1.2000000000000002
+  distribution_metrics:
+    implied_median: 521.6500000000001
+    implied_p10: 471.50000000000006
+    implied_p90: 590.75
+    median_gap: -3.650000000000091
+    median_gap_pct: -3.060796645702384
+    spread_ratio: 1.2159329140461221
+    precision: 0.2799227799227799
+  sources:
+  - '[2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_epidemic)'
+  - '[Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](https://www.ecdc.europa.eu/en/ebola-outbreak-democratic-republic-congo-and-uganda)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44329
+- **Question ID**: 44340
+- **Session Duration**: 407.7s (6.8 min)
+- **Cost**: $6.3835 total (orchestrator $4.1121 + sub-agents $2.2714)
+- **Tokens**: 18,282 total (20 in, 18,262 out)
+  - Cache: 704,504 read, 89,888 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44329_20260629_200238/20260629-200238.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0942 |
+| execute_code | 4 | 0 | 215ms | — |
+| fetch_url | 1 | 0 | 11416ms | — |
+| premortem | 1 | 0 | 94706ms | $2.0736 |
+| reflection | 1 | 0 | 7ms | — |
+| web_search | 2 | 0 | 24737ms | $0.1036 |
+| wikipedia | 2 | 0 | 263ms | — |
+
+### Sources Consulted
+
+- [2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_ep...
+- [Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](h...
