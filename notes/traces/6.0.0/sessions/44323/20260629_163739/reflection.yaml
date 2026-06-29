@@ -1,0 +1,115 @@
+---
+timestamp: 2026-06-29 16:38:46 UTC
+question_type: discrete
+factors:
+- description: WC knockout matches historically average ~2.3-2.5 goals/match including
+    extra time; two matches imply a combined mean near 4.5-5.0
+  supports:
+    center: 4.75
+    low: 2.0
+    high: 8.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Goal counts are overdispersed Poisson; right-skewed with a meaningful
+    tail toward 8+ if either match is high-scoring
+  supports:
+    center: 5.0
+    low: 2.0
+    high: 9.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Knockout games are often tight/defensive, raising mass on low totals
+    (2-4); ~25-30% go to ET adding modest goals
+  supports:
+    center: 4.0
+    low: 1.0
+    high: 6.0
+  logit: 0.0
+  confidence: 0.75
+  effective_logit: 0.0
+tentative_estimate:
+  center: 4.3
+  low: 2.0
+  high: 8.0
+anchor: Knockout-stage goals/match ~2.4 (FIFA WC historical), two matches => combined
+  mean ~4.75
+assessment: Self-contained statistical question on goals in two WC quarterfinals.
+  Teams unknown, so this is a pure scoring-rate model. Monte Carlo with negative-binomial
+  (Gamma-Poisson) per-match goals plus extra-time component, mixed across a higher
+  (reg mean 2.35) and lower (reg mean 2.10) scenario gives combined mean ~4.75, median
+  ~4-5, right-skewed. P0=2.3%, modal 3-4, P>=10 ~5.7%. Distribution well-matches question's
+  stated 4-5 typical with 0-2 low and 8+ high tails.
+key_uncertainties: Whether both matches are defensive (pushes toward 2-4) or one becomes
+  a blowout (pushes toward 8+). Extra-time frequency adds modest upside.
+tool_audit: execute_code used for Monte Carlo simulation — worked cleanly. No external
+  research needed since teams are unknown and this is a scoring-distribution problem;
+  no tools failed.
+process_reflection: Smooth for this question type — a single simulation suffices.
+  The discrete numeric scaffolding worked well. No friction; would not have benefited
+  from research subagents since matchups are inherently unknown at forecast time.
+computed:
+  factor_count: 3
+  factor_sum: 0.0
+  neutral_factor_count: 3
+  factor_breakdown:
+  - description: WC knockout matches historically average ~2.3-2.5 goals/match including
+      extra time; two matches imply a combined mean near 4.5-5.0
+    supports:
+      center: 4.75
+      low: 2.0
+      high: 8.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Goal counts are overdispersed Poisson; right-skewed with a meaningful
+      tail toward 8+ if either match is high-scoring
+    supports:
+      center: 5.0
+      low: 2.0
+      high: 9.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Knockout games are often tight/defensive, raising mass on low totals
+      (2-4); ~25-30% go to ET adding modest goals
+    supports:
+      center: 4.0
+      low: 1.0
+      high: 6.0
+    logit: 0.0
+    confidence: 0.75
+    effective_logit: 0.0
+  dominant_factor: WC knockout matches historically average ~2.3-2.5 goals/match including
+    extra time; two matches imply a combined mean near 4.5-5.0
+  dominant_effective_logit: 0.0
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44323
+- **Question ID**: 44334
+- **Session Duration**: 204.7s (3.4 min)
+- **Cost**: $4.7174 total (orchestrator $2.2495 + sub-agents $2.4679)
+- **Tokens**: 6,889 total (14 in, 6,875 out)
+  - Cache: 353,412 read, 64,187 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44323_20260629_163739/20260629-163739.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 219ms | — |
+| premortem | 2 | 0 | 81091ms | $2.3838 |
+| reflection | 2 | 0 | 5ms | — |
+| stock_price | 2 | 0 | 414ms | — |
+| web_search | 2 | 0 | 20894ms | $0.0842 |
+| wikipedia | 1 | 0 | 237ms | — |
