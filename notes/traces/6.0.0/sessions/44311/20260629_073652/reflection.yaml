@@ -1,0 +1,129 @@
+---
+timestamp: 2026-06-29 07:38:58 UTC
+question_type: numeric
+factors:
+- description: Current price (June 29 close) is 2,628,000 KRW; random walk anchor
+    centers here
+  supports:
+    center: 2628000.0
+    low: 2220000.0
+    high: 3250000.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Extreme recent realized volatility (~7.3% daily, trading halts) implies
+    wide 9-day distribution
+  supports:
+    center: 2650000.0
+    low: 2200000.0
+    high: 3300000.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Post-shock bounce tendency (after -8% drops, median +4.4% over 10d,
+    75% positive) gives mild positive drift
+  supports:
+    center: 2720000.0
+    low: 2400000.0
+    high: 3100000.0
+  logit: 0.3
+  confidence: 0.5
+  effective_logit: 0.15
+tentative_estimate:
+  center: 2667000.0
+  low: 2222000.0
+  high: 3251000.0
+anchor: Random walk from current price 2,628,000 with empirical ~6% daily vol
+assessment: SK hynix is extremely volatile right now (parabolic run to ~2.92M, crash
+  to 1.91M, recovery, then renewed weakness; June 29 trading halt due to volatility).
+  Current close 2,628,000. Horizon ~9 trading days to July 10. I used a t-distributed
+  Monte Carlo mixture over three vol regimes (6.5%/4.5%/3.0% daily, weighted 45/35/20)
+  with mild post-shock positive drift. Median ~2.67M, P10 2.22M, P90 3.25M. Distribution
+  is wide but justified by realized vol; σ*sqrt(9) at 6% daily ≈ 18%. Bounds 2.0-3.4M
+  roughly match my P5-P92.
+key_uncertainties: Whether extreme volatility persists or calms; direction of drift
+  after recent crash; HBM/memory pricing news in the window.
+tool_audit: web_search/fetch_url returned full recent price history and shock-alert
+  stats; very useful. execute_code ran MC. No failures.
+process_reflection: Smooth. The yahoo finance api_data embedded shock-alert and volatility
+  stats was directly useful for a short-horizon stock question, minimizing research
+  overhead.
+computed:
+  factor_count: 3
+  factor_sum: 0.15
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Current price (June 29 close) is 2,628,000 KRW; random walk anchor
+      centers here
+    supports:
+      center: 2628000.0
+      low: 2220000.0
+      high: 3250000.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Extreme recent realized volatility (~7.3% daily, trading halts) implies
+      wide 9-day distribution
+    supports:
+      center: 2650000.0
+      low: 2200000.0
+      high: 3300000.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Post-shock bounce tendency (after -8% drops, median +4.4% over 10d,
+      75% positive) gives mild positive drift
+    supports:
+      center: 2720000.0
+      low: 2400000.0
+      high: 3100000.0
+    logit: 0.3
+    confidence: 0.5
+    effective_logit: 0.15
+  dominant_factor: Post-shock bounce tendency (after -8% drops, median +4.4% over
+    10d, 75% positive) gives mild positive drift
+  dominant_effective_logit: 0.15
+  distribution_metrics:
+    implied_median: 2720000.0
+    implied_p10: 2400000.0
+    implied_p90: 3100000.0
+    median_gap: -53000.0
+    median_gap_pct: -7.571428571428572
+    spread_ratio: 1.47
+    precision: 0.3858267716535433
+  sources:
+  - '[SK hynix Inc. (000660.KS) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/000660.KS/)'
+  - '[SK hynix Inc. (000660.KS) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/000660.KS/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44311
+- **Question ID**: 44322
+- **Session Duration**: 222.2s (3.7 min)
+- **Cost**: $3.8560 total (orchestrator $2.3303 + sub-agents $1.5257)
+- **Tokens**: 6,178 total (14 in, 6,164 out)
+  - Cache: 380,661 read, 69,160 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44311_20260629_073652/20260629-073652.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 221ms | — |
+| fetch_url | 1 | 0 | 365ms | — |
+| premortem | 1 | 0 | 73641ms | $1.4855 |
+| reflection | 1 | 0 | 31789ms | — |
+| stock_price | 3 | 0 | 354ms | — |
+| web_search | 1 | 0 | 25085ms | $0.0402 |
+
+### Sources Consulted
+
+- [SK hynix Inc. (000660.KS) Stock Price, News, Quote & History - Yahoo Finance...
+- [SK hynix Inc. (000660.KS) Stock Historical Prices & Data - Yahoo Finance](ht...

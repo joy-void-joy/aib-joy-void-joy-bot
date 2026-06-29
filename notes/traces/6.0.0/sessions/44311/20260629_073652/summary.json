@@ -1,0 +1,108 @@
+{
+  "condensed_reasoning": "## Research\n\nI needed to forecast SK hynix's (`000660.KS`) closing share price on July 10, 2026 — only ~9 trading days out from my June 29 anchor date. I started with a single `web_search` that returned a rich Yahoo Finance payload embedding the full recent price history plus pre-computed summary statistics, then confirmed it with a `fetch_url` on the Yahoo history page.\n\n## Key Evidence\n\n- **Current price**: KRW **2,628,000** (June 29 close), previous close 2,673,000, down -1.68% on the day.\n- **Extreme volatility regime**: The stock ran parabolically from ~2.07M to a recent high of **2.92M** (June 22), crashed to a recent low of **1.91M** (June 8), then recovered. Trailing 20-day realized volatility was **~7.1–7.3% daily**. A TradingView snippet documented a **June 29 KRX 20-minute trading halt** tied to volatility concentration in SK hynix.\n- **Shock-alert stats**: The embedded data flagged the June 26 -8.4% drop and noted that across 8 comparable -8% events, the **median forward 10-day return was +4.4%, with 75% positive** — suggesting a mild post-shock bounce tendency.\n- **Analyst context**: 37 analysts rated Strong Buy with a 12-month target of ~KRW 3.09M.\n\n## Modeling\n\nI computed daily log returns (mean +0.6%, std **7.29%**) and ran two Monte Carlo simulations. First a 200K-path bootstrap with zero drift. Then a refined 300K-path **t-distributed mixture across three volatility regimes** (6.5%/4.5%/3.0% daily, weighted 45/35/20) to allow for vol calming, with a mild post-shock positive drift. I explicitly **damped the raw empirical drift to ~0** rather than propagating the contaminated trailing mean.\n\n## Conclusion\n\nI anchored on a random walk from the current price with a slight upward tilt. The final distribution: **median ~KRW 2,667,000**, P10 **2,222,000**, P90 **3,250,000**, P1 1,808,516, P99 4,066,911 — wide tails justified by σ√9 ≈ 18% at ~6% daily vol. My premortem acknowledged the bounds could be too wide if vol reverts fast, or too thin if a headline gaps the stock; I set confidence at 0.60. The premortem reviewer approved.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The trailing_returns ten_day (+14.9%) and twenty_day (+12.6%) in the data appear inconsistent with the recent five_day (-10%) slide and the visible price path; the agent wisely did not propagate these raw drift figures, damping drift to ~0, so no harm to the forecast."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation (t-distributed three-regime volatility mixture) random-walking from the current price over a 9-trading-day horizon using empirically-derived volatility.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the extreme ~7% daily volatility regime persists through July 10 or reverts quickly, and the direction of drift after the recent crash-and-recovery."
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "Volatility (std 7.29% daily) was estimated from a May 29-June 29 window that contains a one-off parabolic run (2.07M->2.92M) plus a crash and recovery — a structural episode, not a stationary process. The three-regime mixture (6.5/4.5/3.0%) still leans heavily on this contaminated window; if the frenzy cooled the P10-P90 of 2.22M-3.25M would be materially too wide. The agent acknowledged this in premortem but the central vol assumption remains anchored to the episode.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The +0.3 logit / mild positive drift rests on only 8 'comparable_events' from the shock_alert (median +4.4%, 75% positive). This is a thin sample and likely drawn from the same contaminated high-vol window, yet it tilts the median ~1.5% above the random-walk center.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Median ~2,650,000 KRW, P10-P90 roughly 2,250,000-3,200,000",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Recognized this is fundamentally a short-horizon random-walk problem and correctly anchored the median at the current price (2,628,000 KRW) rather than chasing the parabolic high or recent low.",
+    "Explicitly damped the contaminated empirical drift (+0.6% daily) to ~0 instead of naively propagating it, which would have produced an absurd upward forecast over 9 days.",
+    "Used a t-distributed (fat-tailed) mixture across three vol regimes rather than a single Gaussian, appropriately modeling both tail risk and the possibility of vol calming.",
+    "Ran 300K MC paths for stable percentile estimates and verified tail probabilities (P(>3.4M)=6.5%, P(<2.0M)=3.1%).",
+    "Premortem genuinely engaged the main weakness (vol reversion making bounds too wide) and set well-calibrated 0.60 confidence."
+  ],
+  "weaknesses": [
+    "The volatility estimate relies entirely on a 21-day window dominated by a single structural episode; no attempt to look at longer-horizon (e.g., 60-90 day) realized vol to sanity-check whether 6% daily is a fair forward assumption.",
+    "The mild positive drift rests on only 8 comparable shock events from the same contaminated window — a thin and possibly circular base rate.",
+    "Did not check whether July 10, 2026 is a Korean trading day or whether any earnings/holiday fell in the window, despite the resolution criteria mentioning a holiday fallback.",
+    "No use of the analyst 12-month target (~3.09M) even as a loose directional cross-check on drift."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Cross-check the 21-day realized vol against a 60-90 day window to test whether ~6% daily is regime-contaminated before centering the distribution on it.",
+    "Verify the resolution date (July 10, 2026) is a KRX trading day and note any earnings releases in the 9-day window that could cause gap risk.",
+    "When deriving a post-shock bounce drift, widen the comparable-event lookback beyond the contaminated window or down-weight it given the small (n=8) sample."
+  ]
+}
