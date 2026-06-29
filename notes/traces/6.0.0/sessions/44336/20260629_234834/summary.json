@@ -1,0 +1,108 @@
+{
+  "condensed_reasoning": "## Research\n\nI made a single research call (after the bare `research` tool name failed and I retried via `mcp__research__research`) asking about US spot Bitcoin ETF net flows in late June / early July 2026 from Farside and SoSoValue, plus the BTC price trend. The call returned rich, well-sourced data covering exactly what I needed.\n\n## Key Evidence\n\n- **June 2026 was the worst month on record: ~$4.06B net outflows** (SoSoValue), beating Feb 2025's $3.56B, driven ~73% by BlackRock's `IBIT`.\n- This was a **seventh consecutive net-outflow week**, part of a streak beginning early May; May+June ~$6.5B, H1 YTD ~$5B — pushing cumulative since-launch flows negative for the first time.\n- Late-June daily flows were sharply negative (Jun 24 −$469M, Jun 25 −$692M, Jun 26 −$445M), but **Monday June 29 posted a small +$69.5M inflow** — the first positive day after five straight outflows, framed as a \"tentative pause, not a confirmed reversal.\"\n- **BTC ~$60K**, near its 52-week low of ~$58K, **−52% from the Oct 2025 peak**, −19% in June, −31% YTD. Technicals showed a head-and-shoulders pattern with a $42K downside target; bearish macro (strong USD, Fed rate-hike expectations, \"debasement-trade\" exit).\n\n## Conclusion\n\nI checkpointed via a reflection step with four factors: (1) the seventh-consecutive-outflow-week regime (+1.3), (2) persistent bearish macro and technicals (+0.7), (3) mean-reversion/oversold bounce risk given June 29's first inflow day (−0.6), and (4) ~1.5 weeks of forward uncertainty post-July-4 (−0.2). The in-regime weekly outflow base rate is ~75%. I ran a premortem articulating the strongest NO case (violent oversold relief rally, noisy weekly direction, single green day flipping a week), which the reviewer rated WARN — sound forecast, with only a minor calibration note that my tool_audit claimed \"no failures\" despite the initial tool error. I concluded **lean YES at 0.71**, momentum-driven but trimmed below my ~75% anchor to account for genuine mean-reversion risk and forward noise.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": "wrong tool name (bare 'research' not available; retried as mcp__research__research)",
+        "impact": "none",
+        "value": "low",
+        "notes": "The failed bare call was immediately retried successfully; no data impact."
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup tool was used; a Polymarket/Kalshi check could have provided an external market-implied probability for the weekly-flow direction."
+    ],
+    "subtle_bugs": [
+      "The research answer's 'June 8-12 flipped a week positive' framing was not actually in the returned data; the agent's mean-reversion factor borrowed an illustrative detail that the premortem could not verify."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Base-rate-within-regime estimate anchored on a seventh-consecutive-week ETF outflow streak, tempered by mean-reversion and forward-uncertainty adjustments.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether an oversold BTC relief rally during July 6-10 triggers large ETF inflow days that flip the week positive."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The '~75% in-regime weekly base rate' is asserted from '6-7 of last ~8 weeks negative' but is really a sample of one consecutive streak, not an independent base rate; the trace did not quantify the empirical hit rate of weekly-direction persistence or the distribution of weekly flow magnitudes. The anchor_logit of 1.1 rests on a small, autocorrelated sample.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The forecast targets July 6-10 but the only concrete forward signal is June 29's single +$69.5M inflow; June 30-July 3 Farside data was 'not published yet.' The agent correctly noted this but the ~1.5-week gap means the estimate leans heavily on momentum without any data from the intervening week.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "72%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Anchored on the single most decisive fact — a seventh consecutive net-outflow week with June the worst month on record (-$4.06B) — rather than over-weighting the noisy June 29 +$69.5M inflow.",
+    "Correctly treated June 29's inflow as base-rate/mean-reversion evidence rather than as resolving the July 6-10 question, avoiding a future-leak / premature-resolution error.",
+    "Explicitly trimmed from the ~75% anchor down to 71% to price in genuine crypto weekly-direction noise and 1.5 weeks of forward uncertainty — a sensible, non-mechanical adjustment.",
+    "Ran a substantive premortem with concrete, falsifiable triggers ($67K reclaim, two consecutive inflow days) that would flip the call to NO."
+  ],
+  "weaknesses": [
+    "Did not quantify the magnitude buffer: with recent weeks at -$1.79B, it would take an extraordinary single green day to flip a week positive, which arguably justifies a probability higher than 71% rather than a trim downward.",
+    "The illustrative claim that 'June 8-12 flipped a week positive' was not actually supported by the research data (the trace only shows a 13-day streak ending June 4 with a +$3.05M inflow); the reviewer caught this as unsupported.",
+    "Self-reported tool_audit 'No failures' was inaccurate — the initial `research` call errored — a calibration lapse flagged by the premortem.",
+    "No prediction-market check (e.g., Polymarket/Kalshi) for a crypto-flows question where such markets sometimes exist."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial tool call used the bare name 'research' which is not available, returning a tool_use_error before the correct mcp__research__research variant succeeded — minor wasted turn but no data impact.",
+      "Agent's self-reported tool_audit ('No failures') contradicted ground-truth (the initial error plus a stock_price error noted by the premortem)."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
