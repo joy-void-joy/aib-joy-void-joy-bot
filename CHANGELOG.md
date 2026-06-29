@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.1.0 (2026-06-29)
+
+Worldview store becomes a self-maintaining, coherent world model
+- worldview: staleness now triggers re-research — `aib-devtools worldview loop` refreshes every stale research entry on its own TTL clock, independent of forecasting
+- worldview: research overwrites preserve the prior snapshot, building a per-fact trajectory (time series)
+- tools: wv_reconcile — maintenance agent re-researches a disputed claim and supersedes the conflicting entries with one authoritative entry
+- worldview: maintenance agent reconciles contradictions instead of flagging them for human review; uncertain forecast resolutions retry on the next sweep
+- agent: get_research_mcp_servers is sandbox-optional so research runs outside a forecast
+
 ## v6.0.0 (2026-06-29)
 
 Default forecasting model upgraded to Claude Opus 4.8
