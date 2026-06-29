@@ -2,6 +2,13 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.1.0 (2026-06-29)
+
+Activate the worldview forecast store and fix tool-name friction
+- worldview: top-level forecasts now register as depth-0 entries (notes/worldview/forecasts/), feeding the maintenance sweep's resolution, scoring, and research-linking — previously only subforecasts populated the store, so it stayed empty
+- prompts: tool docs present the exact callable name (e.g. mcp__research__research) instead of the bare name, eliminating "No such tool available: research" retries
+- prompts: subforecast decomposition is now directive — binary-threshold-on-a-quantity questions default to a numeric subforecast + CDF threshold, rather than permissive guidance the agent never acted on
+
 ## v6.0.0 (2026-06-29)
 
 Default forecasting model upgraded to Claude Opus 4.8
