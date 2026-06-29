@@ -1,0 +1,90 @@
+{
+  "condensed_reasoning": "## Research\n\nI was asked for the KOSPI Composite Index (`^KS11`) closing level on **July 10, 2026** — a short-horizon forecast just **9 trading days** out from my information cutoff. I began with two web searches to pin down the current level. Multiple sources converged: CNBC and Trading Economics both reported a **June 29 close of 8,394.65** (down 0.20%, prev close 8,411.21). A TradingView snippet flagged the unusual regime: \"5 sidecars and one circuit breaker\" over two weeks, including a near-10% intraday drop on June 23, with the index \"still up around 100% this year\" after setting all-time highs days before the crash.\n\nTo estimate volatility, I pulled the 3-month daily series directly via the Yahoo chart API inside the sandbox (avoiding HTML scraping). This gave a clean series confirming the June 29 close and showing wild recent swings (e.g., June 22 → 9,114, June 23 → 8,204, June 25 → 8,930, June 26 → 8,411).\n\n## Key Evidence\n\n- **Spot anchor:** `8,394.65` (June 29 close), confirmed across CNBC, Trading Economics, and the Yahoo series.\n- **Volatility:** Full-window daily σ = **4.42%**, last-15 σ = 4.77%, last-10 σ = 4.68%; **annualized ≈ 70%**. I blended these to ~4.5%/day.\n- **Regime:** Multiple circuit breakers/sidecars confirm an extreme-volatility regime; a one-sigma move over 9 days is roughly **±13–14%**.\n- **Drift caution:** The empirical historical mean drift was +0.39%/day — a bubble artifact I deliberately did NOT use. Instead I applied a scenario-mixed drift.\n- **Downside tilt:** A **−5.81% reversal on June 26** (8,930 → 8,411), plus chip-price sustainability concerns and foreign selling, justified a mild bearish lean.\n\n## Conclusion\n\nI ran a **Monte Carlo simulation (300,000 paths)** with **Student-t (df=4)** fat-tailed innovations over 9 trading days, using σ≈4.5%/day with σ-uncertainty mixing (0.038/0.045/0.055) and a scenario-mixed drift (**40% mild-bearish / 40% neutral / 20% bullish**). This produced a distribution centered near spot with a slight downside tilt and very wide fat tails:\n\n- **Median (P50): ~8,292**\n- **P10–P90: 6,961 – 9,880**\n- **P25–P75: 7,579 – 9,071**\n- Tail checks: P(<6,500)≈4.3%, P(>10,500)≈4.7%, respecting open bounds.\n\nI checkpointed via reflection and ran a premortem (self-confidence 0.60) acknowledging the two-sided risk: volatility could normalize toward 2–3%/day (making my distribution too wide), or foreign selling could push the index well below 8,000 (making my median too high). The premortem returned **approve**, verifying all three factors against the trace, and I submitted.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No tool for options-implied / forward-looking volatility (VKOSPI or KOSPI 200 implied vol) to cross-check the 70% realized annualized figure."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Monte Carlo simulation (300K paths, Student-t df=4) from the June 29 spot close, using empirically-derived daily volatility with scenario-mixed drift over 9 trading days.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the extreme post-bubble volatility regime persists/deepens or normalizes over the 9-day horizon, and which direction any trend resolves."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The Monte Carlo used a blended σ≈4.5%/day for all 9 days, but the agent's own premortem notes much of that volatility came from a few extreme bubble-driven days (June 19-26). Mean-reverting volatility would tighten the realized distribution, so the P10-P90 band of 6,961-9,880 (~35% wide) is plausibly too wide. This is a width error, not a directional one.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "Median was shifted ~1.2% below spot (8,292 vs 8,395) on a scenario-mixed drift (40% bearish/40% neutral/20% bullish) that is not supported by hard directional evidence over a 9-day horizon; a pure random walk would center at 8,395. The premortem itself flagged this as 'within noise.'",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Median ~8,395 (random walk), P10-P90 roughly 7,100-9,750",
+    "agrees_with_agent": true,
+    "divergence_reason": "I would center slightly higher — at the pure random-walk spot of 8,395 rather than 8,292 — since the ~1.2% downside shift comes from an assumed drift mixture rather than hard directional evidence. The difference is immaterial relative to the ±13% one-sigma width."
+  },
+  "strengths": [
+    "Deliberately avoided the +0.39%/day empirical drift, correctly recognizing it as a bubble artifact that would have produced a severe regime error.",
+    "Fetched the actual 3-month daily series via the Yahoo chart API inside the sandbox and computed volatility across multiple windows rather than guessing.",
+    "Used Student-t (df=4) fat tails plus σ-mixing and validated tail probabilities against the open question bounds.",
+    "Cross-confirmed the June 29 spot across three independent sources before anchoring."
+  ],
+  "weaknesses": [
+    "Did not model volatility mean-reversion despite flagging in the premortem that vol could normalize toward 2-3%/day — static σ likely overstates band width.",
+    "Did not check options-implied volatility (VKOSPI) for a forward-looking vol cross-check.",
+    "The ~1.2% bearish median shift rests on a subjective drift mixture rather than a quantified signal."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Cross-check realized volatility against an options-implied measure (VKOSPI / KOSPI 200 implied vol) before sizing the distribution width.",
+    "Apply a simple volatility decay/mean-reversion assumption when recent σ is dominated by a handful of extreme days, rather than holding it constant across the full horizon.",
+    "Default to a pure random-walk median absent quantified directional evidence, reserving drift shifts for cases with a concrete signal."
+  ]
+}

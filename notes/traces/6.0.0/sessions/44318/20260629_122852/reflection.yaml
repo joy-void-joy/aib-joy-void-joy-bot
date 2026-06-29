@@ -1,0 +1,125 @@
+---
+timestamp: 2026-06-29 12:30:41 UTC
+question_type: numeric
+factors:
+- description: Current level (June 29 close) is 8,394.65, the resolution anchor. Random
+    walk from here is the base case.
+  supports:
+    center: 8350.0
+    low: 7000.0
+    high: 9800.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Extreme realized daily volatility ~4.4-4.8% (annualized ~70%), multiple
+    circuit breakers/sidecars. Over 9 trading days this gives ~13-14% one-sigma swing.
+  supports:
+    center: 8350.0
+    low: 6960.0
+    high: 9880.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Recent sharp reversal (-5.81% on June 26) and chip-price sustainability
+    concerns + foreign selling create mild downside bias, but post-crash momentum
+    is two-sided.
+  supports:
+    center: 8200.0
+    low: 7000.0
+    high: 9500.0
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+tentative_estimate:
+  center: 8292.0
+  low: 6961.0
+  high: 9880.0
+anchor: Random walk from current close 8,394.65 with empirical daily σ~4.5% over 9
+  trading days.
+assessment: 'Short-horizon (9 trading days) index forecast. Anchor on current close
+  8,394.65. Extremely high volatility regime (daily σ~4.5%, recent circuit breakers).
+  Used Monte Carlo with Student-t (df=4) fat tails, scenario-mixed drift (40% mild
+  bearish, 40% neutral, 20% bullish) and σ uncertainty (0.038/0.045/0.055). Median
+  8,292, P10 6,961, P90 9,880. Tails: P(<6500)=4.3%, P(>10500)=4.7%, consistent with
+  open bounds. Width matches random-walk implied range — not narrower. Distribution
+  roughly symmetric in log space, slight downside tilt from recent reversal.'
+key_uncertainties: Whether the bubble-like rally resumes or the crash deepens; circuit-breaker
+  tail events; chip-price trajectory.
+tool_audit: web_search gave current quote across CNBC/TradingEconometrics/Yahoo (June
+  29 close ~8,394.65, confirmed). Yahoo chart API in sandbox returned clean 3mo daily
+  series. execute_code for MC worked.
+process_reflection: Smooth for a short-horizon index question. Direct Yahoo chart
+  API fetch in sandbox is reliable and avoids HTML scraping. No friction.
+computed:
+  factor_count: 3
+  factor_sum: -0.1
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Current level (June 29 close) is 8,394.65, the resolution anchor.
+      Random walk from here is the base case.
+    supports:
+      center: 8350.0
+      low: 7000.0
+      high: 9800.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Extreme realized daily volatility ~4.4-4.8% (annualized ~70%), multiple
+      circuit breakers/sidecars. Over 9 trading days this gives ~13-14% one-sigma
+      swing.
+    supports:
+      center: 8350.0
+      low: 6960.0
+      high: 9880.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Recent sharp reversal (-5.81% on June 26) and chip-price sustainability
+      concerns + foreign selling create mild downside bias, but post-crash momentum
+      is two-sided.
+    supports:
+      center: 8200.0
+      low: 7000.0
+      high: 9500.0
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  dominant_factor: Recent sharp reversal (-5.81% on June 26) and chip-price sustainability
+    concerns + foreign selling create mild downside bias, but post-crash momentum
+    is two-sided.
+  dominant_effective_logit: -0.1
+  distribution_metrics:
+    implied_median: 8200.0
+    implied_p10: 7000.0
+    implied_p90: 9500.0
+    median_gap: 92.0
+    median_gap_pct: 3.6799999999999997
+    spread_ratio: 1.1676
+    precision: 0.3520260492040521
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44318
+- **Question ID**: 44329
+- **Session Duration**: 209.6s (3.5 min)
+- **Cost**: $3.7162 total (orchestrator $2.4015 + sub-agents $1.3147)
+- **Tokens**: 6,328 total (16 in, 6,312 out)
+  - Cache: 434,680 read, 68,043 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44318_20260629_122852/20260629-122852.log`
+
+### Tool Calls
+
+- **Total**: 7 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 195ms | — |
+| premortem | 1 | 0 | 73010ms | $1.2384 |
+| reflection | 1 | 0 | 4ms | — |
+| web_search | 2 | 0 | 20152ms | $0.0763 |
