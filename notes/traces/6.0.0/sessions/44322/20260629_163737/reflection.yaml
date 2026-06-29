@@ -1,0 +1,128 @@
+---
+timestamp: 2026-06-29 16:38:45 UTC
+question_type: numeric
+factors:
+- description: Current price ~$51.85 (Jun 29 intraday), Jun 26 close $50.00; this
+    is the anchor for a 7-trading-day horizon
+  supports:
+    center: 51.4
+    low: 43.0
+    high: 62.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Realized daily vol ~5.7% (90% annualized), matching stated IV ~90%;
+    drives wide distribution
+  supports:
+    center: 51.4
+    low: 43.0
+    high: 62.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Strong recent downtrend (20d mean -1.3%/day, -22% over 20d) but stock
+    bounced +3.7% today; momentum ambiguous
+  supports:
+    center: 50.0
+    low: 42.0
+    high: 60.0
+  logit: -0.2
+  confidence: 0.4
+  effective_logit: -0.08000000000000002
+tentative_estimate:
+  center: 51.4
+  low: 42.8
+  high: 61.6
+anchor: Current price ~$51.85 as random-walk center for 7-trading-day horizon
+assessment: Short-horizon (7 trading day) stock price forecast. Best approach is Monte
+  Carlo from current price using empirical/IV volatility (~5.5-5.7% daily, 90% annualized).
+  Used a mixture of drift scenarios (flat 50%, mild-negative 30%, mild-positive 20%)
+  with Student-t(4) fat tails. Median ~$51.4, P10 ~$42.8, P90 ~$61.6. Tails well within
+  open bounds (P<30 ~0.1%, P>85 ~0.2%). Width is driven by genuine high volatility,
+  consistent with random-walk sqrt(7)*5.7%*51.85 ≈ $7.8 one-sigma.
+key_uncertainties: Direction of drift (downtrend vs today's bounce) and any new catalyst
+  news in the next 2 weeks. Volatility could spike on company news.
+tool_audit: web_search returned full Yahoo Finance quote with recent daily history
+  and current price — sufficient. execute_code ran Monte Carlo cleanly. No failures.
+process_reflection: Standard short-horizon stock question; the scaffolding worked
+  smoothly. The embedded Yahoo quote data with daily history made volatility estimation
+  trivial without needing a separate data tool.
+computed:
+  factor_count: 3
+  factor_sum: -0.08000000000000002
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Current price ~$51.85 (Jun 29 intraday), Jun 26 close $50.00; this
+      is the anchor for a 7-trading-day horizon
+    supports:
+      center: 51.4
+      low: 43.0
+      high: 62.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Realized daily vol ~5.7% (90% annualized), matching stated IV ~90%;
+      drives wide distribution
+    supports:
+      center: 51.4
+      low: 43.0
+      high: 62.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Strong recent downtrend (20d mean -1.3%/day, -22% over 20d) but stock
+      bounced +3.7% today; momentum ambiguous
+    supports:
+      center: 50.0
+      low: 42.0
+      high: 60.0
+    logit: -0.2
+    confidence: 0.4
+    effective_logit: -0.08000000000000002
+  dominant_factor: Strong recent downtrend (20d mean -1.3%/day, -22% over 20d) but
+    stock bounced +3.7% today; momentum ambiguous
+  dominant_effective_logit: -0.08000000000000002
+  distribution_metrics:
+    implied_median: 50.0
+    implied_p10: 42.0
+    implied_p90: 60.0
+    median_gap: 1.3999999999999986
+    median_gap_pct: 7.77777777777777
+    spread_ratio: 1.0444444444444447
+    precision: 0.3657587548638133
+  sources:
+  - '[Oklo Inc. (OKLO) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/OKLO/)'
+  - '[Oklo Inc. (OKLO) Stock Historical Prices & Data - Yahoo Finance](https://finance.yahoo.com/quote/OKLO/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44322
+- **Question ID**: 44333
+- **Session Duration**: 140.0s (2.3 min)
+- **Cost**: $4.5352 total (orchestrator $2.0673 + sub-agents $2.4679)
+- **Tokens**: 4,712 total (12 in, 4,700 out)
+  - Cache: 308,908 read, 66,735 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44322_20260629_163737/20260629-163737.log`
+
+### Tool Calls
+
+- **Total**: 13 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 219ms | — |
+| premortem | 2 | 0 | 81091ms | $2.3838 |
+| reflection | 2 | 0 | 5ms | — |
+| stock_price | 2 | 0 | 414ms | — |
+| web_search | 2 | 0 | 20894ms | $0.0842 |
+| wikipedia | 1 | 0 | 237ms | — |
+
+### Sources Consulted
+
+- [Oklo Inc. (OKLO) Stock Price, News, Quote & History - Yahoo Finance](https:/...
+- [Oklo Inc. (OKLO) Stock Historical Prices & Data - Yahoo Finance](https://fin...
