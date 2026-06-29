@@ -1,0 +1,120 @@
+{
+  "condensed_reasoning": "## Research\n\nI started by trying to call a `research` tool that didn't exist (got a tool-name error), then re-issued the call correctly as `mcp__research__research` with two queries: one for the latest Gallup Korea Daily Opinion approval for President Lee Jae-myung and any July reading, and one for the political drivers affecting his approval into early July 2026.\n\nThe research came back richly sourced and corroborated:\n- **Most recent confirmed Gallup reading: 51% approval / 41% disapproval** (survey June 23–25, released June 26, 1,000 adults, ±3.1pp). This was his lowest since taking office and the first time Gallup disapproval topped 40%.\n- The **July 3 Gallup reading was correctly flagged as not yet available** (today is June 29) and used only as future/trajectory context, not as a resolver.\n- **Cross-pollster check — Realmeter June 29: 46.5% approval / 49.5% disapproval**, the 6th straight weekly decline but decelerating to roughly **-0.2pp/week** (near-flat). Realmeter peaked at 60.5% in mid-May.\n- **Trajectory:** unambiguously downward across both pollsters (~67% March → 57% mid-June → 51% June 26).\n\n## Key Evidence\n\nI identified active negative drivers persisting into early July: the **June 3 ballot-shortage scandal** (special-prosecutor push declared official DPK policy June 29, July probes, Board of Audit, Assembly committee), **prosecution-reform base disillusionment** (\"core base is leaving\"), **PM nominee controversy**, and a **weak economy** (won ~1,545/USD, inflation >3%, MSCI upgrade rejection). Offsetting positives: the **~800tn-won semiconductor/AI mega-investment** (June 29), a possible second supplementary budget, and a **DPK base floor ~40–41%**.\n\nI noted Gallup runs ~4–5pp above Realmeter, so Realmeter's flattening at 46.5% would imply Gallup ~50–51 if it tracked Realmeter.\n\n## Modeling\n\nI ran a **200,000-draw Monte Carlo** treating the last Gallup value (51%) as a random-walk anchor for a two-week-forward poll. I modeled the latent change as a scenario mixture: **45% decelerating decline** (drift N(-3, 2)), **30% stabilization/good news** (drift N(0, 2)), **25% renewed steep decline** (drift N(-6, 2)), plus **measurement noise SE ~1.58** from the ±3.1 MOE. I cross-checked with a `reflection` tool (implied median ~47.7, aligning with my 48) and a `premortem` (approved after one formatting-error retry).\n\n## Conclusion\n\nI concluded a **median of ~48%**, with P10 ~43.7, P90 ~52.5 (80% CI roughly 44–52.5), comfortably inside the 37.5–62.5 bounds. The core tension I split was Gallup's own steep -6pp one-step momentum versus Realmeter's recent flattening; I landed on a moderate continued decline.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "high",
+        "notes": "Initial call used wrong tool name 'research' (errored); the working call mcp__research__research returned exceptionally well-sourced, cross-pollster data (Gallup 51%, Realmeter 46.5% with deceleration) plus a rich driver list. Central to the forecast."
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The agent's own tool_audit note in the reflection claimed 'No failures,' but there were two transient tool errors (the initial research tool-name error and the premortem validation error). Did not affect data quality but is an inaccurate self-report, as the premortem itself noted."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Random-walk anchored at the last Gallup reading (51%) with a 200K-draw Monte Carlo scenario mixture for two-week-forward change plus measurement noise.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the early-July Gallup decline continues at its own steep -6pp/2-week pace or flattens as Realmeter's most recent reading suggests."
+  },
+  "risk_flags": [
+    {
+      "category": "underconfidence",
+      "evidence": "The agent placed center at ~48, four points below the 51 anchor, but its strongest single recent signal (Realmeter flattening to -0.2pp/week, plus Gallup's 4-5pp premium implying Gallup ~50-51) and the floor effect both pointed near 50-51. The 30% stabilization scenario mode (51) may be underweighted given the deceleration evidence; the distribution could be centered slightly high of 48.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The 2-week drift assumptions are anchored heavily on Gallup's single -6pp step (June 9-11 to June 23-25), which is one observation, not a base rate. No reference class of how often steep one-step poll drops continue vs revert was established, so the -3 drift in the dominant scenario is somewhat ad hoc.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~49 (range 45-52)",
+    "agrees_with_agent": true,
+    "divergence_reason": "I would center slightly higher (~49 vs 48). The most recent signal (Realmeter deceleration to near-flat) plus Gallup's structural premium and a ~40-41% DPK floor argue against extrapolating Gallup's own steep -6pp step linearly forward. But this is within a point of the agent and the wide spread covers it, so directionally consistent."
+  },
+  "strengths": [
+    "Correctly treated the unobserved July 3 Gallup reading as future/unavailable and used it only as trajectory context rather than a resolver — avoiding a future-leak trap.",
+    "Used a cross-pollster (Realmeter) signal to calibrate the *pace* of decline (deceleration to -0.2pp/week), not just the level, which is the right way to extract information from a non-identical tracker.",
+    "Explicitly accounted for the Gallup-vs-Realmeter level gap (~4-5pp) instead of naively averaging the two pollsters.",
+    "Built a transparent, reproducible 200K-draw scenario-mixture Monte Carlo and incorporated the ±3.1 MOE as measurement SE plus whole-number rounding awareness.",
+    "Premortem produced a genuine two-sided bull (Realmeter flattening + pollster premium -> ~50-51) and bear (special-prosecutor cascade -> mid-40s) case rather than restating the conclusion."
+  ],
+  "weaknesses": [
+    "The dominant scenario's -3pp drift is anchored to a single steep Gallup step rather than an established base rate for poll-decline persistence vs mean-reversion.",
+    "Center (~48) sits below where the agent's own strongest recent evidence (Realmeter flattening + Gallup premium ~50-51, floor ~40-41%) pointed; the stabilization scenario may be underweighted at 30%.",
+    "Self-reported 'No failures' in the reflection tool_audit despite two transient tool errors — an accuracy lapse the premortem had to catch.",
+    "Did not check any prediction market or note its absence (likely none exists for this granular poll question, but worth confirming)."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial tool call used the bare name 'research' which does not exist; required a retry with the MCP-prefixed name 'mcp__research__research'.",
+      "First premortem call failed Pydantic validation due to embedded quote/formatting in the counterargument string; succeeded on retry.",
+      "Minor token waste from the two retries, but no data-quality impact."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "The session is dated 2026-06-29; all sources are accessed_at 2026-06-29 or earlier.",
+      "The agent explicitly noted the July 3 Gallup reading is 'not yet available' and is in the future, using it only as trajectory context.",
+      "No data from after the June 29 cutoff (and certainly nothing from the July 10 resolution window) appears in the trace."
+    ]
+  },
+  "actionable_improvements": [
+    "Anchor the drift assumptions in a base rate (e.g., historical persistence of steep one-step Korean presidential poll drops) rather than a single observed -6pp step.",
+    "Weight the stabilization scenario a bit higher or nudge the center toward 49 to better reflect the Realmeter flattening signal and the DPK floor.",
+    "Report tool failures honestly in the self-audit (the two retries) instead of stating 'No failures.'",
+    "Briefly confirm whether any prediction market covers this question, even if only to note none exists."
+  ]
+}
