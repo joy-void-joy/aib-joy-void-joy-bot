@@ -1,0 +1,119 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched whether a Turkish court would issue a **new** order specifically blocking or suspending CHP's planned **July 12, 2026 extraordinary congress** during the resolution window (June 27–July 9, 2026). My first `research` call failed (wrong tool name), but I immediately retried via `mcp__research__research` with two parallel queries — one in English, one in Turkish — targeting the latest court decisions, injunction requests, and the status of the congress as of late June 2026. Both returned rich, well-sourced findings from Turkish outlets (Cumhuriyet, Hürriyet, BBC Türkçe, CNN Türk, DW).\n\n## Key Evidence\n\n- **No new qualifying order exists as of June 29, 2026.** The only operative block is the **pre-existing May 21, 2026 `ihtiyati tedbir`** (interim injunction) bundled with the Ankara BAM 36th Civil Chamber's `mutlak butlan` (absolute nullity) ruling that removed Özel and reinstated Kılıçdaroğlu. The fine print explicitly **excludes** this standing injunction and any rejections from counting as YES.\n- **The blocking function is already served administratively.** The Kılıçdaroğlu HQ blocks the congress by refusing to process the delegate signatures (counting only **820 valid** vs. 833) and citing the existing `tedbir` — so anti-Özel actors have little incentive to seek a redundant new court order.\n- **The July 12 date is a political call by ~111 MPs**, not a formally convened/scheduled party-organ event — reducing the ripeness for a targeted injunction.\n- **The active litigation is inverted from naive expectation:** the Özel camp filed (June 29, Sulh Hukuk Mahkemesi) to *enable* a congress via a \"çağrı heyeti\" (call committee) — a rejection of which would NOT count as YES.\n- **Recent court action did not produce a new block:** the June 26 İstinaf decision was a *procedural* rejection of a third-party (Tülin Apak) `tavzih` (clarification) petition, mischaracterized by pro-government media as a congress ban.\n- **Counterweight (YES):** the environment is highly litigious and polarized; \"further pre-emptive injunction requests are widely anticipated\"; courts have shown willingness to intervene dramatically (May 21); and only **one grant** among many possible Ankara/Istanbul courts in a 13-day window resolves YES.\n\n## Conclusion\n\nI built five factors, ran them through `reflection` (factor-implied ~34%, but I held lower at 22% citing the redundancy of the standing injunction), then ran a `premortem` that returned a \"warn\" verdict — approving the 22% while flagging that my tool-audit \"no failures\" claim was wrong and that Factor 3's \"several rejections\" framing was overstated (only one rejection is documented). I concluded the picture leans **NO** because the blocking is already accomplished, nothing concrete is yet ripe to enjoin, and the live lawsuit is an enabling one — settling at **~22%**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 5,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": "wrong tool name (unprefixed 'research' not available)",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Immediately recovered by retrying under the mcp__research__research name; no substantive impact."
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup tool was used to triangulate a market price for this contract.",
+      "No structured base-rate/reference-class dataset for Turkish party-injunction grants, leaving the anchor qualitative."
+    ],
+    "subtle_bugs": [
+      "One research entry speculated forward ('the July 12 congress was NOT held') beyond the June 29 knowledge state; the agent correctly noticed and discounted this extrapolation rather than treating it as a resolver."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Qualitative analysis of fast-moving Turkish news sources combined with a base-rate anchor for a new targeted injunction in a short window when a standing injunction already exists.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a concrete convocation step (call-committee appointment or formal scheduling) occurs that gives opponents a ripe target AND whether any single court grants rather than rejects a fresh pre-emptive injunction in the 13-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "Factor 3 asserts 'several recent injunction requests against CHP congresses have been rejected by courts,' but the trace documents only ONE relevant rejection (the June 26 Tülin Apak tavzih/clarification petition), which was a procedural rejection of a third-party petition, not even an injunction-request denial. The premortem itself flagged this plural framing as unsupported.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The agent settled at 22% versus its own factor-implied 34%, justifying the ~12pp downward departure mainly via the 'redundant order' incentive argument. Given the question explicitly notes 'further pre-emptive injunction requests are widely anticipated' in a hyperpoliticized judiciary where one grant resolves YES, the discount below factor-implied may slightly understate the litigious upside.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "20-25%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the resolution fine print — that the pre-existing May 21 injunction and any rejections are explicitly EXCLUDED from counting as YES — and built the entire forecast around the need for a genuinely NEW targeted order.",
+    "Caught the inverted litigation dynamic: the active lawsuit (Özel camp's June 29 Sulh Hukuk filing) is to ENABLE a congress, not block it, so its rejection would not resolve YES — a subtle point easy to miss.",
+    "Recognized the 'redundancy' incentive structure: because a standing injunction plus administrative signature-blocking already achieve the block, opponents have little reason to seek a new court order — a non-obvious mechanistic argument.",
+    "Ran a genuine premortem with a strong, specific counterargument and concrete 'what would change my mind' conditions, and honestly surfaced its own tool-audit error and Factor 3 overstatement.",
+    "Used parallel bilingual (English + Turkish) queries to surface native-language reporting for a fast-moving foreign legal story."
+  ],
+  "weaknesses": [
+    "Factor 3's 'several rejections' is overstated — only one procedural rejection is in the trace; the agent acknowledged this only after the premortem flagged it but left the StructuredOutput factor wording loosely tied to the same overstatement.",
+    "The tool-audit narrative inside the reflection claimed 'Both queries succeeded. No tool failures,' which is factually wrong — the first 'research' call errored ('No such tool available') before the mcp-prefixed retry succeeded.",
+    "Did not check any prediction market (e.g., Polymarket/Kalshi) for a comparable CHP/Turkish-politics contract, nor establish a quantitative reference class of how often pre-emptive injunctions get granted in Turkish party-leadership disputes — the base rate remained a hand-waved 15-20%."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial tool call used the bare name 'research' which does not exist, returning 'No such tool available' before the agent retried with the mcp__research__research prefix — minor token/turn waste, fully recovered.",
+      "The research sub-agent noted web-search MCP tools were blocked, forcing direct site/RSS fetching; results were still obtained but via a fallback path."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "SUSPECT",
+    "evidence": [
+      "This is a forward-looking forecast generated 2026-06-29, with a resolution window of June 27–July 9, 2026, so it is largely prospective rather than a retrodict.",
+      "However, one research entry asserted forward-looking outcomes ('The July 12, 2026 extraordinary congress was NOT held'; Kılıçdaroğlu plans ordinary congress from Sept 1; final decision 'likely September 2026') that postdate the June 29 knowledge cutoff. The agent explicitly flagged and discounted this extrapolation and did not use it as a resolver, so the final forecast is not contaminated."
+    ]
+  },
+  "actionable_improvements": [
+    "Tighten Factor 3 wording to reflect the single documented procedural rejection rather than 'several injunction requests rejected,' since the trace does not support the plural.",
+    "Make the tool-audit narrative accurate — acknowledge the first failed 'research' call instead of asserting 'no tool failures.'",
+    "Add a prediction-market check (Polymarket/Kalshi/Manifold) and/or a brief reference-class tally of Turkish party-injunction grant rates to harden the 15-20% anchor beyond a qualitative estimate."
+  ]
+}
