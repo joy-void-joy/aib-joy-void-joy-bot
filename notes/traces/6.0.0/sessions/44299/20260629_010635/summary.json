@@ -1,0 +1,113 @@
+{
+  "condensed_reasoning": "## Research\n\nI investigated whether Binance would publish a delisting announcement explicitly naming the MemeCore `MUSDT` perpetual contract between June 27 and July 11, 2026. I issued two research queries — one directly checking Binance Futures announcements/delisting pages for an `MUSDT` perp delisting notice, and one on broader MemeCore news around the late-June flash crash, exchange status, and the ZachXBT criticism. (My first attempt called a bare `research` tool that didn't exist; I corrected to `mcp__research__research`.)\n\n## Key Evidence\n\nThe research came back well-sourced and unambiguous on the central fact:\n\n- **No delisting notice exists.** Binance has not announced or published any delisting for the `M`/`MUSDT` USDT-M perpetual as of June 29, 2026. I cross-checked Binance's actual 2026 USDT-M delisting cycles (**Jan 30; Mar 17/18; Apr 8/9; Apr 28/29**) and spot delistings (Jun 19; Jul 10) — none include MemeCore.\n- **The contract trades actively.** TradingView showed Binance `MUSDT.P` at **~$2.85** with **~$4.04M 24h volume**.\n- **The real story is a crash, not a delisting.** On June 25, `M` crashed **~76%** (from ~$2.92 to ~$0.51), erasing nearly **$3B** in value on only ~$21M volume, exposing **<$100k on-chain liquidity** and **>90% insider-held supply**.\n- **ZachXBT pressure + \"reviewing.\"** ZachXBT publicly demanded Binance/Bybit explain why they listed `M` perpetuals (50x leverage, listed July 2025); Binance and Bitget said they were **\"reviewing the situation\"** — a review of the controversy, not a delisting.\n- **Caveat noted in research:** Binance's own announcement pages returned 403/no content, so the research relied on third-party trackers (PANews, BeInCrypto, BingX, Yahoo) which collectively covered the full Jan–Jul cycle.\n\n## Conclusion\n\nI built a five-factor model. The dominant factor was **status quo** (logit -1.8, no notice + active volume). I raised odds above base rate for the **active controversy** (+1.2) and **Binance's frequent short-notice perp-delisting waves** (+0.5), and dampened for the **short 12-day window** where \"reviewing\" rarely converts to action (-0.8) and the **contract's still-meaningful volume above typical delisting targets** plus post-crash optics risk (-0.5). My reflection tool's factor sum implied ~21%, but I weighted short-window and status-quo inertia more heavily and settled lower. A premortem stress-tested the YES case (reputational crisis, PR incentive to act decisively) and returned **warn** — endorsing the forecast while flagging only a tool-audit misstatement (I'd written \"No tool failures\" despite underlying fetch_url 403s). I concluded at **~14% (NO)**: the controversy meaningfully elevates the probability, but a published, explicitly-named `MUSDT` delisting notice within this narrow window remains unlikely.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 9,
+        "errors": 5,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "search_exa": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": "No such tool available - agent called bare 'research' instead of 'mcp__research__research'",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Immediately corrected; negligible cost."
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Direct authenticated access to Binance's own announcement detail pages would have removed reliance on third-party trackers (Binance pages returned 403)."
+    ],
+    "subtle_bugs": [
+      "The agent's self-reported tool_audit claimed 'No tool failures,' but per the premortem ground-truth there were ~5 errors across calls including fetch_url 403s. The research conclusion was still corroborated by third-party trackers, so the forecast was unaffected, but the self-assessment was inaccurate."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/crypto",
+    "approach": "Qualitative factor model: status-quo base rate for a named perp delisting in a ~2-week window, adjusted up for the active ZachXBT controversy/'reviewing' statement and Binance's frequent delisting waves, down for the short window and retained volume.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Binance's vague 'reviewing the situation' converts into a published, explicitly-named MUSDT perp delisting notice within the narrow 12-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction-market check (Polymarket/Kalshi/Manifold) was attempted for a question that is itself framed like a binary market ('Will Binance announce... before July 11'), and Binance's own announcement pages were inaccessible (403), leaving the agent fully dependent on third-party trackers for the negative confirmation.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The anchor cites a ~6-8% base rate for 'a specific named perpetual contract receiving a delisting announcement in a given ~2-week window' but this figure is asserted without derivation; given Binance delists dozens of perps per year in waves, the per-contract-per-2-week base rate for a contract NOT under acute scrutiny is plausibly lower, so the anchor may slightly overstate the unconditional base.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "12%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified and nailed the central resolution fact — no delisting notice exists as of June 29 — and corroborated it via a cross-check of all four 2026 USDT-M delisting waves (Jan 30, Mar 17/18, Apr 8/9, Apr 28/29) plus spot cycles, none containing M.",
+    "Resisted the additive model: noted the factor sum implied ~21% but deliberately weighted status-quo inertia and the short 12-day window down to ~14%, with an explicit rationale rather than blindly trusting the tool output.",
+    "Distinguished 'reviewing the situation' (a controversy review) from an actual delisting commitment — avoiding the common error of treating exchange statements as imminent action.",
+    "Ran a genuine premortem that constructed a specific, coherent YES case (reputational crisis + PR incentive + short-notice delisting waves) rather than a token counterargument."
+  ],
+  "weaknesses": [
+    "Self-reported 'No tool failures' in its tool_audit despite underlying fetch_url 403 errors (caught by the premortem) — an inaccurate self-assessment.",
+    "Did not check any prediction market for a directly market-style binary question.",
+    "The ~6-8% anchor base rate is asserted without any quantitative derivation (e.g., # perps delisted per year / # listed perps / windows per year), making the most load-bearing number a soft estimate."
+  ],
+  "pipeline": {
+    "issues": [
+      "Agent's first tool call used a non-existent bare 'research' tool name before correcting to 'mcp__research__research' — minor wasted call, suggests tool-name ambiguity in the prompt/registry.",
+      "Binance's own announcement detail pages returned 403/no-content, forcing reliance on third-party delisting trackers (worked out, but a data-access limitation)."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "All evidence is dated on or before the 2026-06-29 generation date; the agent explicitly anchors on 'as of June 29, 2026' and forecasts forward to the July 11 deadline.",
+      "No source accessed describes any event after June 29, 2026; the latest data points (price ~$0.65-0.71, ~$4M volume) are same-day snapshots, not post-cutoff resolution information."
+    ]
+  },
+  "actionable_improvements": []
+}
