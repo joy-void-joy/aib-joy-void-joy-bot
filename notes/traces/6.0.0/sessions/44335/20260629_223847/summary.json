@@ -1,0 +1,109 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a **threshold-on-a-trend** question: will Gallup Korea's approve-minus-disapprove gap for President Lee Jae-myung cross to **≤0** in either the July 3 or July 10 Daily Opinion report. I anchored on the recent Gallup trajectory: **June 12 = 57−35 = +22**, **June 26 = 51−41 = +10** — a fall of roughly **−6/week**.\n\nI started with a momentum Monte Carlo: drift ~N(−5, 2.5)/week plus ~3.5pp poll noise, two report chances. This gave a base **P(YES) ≈ 0.50** (median gap +5 on Jul3, ~0 on Jul10). A sensitivity sweep showed the answer was highly drift-dependent — **0.27 at −3/week up to 0.62 at −6/week** — so I went to research to refine the drift.\n\n## Key Evidence\n\nThe `research` tool returned rich, current data:\n- **Gallup (Jun 23–25):** approval **51%** (−6pp, lowest since taking office), disapproval **41%** (+6pp, first time over 40%). No dead cross yet.\n- **Realmeter (Jun 22–26):** approval **46.5%** (−0.2pp, sixth straight weekly decline), disapproval **49.5%** — **sustained dead cross for a second consecutive week**.\n- Drivers: economy/cost-of-living, housing, NEC ballot scandal, prosecution dispute; erosion even in Lee's progressive/Honam base.\n\nThe **decisive datapoint** was Realmeter's near-flat −0.2pp this week. Realmeter is the leading indicator Gallup typically lags, and it has **stabilized at the dead cross** rather than continuing to free-fall. I also noted Gallup runs a structural **+10–+13 house-effect buffer** on the gap relative to Realmeter (Gallup +10 vs Realmeter −3), so Gallup's equilibrium likely sits **above zero**.\n\n## Conclusion\n\nI built a scenario-mixture Monte Carlo (35% strong catch-up decline ~−7/wk, 40% moderate ~−3.5, 25% stabilize ~−1, plus week-2 deceleration and release-probability of 0.75/0.90 for the two reports). This yielded **~0.32**. My linear factor sum implied ~0.485, while pure momentum gave 0.50–0.62. I landed at **0.38**, nudging above the mixture because **Gallup's sharp drop is more recent than Realmeter's**, so Gallup may still have 1–2 weeks of decline before flattening. A premortem stress-tested the bear case (house-effect equilibrium ~+7–10, single −12 swing was catch-up not freefall, no fresh catalyst) and **approved**, citing an independent range of 0.32–0.42. Final: **38%, NO favored but with real crossing probability.**",
+  "tool_audit": {
+    "by_tool": {
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A tool to fit drift+noise directly from a short polling time series (the agent itself flagged this) would reduce manual Monte Carlo guesswork.",
+      "Direct access to verify Gallup Daily Opinion's publication calendar/report numbering rather than inferring cadence from report numbers."
+    ],
+    "subtle_bugs": [
+      "The agent relied on a single research call (6h TTL) without a second query to confirm Gallup's release schedule, leaving the release-cadence factor partly speculative despite it carrying numeric weight in the model."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Monte Carlo extrapolation of the Gallup approve-minus-disapprove gap toward a zero crossing, with a scenario mixture for drift, deceleration, and report-release uncertainty, refined by current polling research.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether Gallup's recent sharp decline continues at full momentum or decelerates like Realmeter has, and whether both July reports actually publish."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent never checked any prediction market (Polymarket/Kalshi/Metaculus) nor verified Gallup's actual publication cadence directly. Factor 5 (665->666 numbering schedule risk) is asserted but, per the premortem, 'is NOT visible in the provided trace excerpt' — the cadence claim is not clearly grounded in a cited source.",
+      "severity": "minor"
+    },
+    {
+      "category": "computation_error",
+      "evidence": "Release-schedule risk is applied twice: baked into the final Monte Carlo (rel1=0.75, rel2=0.90 yielding ~0.32) AND added again as a separate negative factor 5 (logit -0.3). If the 0.32 mixture already accounts for release risk, treating schedule risk as an additional downward factor risks slight double-counting.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The final 0.38 is a subjective upward nudge from the 0.32 Monte Carlo output, justified only by 'Gallup's drop is more recent.' The same recency argument could equally support a higher number; the nudge direction and magnitude are not independently validated.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "35%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Reframed the binary as a gap-crossing threshold and respected the equal-counts-as-YES (gap ≤0) rule, plus correctly excluded Realmeter as only a leading indicator",
+    "Ran a drift/noise sensitivity sweep (0.27–0.62) BEFORE committing, recognizing the model's fragility, then sought data specifically to pin the drift",
+    "Isolated the decisive Realmeter −0.2pp flattening datapoint and the +10–13 house-effect buffer to move from a naive ~0.50 momentum prior down to 0.38"
+  ],
+  "weaknesses": [
+    "Final 0.38 is an unmodeled hand-nudge above the 0.32 Monte Carlo output, justified by a single qualitative recency argument",
+    "Did not verify Gallup's actual publication schedule despite using report-release probability (0.75/0.90) and a separate schedule-risk factor",
+    "Possible double-counting of release/schedule risk between the Monte Carlo and factor 5"
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
