@@ -1,0 +1,82 @@
+{
+  "condensed_reasoning": "## Research\n\nI investigated whether Apple or Tata Electronics would make a genuinely **new, on-the-record, named public statement** about the Tata Electronics data breach between **June 27 and July 10, 2026** (publication date June 29). I ran two web searches covering the breach timeline and any regulatory/follow-up developments.\n\n## Key Evidence\n\n- **All confirmed statements predate the resolution window.** Tata's named quotes to Reuters, CNBC, and Business Standard (\"A few weeks ago, Tata Electronics identified a cybersecurity incident on some of our systems. Our response protocols were deployed immediately...\") date from **June 22–26, 2026**. These precede June 27 and do **not** count toward resolution; re-quotes of them are explicitly excluded.\n- **The story is high-profile and actively developing:** `World Leaks` dumped ~630GB / 200,000+ files allegedly including `Apple` and `Tesla` trade secrets, schematics, and quality-inspection docs. Tata launched a forensic audit with a global consulting firm, notified the Indian government, and a **follow-on Bajaj Auto ransomware attack** kept the Indian manufacturing-cyber story alive.\n- **Apple is only \"investigating\"** per anonymous Moneycontrol sources — no on-record Apple statement exists, consistent with its standard posture of not commenting on supplier incidents where its own systems weren't breached.\n\n## Conclusion\n\nI weighed upward pressures (Tata's demonstrated willingness to give named press quotes, an active forensic audit, regulatory involvement, sustained heavy coverage, and two companies = two chances) against the dominant downward pattern: **companies typically go quiet during active investigations, with media simply re-quoting prior pre-window statements.** Combined with Apple's near-zero likelihood of breaking silence, the strict qualifying bar (newly-issued, named-attribution, directly addressing the breach), and the short 13-day window, I anchored on a ~30–40% base rate and concluded **35%**. A premortem flagged a defensible 45–55% alternative (aggressive Indian business press, regulatory pressure), but I judged the deferral pattern dominant and held at **0.35**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No date-filtered news search was used to isolate any statement published strictly within the open window (June 27-29)."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "technology",
+    "approach": "Qualitative base-rate analysis of corporate breach-communication patterns informed by two web searches confirming the statement timeline.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Tata issues a genuinely fresh named on-record quote (vs. media re-quoting prior June 22-26 statements) during its active forensic audit within the 13-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "Window opened June 27; published June 29. The agent ran no search scoped to June 27+ to verify whether a qualifying statement had already appeared in the ~2 elapsed days.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Factor 2 cites 'CERT-In involvement' but trace only supports 'informed the Indian government'; premortem flagged this as unsupported specificity.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "35-45%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly treated the June 22-26 statements as predating the window and excluded them from resolution rather than scoring the question as already YES.",
+    "Engaged precisely with strict criteria — named attribution, newly-issued, re-quotes excluded, no-comment excluded.",
+    "Cleanly separated Apple (near-zero) from Tata (swing factor) and weighted accordingly.",
+    "Premortem built a real 45-55% counterargument with concrete mechanisms, not a token one."
+  ],
+  "weaknesses": [
+    "No targeted search for statements dated June 27-29 despite the window already being partly elapsed at publication.",
+    "Asserted 'CERT-In' specifically when only generic government notification was sourced.",
+    "30-40% base rate asserted intuitively without enumerating comparable breach cases."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For questions whose resolution window has already opened before publication, run a date-scoped search (e.g., 'after:2026-06-27') to check whether a qualifying event has already occurred.",
+    "Cite only sourced specifics — use 'Indian government notified' rather than 'CERT-In' unless CERT-In is explicitly in a source.",
+    "Anchor the base rate to a few named comparable corporate-breach cases to make the 30-40% reference class auditable."
+  ]
+}
