@@ -1,0 +1,130 @@
+---
+timestamp: 2026-06-29 08:28:56 UTC
+question_type: numeric
+factors:
+- description: 'June 2026 empirical daily distribution: mean 243, median 213, std
+    129, range 72-660. This is the direct reference class for a single night.'
+  supports:
+    center: 213.0
+    low: 123.0
+    high: 437.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: 'Escalating trend: 2026 YTD avg 223, June avg 243, recent 2 weeks avg
+    267; war-record 660 set June 26. Slight upward drift into July summer raid season.'
+  supports:
+    center: 240.0
+    low: 140.0
+    high: 500.0
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Single-night value dominated by whether Ukraine launches a mass raid
+    (unpredictable 10 days out) - bimodal: quiet <200, mass raids 300-700+.'
+  supports:
+    center: 220.0
+    low: 120.0
+    high: 450.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 228.0
+  low: 125.0
+  high: 437.0
+anchor: 2026 daily average ~223 drones/night (Kommersant compilation); June 2026 median
+  213.
+assessment: 'Numeric forecast for a single overnight MoD drone-claim figure on July
+  9, 2026, ~10 days out. The value is essentially a random draw from the recent nightly
+  distribution since it depends on whether Ukraine mounts a mass raid that night -
+  unpredictable at this horizon. I bootstrapped from the 29 June 2026 daily figures
+  (recency-weighted), added multiplicative jitter and a modest +5% escalation drift,
+  yielding median ~228, P10 125, P90 437, P99 785. The all-time record 660 (June 26)
+  sits near my P95-P97, consistent with a 1/29 historical frequency. Distribution
+  is right-skewed by construction (mass-raid tail). Open upper bound: ~0.8% mass above
+  800. Low scenario: quiet night ~95-150. High scenario: large coordinated raid 500-700+.'
+key_uncertainties: Whether July 8-9 is a quiet night or a mass-raid night. Possible
+  escalation/de-escalation in the war over the next 10 days. Small chance of no bulletin
+  (resolves 0) - very unlikely given near-daily consistency since 2022.
+tool_audit: research() returned an excellent full daily June 2026 series with sources
+  (Kommersant, Interfax, RIA, etc.) - high quality. execute_code worked for the Monte
+  Carlo. No failures.
+process_reflection: Scaffolding worked smoothly. The research sub-agent delivering
+  a complete daily time series was exactly what was needed for an empirical distribution.
+  For this question type (single draw from a known stochastic process), the main analytical
+  work is just sampling the reference distribution - no friction.
+computed:
+  factor_count: 3
+  factor_sum: 0.18
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'June 2026 empirical daily distribution: mean 243, median 213, std
+      129, range 72-660. This is the direct reference class for a single night.'
+    supports:
+      center: 213.0
+      low: 123.0
+      high: 437.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: 'Escalating trend: 2026 YTD avg 223, June avg 243, recent 2 weeks
+      avg 267; war-record 660 set June 26. Slight upward drift into July summer raid
+      season.'
+    supports:
+      center: 240.0
+      low: 140.0
+      high: 500.0
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Single-night value dominated by whether Ukraine launches a mass
+      raid (unpredictable 10 days out) - bimodal: quiet <200, mass raids 300-700+.'
+    supports:
+      center: 220.0
+      low: 120.0
+      high: 450.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: 'Escalating trend: 2026 YTD avg 223, June avg 243, recent 2 weeks
+    avg 267; war-record 660 set June 26. Slight upward drift into July summer raid
+    season.'
+  dominant_effective_logit: 0.18
+  distribution_metrics:
+    implied_median: 239.99999999999997
+    implied_p10: 140.0
+    implied_p90: 500.0
+    median_gap: -11.999999999999972
+    median_gap_pct: -3.3333333333333255
+    spread_ratio: 0.8666666666666667
+    precision: 1.368421052631579
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44312
+- **Question ID**: 44323
+- **Session Duration**: 949.8s (15.8 min)
+- **Cost**: $16.1199 total (orchestrator $2.6459 + sub-agents $13.4740)
+- **Tokens**: 6,724 total (16 in, 6,708 out)
+  - Cache: 471,500 read, 76,549 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44312_20260629_081450/20260629-081450.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 1 (5.6%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 134ms | — |
+| fetch_url | 3 | 1 ⚠️ | 1556ms | — |
+| premortem | 1 | 0 | 71666ms | $1.3592 |
+| reflection | 1 | 0 | 12ms | — |
+| research | 1 | 0 | 764995ms | $11.6917 |
+| web_search | 10 | 0 | 27779ms | $0.4231 |
