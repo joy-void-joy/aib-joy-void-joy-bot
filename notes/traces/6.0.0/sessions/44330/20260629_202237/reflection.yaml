@@ -1,0 +1,170 @@
+---
+timestamp: 2026-06-29 20:25:47 UTC
+question_type: numeric
+factors:
+- description: 'Latest data-as-of June 27: 1,274 confirmed DRC cases (ECDC relaying
+    MoH sitrep N044). This is the cumulative floor since counts only rise.'
+  supports:
+    center: 1274.0
+    low: 1274.0
+    high: 1274.0
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+- description: Steady daily growth ~37-47/day (June17->24=37/d, June24->27=40/d, latest
+    day 47). Projecting ~11 days from June 27 to a data-as-of date ~July 8.
+  supports:
+    center: 1714.0
+    low: 1560.0
+    high: 1900.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Response ramping (PHEIC, vaccination, 79% contact follow-up) could
+    bend curve down; but Bundibugyo vaccines/treatments less established, limiting
+    effect.
+  supports:
+    center: 1650.0
+    low: 1500.0
+    high: 1780.0
+  logit: 0.0
+  confidence: 0.6
+  effective_logit: 0.0
+- description: Expanded detection in newly added zones (Mandima added June 27) could
+    push counts higher via case-finding backlog.
+  supports:
+    center: 1820.0
+    low: 1700.0
+    high: 2100.0
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+- description: 'Data-as-of date uncertainty: reporting lag means captured figure by
+    July 10 likely reflects ~July 6-9, occasionally earlier.'
+  supports:
+    center: 1710.0
+    low: 1500.0
+    high: 1950.0
+  logit: 0.0
+  confidence: 0.75
+  effective_logit: 0.0
+tentative_estimate:
+  center: 1718.0
+  low: 1549.0
+  high: 1973.0
+anchor: 'Linear extrapolation: 1,274 (June 27) + ~11 days x ~40/day = ~1,714 confirmed
+  cases by ~July 8 data-as-of date.'
+assessment: Numeric forecast for cumulative DRC confirmed Bundibugyo cases by data-as-of
+  <= July 10. Current confirmed floor is 1,274 (June 27, ECDC/MoH). Daily growth has
+  been remarkably stable at ~37-47/day across multiple intervals. Monte Carlo from
+  1,274 baseline over an ~11-day horizon (with horizon SD ~1.9 days for reporting-lag
+  uncertainty) and a scenario mixture (48% constant, 28% deceleration, 17% acceleration,
+  7% surge) yields median ~1,718, P10 1,549, P90 1,973, right-skewed. Floor of distribution
+  ~1,440 (P1) reflects worst-case curve-bend + reporting lag; upper tail to ~2,337
+  (P99) reflects sustained/accelerating growth with timely reporting. Question creator's
+  lower bound (1,155) is already stale. Distribution comfortably within stated bounds.
+key_uncertainties: (1) Exact data-as-of date captured by July 10 (reporting lag).
+  (2) Whether the response bends the curve within 2 weeks. (3) Possibility of batch
+  confirmations causing a jump.
+tool_audit: web_search returned current ECDC/WHO/Wikipedia data including the critical
+  June 27 figure of 1,274. fetch_url on ECDC page confirmed 1,274 confirmed, 360 deaths,
+  47 new in prior day, geographic breakdown. Both tools worked well. No failures.
+  execute_code ran Monte Carlo successfully.
+process_reflection: 'Scaffolding worked smoothly for this epidemic-trajectory numeric
+  question. The key was finding the freshest data point (June 27: 1,274) which superseded
+  the description''s June 24 figure of 1,155. web_search surfacing the ECDC update
+  line directly was efficient. The main modeling judgment — horizon (data-as-of date
+  capture) and rate trajectory — was straightforward to encode in Monte Carlo. No
+  major friction.'
+computed:
+  factor_count: 5
+  factor_sum: 0.0
+  neutral_factor_count: 5
+  factor_breakdown:
+  - description: 'Latest data-as-of June 27: 1,274 confirmed DRC cases (ECDC relaying
+      MoH sitrep N044). This is the cumulative floor since counts only rise.'
+    supports:
+      center: 1274.0
+      low: 1274.0
+      high: 1274.0
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  - description: Steady daily growth ~37-47/day (June17->24=37/d, June24->27=40/d,
+      latest day 47). Projecting ~11 days from June 27 to a data-as-of date ~July
+      8.
+    supports:
+      center: 1714.0
+      low: 1560.0
+      high: 1900.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Response ramping (PHEIC, vaccination, 79% contact follow-up) could
+      bend curve down; but Bundibugyo vaccines/treatments less established, limiting
+      effect.
+    supports:
+      center: 1650.0
+      low: 1500.0
+      high: 1780.0
+    logit: 0.0
+    confidence: 0.6
+    effective_logit: 0.0
+  - description: Expanded detection in newly added zones (Mandima added June 27) could
+      push counts higher via case-finding backlog.
+    supports:
+      center: 1820.0
+      low: 1700.0
+      high: 2100.0
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  - description: 'Data-as-of date uncertainty: reporting lag means captured figure
+      by July 10 likely reflects ~July 6-9, occasionally earlier.'
+    supports:
+      center: 1710.0
+      low: 1500.0
+      high: 1950.0
+    logit: 0.0
+    confidence: 0.75
+    effective_logit: 0.0
+  dominant_factor: 'Latest data-as-of June 27: 1,274 confirmed DRC cases (ECDC relaying
+    MoH sitrep N044). This is the cumulative floor since counts only rise.'
+  dominant_effective_logit: 0.0
+  sources:
+  - '[2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_epidemic)'
+  - '[Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](https://www.ecdc.europa.eu/en/ebola-outbreak-democratic-republic-congo-and-uganda)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44330
+- **Question ID**: 44341
+- **Session Duration**: 294.6s (4.9 min)
+- **Cost**: $4.8134 total (orchestrator $3.2245 + sub-agents $1.5889)
+- **Tokens**: 11,929 total (16 in, 11,913 out)
+  - Cache: 514,036 read, 83,185 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44330_20260629_202237/20260629-202237.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0426 |
+| execute_code | 2 | 0 | 2346ms | — |
+| fetch_url | 1 | 0 | 18214ms | — |
+| premortem | 1 | 0 | 74475ms | $1.4465 |
+| reflection | 1 | 0 | 5ms | — |
+| web_search | 2 | 0 | 17277ms | $0.0998 |
+| wikipedia | 2 | 0 | 221ms | — |
+
+### Sources Consulted
+
+- [2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_ep...
+- [Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](h...

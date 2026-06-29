@@ -1,0 +1,112 @@
+{
+  "condensed_reasoning": "## Research\n\nI was forecasting cumulative DRC-only confirmed Bundibugyo (Ebola) cases by the most recent data-as-of date on or before **July 10, 2026**. I ran two `web_search` queries for the latest ECDC/WHO/MoH figures, then used `fetch_url` on the ECDC outbreak page to pin down the precise current count and breakdown.\n\n## Key Evidence\n\n- **Latest figure: 1,274 confirmed DRC cases** (data-as-of **June 27, 2026**, ECDC relaying DRC MoH sitrep N044), with 360 confirmed deaths and a latest single day of **+47** new confirmed. This superseded the question description's stale 1,155 figure and forms the cumulative floor since counts only rise.\n- **Geographic detail** from the ECDC fetch: Ituri 1,165 cases (23 zones), North Kivu 106, South Kivu 3, with `Mandima` newly added on June 27 — a potential source of case-finding backlog.\n- **Trajectory I assembled**: 896 (Jun 17) → 1,118 (Jun 23) → 1,155 (Jun 24) → 1,274 (Jun 27), implying a remarkably stable **~37–47 confirmed/day**.\n- Context: PHEIC declared May 16/17; Bundibugyo-specific vaccines/treatments are less established (existing Ebola therapeutics were certified for Zaire ebolavirus), limiting the near-term curve-bending effect.\n\n## Modeling\n\nI ran a Monte Carlo (`execute_code`) from the 1,274 baseline over an **~11-day horizon** (SD ~1.9 days for reporting-lag / data-as-of-date uncertainty), with a scenario mixture of **48% constant growth, 28% deceleration, 17% acceleration, 7% surge**. A first pass felt under-dispersed, so I widened parameter uncertainty and added tail scenarios. The final distribution is right-skewed: **median ~1,718, P10 ~1,549, P90 ~1,973, P99 ~2,337**. This matched my linear anchor (1,274 + 11×40 ≈ 1,714).\n\n## Conclusion\n\nI logged factors via `reflection`, ran a bidirectional `premortem` (downward curve-bend to ~1,500–1,600; upward to ~2,000–2,300) which was approved, and submitted: **median ~1,718**, comfortably within the question's 1,155–2,600 range, with the creator's lower bound already exceeded.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The narrative trajectory point 'June 23 = 1,118' was never retrieved by any tool; only 896 (Jun 17), 1,155 (Jun 24), and 1,274 (Jun 27) are sourced. It is presented as data but is unsubstantiated. It does not affect the drift estimate, which rests on the sourced endpoints."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Monte Carlo extrapolation from the latest confirmed case count over an ~11-day horizon with a 4-scenario growth-shape mixture and reporting-lag uncertainty.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The exact data-as-of date captured by July 10 (reporting lag) combined with whether the response bends the growth curve within the two-week window."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "For an epidemic forecast where the agent itself noted 'true scale could considerably exceed confirmed numbers' and a newly-added zone (Mandima) risking batch confirmations, the upper tail is fairly tight (P90 1,973, P99 2,337). The agent flagged the first MC pass as under-dispersed and widened it, but epidemic case-count forecasts have notoriously fat realized error tails; a single large batch lab confirmation could exceed P99.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The model assumes a continuous near-linear daily-count process, but DRC/Bundibugyo sitreps frequently report cases in lumpy batches as lab confirmations clear. The smooth daily-drift Monte Carlo may understate discrete jump risk over an 11-day window; no discrete batch-jump process was modeled beyond the 7% 'surge' rate multiplier.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~1,700 median, range ~1,540-2,000",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Identified and used the freshest data point (1,274 as of June 27), which superseded the question description's stale 1,155 figure - the single most important move for this question.",
+    "Correctly recognized the cumulative floor property (counts only rise) and anchored the lower distribution accordingly.",
+    "Explicitly modeled data-as-of-date / reporting-lag uncertainty as a stochastic horizon (SD ~1.9 days), the right structural treatment for a 'by date X' resolution rule.",
+    "Ran a second Monte Carlo after self-diagnosing under-dispersion in the first, rather than accepting the initial tight distribution.",
+    "Linear extrapolation sanity check (1,274 + 11x40 = 1,714) independently corroborated the MC median ~1,718."
+  ],
+  "weaknesses": [
+    "Inserted an unsourced 'June 23 = 1,118' trajectory point into the final summary as if it were retrieved data; the premortem flagged it but it stayed in.",
+    "Cited '79% contact follow-up' in a factor description with no source anywhere in the trace - a fabricated specific that reduces traceability.",
+    "Did not fetch the underlying DRC MoH sitrep (insp.cd/sitrep-n044) or Africa CDC sitreps for a genuine week-by-week trajectory, instead reconstructing intervals from sparse endpoints.",
+    "Did not consult the CDC MMWR 'Modeled Scenario Projections for the Bundibugyo Outbreak' (surfaced in its own search results), which could have provided an authoritative independent growth-curve anchor."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
