@@ -1,0 +1,114 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a binary, narrow-window scheduling question: would a formal \"Terror-Free Türkiye\" / PKK framework bill (`kanun teklifi`) be **registered** with the TBMM Speaker's Office (with an Esas No) during the ~13-day window of **June 27 – July 9, 2026** (i.e., before July 10)? I ran a single batched `research` call with two targeted queries — one on the current status/timing of the bill, and one on the 2026 NATO summit dates, TBMM recess schedule, and Erdoğan's June statements.\n\n## Key Evidence\n\nThe research returned high-quality, specific findings from credible Turkish and international sources (Hürriyet Daily News, Turkish Minute, Türkiye Today, Evrensel, Cumhuriyet, NATO, Wikipedia):\n\n- **No bill registered yet**: As of June 29, 2026, **no formal kanun teklifi had been registered** with the TBMM Speaker's Office; the bill was still being drafted.\n- **Post-summit timing**: The government plan was to submit the bill **after the July 7-8 NATO summit** in Ankara, compressing the in-window opportunity to essentially just **July 8-9**.\n- **Unmet precondition**: Submission was explicitly conditioned on **verified PKK disarmament**, which AKP sources said was not yet confirmed — *\"while weapons continue to exist, no law will be passed.\"*\n- **Not on calendar**: The bill was **not on the current parliamentary calendar** (which held a judicial package, pension bill, and student amnesty). July tabling was called a **\"remote possibility.\"**\n- **Slippage risk**: Evrensel and Türkiye Today flagged **diminishing likelihood** and possible deferral to the **October 2026** new legislative year.\n- **Counter-evidence (YES)**: Erdoğan said the framework would go to parliament **\"without delay\"** (June 24); parliament was deliberately kept in session; submission is a lower bar than passage; one source suggested disarmament verification *\"could emerge within a week or two.\"*\n\n## Conclusion\n\nI anchored on a base rate of **~20-25%** for a government bill being registered within a specific ~2-week window when the plan targets the tail end of that window and submission hinges on an unmet external precondition. I built five factors: two strong NO factors (window compression at logit -1.1; disarmament conditionality / \"remote possibility\" at -1.0), a moderate NO factor (October slippage, -0.6), and two YES offsets (political will +0.7; submission < passage +0.4). The factor-implied probability was **~0.21**, but I settled slightly lower at **0.15** given the powerful window-compression effect — even the optimistic \"submit before recess\" scenario has only roughly even odds of landing on/before July 9 versus July 10+. The premortem approved with high confidence (0.70). My final forecast was **15% (NO-leaning)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct access to TBMM's official bill registry (kanun teklifleri / Esas No lookup) to confirm registration status authoritatively rather than via news inference.",
+      "No confirmed exact 2026 TBMM summer recess date — sources only said 'customarily early July' or cited July 15, leaving a key timing parameter under-pinned."
+    ],
+    "subtle_bugs": [
+      "The reflection tool's 'factor_implied_probability' (0.21) diverged ~6pp from the submitted 0.15; the agent chose the lower number on narrative grounds (window compression) rather than the mechanical product. This is a legitimate judgment call but means the final number is slightly more confident than the factors mechanically imply."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Qualitative analysis of Turkish/international news reporting on bill drafting status, submission timing relative to the NATO summit, and an unmet disarmament precondition, combined with a legislative-timetable base rate.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether PKK disarmament verification and a leadership decision to table the bill would both occur within the tiny July 8-9 in-window slot, versus slipping past the July 9 cutoff (or to October)."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent inferred 'no bill registered' from news reporting but did not consult the TBMM's official kanun teklifi registry to authoritatively confirm registration status. For a question resolving on a specific Esas-No registration event, the primary source would be more decisive.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The mechanical factor product implied ~0.21 but the agent submitted 0.15, departing ~6pp lower toward NO. Given genuine residual uncertainty (disarmament could land 'within a week or two', parliament kept in session, low submission bar), the lower number leans slightly more decisive than the evidence strictly supports — though this is well within reasonable judgment.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "15%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the precise resolution bar — registration (Esas No) versus passage — and built the analysis around that distinction rather than conflating it with enactment.",
+    "Pinpointed the decisive structural tension: the government's own plan to submit AFTER the July 7-8 NATO summit compresses the in-window opportunity to essentially July 8-9, which is the crux of the forecast.",
+    "Efficient single batched research call that surfaced exactly the timing and conditionality evidence needed, from a diverse set of credible sources.",
+    "Engaged the unmet disarmament precondition with a verbatim source quote ('while weapons continue to exist, no law will be passed') rather than hand-waving.",
+    "Premortem constructed a real 30-40% YES alternative with concrete falsifiers, not a token gesture, and the agent held its position with reasoned calibration notes."
+  ],
+  "weaknesses": [
+    "Did not nail down the exact 2026 TBMM recess date — a key timing parameter. The whole urgency-to-submit-by-July-9 logic hinges on whether recess is ~July 15 or later, yet this was left as 'customarily early July'.",
+    "Relied entirely on news inference for the 'no bill registered' fact rather than checking the TBMM official registry, which is the authoritative resolution source.",
+    "The 6pp downward departure from the factor-implied 0.21 to 0.15 was justified narratively (window compression) but the same window-compression effect is already encoded in the -1.1 dominant factor, creating a mild risk of double-counting that one constraint."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
