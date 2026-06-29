@@ -1,0 +1,109 @@
+{
+  "condensed_reasoning": "## Research\n\nI ran two parallel research queries via the research MCP tool (after one failed attempt using the wrong tool name `research` instead of `mcp__research__research`). Both returned fresh, multi-sourced findings dated **June 28-29, 2026** — exactly the day before resolution-relevant decisions, from credible outlets (Times of Israel, JPost, JNS, newsru.co.il, Wikipedia).\n\n## Key Evidence\n\n- **Legislative progress:** The Knesset dissolution bill passed its preliminary reading **110-0** (May) and first reading **106-0** (June 1-2). Two more readings remain, and the second + third readings can legally be held in a single plenum session if fast-tracked.\n- **No scheduled vote:** As of June 28-29, **no binding date is set** for the second/third readings. The coalition whip said only that elections would fall \"between September 8 and October 20\" — no agenda slot exists for the final reading.\n- **Compromise track revived June 28:** Netanyahu, via Defense Minister Katz, revived the \"Bismuth Law\" (90-day arrest freeze for Haredi draft evaders) plus \"Basic Law: Torah Study.\" Gafni (Degel HaTorah) and Deri (Shas) said Netanyahu had \"made clear\" he's committed to advancing these laws — working *against* dissolution.\n- **Netanyahu prefers delay:** He wants elections on the October statutory timeline (deadline **Oct 27**, possibly Oct 20); Haredim want early September via dissolution. He controls the agenda and has an incentive not to schedule the final reading quickly.\n- **Elections happen anyway** by Oct 27 regardless, reducing urgency; the recess deadline (~late July) is wider than the question's **July 10** cutoff.\n- **Counter-signal:** Haredi parties explicitly threatened to dissolve the Knesset if no progress on draft bills; Israeli coalition crises move fast, and a 61+ majority clearly exists if talks collapse (Haredim + opposition).\n\n## Conclusion\n\nI structured six factors via the reflection tool, with the dominant negative factor being the revived compromise track (logit -1.3). The factor sum (-2.185) aligned closely with my tentative logit (-2.3). I anchored on a base rate of **~15%** for a specific legislative final-reading vote in a narrow ~11-day window with no scheduled date and active counter-negotiations, then adjusted **down to ~9%** based on the revived compromise track and Netanyahu's preference to delay. The premortem returned a \"warn\" verdict — it concurred with the 9% probability and confirmed all six factors were grounded, flagging only a minor self-audit inaccuracy (I wrote \"No tool failures\" despite the visible wrong-tool-name error on my first call). Status quo strongly favors NO. I concluded **~9% (probability 0.09, logit -2.3)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": "wrong tool name — should be mcp__research__research",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Immediately retried successfully with the correct MCP name; no forecast impact."
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup tool was used (Polymarket/Kalshi/Manifold) for a market-implied probability on Israeli dissolution timing."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Qualitative status-quo analysis of June 28-29 news sources combined with a base-rate anchor for a final legislative reading occurring in a narrow window, adjusted via a structured six-factor logit aggregation.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the revived Haredi compromise talks abruptly collapse and trigger a fast-tracked dissolution final reading within the 11-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market (Polymarket/Kalshi/Manifold) was consulted for a market-implied probability on Israeli dissolution/election timing, despite the question being a discrete dated political event well-suited to one.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The premortem flagged confidence_in_estimate of 0.80 as 'slightly high given genuine event-risk in a fast-moving coalition crisis'; the collapse-scenario factor was weighted only +0.6 logit at 0.6 confidence.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~10%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Sourced fresh June 28-29 reporting one day before the window opened and correctly identified the decisive fact: no scheduled date exists for the second/third readings.",
+    "Read resolution criteria precisely — distinguished the THIRD reading from the already-passed first reading and confined analysis to the June 27-July 10 window, avoiding treating the 106-0 first-reading vote as resolving the question.",
+    "Modeled the narrow 11-day window as a distinct negative factor (logit -0.8), recognizing dissolution could pass after July 10 but before late-July recess.",
+    "Anchored on an explicit ~15% base rate and justified the downward adjustment to ~9% with a specific causal driver (revived compromise track) rather than hedging to 50%."
+  ],
+  "weaknesses": [
+    "Self-audit claimed 'No tool failures' despite the visible wrong-tool-name error on the first research call.",
+    "Did not check any prediction market for a market-implied probability.",
+    "Did not run a follow-up query probing whether a plenum agenda slot or House Committee scheduling action was imminent — the variable that would most sharply move the estimate."
+  ],
+  "pipeline": {
+    "issues": [
+      "First research call failed with 'No such tool available: research' — the agent used the bare name instead of the mcp__research__research namespace, costing one wasted tool turn before a successful retry."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Use the correctly namespaced research tool (mcp__research__research) on the first attempt to avoid a wasted turn.",
+    "Add a prediction-market check for discrete dated political events to obtain a market-implied baseline.",
+    "Run a targeted follow-up query on imminent Knesset agenda/plenum scheduling, since a scheduled final-reading date is the single fact that would most move this forecast.",
+    "Ensure the tool_audit self-report reflects visible trace errors (avoid blanket 'No tool failures' when a call errored)."
+  ]
+}
