@@ -36,11 +36,13 @@ from aib.worldview.lookup import (
     all_slugs,
     amend_research_entry,
     commit_worldview,
+    iter_research_entries,
     load_research_entry,
     save_research_entry,
 )
 from aib.worldview.models import (
     DataPoint,
+    EntryState,
     Source,
     WorldviewResearchEntry,
     make_slug,
@@ -478,6 +480,72 @@ async def run_single_research(
     commit_worldview(f"research: {question.query[:60]}")
 
     return ResearchResult(query=entry.query, entry=entry)
+
+
+# ── Staleness refresh ─────────────────────────────────────────────
+
+
+async def refresh_research_entry(entry: WorldviewResearchEntry) -> ResearchResult:
+    """Re-research a stale entry in place, keeping its slug and per-entry TTL."""
+    ttl = entry.stale_after - entry.updated_at
+    if ttl <= timedelta(0):
+        ttl = TTL_PRESETS[DEFAULT_TTL]
+
+    try:
+        research_servers = get_session().research_mcp_servers
+    except RuntimeError:
+        research_servers = None
+
+    try:
+        report = await run_research_agent(
+            entry.query,
+            "",
+            mcp_servers=research_servers,
+        )
+    except (RuntimeError, OSError, ValidationError) as e:
+        logger.exception("Refresh failed for: %s", entry.slug)
+        return ResearchResult(query=entry.query, error=f"{type(e).__name__}: {e}")
+
+    if report.payload is None:
+        return ResearchResult(
+            query=entry.query,
+            error="Research sub-agent did not return structured findings",
+        )
+
+    refreshed = build_research_entry(
+        entry.query,
+        report.payload,
+        report.session_id,
+        report.final_text,
+        ttl,
+        entry.slug,
+    ).model_copy(update={"created_at": entry.created_at})
+    save_research_entry(refreshed)
+    return ResearchResult(query=refreshed.query, entry=refreshed)
+
+
+async def refresh_stale_entries(*, max_concurrent: int = 3) -> list[ResearchResult]:
+    """Re-research every stale research entry, most-stale first.
+
+    Structural sweep — no semantic judgment. Each entry refreshes on its own
+    TTL clock; the prior snapshot is archived for trajectory history.
+    """
+    stale = sorted(
+        (e for e in iter_research_entries() if e.state == EntryState.stale),
+        key=lambda e: e.stale_after,
+    )
+    if not stale:
+        return []
+
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def refresh_one(entry: WorldviewResearchEntry) -> ResearchResult:
+        async with semaphore:
+            return await refresh_research_entry(entry)
+
+    results = await asyncio.gather(*[refresh_one(e) for e in stale])
+    commit_worldview("worldview: refresh stale research entries")
+    return results
 
 
 # ── Follow-up handler ─────────────────────────────────────────────
