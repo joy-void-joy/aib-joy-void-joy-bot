@@ -1,0 +1,93 @@
+{
+  "condensed_reasoning": "## Research\n\nI started by disambiguating the event. My first searches (`UFC 330 date location 2026` and `Trump UFC 2026 attend event White House`) confirmed that **UFC 330: Makhachev vs. Machado Garry** is a routine numbered PPV scheduled for **August 15, 2026, at the Xfinity Mobile Arena in Philadelphia, PA**. Critically, I separated it from **UFC Freedom 250** — the special White House South Lawn event Trump hosted and watched cage-side on **June 14, 2026** (his 80th birthday / America's 250th anniversary). Conflating the two would have been a serious error, and I avoided it.\n\nI then searched `Trump UFC 330 Philadelphia August 2026 attend` and `Trump UFC events attended 2025 2026 list Dana White` to gauge his attendance pattern and look for any UFC 330-specific announcement.\n\n## Key Evidence\n\n- **No announcement** that Trump will attend UFC 330 was found anywhere — status quo is NO.\n- Trump has a **well-documented, close friendship with Dana White** (ESPN timeline) and a strong, recurring pattern of attending marquee UFC cards (e.g., UFC 314 in Miami, the White House event).\n- He **just hosted the enormous UFC Freedom 250 event two months prior** — possibly satiating near-term UFC appetite.\n- **Venue logistics favor attendance**: Philadelphia is a short flight from DC in swing-state PA he carried; it's a championship main event.\n- **Offsetting negatives**: the main event (`Makhachev`, Russia, vs `Garry`, Ireland) lacks the American/Trump-allied fighters he tends to show up for, and the **FBI thwarted a terror plot** targeting the White House event, raising security considerations.\n\nI noted I could not extract an enumerated list of every UFC event Trump personally attended, so my **~25% base rate** (a handful of ~13 numbered PPVs per year) is a soft, estimated anchor rather than a sourced count.\n\n## Conclusion\n\nI built five factors anchored on the ~25% base rate, with proximity/friendship pulling up (+0.6) and satiation, no-announcement, and matchup/security pulling down. I ran a reflection (factor-implied ~31%, tentative 27%) and a premortem stress-testing the bull case (a late attendance announcement could push past 50%), which returned an **approve** verdict. The positive and negative pulls roughly cancel, leaving my forecast just above the status-quo NO. I concluded **27% (logit ≈ -1.0)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A structured source enumerating every UFC numbered event Trump has personally attended during his presidency would have replaced the estimated ~13/year denominator with a real base rate. No prediction-market tool was used or apparently available to check for a live market on this exact question."
+    ],
+    "subtle_bugs": [
+      "The four wikipedia article extracts surfaced inside web_search api_data rather than as separate narrated calls, which is fine, but the '~13 PPVs/year' denominator was never actually sourced — it reads as if grounded but is an unverified estimate."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Qualitative base-rate anchoring (~25% per-event UFC attendance) adjusted by proximity, friendship, satiation, no-announcement, and matchup/security factors, aggregated via logit reflection.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Trump will issue or have a late attendance announcement for UFC 330, which the agent itself notes would push the probability above 50%."
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The core ~25% anchor rests on an estimated '~13 numbered PPVs per year, attends a handful' denominator that was never sourced. The agent did not extract an enumerated list of Trump's actual UFC attendances, so the dominant factor (logit -1.1, the largest single driver) is built on an unverified figure.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market (Polymarket/Kalshi/Manifold) was checked despite this being a discrete, market-friendly binary event ('Will Trump attend UFC 330?'). A live market could have provided an external calibration anchor.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~25%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly disambiguated UFC 330 from the White House Freedom 250 event, avoiding the central trap.",
+    "Treated absence of any attendance announcement as an explicit status-quo-NO factor.",
+    "Premortem named the precise flip trigger (a confirmed attendance announcement).",
+    "Transparently flagged the base rate as a soft estimate rather than a sourced count."
+  ],
+  "weaknesses": [
+    "Did not enumerate which specific UFC numbered events Trump actually attended in 2025-2026, leaving the dominant ~25% base-rate factor resting on an unverified denominator.",
+    "No prediction-market check was attempted for what is a clean binary attendance question.",
+    "Slightly understated the upward pull of recent behavior: Trump attended UFC 314 (Miami) and just hosted Freedom 250 — a very high recent cadence — yet the agent leaned on a 'satiation' negative that is somewhat speculative and could equally cut the other way (heightened enthusiasm)."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "Trace generated 2026-06-29; the target event (UFC 330) is Aug 15 2026, in the future relative to the session. All evidence used (UFC Freedom 250 June 14, terror plot, UFC 314 Miami, Dana White friendship) predates the 2026-06-29 generation timestamp. The premortem verdict explicitly confirms the WH event is used only as base-rate/satiation context, not as resolving the future question."
+    ]
+  },
+  "actionable_improvements": []
+}
