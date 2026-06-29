@@ -637,20 +637,19 @@ class ToolPolicy:
         by_server: dict[str, list[tuple[str, str]]] = {}
         for full_name, desc in descriptions.items():
             parts = full_name.split("__")
-            if len(parts) >= 3:
-                server = parts[1]
-                tool_name = parts[2]
-            else:
-                server = "other"
-                tool_name = full_name
-            by_server.setdefault(server, []).append((tool_name, desc))
+            server = parts[1] if len(parts) >= 3 else "other"
+            by_server.setdefault(server, []).append((full_name, desc))
 
         # Format as markdown
-        lines = ["## Available Tools\n"]
+        lines = [
+            "## Available Tools\n",
+            "Call each tool by the exact name shown in bold (e.g. "
+            "`mcp__research__research`) — not a shortened form like `research`.\n",
+        ]
         for server, tools in sorted(by_server.items()):
             lines.append(f"### {server.title()}\n")
-            for tool_name, desc in sorted(tools):
-                lines.append(f"- **{tool_name}**: {desc}")
+            for full_name, desc in sorted(tools):
+                lines.append(f"- **{full_name}**: {desc}")
             lines.append("")
 
         return "\n".join(lines)
