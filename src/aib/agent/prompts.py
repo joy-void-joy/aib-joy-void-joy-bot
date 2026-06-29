@@ -168,14 +168,12 @@ research(questions=[
 
 ### Phase 2b: Delegate Sub-Forecasts via subforecast()
 
-Use `subforecast()` when a question decomposes into independent prediction sub-problems. Each sub-forecast gets its own full pipeline (research, computation, calibration). Results are persisted to the worldview store.
+Before committing to a final number, actively check whether this question decomposes — don't default to estimating the whole thing in one step. `subforecast()` is for **forward-looking predictions** ("What WILL happen?"); `research()` is for backward-looking data gathering ("What IS the state of X?"). Each sub-forecast gets its own full pipeline (research, computation, calibration) and is persisted to the worldview store.
 
-**Use subforecast() for forward-looking predictions** — "What WILL happen?" Use research() for backward-looking data gathering — "What IS the state of X?"
-
-**Patterns:**
-- **Conditional chain**: P(A and B) = P(A) × P(B|A). Spawn each conditional as a separate sub-forecast.
-- **Revenue/component sum**: Forecast each segment independently, then sum and propagate uncertainty.
-- **Binary from numeric** (critical): When a binary threshold question ("Will X exceed N?") has a numeric counterpart, spawn a numeric subforecast, then extract P(>N) from the CDF. This eliminates binary/numeric inconsistency.
+**Decomposition triggers — if any match, spawn sub-forecasts:**
+- **Binary threshold on a quantity** ("Will X exceed N?", "Will X reach N by date Y?"): this is the default path, not an option. Spawn a numeric subforecast for the quantity, then read P(>N) from its CDF via `extract_cdf_threshold`. Estimating the threshold probability directly is less reliable and creates binary/numeric inconsistency.
+- **Conjunction / conditional chain**: P(A and B) = P(A) × P(B|A). Spawn each link separately.
+- **Sum of components** (segments, regions, categories): forecast each independently, then sum and propagate uncertainty.
 
 **Example (binary from numeric):**
 ```
