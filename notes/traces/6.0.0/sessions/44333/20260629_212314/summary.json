@@ -1,0 +1,123 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a numeric question about foreign investors' weekly net buy/sell value on KOSPI for July 6–10, 2026 (in trillion won, negative = net selling). My first `research` call failed (`No such tool available: research`), but I immediately recovered with `mcp__research__research` and pulled rich, fresh Yonhap-sourced data.\n\nThe research revealed an **acute foreign selling crisis** as of June 29, 2026:\n- **June 29:** record single-day net selling of **~7.7–7.76T won** — largest since September 2001, **7th consecutive selling day**. Domestic investors absorbed it (individuals +4.60T, institutions +2.93T).\n- **June 19–26 week:** foreigners net sold **over 20T won**.\n- **May 2026:** all-time monthly record of **44.71T won** net selling; **103T+ YTD** by early June.\n- **Pattern:** heavy selling early May–June 11 → brief net buying June 12–16 (**+1.7T on June 12**) → resumed and accelerated June 19–29.\n- **Drivers:** semiconductor correction, Samsung/SK Hynix weakness, won at **1,545** (17-year low), geopolitical risk, profit-taking after a ~108% YTD surge.\n- **Caveat I flagged:** late-June daily figures vary widely across reports (916bn intraday to 7.7–8.3T full-day), reflecting possible **cash+derivatives mixing**, while KRX official cash-equity figures are authoritative and used for resolution.\n\n## Key Evidence\n\nI identified a central tension: the question author frames weekly figures at single-digit-trillion scale (heaviest week ~-7.3T, range capped -9 to +6), while fresh research showed far more extreme late-June numbers. I resolved this by leaning on the measurement-ambiguity caveat — the dramatic daily headlines likely include derivatives, so I should not naively extrapolate the ~-20T/week or -7.7T/day pace into the cash-equity resolution basis.\n\nI built a scenario-mixture Monte Carlo (300K samples). My refined 4-scenario version: **moderate continued selling (~38%, -3T)**, **heavy selling persists (~27%, -7T)**, **extreme sustained crash (~7%, -12T)**, and **stabilization/bounce (~28%, +0.7T)**. This yielded median ~**-3.3T**, ~21% chance of net buying, ~12% below -9.\n\nI ran a reflection (4 factors) and a premortem. The premortem returned **warn**: it confirmed all factors were factually grounded and the forecast sound, but noted (a) my tool_audit falsely claimed \"no tool failures\" despite the recovered research-tool error, and (b) the reviewer's independent median was ~**-4 to -5T**, modestly more negative, suggesting I weight the bounce scenario slightly too high.\n\n## Conclusion\n\nHonoring the reviewer's more bearish estimate, I shifted my distribution modestly negative. Final submitted forecast: **median ~-3.8T**, left-skewed, **P10 -10.1T, P90 +1.4T**, ~**20% chance of net buying**, ~12% below -9T. The distribution retains a fat left tail below the -9 bound to reflect genuine crisis-continuation risk while the measurement ambiguity caps how far I extrapolate the extreme daily pace.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 3,
+        "errors": 1,
+        "error_cause": "called bare tool name 'research' instead of 'mcp__research__research'",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Failed placeholder call; immediately recovered with the correct MCP tool name."
+      },
+      "web_search": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct access to KRX/FSS structured investor-trading data to confirm whether reported figures are cash-equity or cash+derivatives — the key resolution ambiguity had to be left as an assumption."
+    ],
+    "subtle_bugs": [
+      "The research result mixed several inconsistent daily/weekly figures (916bn, 7.7T, 8.31T, and a 16.64T 'June 26' foreign-sell figure from fnnews) without the agent reconciling them; the outlier 16.64T figure in particular was surfaced but not investigated, which could indicate the headline numbers are on a different basis than the cash-equity resolution assumes."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Scenario-mixture Monte Carlo (4 regimes) over the weekly foreign net-flow distribution, anchored on fresh late-June flow data and tempered by cash-vs-derivatives measurement ambiguity.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the acute June-29 panic continues, moderates, or reverses by July 6-10, compounded by ambiguity over whether headline figures are cash-equity or cash+derivatives."
+  },
+  "risk_flags": [
+    {
+      "category": "underconfidence",
+      "evidence": "The agent assigns ~66% mass at -3T-or-better (38% moderate-selling + 28% stabilization/bounce) despite June 29 record -7.7T single-day selling, a 7th consecutive selling day, June 19-26 week of -20T+, and a won at a 17-year low with no stabilization signal anywhere in the trace. The bounce weight (28%) appears generous relative to the momentum evidence.",
+      "severity": "minor"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The forecast leans heavily on the assumption that headline ~7.7T/day figures 'may mix cash+derivatives' to justify discounting the extreme pace, but the agent never confirmed the resolution basis or the figures' true basis. If the KRX cash-equity weekly figure is in fact close to the headline magnitude, the distribution would be materially too high. This is acknowledged as an open uncertainty rather than resolved.",
+      "severity": "major"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "-4 to -5T median (range roughly P10 -11 to P90 +1)",
+    "agrees_with_agent": true,
+    "divergence_reason": "I weight the stabilization/bounce scenario (28%) slightly lower given 7 consecutive selling days, a won at a 17-year low, and zero stabilization signal in the trace; my median sits ~1T more negative than the agent's -3.8T, but this is within the factor confidence bands."
+  },
+  "strengths": [
+    "Used a 300K-sample scenario-mixture Monte Carlo with explicit regime weights rather than naively extrapolating the -7.7T/day or -20T/week panic pace, which would have implied an implausible ~-38T week.",
+    "Surfaced and operationalized the cash-vs-derivatives measurement ambiguity — the single most important resolution issue — to cap left-tail extrapolation rather than ignoring it.",
+    "Recovered cleanly from the failed initial `research` tool call without losing the data-gathering step.",
+    "Explicitly reconciled the conflicting magnitude signals between the question author's moderate framing (heaviest week ~-7.3T) and the far more extreme fresh research, using the creator's -9/+6 bounds as a sanity anchor.",
+    "Ran a genuine premortem with a strong counterargument (own distribution may be 4-6T too high) and adjusted the final distribution negatively in response to the reviewer's independent estimate."
+  ],
+  "weaknesses": [
+    "The tool_audit narrative falsely stated 'No tool failures' despite the recovered `research` tool error — caught by the premortem reviewer.",
+    "Did not attempt to disambiguate the cash-equity vs cash+derivatives question via a targeted follow-up research query (e.g., pulling the KRX investor-trading cash figure directly), leaving the load-bearing assumption unverified.",
+    "No prediction-market or analyst-consensus check for the specific weekly figure; relied entirely on news-flow extrapolation plus subjective scenario weights.",
+    "Scenario weights (38/27/7/28) are asserted rather than derived from any historical base rate of how Korean foreign-selling panics evolve week-over-week, so the model's center is sensitive to unjustified priors.",
+    "Did not reconcile inconsistent daily figures in the research output (916bn vs 7.7T vs 8.31T vs a 16.64T June-26 figure) before using them as momentum evidence."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial `research` tool call failed with 'No such tool available: research' due to wrong tool name, then recovered — minor wasted turn.",
+      "The agent's self-reported tool_audit ('No tool failures') contradicted ground-truth metrics, a self-monitoring inaccuracy the premortem caught."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Issue a targeted follow-up research query to confirm whether the headline daily figures are KRX cash-equity or cash+derivatives, since this assumption is load-bearing for the entire distribution's location.",
+    "Derive scenario weights from a historical base rate of how Korean foreign-selling panics decay week-over-week (e.g., the May 24-session streak and its aftermath) rather than asserting 38/27/7/28.",
+    "Reconcile the inconsistent daily/weekly figures in the research output (916bn vs 7.7T vs 16.64T) before using them as momentum evidence.",
+    "Make tool_audit self-reports consistent with ground-truth error metrics (acknowledge the recovered research-tool failure)."
+  ]
+}
