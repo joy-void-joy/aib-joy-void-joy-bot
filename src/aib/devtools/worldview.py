@@ -4,6 +4,7 @@ Browse, inspect, and maintain the worldview store (notes/worldview/).
 """
 
 import asyncio
+import time
 from datetime import datetime, timezone
 
 import typer
@@ -147,9 +148,11 @@ def maintain(
     for action in summary.actions_taken:
         typer.echo(f"  • {action}")
 
-    if summary.contradictions_flagged:
-        typer.echo(f"\nContradictions flagged ({len(summary.contradictions_flagged)}):")
-        for c in summary.contradictions_flagged:
+    if summary.contradictions_reconciled:
+        typer.echo(
+            f"\nContradictions reconciled ({len(summary.contradictions_reconciled)}):"
+        )
+        for c in summary.contradictions_reconciled:
             typer.echo(f"  ⚠ {c}")
 
     if summary.skipped:
@@ -162,6 +165,45 @@ def maintain(
 
     if dry_run:
         typer.echo("\n(dry run — no changes made)")
+
+
+@app.command("loop")
+def loop(
+    interval: int = typer.Option(
+        30, "--interval", help="Minutes between refresh cycles."
+    ),
+    max_concurrent: int = typer.Option(
+        3, "--max-concurrent", help="Concurrent research agents during refresh."
+    ),
+) -> None:
+    """Run the always-on worldview loop: refresh stale entries, then maintain.
+
+    Each cycle re-researches every stale research entry on its own TTL clock,
+    then runs the maintenance agent to reconcile contradictions, link research,
+    and resolve ready forecasts. Runs independently of forecasting.
+    """
+    from aib.tools.worldview_manager import run_worldview_refresh
+
+    typer.echo(f"Starting worldview refresh loop (every {interval}m). Ctrl-C to stop.")
+    while True:
+        cycle_start = time.time()
+        report = asyncio.run(run_worldview_refresh(max_concurrent=max_concurrent))
+
+        typer.echo(f"\n[{datetime.now(timezone.utc):%H:%M:%S UTC}] cycle complete")
+        typer.echo(f"  Refreshed: {report.refreshed}")
+        if report.refresh_errors:
+            typer.echo(f"  Refresh errors: {len(report.refresh_errors)}")
+        maintenance = report.maintenance
+        if maintenance is not None:
+            typer.echo(f"  Maintenance actions: {len(maintenance.actions_taken)}")
+            if maintenance.contradictions_reconciled:
+                typer.echo(
+                    f"  Contradictions reconciled: "
+                    f"{len(maintenance.contradictions_reconciled)}"
+                )
+        elapsed = int(time.time() - cycle_start)
+        typer.echo(f"  Cycle took {elapsed}s; sleeping {interval}m.")
+        time.sleep(interval * 60)
 
 
 @app.command("resolve")

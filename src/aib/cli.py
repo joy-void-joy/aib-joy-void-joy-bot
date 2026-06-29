@@ -1393,9 +1393,9 @@ def loop(
                     print(f"  Actions: {len(summary.actions_taken)}")
                     for action in summary.actions_taken:
                         print(f"    • {action}")
-                    if summary.contradictions_flagged:
+                    if summary.contradictions_reconciled:
                         print(
-                            f"  Contradictions flagged: {len(summary.contradictions_flagged)}"
+                            f"  Contradictions reconciled: {len(summary.contradictions_reconciled)}"
                         )
                     if summary.notes:
                         print(f"  Notes: {summary.notes}")

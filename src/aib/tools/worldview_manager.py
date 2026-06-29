@@ -2,13 +2,15 @@
 
 Spawns a sub-agent that has full read/write access to the worldview store
 via dedicated MCP tools. The sub-agent decides what to do — cleanup,
-deduplicate, link research to forecasts, flag contradictions, and trigger
-AI resolution for ready subforecasts. All semantic judgments are made by
-the agent rather than by keyword heuristics.
+deduplicate, link research to forecasts, reconcile contradictions, and
+trigger AI resolution for ready subforecasts. All semantic judgments are
+made by the agent rather than by keyword heuristics.
 """
 
 import asyncio
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -30,6 +32,7 @@ from aib.paths import WORLDVIEW_PATH
 from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.mcp_server import create_mcp_server
 from aib.worldview.lookup import (
+    all_slugs,
     archive_entry,
     commit_worldview,
     iter_forecast_entries,
@@ -320,6 +323,69 @@ async def wv_supersede_entry(args: SupersedeEntryInput) -> dict[str, object]:
     }
 
 
+class ReconcileInput(BaseModel):
+    """Input for wv_reconcile."""
+
+    claim: str = Field(
+        description=(
+            "The disputed factual claim to re-research, phrased as a precise "
+            "current-state question (e.g., 'What is the current status of the "
+            "Knesset dissolution bill as of today?')."
+        ),
+    )
+    conflicting_slugs: list[str] = Field(
+        description=(
+            "Slugs of the research entries that disagree and should be "
+            "superseded by the fresh, authoritative entry."
+        ),
+    )
+    ttl: str = Field(
+        default="1d",
+        description="Cache lifetime for the reconciled entry (6h, 12h, 1d, 3d, 7d, 14d).",
+    )
+
+
+@mcp_tool(
+    "wv_reconcile",
+    (
+        "Reconcile a contradiction by re-researching the disputed claim and "
+        "superseding the stale entries with one fresh, authoritative entry. "
+        "The fresh research captures the current state of the world; if sources "
+        "genuinely disagree, it records the range rather than forcing a single "
+        "value. Use this instead of merely noting a contradiction — the store "
+        "should converge on one current truth per fact."
+    ),
+)
+async def wv_reconcile(args: ReconcileInput) -> dict[str, object]:
+    """Re-research a disputed claim and supersede the conflicting entries."""
+    from aib.tools.research import ResearchQuestion, run_single_research
+
+    missing = [s for s in args.conflicting_slugs if load_research_entry(s) is None]
+    if missing:
+        raise ToolError(f"Conflicting slugs not found: {', '.join(missing)}")
+
+    result = await run_single_research(
+        ResearchQuestion(query=args.claim, ttl=args.ttl),
+        all_slugs(),
+    )
+    if result.entry is None:
+        raise ToolError(f"Re-research failed: {result.error or 'no entry produced'}")
+
+    new_slug = result.entry.slug
+    superseded: list[str] = []
+    for slug in args.conflicting_slugs:
+        if slug == new_slug:
+            continue
+        if supersede_entry(slug, "research", new_slug):
+            superseded.append(slug)
+    logger.info("Maintenance agent reconciled %s into %s", superseded, new_slug)
+    return {
+        "reconciled_into": new_slug,
+        "superseded": superseded,
+        "claim": args.claim,
+    }
+
+
 class TagForecastInput(BaseModel):
     """Input for wv_tag_forecast."""
 
@@ -447,6 +513,7 @@ MAINTENANCE_TOOLS = [
     wv_read_entry,
     wv_archive_entry,
     wv_supersede_entry,
+    wv_reconcile,
     wv_tag_forecast,
     wv_resolve_forecast,
     wv_ai_resolve_forecast,
@@ -457,6 +524,7 @@ MAINTENANCE_TOOL_NAMES = [
     "mcp__worldview_maintenance__wv_read_entry",
     "mcp__worldview_maintenance__wv_archive_entry",
     "mcp__worldview_maintenance__wv_supersede_entry",
+    "mcp__worldview_maintenance__wv_reconcile",
     "mcp__worldview_maintenance__wv_tag_forecast",
     "mcp__worldview_maintenance__wv_resolve_forecast",
     "mcp__worldview_maintenance__wv_ai_resolve_forecast",
@@ -475,6 +543,7 @@ Your job is to keep the store organized and accurate. You have these tools:
 - `wv_read_entry` — read a specific entry in full
 - `wv_archive_entry` — move an entry to the archive directory
 - `wv_supersede_entry` — mark an older entry as superseded by a newer one
+- `wv_reconcile` — re-research a disputed claim and supersede the stale entries
 - `wv_tag_forecast` — add tags to a forecast (used to link research to forecasts)
 - `wv_ai_resolve_forecast` — run the AI resolver on a forecast (returns a verdict)
 - `wv_resolve_forecast` — record a resolution you have verified
@@ -495,16 +564,21 @@ Your job is to keep the store organized and accurate. You have these tools:
    with `research:<slug>`. Do not link loosely — only when the research
    directly underpins the forecast.
 
-4. **Flagging contradictions** — If multiple research entries report
-   different values for the same metric, note the contradiction in your
-   final summary. You do not need to resolve contradictions yourself —
-   surfacing them is enough.
+4. **Reconciling contradictions** — If multiple research entries report
+   different values for the same metric, reconcile them with `wv_reconcile`:
+   pass the disputed claim as a precise current-state question along with the
+   conflicting slugs. This re-researches the claim and supersedes the stale
+   entries with one fresh, authoritative entry. If the world is genuinely
+   contested, the fresh research records the range — that is the resolved
+   state, so do not re-flag it. The store should converge on one current
+   truth per fact; never defer a disagreement.
 
 5. **Resolving ready forecasts** — For subforecasts where `resolvable_after`
    has passed and `resolved` is false, call `wv_ai_resolve_forecast`. Review
    the verdict. If the resolver is confident and the reasoning holds up, call
    `wv_resolve_forecast` to record it. If the verdict is uncertain or the
-   reasoning is thin, skip it and leave it for human review.
+   reasoning is thin, skip it and leave it unresolved — the next sweep will
+   re-attempt it once more evidence is available.
 
 ## Guidelines
 
@@ -514,8 +588,11 @@ Your job is to keep the store organized and accurate. You have these tools:
 - **Don't touch every entry.** Sweep, act on the clear cases, and stop. A
   maintenance run should leave the store cleaner than it found it, not
   rewritten end-to-end.
+- **Keep coherence local.** After reconciling or refreshing an entry, only
+  re-check entries that directly touch the same entity or metric — don't
+  re-audit the whole store.
 - **Write a final summary** describing what you did and why, including any
-  contradictions you noticed. Your caller reads this summary to understand
+  contradictions you reconciled. Your caller reads this summary to understand
   the sweep.
 """
 
@@ -527,9 +604,9 @@ class MaintenanceSummary(BaseModel):
         default_factory=list,
         description="Human-readable list of concrete actions taken this sweep.",
     )
-    contradictions_flagged: list[str] = Field(
+    contradictions_reconciled: list[str] = Field(
         default_factory=list,
-        description="Contradictions noticed between research entries.",
+        description="Contradictions reconciled by re-researching the disputed claim.",
     )
     skipped: list[str] = Field(
         default_factory=list,
@@ -561,7 +638,7 @@ async def run_maintenance_agent(
         )
     prompt_parts.append(
         "\nWhen you are finished, emit a structured summary describing what "
-        "you did and any contradictions you flagged."
+        "you did and any contradictions you reconciled."
     )
     prompt = "\n".join(prompt_parts)
 
@@ -624,6 +701,62 @@ async def run_maintenance_agent(
     )
 
 
+# ── Standalone refresh loop ───────────────────────────────────────
+
+
+@contextmanager
+def worldview_research_session() -> Iterator[None]:
+    """Enter a session with research MCP servers for standalone worldview work.
+
+    Refresh and reconcile both run the research sub-agent, which reads its data
+    tools from the active session. Outside a forecast there is no session, so we
+    build the data-gathering servers (no sandbox — fact lookup needs no code
+    execution) and enter a session for the duration of the sweep.
+    """
+    from aib.agent.session import ForecastSession, reset_session, set_session
+    from aib.agent.tool_policy import ToolPolicy
+    from aib.config import settings
+
+    policy = ToolPolicy.from_settings(settings)
+    session = ForecastSession(research_mcp_servers=policy.get_research_mcp_servers())
+    set_session(session)
+    try:
+        yield
+    finally:
+        reset_session()
+
+
+class WorldviewRefreshReport(BaseModel):
+    """Result of one standalone worldview refresh cycle."""
+
+    refreshed: int = 0
+    refresh_errors: list[str] = Field(default_factory=list)
+    maintenance: MaintenanceSummary | None = None
+    committed: bool = False
+
+
+async def run_worldview_refresh(*, max_concurrent: int = 3) -> WorldviewRefreshReport:
+    """Run one full worldview cycle: refresh stale research, then maintenance.
+
+    Re-researches every stale research entry on its own TTL clock, then spawns
+    the maintenance agent to reconcile contradictions, link research, and
+    resolve ready forecasts. Both run inside a research-capable session.
+    """
+    from aib.tools.research import refresh_stale_entries
+
+    with worldview_research_session():
+        refresh_results = await refresh_stale_entries(max_concurrent=max_concurrent)
+        report = await run_maintenance_agent()
+
+    committed = commit_worldview("worldview: refresh + maintenance sweep")
+    return WorldviewRefreshReport(
+        refreshed=sum(1 for r in refresh_results if r.entry is not None),
+        refresh_errors=[r.error for r in refresh_results if r.error],
+        maintenance=report.payload,
+        committed=committed,
+    )
+
+
 # ── Top-level MCP tool ────────────────────────────────────────────
 
 
@@ -657,8 +790,8 @@ class WorldviewManagerOutput(BaseModel):
         "Run maintenance on the worldview store. Spawns a sub-agent that has "
         "full read/write access to worldview entries and decides what to do: "
         "archive resolved/expired entries, supersede duplicates, link research "
-        "to forecasts, flag contradictions, and trigger AI resolution for ready "
-        "subforecasts. Run this at the start or end of a tournament batch.\n\n"
+        "to forecasts, reconcile contradictions, and trigger AI resolution for "
+        "ready subforecasts. Run this at the start or end of a tournament batch.\n\n"
         "Use focus='...' to scope the sweep (e.g., 'resolve ready forecasts'). "
         "Use dry_run=true to preview actions without making changes."
     ),
