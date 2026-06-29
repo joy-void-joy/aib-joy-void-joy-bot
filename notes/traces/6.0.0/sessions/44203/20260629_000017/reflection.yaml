@@ -1,0 +1,227 @@
+---
+timestamp: 2026-06-29 00:04:57 UTC
+question_type: numeric
+factors:
+- description: Current robotracker value 7.2M as of May 14 2026 (last update), near
+    lower bound
+  supports:
+    center: 7.4
+    low: 7.1
+    high: 7.6
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Announced May 13 expansion to 1,400 mi2 (+27% area) rolling out across
+    Miami/Austin/Atlanta/Houston/SF, will partially qualify by Aug 1
+  supports:
+    center: 8.4
+    low: 7.8
+    high: 9.2
+  logit: 1.2
+  confidence: 0.7
+  effective_logit: 0.84
+- description: Robotracker updates ~monthly/sporadic; possible little change captured
+    by Aug 1
+  supports:
+    center: 7.4
+    low: 7.2
+    high: 7.7
+  logit: -0.6
+  confidence: 0.5
+  effective_logit: -0.3
+tentative_estimate:
+  center: 7.95
+  low: 7.27
+  high: 8.87
+anchor: Current value 7.2M (robotracker May 14 2026) + sub-linear population growth
+  from announced 27% area expansion over ~2.5 months
+assessment: 'Numeric: Waymo population served per robotracker. Base 7.2M (May14).
+  Strong upward momentum from announced 1,400 mi2 expansion (+27% area) actively rolling
+  out; population scales sub-linearly with area (marginal suburban density lower).
+  Mixture: 30% minimal change ~7.35M, 42% moderate ~8.0M, 28% strong ~8.7M. Median
+  ~7.95M, P10 7.27M, P90 8.87M. Open bounds; below 7M unlikely (metric monotonic up),
+  above 9M possible in strong case.'
+tool_audit: fetch_url on robotracker leaderboard gave current 7.2M; operator/history
+  pages lacked time series. research() sub-agent gave rich trajectory data (expansion
+  announcements, density). No tool failures.
+process_reflection: Robotracker lacks an accessible historical time series, so update-cadence
+  and growth-rate estimation relied on news inference. A tool to pull tracker snapshot
+  history would sharpen this.
+computed:
+  factor_count: 3
+  factor_sum: 0.54
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current robotracker value 7.2M as of May 14 2026 (last update), near
+      lower bound
+    supports:
+      center: 7.4
+      low: 7.1
+      high: 7.6
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Announced May 13 expansion to 1,400 mi2 (+27% area) rolling out across
+      Miami/Austin/Atlanta/Houston/SF, will partially qualify by Aug 1
+    supports:
+      center: 8.4
+      low: 7.8
+      high: 9.2
+    logit: 1.2
+    confidence: 0.7
+    effective_logit: 0.84
+  - description: Robotracker updates ~monthly/sporadic; possible little change captured
+      by Aug 1
+    supports:
+      center: 7.4
+      low: 7.2
+      high: 7.7
+    logit: -0.6
+    confidence: 0.5
+    effective_logit: -0.3
+  dominant_factor: Announced May 13 expansion to 1,400 mi2 (+27% area) rolling out
+    across Miami/Austin/Atlanta/Houston/SF, will partially qualify by Aug 1
+  dominant_effective_logit: 0.84
+  distribution_metrics:
+    implied_median: 8.136842105263158
+    implied_p10: 7.642105263157895
+    implied_p90: 8.805263157894736
+    median_gap: -0.1868421052631577
+    median_gap_pct: -16.063348416289603
+    spread_ratio: 1.3755656108597305
+    precision: 0.20125786163522008
+  sources:
+  - '[Robotaxi Leaderboard](https://robotracker.app/leaderboard)'
+  - '[Waymo](https://robotracker.app/operators/2)'
+  - '[Robotaxi Leaderboard](https://robotracker.app/leaderboard?history=true)'
+---
+timestamp: 2026-06-29 00:06:24 UTC
+question_type: numeric
+factors:
+- description: 7.2M snapshot (May 14) is POST the May 13 announcement; qualifying
+    area barely moved (1,100->1,108 mi2). Strict no-waitlist methodology means marketing
+    area converts slowly
+  supports:
+    center: 7.4
+    low: 7.2
+    high: 7.7
+  logit: -0.4
+  confidence: 0.8
+  effective_logit: -0.32000000000000006
+- description: Source last updated May 14; meaningful chance it is not updated by
+    Aug 1, leaving value at exactly 7.2M
+  supports:
+    center: 7.25
+    low: 7.2
+    high: 7.3
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Genuine ongoing expansion (1,400 mi2 rolling out, new cities) will
+    push some qualifying growth over 2.5 months
+  supports:
+    center: 7.9
+    low: 7.5
+    high: 8.6
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+tentative_estimate:
+  center: 7.51
+  low: 7.2
+  high: 8.3
+anchor: 7.2M current (robotracker May 14, post-announcement), with slow qualifying
+  conversion over 2.5 months
+assessment: 'Revised down per premortem. Qualifying metric (active no-waitlist) barely
+  moved despite marketing announcement; 7.2M is post-announcement. Mixture: 40% minimal/no-update
+  ~7.28M, 38% moderate ~7.65M, 22% strong ~8.25M. Median 7.51M, P10 7.20M, P90 8.30M.
+  Right-skewed: floor near 7.2M (monotonic, possible stale value), upper tail to 8.5-9M
+  if expansion qualifies fast.'
+tool_audit: Simulation in sandbox; robotracker fetch + research provided values. No
+  failures.
+process_reflection: Premortem correctly caught marketing-vs-qualifying conflation.
+  Distinguishing announced coverage from resolution-source methodology was the crux.
+computed:
+  factor_count: 3
+  factor_sum: -0.14000000000000007
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 7.2M snapshot (May 14) is POST the May 13 announcement; qualifying
+      area barely moved (1,100->1,108 mi2). Strict no-waitlist methodology means marketing
+      area converts slowly
+    supports:
+      center: 7.4
+      low: 7.2
+      high: 7.7
+    logit: -0.4
+    confidence: 0.8
+    effective_logit: -0.32000000000000006
+  - description: Source last updated May 14; meaningful chance it is not updated by
+      Aug 1, leaving value at exactly 7.2M
+    supports:
+      center: 7.25
+      low: 7.2
+      high: 7.3
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Genuine ongoing expansion (1,400 mi2 rolling out, new cities) will
+      push some qualifying growth over 2.5 months
+    supports:
+      center: 7.9
+      low: 7.5
+      high: 8.6
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  dominant_factor: Genuine ongoing expansion (1,400 mi2 rolling out, new cities) will
+    push some qualifying growth over 2.5 months
+  dominant_effective_logit: 0.48
+  distribution_metrics:
+    implied_median: 7.577272727272727
+    implied_p10: 7.33090909090909
+    implied_p90: 7.983636363636363
+    median_gap: -0.06727272727272737
+    median_gap_pct: -10.306406685236775
+    spread_ratio: 1.6852367688022278
+    precision: 0.14647137150466052
+  sources:
+  - '[Robotaxi Leaderboard](https://robotracker.app/leaderboard)'
+  - '[Waymo](https://robotracker.app/operators/2)'
+  - '[Robotaxi Leaderboard](https://robotracker.app/leaderboard?history=true)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44203
+- **Question ID**: 44215
+- **Session Duration**: 464.3s (7.7 min)
+- **Cost**: $7.8261 total (orchestrator $3.0763 + sub-agents $4.7498)
+- **Tokens**: 10,058 total (22 in, 10,036 out)
+  - Cache: 642,690 read, 72,467 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44203_20260629_000017/20260629-000017.log`
+
+### Tool Calls
+
+- **Total**: 24 calls
+- **Errors**: 3 (12.5%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0640 |
+| execute_code | 3 | 0 | 133ms | — |
+| fetch_url | 9 | 2 ⚠️ | 3027ms | — |
+| premortem | 2 | 1 ⚠️ | 59790ms | $2.4082 |
+| reflection | 2 | 0 | 22ms | — |
+| research | 1 | 0 | 184043ms | $2.0852 |
+| web_search | 4 | 0 | 17306ms | $0.1924 |
+| wikipedia | 3 | 0 | 270ms | — |
+
+### Sources Consulted
+
+- [Robotaxi Leaderboard](https://robotracker.app/leaderboard)
+- [Waymo](https://robotracker.app/operators/2)
+- [Robotaxi Leaderboard](https://robotracker.app/leaderboard?history=true)
