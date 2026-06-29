@@ -1,0 +1,238 @@
+---
+timestamp: 2026-06-29 03:18:32 UTC
+question_type: binary
+factors:
+- description: Historical 2026 base rate ~1 shoot-down/month = ~26% per 9-day window
+  logit: -1.05
+  confidence: 0.7
+  effective_logit: -0.735
+- description: 'Clear intensification May-June 2026: events on May 19, June 8, and
+    a late-June Poland incursion with multiple shoot-downs — implies current rate
+    ~2-3/month, well above the annual average'
+  logit: 1.4
+  confidence: 0.8
+  effective_logit: 1.1199999999999999
+- description: July is peak summer war activity; Ukraine long-range strike campaign
+    + Russian EW jamming continue to push drones into NATO airspace
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: NATO rules of engagement loosened since Sept 2025; fighters now more
+    willing to engage rather than just track
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: 'Status quo: most incursions still end without a fighter shoot-down
+    (jammed, crash, tracked-not-engaged); also requires manned FIGHTER kill specifically,
+    excluding SAMs/helicopters'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  logit: 0.16
+  probability: 0.54
+anchor: Historical 2026 rate ~1 NATO fighter shoot-down/month → ~26% per 9-day window
+  (Poisson, from question description's stated frequency)
+assessment: 'This is a Poisson base-rate question over a 9-day window. Historical
+  2026 average is ~1 fighter shoot-down/month (~26% per 9 days), but the recent trajectory
+  shows clear acceleration: three distinct shoot-down events in roughly 6 weeks (May
+  19 Estonia, June 8 Latvia, late June Poland multi-drone), implying a current rate
+  of 2-3/month. A weighted Poisson mixture across rate scenarios gives ~0.51. The
+  strong recent momentum (late-June cluster) plus continued summer war intensity and
+  loosened NATO engagement posture nudge me slightly above the mixture midpoint. The
+  restrictive resolution criteria (manned fighter only, over NATO territory, official
+  confirmation) caps the upside since many incursions are handled by SAMs or end in
+  crashes. Settling around 0.54.'
+key_uncertainties: The true current rate (whether the May-June cluster represents
+  a sustained 2-3/month regime or a temporary spike) and whether July activity sustains
+  or dips. A lull would resolve NO; continued escalation makes YES likely.
+tool_audit: execute_code used for Poisson mixture calculation — worked cleanly. No
+  research() or web tools needed; the question description provides sufficient quantitative
+  grounding (explicit event dates and stated frequency) for a near-future base-rate
+  estimate.
+process_reflection: The scaffolding fit this question well. It is essentially a frequency/Poisson
+  problem and the description gave enough concrete event data to parameterize it directly
+  without external research. The reflection/premortem gate feels slightly heavy for
+  a clean base-rate question, but the code sandbox made the core computation fast
+  and transparent.
+computed:
+  factor_count: 5
+  factor_sum: 0.4549999999999999
+  tentative_logit: 0.16
+  logit_gap: -0.29499999999999993
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Historical 2026 base rate ~1 shoot-down/month = ~26% per 9-day window
+    logit: -1.05
+    confidence: 0.7
+    effective_logit: -0.735
+  - description: 'Clear intensification May-June 2026: events on May 19, June 8, and
+      a late-June Poland incursion with multiple shoot-downs — implies current rate
+      ~2-3/month, well above the annual average'
+    logit: 1.4
+    confidence: 0.8
+    effective_logit: 1.1199999999999999
+  - description: July is peak summer war activity; Ukraine long-range strike campaign
+      + Russian EW jamming continue to push drones into NATO airspace
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: NATO rules of engagement loosened since Sept 2025; fighters now more
+      willing to engage rather than just track
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: 'Status quo: most incursions still end without a fighter shoot-down
+      (jammed, crash, tracked-not-engaged); also requires manned FIGHTER kill specifically,
+      excluding SAMs/helicopters'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: 'Clear intensification May-June 2026: events on May 19, June 8,
+    and a late-June Poland incursion with multiple shoot-downs — implies current rate
+    ~2-3/month, well above the annual average'
+  dominant_effective_logit: 1.1199999999999999
+  factor_implied_probability: 0.6118273690017371
+  tentative_probability: 0.54
+  gap_pp: -7.182736900173703
+  sources: []
+---
+timestamp: 2026-06-29 03:29:26 UTC
+question_type: binary
+factors:
+- description: 'Real-world active-regime base rate: 2 confirmed NATO fighter air-to-air
+    drone kills over NATO territory since mid-May 2026 (May 19 Estonia, June 8 Latvia),
+    ~1 per 20 days. Poisson over 9 days gives ~0.36. (Sourced: defensenews, aerotime,
+    aljazeera)'
+  logit: -0.58
+  confidence: 0.8
+  effective_logit: -0.46399999999999997
+- description: '21-day lull since the last confirmed fighter kill (June 8 -> June
+    29): the trend is NOT accelerating, contrary to the question description''s unverified
+    ''late-June Poland'' claim. Pulls rate down.'
+  logit: -0.35
+  confidence: 0.6
+  effective_logit: -0.21
+- description: June 28 intelligence warning (Guardian/Tusk) of possible Russian provocations
+    against Poland/Baltics; frequent ongoing incursions and demonstrated NATO willingness/ROE
+    to engage keep the threat elevated.
+  logit: 0.35
+  confidence: 0.6
+  effective_logit: 0.21
+- description: 'Restrictive resolution bar: requires a manned FIGHTER air-to-air kill
+    over NATO soil with official confirmation, excluding SAMs, crashes, jamming, un-intercepted
+    strikes (e.g. May 29 Galati hit was NOT shot down). Conditioned on stray drone
+    + positioned jet + authorization.'
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+tentative_estimate:
+  logit: -0.62
+  probability: 0.35
+anchor: 'Active-regime real-world rate: 2 confirmed NATO fighter kills over NATO territory
+  in ~6 weeks (May 19, June 8) ~ 1 per 20 days -> 9-day Poisson window ~0.36'
+assessment: After grounding via research(), the picture is clearer than my first pass.
+  There are exactly 2 confirmed NATO fighter air-to-air drone kills over NATO territory
+  in 2026 (May 19 Estonia, June 8 Latvia), both Baltic Air Policing intercepts of
+  stray EW-diverted Ukrainian drones. The question description's 'late-June Poland
+  multiple shootdowns' is unverified and appears fabricated, so I discard the implied
+  acceleration. The active-regime rate is ~1 per 20 days; a Poisson 9-day window gives
+  ~0.36. A 21-day lull since June 8 argues the rate may be softening, while a June
+  28 provocation warning and frequent incursions keep threat elevated — these roughly
+  offset. The restrictive criteria (manned fighter only, official confirmation, over
+  NATO soil) cap the probability. My weighted mixture lands at ~0.36; I set 0.35.
+  This is well above the reviewer's suggested 0.12-0.20 because the reviewer under-weighted
+  the two genuinely confirmed kills and the demonstrated, repeated willingness of
+  Baltic Air Policing to engage.
+key_uncertainties: Whether the May-June Baltic shoot-down regime persists into early
+  July or the 21-day lull signals a slowdown. A new incursion with a fighter kill
+  July 1-9 resolves YES; a quiet window resolves NO. Also uncertain whether incursions
+  could occur outside the Baltics (Poland/Romania) where ROE has been more restrictive
+  (Romania did not engage the Galati drone).
+tool_audit: research() returned high-quality grounded data with multiple credible
+  sources (defensenews, aerotime, aljazeera, CNN, Wikipedia) confirming exactly 2
+  fighter kills and debunking the late-June Poland claim — very useful, corrected
+  my initial error. execute_code used twice for Poisson mixtures, worked cleanly.
+  The first reflection relied too heavily on the question description's unverified
+  event list; research fixed this.
+update_triggers: News of a NATO fighter drone kill dated July 1-9 (YES); a sustained
+  large incursion campaign in early July (toward 0.5+); a ceasefire or de-escalation
+  (toward 0.20).
+process_reflection: 'The premortem reviewer correctly forced me to ground the base
+  rate rather than trusting the bot-generated description''s event list and stated
+  frequency. Although the reviewer incorrectly claimed the description contained no
+  dates (it did list them), its core push — verify before computing — was right and
+  improved the forecast. The research() tool was excellent here. One friction: the
+  reviewer''s suggested 0.12-0.20 was itself under-grounded (it dismissed the two
+  confirmed Baltic kills), so I treated its number as a loose prior, not a target.'
+computed:
+  factor_count: 4
+  factor_sum: -0.584
+  tentative_logit: -0.62
+  logit_gap: -0.03600000000000003
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Real-world active-regime base rate: 2 confirmed NATO fighter air-to-air
+      drone kills over NATO territory since mid-May 2026 (May 19 Estonia, June 8 Latvia),
+      ~1 per 20 days. Poisson over 9 days gives ~0.36. (Sourced: defensenews, aerotime,
+      aljazeera)'
+    logit: -0.58
+    confidence: 0.8
+    effective_logit: -0.46399999999999997
+  - description: '21-day lull since the last confirmed fighter kill (June 8 -> June
+      29): the trend is NOT accelerating, contrary to the question description''s
+      unverified ''late-June Poland'' claim. Pulls rate down.'
+    logit: -0.35
+    confidence: 0.6
+    effective_logit: -0.21
+  - description: June 28 intelligence warning (Guardian/Tusk) of possible Russian
+      provocations against Poland/Baltics; frequent ongoing incursions and demonstrated
+      NATO willingness/ROE to engage keep the threat elevated.
+    logit: 0.35
+    confidence: 0.6
+    effective_logit: 0.21
+  - description: 'Restrictive resolution bar: requires a manned FIGHTER air-to-air
+      kill over NATO soil with official confirmation, excluding SAMs, crashes, jamming,
+      un-intercepted strikes (e.g. May 29 Galati hit was NOT shot down). Conditioned
+      on stray drone + positioned jet + authorization.'
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  dominant_factor: 'Real-world active-regime base rate: 2 confirmed NATO fighter air-to-air
+    drone kills over NATO territory since mid-May 2026 (May 19 Estonia, June 8 Latvia),
+    ~1 per 20 days. Poisson over 9 days gives ~0.36. (Sourced: defensenews, aerotime,
+    aljazeera)'
+  dominant_effective_logit: -0.46399999999999997
+  factor_implied_probability: 0.3580127140043605
+  tentative_probability: 0.35
+  gap_pp: -0.8012714004360544
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44304
+- **Question ID**: 44315
+- **Session Duration**: 796.9s (13.3 min)
+- **Cost**: $9.1681 total (orchestrator $3.1962 + sub-agents $5.9719)
+- **Tokens**: 13,544 total (18 in, 13,526 out)
+  - Cache: 510,990 read, 75,469 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44304_20260629_031734/20260629-031734.log`
+
+### Tool Calls
+
+- **Total**: 18 calls
+- **Errors**: 1 (5.6%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 107ms | — |
+| fetch_url | 2 | 0 | 86ms | — |
+| premortem | 2 | 1 ⚠️ | 79634ms | $3.1832 |
+| reflection | 2 | 0 | 9ms | — |
+| research | 1 | 0 | 448959ms | $2.5504 |
+| web_search | 6 | 0 | 50511ms | $0.2382 |
+| wikipedia | 3 | 0 | 295ms | — |
