@@ -1,0 +1,122 @@
+---
+timestamp: 2026-06-29 19:29:23 UTC
+question_type: numeric
+factors:
+- description: Current ETH price ~$1,622 (June 29), random walk anchor for 11-day
+    horizon
+  supports:
+    center: 1620.0
+    low: 1430.0
+    high: 1810.0
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Recent 14-day daily vol ~2.1%, full-period ~3.5% (includes crash);
+    blended ~2.5-3% for forward sim
+  supports:
+    center: 1610.0
+    low: 1420.0
+    high: 1810.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Mild altcoin weakness / Bitcoin season narrative gives slight downward
+    bias
+  supports:
+    center: 1590.0
+    low: 1400.0
+    high: 1780.0
+  logit: -0.2
+  confidence: 0.5
+  effective_logit: -0.1
+tentative_estimate:
+  center: 1607.0
+  low: 1423.0
+  high: 1810.0
+anchor: Random walk from current $1,622 with empirical daily vol ~2.5-3% over 11 days
+assessment: ETH at ~$1,622 on June 29, 2026. Forecasting July 10 close (11 days out).
+  Crypto ~martingale, so center on current price with slight downward bias from altcoin
+  weakness. Empirical daily vol blended ~2.5-3% with fat tails (Student-t). Monte
+  Carlo mixture of vol regimes gives P10~1423, median~1607, P90~1810. Width consistent
+  with random-walk over 11 days (3%*sqrt(11)~10% one-sigma). Bounds open so tails
+  extend beyond.
+tool_audit: web_search gave current price and 30-day history (Yahoo recent_history)
+  — sufficient. execute_code ran Monte Carlo cleanly.
+process_reflection: Straightforward short-horizon crypto price question. Empirical
+  vol + Monte Carlo is the right approach; tools worked smoothly. No friction.
+computed:
+  factor_count: 3
+  factor_sum: -0.1
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Current ETH price ~$1,622 (June 29), random walk anchor for 11-day
+      horizon
+    supports:
+      center: 1620.0
+      low: 1430.0
+      high: 1810.0
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Recent 14-day daily vol ~2.1%, full-period ~3.5% (includes crash);
+      blended ~2.5-3% for forward sim
+    supports:
+      center: 1610.0
+      low: 1420.0
+      high: 1810.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Mild altcoin weakness / Bitcoin season narrative gives slight downward
+      bias
+    supports:
+      center: 1590.0
+      low: 1400.0
+      high: 1780.0
+    logit: -0.2
+    confidence: 0.5
+    effective_logit: -0.1
+  dominant_factor: Mild altcoin weakness / Bitcoin season narrative gives slight downward
+    bias
+  dominant_effective_logit: -0.1
+  distribution_metrics:
+    implied_median: 1590.0
+    implied_p10: 1400.0
+    implied_p90: 1780.0
+    median_gap: 17.0
+    median_gap_pct: 4.473684210526316
+    spread_ratio: 1.018421052631579
+    precision: 0.24082140634723087
+  sources:
+  - '[Ethereum USD (ETH-USD) Price History & Historical Data - Yahoo Finance](https://finance.yahoo.com/quote/ETH-USD/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44327
+- **Question ID**: 44338
+- **Session Duration**: 195.8s (3.3 min)
+- **Cost**: $3.6152 total (orchestrator $2.0857 + sub-agents $1.5295)
+- **Tokens**: 4,218 total (14 in, 4,204 out)
+  - Cache: 363,658 read, 65,317 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44327_20260629_192720/20260629-192720.log`
+
+### Tool Calls
+
+- **Total**: 6 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 269ms | — |
+| premortem | 1 | 0 | 56276ms | $1.4900 |
+| reflection | 1 | 0 | 8ms | — |
+| stock_price | 1 | 0 | 406ms | — |
+| web_search | 1 | 0 | 77986ms | $0.0396 |
+
+### Sources Consulted
+
+- [Ethereum USD (ETH-USD) Price History & Historical Data - Yahoo Finance](http...
