@@ -4,7 +4,7 @@ The maintenance sub-agent itself is not unit-tested (it requires an LLM
 client); these tests exercise the MCP tools it calls.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -245,3 +245,117 @@ async def test_resolve_forecast_scores_binary(worldview_dir: Path) -> None:
     assert reloaded.resolution == 1.0
     # Brier score: (0.7 - 1.0)^2 = 0.09
     assert reloaded.score == pytest.approx(0.09)
+
+
+# ── trajectory preservation ──────────────────────────────────────
+
+
+def test_save_research_archives_prior_snapshot(worldview_dir: Path) -> None:
+    save_research_entry(
+        make_research("traj").model_copy(update={"answer": "first-value"})
+    )
+    save_research_entry(
+        make_research("traj").model_copy(update={"answer": "second-value"})
+    )
+
+    live = (worldview_dir / "research" / "traj.json").read_text(encoding="utf-8")
+    assert "second-value" in live
+
+    snapshots = list((worldview_dir / "archive").glob("traj_*.json"))
+    assert len(snapshots) == 1
+    assert "first-value" in snapshots[0].read_text(encoding="utf-8")
+
+
+def test_save_research_new_slug_keeps_no_snapshot(worldview_dir: Path) -> None:
+    save_research_entry(make_research("brand-new"))
+    assert not list((worldview_dir / "archive").glob("brand-new_*.json"))
+
+
+# ── refresh_stale_entries ────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_refresh_targets_only_stale_entries(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import aib.tools.research as research_mod
+    from aib.tools.research import ResearchResult, refresh_stale_entries
+
+    now = datetime.now(timezone.utc)
+
+    def staged(slug: str, updated: datetime, stale: datetime) -> None:
+        save_research_entry(
+            make_research(slug).model_copy(
+                update={"updated_at": updated, "stale_after": stale}
+            )
+        )
+
+    staged("stale-old", now - timedelta(days=2), now - timedelta(days=1))
+    staged("stale-new", now - timedelta(hours=2), now - timedelta(hours=1))
+    staged("fresh", now, now + timedelta(hours=6))
+
+    refreshed: list[str] = []
+
+    async def fake_refresh(entry: WorldviewResearchEntry) -> ResearchResult:
+        refreshed.append(entry.slug)
+        return ResearchResult(query=entry.query, entry=entry)
+
+    monkeypatch.setattr(research_mod, "refresh_research_entry", fake_refresh)
+    monkeypatch.setattr(research_mod, "commit_worldview", lambda msg: False)
+
+    results = await refresh_stale_entries()
+
+    assert "fresh" not in refreshed
+    assert set(refreshed) == {"stale-old", "stale-new"}
+    assert refreshed[0] == "stale-old"  # most-stale first
+    assert len(results) == 2
+
+
+# ── wv_reconcile ─────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_reconcile_supersedes_conflicting_entries(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import aib.tools.research as research_mod
+    from aib.tools.research import ResearchQuestion, ResearchResult
+    from aib.tools.worldview_manager import wv_reconcile
+    from aib.worldview.lookup import load_research_entry
+
+    save_research_entry(make_research("claim-a", query="X is 100"))
+    save_research_entry(make_research("claim-b", query="X is 200"))
+    fresh = make_research("x-current-abc123", query="What is X now?")
+
+    async def fake_research(
+        question: ResearchQuestion, existing_slugs: set[str]
+    ) -> ResearchResult:
+        save_research_entry(fresh)
+        return ResearchResult(query=fresh.query, entry=fresh)
+
+    monkeypatch.setattr(research_mod, "run_single_research", fake_research)
+
+    result = await wv_reconcile.handler(
+        {
+            "claim": "What is the current value of X?",
+            "conflicting_slugs": ["claim-a", "claim-b"],
+            "ttl": "1d",
+        }
+    )
+    assert result.get("is_error") is not True
+
+    for slug in ("claim-a", "claim-b"):
+        reloaded = load_research_entry(slug)
+        assert reloaded is not None
+        assert reloaded.state == EntryState.superseded
+        assert reloaded.superseded_by == "x-current-abc123"
+
+
+@pytest.mark.asyncio
+async def test_reconcile_missing_slug_errors(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import wv_reconcile
+
+    result = await wv_reconcile.handler(
+        {"claim": "Y?", "conflicting_slugs": ["does-not-exist"], "ttl": "1d"}
+    )
+    assert result.get("is_error") is True
