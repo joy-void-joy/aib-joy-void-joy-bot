@@ -1,0 +1,122 @@
+---
+timestamp: 2026-06-29 20:42:11 UTC
+question_type: numeric
+factors:
+- description: Last close June 29, 2026 = $21.32 (random-walk center)
+  supports:
+    center: 21.0
+    low: 16.0
+    high: 27.5
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: High daily volatility ~7.8% (beta ~5), 7 trading-day horizon produces
+    wide distribution
+  supports:
+    center: 21.0
+    low: 16.0
+    high: 27.5
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Slight downward momentum (5 down days, below 50/200 MA) partially offset
+    by +7.3% bounce June 29; net near-neutral with mild down tilt
+  supports:
+    center: 20.5
+    low: 16.0
+    high: 27.0
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+tentative_estimate:
+  center: 21.0
+  low: 16.0
+  high: 27.5
+anchor: Random walk from last close $21.32 with empirical 7.8% daily vol over 7 trading
+  days
+assessment: Numeric stock price forecast, ~7 trading days out. Empirical daily log-return
+  std ~7.8% from last 20 sessions. Base case random walk from $21.32 with a mild downward
+  drift mixture (down-momentum 35%, neutral 40%, bounce 25%). Median ~$21, P10 ~$16,
+  P90 ~$27.5. Open bounds; small tail probability below 10 and above 40 captured.
+  Distribution shape roughly lognormal/right-skewed, appropriate for a price near
+  a 52-week low with catalyst-driven upside (NRC review) and dilution overhang downside.
+tool_audit: web_search returned full Yahoo recent_history and shock_alert stats —
+  very useful. execute_code ran Monte Carlo cleanly. No failures.
+process_reflection: Smooth for a short-horizon stock question. The web_search api_data
+  with recent_history and trailing volatility was exactly what was needed, avoiding
+  extra fetches. Monte Carlo in sandbox is the right tool.
+computed:
+  factor_count: 3
+  factor_sum: -0.12
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Last close June 29, 2026 = $21.32 (random-walk center)
+    supports:
+      center: 21.0
+      low: 16.0
+      high: 27.5
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: High daily volatility ~7.8% (beta ~5), 7 trading-day horizon produces
+      wide distribution
+    supports:
+      center: 21.0
+      low: 16.0
+      high: 27.5
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Slight downward momentum (5 down days, below 50/200 MA) partially
+      offset by +7.3% bounce June 29; net near-neutral with mild down tilt
+    supports:
+      center: 20.5
+      low: 16.0
+      high: 27.0
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  dominant_factor: Slight downward momentum (5 down days, below 50/200 MA) partially
+    offset by +7.3% bounce June 29; net near-neutral with mild down tilt
+  dominant_effective_logit: -0.12
+  distribution_metrics:
+    implied_median: 20.5
+    implied_p10: 16.0
+    implied_p90: 27.0
+    median_gap: 0.5
+    median_gap_pct: 4.545454545454546
+    spread_ratio: 1.0454545454545454
+    precision: 0.5476190476190477
+  sources:
+  - '[NANO Nuclear Energy Inc. (NNE) Stock Price, News, Quote & History - Yahoo Finance](https://finance.yahoo.com/quote/NNE/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44331
+- **Question ID**: 44342
+- **Session Duration**: 144.5s (2.4 min)
+- **Cost**: $3.3083 total (orchestrator $2.2742 + sub-agents $1.0341)
+- **Tokens**: 4,845 total (14 in, 4,831 out)
+  - Cache: 393,361 read, 70,487 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44331_20260629_204106/20260629-204106.log`
+
+### Tool Calls
+
+- **Total**: 6 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 2 | 0 | 191ms | — |
+| premortem | 1 | 0 | 56389ms | $0.9913 |
+| reflection | 1 | 0 | 4ms | — |
+| stock_price | 1 | 0 | 601ms | — |
+| web_search | 1 | 0 | 16099ms | $0.0428 |
+
+### Sources Consulted
+
+- [NANO Nuclear Energy Inc. (NNE) Stock Price, News, Quote & History - Yahoo Fi...

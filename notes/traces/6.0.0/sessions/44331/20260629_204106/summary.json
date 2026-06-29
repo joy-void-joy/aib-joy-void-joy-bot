@@ -1,0 +1,100 @@
+{
+  "condensed_reasoning": "## Research\n\nI needed to forecast NNE's closing price on July 9, 2026, ~7 trading days ahead of the question's publication. I ran a single `mcp__search__web_search` that returned a rich Yahoo Finance payload: `current_price` **$21.32** (the June 29 close, up **+7.3%** from the prior close of $19.87), a full 20-session `recent_history`, `fifty_two_week_high` $60.87, `fifty_two_week_low` $18.93, `beta` ~5.04, and a `summary_stats` block with `trailing_volatility_20d` ~7.6%, `trailing_mean_return_20d` ~-1.74%, and a 5-day trailing return of **-16.8%**. It also included a `shock_alert` noting the +7.3% spike had **35 comparable historical events** with a **median 10-day forward return of +1.79%** and **51.4% positive**.\n\n## Key Evidence\n\n- **Anchor:** Last close **$21.32**, the natural random-walk center.\n- **Volatility:** I computed empirical daily log-return std of **~7.8%** from the last 20 sessions — consistent with a beta-~5 development-stage name where 10%+ single-day moves are routine.\n- **Trend context:** 5 consecutive down days, price near the 52-week low, ~-65% drawdown from the high, and a recent dilutive offering — a mild downward tilt, partly offset by the +7.3% June 29 bounce.\n- **Horizon:** 7 trading days (June 30; Jul 1, 2, 6, 7, 8, 9), accounting for the observed July 4 holiday.\n\n## Modeling\n\nI ran two Monte Carlo simulations in the sandbox. The first was a zero-drift random walk (200K paths), yielding median ~$21.31, P10 ~$16.3, P90 ~$27.7. The second (300K paths) applied a **drift mixture**: 35% down-momentum (-1.0%/day), 40% neutral, 25% bounce-continuation (+0.6%/day), producing median **$21.02**, mean $21.5, P10 $16.04, P90 $27.54.\n\n## Conclusion\n\nI submitted a right-skewed distribution centered on a **median ~$21**, with **P10 $16 / P90 $27.50**, and open-bound tails capturing small probability below $10 and above $40. The width is grounded in the stock's realized volatility and catalyst risk (NRC KRONOS review, AI-power thematic trading) in both directions. My premortem flagged that a dead-cat bounce could push it to $15-17 or a single catalyst headline could spike it to the $30s, but absent a specific catalyst, last close plus empirical volatility governs.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Mixture Monte Carlo random walk from last close ($21.32) using empirical ~7.8% daily log-return volatility over a 7-trading-day horizon with a drift mixture.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a NNE-specific catalyst (NRC milestone, partnership, capital raise) or a sector move hits within the 7-day window, which could push the close well outside the modeled P10-P90."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The model uses a constant ~7.8% daily volatility estimated from a single recent high-vol month (June 1-29), which spans an elevated-volatility regime. If realized vol mean-reverts lower over the next 7 days, the P10-P90 spread ($16-$27.5) may be slightly too wide; but given the +7.3% shock day and beta ~5, this is minor.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The premortem itself argues a single catalyst headline could spike the name 30-50% in a day, yet the P99 is only $34.4 (~+61% from $21.32). For a beta-5, catalyst-driven name 7 days out, the upper tail may be slightly thin, though open bounds partly mitigate this.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "median ~$21, P10 ~$16, P90 ~$27.5",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Extracted maximum value from a single web_search call — used the embedded recent_history, trailing_volatility_20d, beta, and shock_alert base-rate stats rather than firing redundant fetches.",
+    "Computed empirical daily log-return volatility (~7.8%) directly from the 20-session history rather than assuming a generic value, correctly capturing the beta-5 name's realized risk.",
+    "Used a principled drift mixture (35% down-momentum / 40% neutral / 25% bounce) instead of naively extrapolating the strongly negative -1.74% trailing mean, which would have over-tilted the median downward.",
+    "Correctly handled the trading-day calendar, counting 7 sessions and accounting for the observed July 4 holiday.",
+    "Premortem produced a non-token counterargument with concrete bidirectional scenarios and a well-calibrated 0.70 confidence."
+  ],
+  "weaknesses": [
+    "Did not check any prediction market or options-implied volatility, which could have provided a market-based cross-check on the 7-day distribution width.",
+    "Volatility was estimated from only the last 20 sessions in a single elevated-vol regime; no sensitivity check on how the percentiles shift if realized vol reverts lower.",
+    "The 'below 50/200-day moving averages' claim cited as a factor was not directly sourced in the trace (the premortem reviewer noted this), though it is plausibly consistent with the -65% drawdown.",
+    "No news search for imminent NNE-specific catalysts (NRC milestone dates, scheduled earnings) within the July 1-9 window, despite identifying catalyst risk as the key uncertainty."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "All data referenced is dated on or before the June 29, 2026 publication date (last close June 29 = $21.32; recent_history ends 2026-06-29).",
+      "The forecast is explicitly forward-looking from June 29 to July 9; no post-June-29 price data or events were accessed."
+    ]
+  },
+  "actionable_improvements": []
+}
