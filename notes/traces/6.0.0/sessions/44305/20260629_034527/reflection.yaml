@@ -1,0 +1,184 @@
+---
+timestamp: 2026-06-29 03:46:18 UTC
+question_type: binary
+factors:
+- description: 'Status quo: stock at $153.23, needs +5.04% to exceed $160.95. With
+    zero drift over 9 trading days, P~0.34-0.36'
+  logit: -0.6
+  confidence: 0.8
+  effective_logit: -0.48
+- description: Recent momentum mildly negative (sold off from $211 peak, now stabilizing
+    ~$153-154)
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: High post-IPO volatility (5-10% intraday swings) makes a +5% recovery
+    quite achievable
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+tentative_estimate:
+  logit: -0.69
+  probability: 0.34
+anchor: 'Zero-drift random walk: P(+5% in 9 trading days at ~4.5% daily vol) ~ 0.35'
+assessment: SPCX must close strictly above $160.95 on July 10. As of latest close
+  ($153.23) it sits 4.8% below, needing +5.04%. Monte Carlo with daily vol 3.5-5.5%
+  and drift -0.3% to +0.2%/day yields blended P~0.34 (range 0.23-0.42). Status quo
+  resolves NO. High volatility keeps recovery plausible. Recent days show stabilization
+  with low daily vol (~1%), but regime is still elevated. Centering ~0.33-0.34.
+key_uncertainties: True daily volatility (decaying post-IPO) and drift sign. If vol
+  higher or recovery resumes, P rises toward 0.4+.
+tool_audit: execute_code Monte Carlo worked well. No live price data tool available
+  for SPCX (fictional/new IPO ticker), relied on prices given in question description.
+  Did not need research delegation for this straightforward stock-direction question.
+process_reflection: 'Straightforward threshold question; scaffolding fit well. Main
+  friction: no direct stock-data tool to verify latest price or compute empirical
+  volatility from full history — had to estimate vol from the few prices in the description.
+  A stock-price/volatility tool would sharpen this.'
+computed:
+  factor_count: 3
+  factor_sum: -0.42
+  tentative_logit: -0.69
+  logit_gap: -0.26999999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Status quo: stock at $153.23, needs +5.04% to exceed $160.95. With
+      zero drift over 9 trading days, P~0.34-0.36'
+    logit: -0.6
+    confidence: 0.8
+    effective_logit: -0.48
+  - description: Recent momentum mildly negative (sold off from $211 peak, now stabilizing
+      ~$153-154)
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: High post-IPO volatility (5-10% intraday swings) makes a +5% recovery
+      quite achievable
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  dominant_factor: 'Status quo: stock at $153.23, needs +5.04% to exceed $160.95.
+    With zero drift over 9 trading days, P~0.34-0.36'
+  dominant_effective_logit: -0.48
+  factor_implied_probability: 0.3965167501352737
+  tentative_probability: 0.34
+  gap_pp: -5.651675013527369
+  sources: []
+---
+timestamp: 2026-06-29 03:49:05 UTC
+question_type: binary
+factors:
+- description: 'Status quo: latest close $153.23 (confirmed by live Yahoo/CNN/TradingEconomics
+    data), needs +5.04% to exceed $160.95. With zero drift, P~0.37-0.43 depending
+    on vol'
+  logit: -0.35
+  confidence: 0.85
+  effective_logit: -0.2975
+- description: Very high realized volatility (20d vol ~9.6%, a -16.4% single day)
+    makes a +5% recovery readily achievable in 9 trading days
+  logit: 0.4
+  confidence: 0.8
+  effective_logit: 0.32000000000000006
+- description: Nasdaq-100 inclusion on July 7 (confirmed, before July 10 resolution)
+    is a concrete positive catalyst — index-fund buying tends to support price into
+    inclusion
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: Recent momentum negative (20d mean return -0.55%/day, -17% 5-day, near
+    recent lows)
+  logit: -0.35
+  confidence: 0.55
+  effective_logit: -0.1925
+tentative_estimate:
+  logit: -0.4
+  probability: 0.4
+anchor: 'Zero-drift random walk at ~7% daily vol: P(+5% in 9 trading days) ~ 0.40'
+assessment: 'Grounded with live data: SPCX last close $153.23, needs +5.04% to clear
+  $160.95. Realized volatility is very high (20d ~9.6%, with a -16.4% single-day move),
+  so a +5% move in 9 trading days is well within range. Key catalyst: confirmed Nasdaq-100
+  inclusion July 7 (within window), which historically brings index-fund demand and
+  can lift price around inclusion — a genuine upward tilt. Offsetting: negative recent
+  momentum (-0.55%/day 20d mean, near recent lows). Monte Carlo across vol 5-9% and
+  drift -0.3% to +0.3%/day gives weighted blend ~0.40. Status quo resolves NO but
+  volatility + catalyst keep YES live. Settling ~0.40.'
+key_uncertainties: Magnitude/direction of Nasdaq-100 inclusion effect, and whether
+  elevated vol persists or decays. Negative momentum vs index-buying tug-of-war.
+tool_audit: web_search returned excellent live structured data (current_price 153.23,
+  20d vol 9.65, trailing returns, recent history, Nasdaq-100 inclusion news) — confirmed
+  all prices in the question description are accurate. execute_code Monte Carlo worked
+  well. Earlier reviewer wrongly claimed prices were fabricated; they are both in
+  the question description AND confirmed by live data.
+process_reflection: web_search's structured api_data for tickers is very useful and
+  resolved the grounding concern. The premortem reviewer erroneously flagged grounded
+  prices as hallucinated because they appeared in the question description rather
+  than a separate tool call — worth noting the description IS a valid grounded source.
+computed:
+  factor_count: 4
+  factor_sum: 0.07000000000000006
+  tentative_logit: -0.4
+  logit_gap: -0.4700000000000001
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Status quo: latest close $153.23 (confirmed by live Yahoo/CNN/TradingEconomics
+      data), needs +5.04% to exceed $160.95. With zero drift, P~0.37-0.43 depending
+      on vol'
+    logit: -0.35
+    confidence: 0.85
+    effective_logit: -0.2975
+  - description: Very high realized volatility (20d vol ~9.6%, a -16.4% single day)
+      makes a +5% recovery readily achievable in 9 trading days
+    logit: 0.4
+    confidence: 0.8
+    effective_logit: 0.32000000000000006
+  - description: Nasdaq-100 inclusion on July 7 (confirmed, before July 10 resolution)
+      is a concrete positive catalyst — index-fund buying tends to support price into
+      inclusion
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: Recent momentum negative (20d mean return -0.55%/day, -17% 5-day,
+      near recent lows)
+    logit: -0.35
+    confidence: 0.55
+    effective_logit: -0.1925
+  dominant_factor: Very high realized volatility (20d vol ~9.6%, a -16.4% single day)
+    makes a +5% recovery readily achievable in 9 trading days
+  dominant_effective_logit: 0.32000000000000006
+  factor_implied_probability: 0.5174928576663897
+  tentative_probability: 0.4
+  gap_pp: -11.749285766638973
+  sources:
+  - '[Space Exploration Technologies Corp. (SPCX) Stock Price, News, Quote & History
+    - Yahoo Finance](https://finance.yahoo.com/quote/SPCX/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44305
+- **Question ID**: 44316
+- **Session Duration**: 309.9s (5.2 min)
+- **Cost**: $6.2457 total (orchestrator $2.8206 + sub-agents $3.4251)
+- **Tokens**: 9,324 total (20 in, 9,304 out)
+  - Cache: 543,306 read, 69,733 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44305_20260629_034527/20260629-034527.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 1 (9.1%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 303ms | — |
+| premortem | 3 | 1 ⚠️ | 69302ms | $3.3822 |
+| reflection | 3 | 0 | 4ms | — |
+| stock_price | 1 | 0 | 748ms | — |
+| web_search | 1 | 0 | 22525ms | $0.0429 |
+
+### Sources Consulted
+
+- [Space Exploration Technologies Corp. (SPCX) Stock Price, News, Quote & Histo...
