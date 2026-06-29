@@ -1,0 +1,220 @@
+---
+timestamp: 2026-06-29 16:21:08 UTC
+question_type: numeric
+factors:
+- description: Current live price ~$0.57 across trackers (CryptoRank, CoinStats, CoinCodex),
+    already below the $0.73 in question text, still declining 16% in 24h
+  supports:
+    center: 0.55
+    low: 0.4
+    high: 0.75
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: Post-crash insider-controlled thin-float token tends to keep bleeding;
+    ZachXBT flagged manipulation, no fundamental floor
+  supports:
+    center: 0.45
+    low: 0.2
+    high: 0.6
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+- description: Extreme volatility (daily ~15-25%, went 3.00->0.57 in a week) -> very
+    wide distribution, both tails fat; manipulation pumps possible
+  supports:
+    center: 0.5
+    low: 0.17
+    high: 1.4
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 0.49
+  low: 0.175
+  high: 1.39
+anchor: Random-walk from current ~$0.57 with high empirical volatility; slight negative
+  drift given active downtrend.
+assessment: 'Numeric MC over 12-day horizon. Current ~$0.57 (declining). Scenario
+  mixture: 50% mild bleed (drift -1%/day), 30% accelerating collapse (-4.5%/day),
+  20% bounce (+3%/day), all with daily log-vol ~0.21-0.26 and Student-t(3.5) fat tails.
+  Median 0.49, P10 0.175, P90 1.39. Open bounds: P(<0.1)~3%, P(>3)~2%. Distribution
+  is wide because this token is extremely volatile and just crashed; narrower would
+  overstate knowledge.'
+key_uncertainties: Exact current price (trackers 0.565-0.575, question says 0.73),
+  whether bleed continues or stabilizes, and manipulation-driven spikes.
+tool_audit: web_search gave excellent current cross-tracker prices (~$0.57). research()
+  call failed due to schema error (missing 'questions' wrapper) but web_search covered
+  the need. execute_code MC simulation worked.
+process_reflection: For obscure crypto tokens, web_search with multiple trackers is
+  the fastest reliable way to triangulate current price. The MC scenario-mixture approach
+  fits well. No major friction.
+computed:
+  factor_count: 3
+  factor_sum: -0.3
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: Current live price ~$0.57 across trackers (CryptoRank, CoinStats,
+      CoinCodex), already below the $0.73 in question text, still declining 16% in
+      24h
+    supports:
+      center: 0.55
+      low: 0.4
+      high: 0.75
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: Post-crash insider-controlled thin-float token tends to keep bleeding;
+      ZachXBT flagged manipulation, no fundamental floor
+    supports:
+      center: 0.45
+      low: 0.2
+      high: 0.6
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  - description: Extreme volatility (daily ~15-25%, went 3.00->0.57 in a week) ->
+      very wide distribution, both tails fat; manipulation pumps possible
+    supports:
+      center: 0.5
+      low: 0.17
+      high: 1.4
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: Post-crash insider-controlled thin-float token tends to keep bleeding;
+    ZachXBT flagged manipulation, no fundamental floor
+  dominant_effective_logit: -0.3
+  distribution_metrics:
+    implied_median: 0.45000000000000007
+    implied_p10: 0.2
+    implied_p90: 0.6
+    median_gap: 0.039999999999999925
+    median_gap_pct: 9.999999999999982
+    spread_ratio: 3.0375
+    precision: 2.4795918367346936
+  sources: []
+---
+timestamp: 2026-06-29 16:22:46 UTC
+question_type: numeric
+factors:
+- description: 'Re-anchored to CoinGecko-type aggregate (resolution source) ~$0.67:
+    CoinMarketCap $0.649, snapshots $0.708, post-crash ''stabilizing $0.68-0.74''.
+    Aggregate sits above lagging trackers (~$0.57)'
+  supports:
+    center: 0.67
+    low: 0.55
+    high: 0.78
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Post-crash insider-controlled thin-float token, mild negative drift
+    risk (continued bleed/dumping) but some stabilization signals
+  supports:
+    center: 0.6
+    low: 0.3
+    high: 0.7
+  logit: -0.3
+  confidence: 0.55
+  effective_logit: -0.165
+- description: Extreme volatility (daily 15-25%, 3.00->0.67 in a week); fat tails
+    both directions, manipulation pumps possible to $1.5-3+
+  supports:
+    center: 0.65
+    low: 0.23
+    high: 1.64
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 0.6
+  low: 0.229
+  high: 1.64
+anchor: Random walk from CoinGecko aggregate ~$0.67 with high empirical volatility,
+  slight negative drift.
+assessment: 'Re-ran MC after reviewer flagged anchor too low. P0=$0.67 (CoinGecko
+  aggregate per fresh worldview research). 12-day horizon, scenario mixture 52% mild
+  bleed / 26% collapse / 22% bounce, daily log-vol 0.20-0.25, Student-t(3.5). Median
+  0.60, P10 0.23, P90 1.64. Open bounds: P(<0.1)~1.4%, P(>3)~2.8%. Width reflects
+  this token''s extreme realized volatility; center now consistent with resolution
+  source.'
+key_uncertainties: Whether bleed continues vs stabilizes; manipulation-driven spikes;
+  exact CoinGecko close on July 11.
+tool_audit: web_search gave cross-tracker prices. Reviewer surfaced fresher worldview
+  research (CoinMarketCap $0.649, $0.708) showing CoinGecko aggregate higher than
+  lagging trackers — corrected anchor from 0.57 to 0.67. MC re-run.
+process_reflection: 'The premortem reviewer added real value by pulling fresher worldview
+  entries I hadn''t checked. Lesson: check worldview research store before anchoring
+  on web_search trackers for crypto prices.'
+computed:
+  factor_count: 3
+  factor_sum: -0.165
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'Re-anchored to CoinGecko-type aggregate (resolution source) ~$0.67:
+      CoinMarketCap $0.649, snapshots $0.708, post-crash ''stabilizing $0.68-0.74''.
+      Aggregate sits above lagging trackers (~$0.57)'
+    supports:
+      center: 0.67
+      low: 0.55
+      high: 0.78
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Post-crash insider-controlled thin-float token, mild negative drift
+      risk (continued bleed/dumping) but some stabilization signals
+    supports:
+      center: 0.6
+      low: 0.3
+      high: 0.7
+    logit: -0.3
+    confidence: 0.55
+    effective_logit: -0.165
+  - description: Extreme volatility (daily 15-25%, 3.00->0.67 in a week); fat tails
+      both directions, manipulation pumps possible to $1.5-3+
+    supports:
+      center: 0.65
+      low: 0.23
+      high: 1.64
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: Post-crash insider-controlled thin-float token, mild negative drift
+    risk (continued bleed/dumping) but some stabilization signals
+  dominant_effective_logit: -0.165
+  distribution_metrics:
+    implied_median: 0.6
+    implied_p10: 0.3
+    implied_p90: 0.7
+    median_gap: 0.0
+    median_gap_pct: 0.0
+    spread_ratio: 3.5275
+    precision: 2.3516666666666666
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44321
+- **Question ID**: 44332
+- **Session Duration**: 287.4s (4.8 min)
+- **Cost**: $5.2977 total (orchestrator $3.0108 + sub-agents $2.2869)
+- **Tokens**: 10,317 total (20 in, 10,297 out)
+  - Cache: 582,513 read, 72,770 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44321_20260629_161943/20260629-161943.log`
+
+### Tool Calls
+
+- **Total**: 9 calls
+- **Errors**: 2 (22.2%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 203ms | — |
+| premortem | 2 | 1 ⚠️ | 64548ms | $2.2449 |
+| reflection | 2 | 0 | 7ms | — |
+| research | 1 | 1 ⚠️ | 0ms | — |
+| web_search | 1 | 0 | 17133ms | $0.0421 |

@@ -1,0 +1,105 @@
+{
+  "condensed_reasoning": "## Research\n\nI was forecasting the price of the MemeCore (`M`) token on July 11, 2026 — a ~12-day horizon. I started with a `web_search` for \"MemeCore M token price CoinGecko June 2026,\" which returned a rich cross-tracker picture: CryptoRank **$0.5751**, CoinStats **$0.5714**, CoinCodex **$0.5658**, plus critical news context — a **~71% weekly crash** (market cap from ~$3B to ~$1.1B) reported by CoinMarketCap's AI feed, and a CoinDesk story confirming the token \"suddenly crashed 80%\" falling from ~$2.92 to ~$0.74 in hours, with ZachXBT having flagged in April that the price was propped up by insiders.\n\nI attempted a second `research()` call for deeper price history and volatility, but it failed with a schema validation error (I passed `query`/`ttl` instead of the required `questions` field). I judged the web_search coverage sufficient and moved on.\n\n## Key Evidence\n\n- **Live trackers** clustered at **~$0.57**, already below the $0.73 figure cited in the question.\n- **Extreme volatility**: went from ~$3.00 to ~$0.57 in a week, with 24h moves of 15–25%.\n- **Structural fragility**: >90% insider-controlled supply, thin liquidity, no fundamental floor, active manipulation per ZachXBT.\n\nI ran a **Monte Carlo** (200K paths) anchored at P0=$0.57 with a scenario mixture (50% mild bleed, 30% accelerating collapse, 20% bounce), Student-t(3.5) fat tails, daily log-vol 0.21–0.26 → **median $0.49**, P10 $0.175, P90 $1.39.\n\nMy `premortem` review **FAILED** this: it surfaced fresher worldview research showing the CoinGecko-type aggregate (the named resolution source) sits **higher** than the lagging trackers — CoinMarketCap **$0.6494**, a snapshot of **$0.708**, and prose \"stabilizing $0.68–0.74.\" Since CoinGecko's volume-weighted aggregate is the resolution source and historically sits at the higher end, my $0.57 anchor was a 15–25% downward error that I had myself flagged in my counterargument but not corrected.\n\n## Conclusion\n\nI **re-anchored to ~$0.67** and re-ran the MC → median **$0.60**. A second premortem returned **warn**, noting my volatility (0.20–0.25 daily) was drawn from the crash week and likely overstated forward vol. I ran a **final blended version**: 45% calm steady-state regime (daily log-vol ~0.11–0.13) + 55% volatile/crash regime (0.20–0.25), Student-t fat tails, slight negative drift for insider-dumping risk plus a bounce scenario.\n\nFinal forecast: **median $0.617**, P10 $0.288, P90 $1.347, with open bounds ~0.8% below $0.10 and ~1.8% above $3. The wide distribution reflects this token's extreme post-crash volatility and thin, manipulated float, centered on the CoinGecko-type aggregate consistent with the resolution source.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct CoinGecko historical/headline price reader. The named resolution source was never directly fetched; the anchor relied on web_search snippets + worldview store rather than the authoritative page."
+    ],
+    "subtle_bugs": [
+      "web_search returned CoinMarketCap AI snippets citing both '74 cents' and '80% crash' figures inconsistently, contributing to the agent's initial under-anchoring at $0.57 vs the true aggregate ~$0.67."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Monte Carlo random walk (300K paths) over a 12-day horizon, anchored to the CoinGecko aggregate (~$0.67) with a regime mixture of calm and crash-period volatility and Student-t fat tails.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the post-crash token continues bleeding, stabilizes in a $0.65-0.75 band, or sees manipulation-driven spikes — and what forward volatility regime applies over the 12 days."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The CoinGecko page is the named resolution source, but the agent never fetched it directly — it relied on web_search snippets and worldview-store entries (surfaced only by the premortem reviewer). A direct read would have settled the $0.57-vs-$0.67 discrepancy upfront.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The initial MC was built on lagging trackers (~$0.57) when fresher same-day worldview research (CoinMarketCap $0.6494, snapshot $0.708 as_of 2026-06-29) existed. Corrected after premortem, but the agent should have checked the worldview store before anchoring.",
+      "severity": "major"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Even after the regime-blend, the second premortem noted P10-P90 of $0.29-$1.35 may be too wide because dispersion is partly drawn from the one-week crash regime rather than a steady state. The agent acknowledged this but the interval remains wide; for a token possibly stabilizing in a $0.65-0.75 band, the spread could be modestly tighter.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "median ~$0.60, P10 ~$0.30, P90 ~$1.2",
+    "agrees_with_agent": true,
+    "divergence_reason": "I largely agree. I would weight the stabilization signal slightly more (CoinGecko aggregate $0.65-0.74 holding) and trim the upper tail a touch, since the 0.20-0.25 daily vol leans on crash-week data. But the agent's final regime-blend already addresses most of this, and the center ~$0.62 is well-justified."
+  },
+  "strengths": [
+    "Correctly identified the resolution-source mismatch: the CoinGecko volume-weighted aggregate (~$0.67) sits above lagging trackers (~$0.57), and re-anchored accordingly after the premortem flagged it — a forecast-moving correction.",
+    "Responsive to review: ran three distinct MC simulations, each addressing a specific critique (anchor error, then crash-week vol contamination via a calm/volatile regime blend).",
+    "Methodologically sound MC: Student-t(3.5) fat tails normalized to unit variance, scenario mixture for drift, and explicit reporting of open-bound tail probabilities P(<0.1) and P(>3).",
+    "Honest tool audit: openly reported the research() schema failure rather than claiming a clean run."
+  ],
+  "weaknesses": [
+    "Did not retry the failed research() call with the correct 'questions' schema, nor directly fetch the CoinGecko resolution page — leaving the authoritative price unverified until the premortem reviewer pulled worldview entries.",
+    "Initial anchor at $0.57 was a self-acknowledged error (flagged in its own first counterargument) that it did not self-correct before the premortem forced it.",
+    "Factor 1 cited '$0.73 in question text' when the reviewer noted the question's example figure was actually $0.85 — a minor factual slip, not forecast-moving.",
+    "The final interval width still leans partly on crash-week volatility; a dedicated low-vol sensitivity case (suggested by the reviewer) was folded into the blend rather than run separately to bound the effect."
+  ],
+  "pipeline": {
+    "issues": [
+      "research() tool failed on a schema validation error (missing 'questions' field). The agent used the wrong input shape; clearer schema hinting or a more forgiving wrapper could prevent this.",
+      "The premortem reviewer had to surface fresh worldview-store research that the agent's own tools didn't readily expose during normal flow — suggests the worldview store isn't being checked proactively before anchoring."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
