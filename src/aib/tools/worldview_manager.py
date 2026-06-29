@@ -349,11 +349,10 @@ class ReconcileInput(BaseModel):
     "wv_reconcile",
     (
         "Reconcile a contradiction by re-researching the disputed claim and "
-        "superseding the stale entries with one fresh, authoritative entry. "
-        "The fresh research captures the current state of the world; if sources "
-        "genuinely disagree, it records the range rather than forcing a single "
-        "value. Use this instead of merely noting a contradiction — the store "
-        "should converge on one current truth per fact."
+        "superseding the conflicting entries with one fresh, authoritative "
+        "note that resolves the disagreement. Use this instead of merely "
+        "noting a contradiction — the store should converge on one current "
+        "truth per fact."
     ),
 )
 async def wv_reconcile(args: ReconcileInput) -> dict[str, object]:
@@ -567,11 +566,10 @@ Your job is to keep the store organized and accurate. You have these tools:
 4. **Reconciling contradictions** — If multiple research entries report
    different values for the same metric, reconcile them with `wv_reconcile`:
    pass the disputed claim as a precise current-state question along with the
-   conflicting slugs. This re-researches the claim and supersedes the stale
-   entries with one fresh, authoritative entry. If the world is genuinely
-   contested, the fresh research records the range — that is the resolved
-   state, so do not re-flag it. The store should converge on one current
-   truth per fact; never defer a disagreement.
+   conflicting slugs. This re-researches the claim and supersedes the
+   conflicting entries with one fresh, authoritative note that resolves the
+   disagreement. The store should converge on one current truth per fact;
+   never defer a disagreement.
 
 5. **Resolving ready forecasts** — For subforecasts where `resolvable_after`
    has passed and `resolved` is false, call `wv_ai_resolve_forecast`. Review
