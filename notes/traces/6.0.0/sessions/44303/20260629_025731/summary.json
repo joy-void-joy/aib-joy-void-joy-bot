@@ -1,0 +1,84 @@
+{
+  "condensed_reasoning": "## Research\n\nI needed to determine whether Russia would impose a **full, across-the-board (producer-inclusive) ban on diesel exports before July 10, 2026**. My first tool call hit a naming error (`research` not available), so I immediately retried with `mcp__research__research`, asking specifically whether a government resolution (`postanovlenie`) extending the diesel export prohibition to direct producers had been formally adopted or published on `publication.pravo.gov.ru` as of late June 2026.\n\nThe single research call returned a rich, primary-sourced snapshot (TASS, Kommersant, government.ru, pnp.ru, ren.tv, Bloomberg, Reuters, consultant.ru).\n\n## Key Evidence\n\n- **No ban adopted.** As of **June 28–29, 2026**, no producer-inclusive diesel export ban had been signed or published. Novak stated *\"the decision has not yet been taken\"* and Putin confirmed it was *\"still being considered.\"*\n- **Ministry opposition.** The Energy Ministry's standing recommendation was **against** a total ban.\n- **Revealed preference for softer tools.** On June 28 the government instead adopted alternative measures — cutting the mandatory exchange-sale norm from **15% to 10%** (three months), exchange price-step limits, and preferential import tax terms.\n- **Weaker rationale.** Novak cited a diesel **surplus** as the basis for any ban — a weaker case than the gasoline ban, which addressed a shortage.\n- **Legal anchor falls after the window.** The current fuel export ban (`Postanovlenie No. 78`, Jan 31, 2026) runs through **July 31, 2026** — the natural decision/extension point lies *after* the July 10 question window. Under No. 78, gasoline already covers producers (extended April 2, 2026) but diesel producers remain exempt.\n- **Offsetting momentum.** A government headquarters meeting was scheduled for **June 29** (within the window), Putin was personally engaged, and Russia had demonstrated it could move from proposal to signed producer-inclusive resolution very fast (gasoline precedent, April 2, 2026).\n\n## Conclusion\n\nI framed this as a status-quo/predictive question with a very short (~10-day) window. The explicit non-decision, ministry opposition, surplus rationale, and the June 28 choice of softer measures all point strongly toward **NO**, partly offset by genuine live high-level momentum and Russia's demonstrated speed. I built four factors (three negative, one positive at +1.0), anchored to ~15% as the base rate for a contested, ministry-opposed measure being adopted within ~10 days while still officially \"under consideration.\" My `premortem` constructed a substantive YES counterargument (Novak championing, Putin engagement, in-window June 29 meeting, ready legal template, drone-strike urgency) and the reviewer approved with an independent 12–18% range. I concluded at a logit of **-1.85**, **probability 0.14**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": "wrong tool name (no such tool); immediately retried with correct mcp__research__research",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Trivial naming slip, no time or forecast cost."
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct lookup of publication.pravo.gov.ru itself — the agent relied on the research tool's synthesis rather than independently confirming the absence of a published postanovlenie."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Status-quo base-rate reasoning informed by a single primary-sourced research call, combined into a logit factor model via the reflection tool.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the in-window June 29 government meeting produces an immediate producer-inclusive ban resolution versus continued deferral toward the July 31 expiry."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent asked the research tool about publication.pravo.gov.ru but never directly queried the legal gazette or a prediction market (Polymarket/Metaculus) to triangulate the near-term probability; it relied solely on one synthesized research answer.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "13%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly anchored on the legal calendar: identified that Postanovlenie No. 78 expires July 31 (after the window), so the natural decision point falls outside the question's horizon — a subtle, high-value insight.",
+    "Treated the June 28 adoption of softer measures (exchange-sale norm 15%->10%) as a revealed-preference signal against a full ban, rather than just citing 'considering' headlines.",
+    "Distinguished precisely between the producer-inclusive ban the question asks about and the already-existing non-producer diesel ban / gasoline-to-producers extension — matching the exact resolution criteria.",
+    "Resisted hedging to 50% on a newsworthy 'under consideration' question and committed to low teens with explicit calibration notes.",
+    "Recovered instantly from the wrong-tool-name error with zero forecast impact."
+  ],
+  "weaknesses": [
+    "Did not independently verify absence of a published postanovlenie (relied entirely on the research tool's synthesis of pravo.gov.ru rather than a direct lookup).",
+    "No prediction-market check (Polymarket/Metaculus) to triangulate the near-term probability against external aggregated odds.",
+    "The +1.0 'fast precedent / June 29 meeting' factor is somewhat in tension with the surplus rationale — the gasoline precedent addressed a shortage, so its applicability to a surplus-driven diesel decision is weaker than the factor weight implies, slightly understating the NO lean."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial tool call used bare name 'research' which is not registered (returned 'No such tool available'); resolved by retry with mcp__research__research. Cosmetic only."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
