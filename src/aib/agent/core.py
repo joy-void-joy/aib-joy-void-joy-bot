@@ -25,6 +25,7 @@ from claude_agent_sdk import (
     UserMessage,
 )
 
+from pydantic import ValidationError
 
 from aib.agent.client import build_client
 from aib.agent.display import (
@@ -73,6 +74,7 @@ from aib.paths import (
 )
 from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
 from aib.tools.sandbox import Sandbox
+from aib.worldview.lookup import register_main_forecast
 
 logger = logging.getLogger(__name__)
 
@@ -1284,6 +1286,11 @@ async def run_forecast(
             )
         except Exception as e:
             logger.warning("Failed to auto-save forecast: %s", e)
+
+        try:
+            register_main_forecast(output, context, post_id)
+        except (OSError, ValidationError) as e:
+            logger.warning("Failed to register forecast in worldview: %s", e)
 
     logging.getLogger("aib").removeHandler(_log_handler)
     _log_handler.close()
