@@ -116,13 +116,6 @@ RESEARCH_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Worldview manager (store maintenance)
-WORLDVIEW_MANAGER_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__worldview__worldview_manager",
-    }
-)
-
 # Market tools - live prices
 LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
     {
@@ -375,7 +368,6 @@ class ToolPolicy:
         from aib.tools.research import research
         from aib.tools.search import fetch_url, web_search
         from aib.tools.subforecast import extract_cdf_threshold_tool, subforecast
-        from aib.tools.worldview_manager import worldview_manager
 
         # Main agent: orchestrator tools only
         servers: dict[str, McpServerConfig] = {
@@ -385,7 +377,6 @@ class ToolPolicy:
             ),
             "research": create_mcp_server("research", tools=[research]),
             "search": create_mcp_server("search", tools=[web_search, fetch_url]),
-            "worldview": create_mcp_server("worldview", tools=[worldview_manager]),
             "metaculus": create_mcp_server(
                 "metaculus",
                 tools=[
@@ -552,7 +543,6 @@ class ToolPolicy:
         tools.update(NOTES_TOOLS)
         tools.update(PREMORTEM_TOOLS)
         tools.update(RESEARCH_TOOLS)
-        tools.update(WORLDVIEW_MANAGER_TOOLS)
         tools.update(SEARCH_TOOLS)
         tools.update(FETCH_TOOLS)
 

@@ -5,11 +5,13 @@ Agent version history. Each version tracks a behavioral change in the forecastin
 ## v6.1.0 (2026-06-29)
 
 Worldview store becomes a self-maintaining, coherent world model
-- worldview: staleness now triggers re-research — `aib-devtools worldview loop` refreshes every stale research entry on its own TTL clock, independent of forecasting
+- worldview: `aib-devtools worldview loop` surveys the whole store for issues (contradictions, outdated entries, duplicates, missing links, resolvable forecasts) and fans out a fix agent per issue in parallel — independent of forecasting
+- worldview: a read-only survey agent registers issues via an `add_issue` tool in one pass; a fix agent then resolves each issue via research + structural ops
+- tools: wv_reconcile re-researches a disputed claim and supersedes the conflicting entries with one authoritative note; wv_refresh re-researches a stale entry in place
 - worldview: research overwrites preserve the prior snapshot, building a per-fact trajectory (time series)
-- tools: wv_reconcile — maintenance agent re-researches a disputed claim and supersedes the conflicting entries with one authoritative entry
-- worldview: maintenance agent reconciles contradictions instead of flagging them for human review; uncertain forecast resolutions retry on the next sweep
-- agent: get_research_mcp_servers is sandbox-optional so research runs outside a forecast
+- worldview: contradictions are reconciled and uncertain forecast resolutions retried — never deferred to human review
+- agent: worldview_manager removed from the forecaster's toolset; maintenance runs only via the standalone loop
+- agent: get_research_mcp_servers is sandbox-optional so maintenance can research outside a forecast
 
 ## v6.0.0 (2026-06-29)
 

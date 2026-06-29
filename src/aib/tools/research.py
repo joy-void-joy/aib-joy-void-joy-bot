@@ -36,13 +36,11 @@ from aib.worldview.lookup import (
     all_slugs,
     amend_research_entry,
     commit_worldview,
-    iter_research_entries,
     load_research_entry,
     save_research_entry,
 )
 from aib.worldview.models import (
     DataPoint,
-    EntryState,
     Source,
     WorldviewResearchEntry,
     make_slug,
@@ -522,30 +520,6 @@ async def refresh_research_entry(entry: WorldviewResearchEntry) -> ResearchResul
     ).model_copy(update={"created_at": entry.created_at})
     save_research_entry(refreshed)
     return ResearchResult(query=refreshed.query, entry=refreshed)
-
-
-async def refresh_stale_entries(*, max_concurrent: int = 3) -> list[ResearchResult]:
-    """Re-research every stale research entry, most-stale first.
-
-    Structural sweep — no semantic judgment. Each entry refreshes on its own
-    TTL clock; the prior snapshot is archived for trajectory history.
-    """
-    stale = sorted(
-        (e for e in iter_research_entries() if e.state == EntryState.stale),
-        key=lambda e: e.stale_after,
-    )
-    if not stale:
-        return []
-
-    semaphore = asyncio.Semaphore(max_concurrent)
-
-    async def refresh_one(entry: WorldviewResearchEntry) -> ResearchResult:
-        async with semaphore:
-            return await refresh_research_entry(entry)
-
-    results = await asyncio.gather(*[refresh_one(e) for e in stale])
-    commit_worldview("worldview: refresh stale research entries")
-    return results
 
 
 # ── Follow-up handler ─────────────────────────────────────────────

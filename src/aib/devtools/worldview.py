@@ -126,45 +126,32 @@ def show_entry(
 @app.command("maintain")
 def maintain(
     dry_run: bool = typer.Option(
-        False, "--dry-run", "-n", help="Preview without changes"
+        False, "--dry-run", "-n", help="Survey only; don't spawn fix agents"
     ),
-    focus: str | None = typer.Option(
-        None,
-        "--focus",
-        help="Optional focus for the sweep (e.g., 'resolve ready forecasts only')",
+    max_concurrent: int = typer.Option(
+        3, "--max-concurrent", help="Concurrent fix agents"
     ),
 ) -> None:
-    """Spawn the worldview maintenance sub-agent for a full sweep."""
-    from aib.tools.worldview_manager import run_maintenance_agent
+    """Run one worldview survey + fix sweep."""
+    from aib.tools.worldview_manager import run_worldview_refresh
 
-    typer.echo("Running worldview maintenance sub-agent...")
-    summary = asyncio.run(run_maintenance_agent(focus=focus, dry_run=dry_run)).payload
+    typer.echo("Surveying the worldview store...")
+    report = asyncio.run(
+        run_worldview_refresh(max_concurrent=max_concurrent, dry_run=dry_run)
+    )
 
-    if summary is None:
-        typer.echo("Sub-agent produced no summary.")
+    typer.echo(f"\nIssues found ({len(report.issues_found)}):")
+    for issue in report.issues_found:
+        slugs = ", ".join(issue.slugs)
+        typer.echo(f"  [{issue.kind}] {issue.description} ({slugs})")
+
+    if report.dry_run:
+        typer.echo("\n(dry run — no fix agents spawned)")
         return
 
-    typer.echo(f"\nActions taken ({len(summary.actions_taken)}):")
-    for action in summary.actions_taken:
-        typer.echo(f"  • {action}")
-
-    if summary.contradictions_reconciled:
-        typer.echo(
-            f"\nContradictions reconciled ({len(summary.contradictions_reconciled)}):"
-        )
-        for c in summary.contradictions_reconciled:
-            typer.echo(f"  ⚠ {c}")
-
-    if summary.skipped:
-        typer.echo(f"\nSkipped ({len(summary.skipped)}):")
-        for s in summary.skipped:
-            typer.echo(f"  – {s}")
-
-    if summary.notes:
-        typer.echo(f"\nNotes: {summary.notes}")
-
-    if dry_run:
-        typer.echo("\n(dry run — no changes made)")
+    typer.echo(f"\nFixes ({len(report.fixes)}):")
+    for fix in report.fixes:
+        typer.echo(f"  • {fix}")
 
 
 @app.command("loop")
@@ -176,11 +163,11 @@ def loop(
         3, "--max-concurrent", help="Concurrent research agents during refresh."
     ),
 ) -> None:
-    """Run the always-on worldview loop: refresh stale entries, then maintain.
+    """Run the always-on worldview loop: survey the store, then fix each issue.
 
-    Each cycle re-researches every stale research entry on its own TTL clock,
-    then runs the maintenance agent to reconcile contradictions, link research,
-    and resolve ready forecasts. Runs independently of forecasting.
+    Each cycle surveys the whole store for issues (contradictions, outdated
+    entries, duplicates, missing links, resolvable forecasts) and fans out a
+    fix agent per issue. Runs independently of forecasting.
     """
     from aib.tools.worldview_manager import run_worldview_refresh
 
@@ -190,17 +177,9 @@ def loop(
         report = asyncio.run(run_worldview_refresh(max_concurrent=max_concurrent))
 
         typer.echo(f"\n[{datetime.now(timezone.utc):%H:%M:%S UTC}] cycle complete")
-        typer.echo(f"  Refreshed: {report.refreshed}")
-        if report.refresh_errors:
-            typer.echo(f"  Refresh errors: {len(report.refresh_errors)}")
-        maintenance = report.maintenance
-        if maintenance is not None:
-            typer.echo(f"  Maintenance actions: {len(maintenance.actions_taken)}")
-            if maintenance.contradictions_reconciled:
-                typer.echo(
-                    f"  Contradictions reconciled: "
-                    f"{len(maintenance.contradictions_reconciled)}"
-                )
+        typer.echo(f"  Issues found: {len(report.issues_found)}")
+        for fix in report.fixes:
+            typer.echo(f"    • {fix}")
         elapsed = int(time.time() - cycle_start)
         typer.echo(f"  Cycle took {elapsed}s; sleeping {interval}m.")
         time.sleep(interval * 60)

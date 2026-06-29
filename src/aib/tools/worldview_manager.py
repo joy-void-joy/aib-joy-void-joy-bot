@@ -11,6 +11,7 @@ import asyncio
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -22,7 +23,6 @@ from aib.agent.client import REMOVE, build_client
 from aib.tools.metrics import get_collector
 from aib.agent.display import make_agent_prefix, print_block
 from aib.agent.hooks import create_allowed_tools_hook
-from aib.agent.nested import NestedAgentReport
 from aib.agent.resolver import (
     QuestionForResolution,
     ResolutionVerdict,
@@ -81,7 +81,7 @@ async def resolve_ready_forecasts(
     """Run AI resolution on every forecast whose resolvable_after has passed.
 
     Structural sweep — no semantic judgment. For dedup/linking/contradiction
-    maintenance, use the worldview_manager sub-agent instead.
+    maintenance, use run_worldview_refresh (survey + fix) instead.
     """
     resolvable = find_resolvable_forecasts()
     if not resolvable:
@@ -504,177 +504,235 @@ async def wv_ai_resolve_forecast(
     return verdict.model_dump(mode="json")
 
 
-# ── Sub-agent runner ──────────────────────────────────────────────
+class RefreshEntryInput(BaseModel):
+    """Input for wv_refresh."""
+
+    slug: str = Field(description="Slug of the research entry to re-research in place.")
 
 
-MAINTENANCE_TOOLS = [
-    wv_list_entries,
-    wv_read_entry,
-    wv_archive_entry,
-    wv_supersede_entry,
-    wv_reconcile,
-    wv_tag_forecast,
-    wv_resolve_forecast,
-    wv_ai_resolve_forecast,
-]
+@mcp_tool(
+    "wv_refresh",
+    (
+        "Re-research a research entry in place, keeping its slug and TTL. Use "
+        "for an outdated entry to replace it with the current state of the "
+        "world; the prior version is archived as a trajectory snapshot."
+    ),
+)
+async def wv_refresh(args: RefreshEntryInput) -> dict[str, object]:
+    """Re-research a stale research entry in place."""
+    from aib.tools.research import refresh_research_entry
 
-MAINTENANCE_TOOL_NAMES = [
+    entry = load_research_entry(args.slug)
+    if entry is None:
+        raise ToolError(f"Research entry {args.slug!r} not found")
+    result = await refresh_research_entry(entry)
+    if result.entry is None:
+        raise ToolError(f"Refresh failed: {result.error or 'no entry produced'}")
+    return {
+        "refreshed": args.slug,
+        "stale_after": result.entry.stale_after.isoformat(),
+    }
+
+
+# ── Survey + fix agents ───────────────────────────────────────────
+
+
+class Issue(BaseModel):
+    """One issue in the worldview store, registered by the survey agent."""
+
+    kind: Literal[
+        "contradiction", "outdated", "duplicate", "missing_link", "resolvable"
+    ] = Field(description="The kind of issue.")
+    description: str = Field(description="What the issue is, in one sentence.")
+    slugs: list[str] = Field(
+        default_factory=list,
+        description="Slugs of the entries involved.",
+    )
+    claim: str | None = Field(
+        default=None,
+        description=(
+            "For contradiction/outdated: the precise current-state question to "
+            "re-research (e.g., 'What is the current status of X as of today?')."
+        ),
+    )
+
+
+survey_issues: ContextVar[list[Issue] | None] = ContextVar(
+    "survey_issues", default=None
+)
+
+
+@mcp_tool(
+    "add_issue",
+    (
+        "Register one issue you found in the worldview store. Call once per "
+        "distinct issue. Kinds: 'contradiction' (entries disagree on a metric), "
+        "'outdated' (an entry is stale or the world moved), 'duplicate' (two "
+        "entries cover the same question), 'missing_link' (a forecast's evidence "
+        "is an untagged research entry), 'resolvable' (a forecast past its "
+        "resolve date). For contradiction/outdated, include the precise claim "
+        "to re-research."
+    ),
+)
+async def add_issue(args: Issue) -> dict[str, object]:
+    """Register an issue during a survey."""
+    issues = survey_issues.get()
+    if issues is None:
+        raise ToolError("add_issue called outside a survey run")
+    issues.append(args)
+    return {"registered": args.kind, "total": len(issues)}
+
+
+SURVEY_TOOLS = [wv_list_entries, wv_read_entry, add_issue]
+
+SURVEY_TOOL_NAMES = [
     "mcp__worldview_maintenance__wv_list_entries",
     "mcp__worldview_maintenance__wv_read_entry",
-    "mcp__worldview_maintenance__wv_archive_entry",
-    "mcp__worldview_maintenance__wv_supersede_entry",
+    "mcp__worldview_maintenance__add_issue",
+]
+
+FIX_TOOLS = [
+    wv_read_entry,
+    wv_reconcile,
+    wv_refresh,
+    wv_supersede_entry,
+    wv_tag_forecast,
+    wv_ai_resolve_forecast,
+    wv_resolve_forecast,
+    wv_archive_entry,
+]
+
+FIX_TOOL_NAMES = [
+    "mcp__worldview_maintenance__wv_read_entry",
     "mcp__worldview_maintenance__wv_reconcile",
+    "mcp__worldview_maintenance__wv_refresh",
+    "mcp__worldview_maintenance__wv_supersede_entry",
     "mcp__worldview_maintenance__wv_tag_forecast",
-    "mcp__worldview_maintenance__wv_resolve_forecast",
     "mcp__worldview_maintenance__wv_ai_resolve_forecast",
+    "mcp__worldview_maintenance__wv_resolve_forecast",
+    "mcp__worldview_maintenance__wv_archive_entry",
 ]
 
 
-MAINTENANCE_SYSTEM_PROMPT = """\
-You are the maintenance agent for the worldview store.
+SURVEY_SYSTEM_PROMPT = """\
+You are the survey agent for the worldview store — a cache of factual notes
+(research entries) and subforecasts that the forecasting pipeline relies on.
 
-The worldview store holds two kinds of entries:
-- **Research entries**: factual findings from the research sub-agent, keyed by slug.
-- **Forecast entries**: subforecasts produced by the forecasting pipeline, keyed by slug.
+Your ONLY job is to read the whole store and register every issue you find by
+calling `add_issue` once per distinct issue. You do NOT fix anything.
 
-Your job is to keep the store organized and accurate. You have these tools:
-- `wv_list_entries` — see all entries with summary info
-- `wv_read_entry` — read a specific entry in full
-- `wv_archive_entry` — move an entry to the archive directory
-- `wv_supersede_entry` — mark an older entry as superseded by a newer one
-- `wv_reconcile` — re-research a disputed claim and supersede the stale entries
-- `wv_tag_forecast` — add tags to a forecast (used to link research to forecasts)
-- `wv_ai_resolve_forecast` — run the AI resolver on a forecast (returns a verdict)
-- `wv_resolve_forecast` — record a resolution you have verified
+Issue kinds:
+- **contradiction** — two or more research entries report different values for
+  the same metric. Include the conflicting slugs and a precise `claim` (a
+  current-state question to re-research).
+- **outdated** — a research entry whose data is stale (its state is `stale`) or
+  plainly out of date. Include the slug and a `claim`.
+- **duplicate** — two entries genuinely cover the same question (not just share
+  keywords). Include both slugs.
+- **missing_link** — a forecast whose primary evidence is a research entry that
+  is not tagged `research:<slug>`. Include the forecast and research slugs.
+- **resolvable** — a forecast whose `resolvable_after` has passed and is not
+  yet resolved. Include the forecast slug.
 
-## Tasks to perform
+## How to work
 
-1. **Cleanup** — Archive entries that are already resolved, or clearly past
-   their stale window. These clutter the store without providing value. Only
-   archive when you are confident the entry is no longer useful.
-
-2. **Deduplication** — If two entries genuinely cover the same question (not
-   just share words), keep the newer one and supersede the older. Be strict:
-   only supersede when the redundancy is clear after reading both entries.
-   Related-but-distinct entries should both be kept.
-
-3. **Linking research to forecasts** — When a research entry contains data
-   that is the primary evidence for a specific forecast, tag the forecast
-   with `research:<slug>`. Do not link loosely — only when the research
-   directly underpins the forecast.
-
-4. **Reconciling contradictions** — If multiple research entries report
-   different values for the same metric, reconcile them with `wv_reconcile`:
-   pass the disputed claim as a precise current-state question along with the
-   conflicting slugs. This re-researches the claim and supersedes the
-   conflicting entries with one fresh, authoritative note that resolves the
-   disagreement. The store should converge on one current truth per fact;
-   never defer a disagreement.
-
-5. **Resolving ready forecasts** — For subforecasts where `resolvable_after`
-   has passed and `resolved` is false, call `wv_ai_resolve_forecast`. Review
-   the verdict. If the resolver is confident and the reasoning holds up, call
-   `wv_resolve_forecast` to record it. If the verdict is uncertain or the
-   reasoning is thin, skip it and leave it unresolved — the next sweep will
-   re-attempt it once more evidence is available.
-
-## Guidelines
-
-- **Be thoughtful.** Skip uncertain cases rather than acting on weak signals.
-- **Read before acting.** List first, then read the specific entries you care
-  about before archiving, superseding, or tagging.
-- **Don't touch every entry.** Sweep, act on the clear cases, and stop. A
-  maintenance run should leave the store cleaner than it found it, not
-  rewritten end-to-end.
-- **Keep coherence local.** After reconciling or refreshing an entry, only
-  re-check entries that directly touch the same entity or metric — don't
-  re-audit the whole store.
-- **Write a final summary** describing what you did and why, including any
-  contradictions you reconciled. Your caller reads this summary to understand
-  the sweep.
+1. Call `wv_list_entries` to see everything, including each entry's state and
+   staleness.
+2. Read the entries you need with `wv_read_entry` to judge contradictions and
+   duplicates — compare their actual content, not just titles.
+3. Register each issue with `add_issue`. Be precise and conservative: register
+   an issue only when it is clear. Related-but-distinct entries are not a
+   contradiction or a duplicate.
+4. Do not register the same issue twice. When you have surveyed the whole
+   store, stop.
 """
 
 
-class MaintenanceSummary(BaseModel):
-    """Structured summary returned by the maintenance sub-agent."""
+FIX_SYSTEM_PROMPT = """\
+You are a fix agent for the worldview store. You are given ONE issue and must
+resolve it, then report what you did in one or two sentences.
 
-    actions_taken: list[str] = Field(
-        default_factory=list,
-        description="Human-readable list of concrete actions taken this sweep.",
-    )
-    contradictions_reconciled: list[str] = Field(
-        default_factory=list,
-        description="Contradictions reconciled by re-researching the disputed claim.",
-    )
-    skipped: list[str] = Field(
-        default_factory=list,
-        description="Cases considered but skipped (with brief reason).",
-    )
-    notes: str = Field(
-        default="",
-        description="Any additional observations about the store.",
-    )
+Resolve by issue kind:
+- **contradiction** — call `wv_reconcile` with the claim and the conflicting
+  slugs. It re-researches the claim and supersedes the stale entries with one
+  fresh, authoritative note.
+- **outdated** — call `wv_refresh` on the slug to replace it with the current
+  state of the world.
+- **duplicate** — read both; `wv_supersede_entry` the older one by the newer.
+- **missing_link** — `wv_tag_forecast` the forecast with `research:<slug>`.
+- **resolvable** — `wv_ai_resolve_forecast` the forecast; if the verdict is
+  confident and the reasoning holds, `wv_resolve_forecast` to record it.
+  Otherwise leave it unresolved — a later sweep will re-attempt it.
+
+Read the entries first if you need to. Act only on this one issue. If on
+inspection the issue is not real, do nothing and say so.
+"""
 
 
-async def run_maintenance_agent(
-    focus: str | None = None,
-    dry_run: bool = False,
-) -> NestedAgentReport[MaintenanceSummary]:
-    """Spawn the maintenance sub-agent and return its structured summary."""
+async def run_survey() -> list[Issue]:
+    """Spawn the read-only survey agent; return the issues it registered."""
     WORLDVIEW_PATH.mkdir(parents=True, exist_ok=True)
+    issues: list[Issue] = []
+    token = survey_issues.set(issues)
 
-    prompt_parts = [
-        "Run a maintenance sweep over the worldview store.",
-    ]
-    if focus:
-        prompt_parts.append(f"\nFocus for this sweep: {focus}")
-    if dry_run:
-        prompt_parts.append(
-            "\nDRY RUN: describe what you would do but do not call any "
-            "write tools (archive, supersede, tag, resolve). Your summary "
-            "should list the actions you would have taken."
-        )
-    prompt_parts.append(
-        "\nWhen you are finished, emit a structured summary describing what "
-        "you did and any contradictions you reconciled."
-    )
-    prompt = "\n".join(prompt_parts)
-
-    output_format = {
-        "type": "json_schema",
-        "schema": MaintenanceSummary.model_json_schema(),
-    }
-
-    maintenance_server = create_mcp_server(
-        "worldview_maintenance", tools=MAINTENANCE_TOOLS
-    )
-
-    allowed_tools = list(MAINTENANCE_TOOL_NAMES)
-    if dry_run:
-        # Strip write tools for dry runs; agent can still list and read.
-        allowed_tools = [
-            name
-            for name in allowed_tools
-            if "wv_list_entries" in name or "wv_read_entry" in name
-        ]
-    allowed_tools.append("StructuredOutput")
+    survey_server = create_mcp_server("worldview_maintenance", tools=SURVEY_TOOLS)
+    prefix = make_agent_prefix("worldview-survey", None)
 
     from aib.config import settings
 
-    summary: MaintenanceSummary | None = None
-    text_blocks: list[str] = []
-    prefix = make_agent_prefix("worldview", focus)
+    try:
+        async with build_client(
+            model=settings.model,
+            system_prompt=SURVEY_SYSTEM_PROMPT,
+            permission_mode="bypassPermissions",
+            cwd=str(WORLDVIEW_PATH),
+            extra_args={"no-session-persistence": REMOVE},
+            allowed_tools=SURVEY_TOOL_NAMES,
+            hooks=create_allowed_tools_hook(SURVEY_TOOL_NAMES),
+            mcp_servers={"worldview_maintenance": survey_server},
+        ) as client:
+            await client.query(
+                "Survey the worldview store and register every issue you find."
+            )
+            async for message in client.receive_response():
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        print_block(block, prefix=prefix)
+                if isinstance(message, ResultMessage):
+                    if message.total_cost_usd is not None:
+                        get_collector().record_cost(
+                            "worldview_survey", message.total_cost_usd
+                        )
+    finally:
+        survey_issues.reset(token)
 
+    return issues
+
+
+async def fix_issue(issue: Issue) -> str:
+    """Spawn a fix agent to resolve one issue; return its report."""
+    fix_server = create_mcp_server("worldview_maintenance", tools=FIX_TOOLS)
+    prefix = make_agent_prefix("worldview-fix", issue.kind)
+
+    from aib.config import settings
+
+    text_blocks: list[str] = []
+    prompt = (
+        f"Issue kind: {issue.kind}\n"
+        f"Description: {issue.description}\n"
+        f"Entries: {', '.join(issue.slugs) or '(none)'}\n"
+        f"Claim to research: {issue.claim or '(none)'}\n\n"
+        "Resolve this issue, then report what you did."
+    )
     async with build_client(
         model=settings.model,
-        system_prompt=MAINTENANCE_SYSTEM_PROMPT,
+        system_prompt=FIX_SYSTEM_PROMPT,
         permission_mode="bypassPermissions",
         cwd=str(WORLDVIEW_PATH),
         extra_args={"no-session-persistence": REMOVE},
-        allowed_tools=allowed_tools,
-        hooks=create_allowed_tools_hook(allowed_tools),
-        output_format=output_format,
-        mcp_servers={"worldview_maintenance": maintenance_server},
+        allowed_tools=FIX_TOOL_NAMES,
+        hooks=create_allowed_tools_hook(FIX_TOOL_NAMES),
+        mcp_servers={"worldview_maintenance": fix_server},
     ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
@@ -685,18 +743,9 @@ async def run_maintenance_agent(
                         text_blocks.append(block.text)
             if isinstance(message, ResultMessage):
                 if message.total_cost_usd is not None:
-                    get_collector().record_cost(
-                        "worldview_manager", message.total_cost_usd
-                    )
-                if message.structured_output:
-                    summary = MaintenanceSummary.model_validate(
-                        message.structured_output
-                    )
+                    get_collector().record_cost("worldview_fix", message.total_cost_usd)
 
-    return NestedAgentReport[MaintenanceSummary](
-        payload=summary,
-        final_text=text_blocks[-1] if text_blocks else "",
-    )
+    return text_blocks[-1] if text_blocks else f"{issue.kind}: no report"
 
 
 # ── Standalone refresh loop ───────────────────────────────────────
@@ -725,85 +774,40 @@ def worldview_research_session() -> Iterator[None]:
 
 
 class WorldviewRefreshReport(BaseModel):
-    """Result of one standalone worldview refresh cycle."""
+    """Result of one worldview survey + fix cycle."""
 
-    refreshed: int = 0
-    refresh_errors: list[str] = Field(default_factory=list)
-    maintenance: MaintenanceSummary | None = None
-    committed: bool = False
-
-
-async def run_worldview_refresh(*, max_concurrent: int = 3) -> WorldviewRefreshReport:
-    """Run one full worldview cycle: refresh stale research, then maintenance.
-
-    Re-researches every stale research entry on its own TTL clock, then spawns
-    the maintenance agent to reconcile contradictions, link research, and
-    resolve ready forecasts. Both run inside a research-capable session.
-    """
-    from aib.tools.research import refresh_stale_entries
-
-    with worldview_research_session():
-        refresh_results = await refresh_stale_entries(max_concurrent=max_concurrent)
-        report = await run_maintenance_agent()
-
-    committed = commit_worldview("worldview: refresh + maintenance sweep")
-    return WorldviewRefreshReport(
-        refreshed=sum(1 for r in refresh_results if r.entry is not None),
-        refresh_errors=[r.error for r in refresh_results if r.error],
-        maintenance=report.payload,
-        committed=committed,
-    )
-
-
-# ── Top-level MCP tool ────────────────────────────────────────────
-
-
-class WorldviewManagerInput(BaseModel):
-    """Input for the worldview_manager tool."""
-
-    focus: str | None = Field(
-        default=None,
-        description=(
-            "Optional focus for this sweep (e.g., 'resolve ready forecasts only', "
-            "'find duplicates in research'). Leave blank for a full sweep."
-        ),
-    )
-    dry_run: bool = Field(
-        default=False,
-        description="If true, the agent reports what it would do without making changes.",
-    )
-
-
-class WorldviewManagerOutput(BaseModel):
-    """Output from the worldview_manager tool."""
-
-    summary: MaintenanceSummary | None = None
+    issues_found: list[Issue] = Field(default_factory=list)
+    fixes: list[str] = Field(default_factory=list)
     dry_run: bool = False
     committed: bool = False
 
 
-@mcp_tool(
-    "worldview_manager",
-    (
-        "Run maintenance on the worldview store. Spawns a sub-agent that has "
-        "full read/write access to worldview entries and decides what to do: "
-        "archive resolved/expired entries, supersede duplicates, link research "
-        "to forecasts, reconcile contradictions, and trigger AI resolution for "
-        "ready subforecasts. Run this at the start or end of a tournament batch.\n\n"
-        "Use focus='...' to scope the sweep (e.g., 'resolve ready forecasts'). "
-        "Use dry_run=true to preview actions without making changes."
-    ),
-)
-async def worldview_manager(args: WorldviewManagerInput) -> WorldviewManagerOutput:
-    """Run worldview store maintenance via a sub-agent."""
-    report = await run_maintenance_agent(focus=args.focus, dry_run=args.dry_run)
+async def run_worldview_refresh(
+    *, max_concurrent: int = 3, dry_run: bool = False
+) -> WorldviewRefreshReport:
+    """Survey the worldview store, then fan out a fix agent per issue.
 
-    committed = False
-    if not args.dry_run:
-        committed = commit_worldview("worldview: maintenance sweep")
+    One read-only agent registers every issue (contradiction, outdated,
+    duplicate, missing_link, resolvable); a fix agent then resolves each issue
+    in parallel. Runs inside a research-capable session so fixes can re-research.
+    When dry_run is set, the survey runs but no fix agents are spawned.
+    """
+    with worldview_research_session():
+        issues = await run_survey()
+        if dry_run or not issues:
+            return WorldviewRefreshReport(issues_found=issues, dry_run=dry_run)
 
-    return WorldviewManagerOutput(
-        summary=report.payload,
-        dry_run=args.dry_run,
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def fix_one(issue: Issue) -> str:
+            async with semaphore:
+                return await fix_issue(issue)
+
+        fixes = await asyncio.gather(*[fix_one(i) for i in issues])
+
+    committed = commit_worldview("worldview: survey + fix sweep")
+    return WorldviewRefreshReport(
+        issues_found=issues,
+        fixes=list(fixes),
         committed=committed,
     )
