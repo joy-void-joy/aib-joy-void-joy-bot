@@ -36,11 +36,32 @@ logger = logging.getLogger(__name__)
 # ── Save ───────────────────────────────────────────────────────────
 
 
+def archive_research_snapshot(slug: str) -> None:
+    """Copy the current research entry into the archive as a trajectory snapshot."""
+    path = worldview_entry_path(slug, "research")
+    if not path.exists():
+        return
+    old_data = json.loads(path.read_text(encoding="utf-8"))
+    ts_raw = old_data.get("updated_at")
+    old_ts = (
+        datetime.fromisoformat(ts_raw)
+        if isinstance(ts_raw, str)
+        else datetime.now(timezone.utc)
+    )
+    WORLDVIEW_ARCHIVE_PATH.mkdir(parents=True, exist_ok=True)
+    snapshot = (
+        WORLDVIEW_ARCHIVE_PATH / f"{slug}_{old_ts.strftime('%Y%m%d_%H%M%S_%f')}.json"
+    )
+    snapshot.write_text(json.dumps(old_data, indent=2, default=str), encoding="utf-8")
+    logger.info("Archived prior research snapshot to %s", snapshot)
+
+
 def save_research_entry(entry: WorldviewResearchEntry) -> Path:
-    """Write a research entry to the worldview store. Returns the file path."""
+    """Write a research entry, archiving any prior version for trajectory history."""
     if retrodict_cutoff.get() is not None:
         return worldview_entry_path(entry.slug, "research")
     WORLDVIEW_RESEARCH_PATH.mkdir(parents=True, exist_ok=True)
+    archive_research_snapshot(entry.slug)
     path = worldview_entry_path(entry.slug, "research")
     path.write_text(entry.model_dump_json(indent=2), encoding="utf-8")
     logger.info("Saved research entry %s to %s", entry.slug, path)
