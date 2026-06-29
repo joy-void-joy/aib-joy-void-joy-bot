@@ -5,7 +5,7 @@ client); these tests exercise the MCP tools it calls.
 """
 
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -348,7 +348,7 @@ async def test_wv_refresh_missing_entry_errors(worldview_dir: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_run_worldview_refresh_dry_run_skips_fixes(
-    monkeypatch: pytest.MonkeyPatch,
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from contextlib import contextmanager
 
@@ -382,7 +382,7 @@ async def test_run_worldview_refresh_dry_run_skips_fixes(
 
 @pytest.mark.asyncio
 async def test_run_worldview_refresh_fans_out_a_fix_per_issue(
-    monkeypatch: pytest.MonkeyPatch,
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from contextlib import contextmanager
 
@@ -415,6 +415,72 @@ async def test_run_worldview_refresh_fans_out_a_fix_per_issue(
 
     assert set(fixed) == {"outdated", "duplicate"}
     assert len(report.fixes) == 2
+
+
+# ── deterministic TTL seeding ────────────────────────────────────
+
+
+def test_stale_outdated_issues_seeds_only_stale(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import stale_outdated_issues
+
+    now = datetime.now(timezone.utc)
+    save_research_entry(
+        make_research("expired").model_copy(
+            update={"updated_at": now, "stale_after": now - timedelta(hours=1)}
+        )
+    )
+    save_research_entry(
+        make_research("current").model_copy(
+            update={"updated_at": now, "stale_after": now + timedelta(hours=6)}
+        )
+    )
+
+    issues = stale_outdated_issues()
+    assert {s for i in issues for s in i.slugs} == {"expired"}
+    assert all(i.kind == "outdated" for i in issues)
+
+
+@pytest.mark.asyncio
+async def test_run_worldview_refresh_dedupes_seeded_outdated(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from contextlib import contextmanager
+
+    import aib.tools.worldview_manager as wv_mod
+    from aib.tools.worldview_manager import Issue, run_worldview_refresh
+
+    now = datetime.now(timezone.utc)
+    save_research_entry(
+        make_research("dup-stale").model_copy(
+            update={"updated_at": now, "stale_after": now - timedelta(hours=1)}
+        )
+    )
+
+    async def fake_survey() -> list[Issue]:
+        return [
+            Issue(kind="outdated", description="agent also saw it", slugs=["dup-stale"])
+        ]
+
+    fixed: list[Issue] = []
+
+    async def fake_fix(issue: Issue) -> str:
+        fixed.append(issue)
+        return "fixed"
+
+    @contextmanager
+    def fake_session() -> Iterator[None]:
+        yield
+
+    monkeypatch.setattr(wv_mod, "run_survey", fake_survey)
+    monkeypatch.setattr(wv_mod, "fix_issue", fake_fix)
+    monkeypatch.setattr(wv_mod, "worldview_research_session", fake_session)
+    monkeypatch.setattr(wv_mod, "commit_worldview", lambda msg: False)
+
+    report = await run_worldview_refresh()
+
+    outdated = [i for i in report.issues_found if "dup-stale" in i.slugs]
+    assert len(outdated) == 1
+    assert len(fixed) == 1
 
 
 # ── wv_reconcile ─────────────────────────────────────────────────

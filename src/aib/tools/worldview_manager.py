@@ -625,8 +625,9 @@ Issue kinds:
 - **contradiction** — two or more research entries report different values for
   the same metric. Include the conflicting slugs and a precise `claim` (a
   current-state question to re-research).
-- **outdated** — a research entry whose data is stale (its state is `stale`) or
-  plainly out of date. Include the slug and a `claim`.
+- **outdated** — a research entry that looks out of date even though it is NOT
+  marked `stale` (entries already marked `stale` are auto-queued for refresh, so
+  do not register those). Include the slug and a `claim`.
 - **duplicate** — two entries genuinely cover the same question (not just share
   keywords). Include both slugs.
 - **missing_link** — a forecast whose primary evidence is a research entry that
@@ -782,18 +783,44 @@ class WorldviewRefreshReport(BaseModel):
     committed: bool = False
 
 
+def stale_outdated_issues() -> list[Issue]:
+    """Queue every TTL-expired research entry for refresh (deterministic)."""
+    return [
+        Issue(
+            kind="outdated",
+            description=f"TTL expired; stale since {entry.stale_after.isoformat()}.",
+            slugs=[entry.slug],
+            claim=entry.query,
+        )
+        for entry in iter_research_entries()
+        if entry.state == EntryState.stale
+    ]
+
+
 async def run_worldview_refresh(
     *, max_concurrent: int = 3, dry_run: bool = False
 ) -> WorldviewRefreshReport:
     """Survey the worldview store, then fan out a fix agent per issue.
 
-    One read-only agent registers every issue (contradiction, outdated,
-    duplicate, missing_link, resolvable); a fix agent then resolves each issue
-    in parallel. Runs inside a research-capable session so fixes can re-research.
-    When dry_run is set, the survey runs but no fix agents are spawned.
+    Every TTL-expired research entry is queued for refresh deterministically; a
+    read-only survey agent then registers the remaining issues (contradiction,
+    duplicate, missing_link, resolvable, and any non-stale outdated). A fix agent
+    resolves each issue in parallel, inside a research-capable session. When
+    dry_run is set, issues are collected but no fix agents are spawned.
     """
     with worldview_research_session():
-        issues = await run_survey()
+        seeded = stale_outdated_issues()
+        seeded_slugs = {slug for issue in seeded for slug in issue.slugs}
+        surveyed = await run_survey()
+        deduped = [
+            issue
+            for issue in surveyed
+            if not (
+                issue.kind == "outdated"
+                and any(slug in seeded_slugs for slug in issue.slugs)
+            )
+        ]
+        issues = seeded + deduped
         if dry_run or not issues:
             return WorldviewRefreshReport(issues_found=issues, dry_run=dry_run)
 
