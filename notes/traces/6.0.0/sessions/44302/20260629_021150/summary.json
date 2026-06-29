@@ -1,0 +1,75 @@
+{
+  "condensed_reasoning": "## Research\n\nI treated this as a clear-cut, status-quo-driven question and chose **not to delegate any external research**. I parsed the resolution criteria: a YES requires a Turkish court ordering release or de-detention (including judicial-control substitution) in the **espionage case specifically**, between June 27 and July 9, 2026. I identified the **July 6, 2026 hearing** as the only realistic in-window decision point, with continued detention as the status quo.\n\nI relied on case facts I attributed to the question description:\n- The Istanbul 25th High Criminal Court has **repeatedly ordered continuation of detention** at every hearing, rejecting all release requests.\n- At the most recent hearing the prosecutor requested **15–20 year sentences** and continued detention; the court accepted and adjourned to July 6.\n- Human rights groups describe the prosecution as **politically motivated** against Erdoğan's leading rival.\n\n## Key Evidence\n\nI built four factors:\n- **Entrenched status quo** of repeated detention continuations (`logit -2.5`, conf 0.9) — the dominant factor.\n- **Fresh signal**: prosecutor's just-accepted request for 15–20yr sentences and continued detention (`logit -1.5`, conf 0.8).\n- **Political incentive** against release in a documented campaign where courts side with the government (`logit -1`, conf 0.75).\n- A small **upside** for a surprise release / judicial-control substitution under ECtHR/EU pressure (`logit +0.4`, conf 0.5).\n\nThe factor product implied ~**1.7%**; I set my tentative at **4%** to allow for unmodeled tail scenarios. My premortem raised a substantive counterargument (international pressure, face-saving release since İmamoğlu stays jailed on the corruption case anyway, detention-time limits once evidence collection completes). The gate returned **warn**, flagging that I did zero external research and that the case-specific facts (July 6 date, sentence figures) were unverified — but it independently estimated ~3–5%, agreeing my probability was directionally well-grounded.\n\n## Conclusion\n\nI concluded İmamoğlu is **very unlikely** to be released in the espionage case before July 9, 2026. A surprise release would be out of character for this court's established pattern. I submitted **4% (logit -3.2)**, retaining a small residual for an unexpected release under international pressure or judicial-control substitution.",
+  "tool_audit": {
+    "by_tool": {
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The premortem's worldview corroboration (İmamoğlu detained since March 2025, documented AKP/judiciary campaign) validated the status-quo direction but did NOT verify the specific July 6 / 15-20yr claims; the agent's closing line conflated this directional support with confirmation of the unverified specifics."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Qualitative status-quo reasoning over court-pattern and political-incentive factors, done entirely from the question description with no external research.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the in-window July 6 hearing produces an unexpected release or judicial-control substitution under domestic/international (ECtHR/EU) pressure."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The question names MLSA as authoritative and concerns a fast-moving legal situation with a hearing inside the resolution window, yet the agent did zero external research (1 reflection call, 0 search/fetch calls). A single MLSA/news check would have verified the load-bearing Factor 2 claims (July 6 date, 15-20yr sentence request) and confirmed no release had already occurred.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Factor 2 (logit -1.5, the 'fresh signal') rests on specific unverified claims — prosecutor's 15-20yr request, court acceptance, July 6 adjournment — which the premortem flagged as not present in the resolution criteria given and possibly hallucinated. The agent asserted in its closing response that these facts 'are in fact contained in the question's description field' without the trace reproducing that body to confirm.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "4%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly scoped the resolution to the espionage case specifically and noted judicial-control substitution counts as YES.",
+    "Identified the July 6 hearing as the single realistic in-window decision point, framing the question as a one-shot status-quo bet.",
+    "Premortem counterargument was substantive (ECtHR pressure, low marginal cost of release, detention-time limits), not a token gesture.",
+    "Deliberately set the tentative (4%) above the bare factor product (1.7%) to reserve mass for tail scenarios."
+  ],
+  "weaknesses": [
+    "No independent verification on a time-sensitive legal question whose decisive hearing falls inside the resolution window; the load-bearing 'fresh signal' factor was unsourced.",
+    "Justified skipping research with 'description provides sufficient detail' — weak for a fast-moving situation with unconfirmed specifics.",
+    "Closing response asserted the contested facts were in the description field, a claim the trace does not substantiate."
+  ],
+  "pipeline": {
+    "issues": [
+      "No MCP errors or sandbox issues. Minor concern: the trace does not reproduce the question body/description, so a reviewer cannot independently confirm whether the July 6 date and sentence figures were genuinely in the description or hallucinated — the premortem explicitly noted this ambiguity."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "For time-sensitive legal questions with a hearing inside the resolution window, run at least one targeted news/MLSA check to confirm the decisive event has not already occurred and to source any case-specific 'fresh signal' factors.",
+    "When a premortem flags unverified facts, either verify them or down-weight the dependent factor rather than asserting in the closing response that they were confirmed."
+  ]
+}
