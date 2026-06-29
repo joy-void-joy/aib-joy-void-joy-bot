@@ -1,0 +1,119 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the DRC Ebola (Bundibugyo virus) outbreak to forecast cumulative confirmed cases in the ECDC Communicable Disease Threats Report (CDTR) published around 10 July 2026. My single research query returned excellent, current data from authoritative sources (ECDC outbreak page, ECDC CDTR Week 26, WHO DON, CDC, ebolamap.org).\n\n## Key Evidence\n\n- **Latest count:** `1,274 confirmed cases` and 360 confirmed deaths in DRC as of **27 June 2026** (DRC MoH SitRep N°044, reflected in ECDC's 29 June update), with the most recent daily increment of **+47 cases**.\n- **Trajectory:** Remarkably **linear at ~38.75/day over 24 days** (344 on 3 Jun → 1,274 on 27 Jun). I verified segment rates with code: they clustered tightly at 37–41/day. Now the third-largest Ebola outbreak on record, in an \"upward phase\" with no clear plateau, expanding to new health zones.\n- **CDTR cadence:** Published **weekly on Fridays**, Friday-to-Friday weeks. **Week 26 (19–26 June)** cited DRC **1,155** (≈24 June data → ~2-day lag). Weeks 27 and 28 not yet published.\n- **Resolution mapping:** The report published ~10 July is **Week 28 (3–10 July)**. Applying the observed ~2-day lag, it likely cites ~8 July data — roughly **11 days forward** from my 27 June base.\n\n## Modeling\n\nMy anchor: 1,274 + ~40/day × ~11 days ≈ **1,714**. I built a Monte Carlo (300K samples) combining:\n- **Report/cutoff uncertainty:** 85% Week 28 (~11 days), 10% Week 27 fallback (~4.5 days), 5% other source (~12 days).\n- **Rate-scenario mixture:** steady ~40, accelerating ~50, slowing/control ~28, and a strong-surge ~65 tail.\n- **8% backlog-dump bolus** (+50–250) for testing scale-up / reporting jumps.\n\n## Conclusion\n\nThe model gave a **median of ~1,723**, P10 **1,508**, P90 **1,960**, P99 **2,247**. The right tail is extended for epidemic acceleration; the left tail covers a Week 27 fallback or PHEIC-driven slowing. I judged P(>2,600) negligible (would require sustained ~120/day, 3× current). My reflection and premortem (which approved) both aligned. I concluded the distribution sits comfortably inside the 1,150–2,600 open bounds, centered at **1,723 confirmed cases**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": "wrong tool name (no such tool 'research'); immediately self-corrected to mcp__research__research",
+        "impact": "none",
+        "value": "wasted",
+        "notes": "Trivial name error, no cost to the forecast."
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The reflection tool's implied median (1,716.7) and the Monte Carlo median (1,723) differ slightly; the agent treated them as confirming each other, which is fine, but the reflection's logit-based distribution is a separate model from the simulation and its agreement is partly coincidental rather than a true independent check."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Linear extrapolation of confirmed-case trajectory anchored to the latest ECDC figure, then a Monte Carlo mixture over report-timing/data-cutoff and growth-rate scenarios.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The exact data-cutoff date the Week 28 CDTR will cite (anywhere from ~3 July to ~10 July) combined with whether linear ~40/day growth holds, accelerates, or decelerates over the projection window."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The entire forecast rests on a single observed lag pair (Week 26 CDTR = 1,155 ≈ 24 June data) to infer a precise ~2-day lag, then projects 11 days forward. The 11-day horizon is the largest single driver of the ~1,723 center, yet its support (one lag observation) is thin. The P10-P90 band (1,508-1,960, spread ratio ~1.23) may be too tight given the cutoff date could plausibly span 3-10 July (a ~280-case range at 40/day).",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The model assumes growth stays linear at ~40/day, but epidemic curves in an 'upward phase' are often super-linear (exponential). The agent's research itself notes 'no clear plateau' and 'slightly accelerating expansion.' A linear (rather than mildly exponential) baseline could understate the median; the right-tail surge scenario only partially compensates.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~1,650-1,720 median (range ~1,480-1,980)",
+    "agrees_with_agent": true,
+    "divergence_reason": "I would center marginally lower because the agent's most uncertain assumption is the ~2-day lag, which it inferred from a single data pair (Week 26 = 1,155 ≈ 24 June). If the Week 28 CDTR's text actually cites a 'data as of ~3-6 July' figure (common for these bulletins), the value drops ~150-250, so I'd weight the left/fallback mass slightly more heavily. Directionally fully consistent."
+  },
+  "strengths": [
+    "Correctly mapped the ambiguous resolution ('report published around July 10') to the specific Week 28 (3-10 July) CDTR and identified the data-lag fine print, modeling cutoff-date uncertainty explicitly rather than naively using the 10 July date.",
+    "Verified the linear-growth claim quantitatively with execute_code (full-span 38.75/day; segment rates 37-41/day) instead of asserting it.",
+    "Correctly isolated DRC-only confirmed cases, explicitly excluding Uganda's 20 cases and the outbreak total of 1,294 — directly engaging the resolution criteria.",
+    "Built a structured two-stage Monte Carlo: first a base model (~1,700), then a second iteration explicitly adding right-tail acceleration and an 8% backlog-dump bolus, showing deliberate tail-risk reasoning.",
+    "Sanity-checked the upper open bound: explicitly computed that P(>2,600) requires sustained ~120/day (3x current) and is negligible."
+  ],
+  "weaknesses": [
+    "Inferred the critical ~2-day data lag from a single Week 26 data point; did not seek a second historical CDTR (e.g., Week 25) to confirm the lag is stable, leaving the dominant projection assumption under-validated.",
+    "Did not check the actual textual format of how CDTR reports phrase their case counts ('as of [date]'), which directly determines whether the cited figure is ~3 July or ~8 July data — a ~200-case swing.",
+    "Assumed strictly linear growth as the baseline despite its own research flagging 'slightly accelerating' expansion; an exponential or log-linear fit was not tested even though the data was already in code.",
+    "No prediction-market or external-forecast cross-check was attempted (though admittedly unlikely to exist for this specific niche question)."
+  ],
+  "pipeline": {
+    "issues": [
+      "Initial tool call used bare name 'research' instead of 'mcp__research__research', returning a no-such-tool error; self-corrected immediately with negligible cost."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Confirm the data lag with a second historical CDTR (e.g., Week 25) before treating ~2 days as stable, since this single assumption drives the projection horizon and ~200 cases of the central estimate.",
+    "Read the actual phrasing of a recent CDTR Ebola entry ('cases as of [date]') to pin down the cited cutoff date rather than inferring it from one count pair.",
+    "Fit both linear and log-linear/exponential models to the already-collected case series and present the spread, since the agent's own research flagged accelerating growth.",
+    "Widen the left tail slightly to reflect the realistic chance the Week 28 report cites earlier-than-8-July data (~3-6 July)."
+  ]
+}
