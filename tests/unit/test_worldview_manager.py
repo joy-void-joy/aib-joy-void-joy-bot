@@ -4,7 +4,8 @@ The maintenance sub-agent itself is not unit-tested (it requires an LLM
 client); these tests exercise the MCP tools it calls.
 """
 
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -245,3 +246,288 @@ async def test_resolve_forecast_scores_binary(worldview_dir: Path) -> None:
     assert reloaded.resolution == 1.0
     # Brier score: (0.7 - 1.0)^2 = 0.09
     assert reloaded.score == pytest.approx(0.09)
+
+
+# ── trajectory preservation ──────────────────────────────────────
+
+
+def test_save_research_archives_prior_snapshot(worldview_dir: Path) -> None:
+    save_research_entry(
+        make_research("traj").model_copy(update={"answer": "first-value"})
+    )
+    save_research_entry(
+        make_research("traj").model_copy(update={"answer": "second-value"})
+    )
+
+    live = (worldview_dir / "research" / "traj.json").read_text(encoding="utf-8")
+    assert "second-value" in live
+
+    snapshots = list((worldview_dir / "archive").glob("traj_*.json"))
+    assert len(snapshots) == 1
+    assert "first-value" in snapshots[0].read_text(encoding="utf-8")
+
+
+def test_save_research_new_slug_keeps_no_snapshot(worldview_dir: Path) -> None:
+    save_research_entry(make_research("brand-new"))
+    assert not list((worldview_dir / "archive").glob("brand-new_*.json"))
+
+
+# ── add_issue + survey collector ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_add_issue_registers_to_collector(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import Issue, add_issue, survey_issues
+
+    collected: list[Issue] = []
+    token = survey_issues.set(collected)
+    try:
+        result = await add_issue.handler(
+            {
+                "kind": "contradiction",
+                "description": "A and B disagree on X",
+                "slugs": ["a", "b"],
+                "claim": "What is X now?",
+            }
+        )
+        assert result.get("is_error") is not True
+    finally:
+        survey_issues.reset(token)
+
+    assert len(collected) == 1
+    assert collected[0].kind == "contradiction"
+    assert collected[0].slugs == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_add_issue_outside_survey_errors(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import add_issue
+
+    result = await add_issue.handler(
+        {"kind": "outdated", "description": "stale", "slugs": ["c"]}
+    )
+    assert result.get("is_error") is True
+
+
+# ── wv_refresh ───────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_wv_refresh_replaces_entry(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import aib.tools.research as research_mod
+    from aib.tools.research import ResearchResult
+    from aib.tools.worldview_manager import wv_refresh
+
+    save_research_entry(make_research("to-refresh", query="current X?"))
+    refreshed = make_research("to-refresh", query="current X?").model_copy(
+        update={"answer": "fresh data"}
+    )
+
+    async def fake_refresh(entry: WorldviewResearchEntry) -> ResearchResult:
+        return ResearchResult(query=entry.query, entry=refreshed)
+
+    monkeypatch.setattr(research_mod, "refresh_research_entry", fake_refresh)
+
+    result = await wv_refresh.handler({"slug": "to-refresh"})
+    assert result.get("is_error") is not True
+    assert "to-refresh" in result["content"][0]["text"]
+
+
+@pytest.mark.asyncio
+async def test_wv_refresh_missing_entry_errors(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import wv_refresh
+
+    result = await wv_refresh.handler({"slug": "nope"})
+    assert result.get("is_error") is True
+
+
+# ── run_worldview_refresh (survey → fan out) ─────────────────────
+
+
+@pytest.mark.asyncio
+async def test_run_worldview_refresh_dry_run_skips_fixes(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from contextlib import contextmanager
+
+    import aib.tools.worldview_manager as wv_mod
+    from aib.tools.worldview_manager import Issue, run_worldview_refresh
+
+    issues = [Issue(kind="outdated", description="stale", slugs=["x"])]
+    fix_calls: list[Issue] = []
+
+    async def fake_survey() -> list[Issue]:
+        return issues
+
+    async def fake_fix(issue: Issue) -> str:
+        fix_calls.append(issue)
+        return "fixed"
+
+    @contextmanager
+    def fake_session() -> Iterator[None]:
+        yield
+
+    monkeypatch.setattr(wv_mod, "run_survey", fake_survey)
+    monkeypatch.setattr(wv_mod, "fix_issue", fake_fix)
+    monkeypatch.setattr(wv_mod, "worldview_research_session", fake_session)
+
+    report = await run_worldview_refresh(dry_run=True)
+
+    assert report.dry_run is True
+    assert len(report.issues_found) == 1
+    assert fix_calls == []
+
+
+@pytest.mark.asyncio
+async def test_run_worldview_refresh_fans_out_a_fix_per_issue(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from contextlib import contextmanager
+
+    import aib.tools.worldview_manager as wv_mod
+    from aib.tools.worldview_manager import Issue, run_worldview_refresh
+
+    issues = [
+        Issue(kind="outdated", description="a", slugs=["x"]),
+        Issue(kind="duplicate", description="b", slugs=["y", "z"]),
+    ]
+    fixed: list[str] = []
+
+    async def fake_survey() -> list[Issue]:
+        return issues
+
+    async def fake_fix(issue: Issue) -> str:
+        fixed.append(issue.kind)
+        return f"fixed {issue.kind}"
+
+    @contextmanager
+    def fake_session() -> Iterator[None]:
+        yield
+
+    monkeypatch.setattr(wv_mod, "run_survey", fake_survey)
+    monkeypatch.setattr(wv_mod, "fix_issue", fake_fix)
+    monkeypatch.setattr(wv_mod, "worldview_research_session", fake_session)
+    monkeypatch.setattr(wv_mod, "commit_worldview", lambda msg: False)
+
+    report = await run_worldview_refresh()
+
+    assert set(fixed) == {"outdated", "duplicate"}
+    assert len(report.fixes) == 2
+
+
+# ── deterministic TTL seeding ────────────────────────────────────
+
+
+def test_stale_outdated_issues_seeds_only_stale(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import stale_outdated_issues
+
+    now = datetime.now(timezone.utc)
+    save_research_entry(
+        make_research("expired").model_copy(
+            update={"updated_at": now, "stale_after": now - timedelta(hours=1)}
+        )
+    )
+    save_research_entry(
+        make_research("current").model_copy(
+            update={"updated_at": now, "stale_after": now + timedelta(hours=6)}
+        )
+    )
+
+    issues = stale_outdated_issues()
+    assert {s for i in issues for s in i.slugs} == {"expired"}
+    assert all(i.kind == "outdated" for i in issues)
+
+
+@pytest.mark.asyncio
+async def test_run_worldview_refresh_dedupes_seeded_outdated(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from contextlib import contextmanager
+
+    import aib.tools.worldview_manager as wv_mod
+    from aib.tools.worldview_manager import Issue, run_worldview_refresh
+
+    now = datetime.now(timezone.utc)
+    save_research_entry(
+        make_research("dup-stale").model_copy(
+            update={"updated_at": now, "stale_after": now - timedelta(hours=1)}
+        )
+    )
+
+    async def fake_survey() -> list[Issue]:
+        return [
+            Issue(kind="outdated", description="agent also saw it", slugs=["dup-stale"])
+        ]
+
+    fixed: list[Issue] = []
+
+    async def fake_fix(issue: Issue) -> str:
+        fixed.append(issue)
+        return "fixed"
+
+    @contextmanager
+    def fake_session() -> Iterator[None]:
+        yield
+
+    monkeypatch.setattr(wv_mod, "run_survey", fake_survey)
+    monkeypatch.setattr(wv_mod, "fix_issue", fake_fix)
+    monkeypatch.setattr(wv_mod, "worldview_research_session", fake_session)
+    monkeypatch.setattr(wv_mod, "commit_worldview", lambda msg: False)
+
+    report = await run_worldview_refresh()
+
+    outdated = [i for i in report.issues_found if "dup-stale" in i.slugs]
+    assert len(outdated) == 1
+    assert len(fixed) == 1
+
+
+# ── wv_reconcile ─────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_reconcile_supersedes_conflicting_entries(
+    worldview_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import aib.tools.research as research_mod
+    from aib.tools.research import ResearchQuestion, ResearchResult
+    from aib.tools.worldview_manager import wv_reconcile
+    from aib.worldview.lookup import load_research_entry
+
+    save_research_entry(make_research("claim-a", query="X is 100"))
+    save_research_entry(make_research("claim-b", query="X is 200"))
+    fresh = make_research("x-current-abc123", query="What is X now?")
+
+    async def fake_research(
+        question: ResearchQuestion, existing_slugs: set[str]
+    ) -> ResearchResult:
+        save_research_entry(fresh)
+        return ResearchResult(query=fresh.query, entry=fresh)
+
+    monkeypatch.setattr(research_mod, "run_single_research", fake_research)
+
+    result = await wv_reconcile.handler(
+        {
+            "claim": "What is the current value of X?",
+            "conflicting_slugs": ["claim-a", "claim-b"],
+            "ttl": "1d",
+        }
+    )
+    assert result.get("is_error") is not True
+
+    for slug in ("claim-a", "claim-b"):
+        reloaded = load_research_entry(slug)
+        assert reloaded is not None
+        assert reloaded.state == EntryState.superseded
+        assert reloaded.superseded_by == "x-current-abc123"
+
+
+@pytest.mark.asyncio
+async def test_reconcile_missing_slug_errors(worldview_dir: Path) -> None:
+    from aib.tools.worldview_manager import wv_reconcile
+
+    result = await wv_reconcile.handler(
+        {"claim": "Y?", "conflicting_slugs": ["does-not-exist"], "ttl": "1d"}
+    )
+    assert result.get("is_error") is True

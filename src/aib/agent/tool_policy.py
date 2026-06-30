@@ -116,13 +116,6 @@ RESEARCH_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Worldview manager (store maintenance)
-WORLDVIEW_MANAGER_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__worldview__worldview_manager",
-    }
-)
-
 # Market tools - live prices
 LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
     {
@@ -375,7 +368,6 @@ class ToolPolicy:
         from aib.tools.research import research
         from aib.tools.search import fetch_url, web_search
         from aib.tools.subforecast import extract_cdf_threshold_tool, subforecast
-        from aib.tools.worldview_manager import worldview_manager
 
         # Main agent: orchestrator tools only
         servers: dict[str, McpServerConfig] = {
@@ -385,7 +377,6 @@ class ToolPolicy:
             ),
             "research": create_mcp_server("research", tools=[research]),
             "search": create_mcp_server("search", tools=[web_search, fetch_url]),
-            "worldview": create_mcp_server("worldview", tools=[worldview_manager]),
             "metaculus": create_mcp_server(
                 "metaculus",
                 tools=[
@@ -415,13 +406,13 @@ class ToolPolicy:
 
     def get_research_mcp_servers(
         self,
-        sandbox: Sandbox,
+        sandbox: Sandbox | None = None,
     ) -> dict[str, McpServerConfig]:
         """Get MCP servers for the research sub-agent.
 
         Includes all ~35 data-gathering tools that the main agent
-        delegates via research(). The research sub-agent also gets
-        sandbox access for data analysis.
+        delegates via research(). A sandbox server for data analysis
+        is included only when a sandbox is provided.
         """
         from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
         from aib.tools.financial import (
@@ -473,7 +464,6 @@ class ToolPolicy:
                     census_data,
                 ],
             ),
-            "sandbox": sandbox.create_mcp_server(),
             "markets": create_mcp_server(
                 "markets",
                 tools=[
@@ -506,6 +496,9 @@ class ToolPolicy:
                 ],
             ),
         }
+
+        if sandbox is not None:
+            servers["sandbox"] = sandbox.create_mcp_server()
 
         if not self.is_retrodict:
             servers["weather"] = create_mcp_server(
@@ -550,7 +543,6 @@ class ToolPolicy:
         tools.update(NOTES_TOOLS)
         tools.update(PREMORTEM_TOOLS)
         tools.update(RESEARCH_TOOLS)
-        tools.update(WORLDVIEW_MANAGER_TOOLS)
         tools.update(SEARCH_TOOLS)
         tools.update(FETCH_TOOLS)
 

@@ -1384,21 +1384,14 @@ def loop(
         print(f"\n✅ Cycle complete in {duration_str}")
 
         if cycle_forecasts > 0:
-            print("\n🧹 Running worldview maintenance...")
-            from aib.tools.worldview_manager import run_maintenance_agent
+            print("\n🧹 Running worldview survey + fix...")
+            from aib.tools.worldview_manager import run_worldview_refresh
 
             try:
-                summary = asyncio.run(run_maintenance_agent()).payload
-                if summary is not None:
-                    print(f"  Actions: {len(summary.actions_taken)}")
-                    for action in summary.actions_taken:
-                        print(f"    • {action}")
-                    if summary.contradictions_flagged:
-                        print(
-                            f"  Contradictions flagged: {len(summary.contradictions_flagged)}"
-                        )
-                    if summary.notes:
-                        print(f"  Notes: {summary.notes}")
+                report = asyncio.run(run_worldview_refresh())
+                print(f"  Issues found: {len(report.issues_found)}")
+                for fix in report.fixes:
+                    print(f"    • {fix}")
             except Exception as e:
                 print(f"  ⚠️  Maintenance failed: {e}")
 

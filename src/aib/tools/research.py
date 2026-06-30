@@ -480,6 +480,48 @@ async def run_single_research(
     return ResearchResult(query=entry.query, entry=entry)
 
 
+# ── Staleness refresh ─────────────────────────────────────────────
+
+
+async def refresh_research_entry(entry: WorldviewResearchEntry) -> ResearchResult:
+    """Re-research a stale entry in place, keeping its slug and per-entry TTL."""
+    ttl = entry.stale_after - entry.updated_at
+    if ttl <= timedelta(0):
+        ttl = TTL_PRESETS[DEFAULT_TTL]
+
+    try:
+        research_servers = get_session().research_mcp_servers
+    except RuntimeError:
+        research_servers = None
+
+    try:
+        report = await run_research_agent(
+            entry.query,
+            "",
+            mcp_servers=research_servers,
+        )
+    except (RuntimeError, OSError, ValidationError) as e:
+        logger.exception("Refresh failed for: %s", entry.slug)
+        return ResearchResult(query=entry.query, error=f"{type(e).__name__}: {e}")
+
+    if report.payload is None:
+        return ResearchResult(
+            query=entry.query,
+            error="Research sub-agent did not return structured findings",
+        )
+
+    refreshed = build_research_entry(
+        entry.query,
+        report.payload,
+        report.session_id,
+        report.final_text,
+        ttl,
+        entry.slug,
+    ).model_copy(update={"created_at": entry.created_at})
+    save_research_entry(refreshed)
+    return ResearchResult(query=refreshed.query, entry=refreshed)
+
+
 # ── Follow-up handler ─────────────────────────────────────────────
 
 
