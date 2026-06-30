@@ -1,0 +1,93 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched this fast-moving Turkish political-legal question with a single `mcp__research__research` call (my first attempt failed on a schema validation error — I had passed a bare `query` object instead of the required `questions` array — and I retried successfully). The research returned a rich, well-sourced summary aggregating multiple Turkish-language outlets (haberler.com, Türkiye Gazetesi, Sözcü, BirGün, Hürriyet) with a coherent timeline.\n\n## Key Evidence\n\nThe critical findings as of **June 30, 2026**:\n- The application to the `Sulh Hukuk Mahkemesi` to appoint a 3-person **çağrı heyeti** was **announced but NOT confirmed filed** — outlets used future/conditional phrasing for a \"today\" (June 29) filing, with no docket number or case details.\n- **No court ruling** had been issued or reported.\n- Timeline anchors: 833 notarized signatures delivered June 17 (10-day deadline); deadline expired June 26 with HQ declining (claiming ~820 valid signatures); **July 11** cited as the operative deadline (15-day advance-notice rule for a **July 26** congress); **July 20** judicial recess (`adli tatil`) begins.\n- Applications \"typically\" take ~15 days → if filed June 29-30, median ruling ≈ July 14, **past the July 11 window**.\n- The disputed signature count (**833 vs 820**) likely triggers a `bilirkişi` (expert) signature examination first — a step the fine print explicitly excludes and which adds delay.\n- Counterbalancing: precedents exist (MHP 2016, CHP İstanbul provincial), and Özel's camp faces hard deadline-driven urgency.\n\n## Conclusion\n\nI modeled a conditional chain: **P(filed) ≈ 0.90 × P(rules by July 11 | filed) ≈ 0.40 × P(favorable appointment | rules in time) ≈ 0.60 ≈ 0.22**. My `reflection` factor-implied probability came in lower (~0.15), but I weighted the deadline-driven urgency holistically — courts can compress timelines under such pressure with clear precedent to follow — and settled at **0.22**. The modal outcome remains \"court has not yet ruled by July 11.\" A `premortem` adversarial check (strongest YES case: hard deadline → expedited handling → precedent favors granting) was approved as well-grounded. I submitted **22% (NO favored)**.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No access to a Turkish court e-filing / UYAP docket lookup to confirm whether the application was actually filed and assigned a case number — the single most decisive missing fact.",
+      "No prediction-market check (though no relevant market likely exists for this niche question)."
+    ],
+    "subtle_bugs": [
+      "The agent's own tool_audit text claimed research returned results with 'no failures,' but the first research call did fail on schema validation (1 error across 2 calls). The premortem flagged this as a minor accuracy issue in the audit narrative, not forecast-affecting."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/policy",
+    "approach": "Conditional-chain decomposition (P(filed) × P(rules in window) × P(favorable appointment)) anchored on a fresh news-based timeline from Turkish-language sources.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the court will expedite a ruling before the July 11 window or instead order a bilirkişi signature examination / defer pending the higher-court litigation."
+  },
+  "risk_flags": [
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The question title asks about an appointment 'before July 12, 2026,' which means a ruling through July 11 inclusive. The agent consistently treats the deadline as 'rules before July 11' / 'by July 11' rather than 'on or before July 11.' This shaves roughly one day off the available window and may slightly understate the timeline factor, though the effect on the final probability is marginal.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent relied on a single research call and never attempted to confirm via a court docket (UYAP) whether the application was actually filed with a case number — the premortem itself identifies docket confirmation as the key mind-changer (±10-15pp), yet no second research pass or follow-up was spawned to chase it.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "20%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Built a clean conditional-chain decomposition (filing × timely ruling × favorable outcome) that correctly isolates the three distinct hurdles, rather than treating the question as a single binary.",
+    "Correctly identified that the resolution requires a *favorable national-level appointment* and explicitly excluded a bilirkişi-only or rejection outcome, matching the fine print.",
+    "Tied the timeline factor to concrete dated anchors (July 11 notice deadline, July 20 recess, ~15-day typical processing) rather than vague intuition, yielding a defensible 'median ruling lands past the window' argument.",
+    "Surfaced and reconciled the gap between the factor-implied probability (0.15) and the holistic estimate (0.22) transparently, justifying the upward adjustment via deadline-driven urgency and precedent.",
+    "Premortem produced a genuinely adversarial YES case and named falsifiable mind-changers (docket number, expedited hearing)."
+  ],
+  "weaknesses": [
+    "Did not attempt to verify filing status via a court docket lookup despite identifying it as the single most decisive uncertainty (±10-15pp swing) — a follow-up research call could have materially sharpened the P(filed) and P(rules in window) estimates.",
+    "The tool_audit narrative inaccurately stated research had 'no failures' when the first call failed on schema validation; minor but a self-assessment accuracy lapse.",
+    "Treated the deadline as 'before July 11' rather than 'on or before July 11' (question says 'before July 12'), a one-day window understatement that slightly biases the timeline factor downward.",
+    "The bilirkişi-step factor (logit -0.8, conf 0.6) is inferential ('probably orders'); the agent reasonably hedged but stacked it as a meaningful negative without direct evidence the court would do so in this specific expedited context, risking mild double-penalization alongside the timeline factor."
+  ],
+  "pipeline": {
+    "issues": [
+      "Minor token waste from the first research call failing on a schema validation error ('questions: Field required') and requiring a retry — a self-corrected input error, not a substantive failure."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
