@@ -14,6 +14,7 @@ Layout:
 import json
 import logging
 import re
+import tempfile
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -42,8 +43,11 @@ TRACES_PATH = NOTES_PATH / "traces"
 
 FEEDBACK_PATH = NOTES_PATH / "feedback_loop"
 
-# ── Agent SDK spawn cwd (session isolation from user's worktree) ──
-AGENT_CWD = NOTES_PATH / "agent-cwd"
+# ── Agent SDK spawn cwd: real isolation outside the user's worktree ──
+# Lives under the system temp dir, not NOTES_PATH, so the SDK subprocess
+# working directory (and anything written relative to it) never lands in
+# or gets committed to the git tree.
+AGENT_CWD = Path(tempfile.gettempdir()) / "aib-agent-cwd"
 
 # ── Worldview store paths (version-independent) ───────────────────
 WORLDVIEW_PATH = NOTES_PATH / "worldview"

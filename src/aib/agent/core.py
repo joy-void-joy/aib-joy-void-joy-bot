@@ -424,9 +424,6 @@ def create_permission_hooks(
                 return allow()
             return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
 
-        # Bash: SDK sandbox config handles this via autoAllowBashIfSandboxed
-        # No explicit denial needed here
-
         # File edit operations: only allowed in RW directories
         if tool_name == "Edit":
             file_path = tool_input.get("file_path", "")
@@ -980,7 +977,6 @@ async def run_forecast(
                     *notes.all_dirs,
                     sandbox_shared_dir,
                     session_downloads,
-                    Path.home() / ".claude" / "projects",
                 ],
                 allowed_tools=allowed_tools,
                 output_format={

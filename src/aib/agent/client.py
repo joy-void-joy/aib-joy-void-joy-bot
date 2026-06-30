@@ -37,7 +37,10 @@ class AupRefusalError(Exception):
     """
 
 
-DEFAULT_EXTRA_ARGS: dict[str, str | None] = {"no-session-persistence": None}
+DEFAULT_EXTRA_ARGS: dict[str, str | None] = {
+    "no-session-persistence": None,
+    "strict-mcp-config": None,
+}
 DEFAULT_ENV: dict[str, str] = {
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
 }
@@ -130,6 +133,9 @@ async def build_client(
     if "cwd" not in kwargs:
         AGENT_CWD.mkdir(parents=True, exist_ok=True)
         kwargs["cwd"] = str(AGENT_CWD)
+
+    if "setting_sources" not in kwargs:
+        kwargs["setting_sources"] = []
 
     options = ClaudeAgentOptions(
         extra_args=merged_extra,
