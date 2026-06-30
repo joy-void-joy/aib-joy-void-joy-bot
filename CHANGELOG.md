@@ -4,7 +4,8 @@ Agent version history. Each version tracks a behavioral change in the forecastin
 
 ## v6.1.0 (2026-06-29)
 
-Worldview store becomes a self-maintaining, coherent world model
+Worldview store becomes a self-maintaining, coherent world model, and the forecast store is activated
+- worldview: top-level forecasts now register as depth-0 entries (notes/worldview/forecasts/), feeding the maintenance sweep's resolution, scoring, and research-linking — previously only subforecasts populated the store, so it stayed empty
 - worldview: `aib-devtools worldview loop` surveys the whole store for issues (contradictions, outdated entries, duplicates, missing links, resolvable forecasts) and fans out a fix agent per issue in parallel — independent of forecasting
 - worldview: a read-only survey agent registers issues via an `add_issue` tool in one pass; a fix agent then resolves each issue via research + structural ops
 - tools: wv_reconcile re-researches a disputed claim and supersedes the conflicting entries with one authoritative note; wv_refresh re-researches a stale entry in place
@@ -12,6 +13,8 @@ Worldview store becomes a self-maintaining, coherent world model
 - worldview: contradictions are reconciled and uncertain forecast resolutions retried — never deferred to human review
 - agent: worldview_manager removed from the forecaster's toolset; maintenance runs only via the standalone loop
 - agent: get_research_mcp_servers is sandbox-optional so maintenance can research outside a forecast
+- prompts: tool docs present the exact callable name (e.g. mcp__research__research) instead of the bare name, eliminating "No such tool available: research" retries
+- prompts: subforecast decomposition is now directive — binary-threshold-on-a-quantity questions default to a numeric subforecast + CDF threshold, rather than permissive guidance the agent never acted on
 
 ## v6.0.0 (2026-06-29)
 

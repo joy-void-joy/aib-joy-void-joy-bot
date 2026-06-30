@@ -8,8 +8,9 @@ import json
 import logging
 import os
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import sh
 from pydantic import ValidationError
@@ -25,10 +26,16 @@ from aib.paths import (
 from aib.retrodict_context import retrodict_cutoff
 from aib.worldview.models import (
     EntryState,
+    NumericBounds,
     Revision,
     WorldviewForecastEntry,
     WorldviewResearchEntry,
+    from_forecast_output,
+    slugify_topic,
 )
+
+if TYPE_CHECKING:
+    from aib.agent.models import ForecastOutput
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +125,68 @@ def load_forecast_entry(slug: str) -> WorldviewForecastEntry | None:
     if not path.exists():
         return None
     return WorldviewForecastEntry.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+# ── Register ───────────────────────────────────────────────────────
+
+MAIN_FORECAST_TTL = timedelta(days=7)
+
+
+def parse_api_timestamp(value: object) -> datetime | None:
+    """Parse an ISO 8601 timestamp from Metaculus question context, or None."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def main_forecast_slug(question_title: str, post_id: int) -> str:
+    """Stable, deterministic worldview slug for a top-level forecast, keyed by post."""
+    return f"{slugify_topic(question_title)}-{post_id}"
+
+
+def register_main_forecast(
+    output: "ForecastOutput",
+    context: dict[str, object],
+    post_id: int,
+) -> WorldviewForecastEntry | None:
+    """Persist a top-level forecast as a depth-0 worldview entry.
+
+    Feeds the maintenance sweep so it can resolve, score, and link the agent's
+    own top-level predictions. Re-forecasts preserve created_at and archive the
+    prior version via save_forecast_entry.
+    """
+    if retrodict_cutoff.get() is not None:
+        return None
+
+    slug = main_forecast_slug(output.question_title, post_id)
+    now = datetime.now(timezone.utc)
+    close_time = parse_api_timestamp(context.get("scheduled_close_time"))
+
+    entry = from_forecast_output(
+        output,
+        slug=slug,
+        stale_after=close_time or (now + MAIN_FORECAST_TTL),
+        resolvable_after=parse_api_timestamp(context.get("scheduled_resolve_time")),
+        parent_post_id=post_id,
+        depth=0,
+        tags=["main-forecast"],
+    )
+
+    updates: dict[str, object] = {}
+    bounds = context.get("numeric_bounds")
+    if isinstance(bounds, dict):
+        updates["numeric_bounds"] = NumericBounds.model_validate(bounds)
+    existing = load_forecast_entry(slug)
+    if existing is not None:
+        updates["created_at"] = existing.created_at
+    if updates:
+        entry = entry.model_copy(update=updates)
+
+    save_forecast_entry(entry)
+    return entry
 
 
 # ── Iteration ──────────────────────────────────────────────────────

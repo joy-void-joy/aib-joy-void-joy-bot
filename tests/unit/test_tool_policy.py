@@ -234,6 +234,24 @@ class TestToolPolicyResearchServers:
 
         assert "asknews" in servers
 
+
+class TestToolPolicyToolDocs:
+    """Tool docs must present the exact callable name (mcp__server__tool)."""
+
+    def test_shows_full_callable_name_not_bare(self) -> None:
+        policy = ToolPolicy()
+        docs = policy._format_tool_docs(
+            {"mcp__research__research": "Delegate data-gathering."}
+        )
+        assert "**mcp__research__research**" in docs
+        assert "- **research**:" not in docs
+
+    def test_includes_exact_name_instruction(self) -> None:
+        policy = ToolPolicy()
+        docs = policy._format_tool_docs({"mcp__search__web_search": "Search the web."})
+        assert "exact name" in docs
+        assert "mcp__research__research" in docs
+
     def test_excludes_asknews_without_api_key(self) -> None:
         """Research sub-agent should not have AskNews without api_key."""
         sandbox = MagicMock()

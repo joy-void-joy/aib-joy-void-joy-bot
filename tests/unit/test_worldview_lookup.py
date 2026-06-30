@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from aib.agent.models import ForecastOutput
 from aib.worldview.models import (
     EntryState,
     WorldviewForecastEntry,
@@ -284,3 +285,101 @@ class TestAllSlugs:
         slugs = all_slugs()
         assert "forecast-slug-aaaa1111" in slugs
         assert "research-slug-bbbb2222" in slugs
+
+
+def make_output(**overrides: object) -> ForecastOutput:
+    defaults: dict[str, object] = {
+        "question_id": 12345,
+        "post_id": 41976,
+        "question_title": "Will X exceed 2000 by July?",
+        "question_type": "binary",
+        "summary": "Likely.",
+        "reasoning": "Because reasons.",
+        "probability": 0.62,
+    }
+    defaults.update(overrides)
+    return ForecastOutput.model_validate(defaults)
+
+
+class TestRegisterMainForecast:
+    def test_registers_depth_zero_entry(self, worldview_dir: Path) -> None:
+        from aib.worldview.lookup import (
+            load_forecast_entry,
+            main_forecast_slug,
+            register_main_forecast,
+        )
+
+        context: dict[str, object] = {
+            "scheduled_close_time": "2026-07-01T16:00:00+00:00",
+            "scheduled_resolve_time": "2026-07-02T00:00:00+00:00",
+        }
+        entry = register_main_forecast(make_output(), context, 41976)
+
+        assert entry is not None
+        assert entry.slug == main_forecast_slug("Will X exceed 2000 by July?", 41976)
+        assert entry.depth == 0
+        assert entry.parent_post_id == 41976
+        assert "main-forecast" in entry.tags
+        assert entry.probability == 0.62
+        assert entry.resolvable_after is not None
+        assert load_forecast_entry(entry.slug) is not None
+
+    def test_numeric_bounds_attached(self, worldview_dir: Path) -> None:
+        from aib.worldview.lookup import register_main_forecast
+
+        output = make_output(question_type="numeric", probability=None, median=1500.0)
+        context: dict[str, object] = {
+            "numeric_bounds": {"range_min": 0, "range_max": 10000}
+        }
+        entry = register_main_forecast(output, context, 99)
+
+        assert entry is not None
+        assert entry.numeric_bounds is not None
+        assert entry.numeric_bounds.range_max == 10000
+
+    def test_reforecast_preserves_created_at_and_archives(
+        self, worldview_dir: Path
+    ) -> None:
+        from aib.worldview.lookup import register_main_forecast
+
+        first = register_main_forecast(make_output(), {}, 41976)
+        assert first is not None
+
+        second = register_main_forecast(make_output(probability=0.7), {}, 41976)
+        assert second is not None
+        assert second.created_at == first.created_at
+        assert second.probability == 0.7
+
+        archives = list((worldview_dir / "forecasts").glob(f"{first.slug}_*.json"))
+        assert len(archives) == 1
+
+    def test_retrodict_skips_registration(self, worldview_dir: Path) -> None:
+        from aib.retrodict_context import retrodict_cutoff
+        from aib.worldview.lookup import register_main_forecast
+
+        token = retrodict_cutoff.set(datetime.now(timezone.utc))
+        try:
+            result = register_main_forecast(make_output(), {}, 41976)
+        finally:
+            retrodict_cutoff.reset(token)
+        assert result is None
+
+
+class TestForecastSlugAndTimestamp:
+    def test_main_forecast_slug_stable_and_keyed_by_post(self) -> None:
+        from aib.worldview.lookup import main_forecast_slug
+
+        a = main_forecast_slug("Will X exceed 2000?", 41976)
+        b = main_forecast_slug("Will X exceed 2000?", 41976)
+        c = main_forecast_slug("Will X exceed 2000?", 99999)
+        assert a == b
+        assert a.endswith("-41976")
+        assert a != c
+
+    def test_parse_api_timestamp(self) -> None:
+        from aib.worldview.lookup import parse_api_timestamp
+
+        assert parse_api_timestamp("2026-07-01T16:00:00+00:00") is not None
+        assert parse_api_timestamp(None) is None
+        assert parse_api_timestamp(12345) is None
+        assert parse_api_timestamp("not a date") is None
