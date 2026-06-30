@@ -1,0 +1,93 @@
+{
+  "condensed_reasoning": "## Research\n\nI needed to determine whether SpaceX would launch Starship Flight 13 before July 12, 2026 — an ~11-day window from my forecast date of June 30, 2026. I ran four `web_search` queries covering: the Flight 13 launch date and FAA license status, the Flight 12 mishap investigation, whether that investigation had been closed with a return-to-flight license, and the hardware status of Booster 20 and Ship 40.\n\n## Key Evidence\n\nMy searches surfaced two binding constraints, both unsatisfied:\n\n- **Open FAA mishap investigation.** Flight 12 launched May 22, 2026, and on **May 27** the FAA declared it a `mishap` (Booster 19's Raptor 3 engines failed to relight after stage separation) and required a SpaceX-led investigation plus corrective actions before Flight 13 could proceed. My targeted search for a *closure / return-to-flight* statement returned only the grounding order and an unrelated **2023** mishap-closure page — **no confirmed closure** of the Flight 12 investigation.\n- **Hardware not flight-ready.** A Tesla Oracle article dated **June 29** reported Ship 40 performed only a **single-engine static fire** with \"no final date yet.\" NASASpaceFlight confirmed both Booster 20 and Ship 40 were only at the static-fire stage, not yet stacked. A full static fire, stacking, and likely a wet dress rehearsal all remained.\n- **Tracker dates.** Trackers centered on **NET July**, with Space Launch Live showing **July 31**. A provisional ~July 3 target appeared to be explicitly estimated and pending FAA.\n\nI also weighed upside: SpaceX runs aggressive parallel campaigns (Booster 20 had its full 33 engines installed and cryo done), and its self-led investigations can close quickly. Against that, Starship has a strong history of slipping past provisional targets, and even SpaceX's fastest historical return-to-flight (~2.5 months after a mishap) exceeds the available window from the May 27 declaration.\n\n## Conclusion\n\nI anchored at ~15% for a launch in an ~11-day window when hardware is mid-integration and an open regulatory mishap gates the license, then adjusted **down to ~9%**. A YES requires nearly everything — investigation closure, license issuance, full static fire, stacking, WDR, and launch — to break right simultaneously within 11 days. I ran a reflection (factor sum −2.745, tentative logit −2.3) and a premortem, which approved the forecast and independently estimated 8–12%. I submitted **9% (logit −2.3)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup was used to cross-check a market-implied probability for this launch-timing question."
+    ],
+    "subtle_bugs": [
+      "The Wikipedia Flight-12 page content surfaced inside web_search api_data, leading the agent to under-report tool usage ('did not need Wikipedia fetch') while metrics counted a Wikipedia call — misleading but immaterial to the forecast."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/space",
+    "approach": "Qualitative timeline analysis from news sources, anchoring on a base rate for a launch in a short window and adjusting down for two unsatisfied hard gates (open FAA mishap investigation and incomplete hardware).",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the FAA closes the Flight 12 mishap investigation, issues a license, AND SpaceX completes full static fire/stacking/WDR all within the ~11-day window."
+  },
+  "risk_flags": [
+    {
+      "category": "stale_data",
+      "evidence": "The 'provisional July 3 target' is cited in the summary and a factor, but the premortem and trace note this specific date is NOT visible in any search result. The agent inferred/carried it without a source.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check any prediction market (Polymarket/Kalshi/Manifold) and did not search for a confirmed full static fire or FAA license docket update dated after June 29. Given an 11-day window, late-breaking news could shift the estimate, but no follow-up search closer to resolution was attempted.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "7%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Identified the two genuinely binding gates (open FAA mishap investigation + hardware only at single-engine static fire) rather than anchoring on optimistic tracker dates.",
+    "Correctly recognized the provisional ~July 3 target as stale/estimated and instead weighted the NET-July / July-31 tracker consensus.",
+    "Anchored explicitly at ~15% and adjusted to 9% with transparent reasoning, resisting both a drop to 3% and a hedge toward 50%, naming SpaceX's fast cadence as the upside.",
+    "Pulled the freshest available data point — the June 29 single-engine static fire, ~1 day before the forecast — to bound the timeline precisely."
+  ],
+  "weaknesses": [
+    "Carried the unsupported 'provisional July 3' date into the final summary and a factor, a detail the premortem explicitly flagged as not present in the search results.",
+    "Self-reported tool_audit ('did not need Wikipedia fetch') contradicted the recorded Wikipedia call surfaced via search api_data.",
+    "The '~15%' anchor is asserted rather than derived from an explicit reference class of post-mishap return-to-flight intervals, leaving the base rate softly grounded."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "This is a live forecast dated June 30, 2026 for an event before July 12, 2026 — not a retrodict. All sources are dated on or before June 30, 2026 (latest is the June 29 static fire). No post-forecast information was accessed and the event had not yet occurred."
+    ]
+  },
+  "actionable_improvements": []
+}
