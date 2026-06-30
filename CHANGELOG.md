@@ -2,6 +2,17 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.2.0 (2026-06-30)
+
+Lock the agent out of the host shell; isolate the SDK spawn cwd from the worktree
+- agent: Bash removed from the built-in toolset (orchestrator + research sub-agent) — code execution runs only in the Docker-isolated mcp__sandbox__execute_code tool, eliminating the silent host-shell fallback that engaged when the sandbox was unavailable
+- paths: AGENT_CWD moved from notes/agent-cwd into the system temp dir so the SDK subprocess working directory never lands in (or gets committed to) the git tree; the legacy in-tree path is gitignored
+- tools: reflection() accepts `factors` passed as a JSON string (coerced like `tentative_estimate` already was), fixing a list_type validation crash when the agent serializes the field
+- agent: ToolSearch added to the allow-list — it was being denied by the tool whitelist, which blocked the agent from loading deferred tool schemas (e.g. mcp__sandbox__execute_code) and forced the Bash fallback
+- agent: native WebSearch/WebFetch allowed for live forecasts but denied during retrodict (added to retrodict's denied-tools set) so they can't bypass the cutoff that mcp__search__* enforce
+- agent: forecasting session no longer inherits the user's account MCP connectors (Gmail/Drive/Calendar/Remote) — `--strict-mcp-config` loads only the bot's own MCP servers
+- agent: setting_sources pinned to [] and ~/.claude/projects dropped from add_dirs, so a forecast can't load the user's settings or read their other Claude Code projects
+
 ## v6.1.0 (2026-06-29)
 
 Worldview store becomes a self-maintaining, coherent world model, and the forecast store is activated
