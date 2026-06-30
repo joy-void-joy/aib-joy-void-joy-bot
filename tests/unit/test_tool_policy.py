@@ -22,11 +22,12 @@ class TestToolPolicyToolSets:
     """Tests for tool set constants."""
 
     def test_builtin_tools_present(self) -> None:
-        """Built-in tools should be defined (WebSearch/WebFetch excluded)."""
-        assert "WebSearch" not in BUILTIN_TOOLS
-        assert "WebFetch" not in BUILTIN_TOOLS
-        assert "Bash" in BUILTIN_TOOLS
+        """Built-in tools should be defined (Bash excluded; web tools retrodict-gated)."""
+        assert "Bash" not in BUILTIN_TOOLS
         assert "Task" in BUILTIN_TOOLS
+        assert "ToolSearch" in BUILTIN_TOOLS
+        assert "WebSearch" in BUILTIN_TOOLS
+        assert "WebFetch" in BUILTIN_TOOLS
 
     def test_metaculus_tools_require_token(self) -> None:
         """Metaculus tools should all have metaculus prefix."""

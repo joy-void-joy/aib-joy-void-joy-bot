@@ -27,18 +27,22 @@ if TYPE_CHECKING:
 
 # --- Tool Sets ---
 
-# Built-in SDK tools (always available)
-# WebSearch and WebFetch are excluded — agent uses MCP equivalents
-# (mcp__search__web_search, mcp__search__fetch_url) which provide
-# API augmentation and retrodict support.
+# Built-in SDK tools the agent is allowed to use. Bash is excluded — code runs
+# only in the Docker-isolated mcp__sandbox__execute_code, never the host shell.
+# WebSearch/WebFetch are allowed for live forecasts but denied during retrodict
+# (see retrodict._DENIED_TOOLS) since they don't honor the cutoff; the agent
+# also has mcp__search__web_search / fetch_url, which add API augmentation and
+# enforce the cutoff. ToolSearch loads deferred MCP tool schemas.
 BUILTIN_TOOLS: frozenset[str] = frozenset(
     {
         "Read",
         "Write",
         "Glob",
         "Grep",
-        "Bash",
         "Task",
+        "ToolSearch",
+        "WebSearch",
+        "WebFetch",
         "StructuredOutput",
     }
 )

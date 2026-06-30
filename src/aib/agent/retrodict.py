@@ -38,7 +38,10 @@ def get_modified_input(tool_use_id: str) -> dict[str, Any] | None:
         return None
 
 
-_DENIED_TOOLS = frozenset({"Bash"})
+# Built-in tools that would bypass the cutoff if used during a retrodict: Bash
+# can run arbitrary code / reach the live network, and native WebSearch/WebFetch
+# hit the live web without the cutoff filtering that mcp__search__* apply.
+_DENIED_TOOLS = frozenset({"Bash", "WebSearch", "WebFetch"})
 
 
 def _parse_trends_duration(timeframe: str) -> int:
