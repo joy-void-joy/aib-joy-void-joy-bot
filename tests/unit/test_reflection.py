@@ -1,5 +1,6 @@
 """Tests for the reflection tool."""
 
+import json
 import math
 from pathlib import Path
 
@@ -54,6 +55,36 @@ def _make_numeric_input(
         tool_audit="Test tool audit.",
         process_reflection="Test process reflection.",
     )
+
+
+class TestReflectionInputJsonCoercion:
+    """The agent sometimes passes structured fields as JSON strings."""
+
+    def test_factors_and_estimate_as_json_strings(self) -> None:
+        """factors and tentative_estimate as JSON strings are coerced."""
+        payload = {
+            "factors": json.dumps(
+                [{"description": "Strong trend", "logit": 1.5, "confidence": 0.8}]
+            ),
+            "tentative_estimate": json.dumps({"logit": 0.8, "probability": 0.69}),
+            "assessment": "x",
+            "tool_audit": "x",
+            "process_reflection": "x",
+        }
+        inp = ReflectionInput.model_validate(payload)
+        assert len(inp.factors) == 1
+        assert isinstance(inp.factors[0], Factor)
+        assert inp.factors[0].description == "Strong trend"
+        assert isinstance(inp.tentative_estimate, BinaryEstimate)
+        assert inp.tentative_estimate.probability == 0.69
+
+    def test_native_list_factors_unaffected(self) -> None:
+        """Passing factors as a real list still works."""
+        inp = _make_binary_input(
+            factors=[Factor(description="d", logit=1.0, confidence=0.5)]
+        )
+        assert len(inp.factors) == 1
+        assert isinstance(inp.factors[0], Factor)
 
 
 class TestComputeReflectionBinary:

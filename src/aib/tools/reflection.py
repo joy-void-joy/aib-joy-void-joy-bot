@@ -64,12 +64,18 @@ class ReflectionInput(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def deserialize_tentative_estimate(cls, data: dict) -> dict:  # type: ignore[type-arg]
-        """Deserialize tentative_estimate if passed as a JSON string."""
+    def deserialize_json_fields(cls, data: dict[str, object]) -> dict[str, object]:
+        """Deserialize structured fields passed as JSON strings.
+
+        The agent sometimes serializes complex fields (factors,
+        tentative_estimate) to a string instead of nested JSON; coerce them
+        back so validation sees real objects.
+        """
         if isinstance(data, dict):
-            te = data.get("tentative_estimate")
-            if isinstance(te, str):
-                data = {**data, "tentative_estimate": json.loads(te)}
+            for field in ("factors", "tentative_estimate"):
+                value = data.get(field)
+                if isinstance(value, str):
+                    data = {**data, field: json.loads(value)}
         return data
 
     anchor: str | None = Field(
