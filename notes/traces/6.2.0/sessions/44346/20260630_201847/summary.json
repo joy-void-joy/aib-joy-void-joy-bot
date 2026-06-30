@@ -1,0 +1,97 @@
+{
+  "condensed_reasoning": "## Research\n\nI addressed a timing question: whether SK Hynix's ADRs (ticker `SKHY`) would begin trading on Nasdaq before July 11, 2026. My first `research` call failed a Pydantic validation (I passed `query` instead of the required `questions` array), but I immediately retried with the correct schema and got a rich, well-sourced answer.\n\n## Key Evidence\n\nThe research returned a detailed status snapshot as of June 30, 2026, with 14 sources (CNBC, KED Global, HSBC, Mirae, SEC EDGAR, barchart, etc.):\n\n- **July 10, 2026 remains the target first-trading date** with **no reported slippage** — actually *ahead* of an earlier August expectation.\n- **SEC F-1/A amended June 30, 2026; registration NOT yet effective** as of that date — all dates explicitly \"tentative and subject to change.\"\n- **Formal global roadshow had not started** — planned *after* registration effectiveness, ahead of demand-forecast pricing. Non-deal roadshows completed early June.\n- Offering: up to **17.79M new ADSs**, ~**$29.4B** — the **largest ADR offering ever**.\n- Structural dates: **subscription/payment July 14**, **domestic new-share listing July 29**.\n- Some outlets (ifeng/The Elec, stnn) explicitly floated **\"mid-to-late July\"** listing; Korea's FSS review could finish **~July 3**.\n- Strong demand signals: HSBC 20% premium, Mirae ~$1.5B projected ETF inflows.\n\n## Conclusion\n\nI weighed five factors. The decisive structural insight: **July 10 is exactly the LAST day of the resolution window (June 27–July 10), giving zero buffer** — any slip of even 1–3 days resolves NO, and IPO timelines slip far more often than they accelerate. Combined with registration not yet effective and the roadshow not yet started ~7 business days out for the largest ADR offering on record, I weighted downside heavily (factors at −0.8, −0.7, −0.5). Offsetting positives — consistent July 10 reporting with no slippage, motivated top underwriters, FSS review possibly done by July 3, and strong demand (+0.5, +0.3) — pulled me back up somewhat. My `reflection` tool yielded a factor-implied probability of ~0.29 and I set a tentative **0.32**. The `premortem` constructed a coherent ~50%+ YES counterargument but ultimately **approved** with its own independent ~0.30–0.40 read. I submitted a final probability of **0.32** (logit −0.75).",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup tool was used for an event-timing question where a market might exist.",
+      "No direct SEC EDGAR effectiveness-status check beyond the research summary."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Qualitative base-rate analysis of a single news-driven IPO timing question, anchored on the asymmetry that the target date is the last day of the resolution window.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the SEC registration becomes effective and the compressed global roadshow/pricing can complete in time to begin trading by exactly July 10 (the last day of the window)."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check any prediction market (Polymarket/Kalshi/Manifold) for a SK Hynix listing-date market, nor did it attempt a fresh re-check of SEC EDGAR for effectiveness status closer to resolution. For a fast-moving timing question, a single research call was the entire evidence base.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "30%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the decisive structural asymmetry: July 10 is the exact target AND the last day of the resolution window, so any slip resolves NO — weighted appropriately at logit -0.8.",
+    "Caught the critical real-time detail that SEC registration was NOT yet effective and the roadshow had not started as of June 30, translating ~7 remaining business days into compressed-timeline downside.",
+    "Engaged with disconfirming evidence (July 14 payment, July 29 domestic listing, 'mid-to-late July' reports) rather than anchoring on the headline July 10 date.",
+    "Ran a genuine premortem constructing a coherent ~50%+ YES alternative, avoiding one-sided reasoning."
+  ],
+  "weaknesses": [
+    "tool_audit claimed 'No tool failures' despite the first research call failing Pydantic validation.",
+    "Asserted a '30-40%' IPO base rate without deriving it from any named reference-class examples.",
+    "Relied on a single research snapshot with no second-source or direct SEC effectiveness verification for a question that could flip on one post-June-30 news event."
+  ],
+  "pipeline": {
+    "issues": [
+      "First research call failed Pydantic validation (missing 'questions' field) but was immediately retried successfully — minor token waste, no impact on the forecast.",
+      "Agent's tool_audit narrative inaccurately stated 'No tool failures' despite the one validation error."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "When a research call fails and is retried, accurately reflect the failure in tool_audit rather than claiming 'no failures.'",
+    "For binary event-timing questions, check whether a relevant prediction market exists to cross-check the qualitative estimate.",
+    "Derive the invoked IPO base rate from named reference-class examples rather than asserting a 30-40% range."
+  ]
+}
