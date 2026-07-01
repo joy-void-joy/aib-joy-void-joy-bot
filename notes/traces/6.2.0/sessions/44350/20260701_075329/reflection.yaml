@@ -1,0 +1,228 @@
+---
+timestamp: 2026-07-01 07:56:33 UTC
+question_type: binary
+factors:
+- description: Current close $58,664 (July 1), threshold $56,000 is only ~4.5% below
+    — well within reach given elevated volatility
+  logit: 0.3
+  confidence: 0.9
+  effective_logit: 0.27
+- description: 'Strong bearish momentum: 10-day trailing return -7.2%, mean daily
+    return -0.75%, record ETF outflows ongoing, break below key $60k level'
+  logit: 0.6
+  confidence: 0.7
+  effective_logit: 0.42
+- description: Extreme Fear (index 11-15) + oversold RSI historically precede relief
+    bounces; mean reversion risk against YES
+  logit: -0.5
+  confidence: 0.55
+  effective_logit: -0.275
+- description: Empirical daily vol 1.5-2.0%, options imply >3%; higher vol raises
+    probability of touching threshold below spot
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+- description: Only need ONE of three consecutive (correlated) days below threshold
+    — modest boost vs single-day
+  logit: 0.15
+  confidence: 0.8
+  effective_logit: 0.12
+tentative_estimate:
+  logit: -0.49
+  probability: 0.38
+anchor: 'Random-walk with empirical vol: P(price dips ~4.5% below spot within 8-10
+  days at ~2% daily vol) ~ 0.30-0.40'
+assessment: 'Threshold question modeled via Monte Carlo. S0=$58,664, threshold $56,000
+  (~4.5% below), window July 9-11 (8-10 days out). Empirical daily vol ~1.5-2.0%,
+  options imply >3%. Weighted mixture of drift scenarios (bearish momentum vs oversold
+  mean-reversion) and vol scenarios gives P(YES)~0.385. Sensitivity: 0.19 (relief
+  rally, +drift) to 0.58 (momentum down). Key tension: strong recent downtrend and
+  structural ETF-outflow selling pressure argue for continued decline, but extreme-fear/oversold
+  conditions argue for a bounce. I keep drift near zero-to-mildly-negative to avoid
+  over-extrapolating momentum. Result stable around 0.37-0.40 across reasonable parameter
+  choices.'
+calibration_notes: Anchor ~0.35 from diffusion base rate. Factors roughly balanced,
+  mild net positive from momentum offset by mean-reversion. Not lazily at 50% — data
+  supports a below-even estimate. Threshold is close enough that this is genuinely
+  uncertain, not a near-0 or near-1.
+key_uncertainties: Drift direction (momentum continuation vs oversold bounce) is the
+  dominant swing factor — moves P(YES) from 0.19 to 0.58. True forward volatility
+  (empirical ~1.9% vs implied >3%).
+tool_audit: web_search returned excellent structured Yahoo Finance daily close history
+  (through July 1) and confirming ETF-outflow context — highly useful. sandbox execute_code
+  used for empirical vol and Monte Carlo — worked cleanly. No failures.
+process_reflection: Standard threshold-on-continuous-variable question; the pipeline
+  fit well. Direct data via web_search plus Monte Carlo in sandbox was sufficient
+  — no need for subforecast decomposition since it's a single clean quantity. Scaffolding
+  was smooth for this question type.
+computed:
+  factor_count: 5
+  factor_sum: 0.6749999999999999
+  tentative_logit: -0.49
+  logit_gap: -1.165
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current close $58,664 (July 1), threshold $56,000 is only ~4.5% below
+      — well within reach given elevated volatility
+    logit: 0.3
+    confidence: 0.9
+    effective_logit: 0.27
+  - description: 'Strong bearish momentum: 10-day trailing return -7.2%, mean daily
+      return -0.75%, record ETF outflows ongoing, break below key $60k level'
+    logit: 0.6
+    confidence: 0.7
+    effective_logit: 0.42
+  - description: Extreme Fear (index 11-15) + oversold RSI historically precede relief
+      bounces; mean reversion risk against YES
+    logit: -0.5
+    confidence: 0.55
+    effective_logit: -0.275
+  - description: Empirical daily vol 1.5-2.0%, options imply >3%; higher vol raises
+      probability of touching threshold below spot
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  - description: Only need ONE of three consecutive (correlated) days below threshold
+      — modest boost vs single-day
+    logit: 0.15
+    confidence: 0.8
+    effective_logit: 0.12
+  dominant_factor: 'Strong bearish momentum: 10-day trailing return -7.2%, mean daily
+    return -0.75%, record ETF outflows ongoing, break below key $60k level'
+  dominant_effective_logit: 0.42
+  factor_implied_probability: 0.6626218371700825
+  tentative_probability: 0.38
+  gap_pp: -28.26218371700825
+  sources:
+  - '[Bitcoin USD (BTC-USD) Price History & Historical Data - Yahoo Finance](https://finance.yahoo.com/quote/BTC-USD/history/)'
+---
+timestamp: 2026-07-01 08:05:05 UTC
+question_type: binary
+factors:
+- description: 'Diffusion base: threshold $56,000 is 4.5% below spot $58,664; with
+    fat-tailed crisis-regime vol over 8-10 days, single-day P(<56k)~0.35 (aligns with
+    companion numeric July-10 CDF ~0.37)'
+  logit: -0.4
+  confidence: 0.85
+  effective_logit: -0.34
+- description: '3-day ''at least one'' structure: empirical uplift ~1.24x over single-day
+    (correlated consecutive days), moving single ~0.35 to ~0.43'
+  logit: 0.35
+  confidence: 0.85
+  effective_logit: 0.2975
+- description: 'Strong bearish momentum: 10-day return -7.2%, mean daily -0.75%, record
+    ETF outflows (13+ days, ~$4B June), fresh break below $60k'
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+- description: Extreme Fear (index 15) + oversold RSI create mean-reversion/bounce
+    risk against YES
+  logit: -0.4
+  confidence: 0.55
+  effective_logit: -0.22000000000000003
+- description: Student-t(4) fat tails + options-implied >3% vol widen downside path
+    probability vs normal model
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+tentative_estimate:
+  logit: -0.24
+  probability: 0.44
+anchor: Companion numeric July-10 CDF implies single-day P(<56k)~0.37; with 3-day
+  correlated-day uplift ~1.24x, anchor ~0.44
+assessment: 'Revised after premortem flagged binary-numeric inconsistency and thin
+  tails. Re-ran Monte Carlo with Student-t(4) fat tails matching crisis regime. Reconciled
+  single-day P(<56k)~0.35 (consistent with companion numeric July-10 forecast ~0.37)
+  and applied empirical 3-day ''at least one'' uplift of ~1.24x. Two convergent methods:
+  fat-tailed weighted MC gives 3-day P(YES)=0.42; numeric-CDF-derived gives 0.46.
+  Central estimate 0.44. This addresses both reviewer concerns \u2014 fatter tails
+  and preserved 3-day uplift. Genuine two-sided uncertainty: bearish momentum + structural
+  ETF selling vs oversold/extreme-fear bounce potential.'
+calibration_notes: Now consistent with companion numeric forecast (single-day 0.37
+  x 1.24 = 0.46; my fat-tailed MC 0.42). Central 0.44. Not a lazy 50 \u2014 slightly
+  below even, reflecting that threshold is meaningfully below spot but reachable in
+  high-vol downtrend.
+key_uncertainties: Drift direction (momentum continuation to ~0.58 vs bounce to ~0.17)
+  remains dominant swing. Exact tail fatness of forward returns.
+tool_audit: 'web_search: excellent structured Yahoo daily-close data through July
+  1 + ETF-outflow context. sandbox execute_code: empirical vol, normal MC, then Student-t
+  fat-tailed MC and reconciliation \u2014 all clean. premortem reviewer: correctly
+  caught binary-numeric inconsistency with companion numeric forecast, prompting fat-tail
+  revision.'
+process_reflection: The premortem reviewer's cross-check against the worldview store's
+  companion numeric forecast was genuinely valuable \u2014 it caught that my normal-tailed
+  model understated crisis fat tails and washed out the 3-day uplift. Good example
+  of the gate improving the forecast. Pipeline worked well.
+computed:
+  factor_count: 5
+  factor_sum: 0.1574999999999999
+  tentative_logit: -0.24
+  logit_gap: -0.39749999999999985
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Diffusion base: threshold $56,000 is 4.5% below spot $58,664; with
+      fat-tailed crisis-regime vol over 8-10 days, single-day P(<56k)~0.35 (aligns
+      with companion numeric July-10 CDF ~0.37)'
+    logit: -0.4
+    confidence: 0.85
+    effective_logit: -0.34
+  - description: '3-day ''at least one'' structure: empirical uplift ~1.24x over single-day
+      (correlated consecutive days), moving single ~0.35 to ~0.43'
+    logit: 0.35
+    confidence: 0.85
+    effective_logit: 0.2975
+  - description: 'Strong bearish momentum: 10-day return -7.2%, mean daily -0.75%,
+      record ETF outflows (13+ days, ~$4B June), fresh break below $60k'
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  - description: Extreme Fear (index 15) + oversold RSI create mean-reversion/bounce
+      risk against YES
+    logit: -0.4
+    confidence: 0.55
+    effective_logit: -0.22000000000000003
+  - description: Student-t(4) fat tails + options-implied >3% vol widen downside path
+      probability vs normal model
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  dominant_factor: 'Diffusion base: threshold $56,000 is 4.5% below spot $58,664;
+    with fat-tailed crisis-regime vol over 8-10 days, single-day P(<56k)~0.35 (aligns
+    with companion numeric July-10 CDF ~0.37)'
+  dominant_effective_logit: -0.34
+  factor_implied_probability: 0.5392938058983595
+  tentative_probability: 0.44
+  gap_pp: -9.92938058983595
+  sources:
+  - '[Bitcoin USD (BTC-USD) Price History & Historical Data - Yahoo Finance](https://finance.yahoo.com/quote/BTC-USD/history/)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44350
+- **Question ID**: 44361
+- **Session Duration**: 805.3s (13.4 min)
+- **Cost**: $4.8674 total (orchestrator $3.3122 + sub-agents $1.5552)
+- **Tokens**: 13,120 total (22 in, 13,098 out)
+  - Cache: 630,163 read, 73,826 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44350_20260701_075329/20260701-075329.log`
+
+### Tool Calls
+
+- **Total**: 11 calls
+- **Errors**: 1 (9.1%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 4 | 0 | 507ms | — |
+| premortem | 2 | 1 ⚠️ | 250940ms | $1.4715 |
+| reflection | 2 | 0 | 8ms | — |
+| stock_price | 1 | 0 | 281ms | — |
+| web_search | 2 | 0 | 50213ms | $0.0837 |
+
+### Sources Consulted
+
+- [Bitcoin USD (BTC-USD) Price History & Historical Data - Yahoo Finance](https...
