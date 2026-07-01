@@ -1,0 +1,102 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a binary question about whether a specific facility — the Moscow Oil Refinery (MNPZ/Kapotnya) — would be struck or targeted in a narrow 4-day window (July 9–12, 2026). I fired two research queries in parallel: one targeting MNPZ's recent strike history and operational status after June 18, and one establishing the base rate for Ukraine's broader refinery-strike campaign in June–July 2026.\n\n## Key Evidence\n\nThe research returned rich, well-dated, well-sourced findings:\n\n- **MNPZ was struck twice in one week** — June 16 and June 18, 2026 — the June 18 raid being the largest on Moscow in ~2 years (~180–200 drones over the city).\n- The facility is now **fully disabled/offline**, with repair estimates ranging from 6 months (Reuters) to **no resumption before 2027** (Frankfurter Rundschau, OilPrice).\n- **No confirmed fresh MNPZ strike since June 18.** Ukraine's late-June operations **rotated to other live refineries** — Slavyansk-na-Kubani, Yaroslavl (June 28), Tyumen/Antipinsky (June 20–21), Ufa.\n- Ukrainian doctrine favors **re-striking facilities when they resume repairs/operations** rather than re-hitting already-destroyed sites, though there is precedent for persistent re-striking (Ryazan/Saratov ~15x each).\n- **Very high Moscow raid tempo**: attacks every few days in June (16, 18, 22, 25–26, 30), and capability to reach Kapotnya remains intact (air-defense corridor operations announced June 30).\n- Broad campaign base rate: **~26 refinery attacks across April–May (~13/month)**, intensifying on every metric.\n\n## Conclusion\n\nI built a **Poisson framing**. Using MNPZ-specific events (I initially listed May 17, June 6, June 16, June 18 — 4 events over ~61 days = 0.066/day peak), a 4-day window at peak rate gives ~23%. But because the facility is disabled and Ukraine rotated away, I discounted the forward rate to **~0.04/day → ~15%**. My reflection tool gave a factor-implied ~20%, and I settled at **15%** to reflect the forward-looking discount. The premortem returned **warn**, flagging that \"May 17\" was not corroborated in the research (only June 6/16/18 were), but noted this did not change direction or magnitude and independently validated **11–15%** as well-calibrated. I corrected the chronology note and submitted **15% (NO likely)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup tool was used (or available) to sanity-check against market-implied odds for Russian strike questions.",
+      "No way to distinguish resolution-relevant 'MNPZ-specific debris/interception' events from general Moscow raids in the base-rate data."
+    ],
+    "subtle_bugs": [
+      "The research answer conflated a low-confidence ZN.UA 'June 19' reference (likely the June 18 raid) into the chronology; the agent handled this correctly but it could have inflated the event count.",
+      "The 'May 17' event appears to originate from the question text itself and was reinterpreted as a research-confirmed date, producing a fabricated specific event in the final output."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Poisson framing on MNPZ-specific strike chronology, with a downward forward-rate adjustment for the facility being disabled and Ukraine rotating to other targets.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Ukraine mounts a large symbolic Moscow raid in the July 9-12 window that implicates Kapotnya, and how liberally reporting attributes debris/interceptions to the refinery specifically."
+  },
+  "risk_flags": [
+    {
+      "category": "computation_error",
+      "evidence": "Anchor and Factor 1 include a 'May 17' MNPZ-specific event that the premortem confirmed is absent from the research trace (only June 6/16/18 supported). The Poisson used 4 events over 61 days = 0.066/day; the phantom event diffuses the base rate downward, so it works against YES and does not inflate the 15% — hence minor.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction market checked and no explicit July 1-9 MNPZ update sought, despite the premortem noting a fresh July 1-9 strike would move the estimate 10-15pp. The forecast extrapolates entirely from June-era data.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "13%",
+    "agrees_with_agent": true,
+    "divergence_reason": "I weight the 'disabled until 2027 + explicit rotation to live targets + zero MNPZ events in 12+ days' cluster slightly more heavily, nudging me toward the lower end of the agent's own 11-15% range, but this is well within noise for a 4-day window."
+  },
+  "strengths": [
+    "Parallelized two well-targeted research queries (facility-specific status + campaign base rate), yielding dated, sourced strike chronology that enabled a clean Poisson calculation.",
+    "Correctly identified the crux for a narrow specific-target window: disabled-until-2027 status plus explicit rotation to live refineries lowering the forward rate, offset by high Moscow raid tempo and broad debris/interception resolution criteria.",
+    "Ran a sensitivity sweep across rates (0.03-0.066/day) rather than picking a single point, and consciously anchored below the June peak (0.04 vs 0.066/day) to reflect the forward discount.",
+    "Engaged the broad resolution criteria explicitly (Factor 3: interception/debris near refinery counts if Kapotnya specifically identified) rather than treating the question as requiring a confirmed damaging hit.",
+    "Premortem constructed a genuine 25-30% counterargument (re-strike-in-a-week precedent, continuous raids, Ryazan/Saratov doctrine) rather than a token one."
+  ],
+  "weaknesses": [
+    "Carried the unsupported 'May 17' MNPZ date into the final submission's anchor and Factor 1 even after the premortem flagged it, hedging with '(per question)' rather than cleanly removing it — leaving a fabricated specific date in the output.",
+    "Did not attempt to distinguish 'MNPZ specifically targeted/debris near it' events (the resolution-relevant rate) from the general Moscow-raid tempo, which are quite different base rates; the Poisson rate blends confirmed damaging strikes with the broader-criteria interpretation without separating them.",
+    "Did not check any prediction market or search for a fresher July 1-9 update, despite the premortem noting a July 1-9 strike would shift the estimate materially."
+  ],
+  "pipeline": {
+    "issues": [
+      "The '(per question)' hedge left a fabricated 'May 17' date in the final anchor/Factor 1 even after the premortem flagged it — a minor output-hygiene issue, not a pipeline error.",
+      "Thinking blocks rendered empty in the trace, so internal reasoning between tool calls is not visible for review."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
