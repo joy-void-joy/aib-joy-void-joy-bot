@@ -15,3 +15,4 @@ class NestedAgentReport[T: BaseModel](BaseModel):
     final_text: str = ""
     error: str | None = None
     session_id: str | None = None
+    trace: str = ""

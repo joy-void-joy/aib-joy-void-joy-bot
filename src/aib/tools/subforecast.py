@@ -191,6 +191,9 @@ async def run_single_subforecast(
             parent_slug=slug,
         )
 
+        if forecast.trace:
+            session.nested_traces[f"subforecast:{spec.question}"] = forecast.trace
+
         # Persist to worldview store
         ttl = TTL_PRESETS.get(spec.ttl, TTL_PRESETS[DEFAULT_TTL])
         now = datetime.now(timezone.utc)

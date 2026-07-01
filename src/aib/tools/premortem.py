@@ -28,7 +28,12 @@ from aib.agent.models import (
     NumericEstimate,
     NumericSupport,
 )
-from aib.agent.session import ReviewResult, ReviewState, ReviewVerdict
+from aib.agent.session import (
+    ReviewResult,
+    ReviewState,
+    ReviewVerdict,
+    register_premortem_trace,
+)
 from aib.paths import WORLDVIEW_PATH
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
@@ -495,6 +500,7 @@ async def run_reviewer(
     from claude_agent_sdk import (
         AssistantMessage as _AssistantMessage,
         ResultMessage,
+        UserMessage,
     )
     from claude_agent_sdk.types import HookEvent, HookMatcher as HookMatcherType
 
@@ -536,6 +542,7 @@ async def run_reviewer(
         structured_output: dict[str, Any] | None = None
         so_tool_blocks: list[ToolUseBlock] = []
         text_blocks: list[str] = []
+        nested_messages: list[_AssistantMessage | UserMessage] = []
         review_label = question_context.get("title") if question_context else None
         prefix = make_agent_prefix("premortem", review_label)
         async with build_client(
@@ -559,6 +566,8 @@ async def run_reviewer(
         ) as client:
             await client.query(prompt)
             async for message in client.receive_response():
+                if isinstance(message, (_AssistantMessage, UserMessage)):
+                    nested_messages.append(message)
                 if isinstance(message, _AssistantMessage):
                     for block in message.content:
                         print_block(block, prefix=prefix)
@@ -576,10 +585,15 @@ async def run_reviewer(
 
         final_text = text_blocks[-1] if text_blocks else ""
 
+        from aib.agent.core import build_trace
+
+        nested_trace = build_trace(nested_messages, review_label or "premortem")
+
         if structured_output:
             return NestedAgentReport[ReviewResult](
                 payload=ReviewResult.model_validate(structured_output),
                 final_text=final_text,
+                trace=nested_trace,
             )
 
         if so_tool_blocks:
@@ -594,6 +608,7 @@ async def run_reviewer(
                 return NestedAgentReport[ReviewResult](
                     payload=result,
                     final_text=final_text,
+                    trace=nested_trace,
                 )
             except (KeyError, ValidationError):
                 logger.warning(
@@ -605,6 +620,7 @@ async def run_reviewer(
         return NestedAgentReport[ReviewResult](
             final_text=final_text,
             error="reviewer produced no parseable structured output",
+            trace=nested_trace,
         )
     except Exception as e:
         logger.exception("Premortem reviewer sub-agent failed")
@@ -700,6 +716,7 @@ def create_premortem_tool(
                 traces_dir,
             )
             review_result = review_report.payload
+            register_premortem_trace(review_report.trace)
         except Exception:
             logger.exception("Premortem reviewer crashed")
 
