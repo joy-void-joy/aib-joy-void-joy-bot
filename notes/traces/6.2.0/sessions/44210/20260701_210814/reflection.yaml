@@ -1,0 +1,127 @@
+---
+timestamp: 2026-07-01 21:21:10 UTC
+question_type: binary
+factors:
+- description: 'Recent base rate: ~1 computer-related recall/year in saferproducts.gov
+    (2020-23 one each, 2024-25 zero, 2026 one). Poisson 2-month window P(>=1) ~0.13'
+  logit: -1.9
+  confidence: 0.8
+  effective_logit: -1.52
+- description: PublicSearch may match description fields/broader category than product
+    name, raising hit rate modestly
+  logit: 0.4
+  confidence: 0.5
+  effective_logit: 0.2
+- description: Two consecutive zero years (2024, 2025) suggest current rate may be
+    at low end
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+- description: Only need ONE recall in 2 months; 'Recalls/Repairs' is lenient and
+    category is broad (dive computers, laptops, cases, PSUs, monitors, lamps all counted)
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+tentative_estimate:
+  logit: -1.7
+  probability: 0.155
+anchor: ~1 computer recall/year recently; Poisson 2-month P(>=1) ~0.13
+assessment: 'The resolution is a search of saferproducts.gov PublicSearch for ''Recalls/Repairs''
+  of ''computers'' covering Jul 1 - Aug 31 2026. I replicated the search via the REST
+  API (ProductName=computer), which returns the identical recall database. Historically
+  the ''computer'' category is broad (dive computers, laptop batteries, PC cases,
+  power supplies, monitors, task lamps) but recent frequency is low: ~1/year 2020-2023,
+  ZERO in 2024 and 2025, one in April 2026. A Poisson model at ~0.85-1.0/yr gives
+  2-month P(>=1) of 0.13-0.15. A broader-search interpretation (matching description
+  text) pushes to ~0.22. Weighted mixture ~0.16. Status quo strongly favors NO for
+  any given 2-month window. Settling ~0.15.'
+calibration_notes: Status quo (NO) favored. Not hedging to 50%; committing to ~0.15
+  based on empirical Poisson rate. Main uncertainty is search breadth of the admin's
+  actual PublicSearch query.
+tool_audit: research() gave good structural context (literal ProductType=Computers
+  API is empty, but text search is broad). fetch_url on the REST API ProductName=computer
+  returned the full 85-recall history with dates - the key data. PublicSearch and
+  CPSC.gov doc pages returned 403 (normal for these). One REST call errored ('provider
+  failed on Open') transiently but retry via ProductName=computer worked.
+process_reflection: Smooth. The REST API proxy for the resolution search was the crucial
+  move and worked cleanly, giving a full time series to compute a base rate. This
+  is a clean base-rate question; the scaffolding was well-suited. No missing tools.
+computed:
+  factor_count: 4
+  factor_sum: -1.29
+  tentative_logit: -1.7
+  logit_gap: -0.4099999999999999
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Recent base rate: ~1 computer-related recall/year in saferproducts.gov
+      (2020-23 one each, 2024-25 zero, 2026 one). Poisson 2-month window P(>=1) ~0.13'
+    logit: -1.9
+    confidence: 0.8
+    effective_logit: -1.52
+  - description: PublicSearch may match description fields/broader category than product
+      name, raising hit rate modestly
+    logit: 0.4
+    confidence: 0.5
+    effective_logit: 0.2
+  - description: Two consecutive zero years (2024, 2025) suggest current rate may
+      be at low end
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  - description: Only need ONE recall in 2 months; 'Recalls/Repairs' is lenient and
+      category is broad (dive computers, laptops, cases, PSUs, monitors, lamps all
+      counted)
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  dominant_factor: 'Recent base rate: ~1 computer-related recall/year in saferproducts.gov
+    (2020-23 one each, 2024-25 zero, 2026 one). Poisson 2-month window P(>=1) ~0.13'
+  dominant_effective_logit: -1.52
+  factor_implied_probability: 0.21585281082251456
+  tentative_probability: 0.155
+  gap_pp: -6.0852810822514565
+  sources:
+  - '[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=computer&RecallDateStart=2023-01-01&format=json)'
+  - '[Search Home](https://www.saferproducts.gov/PublicSearch)'
+  - '[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=laptop&RecallDateStart=2020-01-01&format=json)'
+  - '[cpsc.gov](https://www.cpsc.gov/Recalls/CPSC-Recalls-Restful-API-Documentation)'
+  - '[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=computer&format=json)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44210
+- **Question ID**: 44222
+- **Session Duration**: 875.2s (14.6 min)
+- **Cost**: $8.8451 total (orchestrator $3.0838 + sub-agents $5.7613)
+- **Tokens**: 11,688 total (20 in, 11,668 out)
+  - Cache: 545,668 read, 74,126 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44210_20260701_210814/20260701-210814.log`
+
+### Tool Calls
+
+- **Total**: 35 calls
+- **Errors**: 8 (22.9%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.6108 |
+| execute_code | 1 | 0 | 231ms | — |
+| fetch_url | 16 | 6 ⚠️ | 24635ms | — |
+| premortem | 3 | 1 ⚠️ | 62561ms | $2.9522 |
+| reflection | 3 | 0 | 1154ms | — |
+| research | 2 | 1 ⚠️ | 239241ms | $1.9261 |
+| search_exa | 2 | 0 | 1582ms | — |
+| web_search | 7 | 0 | 18523ms | $0.2722 |
+| wikipedia | 1 | 0 | 196ms | — |
+
+### Sources Consulted
+
+- [saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?Prod...
+- [Search Home](https://www.saferproducts.gov/PublicSearch)
+- [saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?Prod...
+- [cpsc.gov](https://www.cpsc.gov/Recalls/CPSC-Recalls-Restful-API-Documentation)
+- [saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?Prod...

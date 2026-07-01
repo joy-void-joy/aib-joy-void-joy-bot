@@ -1,0 +1,245 @@
+{
+  "question_id": 44222,
+  "post_id": 44210,
+  "question_title": "Will the CPSC publish any computer-related recalls in July or August 2026?",
+  "question_type": "binary",
+  "timestamp": "20260701_212432",
+  "probability": 0.16,
+  "logit": -1.66,
+  "probabilities": null,
+  "median": null,
+  "confidence_interval": null,
+  "percentiles": null,
+  "summary": "The question resolves YES if a saferproducts.gov PublicSearch for \"Recalls/Repairs\" of \"computers\" returns any match dated Jul 1 - Aug 31, 2026. I replicated this search via the CPSC/SaferProducts REST API (ProductName=computer), which resolves against the identical recall database and returned the full 85-record history. The \"computers\" search is broad (dive computers, laptop batteries, PC cases, power supplies, monitors, task lamps) but recent frequency is low: ~1/year in 2020-2023, ZERO in 2024 and 2025, and one in April 2026. A Poisson model at ~0.85-1.0/yr gives a 2-month P(>=1) of 0.13-0.15; a broader-search interpretation lifts it toward 0.22. Weighting these gives ~0.16. Status quo strongly favors NO for any given 2-month window. Main residual uncertainty is exactly how broadly the admin's portal keyword search matches.",
+  "factors": [
+    {
+      "description": "Recent base rate: ~1 computer-related recall/year (2020-23 one each, 2024-25 zero, 2026 one in April). Poisson 2-month P(>=1) ~0.13. I replicated the resolution search via the REST API (ProductName=computer), which resolves against the same recall DB.",
+      "logit": -1.9,
+      "confidence": 0.8,
+      "conditional": null,
+      "effective_logit": -1.52
+    },
+    {
+      "description": "The admin's PublicSearch may match description/hazard fields or a broader category taxonomy than product name alone, raising the effective hit rate",
+      "logit": 0.4,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": 0.2
+    },
+    {
+      "description": "Two consecutive zero years (2024, 2025) suggest the current rate may sit at the low end of the historical range",
+      "logit": -0.3,
+      "confidence": 0.5,
+      "conditional": null,
+      "effective_logit": -0.15
+    },
+    {
+      "description": "Only ONE recall needed in the 2-month window; 'Recalls/Repairs' is lenient and the category is broad (dive computers, laptop batteries, PC cases, PSUs, monitors, task lamps all historically counted)",
+      "logit": 0.3,
+      "confidence": 0.6,
+      "conditional": null,
+      "effective_logit": 0.18
+    }
+  ],
+  "resolution": null,
+  "submitted_at": "20260701_232432",
+  "comment_posted_at": null,
+  "tool_metrics": {
+    "session_duration_seconds": 977.75,
+    "total_tool_calls": 35,
+    "total_errors": 8,
+    "overall_error_rate": "22.9%",
+    "total_tool_time_ms": 1197044.96,
+    "subagent_cost_usd": 5.7613,
+    "tools_used": 9,
+    "by_tool": {
+      "fetch_url": {
+        "call_count": 16,
+        "error_count": 6,
+        "error_rate": "37.5%",
+        "total_duration_ms": 394164.86,
+        "avg_duration_ms": 24635.3,
+        "min_duration_ms": 45.74,
+        "max_duration_ms": 65493.64,
+        "total_cost_usd": 0.0
+      },
+      "research": {
+        "call_count": 2,
+        "error_count": 1,
+        "error_rate": "50.0%",
+        "total_duration_ms": 478482.21,
+        "avg_duration_ms": 239241.1,
+        "min_duration_ms": 0.06,
+        "max_duration_ms": 478482.15,
+        "total_cost_usd": 1.9261
+      },
+      "web_search": {
+        "call_count": 7,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 129660.42,
+        "avg_duration_ms": 18522.92,
+        "min_duration_ms": 11074.14,
+        "max_duration_ms": 22620.67,
+        "total_cost_usd": 0.2722
+      },
+      "wikipedia": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 196.41,
+        "avg_duration_ms": 196.41,
+        "min_duration_ms": 196.41,
+        "max_duration_ms": 196.41,
+        "total_cost_usd": 0.0
+      },
+      "reflection": {
+        "call_count": 3,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 3462.7,
+        "avg_duration_ms": 1154.23,
+        "min_duration_ms": 24.79,
+        "max_duration_ms": 3353.53,
+        "total_cost_usd": 0.0
+      },
+      "content_extract": {
+        "call_count": 0,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 0.0,
+        "avg_duration_ms": 0.0,
+        "min_duration_ms": 0,
+        "max_duration_ms": 0.0,
+        "total_cost_usd": 0.6108
+      },
+      "premortem": {
+        "call_count": 3,
+        "error_count": 1,
+        "error_rate": "33.3%",
+        "total_duration_ms": 187683.04,
+        "avg_duration_ms": 62561.01,
+        "min_duration_ms": 54578.84,
+        "max_duration_ms": 66959.53,
+        "total_cost_usd": 2.9522
+      },
+      "search_exa": {
+        "call_count": 2,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 3164.06,
+        "avg_duration_ms": 1582.03,
+        "min_duration_ms": 1496.33,
+        "max_duration_ms": 1667.73,
+        "total_cost_usd": 0.0
+      },
+      "execute_code": {
+        "call_count": 1,
+        "error_count": 0,
+        "error_rate": "0.0%",
+        "total_duration_ms": 231.25,
+        "avg_duration_ms": 231.25,
+        "min_duration_ms": 231.25,
+        "max_duration_ms": 231.25,
+        "total_cost_usd": 0.0
+      }
+    }
+  },
+  "token_usage": {
+    "input_tokens": 20,
+    "output_tokens": 11668,
+    "cache_read_input_tokens": 545668,
+    "cache_creation_input_tokens": 74126,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 74126,
+      "ephemeral_5m_input_tokens": 0
+    }
+  },
+  "log_path": "/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44210_20260701_210814/20260701-210814.log",
+  "question_published_at": "2026-07-01T21:00:00Z",
+  "question_close_time": "2026-07-02T00:00:00Z",
+  "question_scheduled_resolve_time": "2026-09-01T00:00:00Z",
+  "reasoning": "I've completed my forecast.\n\n## Forecast: Will the CPSC publish any computer-related recalls in July or August 2026?\n\n**Probability: 0.16 (16%)**\n\n### Key reasoning\n\nI replicated the exact resolution search (saferproducts.gov PublicSearch for \"computers\") using the CPSC/SaferProducts REST API, which queries the identical recall database. This returned the full 85-record history of computer-related recalls.\n\n**The critical finding is the recent frequency:**\n- 2020, 2021, 2022, 2023: one computer recall each year\n- **2024 and 2025: zero**\n- 2026: one (the Apex ATX power supply recall in April)\n\nThis works out to ~0.85–1.0 recalls per year recently. A Poisson model gives a 2-month window probability of only **~0.13–0.15** for at least one recall. The category is genuinely broad (dive computers, laptop batteries, PC cases, monitors, power supplies, task lamps all count), but the events are simply infrequent.\n\nI nudged slightly above the narrow Poisson estimate (to 0.16) to account for the possibility that the admin's portal keyword search matches product descriptions/categories more broadly than my title-based proxy — which could raise the hit rate. The status quo strongly favors **NO** for any given 2-month window.\n\nThe premortem reviewer approved, confirming the base-rate data was solid and the forecast well-calibrated within the 0.14–0.18 range.",
+  "sources_consulted": [
+    "[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=computer&RecallDateStart=2023-01-01&format=json)",
+    "[Search Home](https://www.saferproducts.gov/PublicSearch)",
+    "[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=laptop&RecallDateStart=2020-01-01&format=json)",
+    "[cpsc.gov](https://www.cpsc.gov/Recalls/CPSC-Recalls-Restful-API-Documentation)",
+    "[saferproducts.gov](https://www.saferproducts.gov/RestWebServices/Recall?ProductName=computer&format=json)"
+  ],
+  "agent_version": "6.2.0",
+  "cdf": null,
+  "numeric_bounds": null,
+  "retrodict_date": null,
+  "comparison": null,
+  "community_mean": null,
+  "community_means": null,
+  "community_cdf": null,
+  "community_scaling": null,
+  "peer_score": null,
+  "baseline_score": null,
+  "score_timestamp": null,
+  "resolution_source": null,
+  "resolution_reason": null,
+  "resolution_criteria": "This question resolves as **Yes** if a search, conducted by a Metaculus admin on or after September 1, 2026, at the US Consumer Product Safety Commission's [SaferProducts portal](https://www.saferproducts.gov/PublicSearch) for \"Recalls / Repairs\" of \"computers\" returns any matches for the time period from July 1, 2026 to August 31, 2026.",
+  "fine_print": "MISSING — fetch the Metaculus question page to recover.",
+  "background_info": null,
+  "revision_history": [
+    {
+      "verdict": "approve",
+      "input": {
+        "factors": [
+          {
+            "description": "Recent base rate: ~1 computer-related recall/year in saferproducts.gov (2020-23 one each, 2024-25 zero, 2026 one). Poisson 2-month window P(>=1) ~0.13",
+            "supports": null,
+            "logit": -1.9,
+            "confidence": 0.8,
+            "conditional": null,
+            "effective_logit": -1.52
+          },
+          {
+            "description": "PublicSearch may match description fields/broader category than product name, raising hit rate modestly",
+            "supports": null,
+            "logit": 0.4,
+            "confidence": 0.5,
+            "conditional": null,
+            "effective_logit": 0.2
+          },
+          {
+            "description": "Two consecutive zero years (2024, 2025) suggest current rate may be at low end",
+            "supports": null,
+            "logit": -0.3,
+            "confidence": 0.5,
+            "conditional": null,
+            "effective_logit": -0.15
+          },
+          {
+            "description": "Only need ONE recall in 2 months; 'Recalls/Repairs' is lenient and category is broad (dive computers, laptops, cases, PSUs, monitors, lamps all counted)",
+            "supports": null,
+            "logit": 0.3,
+            "confidence": 0.6,
+            "conditional": null,
+            "effective_logit": 0.18
+          }
+        ],
+        "tentative_estimate": {
+          "logit": -1.7,
+          "probability": 0.155
+        },
+        "anchor": "~1 computer recall/year recently; Poisson 2-month P(>=1) ~0.13",
+        "assessment": "The resolution is a search of saferproducts.gov PublicSearch for 'Recalls/Repairs' of 'computers' covering Jul 1 - Aug 31 2026. I replicated the search via the REST API (ProductName=computer), which returns the identical recall database. Historically the 'computer' category is broad (dive computers, laptop batteries, PC cases, power supplies, monitors, task lamps) but recent frequency is low: ~1/year 2020-2023, ZERO in 2024 and 2025, one in April 2026. A Poisson model at ~0.85-1.0/yr gives 2-month P(>=1) of 0.13-0.15. A broader-search interpretation (matching description text) pushes to ~0.22. Weighted mixture ~0.16. Status quo strongly favors NO for any given 2-month window. Settling ~0.15.",
+        "calibration_notes": "Status quo (NO) favored. Not hedging to 50%; committing to ~0.15 based on empirical Poisson rate. Main uncertainty is search breadth of the admin's actual PublicSearch query.",
+        "key_uncertainties": null,
+        "tool_audit": "research() gave good structural context (literal ProductType=Computers API is empty, but text search is broad). fetch_url on the REST API ProductName=computer returned the full 85-recall history with dates - the key data. PublicSearch and CPSC.gov doc pages returned 403 (normal for these). One REST call errored ('provider failed on Open') transiently but retry via ProductName=computer worked.",
+        "update_triggers": null,
+        "process_reflection": "Smooth. The REST API proxy for the resolution search was the crucial move and worked cleanly, giving a full time series to compute a base rate. This is a clean base-rate question; the scaffolding was well-suited. No missing tools."
+      },
+      "reviewer_assessment": "Verified all four factors against the research trace and the (identical, fresh) worldview research entry. No errors found.\n\nFACTORS GROUNDED:\n- Factor 1 (base rate ~1/yr, Poisson 2-mo P≈0.13): The ProductName=computer full-history query (trace lines 246-293) returns exactly 2020:1, 2021:1, 2022:1, 2023:1, 2024:0, 2025:0, 2026:1. The execute_code Poisson calc (lines 316-317) yields 0.132 at 0.85/yr. Logit -1.9 direction correct (NO-favoring). Fully grounded.\n- Factor 2 (broader PublicSearch matching, +0.4): An acknowledged modeling assumption, not a hallucination — the agent transparently notes it could not reach the PublicSearch portal (403) and used ProductName=computer as a proxy. Confidence 0.5 appropriately reflects this. Direction correct.\n- Factor 3 (two consecutive zero years 2024-25, -0.3): Directly confirmed by trace data. Direction correct.\n- Factor 4 (broad category: dive computers, cases, PSUs, monitors, lamps, +0.3): All present in the full history (NZXT H1 cases, Advantus task lamps, monitors, dive computers). Grounded.\n\nNO DOUBLE-COUNTING of consequence: Factors 1 and 3 both touch the recall counts, but Factor 3 is a mild trend adjustment (logit -0.3) — negligible and not a material error.\n\nPRE-PUBLICATION EVENT: The April 2026 Apex recall predates July 1, but the agent correctly uses it only as base-rate evidence (the 2026:1 count), not as resolving the July-Aug window. No Case 2 violation.\n\nRESOLUTION CRITERIA: Provided and clearly engaged — the agent replicated the exact SaferProducts search via REST API and honestly flagged the proxy limitation.\n\nREGIME WINDOW: 70-month Sept 2020-Jul 2026 window is a single stable low-frequency regime; no structural break contamination.\n\nCOUNTERARGUMENT: Strong and genuine — constructs the real alternative (portal keyword breadth could be 2-4x higher, pushing P>0.3) with a concrete falsification test.\n\nSELF-CONFIDENCE (0.70): Well-calibrated given the acknowledged PublicSearch-breadth uncertainty.\n\nTOOL AUDIT: Honest. Agent acknowledges the transient 'provider failed on Open' error and the 403s; does not falsely claim zero failures. Consistent with the 37.5% fetch_url error rate.\n\nINDEPENDENT PROBABILITY: My estimate is ~0.14-0.18 for a 2-month window given the ~1/yr base rate plus a bounded upward adjustment for broader portal matching. The agent's 15.5% sits squarely in this range. Anchor divergence (~13% → 15.5%) is only ~2.5pp, justified by the modest search-breadth factor. No meaningful gap."
+    }
+  ]
+}
