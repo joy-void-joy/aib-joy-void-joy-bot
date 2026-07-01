@@ -9,6 +9,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
+MODEL_ALIASES: dict[str, str] = {
+    "fable": "claude-fable-5",
+    "opus": "claude-opus-4-8",
+    "sonnet": "claude-sonnet-5",
+    "haiku": "claude-haiku-4-5-20251001",
+}
+
+
+def resolve_model(name: str) -> str:
+    """Resolve a model alias (e.g. 'fable', 'opus') to a full model ID.
+
+    Unrecognized names pass through unchanged, so full model IDs
+    (including OpenRouter-style IDs) remain valid.
+    """
+    return MODEL_ALIASES.get(name, name)
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.

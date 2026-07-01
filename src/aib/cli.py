@@ -19,6 +19,7 @@ import typer
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.config import TOURNAMENTS as TOURNAMENT_IDS
+from aib.config import resolve_model, settings
 from aib.agent.history import (
     RetrodictComparison,
     commit_forecast,
@@ -1328,6 +1329,14 @@ def loop(
             help="Use cached forecast if available instead of re-running agent",
         ),
     ] = True,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            "--model",
+            "-m",
+            help="Model to forecast with: alias ('fable', 'opus', 'sonnet', 'haiku') or full model ID (default: AIB_MODEL)",
+        ),
+    ] = None,
 ) -> None:
     """Continuously forecast tournaments in a loop.
 
@@ -1336,8 +1345,11 @@ def loop(
     """
     if tournaments is None:
         tournaments = ["futureeval", "minibench"]
+    if model is not None:
+        settings.model = resolve_model(model)
 
     print(f"Starting forecast loop for tournaments: {', '.join(tournaments)}")
+    print(f"Model: {settings.model}")
     print(f"Interval: {interval} minutes")
     print("Press Ctrl+C to stop\n")
 
