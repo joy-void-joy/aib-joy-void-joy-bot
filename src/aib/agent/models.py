@@ -901,6 +901,12 @@ class ForecastOutput(BaseModel):
         default=None,
         description="Opus-reviewed narrative of the agent's research and reasoning.",
     )
+    trace: str | None = Field(
+        default=None,
+        exclude=True,
+        description="Full markdown reasoning trace, handed to a parent forecast for "
+        "inline expansion. Transient — never persisted.",
+    )
     sources_consulted: list[str] = Field(
         default_factory=list,
         description="URLs and data sources the agent consulted.",

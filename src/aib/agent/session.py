@@ -29,6 +29,7 @@ class ForecastSession:
         "current_depth",
         "metrics",
         "modified_inputs",
+        "nested_traces",
         "parent_slug",
         "post_id",
         "research_mcp_servers",
@@ -48,6 +49,7 @@ class ForecastSession:
     ) -> None:
         self.metrics = MetricsCollector()
         self.modified_inputs: dict[str, dict[str, Any]] = {}
+        self.nested_traces: dict[str, str] = {}
         self.run_forecast_fn = run_forecast_fn
         self.research_mcp_servers = research_mcp_servers
         self.subforecast_depth: int | None = subforecast_depth
@@ -77,6 +79,25 @@ def set_session(session: ForecastSession) -> None:
 def reset_session() -> None:
     """Clear the current forecast session."""
     _current_session.set(None)
+
+
+def register_nested_trace(key: str, trace: str) -> None:
+    """Store a nested sub-agent's reasoning trace under ``key`` for inline
+    expansion in the parent forecast's trace. No-op outside a session."""
+    session = _current_session.get()
+    if session is not None and trace:
+        session.nested_traces[key] = trace
+
+
+def register_premortem_trace(trace: str) -> None:
+    """Store a premortem reviewer's trace under the next ordinal key
+    (``premortem:0``, ``premortem:1``, …), matching the render order in which
+    build_trace expands premortem result blocks. No-op outside a session."""
+    session = _current_session.get()
+    if session is None or not trace:
+        return
+    ordinal = sum(1 for k in session.nested_traces if k.startswith("premortem:"))
+    session.nested_traces[f"premortem:{ordinal}"] = trace
 
 
 class ReviewVerdict(StrEnum):

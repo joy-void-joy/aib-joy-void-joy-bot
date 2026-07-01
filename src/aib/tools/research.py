@@ -18,7 +18,12 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from claude_agent_sdk import AssistantMessage, McpServerConfig, ResultMessage
+from claude_agent_sdk import (
+    AssistantMessage,
+    McpServerConfig,
+    ResultMessage,
+    UserMessage,
+)
 from claude_agent_sdk.types import TextBlock, ToolUseBlock
 from pydantic import BaseModel, Field, ValidationError
 
@@ -28,7 +33,7 @@ from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
 from aib.agent.nested import NestedAgentReport
 from aib.agent.retrodict import create_retrodict_hooks
 from aib.retrodict_context import retrodict_cutoff
-from aib.agent.session import get_session
+from aib.agent.session import get_session, register_nested_trace
 from aib.paths import WORLDVIEW_PATH
 from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.metrics import get_collector
@@ -297,6 +302,7 @@ async def run_research_agent(
     session_id: str | None = None
     so_tool_blocks: list[ToolUseBlock] = []
     text_blocks: list[str] = []
+    nested_messages: list[AssistantMessage | UserMessage] = []
     assistant_msg_count = 0
     tool_use_count = 0
     result_message_seen = False
@@ -316,6 +322,8 @@ async def run_research_agent(
     ) as client:
         await client.query(prompt)
         async for message in client.receive_response():
+            if isinstance(message, (AssistantMessage, UserMessage)):
+                nested_messages.append(message)
             if isinstance(message, AssistantMessage):
                 assistant_msg_count += 1
                 for block in message.content:
@@ -388,10 +396,13 @@ async def run_research_agent(
             f"last_text={(text_blocks[-1] if text_blocks else '')[:300]!r}"
         )
 
+    from aib.agent.core import build_trace
+
     return NestedAgentReport[ResearchFindings](
         payload=findings,
         final_text=text_blocks[-1] if text_blocks else "",
         session_id=session_id,
+        trace=build_trace(nested_messages, query),
     )
 
 
@@ -452,6 +463,8 @@ async def run_single_research(
             error=f"{type(e).__name__}: {e}",
         )
 
+    register_nested_trace(f"research:{question.query}", report.trace)
+
     if report.payload is None:
         return ResearchResult(
             query=question.query,
@@ -503,6 +516,8 @@ async def refresh_research_entry(entry: WorldviewResearchEntry) -> ResearchResul
     except (RuntimeError, OSError, ValidationError) as e:
         logger.exception("Refresh failed for: %s", entry.slug)
         return ResearchResult(query=entry.query, error=f"{type(e).__name__}: {e}")
+
+    register_nested_trace(f"research:{entry.query}", report.trace)
 
     if report.payload is None:
         return ResearchResult(
@@ -558,6 +573,8 @@ async def run_follow_up(
             query=question.query,
             error=f"{type(e).__name__}: {e}",
         )
+
+    register_nested_trace(f"research:{question.query}", report.trace)
 
     findings = report.payload
     if findings is None:

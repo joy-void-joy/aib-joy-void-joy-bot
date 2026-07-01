@@ -2,6 +2,14 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.3.0 (2026-07-01)
+
+Embed nested sub-agent reasoning traces inline in the reviewed forecast trace
+- agent: research/subforecast/premortem sub-agents now capture their own SDK message stream and register a sub-trace on the session, keyed by query/question/ordinal
+- agent: ReasoningLogger expands each nested sub-trace inline beneath the tool result that produced it, so build_trace no longer shows nested agents as opaque tool results
+- agent: the post-session reviewer (condensed_reasoning) and the premortem gate now see the full nested reasoning — closing blind spots in retrodict future-leak detection, tool auditing of the ~35 research-side data tools, and reasoning-level risk flags
+- nested traces are hand-carried via NestedAgentReport.trace and a transient (non-persisted) ForecastOutput.trace field; nothing extra is written to disk or shown to the live forecasting agent
+
 ## v6.2.0 (2026-06-30)
 
 Lock the agent out of the host shell; isolate the SDK spawn cwd from the worktree
