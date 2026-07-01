@@ -1,0 +1,135 @@
+---
+timestamp: 2026-07-01 18:10:19 UTC
+question_type: binary
+factors:
+- description: America's Car-Mart in active lender-managed workout, restructuring
+    advisers hired (Houlihan Lokey/FTI/Mayer Brown), explicitly cited potential bankruptcy,
+    seeking $500M rescue
+  logit: 1.2
+  confidence: 0.8
+  effective_logit: 0.96
+- description: CRMT standstill covenant relief runs through EARLY SEPTEMBER (extendable
+    to November) - modal forced-filing date is at/after the Sep 1 deadline, and standstills
+    disincentivize filing during relief window
+  logit: -0.9
+  confidence: 0.7
+  effective_logit: -0.63
+- description: Faraday Future chronic distress, founder bankruptcy history, but survives
+    on serial dilutive raises, just got $30M, no formal restructuring process
+  logit: 0.3
+  confidence: 0.6
+  effective_logit: 0.18
+- description: Beyond Meat completed out-of-court restructuring late 2025 pushing
+    maturity to 2030; near-term risk is Nasdaq delisting not bankruptcy
+  logit: -0.3
+  confidence: 0.7
+  effective_logit: -0.21
+- description: Remaining 4 (Chegg net-cash, JetBlue $2.4B liquidity, Peloton/Petco
+    turnarounds) all low near-term filing risk
+  logit: -0.2
+  confidence: 0.7
+  effective_logit: -0.13999999999999999
+- description: Disjunction across 7 companies raises combined probability vs any single
+    name
+  logit: 0.4
+  confidence: 0.7
+  effective_logit: 0.27999999999999997
+tentative_estimate:
+  logit: -1.07
+  probability: 0.25
+anchor: Base rate for a specific distressed but not-yet-filed company filing Chapter
+  11 within a 2-month window is low single digits each; disjunction over 7 with one
+  active-restructuring name pushes combined to ~20-25%.
+assessment: Disjunction of 7 distressed companies over ~2 months. CRMT dominates the
+  probability mass as the only name with a hard near-term restructuring catalyst,
+  but its standstill relief extends through early September (past the Sep 1 deadline)
+  and is extendable to November, so the modal filing likely lands after resolution.
+  Product-form combination of individual filing probabilities gives ~23% central,
+  sensitivity 19-31%. I nudge slightly above the point estimate to ~25% to account
+  for prepackaged/pre-negotiated Chapter 11 possibility (common with advisers like
+  Houlihan Lokey) that could accelerate a CRMT filing into August.
+key_uncertainties: Whether CRMT executes a prepackaged/pre-negotiated Chapter 11 before
+  Sep 1 vs waiting for standstill expiry in early September or extending to November.
+  This single variable drives most of the outcome.
+tool_audit: research() sub-agent returned excellent structured data with current stock
+  prices, restructuring timelines, and debt maturities for all 7 companies. No failures.
+  execute_code computed the combined probability cleanly.
+process_reflection: The research tool was highly effective for a multi-entity screening
+  question - batching all 6 other companies into one query and Beyond Meat separately
+  gave comprehensive coverage. The main judgment call (CRMT standstill timing vs Sep
+  1 deadline) was well-supported by the retrieved data. No friction.
+computed:
+  factor_count: 6
+  factor_sum: 0.43999999999999995
+  tentative_logit: -1.07
+  logit_gap: -1.51
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: America's Car-Mart in active lender-managed workout, restructuring
+      advisers hired (Houlihan Lokey/FTI/Mayer Brown), explicitly cited potential
+      bankruptcy, seeking $500M rescue
+    logit: 1.2
+    confidence: 0.8
+    effective_logit: 0.96
+  - description: CRMT standstill covenant relief runs through EARLY SEPTEMBER (extendable
+      to November) - modal forced-filing date is at/after the Sep 1 deadline, and
+      standstills disincentivize filing during relief window
+    logit: -0.9
+    confidence: 0.7
+    effective_logit: -0.63
+  - description: Faraday Future chronic distress, founder bankruptcy history, but
+      survives on serial dilutive raises, just got $30M, no formal restructuring process
+    logit: 0.3
+    confidence: 0.6
+    effective_logit: 0.18
+  - description: Beyond Meat completed out-of-court restructuring late 2025 pushing
+      maturity to 2030; near-term risk is Nasdaq delisting not bankruptcy
+    logit: -0.3
+    confidence: 0.7
+    effective_logit: -0.21
+  - description: Remaining 4 (Chegg net-cash, JetBlue $2.4B liquidity, Peloton/Petco
+      turnarounds) all low near-term filing risk
+    logit: -0.2
+    confidence: 0.7
+    effective_logit: -0.13999999999999999
+  - description: Disjunction across 7 companies raises combined probability vs any
+      single name
+    logit: 0.4
+    confidence: 0.7
+    effective_logit: 0.27999999999999997
+  dominant_factor: America's Car-Mart in active lender-managed workout, restructuring
+    advisers hired (Houlihan Lokey/FTI/Mayer Brown), explicitly cited potential bankruptcy,
+    seeking $500M rescue
+  dominant_effective_logit: 0.96
+  factor_implied_probability: 0.6082590307465143
+  tentative_probability: 0.25
+  gap_pp: -35.825903074651436
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44209
+- **Question ID**: 44221
+- **Session Duration**: 467.7s (7.8 min)
+- **Cost**: $9.4810 total (orchestrator $2.3525 + sub-agents $7.1285)
+- **Tokens**: 7,470 total (12 in, 7,458 out)
+  - Cache: 312,211 read, 70,649 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44209_20260701_180403/20260701-180403.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 1 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| company_financials | 4 | 0 | 608ms | — |
+| execute_code | 1 | 0 | 196ms | — |
+| premortem | 1 | 0 | 56244ms | $1.3170 |
+| reflection | 1 | 0 | 6ms | — |
+| research | 1 | 0 | 293801ms | $5.8116 |
+| stock_price | 7 | 1 ⚠️ | 553ms | — |
