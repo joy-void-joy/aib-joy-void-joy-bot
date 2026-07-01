@@ -125,10 +125,17 @@ class ReasoningLogger:
     to the agent during runtime.
     """
 
-    def __init__(self, log_path: Path, question_title: str) -> None:
+    def __init__(
+        self,
+        log_path: Path,
+        question_title: str,
+        nested_traces: dict[str, str] | None = None,
+    ) -> None:
         self.log_path = log_path
         self.lines: list[str] = []
         self._pending_inputs: dict[str, tuple[str, dict]] = {}
+        self.nested_traces = nested_traces or {}
+        self.premortem_seen = 0
         self.lines.append(f"# Reasoning Log: {question_title}\n")
         self.lines.append(f"*Generated: {effective_now().isoformat()}*\n\n")
 
@@ -159,9 +166,43 @@ class ReasoningLogger:
                     textwrap.fill(line, width=200) for line in content_str.splitlines()
                 )
                 parts.append(f"### 📋 Result\n\n```\n{wrapped}\n```\n")
+                nested = self.nested_trace_for(original)
+                if nested:
+                    parts.append(nested)
                 return "\n".join(parts)
             case _:
                 return f"## ❓ {type(block).__name__}\n\n{block}\n"
+
+    def nested_trace_for(self, original: tuple[str, dict] | None) -> str:
+        """Expand the reasoning traces of nested sub-agents (research,
+        subforecast, premortem) inline beneath their tool result. Keys mirror
+        how the runners register into ForecastSession.nested_traces."""
+        if original is None or not self.nested_traces:
+            return ""
+        name, tool_input = original
+        keys: list[str] = []
+        if name == "mcp__research__research":
+            keys = [
+                f"research:{q.get('query', '')}"
+                for q in tool_input.get("questions", [])
+            ]
+        elif name == "mcp__subforecast__subforecast":
+            keys = [
+                f"subforecast:{s.get('question', '')}"
+                for s in tool_input.get("specs", [])
+            ]
+        elif name == "mcp__premortem__premortem":
+            keys = [f"premortem:{self.premortem_seen}"]
+            self.premortem_seen += 1
+        traces = [self.nested_traces[k] for k in keys if k in self.nested_traces]
+        if not traces:
+            return ""
+        short = name.rsplit("__", 1)[-1]
+        blocks = "\n\n".join(traces)
+        return (
+            f"\n### ↳ Nested {short} agent trace\n\n{blocks}\n\n"
+            f"### ↳ End nested {short} agent trace\n"
+        )
 
     def log_block(self, block: ContentBlock) -> None:
         """Add a formatted block to the log."""
@@ -554,6 +595,7 @@ def build_trace(
     messages: Sequence[AssistantMessage | UserMessage],
     title: str = "",
     exclude_tools: frozenset[str] = frozenset(),
+    nested_traces: dict[str, str] | None = None,
 ) -> str:
     """Build a markdown trace from conversation messages.
 
@@ -567,9 +609,12 @@ def build_trace(
             pattern as extract_sources: when a ToolUseBlock.name matches,
             its id is recorded and the corresponding ToolResultBlock is
             also skipped.
+        nested_traces: Sub-agent traces keyed by tool+identifier, expanded
+            inline beneath the research/subforecast/premortem result that
+            produced them.
     """
     excluded_ids: set[str] = set()
-    rl = ReasoningLogger(Path("/dev/null"), title)
+    rl = ReasoningLogger(Path("/dev/null"), title, nested_traces=nested_traces)
     for msg in messages:
         content = msg.content
         if isinstance(content, str):
@@ -943,6 +988,7 @@ async def run_forecast(
                 exclude_tools=frozenset(
                     {"mcp__notes__reflection", "mcp__premortem__premortem"}
                 ),
+                nested_traces=session.nested_traces,
             ),
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
@@ -1054,8 +1100,11 @@ async def run_forecast(
 
     try:
         # Post-session Opus review (replaces Sonnet condensation)
+        trace_md = build_trace(
+            all_messages, question_title, nested_traces=session.nested_traces
+        )
         forecast_summary = await review_forecast_trace(
-            build_trace(all_messages, question_title),
+            trace_md,
             question_title,
             notes.session,
             structured_output=result.structured_output,
@@ -1091,6 +1140,7 @@ async def run_forecast(
         token_usage=cast(TokenUsage, result.usage) if result.usage else None,
         retrodict_date=cutoff,
     )
+    output.trace = trace_md
 
     if result.structured_output:
         forecast = model_class.model_validate(result.structured_output)
