@@ -15,6 +15,7 @@ import sh
 from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
+from aib.config import settings
 from aib.paths import (
     forecasts_dir,
     find_latest_forecast_file,
@@ -136,6 +137,7 @@ class SavedForecast(BaseModel):
     reasoning: str = ""
     sources_consulted: list[str] = Field(default_factory=list)
     agent_version: str | None = None
+    model: str | None = None  # Model ID that produced this forecast
     # Numeric CDF and bounds (for baseline scoring)
     cdf: list[float] | None = None
     numeric_bounds: dict[str, object] | None = None
@@ -237,6 +239,7 @@ def save_forecast(
         fine_print=fine_print,
         revision_history=revision_history,
         agent_version=AGENT_VERSION,
+        model=settings.model,
     )
 
     prefix = "PARTIAL_" if partial else ""

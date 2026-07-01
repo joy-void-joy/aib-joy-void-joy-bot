@@ -1,0 +1,101 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a disjunction question: it resolves YES if **any** of 7 distressed companies (`BYND`, `CHGG`, `CRMT`, `JBLU`, `PTON`, `FFAI`, `WOOF`) files for bankruptcy before **September 1, 2026** — roughly a 2-month window from the July 1 forecast date. I issued two parallel research queries: one deep-dive on Beyond Meat, and one batched screen across the remaining six companies to rank near-term filing risk.\n\n## Key Evidence\n\nThe research returned strong, current, sourced data:\n\n- **America's Car-Mart (`CRMT`) — the dominant driver.** In an active lender-managed workout: a June 19, 2026 Silver Point-led amendment provides covenant relief (no new money) **only through early September 2026, extendable to November**. The company explicitly cited \"potential bankruptcy,\" hired top restructuring advisers (**Houlihan Lokey, FTI, Mayer Brown**), was reported seeking a **$500M** rescue, stock down ~95% (`$62.72 → $2.88`), Q3 FY2026 net loss of **-$76.7M** (EPS -$9.25), and was dropped from the Russell 2000.\n- **Faraday Future (`FFAI`)** — chronic distress, founder bankruptcy history, stock ~$0.25, but survives on serial dilutive raises (just secured $30M) with no formal restructuring process.\n- **Beyond Meat (`BYND`)** — completed an **out-of-court** debt restructuring in late 2025, pushing the maturity cliff to 2030; the acute near-term risk is **Nasdaq delisting (Aug 31 deadline), not bankruptcy**.\n- **Chegg (`CHGG`)** distress Z-score but **net-cash/debt-free**; **JetBlue (`JBLU`)** has **$2.4B liquidity** and a 2027/2029 story, not mid-2026; **Peloton (`PTON`)** and **Petco (`WOOF`)** are executing turnarounds with positive FCF and maturities extended to 2029/2031.\n\n## Conclusion\n\nI recognized `CRMT` carries almost all the probability mass, but its standstill relief runs **past** the Sep 1 resolution date, pushing the modal forced-filing date to at or after the deadline — and standstills disincentivize filing during the relief window. I computed a **product-form combination** of individual filing probabilities (CRMT 0.15, FFAI 0.05, others ≤0.02), yielding **~23% central** with a sensitivity range of **19-31%**. I nudged slightly up to **25%** to account for the possibility of a prepackaged/pre-negotiated Chapter 11 (common with advisers like Houlihan Lokey) accelerating a CRMT filing into August. I noted explicitly that the factor logit sum (~61%) overstates the answer because factors don't naturally represent a disjunction of independent low-probability events — the product-form computation is the correct frame. The premortem returned a **warn** (only for an immaterial tool-audit inaccuracy) and confirmed my 25% aligned with its independent estimate. **Final forecast: 25%.**",
+  "tool_audit": {
+    "by_tool": {
+      "stock_price": {
+        "calls": 7,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "company_financials": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct access to court filing dockets (PACER) to verify no filing had occurred as of the forecast date, though research coverage was adequate."
+    ],
+    "subtle_bugs": [
+      "The agent's reflection tool_audit stated 'No failures' but ground-truth metrics showed stock_price had 1 error (14.3% error rate over 7 calls). Immaterial to the forecast since financials came from the research sub-agent, but the self-report was inaccurate — flagged by premortem."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Product-form disjunction of individual per-company Chapter 11 filing probabilities over a 2-month window, anchored on qualitative distress/restructuring research for each of 7 names.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether America's Car-Mart executes a prepackaged/pre-negotiated Chapter 11 before Sep 1 versus waiting for its standstill to expire in early September (or extending to November)."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "CRMT is in active distress with top restructuring advisers hired and a hard early-September standstill cliff. Prepackaged Chapter 11 filings with a Houlihan Lokey-led lineup are frequently filed on short notice; assigning CRMT only 0.15 for the ~2-month window may understate the acceleration risk into August. The agent partially acknowledged this by nudging to 25%, but the base CRMT probability of 0.15 could reasonably be higher given the advisory lineup and $500M rescue urgency.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "22%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly framed the question as a disjunction and used product-form P(at least one) rather than naively summing or averaging per-company probabilities — and explicitly explained why the factor-sum (61%) diverges from the true estimate (25%).",
+    "Identified the single decisive detail — that CRMT's Silver Point standstill relief runs through early September, PAST the Sep 1 resolution date — and correctly reasoned that this pushes the modal forced-filing date at/after the deadline while disincentivizing filing during the relief window.",
+    "Cleanly distinguished bankruptcy risk from adjacent-but-different risks: Beyond Meat's Aug 31 Nasdaq delisting deadline is NOT a bankruptcy trigger; JetBlue's '75% bankruptcy by 2027' is a 2027/2029 refinancing story, not mid-2026.",
+    "Ran explicit sensitivity scenarios (high 31%, low 19%) rather than a single point estimate, and nudged up for the prepack acceleration tail with a stated rationale."
+  ],
+  "weaknesses": [
+    "The reflection tool_audit claimed 'No failures' when a stock_price sub-call had errored (14.3% error rate) — an inaccurate self-report caught by the premortem, though immaterial to the forecast.",
+    "Individual per-company probabilities (e.g., CRMT 0.15, FFAI 0.05) were assigned by judgment without an explicit reference class or historical base rate for how often a company at this specific stage of a lender-managed workout files within 2 months, leaving the anchor somewhat qualitative."
+  ],
+  "pipeline": {
+    "issues": [
+      "A stock_price sub-call errored (1 of 7 calls per premortem ground-truth), but it was not load-bearing and did not affect the forecast.",
+      "The agent's self-reported tool_audit inaccurately claimed no failures."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}

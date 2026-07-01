@@ -1,0 +1,103 @@
+{
+  "slug": "what-is-the-mass-shooting-tracker-massshootingtrac-905b4e89",
+  "query": "What is the Mass Shooting Tracker (massshootingtracker.site) total number of mass shootings recorded for full-year 2025, and specifically for July 2025? This tracker uses the broad 4+ people shot definition.",
+  "answer": "I've completed the research. Here's the bottom line on the Mass Shooting Tracker (massshootingtracker.site) 2025 figures:\n\n**What I found:**\n- The tracker uses the broad \"4+ people shot\" definition and serves its data from an S3 JSON endpoint: `https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json`\n\n**The key limitation:** I could **not** verify an exact full-year 2025 total or a clean July 2025 count directly from the tracker. The JSON file is sorted newest-first, and every fetch tool truncated around July 7 (cutting off the first half of the year), while bash/curl was disabled and all CORS proxies/Wayback were blocked.\n\n**Verifiable findings:**\n- A direct read returned **316 incident objects covering only ~July 7 → Dec 31, 2025** — a partial count, not the full year. So the tracker's 2025 total is **at least 316** and certainly higher.\n- **July 2025 specifically could not be reliably counted** — it fell exactly at the truncation boundary, yielding inconsistent partial reads (~31–47).\n\n**Context from narrower trackers** (not MST): Wikipedia's 2025 list reports **425 shootings** (420 killed, 1,900 wounded); Gun Violence Archive reports **~407–408**. Because MST's \"4+ shot\" definition is broader, its 2025 total very likely **exceeds 425**, but I couldn't confirm the exact integer.\n\nThe precise numbers are retrievable by anyone with shell access via `curl` + `jq 'length'` on the S3 endpoint (and a `date startswith \"2025-07\"` filter for July).",
+  "sources": [
+    {
+      "url": "https://massshootingtracker.site/",
+      "title": "Mass Shooting Tracker (home page, definition)",
+      "domain": "massshootingtracker.site",
+      "accessed_at": "2026-06-30",
+      "snippet": "We define a 'mass shooting' as a single outburst of violence in which four or more people are shot."
+    },
+    {
+      "url": "https://massshootingtracker.site/data/?year=2025",
+      "title": "Mass Shootings in 2025 (data page, renders client-side)",
+      "domain": "massshootingtracker.site",
+      "accessed_at": "2026-06-30",
+      "snippet": "Data compiled by an independent all-volunteer group based out of reddit (r/GunsAreCool)."
+    },
+    {
+      "url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json",
+      "title": "2025-data.json (S3 data endpoint, sorted newest-first)",
+      "domain": "s3.us-east-2.amazonaws.com",
+      "accessed_at": "2026-06-30",
+      "snippet": "JSON array of incident objects; partial read returned 316 objects from Dec 31 back to ~July 7, 2025 before truncation."
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025",
+      "title": "List of mass shootings in the United States in 2025 - Wikipedia",
+      "domain": "en.wikipedia.org",
+      "accessed_at": "2026-06-30",
+      "snippet": "A total of 420 people were killed and 1,900 people wounded in 425 shootings."
+    },
+    {
+      "url": "https://www.thetrace.org/2025/12/data-shooting-stats-gun-violence-america/",
+      "title": "Gun Violence By The Numbers in 2025 - The Trace",
+      "domain": "thetrace.org",
+      "accessed_at": "2026-06-30",
+      "snippet": "At least 40,000 people were shot in 2025; shooting deaths and injuries fell to some of the lowest levels on record."
+    },
+    {
+      "url": "https://www.mcgowanprograms.com/blog/2025-active-shooter-statistics-a-year-in-review/",
+      "title": "2025 Active Shooter Statistics: A Year in Review",
+      "domain": "mcgowanprograms.com",
+      "accessed_at": "2026-06-30",
+      "snippet": "Per Gun Violence Archive there were around 407 mass shootings in the United States in 2025."
+    },
+    {
+      "url": "https://github.com/MassShootingTracker/shootingtracker",
+      "title": "GitHub - MassShootingTracker/shootingtracker",
+      "domain": "github.com",
+      "accessed_at": "2026-06-30",
+      "snippet": "Mass Shooting Tracker website repository (README only; no 2025 data files exposed)."
+    }
+  ],
+  "key_facts": [],
+  "data_points": [
+    {
+      "metric": "Mass Shooting Tracker 2025 incidents directly readable (partial, ~July 7-Dec 31 only)",
+      "value": 316.0,
+      "unit": "incidents",
+      "as_of": "2026-06-30",
+      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json"
+    },
+    {
+      "metric": "Wikipedia 2025 US mass shootings total (4+ victims, narrower than MST)",
+      "value": 425.0,
+      "unit": "shootings",
+      "as_of": "2026-06-30",
+      "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Wikipedia 2025 US mass shooting deaths",
+      "value": 420.0,
+      "unit": "people killed",
+      "as_of": "2026-06-30",
+      "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Wikipedia 2025 US mass shooting wounded",
+      "value": 1900.0,
+      "unit": "people wounded",
+      "as_of": "2026-06-30",
+      "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Gun Violence Archive 2025 mass shootings (separate tracker, context)",
+      "value": 407.0,
+      "unit": "mass shootings",
+      "as_of": "2026-06-30",
+      "source_url": "https://www.mcgowanprograms.com/blog/2025-active-shooter-statistics-a-year-in-review/"
+    }
+  ],
+  "created_at": "2026-06-30T20:08:28.944523Z",
+  "updated_at": "2026-06-30T20:08:28.944523Z",
+  "stale_after": "2026-07-07T20:08:28.944523Z",
+  "resolvable_after": null,
+  "state": "fresh",
+  "superseded_by": null,
+  "revision_history": [],
+  "session_id": "84387c93-5c05-4548-800e-a8a5666605fa",
+  "follow_up_count": 0
+}

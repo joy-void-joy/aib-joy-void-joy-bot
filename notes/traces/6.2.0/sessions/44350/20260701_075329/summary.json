@@ -1,0 +1,100 @@
+{
+  "condensed_reasoning": "## Research\n\nI analyzed a threshold question: will Bitcoin's daily close fall below **$56,000** on any day from July 9–11, 2026? I started with two web searches. The first returned structured Yahoo Finance data confirming BTC closed at **$58,664** on July 1, 2026, with a full 30-day daily-close history. Summary stats showed a **-53.5% drawdown** from the 52-week high ($126,198), a **10-day trailing return of -7.23%**, 20-day trailing volatility of ~1.49%, and a recent low of $58,559 on June 30. The second search confirmed the crisis regime: **record ETF outflows** (~$4–5B in June, 13+ consecutive days of withdrawals), Strategy (MSTR) reducing purchases, a fresh break below $60k, and a Fear & Greed Index of **15 (Extreme Fear)**.\n\n## Key Evidence\n\nI computed empirical statistics in the sandbox: daily vol (all) = 1.96%, last-14 = 1.47%, mean daily return (last 10) = **-0.75%**. My first Monte Carlo used **normal** returns across six weighted drift/vol scenarios (0.19 relief-rally to 0.58 momentum-down), giving a weighted **3-day P(YES) ≈ 0.385**. I checkpointed this at 0.38.\n\nThe premortem reviewer **failed** my first pass, flagging a binary-vs-numeric inconsistency: a fresh companion numeric forecast for \"BTC price on July 10, 2026\" (post 44349) had a CDF implying single-day **P(<$56,000) ≈ 0.37**, and since the binary resolves YES if *any* of three correlated days closes below, the 3-day probability must exceed the single-day figure. My normal-tailed model was too thin and washed out the uplift.\n\nI re-ran with **Student-t(4) fat tails**: weighted single-day 0.299, 3-day 0.369 (a **~1.24x uplift**). I then reconciled by reducing relief-rally weight to better reflect the -0.75%/day momentum, giving single-day 0.347 and **3-day P(YES) = 0.42**; the CDF-derived cross-check (0.37 × 1.24) gave **0.46**.\n\n## Conclusion\n\nTwo convergent methods (fat-tailed MC 0.42, CDF-derived 0.46) put my central estimate at **0.44**. I framed this as genuinely two-sided: structural bearish momentum and ETF selling pull toward a ~0.55 YES case, while oversold/Extreme-Fear contrarian bottoming (where a single 5-6% relief rally erases most YES probability) pulls toward a ~0.30 NO case. The drift assumption is the dominant swing factor. The premortem **approved** the revised forecast, confirming consistency with the companion numeric CDF. Final probability: **0.44 (NO-leaning)**.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct prediction-market lookup tool was used; a Polymarket/Kalshi BTC-threshold query would have provided an external calibration anchor.",
+      "No live options-chain / implied-volatility source to substantiate the '>3% implied vol' claim that was asserted from memory."
+    ],
+    "subtle_bugs": [
+      "The premortem tool_audit narrative in the agent's reflection framed the premortem call as cleanly 'successful/helpful,' whereas ground-truth metrics show a 100% error rate (likely timeout) — the tool still returned useful content, so the misleading framing was immaterial to the forecast but is an inaccurate self-report."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Fat-tailed Student-t(4) Monte Carlo across weighted drift/volatility scenarios, reconciled against a companion numeric BTC-price CDF with an empirical 3-day 'at least one' uplift.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "The forward drift direction — momentum continuation (~0.58) versus an oversold/Extreme-Fear relief bounce (~0.30) — dominates the estimate."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "A Token Metrics search snippet explicitly mentioned 'Polymarket puts 51.7% odds on Bitcoin staying above $60,000 by June 27' — a prediction market on a nearby BTC threshold was visible in the results but never consulted or used to calibrate the forecast.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The '>3% options-implied vol' claim (Factor 5) is asserted in the summary and factors but never appears in any search result or sandbox output; it materially supports the fat-tail widening but is unsubstantiated. The premortem itself flagged it as 'asserted, not in trace.'",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "42%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly mapped the July 9-11 window to Monte Carlo path indices (prices[:,7:10] over a 10-day path from July 1), which the reviewer independently verified as correct.",
+    "Responded substantively to the premortem failure by switching from a normal to a Student-t(4) fat-tailed model and re-deriving the 3-day uplift empirically (0.299→0.369, ~1.24x) rather than hand-waving.",
+    "Achieved genuine two-method convergence (fat-tailed MC 0.42 and CDF-derived 0.46) and anchored the binary to the companion numeric forecast, avoiding a >10pp binary-numeric inconsistency.",
+    "Used empirical vol computed directly from the fetched close history rather than a guessed value, and kept drift near zero-to-mildly-negative to avoid over-extrapolating a -0.75%/day momentum."
+  ],
+  "weaknesses": [
+    "Did not consult the Polymarket odds visible in its own search results, missing a free market-implied calibration check for a crypto-threshold question.",
+    "The first-pass normal-tailed MC (0.385) essentially reproduced the single-day probability and washed out the 3-day structure — this error was only caught by the premortem, not self-identified, despite Factor 5 of pass 1 explicitly noting the 'at least one of three' boost.",
+    "The reconciliation scenario reweighting (reducing relief-rally weight, nudging drift) was somewhat outcome-driven to land near the reviewer's target ~0.44 rather than derived from an independent principle."
+  ],
+  "pipeline": {
+    "issues": [
+      "The first premortem call registered as an error/timeout (~427s) at the metrics level but still returned actionable reviewer feedback; the agent's tool_audit narrative did not acknowledge this failure.",
+      "The '>3% options-implied volatility' figure propagated into the final factors and summary without any source in the trace."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
