@@ -1,0 +1,110 @@
+{
+  "condensed_reasoning": "## Research\n\nI ran a single research query (after a schema retry) asking whether Uganda's confirmed Bundibugyo Ebola case count had risen above 20 after 21 June 2026, directing the sub-agent to check ECDC CDTR Week 27 and WHO Disease Outbreak News. The result was clean and multi-sourced:\n\n- **ECDC (page last updated 1 July 2026):** Uganda at **20 confirmed cases, 2 deaths**, with **no new cases since 21 June 2026**; 15 recovered.\n- **WHO DON607/DON608:** Uganda at 19 confirmed cases (one below ECDC/MoH due to reporting lag), 2 deaths.\n- **Corroboration:** Wikipedia, NICD (26 June), and ebola.fyi all confirmed Uganda at 20c/2d, plateaued since 21 June, border closed.\n- **Context:** The outbreak is being driven almost entirely by the **DRC** (1,274 → 1,333 confirmed cases in days), and ECDC rates Uganda's risk **HIGH**.\n\n## Key Evidence\n\nThe question resolves **YES** only if a *genuinely new* confirmed case pushes Uganda's total to **21+** during **July 1–12, 2026**. I computed a Poisson threshold model in the sandbox: from case #19 (June 5) to July 1 is ~26 days with **1 new case** (June 21), giving **λ ≈ 0.46** over a 12-day window → **P(≥1 new case) ≈ 0.37**. I ran a sensitivity range (λ = 0.25–0.6 → P = 0.22–0.45).\n\nI then structured four factors:\n- **Recent empirical rate** (logit −0.53): the Poisson anchor.\n- **Domestic deceleration** (logit −0.5): 11-day plateau, contacts nearly cleared, no community transmission, border closed.\n- **Importation pressure** (logit +0.4): large, rapidly growing DRC reservoir; ECDC HIGH risk.\n- **Reporting availability** (logit +0.1): frequent ECDC/WHO updates mean a real case would likely be published in-window.\n\nThe premortem returned **warn** (approved), flagging two minor issues: the \"9 contacts remaining\" figure wasn't in the research (I attributed it to the question description), and my tool-audit \"no failures\" claim was inaccurate given the first research call's schema error.\n\n## Conclusion\n\nThe domestic outbreak is winding down, pushing toward NO, offset by genuine importation risk from the growing DRC outbreak. The recent-rate Poisson gives ~0.37; deceleration signals pull me modestly below. **Final estimate: 0.31.**",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 3,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The reflection tool reported factor_implied_probability of 0.396 vs the agent's tentative 0.30 — a 9.6pp downward gap. The agent applied extra deceleration weighting beyond what the four logits sum to, but never explicitly reconciled why the final (0.31) sits below the mechanical factor aggregation."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Poisson threshold model anchored on Uganda's recent empirical case rate (1 new case per ~26 days), adjusted qualitatively for domestic deceleration and DRC importation pressure.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the rapidly growing DRC reservoir produces a fresh Uganda importation (or a remaining contact converts to a case) within the 12-day window despite the closed border and decelerating domestic outbreak."
+  },
+  "risk_flags": [],
+  "reviewer_estimate": {
+    "estimate": "26%",
+    "agrees_with_agent": true,
+    "divergence_reason": "I weight the deceleration signal slightly more heavily: the June 21 case is the only new case in a 26-day stretch and it predates the window, contacts are nearly cleared, and the border is closed, so I land a touch below the agent at ~26%. This is directionally identical and within the premortem's own 0.25–0.35 range."
+  },
+  "strengths": [
+    "Anchored the estimate on an explicit Poisson computation (λ≈0.46 → P≈0.37) with a sensitivity range (λ=0.25–0.6), rather than a hand-waved probability.",
+    "Correctly parsed the resolution mechanics — required a 'genuinely new' case to reach 21+, and the premortem confirmed retrospective reclassification would not trigger YES.",
+    "Held both sides of the ledger explicitly: domestic deceleration (NO) vs. growing DRC importation reservoir + ECDC HIGH risk (YES), rather than anchoring solely on the flat status quo.",
+    "Efficient trace: one substantive research call surfaced five corroborating sources (ECDC, WHO DONs, Wikipedia, NICD, ebola.fyi) that all agreed on the 20-case plateau."
+  ],
+  "weaknesses": [
+    "The 'no failures' tool-audit claim in the reflection was inaccurate — the first research call failed with a pydantic schema error (self-corrected, but misreported).",
+    "Never reconciled the 9.6pp gap flagged by the reflection tool (factor-implied 0.40 vs. tentative 0.30); the extra downward adjustment was applied but not explicitly justified.",
+    "The Poisson rate was drawn from a mixed window (June 5–July 1) that spans the deceleration; a rate estimated purely from the plateaued late-June period would have been lower, so the anchor is arguably slightly high.",
+    "Did not check any prediction-market or community prior for calibration."
+  ],
+  "pipeline": {
+    "issues": [
+      "First mcp__research__research call failed with a pydantic validation error because the agent supplied a top-level 'query' field instead of the required 'questions' array — one wasted call, self-corrected on retry."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}

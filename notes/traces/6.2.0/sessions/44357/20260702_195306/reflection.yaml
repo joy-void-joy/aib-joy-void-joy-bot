@@ -1,0 +1,111 @@
+---
+timestamp: 2026-07-02 19:56:11 UTC
+question_type: binary
+factors:
+- description: 'Recent empirical case rate: 1 new case in the ~26 days since case
+    #19 (June 5), implying Poisson lambda ~0.46 over a 12-day window, P(>=1) ~0.37'
+  logit: -0.53
+  confidence: 0.7
+  effective_logit: -0.371
+- description: 'Strong domestic deceleration: plateau at 20 for 11 days (June 21-July
+    1), only 9 contacts remaining under follow-up (most completing 21-day period),
+    no documented community transmission, border closed'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: 'Persistent importation pressure: DRC outbreak large and rapidly growing
+    (1,155->1,333 in days), ECDC rates Uganda risk HIGH, cross-border corridor links
+    persist'
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: 'Reporting availability strong: ECDC/WHO update frequently (ECDC updated
+    July 1), so a genuine new case would likely be published within window'
+  logit: 0.1
+  confidence: 0.6
+  effective_logit: 0.06
+tentative_estimate:
+  logit: -0.85
+  probability: 0.3
+anchor: 'Recent case rate: 1 new case per ~26 days -> Poisson lambda ~0.46 over 12
+  days -> P(>=1) ~0.37'
+assessment: Question asks whether a genuinely new confirmed case pushes Uganda above
+  20 (to 21+) during July 1-12. As of July 1, Uganda plateaued at 20 with no new cases
+  since June 21. The domestic outbreak is winding down (contacts nearly all cleared,
+  no community transmission, border closed), which pushes toward NO. The main residual
+  risk is fresh importation from a large growing DRC outbreak. Recent-rate Poisson
+  gives ~0.37; deceleration signals push me somewhat below that to ~0.30.
+key_uncertainties: Whether the DRC growth translates into new Uganda importations
+  despite the closed border, and whether any remaining contact converts to a case.
+tool_audit: research() returned excellent, directly relevant multi-source confirmation
+  (ECDC July 1, WHO DONs, Wikipedia, NICD, ebola.fyi) with no failures. sandbox execute_code
+  worked for Poisson calc.
+process_reflection: Smooth. This is a straightforward epidemiological threshold question;
+  the research sub-agent nailed the current state on the first call, and a simple
+  Poisson sufficed. No friction.
+computed:
+  factor_count: 4
+  factor_sum: -0.421
+  tentative_logit: -0.85
+  logit_gap: -0.429
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Recent empirical case rate: 1 new case in the ~26 days since case
+      #19 (June 5), implying Poisson lambda ~0.46 over a 12-day window, P(>=1) ~0.37'
+    logit: -0.53
+    confidence: 0.7
+    effective_logit: -0.371
+  - description: 'Strong domestic deceleration: plateau at 20 for 11 days (June 21-July
+      1), only 9 contacts remaining under follow-up (most completing 21-day period),
+      no documented community transmission, border closed'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: 'Persistent importation pressure: DRC outbreak large and rapidly
+      growing (1,155->1,333 in days), ECDC rates Uganda risk HIGH, cross-border corridor
+      links persist'
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: 'Reporting availability strong: ECDC/WHO update frequently (ECDC
+      updated July 1), so a genuine new case would likely be published within window'
+    logit: 0.1
+    confidence: 0.6
+    effective_logit: 0.06
+  dominant_factor: 'Recent empirical case rate: 1 new case in the ~26 days since case
+    #19 (June 5), implying Poisson lambda ~0.46 over a 12-day window, P(>=1) ~0.37'
+  dominant_effective_logit: -0.371
+  factor_implied_probability: 0.39627748369828364
+  tentative_probability: 0.3
+  gap_pp: -9.627748369828366
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44357
+- **Question ID**: 44368
+- **Session Duration**: 282.2s (4.7 min)
+- **Cost**: $7.4972 total (orchestrator $2.1073 + sub-agents $5.3899)
+- **Tokens**: 6,320 total (14 in, 6,306 out)
+  - Cache: 328,911 read, 60,839 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44357_20260702_195306/20260702-195306.log`
+
+### Tool Calls
+
+- **Total**: 15 calls
+- **Errors**: 1 (6.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0676 |
+| execute_code | 1 | 0 | 239ms | — |
+| fetch_url | 1 | 0 | 6177ms | — |
+| premortem | 2 | 0 | 58597ms | $2.0604 |
+| reflection | 2 | 0 | 4ms | — |
+| research | 3 | 1 ⚠️ | 106389ms | $3.0976 |
+| web_search | 4 | 0 | 31773ms | $0.1644 |
+| wikipedia | 2 | 0 | 216ms | — |
