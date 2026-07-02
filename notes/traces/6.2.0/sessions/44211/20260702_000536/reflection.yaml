@@ -1,0 +1,106 @@
+---
+timestamp: 2026-07-02 00:10:40 UTC
+question_type: binary
+factors:
+- description: 'Base rate: ~4-5 new North-America-specific CDC Travel Health Notices
+    over past ~10 months (~0.45-0.6/month); Poisson over 2 months gives P(>=1)~0.63-0.70'
+  logit: 0.9
+  confidence: 0.8
+  effective_logit: 0.7200000000000001
+- description: 'Broad geographic scope: CDC North America includes Caribbean (Haiti,
+    Cuba, DR, Jamaica) + Central America (Panama, Costa Rica) + Mexico + Canada =
+    many candidate countries with frequent outbreaks'
+  logit: 0.5
+  confidence: 0.75
+  effective_logit: 0.375
+- description: June 2026 alone had TWO new NA notices (Hep A Canada, Diphtheria Haiti);
+    summer is active dengue/hurricane/mosquito season, suggesting elevated rate
+  logit: 0.4
+  confidence: 0.6
+  effective_logit: 0.24
+- description: Requires genuinely NEW notice, not just updates to existing global
+    measles/dengue notices; narrows qualifying events
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+tentative_estimate:
+  logit: 0.95
+  probability: 0.72
+anchor: 'Poisson base rate: ~0.5 new NA notices/month over 10 months of data, 2-month
+  window lambda~1.0, P(>=1)~0.63'
+assessment: Question resolves YES if any North American country gets a newly-issued
+  CDC Travel Health Notice in July or August 2026. This is essentially a base-rate/frequency
+  question. CDC issues NA-specific notices at roughly 0.45-0.6/month, but June 2026
+  had two, and the broad geographic scope (Caribbean+Central America included) plus
+  active summer outbreak season push toward the higher end. Poisson with lambda~1.2
+  over two months gives ~0.70. I nudge slightly up to 0.72 given June's activity and
+  broad country pool.
+tool_audit: research() sub-agent returned detailed notice history with dates - very
+  useful. execute_code confirmed Poisson calculation. No failures.
+process_reflection: Straightforward base-rate question; research tool gave exactly
+  the notice frequency data needed. Minimal friction.
+computed:
+  factor_count: 4
+  factor_sum: 1.155
+  tentative_logit: 0.95
+  logit_gap: -0.20500000000000007
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Base rate: ~4-5 new North-America-specific CDC Travel Health Notices
+      over past ~10 months (~0.45-0.6/month); Poisson over 2 months gives P(>=1)~0.63-0.70'
+    logit: 0.9
+    confidence: 0.8
+    effective_logit: 0.7200000000000001
+  - description: 'Broad geographic scope: CDC North America includes Caribbean (Haiti,
+      Cuba, DR, Jamaica) + Central America (Panama, Costa Rica) + Mexico + Canada
+      = many candidate countries with frequent outbreaks'
+    logit: 0.5
+    confidence: 0.75
+    effective_logit: 0.375
+  - description: June 2026 alone had TWO new NA notices (Hep A Canada, Diphtheria
+      Haiti); summer is active dengue/hurricane/mosquito season, suggesting elevated
+      rate
+    logit: 0.4
+    confidence: 0.6
+    effective_logit: 0.24
+  - description: Requires genuinely NEW notice, not just updates to existing global
+      measles/dengue notices; narrows qualifying events
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  dominant_factor: 'Base rate: ~4-5 new North-America-specific CDC Travel Health Notices
+    over past ~10 months (~0.45-0.6/month); Poisson over 2 months gives P(>=1)~0.63-0.70'
+  dominant_effective_logit: 0.7200000000000001
+  factor_implied_probability: 0.7604230019887311
+  tentative_probability: 0.72
+  gap_pp: -4.042300198873116
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44211
+- **Question ID**: 44223
+- **Session Duration**: 373.3s (6.2 min)
+- **Cost**: $5.2151 total (orchestrator $1.9379 + sub-agents $3.2772)
+- **Tokens**: 4,991 total (14 in, 4,977 out)
+  - Cache: 316,451 read, 58,118 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44211_20260702_000536/20260702-000536.log`
+
+### Tool Calls
+
+- **Total**: 10 calls
+- **Errors**: 1 (10.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0961 |
+| execute_code | 1 | 0 | 207ms | — |
+| fetch_url | 1 | 0 | 23350ms | — |
+| premortem | 1 | 0 | 51029ms | $1.3243 |
+| reflection | 1 | 0 | 5ms | — |
+| research | 2 | 1 ⚠️ | 120871ms | $1.6882 |
+| web_search | 4 | 0 | 34173ms | $0.1686 |
