@@ -1,0 +1,101 @@
+{
+  "condensed_reasoning": "## Research\n\nI ran a single research query on Virgin Galactic (`SPCE`) covering financing, capital raises, cash position, and going-concern status in 2026. The research returned rich financial data:\n\n- **Total liquidity** ~**$251M** at Mar 31, 2026 (cash $124.8M + marketable securities $95.1M + restricted $30.6M), i.e. ~**$220M unrestricted**.\n- **Q1 2026 free cash flow** of **–$93M**, with **Q2 guidance of –$87M to –$92M** — roughly **$90M/quarter burn**.\n- Runway of only **~2–3 quarters** without new financing.\n- Heavy Q2 2026 balance-sheet activity, but mostly **dilutive/deleveraging** rather than one large cash raise: ~$52M April ATM, June redemption of $30.5M first-lien 2028 notes **in stock**, June 22 exchange of ~$52.5M 2027 convertible notes for stock+warrants, and a ~$30.5M 9.80% note swap for ~6.7M shares.\n- Still **pre-revenue**, with first commercial spaceflight not until **Q4 2026**.\n- Reports of a **new strategic investor** and a 125% June stock spike.\n\n## Key Evidence\n\nCritically, the research sub-agent **erroneously claimed there was \"no explicit going-concern qualification in the Q1 2026 materials.\"** I caught this: the question text itself quotes the Q1 2026 10-Q going-concern statement directly, so the authoritative fact is that the **Q1 2026 10-Q DID carry a going concern statement**. I overrode the sub-agent and disclosed the discrepancy transparently.\n\nMy core reasoning: ASC 205-40 requires management to demonstrate sufficient liquidity for **12 months**, and management explicitly excludes capital-market transactions (not within its control) from that evaluation. With ~2 quarters of runway and no revenue until Q4 2026, the company structurally **cannot** demonstrate 12-month liquidity — so the doubt persists absent a large committed financing. The Q2 debt exchanges cut leverage but were **dilutive equity swaps, not cash injections**, so they don't extend runway.\n\nI ran a reflection producing five factors (factor sum implied **~99%**) and a premortem constructing the strongest NO case (balance-sheet flurry, rumored strategic investor, June rally, precedent of removing going-concern language before a commercial milestone). The premortem was **approved**, confirming factor grounding and that the June capital events were used only as forward-looking evidence, not as already resolving the question.\n\n## Conclusion\n\nI concluded **95% YES** — the going concern statement will almost certainly persist into the Q2 2026 10-Q. I held below the ~99% factor sum to account for tail risks: filing timing before the resolution window, a surprise large committed strategic financing (~$300M+) that could flip it to NO, or question annulment.",
+  "tool_audit": {
+    "by_tool": {
+      "company_financials": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "stock_price": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct SEC EDGAR access to verify the Q1 2026 10-Q going-concern text or to check the expected Q2 10-Q filing date, which would have removed reliance on the question text for the pivotal baseline fact"
+    ],
+    "subtle_bugs": [
+      "The research sub-agent conflated press-release/8-K summaries with actual 10-Q disclosure, producing a confident but wrong statement on the central variable (going-concern presence) — a misleading result that did not surface as an error"
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/equity",
+    "approach": "Status-quo continuity anchor (prior quarter's going-concern statement) plus cash-runway math against the ASC 205-40 12-month liquidity test, adjusted down for financing tail risks.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a large committed strategic financing (~$300M+) closes and provides 12-month runway before the Q2 10-Q is filed, letting management remove the qualification."
+  },
+  "risk_flags": [
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The research sub-agent explicitly stated 'No explicit going-concern qualification in the Q1 2026 materials' — directly contradicting Factor 1. The agent correctly overrode this using the authoritative question text and disclosed the discrepancy, but the conflicting data point on the single most important variable was resolved only by trusting the resolution criteria quote rather than by verifying the actual 10-Q, leaving residual uncertainty about the Q1 baseline unaddressed.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "94%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Caught a critical factual error in the research sub-agent output (claimed no Q1 going concern) and correctly overrode it using the authoritative question text, disclosing the discrepancy transparently in both the response and tool_audit",
+    "Correctly identified the operative ASC 205-40 mechanism — the 12-month liquidity test and management's exclusion of not-within-control capital-market transactions — which is what structurally guarantees persistence, rather than relying only on a naive status-quo heuristic",
+    "Correctly characterized the Q2 debt-for-equity exchanges as deleveraging/dilutive rather than runway-extending cash, avoiding a common trap of reading balance-sheet 'strengthening' headlines as liquidity relief",
+    "Held at 95% below the ~99% factor sum, appropriately reserving probability mass for genuine tail risks (rumored strategic investor, filing timing, annulment) rather than anchoring to the mechanical factor product"
+  ],
+  "weaknesses": [
+    "Did not attempt to verify whether the Q2 2026 10-Q would actually be filed before the resolution window — this filing-timing risk was assigned a factor but never researched (a 10-Q filing date is typically predictable/estimable)",
+    "Did not follow up on the rumored 'new strategic investor' behind the 125% June stock spike; a single targeted search could have narrowed the most important NO-case uncertainty rather than leaving it at a hand-waved 40% confidence factor",
+    "Only ran one research query and did not independently confirm the Q1 2026 going-concern language from the primary 10-Q despite the sub-agent contradicting it on the pivotal variable"
+  ],
+  "pipeline": {
+    "issues": [
+      "Research sub-agent returned a factually incorrect claim on the pivotal variable (no Q1 going concern) that contradicted the resolution criteria — a data-quality issue that the agent fortunately caught only because the question text quoted the authoritative statement"
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
