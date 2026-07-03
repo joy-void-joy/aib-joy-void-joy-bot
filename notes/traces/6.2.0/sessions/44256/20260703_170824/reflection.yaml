@@ -1,0 +1,153 @@
+---
+timestamp: 2026-07-03 17:18:39 UTC
+question_type: discrete
+factors:
+- description: 'July 3, 2026 already reported 30 aircraft (within the resolution window),
+    establishing a hard floor: the max can only rise from 30.'
+  supports:
+    center: 30.0
+    low: 30.0
+    high: 30.0
+  logit: 2.0
+  confidence: 0.95
+  effective_logit: 1.9
+- description: 2026 is in a historically rare quiet regime (daily avg ~4.5, all-year
+    single-day max ~32, multi-day zero pauses) driven by Trump-Xi diplomacy; suppresses
+    the max.
+  supports:
+    center: 36.0
+    low: 31.0
+    high: 46.0
+  logit: 0.9
+  confidence: 0.7
+  effective_logit: 0.63
+- description: August is historically the most active month (Pelosi Aug 2022, Aug
+    2025 surge 80+); Han Kuang exercises in July often trigger PLA response; 62-day
+    window catches surges.
+  supports:
+    center: 55.0
+    low: 40.0
+    high: 90.0
+  logit: 0.8
+  confidence: 0.6
+  effective_logit: 0.48
+- description: Major named exercises (Strait Thunder 68 ADIZ, Justice Mission 130,
+    Joint Sword-2024B 153) produce huge single-day counts; ~1 every 2-3 months historically
+    but suppressed in current pause.
+  supports:
+    center: 90.0
+    low: 60.0
+    high: 130.0
+  logit: -0.3
+  confidence: 0.5
+  effective_logit: -0.15
+tentative_estimate:
+  center: 42.0
+  low: 33.0
+  high: 81.0
+anchor: 'Reference class: 2-month max of a right-skewed count with occasional exercise-driven
+  spikes. 2026 quiet-regime baseline max ~32-40; active-regime/exercise tail reaches
+  60-153.'
+assessment: 'Discrete question: max daily PLA aircraft over Jul 1-Aug 31 2026 (62
+  days). Hard floor of 30 already set by July 3 report. Mixture model: quiet regime
+  persists (52%, max ~30s-40s), moderate event-driven surge (32%, ~45-65), major exercise
+  (16%, 65-135). Median ~42, P90~81. Upper tail reflects real risk of a Joint Sword-scale
+  exercise, which historically hits 130+. The diplomatic pause is the dominant suppressor
+  but activity clearly resumes in spikes (Jun 4=32, Jul 3=30). August seasonality
+  and Han Kuang provide surge triggers.'
+key_uncertainties: Whether the Trump-Xi diplomatic pause holds through August, and
+  whether a major named exercise occurs in this specific window. A single Joint Sword-scale
+  drill would push the resolution above 90.
+tool_audit: research() returned excellent structured daily data for 2026 including
+  recent Jul 1-3 counts and historical exercise peaks. execute_code used for Monte
+  Carlo mixture simulation. No failures.
+process_reflection: The research tool was highly effective, returning granular daily
+  counts that pinned down a hard floor (Jul 3 = 30). The main uncertainty is regime
+  persistence (pause vs reversion), which is inherently a scenario-weighting judgment
+  the mixture handles well. No major friction.
+computed:
+  factor_count: 4
+  factor_sum: 2.86
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'July 3, 2026 already reported 30 aircraft (within the resolution
+      window), establishing a hard floor: the max can only rise from 30.'
+    supports:
+      center: 30.0
+      low: 30.0
+      high: 30.0
+    logit: 2.0
+    confidence: 0.95
+    effective_logit: 1.9
+  - description: 2026 is in a historically rare quiet regime (daily avg ~4.5, all-year
+      single-day max ~32, multi-day zero pauses) driven by Trump-Xi diplomacy; suppresses
+      the max.
+    supports:
+      center: 36.0
+      low: 31.0
+      high: 46.0
+    logit: 0.9
+    confidence: 0.7
+    effective_logit: 0.63
+  - description: August is historically the most active month (Pelosi Aug 2022, Aug
+      2025 surge 80+); Han Kuang exercises in July often trigger PLA response; 62-day
+      window catches surges.
+    supports:
+      center: 55.0
+      low: 40.0
+      high: 90.0
+    logit: 0.8
+    confidence: 0.6
+    effective_logit: 0.48
+  - description: Major named exercises (Strait Thunder 68 ADIZ, Justice Mission 130,
+      Joint Sword-2024B 153) produce huge single-day counts; ~1 every 2-3 months historically
+      but suppressed in current pause.
+    supports:
+      center: 90.0
+      low: 60.0
+      high: 130.0
+    logit: -0.3
+    confidence: 0.5
+    effective_logit: -0.15
+  dominant_factor: 'July 3, 2026 already reported 30 aircraft (within the resolution
+    window), establishing a hard floor: the max can only rise from 30.'
+  dominant_effective_logit: 1.9
+  distribution_metrics:
+    implied_median: 37.84177215189874
+    implied_p10: 33.14240506329114
+    implied_p90: 47.05063291139241
+    median_gap: 4.158227848101262
+    median_gap_pct: 29.897610921501673
+    spread_ratio: 3.451194539249146
+    precision: 1.1428571428571428
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44256
+- **Question ID**: 44267
+- **Session Duration**: 716.9s (11.9 min)
+- **Cost**: $11.7982 total (orchestrator $2.9088 + sub-agents $8.8894)
+- **Tokens**: 11,526 total (14 in, 11,512 out)
+  - Cache: 404,669 read, 76,702 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44256_20260703_170824/20260703-170824.log`
+
+### Tool Calls
+
+- **Total**: 37 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2274 |
+| execute_code | 2 | 0 | 142ms | — |
+| fetch_url | 7 | 0 | 10414ms | — |
+| premortem | 1 | 0 | 65412ms | $1.5348 |
+| reflection | 1 | 0 | 6ms | — |
+| research | 1 | 0 | 474878ms | $6.2248 |
+| web_search | 15 | 0 | 36742ms | $0.9023 |
+| wikipedia | 10 | 0 | 225ms | — |
