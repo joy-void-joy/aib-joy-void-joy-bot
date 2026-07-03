@@ -1,0 +1,118 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this fast-moving geopolitical question with two parallel research queries: one on the current IAEA access status to Iran's three bombed sites (Natanz, Fordow, Isfahan) after the June 2026 US-Iran talks, and one on the broader timeline of Iran-IAEA cooperation suspension and the ongoing negotiations.\n\nThe research returned rich, well-sourced findings (World Israel News, Middle East Monitor, ANI, Times of Israel, CNN, Euronews, Al Jazeera, ISIS-online, Washington Post) with a clean timeline:\n- **July 2, 2025**: Pezeshkian signed the IAEA cooperation-suspension law\n- **~Sept 2025**: Partial restoration via the \"Cairo Agreement\"\n- **Nov 2025**: Iran terminated that agreement\n- **Feb 28, 2026**: Second US-Israeli war began; IAEA halted all verification\n- **June 17-18, 2026**: Islamabad MoU ended the war, opened a 60-day window, stated nuclear activities \"will be supervised by the IAEA\"\n- **Early July 2026**: Only partial, disputed access (a single Bushehr inspection); bombed enrichment sites still off-limits\n\n## Key Evidence\n\n- **Status quo legal ban**: As of July 1-2, 2026, Iran officially bars IAEA from all three bombed sites via a **parliamentary law + SNSC resolution**. Parliament Speaker Qalibaf/Ghalibaf stated verbatim: *\"no access whatsoever will be granted to sites that have been bombed and damaged.\"* Access is permitted **only to Bushehr NPP and Tehran Research Reactor** — neither of which counts for resolution.\n- **Contradictory claims**: VP Vance claimed June 22 that Iran agreed to invite inspectors \"this week\"; Iran's FM Baghaei denied this June 23. A three-way contradiction between US officials, the IAEA, and Tehran.\n- **Diplomatic upside**: Islamabad MoU in force with IAEA-supervision language; **$6bn frozen funds** releasing; **60-day oil waiver**; Doha talks \"going well\" (CNN July 1). Grossi (June 24) says inspections \"are **going to happen**\" — but with no timeline.\n- **The hard condition**: Iran explicitly ties bombed-site access to a **completed final deal + full sanctions relief** — a high bar for a 2-month window. These three sites are the most politically contested because they document strike damage.\n\n## Conclusion\n\nI built four factors: (1) status quo legal ban, `logit -1.8, conf 0.9`; (2) active diplomatic window, `logit +1.0, conf 0.7`; (3) Grossi's optimism without a date, `logit +0.4, conf 0.5`; (4) sites are most contested + access tied to final deal, `logit -0.9, conf 0.75`. I ran a reflection checkpoint (factor-implied probability ~0.199) and a premortem that stress-tested the diplomatic-upside counterargument, which was approved. I concluded **15%** (logit -1.7): meaningful upside from genuine, fast-moving diplomacy, but dominated by Iran's firm, recently-restated legal ban specifically on these three sites and the short ~8-week window in which a completed final deal is unlikely to close.",
+  "tool_audit": {
+    "by_tool": {
+      "execute_code": {
+        "calls": 22,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 1,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market tool was used (or attempted) for cross-validation on a high-salience geopolitical question."
+    ],
+    "subtle_bugs": [
+      "The agent's own tool_audit narrative in the reflection stated 'No failures,' but the premortem reviewer noted ground-truth metrics showed 4 errors/35 calls (fetch_url 100% error, execute_code 14.3%) from underlying sub-agent activity — a misleading self-report, though it did not degrade the evidence base since research() itself returned 0 failures."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Qualitative factor decomposition of current legal/diplomatic status from news research, translated into logit factors with a reflection + premortem checkpoint.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a completed final US-Iran deal closes before mid-August and whether it would trigger even a single token inspection of one bombed site before Sept 1."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent noted a prediction-market check 'would have been nice for cross-validation' but skipped it, assuming the situation was 'too niche/recent for liquid markets' without actually attempting a Polymarket/Kalshi/Metaculus query to confirm. A market on Iran nuclear inspections/deal was plausibly available given the high news salience.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The resolution bar is a single managed visit to any ONE of three sites, yet Iran's ban was firmly re-restated July 1-2 and access is conditioned on a completed final deal unlikely within 8 weeks. Arguments in the trace point toward the low end of the agent's range; 15% may still slightly over-weight the diplomatic upside factor (+1.0 logit) given that even Grossi provided no timeline. Minor, could argue for ~10-13%.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "13%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly and repeatedly anchored on the precise resolution criterion — a NEW inspection of one of the three SPECIFICALLY BOMBED sites — and explicitly recognized Bushehr/Tehran Research Reactor access does NOT count for YES.",
+    "Captured the verbatim, most-recent (July 1-2) authoritative signal (Qalibaf's 'no access whatsoever' quote plus parliamentary law + SNSC resolution) as the dominant status-quo factor.",
+    "Built a genuinely two-sided model, giving real +1.0 logit weight to the active Islamabad MoU, flowing sanctions relief, and Doha momentum rather than dismissing the diplomatic path.",
+    "Premortem produced a substantive counterargument (low resolution bar, Isfahan's sprawling complex, Grossi's institutional authority) and its reviewer caught the tool_audit's inaccurate 'no failures' claim."
+  ],
+  "weaknesses": [
+    "Did not attempt a prediction-market lookup at all, only asserting markets would be illiquid — a quick check would have provided independent cross-validation for a highly salient question.",
+    "No explicit base-rate reference class beyond a hand-waved '15-20% base rate'; the anchor was asserted rather than derived from analogous past cases (e.g., historical speed of IAEA re-access after prior Iranian suspensions).",
+    "Mild double-counting between F1 (current legal ban) and F4 (forward-looking final-deal condition), both encoding Iranian refusal — flagged by the premortem reviewer but not adjusted."
+  ],
+  "pipeline": {
+    "issues": [
+      "Agent's self-reported tool_audit claimed 'No failures' while underlying sub-agent metrics reportedly showed 4/35 errors (fetch_url, execute_code) per the premortem reviewer — a minor self-reporting inaccuracy, not forecast-affecting."
+    ],
+    "clean": true
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Attempt at least one prediction-market query (Polymarket/Kalshi/Metaculus) before concluding markets are illiquid, for cross-validation on salient geopolitical questions.",
+    "Derive base rates from named analogous cases (e.g., time-to-re-access after the 2025 Cairo Agreement or prior Iran-IAEA suspensions) rather than asserting a range.",
+    "Reconcile self-reported tool_audit with actual sub-agent error metrics to avoid inaccurate 'no failures' claims."
+  ]
+}
