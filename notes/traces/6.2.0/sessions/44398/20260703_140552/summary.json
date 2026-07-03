@@ -1,0 +1,123 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the question of Hakainde Hichilema's (`HH`) first-round vote share in Zambia's August 13, 2026 presidential election using two parallel research queries (after two initial schema errors where I omitted the required `questions` field). My first query targeted current polling and political dynamics; my second targeted historical Zambian first-round vote shares and pre-election poll accuracy.\n\n## Key Evidence\n\n- **The one scientific poll**: An October 2025 UNZA/Mutombo national poll (n=1,009, ±3.1%) put HH at **60%** (range 58–63%) vs ~35% combined opposition, with a reported ~75% approval rating.\n- **Incumbency & prior result**: HH won 2021 with **59.02%**; he now runs as the incumbent controlling state machinery.\n- **Fragmented opposition**: 14 approved candidates, no single strong rival. **Edgar Lungu died June 2025** and the PF splintered; the \"United Opposition Front\" collapsed. Brian Mundubile (Tonse-PF alliance) shows some momentum but faces resource disadvantages; M'membe runs separately.\n- **Institutional tilt**: Constitution Amendment Act No. 7 of 2025 plus a delimitation exercise critics call gerrymandering favoring UPND strongholds.\n- **Anti-incumbent risk**: Economic grievances — cost of living, unemployment, ~72% reporting no/irregular power in 2024.\n- **Polling unreliability**: In 2021, government-aligned polls badly overstated the incumbent (PSAZ predicted Lungu 40.4%/HH 30.33%; actual HH 59%). Both recent sitting presidents who ran (Banda 2011, Lungu 2021) **lost outright**, though against strong single challengers.\n\n## Conclusion\n\nI concluded HH is a strong favorite to win, but since the question asks vote **share**, I discounted the poll's 60% to a median of **~56%**. I reasoned that Zambian polling is thin and unreliable (and 2021 polls overstated the then-incumbent — HH is now the incumbent) and that economic grievances create genuine downside, while opposition fragmentation, ~75% approval, machinery, and delimitation provide strong upside. I built a **3-scenario Monte Carlo mixture** (base 56% w0.50, upside 64% w0.23, downside 48.5% w0.27, N=200K) yielding median **55.8%**, P10 **46.6**, P90 **65**, with ~20% mass below the 50%+1 runoff threshold. I checkpointed via reflection (7 factors, factor sum 0.95) and ran a premortem, which returned a \"warn\" only for an inaccurate tool-audit note (I claimed research had \"no failures\" despite two self-corrected schema errors). I submitted the forecast with median ~56% and an 80% interval of roughly 47–65%.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 3,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 28,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 17,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 11,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A polling-aggregation helper for election vote-share questions could have consolidated the sparse Zambian poll data, though the general research tool sufficed."
+    ],
+    "subtle_bugs": []
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Discounted a single scientific poll (60%) to a ~56% median via a 3-scenario Monte Carlo mixture blending base/upside/downside cases informed by polling, incumbency, opposition fragmentation, and economic grievances.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether economic discontent translates into vote defection and whether the single unreliable scientific poll accurately captures HH's true support."
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The agent's key discount logic relies on '2021 polls overstated the incumbent' (PSAZ, Zambia Decides), but those were government-aligned/discredited polls, whereas the current 60% figure comes from an academic UNZA/Mutombo poll. Applying the discredited-poll overstatement pattern to an academic poll may over-discount the median.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The March 2026 academic ZERN/IDCPPA (UCT) survey was identified in the trace but 'detailed vote numbers weren't publicly accessible'; the agent did not attempt a follow-up research query to retrieve fresher 2026 numbers, relying instead on the Oct 2025 poll as the sole scientific anchor.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "57-58% median (80% interval ~48-66%)",
+    "agrees_with_agent": true,
+    "divergence_reason": "I would center marginally higher (~57-58% vs 55.8%) because the Oct 2025 poll is academic (UNZA/Mutombo), not a discredited government poll like the 2021 examples, weakening the overstatement analogy; but this is well within the agent's drawn range and not a meaningful disagreement."
+  },
+  "strengths": [
+    "Correctly identified that the question asks vote SHARE, not probability of winning, and explicitly engaged with the 50%+1 runoff threshold rather than collapsing to a binary win estimate.",
+    "Built a genuine 3-scenario Monte Carlo mixture (N=200K) with distinct base/upside/downside components, producing a defensibly wide distribution (P10 46.6, P90 65) that honestly reflects thin, unreliable Zambian polling.",
+    "Gathered solid historical base rates: both recent incumbents (Banda 2011, Lungu 2021) lost outright, and 2021 polls badly overstated the incumbent — then applied these as downside counterweights rather than just cheerleading the 60% poll.",
+    "Recovered cleanly from two schema-validation errors by batching both research queries with the correct 'questions' field.",
+    "Premortem surfaced a real self-audit discrepancy (the false 'no failures' claim) which the agent acknowledged transparently in its final response."
+  ],
+  "weaknesses": [
+    "The discount from 60% to 56% leans heavily on the '2021 polls overstated the incumbent' analogy, but the 2021 examples were discredited government polls while the current 60% is an academic poll — the analogy is weaker than the weight given to it (logit -0.7 factor).",
+    "Did not pursue a follow-up query to obtain the March 2026 ZERN/IDCPPA academic survey numbers, leaving the forecast anchored to an ~9-month-old Oct 2025 poll despite fresher academic data existing.",
+    "The tool_audit note falsely claimed research had 'no failures' when 2 of 3 calls errored — an accuracy lapse in self-reporting (self-corrected, no forecast impact).",
+    "Did not check any prediction markets (Polymarket/Kalshi/Manifold) for a Zambia election market, though such coverage is admittedly unlikely for this race."
+  ],
+  "pipeline": {
+    "issues": [
+      "Two mcp__research__research calls failed with pydantic validation errors (missing 'questions' field) before the agent corrected the schema — a minor prompt/schema-clarity issue that wasted two turns but did not affect the final output.",
+      "The agent's own tool_audit narrative inaccurately stated research had 'no failures' despite the 66.7% error rate, flagged by the premortem."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
