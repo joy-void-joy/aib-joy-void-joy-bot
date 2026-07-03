@@ -1,0 +1,141 @@
+---
+timestamp: 2026-07-03 09:17:15 UTC
+question_type: numeric
+factors:
+- description: '2026 monthly counts (resolution method) show clear growth: Jan47,Feb68,Mar88,Apr67,May122,Jun95;
+    last-3-mo avg ~95/mo'
+  supports:
+    center: 210.0
+    low: 150.0
+    high: 300.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: 'YoY on same Jul-Aug window: 2024=53, 2025=94 (1.77x); recent monthly
+    YoY Apr-Jun 2026 ~2.6x. Applying ~2.3x to 94 -> ~215'
+  supports:
+    center: 215.0
+    low: 162.0
+    high: 286.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Log-linear trend (18mo) projects ~191 combined; last-12mo regime projects
+    ~223 (accelerating)
+  supports:
+    center: 205.0
+    low: 126.0
+    high: 350.0
+  logit: 0.0
+  confidence: 0.75
+  effective_logit: 0.0
+- description: June 2026 dipped to 95 from May 122; saturation/summer-dip risk provides
+    downside
+  supports:
+    center: 180.0
+    low: 120.0
+    high: 240.0
+  logit: 0.0
+  confidence: 0.5
+  effective_logit: 0.0
+tentative_estimate:
+  center: 213.0
+  low: 140.0
+  high: 329.0
+assessment: Numeric measurement question resolved by exact arXiv advanced-search URL
+  count for 'agentic reinforcement learning' in abstracts, submissions Jul1-Aug31
+  2026 (2-month combined window). I scraped the exact resolution URL for the full
+  monthly series. Growth is strong and accelerating (recent YoY ~2.6x). Three methods
+  (full-trend, last-12 trend, YoY) converge around median 190-225. Mixture gives median
+  213, P10 140, P90 329. This implies ~2.27x YoY vs 2025's 94, slightly below recent
+  2.6x monthly YoY (accounting for June dip and base-growth deceleration). Bounds
+  100-500 open; ~2% mass below 100, ~1.5% above 500.
+tool_audit: 'execute_code: primary tool, used to scrape exact resolution URL and run
+  Monte Carlo. arXiv rate-limited (429) heavily, requiring long sleeps; export API
+  gave lower counts (different matching semantics) so I used the exact advanced-search
+  HTML which is the resolution source. mcp__search__fetch_url also rate-limited by
+  arxiv. All monthly data eventually obtained.'
+process_reflection: The main friction was arXiv's aggressive 429 rate limiting, which
+  forced many retries and long sleeps eating into 60s execution limits. A cached arXiv-count
+  tool or a dedicated arXiv API wrapper respecting the exact advanced-search phrase
+  semantics would have saved significant time. The core task (fit trend to scraped
+  counts, MC project) was well-supported by execute_code.
+computed:
+  factor_count: 4
+  factor_sum: 0.0
+  neutral_factor_count: 4
+  factor_breakdown:
+  - description: '2026 monthly counts (resolution method) show clear growth: Jan47,Feb68,Mar88,Apr67,May122,Jun95;
+      last-3-mo avg ~95/mo'
+    supports:
+      center: 210.0
+      low: 150.0
+      high: 300.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: 'YoY on same Jul-Aug window: 2024=53, 2025=94 (1.77x); recent monthly
+      YoY Apr-Jun 2026 ~2.6x. Applying ~2.3x to 94 -> ~215'
+    supports:
+      center: 215.0
+      low: 162.0
+      high: 286.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Log-linear trend (18mo) projects ~191 combined; last-12mo regime
+      projects ~223 (accelerating)
+    supports:
+      center: 205.0
+      low: 126.0
+      high: 350.0
+    logit: 0.0
+    confidence: 0.75
+    effective_logit: 0.0
+  - description: June 2026 dipped to 95 from May 122; saturation/summer-dip risk provides
+      downside
+    supports:
+      center: 180.0
+      low: 120.0
+      high: 240.0
+    logit: 0.0
+    confidence: 0.5
+    effective_logit: 0.0
+  dominant_factor: '2026 monthly counts (resolution method) show clear growth: Jan47,Feb68,Mar88,Apr67,May122,Jun95;
+    last-3-mo avg ~95/mo'
+  dominant_effective_logit: 0.0
+  sources:
+  - '[Showing 1–200 of 404 results](https://arxiv.org/search/advanced?advanced=&terms-0-operator=AND&terms-0-term=%22agentic+reinforcement+learning%22&terms-0-field=abstract&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2026-01-01&date-to_date=2026-05-31&date-date_type=submitted_date&abstracts=show&size=200&order=-submitted_date)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44213
+- **Question ID**: 44225
+- **Session Duration**: 1103.0s (18.4 min)
+- **Cost**: $12.1424 total (orchestrator $5.1196 + sub-agents $7.0228)
+- **Tokens**: 17,985 total (56 in, 17,929 out)
+  - Cache: 1,601,367 read, 73,175 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44213_20260703_090045/20260703-090045.log`
+
+### Tool Calls
+
+- **Total**: 39 calls
+- **Errors**: 4 (10.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 22 | 3 ⚠️ | 31271ms | — |
+| fetch_url | 1 | 1 ⚠️ | 4363ms | — |
+| premortem | 2 | 0 | 73443ms | $2.4979 |
+| reflection | 2 | 0 | 3123ms | — |
+| research | 1 | 0 | 865252ms | $4.2095 |
+| web_search | 8 | 0 | 87338ms | $0.3154 |
+| wikipedia | 3 | 0 | 244ms | — |
+
+### Sources Consulted
+
+- [Showing 1–200 of 404 results](https://arxiv.org/search/advanced?advanced=&te...
