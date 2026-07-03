@@ -1,0 +1,114 @@
+---
+timestamp: 2026-07-03 12:09:01 UTC
+question_type: binary
+factors:
+- description: Current Bloomberg net worth is right at/just above $1T (~$1.01-1.03T),
+    so status quo slightly favors YES
+  logit: 0.25
+  confidence: 0.7
+  effective_logit: 0.175
+- description: Net worth ~88% concentrated in SpaceX (new IPO, extreme volatility)
+    + Tesla; wide 2-month distribution keeps probability near coin-flip
+  logit: -0.05
+  confidence: 0.8
+  effective_logit: -0.04000000000000001
+- description: Mild positive equity drift expectation over ~2 months, but stocks are
+    elevated post-rout with continued Tesla weakness (-7.5% July 2)
+  logit: 0.1
+  confidence: 0.5
+  effective_logit: 0.05
+- description: Real-time trackers show $1.05-1.10T July 3, suggesting buffer may be
+    larger than Bloomberg's conservative figure
+  logit: 0.2
+  confidence: 0.5
+  effective_logit: 0.1
+tentative_estimate:
+  logit: 0.24
+  probability: 0.56
+anchor: 'Status quo: currently just above $1T on Bloomberg (~$1.01-1.03T), so ~55%
+  base before adjustments'
+assessment: This is a threshold question on a highly volatile quantity centered right
+  at the threshold. Musk's Bloomberg net worth is oscillating around $1T after briefly
+  peaking at $1.45T and dropping below $1T in late June. Monte Carlo with net-worth
+  vol of 35-50% annualized over 2 months, starting ~$1.03T, gives P(>=1T)=0.52-0.58.
+  Main sensitivity is the true current Bloomberg value (1.00T->0.47, 1.07T->0.63).
+  Blended ~0.55. Slight upward tilt for status quo being just above threshold and
+  mild equity drift. Wide volatility keeps this close to a coin flip.
+calibration_notes: Not a lazy 50% — genuine near-coin-flip because quantity sits on
+  the threshold with wide 2-month volatility. Slight upward tilt justified by status
+  quo position above threshold and mild positive drift expectation.
+key_uncertainties: The exact current Bloomberg value (razor-thin buffer), and whether
+  SpaceX new-IPO volatility continues to whipsaw. A sustained SPCX or Tesla decline
+  would push below $1T.
+tool_audit: research() returned excellent current data on net worth, Tesla/SpaceX
+  prices and stakes. execute_code ran clean Monte Carlo. No failures.
+process_reflection: Smooth pipeline. The research sub-agent gave precise, sourced
+  figures directly usable for the simulation. For a threshold-on-volatile-quantity
+  question, decomposition into a numeric subforecast was unnecessary given clean direct
+  computation. No friction.
+computed:
+  factor_count: 4
+  factor_sum: 0.285
+  tentative_logit: 0.24
+  logit_gap: -0.044999999999999984
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current Bloomberg net worth is right at/just above $1T (~$1.01-1.03T),
+      so status quo slightly favors YES
+    logit: 0.25
+    confidence: 0.7
+    effective_logit: 0.175
+  - description: Net worth ~88% concentrated in SpaceX (new IPO, extreme volatility)
+      + Tesla; wide 2-month distribution keeps probability near coin-flip
+    logit: -0.05
+    confidence: 0.8
+    effective_logit: -0.04000000000000001
+  - description: Mild positive equity drift expectation over ~2 months, but stocks
+      are elevated post-rout with continued Tesla weakness (-7.5% July 2)
+    logit: 0.1
+    confidence: 0.5
+    effective_logit: 0.05
+  - description: Real-time trackers show $1.05-1.10T July 3, suggesting buffer may
+      be larger than Bloomberg's conservative figure
+    logit: 0.2
+    confidence: 0.5
+    effective_logit: 0.1
+  dominant_factor: Current Bloomberg net worth is right at/just above $1T (~$1.01-1.03T),
+    so status quo slightly favors YES
+  dominant_effective_logit: 0.175
+  factor_implied_probability: 0.5707716118944918
+  tentative_probability: 0.56
+  gap_pp: -1.0771611894491717
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44254
+- **Question ID**: 44265
+- **Session Duration**: 392.4s (6.5 min)
+- **Cost**: $6.1036 total (orchestrator $2.2615 + sub-agents $3.8421)
+- **Tokens**: 7,832 total (14 in, 7,818 out)
+  - Cache: 331,877 read, 62,778 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44254_20260703_120414/20260703-120414.log`
+
+### Tool Calls
+
+- **Total**: 17 calls
+- **Errors**: 1 (5.9%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 1 | 0 | 259ms | — |
+| fetch_url | 1 | 0 | 201ms | — |
+| kalshi_price | 1 | 0 | 10079ms | — |
+| premortem | 1 | 0 | 76154ms | $1.6128 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 2 | 1 ⚠️ | 99938ms | $2.0551 |
+| stock_history | 1 | 0 | 69ms | — |
+| stock_price | 2 | 0 | 500ms | — |
+| web_search | 4 | 0 | 20464ms | $0.1741 |
+| wikipedia | 3 | 0 | 210ms | — |
