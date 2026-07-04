@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import math
+import os
 import sys
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -20,6 +21,7 @@ import typer
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.config import TOURNAMENTS as TOURNAMENT_IDS
 from aib.config import resolve_model, settings
+from aib.version import AGENT_VERSION, load_agent_version
 from aib.agent.history import (
     RetrodictComparison,
     commit_forecast,
@@ -1354,6 +1356,15 @@ def loop(
     print("Press Ctrl+C to stop\n")
 
     while True:
+        disk_version = load_agent_version()
+        if disk_version != AGENT_VERSION:
+            print(
+                f"\n🔄 Agent code changed on disk ({AGENT_VERSION} → {disk_version}); "
+                "restarting loop to run the new version..."
+            )
+            sys.stdout.flush()
+            os.execv(sys.executable, [sys.executable, *sys.argv])
+
         cycle_start = time.time()
         print(f"\n{'=' * 60}")
         print(f"Cycle started at {datetime.now(timezone.utc).isoformat()}")
