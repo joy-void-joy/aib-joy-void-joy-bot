@@ -1,0 +1,102 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this question — whether South Korea will sign arms export deals worth >$5bn with any country between July 1 and August 31, 2026 — by mapping the ROK arms-export pipeline as of the July 10, 2026 forecast date.\n\nI ran a two-pronged research query via the `mcp__research__research` MCP tool (which spawned nested research agents), then supplemented with direct `mcp__search__web_search` queries and several `WebFetch` calls. My AskNews (`mcp__asknews__search_news`) attempts all failed — first on tier limits (>10 articles), then on a billing/overage cap — so I pivoted to web search, which worked well.\n\n## Key Evidence\n\n- **The Poland K2 \"second executive contract\" was already signed August 1, 2025** (~$6.5B, some cite $6.7B with support packages) — nearly a year *before* the July–Aug 2026 window. This is a critical premise correction: it does not count under a forward-looking interpretation.\n- **Both of ROK's largest near-term naval prizes were lost right before the window:** Poland's Orka submarine program went to Sweden's Saab (~$4.8B, signed June 29, 2026), and Canada's CPSP submarine program (~$39.3B) went to Germany's TKMS (July 7, 2026). Hanwha Ocean lost both.\n- **The April 2026 Hyundai Rotem–Bumar-Łabędy agreement is an industrial K2PL local-production/maintenance pact, not a new multi-billion procurement contract.**\n- **Most active pipeline deals are sub-$5B:** Saudi Cheongung-II ~$3.2B (late 2025), Poland Chunmoo ~$4B (Dec 2025), Norway Chunmoo ~$922M (Feb 2026), Philippines FA-50 ~$712M (June 2025).\n- **The main YES pathway is a K2 *third* executive contract with Poland** under the 2022 framework (up to ~1,000 tanks over ~6 contracts), which would exceed $5B and has shown a late-summer signing tendency (Aug 2022, Aug 2025) — but has no confirmed 2026 date and may be delayed by the shift toward Polish domestic K2PL production.\n- **Macro momentum is very high:** ROK backlog >$72B, 2026 export target ~$37.7B, ~9th globally (SIPRI 2020–24), 2nd-largest supplier to European NATO after the US.\n\n## Conclusion\n\nI anchored on a **~12% base rate** — roughly 2–3 single-country ROK deals exceeding $5B over the last ~48 months (Poland K2 Aug 2022 and Aug 2025) imply ~0.10–0.13 per random 2-month window. I weighted this against a thin near-term confirmed pipeline (no scheduled >$5B deal, two submarine losses) but adjusted upward for the genuine-if-uncertain K2 third-contract pathway with its August signing tendency, plus tail risk from very high overall export momentum. I concluded **~13%** (logit −1.9).",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No prediction-market lookup was attempted; a Polymarket/Kalshi/Manifold check would have provided external calibration for this geopolitical binary.",
+      "No access to a structured defense-contract database (e.g. SIPRI arms transfers, DAPA announcements) that would firm up the base-rate reference class beyond news aggregation."
+    ],
+    "subtle_bugs": [
+      "seoulz.com (a single blog-style aggregator) is the sole source for several key sub-$5B dollar figures (Saudi $3.2B, Chunmoo $4B, Norway $922M); the agent treated these as authoritative without cross-verification, a mild single-source dependency risk."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/geopolitics",
+    "approach": "Established a base rate of single-country ROK >$5B arms deals over ~48 months, then adjusted for a thin confirmed near-term pipeline, two submarine-bid losses, and a genuine K2 third-contract pathway with an August signing tendency.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether a Poland K2 third executive contract (>$5B) gets signed in the specific July–Aug 2026 window given its historical late-summer tendency but unconfirmed 2026 timing."
+  },
+  "risk_flags": [
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The agent adopts a strict 'new binding single-country deal >$5B announced within the window, forward-looking' interpretation and excludes the Aug 1, 2025 K2 contract. If the resolver instead counts cumulative deals 'with any country' over the window, or interprets the question more loosely (e.g. an aggregate of multiple simultaneous sub-$5B deals or MOUs/frameworks), the probability could be materially higher. The agent did not surface or hedge this interpretation ambiguity in its factor weighting.",
+      "severity": "major"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The base rate rests on only 2-3 qualifying events over 48 months (Poland K2 Aug 2022, Aug 2025) — an extremely thin reference class dependent on the exact >$5B single-country threshold. Cheongung-II deals (~$3.2-3.5B), Chunmoo (~$4B), and the 2022 $12B framework are near or above depending on definition, making the ~0.10-0.13/window rate sensitive to threshold choices the agent treated as fixed.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~13%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Caught and corrected a critical premise error embedded in the question's framing — the Poland K2 'second executive contract' was signed Aug 1, 2025, not in the 2026 window — which is the single most important fact for the forecast.",
+    "Captured two very recent, decision-relevant events at the edge of the forecast date: Poland Orka lost to Saab (June 29) and Canada CPSP lost to TKMS (July 7, 2026), correctly removing the two largest >$5B near-term prospects.",
+    "Identified the K2 third executive contract as the primary YES pathway and noted its empirical August signing tendency (2022, 2025) while appropriately discounting for the domestic-production shift.",
+    "Built a coherent, source-backed base rate rather than an unanchored gut number, and enumerated sub-$5B deals (Cheongung-II ~$3.2B, Chunmoo ~$4B) to justify why the confirmed pipeline falls short of threshold."
+  ],
+  "weaknesses": [
+    "Did not explicitly stress-test the resolution interpretation — a looser reading ('any country', cumulative deals, or MOUs/frameworks counting) could push the probability well above 13%, and this ambiguity was left unhedged.",
+    "Did not check prediction markets (Polymarket/Kalshi/Manifold) or any external calibration for a geopolitical question, relying entirely on its own constructed base rate.",
+    "The K2 third-contract 'August tendency' rests on only two data points (2022, 2025), a very small pattern to lean on; the agent treated it as a meaningful signal without quantifying its fragility.",
+    "Wasted several tool calls repeatedly retrying AskNews after clear tier/billing errors instead of pivoting to web search immediately."
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews MCP tool was entirely unavailable this session — first tier-limited (>10 n_articles reserved for higher tiers), then hit a billing/overage cap (403015). The agent burned 6 calls before fully pivoting.",
+      "WebFetch returned a 403 on defence-blog.com and produced one 'Sibling tool call errored' cascade, causing minor retry overhead.",
+      "Minor token waste from repeated identical AskNews retries after the failure mode was already clear."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
