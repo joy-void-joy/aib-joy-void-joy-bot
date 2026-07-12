@@ -2,6 +2,7 @@
 
 import typer
 
+from aib.devtools.agent import app as agent_app
 from aib.devtools.analysis import app as analysis_app
 from aib.devtools.api import app as api_app
 from aib.devtools.calibration import app as calibration_app
@@ -23,6 +24,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+app.add_typer(agent_app, name="agent", help="Agent tool serving for Claude Code")
 app.add_typer(analysis_app, name="analysis", help="Forecast analysis and feedback loop")
 app.add_typer(
     calibration_app, name="calibration", help="Calibration analysis and diagnostics"
