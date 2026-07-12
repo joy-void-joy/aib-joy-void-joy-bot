@@ -381,6 +381,13 @@ Source: `src/aib/devtools/`
 
 ```
 lup-devtools
+├── agent              Agent tool serving for Claude Code
+│   └── serve-tools    Serve the research tools over MCP stdio (--list, --server)
+│
+├── claude             Run Claude Code wired for this project
+│   ├── (default/run)  Launch claude with research tools, local plugin, profile
+│   └── usage          API usage and rate limit display
+│
 ├── calibration        Calibration analysis and diagnostics
 │   ├── binary         Binary forecast calibration (ECE/MCE, reliability diagrams)
 │   ├── numeric        Numeric/discrete calibration via PIT analysis
