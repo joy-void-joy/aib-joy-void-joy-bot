@@ -9,6 +9,11 @@ app = typer.Typer(no_args_is_help=True)
 RESEARCH_SERVER_NAME = "research"
 
 
+@app.callback()
+def main() -> None:
+    """Agent tool serving for interactive Claude Code sessions."""
+
+
 @app.command("serve-tools")
 def serve_tools_cmd(
     list_only: Annotated[
