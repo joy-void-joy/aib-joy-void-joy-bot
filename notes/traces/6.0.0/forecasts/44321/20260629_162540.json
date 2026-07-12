@@ -68,7 +68,7 @@
       "effective_logit": 0.0
     }
   ],
-  "resolution": null,
+  "resolution": 1.27,
   "submitted_at": "20260629_182541",
   "comment_posted_at": null,
   "tool_metrics": {
@@ -154,6 +154,7 @@
   "reasoning": "I've submitted my forecast for the MemeCore (M) token price on July 11, 2026.\n\n**Forecast summary:**\n- **Median: $0.62** | P10: $0.29 | P90: $1.35\n\n**Key reasoning:**\n1. **Re-anchored to the resolution source.** The question text cited $0.73, but live trackers showed ~$0.57. Fresh research surfaced that CoinGecko's volume-weighted aggregate (the actual resolution source) sits higher — around $0.67 (CoinMarketCap $0.649, snapshots up to $0.708, \"stabilizing $0.68–0.74\"). I centered the 12-day random walk there.\n\n2. **Wide distribution justified by extreme volatility.** This token collapsed from ~$3.00 to ~$0.67 in a week with daily moves of 15–25%, a thin manipulated float, and >90% insider/exchange-controlled supply. I used a Monte Carlo with a regime mixture (45% calm steady-state, 55% volatile/crash regime) and Student-t fat tails to capture both continued-bleed risk and manipulation-driven spikes.\n\n3. **Slight bearish tilt** for ongoing insider-dumping risk, but offset by stabilization signals and a dead-cat-bounce scenario.\n\nThe premortem reviewer caught an initial anchoring error (I'd used lagging trackers at $0.57 instead of the CoinGecko aggregate at ~$0.67) and flagged that crash-week volatility might overstate forward vol — both of which I corrected by re-anchoring and blending in a calmer steady-state regime.",
   "sources_consulted": [],
   "agent_version": "6.0.0",
+  "model": null,
   "cdf": [
     0.0010988,
     0.0102486926,
@@ -373,10 +374,10 @@
   "community_means": null,
   "community_cdf": null,
   "community_scaling": null,
-  "peer_score": null,
-  "baseline_score": null,
-  "score_timestamp": null,
-  "resolution_source": null,
+  "peer_score": 24.647529143033182,
+  "baseline_score": -6.338570516888642,
+  "score_timestamp": 1783862848.002859,
+  "resolution_source": "scrape",
   "resolution_reason": null,
   "resolution_criteria": "This question resolves to the closing daily price in US dollars of one MemeCore (M) token for July 11, 2026 (UTC), as reported by CoinGecko on its MemeCore historical data page (https://www.coingecko.com/en/coins/memecore/historical_data). For example, a price of $0.85 resolves as 0.85. The headline USD price on the main MemeCore page (https://www.coingecko.com/en/coins/memecore) may be used to confirm the value near 00:00 UTC on July 12, 2026.",
   "fine_print": "If CoinGecko's historical daily close for July 11, 2026 is not yet posted at resolution time, the resolver will use the CoinGecko headline USD price for M captured at or near 00:00 UTC on July 12, 2026. If CoinGecko no longer reports a MemeCore (M) price (e.g., the page is removed or the token is delisted from all tracked exchanges with no price shown), the question resolves based on the USD price shown for the M/USDT pair on Binance, or failing that, on MEXC, for the same date. If no USD or USDT M price is reported by any of these sources for July 11, 2026, the question resolves to the last available CoinGecko daily closing price on or before that date.",

@@ -52,7 +52,7 @@
       "effective_logit": 0.0
     }
   ],
-  "resolution": null,
+  "resolution": 5.0,
   "submitted_at": "20260629_184200",
   "comment_posted_at": null,
   "tool_metrics": {
@@ -148,6 +148,7 @@
   "reasoning": "Forecast submitted.\n\n**Summary:** This is a self-contained statistical question about total goals in two 2026 World Cup quarterfinals (regulation + extra time, excluding shootouts). Since the teams are unknown at forecast time, I modeled it as a pure scoring-distribution problem using a Monte Carlo simulation:\n\n- **Per-match goals**: Gamma-Poisson (negative binomial) to capture overdispersion, base knockout rate ~2.2-2.35 goals/match\n- **Extra time**: ~27-30% of knockout matches go to ET, with a low ET goal mean\n- **Scenario mixture**: 50/50 blend of higher-scoring (attacking) and lower-scoring (defensive) quarterfinal scenarios\n\n**Result:** Combined mean ~4.75, median ~4-5, right-skewed.\n\n**Distribution (percentiles):**\n| P10 | P20 | P40 | P50 | P60 | P80 | P90 |\n|-----|-----|-----|-----|-----|-----|-----|\n| 1.8 | 2.5 | 3.9 | 4.5 | 5.1 | 6.8 | 8.1 |\n\nThe premortem reviewer flagged that I had initially pulled the center down to 4.3 on a defensive-football argument that 2026's actual (high-scoring) group-stage data doesn't support, so I recentered on the model mean (~4.75). The distribution matches the question's stated typical range of 4-5 with appropriate tails for low (0-2) and high (8+) outcomes.",
   "sources_consulted": [],
   "agent_version": "6.0.0",
+  "model": null,
   "cdf": [
     0.0,
     0.0352333271,
@@ -180,10 +181,10 @@
   "community_means": null,
   "community_cdf": null,
   "community_scaling": null,
-  "peer_score": null,
-  "baseline_score": null,
-  "score_timestamp": null,
-  "resolution_source": null,
+  "peer_score": -1.0666765719190412,
+  "baseline_score": 32.89910488035943,
+  "score_timestamp": 1783770243.351506,
+  "resolution_source": "scrape",
   "resolution_reason": null,
   "resolution_criteria": "This question resolves as the sum of goals scored in the two FIFA World Cup 2026 quarterfinal matches played on July 9, 2026 (Gillette Stadium, Foxborough) and July 10, 2026 (SoFi Stadium, Inglewood), counting all goals scored during regulation time (90 minutes) plus extra time (if played), as reported in the official final scores on FIFA's fixtures and results page: https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures . For example, if the July 9 match finishes 2-1 and the July 10 match finishes 1-1 (then decided on penalties), the combined total is 2+1+1+1 = 5, and the question resolves 5.",
   "fine_print": "Only goals counted toward the official match score (regulation plus any extra time) are included; goals scored in a penalty shootout are NOT counted, as FIFA records shootout results separately from the match score. An own goal counts as a goal for the team credited with the score and is included in the total. The two relevant matches are the quarterfinals officially scheduled for July 9, 2026 and July 10, 2026; if either match is postponed, rescheduled, abandoned, or awarded by walkover/forfeit, the official final score (or 0 goals for an abandoned/forfeited match with no recorded goals) as published by FIFA for that fixture will be used. If the FIFA fixtures page is unavailable, the final scores as reported by other credible sources (https://www.metaculus.com/faq/#definitions) will be used.",
