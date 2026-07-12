@@ -41,7 +41,7 @@ RULES: list[Allow | Deny] = [
     # Safe read-only / common commands
     Allow(pattern=r"^ls\b"),
     Allow(pattern=r"^grep\b"),
-    Allow(pattern=r"|\sxargs\b"),
+    Allow(pattern=r"\|\s*xargs\b"),
     Allow(pattern=r"^test "),
     Allow(pattern=r"^find"),
     # Git (safe subset)
