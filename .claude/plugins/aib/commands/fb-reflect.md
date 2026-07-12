@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(uv run aib-devtools:*), Read, Grep, Glob, Edit, Write, AskUserQuestion
+allowed-tools: Bash(uv run lup-devtools:*), Read, Grep, Glob, Edit, Write, AskUserQuestion
 description: Collaborative discussion about findings, process quality, and what to change
 ---
 

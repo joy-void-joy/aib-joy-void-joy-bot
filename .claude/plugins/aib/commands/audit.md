@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Grep, Glob, Bash(uv run aib-devtools:*, grep AGENT_VERSION:*, uv run python tmp/*.py), Write(tmp/*.py), Task, AskUserQuestion, WebSearch
+allowed-tools: Read, Grep, Glob, Bash(uv run lup-devtools:*, grep AGENT_VERSION:*, uv run python tmp/*.py), Write(tmp/*.py), Task, AskUserQuestion, WebSearch
 description: Focused audit of specific forecasts — traces, reasoning, and version comparison
 argument-hint: <post_id1> [post_id2] [...up to 10]
 ---
@@ -21,13 +21,13 @@ Gather metadata for each post ID and group by version.
 ### 1a. Metadata collection
 
 ```bash
-uv run aib-devtools analysis dashboard
+uv run lup-devtools analysis dashboard
 ```
 
 For each post ID:
 ```bash
-uv run aib-devtools trace show <post_id>
-uv run aib-devtools scores show --post-id <post_id>
+uv run lup-devtools trace show <post_id>
+uv run lup-devtools scores show --post-id <post_id>
 ```
 
 Extract: `agent_version`, question type, forecast value, score (if resolved).
@@ -59,10 +59,10 @@ For each **resolved** question, investigate the real-world outcome by looking at
 
 ```bash
 # Update forecast JSONs with any new resolutions first
-uv run aib-devtools resolution sync
+uv run lup-devtools resolution sync
 
 # Then inspect the full API data for each resolved question
-uv run aib-devtools api post <post_id>
+uv run lup-devtools api post <post_id>
 ```
 
 Extract: resolution value, resolution criteria, close date, question text.
@@ -133,7 +133,7 @@ For each post ID, find and read the summary.json from the session directory. Ext
 
 Cross-reference with Phase 2 resolution investigation — where does the summary align or disagree with what actually happened?
 
-If summary.json is missing for any post, note it. If needed for deeper investigation, use `uv run aib-devtools trace log <post_id>`.
+If summary.json is missing for any post, note it. If needed for deeper investigation, use `uv run lup-devtools trace log <post_id>`.
 
 ### 3b. Version Explorer
 
@@ -264,4 +264,4 @@ Options: "Write the report" / "Investigate [issue] further" / "Adjust recommenda
 - **Quote both sides.** Cite trace evidence AND version diff evidence for each finding.
 - **Strengths matter as much as weaknesses.** Confirming what works prevents regressions.
 - **Be honest about coverage.** If all forecasts are current-version, say so — the audit becomes a trace analysis without version comparison.
-- **Mark analyzed.** After the report: `uv run aib-devtools analysis mark <post_ids>`
+- **Mark analyzed.** After the report: `uv run lup-devtools analysis mark <post_ids>`

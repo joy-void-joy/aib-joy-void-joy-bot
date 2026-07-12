@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(uv run aib-devtools:*), Read, Grep, Glob, AskUserQuestion
+allowed-tools: Bash(uv run lup-devtools:*), Read, Grep, Glob, AskUserQuestion
 description: Feedback loop entry point — status, resolutions, and target selection
 argument-hint: [post_id1 post_id2 ...] [--refresh]
 ---
@@ -15,13 +15,13 @@ Get the current state of the forecasting system and select analysis targets. Res
 Always sync first (unless offline). This is the most important data source.
 
 ```bash
-uv run aib-devtools resolution sync
+uv run lup-devtools resolution sync
 ```
 
 ### 2. Dashboard
 
 ```bash
-uv run aib-devtools analysis dashboard
+uv run lup-devtools analysis dashboard
 ```
 
 Shows: version, forecast counts, unanalyzed count, summary.json coverage, tool health flags, git status, last analysis file.
@@ -29,11 +29,11 @@ Shows: version, forecast counts, unanalyzed count, summary.json coverage, tool h
 ### 3. What resolved since last session?
 
 Surface resolved forecasts with scores, annotated by version. Check both:
-- Devtools: `uv run aib-devtools scores show --resolved`
+- Devtools: `uv run lup-devtools scores show --resolved`
 - Direct: scan forecast JSON files for resolution values (devtools may have filtering bugs)
 
 ```bash
-uv run aib-devtools calibration summary --version all
+uv run lup-devtools calibration summary --version all
 ```
 
 ### 4. Previous session
@@ -54,7 +54,7 @@ If post IDs were provided via $ARGUMENTS, use those. Otherwise, prioritize:
 3. Forecasts flagged by the reviewer
 
 ```bash
-uv run aib-devtools analysis status
+uv run lup-devtools analysis status
 ```
 
 ### 6. Gate

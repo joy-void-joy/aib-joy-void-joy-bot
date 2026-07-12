@@ -50,12 +50,12 @@ plugins/aib/
 └── hooks/                # Git and workflow hooks
 ```
 
-Dev tools live in `src/aib/devtools/` and are invoked via `uv run aib-devtools <command>`.
+Dev tools live in `src/aib/devtools/` and are invoked via `uv run lup-devtools <command>`.
 
 ### When to Add to the Plugin
 
 - **Commands**: Reusable workflows invoked via `/aib:command-name`
-- **Dev tools**: Python CLI tools in `src/aib/devtools/`, run via `uv run aib-devtools <command>`
+- **Dev tools**: Python CLI tools in `src/aib/devtools/`, run via `uv run lup-devtools <command>`
 - **Agents**: Subagent definitions for specialized tasks
 
 ### Settings (`settings.json`)

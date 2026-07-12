@@ -63,7 +63,7 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
    Fix any issues found. The rebased branch should only contain passing code.
 
 4. **Check AGENT_VERSION bump and CHANGELOG**:
-   If the branch includes changes to agent behavior (prompts, tools, subagents, scoring logic), verify that `AGENT_VERSION` in `src/aib/version.py` has been bumped. This is required for regression tracking. Data-only or infrastructure changes do not need a version bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run aib-devtools version bump` or manually add an entry following the existing format (one-line summary + bullet list of changes).
+   If the branch includes changes to agent behavior (prompts, tools, subagents, scoring logic), verify that `AGENT_VERSION` in `src/aib/version.py` has been bumped. This is required for regression tracking. Data-only or infrastructure changes do not need a version bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run lup-devtools version bump` or manually add an entry following the existing format (one-line summary + bullet list of changes).
 
 5. **Commit remaining changes**:
    ```bash

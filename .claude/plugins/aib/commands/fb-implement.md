@@ -48,7 +48,7 @@ Remove prescriptive rules. Add general principles. Don't add:
 
 ## After Implementation
 
-1. Version bump: `uv run aib-devtools version bump <level> "<summary>"`
+1. Version bump: `uv run lup-devtools version bump <level> "<summary>"`
 2. Commit changes
 3. Verify: `git diff --stat` confirms each change
 4. Log changes in analysis doc:

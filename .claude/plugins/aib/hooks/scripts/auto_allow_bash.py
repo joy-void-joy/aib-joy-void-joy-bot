@@ -35,8 +35,8 @@ RULES: list[Allow | Deny] = [
     # Block python anywhere in command (lowest priority — any later Allow overrides)
     Deny(
         pattern=r"(^|\b)python3?\b",
-        reason="Denied: python is only allowed via aib-devtools or ./tmp/ scripts."
-        " Use `uv run aib-devtools <command>` instead.",
+        reason="Denied: python is only allowed via lup-devtools or ./tmp/ scripts."
+        " Use `uv run lup-devtools <command>` instead.",
     ),
     # Safe read-only / common commands
     Allow(pattern=r"^ls\b"),
@@ -53,7 +53,7 @@ RULES: list[Allow | Deny] = [
     Allow(pattern=r"uv run (pyright|pytest|ruff|forecast)\b"),
     Allow(pattern=r"uv run \S+ --help$"),
     # Allow python scripts in specific folders (overrides the deny above)
-    Allow(pattern=r"uv run aib-devtools\b"),
+    Allow(pattern=r"uv run (aib|lup)-devtools\b"),
     Allow(pattern=r"uv run (python )?(\./)?tmp/\S+\.py\b"),
 ]
 

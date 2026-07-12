@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*, uv run aib-devtools dev plugin-bump:*, uv run aib-devtools dev plugin-version:*), Read, Grep, Glob
+allowed-tools: Bash(git:*, uv run lup-devtools dev plugin-bump:*, uv run lup-devtools dev plugin-version:*), Read, Grep, Glob
 description: Review all diffs and create atomic commits covering all changes
 ---
 
@@ -27,7 +27,7 @@ Review all current changes and create atomic commits—each commit should repres
 
 4. **Plugin version bump** (mandatory when plugin files change):
    - If any committed files are under `.claude/plugins/aib/` (commands, hooks, agents, scripts), **always** bump the plugin version — do not ask, just do it
-   - `uv run aib-devtools dev plugin-bump patch "<summary>"` — use `minor` for new commands/agents, `major` for breaking changes
+   - `uv run lup-devtools dev plugin-bump patch "<summary>"` — use `minor` for new commands/agents, `major` for breaking changes
    - Commit the bumped `plugin.json` and plugin `CHANGELOG.md` immediately after
 
 5. **Verify**:

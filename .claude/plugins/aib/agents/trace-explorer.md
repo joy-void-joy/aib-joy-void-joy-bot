@@ -28,22 +28,22 @@ Run these from the project root to access trace data:
 
 ```bash
 # Filtered agent reasoning (strips Docker/HTTP noise, ~1160 lines per trace)
-uv run aib-devtools trace log <post_id>
+uv run lup-devtools trace log <post_id>
 
 # Full untruncated trace (tool results not truncated)
-uv run aib-devtools trace log <post_id> --full
+uv run lup-devtools trace log <post_id> --full
 
 # Tool calls and results only (no thinking/text)
-uv run aib-devtools trace log <post_id> --tools-only
+uv run lup-devtools trace log <post_id> --tools-only
 
 # List all available traces
-uv run aib-devtools trace logs
+uv run lup-devtools trace logs
 
 # Forecast metadata and tool metrics
-uv run aib-devtools trace show <post_id>
+uv run lup-devtools trace show <post_id>
 
 # List all forecasts with metrics
-uv run aib-devtools trace list
+uv run lup-devtools trace list
 ```
 
 Meta-reflections (agent self-summaries) are in `notes/traces/<version>/sessions/<post_id>/*/meta.md`.
@@ -57,9 +57,9 @@ Saved forecasts are in `notes/traces/<version>/forecasts/<post_id>/` and `notes/
 
 3. **Read meta-reflections first**: These are compact agent self-summaries (~200 lines) in `notes/traces/<version>/sessions/<post_id>/*/meta.md`. Start here to orient yourself before reading full traces. Pay close attention to what the agent says about its own needs, frustrations, and confidence.
 
-4. **Read full traces for ALL requested IDs**: Use `uv run aib-devtools trace log <id>` to get the filtered reasoning trace for every post ID. Don't skip traces — you have the context budget, the main conversation doesn't. Use `--tools-only` as a supplement when tool patterns need closer inspection.
+4. **Read full traces for ALL requested IDs**: Use `uv run lup-devtools trace log <id>` to get the filtered reasoning trace for every post ID. Don't skip traces — you have the context budget, the main conversation doesn't. Use `--tools-only` as a supplement when tool patterns need closer inspection.
 
-5. **Cross-reference with metrics**: Use `uv run aib-devtools trace show <id>` to get tool counts, errors, and timing data.
+5. **Cross-reference with metrics**: Use `uv run lup-devtools trace show <id>` to get tool counts, errors, and timing data.
 
 6. **Check for retrodict traces**: For each post ID, check if `notes/traces/*/retrodict/<post_id>/` exists. If it does, this is a retrodiction — run the future-leak checks described below.
 
