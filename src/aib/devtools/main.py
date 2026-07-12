@@ -18,7 +18,7 @@ from aib.devtools.version import app as version_app
 from aib.devtools.worldview import app as worldview_app
 
 app = typer.Typer(
-    help="aib-devtools: forecasting analysis and development tools",
+    help="lup-devtools: forecasting analysis and development tools",
     pretty_exceptions_show_locals=False,
     no_args_is_help=True,
 )

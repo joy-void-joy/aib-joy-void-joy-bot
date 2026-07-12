@@ -653,7 +653,7 @@ def tentative(
             )
             if no_time:
                 typer.echo(
-                    "  Tip: run 'aib-devtools resolution sync --backfill' to backfill resolve times"
+                    "  Tip: run 'lup-devtools resolution sync --backfill' to backfill resolve times"
                 )
         unresolved = due
 
