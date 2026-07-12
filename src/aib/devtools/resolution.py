@@ -625,14 +625,32 @@ def tentative(
         "--override",
         help="Re-check questions that already have tentative resolutions",
     ),
+    sync_first: bool = typer.Option(
+        True,
+        "--sync/--no-sync",
+        help="Scrape official resolutions from the profile page before AI resolution",
+    ),
 ) -> None:
-    """Attempt early resolution using AI agents to check criteria."""
+    """Attempt early resolution using AI agents to check criteria.
+
+    Scrapes official resolutions from the profile page first so questions
+    that already resolved on Metaculus get their real answer instead of an
+    AI verdict (skip with --no-sync).
+    """
     from aib.agent.resolver import (
         QuestionForResolution,
         ResolutionVerdict,
         resolve_batch,
         resolve_question,
     )
+
+    if sync_first:
+        typer.echo("Syncing official resolutions from profile page...")
+        raw = asyncio.run(fetch_scores(DEFAULT_USER_ID))
+        records = raw.get("records")
+        record_list = records if isinstance(records, list) else []
+        updated, unchanged = resolve_scraped(record_list)
+        typer.echo(f"  Official updates: {updated} applied, {unchanged} unchanged\n")
 
     unresolved: list[dict[str, object]] = []
     for base in {d.parent for d in iter_forecast_dirs()}:
