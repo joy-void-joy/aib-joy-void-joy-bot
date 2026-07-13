@@ -1,0 +1,99 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a discrete count question: how many SpaceX orbital launches occur in the 23-day window of July 1–23, 2026. I anchored on two facts. First, **5 launches were already locked in through July 11** (July 2, 5, 7, 9, 11 — all Falcon 9), which I took from the question description as a confirmed floor. Second, I established SpaceX's empirical launch cadence at **~0.45 launches/day**, cross-checking three reference points: 2025 full-year (165 launches → 0.452/day), 2026 YTD (81 by July 11 over 191 days → 0.424/day), and July-to-date (5 in 11 days → 0.4545/day).\n\n## Key Evidence\n\n- **Locked-in floor:** 5 launches through July 11, leaving only the 12-day back half (July 12–23) as the uncertain term.\n- **Empirical cadence convergence:** All three rate estimates cluster tightly around 0.45/day, so the remaining 12 days add a mean of ~5.4 launches.\n- **Monte Carlo simulation** (200K draws): I modeled rate uncertainty as `Normal(0.45, 0.04)` clipped to 0.30–0.60, and layered overdispersion via a gamma-Poisson (negative binomial, shape k=8) to capture scrubs, weather, and manifest clustering. This produced **P10=7, P50=10, P90=14, mean=10.4, std=3.06**, with only 1.7% mass at ≤5.5 and 0.5% at ≥20.5 — comfortably inside the open bounds.\n- **Starship Flight 13:** listed as suborbital, so it would **not** count toward the orbital total; no double-counting with the Falcon fleet rate.\n- **Scheduled missions:** multiple mid-to-late July missions (Starlink groups, SDA Tranche 1) support sustained cadence.\n\nI ran a premortem stress test acknowledging that SpaceX often accelerates in the back half of a month (0.55–0.6/day could push the total to 12–13), while a weather stand-down could suppress it to 8–9. I set confidence at 0.75. A nested reviewer independently corroborated my ~0.45/day rate against fresh worldview cadence research (2026 YTD 0.43/day, 13/month) and approved.\n\n## Conclusion\n\nI concluded a distribution centered on **median 10**, mean ~10.4, with an 80% interval of roughly **7 to 14** (P1=5, P50=10, P99=19). The dominant term is the 5 locked-in launches plus ~5.4 expected over the remaining 12 days at empirical cadence.",
+  "tool_audit": {
+    "by_tool": {
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The reflection tool reported implied_median=7.48, implied_p10=5.99, implied_p90=9.03 from the factor logits — materially different from the submitted P50=10/P10=7/P90=14. The agent correctly used the Monte Carlo output rather than the factor-derived metrics, but this divergence could mislead if the factor metrics were trusted."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/space",
+    "approach": "Negative-binomial (gamma-Poisson) Monte Carlo adding the locked-in 5 launches to a ~0.45/day empirical cadence over the remaining 12 days.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether SpaceX accelerates or is suppressed by weather/scrubs over the July 12–23 back half, since the front-half count is essentially fixed."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The dominant term — '5 launches locked in through July 11' — was never verified in-session against the Wikipedia launch log named in the resolution criteria. The main agent ran zero research tools and asserted 'No research tools needed.' The claim is attributed to the question description but was not independently confirmed by the forecasting agent itself.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The empirical rate research shows the back half of a month can spike to 4 launches/ISO-week (peak weeks in 2026), and the premortem itself flags plausible acceleration to 0.55-0.6/day yielding 12-13 total. The negative-binomial with shape k=8 is only moderate overdispersion; combined with a symmetric rate prior centered at 0.45 (rather than tilted toward the observed back-half-heavy pattern), the upper tail (P90=14) may be slightly compressed relative to SpaceX's demonstrated ability to cluster launches.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "P50 ~10, 80% interval 7-14",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Recognized the question decomposes into a fixed floor (5 locked in) plus a small uncertain back-half term, correctly making the 12-day window the only stochastic component.",
+    "Triangulated the daily cadence across three independent reference points (2025 full-year 0.452/day, 2026 YTD 0.424/day, July-to-date 0.4545/day) that all converge near 0.45/day.",
+    "Used gamma-Poisson (negative binomial) overdispersion rather than a plain Poisson, appropriately widening tails to account for scrubs and launch clustering.",
+    "Explicitly excluded Starship Flight 13 as suborbital, avoiding a double-count against the Falcon fleet rate.",
+    "Premortem constructed a real bidirectional counterargument (0.55-0.6/day back-half acceleration vs weather stand-down) with specific falsification triggers, not a token gesture."
+  ],
+  "weaknesses": [
+    "Did not verify the pivotal '5 launches through July 11' count against the named Wikipedia source; the entire floor rests on an unverified description claim.",
+    "Factor 3 ('multiple scheduled mid-late July missions') carries a +0.5 logit but is not reflected in the Monte Carlo, which uses only the rate — a narrative factor that overlaps with Factor 2 and adds no independent quantitative signal.",
+    "Modeled the back-half rate as symmetric around the whole-window average despite evidence that SpaceX cadence is often back-loaded within a month, which may modestly understate the upper tail.",
+    "Ran no in-session research at all, so any manifest-specific information (e.g., known July 12-23 scheduled launches with firm dates that could raise the floor) was not incorporated beyond a generic rate."
+  ],
+  "pipeline": {
+    "issues": [
+      "In the nested premortem, a Bash call to list the worldview directory was denied by a PreToolUse hook, and a sibling Grep errored as a result — minor friction that the reviewer worked around with a second Grep and direct Reads.",
+      "The reflection tool's implied distribution metrics (median 7.48) diverge sharply from the simulation-driven submission (median 10), a latent inconsistency between the factor-logit machinery and the Monte Carlo that could confuse downstream consumers."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
