@@ -1,0 +1,91 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a numeric measurement question about a fast-moving outbreak. The resolution is the **cumulative DRC confirmed Ebola (Bundibugyo virus) count in the most recent WHO Disease Outbreak News (DON) on/before July 23, 2026**, with an ECDC fallback for the most recent date ≤ July 23.\n\nI did not run new web research in this session — instead I relied on trajectory data points I had from prior-session worldview research on this exact outbreak, encoding them directly into `execute_code`:\n- **Jun 22: 1,094** (CDC)\n- **Jun 27: 1,274** (DRC MoH SitRep)\n- **Jul 2: 1,460** (WHO DON612 as-of date)\n- **Jul 6: 1,708** (CDC/UKHSA)\n- **Jul 8: 1,792** (NICD, ebolamap — my anchor)\n\n## Key Evidence\n\nI computed recent daily growth: Jun17→Jul1 ≈ **40/day**, Jul1→Jul6 ≈ **50/day**, Jul6→Jul8 ≈ **42/day** — settling on **~45/day**. Critically, daily increments stayed flat despite a rising base, indicating **sub-exponential (roughly linear) growth**.\n\nI identified the dominant uncertainty as the **\"as-of\" date of the resolving figure**, since WHO DONs report lagged as-of dates and publish ~weekly-to-biweekly (DON605 late June, DON612 Jul 10 with as-of Jul 2). I built a Monte Carlo model (200K draws) mixing:\n- The **as-of date distribution**: 55% mid-July DON (~Jul 12-16), 25% later DON (~Jul 15-20), 20% ECDC fallback (~Jul 20-22)\n- The **growth regime**: 60% linear ~45/day, 25% deceleration (~32/day from PHEIC response), 15% exponential reacceleration (justified by no proven BDBV vaccine)\n\n## Conclusion\n\nThe mixture yielded **median ~2,120**, P10 ~1,950, P90 ~2,440, with a deliberately **fat upper tail (P99 ~2,970)** to capture reacceleration risk. I noted the question's 4,000 ceiling would require ~3x the current daily rate — effectively out of reach in this ~2-week window (P(>4000) ≈ 0). A nested premortem agent verified my data points against fresh worldview research, confirmed the ~47/day trajectory, and approved, flagging only warn-level issues (a mislabeled DON date \"Jul 1\" vs actual Jul 10/as-of Jul 2, and a sloppy tool_audit claim that data was \"provided in the question\" when it actually came from prior research). I submitted percentiles centered on median **2,120**.",
+  "tool_audit": {
+    "by_tool": {
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The as-of-date distribution in the Monte Carlo (minimum Jul 11) implicitly assumes a new DON will publish between Jul 13-23, giving zero weight to the scenario where DON612 (as-of Jul 2, 1,460) is the most recent qualifying DON. This is not an error message but a modeling assumption that could bias the floor of the distribution upward."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/health",
+    "approach": "Monte Carlo mixture (200K draws) over as-of-date uncertainty and growth-regime uncertainty, extrapolating from the last hard data point (1,792 on Jul 8) at ~45/day.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The as-of date of the resolving WHO DON (or ECDC fallback), which determines how many days of ~45/day growth are added to the 1,792 anchor."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent ran no web research or worldview-read tools in its own session; it hardcoded data points (896, 1460, 1708, 1792) into execute_code comments. It never independently verified whether a NEW WHO DON was published between Jul 10 and Jul 13 (session date), which could have provided a fresher DRC figure than the Jul 8 anchor. The premortem agent had to reconstruct provenance from worldview files.",
+      "severity": "minor"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The agent's summary calls DON612 the 'Last WHO DON (~Jul 2 as-of, 1,460 confirmed)' but the worldview research shows DON612 was published Jul 10 (data as-of Jul 2). Since the question resolves on the most recent DON on/before Jul 23, a DON published Jul 10 with as-of Jul 2 could itself be the resolving DON if no later one is published — implying ~1,460, well below the agent's P1 of 1,849. The model's as-of distribution (min Jul 11) implicitly assumes a newer DON will appear, underweighting the scenario that DON612 (1,460) remains the most recent qualifying DON.",
+      "severity": "major"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The 15% exponential reacceleration component inflates the upper tail (P99 ~2,970) despite the agent's own strong evidence that daily increments are flat (sub-exponential) across four intervals. This fattens the high tail more than the flat-increment data supports, though impact on the median is small.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "median ~2,150 (range ~1,950-2,450)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the crux of the question — the as-of date of the resolving DON — and modeled it explicitly as a distribution rather than assuming a single date.",
+    "Empirically established sub-exponential growth by showing daily increments stayed flat (~42-50/day) despite a rising base across four intervals, then used that to justify linear over exponential extrapolation.",
+    "Ran two Monte Carlo variants (simple normal-rate and a 3-regime mixture) as a cross-check, converging on median ~2,120.",
+    "Correctly reasoned the 4,000 ceiling would need ~3x the current daily rate and computed P(>4000)≈0, appropriately not wasting probability mass at the top of the range."
+  ],
+  "weaknesses": [
+    "Did no first-hand verification in-session that a newer WHO DON hadn't appeared before Jul 13; relied entirely on hardcoded numbers, leaving provenance to be reconstructed by the premortem reviewer.",
+    "Underweighted the scenario where DON612 (as-of Jul 2, 1,460) remains the most recent qualifying DON on/before Jul 23 — the as-of distribution starts at Jul 11, effectively assuming a fresh DON will publish. If WHO's cadence stretched, the true resolving value could be ~1,460, far below the P1 of 1,849.",
+    "The tool_audit narrative falsely claimed 'all trajectory data provided in question' when the question text contained none of the figures — a provenance mislabel caught by the premortem.",
+    "Mislabeled DON612 as 'Jul 1' as-of in Factor 1 (actual: published Jul 10, as-of Jul 2)."
+  ],
+  "pipeline": {
+    "issues": [
+      "The main agent did no in-session research and hardcoded outbreak data into code comments; provenance was only established retroactively by the premortem sub-agent reading worldview files.",
+      "tool_audit narrative contained an inaccurate claim ('all trajectory data provided in question') that did not match the actual question text."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Before extrapolating, verify in-session whether a fresher WHO DON exists (search WHO DON series for any publication Jul 10-23) rather than hardcoding a Jul 8 anchor.",
+    "Add explicit probability mass to the scenario where the last-published DON (DON612, 1,460) remains the resolving figure if no newer DON appears — this shifts the lower tail meaningfully.",
+    "Fix the tool_audit to accurately state data provenance (prior-session worldview research, not the question text)."
+  ]
+}
