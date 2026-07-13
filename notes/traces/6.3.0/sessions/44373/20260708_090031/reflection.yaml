@@ -1,0 +1,136 @@
+---
+timestamp: 2026-07-09 12:49:20 UTC
+question_type: binary
+factors:
+- description: France has exactly 1 confirmed case as of 9 July 2026 (ECDC/WHO). Case
+    was self-reported at airport, immediately isolated in high-containment facility,
+    described as 'successfully contained' with no secondary cases. The high-risk uncontrolled-exposure
+    window has largely passed.
+  logit: -1.8
+  confidence: 0.85
+  effective_logit: -1.53
+- description: 'Historical base rate: across dozens of imported/evacuated Ebola cases
+    in Western countries during 2014-2016, secondary transmission occurred only in
+    US (2 nurses, from an uncontrolled ER presentation) and Spain (1 nurse). All controlled
+    medical evacuations (incl. France 2014) had ZERO secondary transmission. This
+    is a controlled case.'
+  logit: -1.5
+  confidence: 0.8
+  effective_logit: -1.2000000000000002
+- description: Second independent importation possible over ~8 week window given large
+    active DRC outbreak (1700+ cases) and returning aid workers, but France now has
+    heightened screening; low probability.
+  logit: -1.5
+  confidence: 0.6
+  effective_logit: -0.8999999999999999
+- description: Bundibugyo virus, patient had only mild symptoms during flight (low
+    viral shedding early), reducing flight-contact and healthcare-worker transmission
+    risk.
+  logit: -0.5
+  confidence: 0.6
+  effective_logit: -0.3
+tentative_estimate:
+  logit: -2.7
+  probability: 0.06
+anchor: ~10% base rate for a single controlled imported Ebola case in a Western country
+  leading to a second case (secondary transmission or new importation), derived from
+  2014-2016 precedent where controlled evacuations had ~0% secondary transmission
+  but overall importation pressure exists.
+assessment: 'Question resolves YES only if France exceeds 1 confirmed case (secondary
+  transmission OR a second independent importation) before Sept 1. Current status:
+  1 case, contained, isolated, stable, no secondary cases. Western-country precedent
+  strongly favors zero secondary transmission for controlled cases. Main residual
+  risks: a healthcare-associated infection (rare in high-containment facilities) or
+  a fresh importation over the 8-week window. Both are low. Estimate ~6%.'
+key_uncertainties: Whether ECDC would count a flight contact or healthcare worker
+  infection; whether another aid worker importation occurs before Sept 1. Both low
+  probability.
+tool_audit: research() sub-agent timed out (100000s) - failed. web_search and fetch_url
+  worked well, confirmed ECDC shows only 1 France case and 'successfully contained'
+  reporting.
+process_reflection: The research() tool timeout was a significant friction point -
+  it failed entirely and I had to fall back to direct web_search/fetch_url, which
+  worked fine. For a straightforward epidemiological containment question, direct
+  search was sufficient and faster.
+computed:
+  factor_count: 4
+  factor_sum: -3.93
+  tentative_logit: -2.7
+  logit_gap: 1.23
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: France has exactly 1 confirmed case as of 9 July 2026 (ECDC/WHO).
+      Case was self-reported at airport, immediately isolated in high-containment
+      facility, described as 'successfully contained' with no secondary cases. The
+      high-risk uncontrolled-exposure window has largely passed.
+    logit: -1.8
+    confidence: 0.85
+    effective_logit: -1.53
+  - description: 'Historical base rate: across dozens of imported/evacuated Ebola
+      cases in Western countries during 2014-2016, secondary transmission occurred
+      only in US (2 nurses, from an uncontrolled ER presentation) and Spain (1 nurse).
+      All controlled medical evacuations (incl. France 2014) had ZERO secondary transmission.
+      This is a controlled case.'
+    logit: -1.5
+    confidence: 0.8
+    effective_logit: -1.2000000000000002
+  - description: Second independent importation possible over ~8 week window given
+      large active DRC outbreak (1700+ cases) and returning aid workers, but France
+      now has heightened screening; low probability.
+    logit: -1.5
+    confidence: 0.6
+    effective_logit: -0.8999999999999999
+  - description: Bundibugyo virus, patient had only mild symptoms during flight (low
+      viral shedding early), reducing flight-contact and healthcare-worker transmission
+      risk.
+    logit: -0.5
+    confidence: 0.6
+    effective_logit: -0.3
+  dominant_factor: France has exactly 1 confirmed case as of 9 July 2026 (ECDC/WHO).
+    Case was self-reported at airport, immediately isolated in high-containment facility,
+    described as 'successfully contained' with no secondary cases. The high-risk uncontrolled-exposure
+    window has largely passed.
+  dominant_effective_logit: -1.53
+  factor_implied_probability: 0.019265232631591675
+  tentative_probability: 0.06
+  gap_pp: 4.073476736840832
+  sources:
+  - '[2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_epidemic)'
+  - '[Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](https://www.ecdc.europa.eu/en/ebola-outbreak-democratic-republic-congo-and-uganda)'
+  - '[The First European Ebola Case in Years Was Successfully Contained in France:
+    What the U.S. Should Learn from That Response](https://www.medicaldaily.com/first-european-ebola-case-years-was-successfully-contained-france-what-us-should-learn-that-475984)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44373
+- **Question ID**: 44383
+- **Session Duration**: 100204.0s (1670.1 min)
+- **Cost**: $6.5083 total (orchestrator $2.9977 + sub-agents $3.5106)
+- **Tokens**: 5,672 total (16 in, 5,656 out)
+  - Cache: 327,041 read, 111,079 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44373_20260708_090031/20260708-090031.log`
+
+### Tool Calls
+
+- **Total**: 16 calls
+- **Errors**: 2 (12.5%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0892 |
+| fetch_url | 2 | 0 | 10415ms | — |
+| premortem | 1 | 0 | 46397ms | $1.3792 |
+| reflection | 1 | 0 | 4ms | — |
+| research | 3 | 2 ⚠️ | 33396187ms | $1.8025 |
+| web_search | 6 | 0 | 19759ms | $0.2397 |
+| wikipedia | 3 | 0 | 249ms | — |
+
+### Sources Consulted
+
+- [2026 Ebola epidemic - Wikipedia](https://en.wikipedia.org/wiki/2026_Ebola_ep...
+- [Ebola disease outbreak in the Democratic Republic of the Congo and Uganda](h...
+- [The First European Ebola Case in Years Was Successfully Contained in France:...
