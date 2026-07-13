@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Reject pushing a feature branch whose PR would carry forecast data.
+#
+# The forecast loop commits `notes/` data straight to local `main`. A feature
+# branch cut from that `main` inherits those commits. If they have not reached
+# `origin/main`, GitHub computes the PR's merge base against the stale
+# `origin/main` and folds every inherited data file into the merge — landing
+# hundreds of `notes/` files in a code PR as fresh additions with no shared
+# ancestry. Local `main` still holds them as real commits, so the next
+# `git pull` collides add/add on every one.
+#
+# The drift itself is harmless. Opening a PR on top of it is not. This blocks
+# that moment: push `main` first, and the PR's base is correct.
+#
+# Bypass with `git push --no-verify` when a branch is deliberately reshaping
+# `notes/` (e.g. a layout migration).
+
+set -euo pipefail
+
+ZERO='0000000000000000000000000000000000000000'
+
+if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+	exit 0
+fi
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+	# Branch deletion.
+	[ "$local_sha" = "$ZERO" ] && continue
+
+	# Pushing main is how data is *supposed* to reach the remote.
+	[ "$remote_ref" = 'refs/heads/main' ] && continue
+
+	base="$(git merge-base "$local_sha" origin/main 2>/dev/null)" || continue
+
+	mapfile -t data_files < <(git diff --name-only "$base" "$local_sha" -- 'notes/')
+	[ "${#data_files[@]}" -eq 0 ] && continue
+
+	unpushed="$(git rev-list --count origin/main..main 2>/dev/null || echo '?')"
+
+	cat >&2 <<-EOF
+
+		  ✘ push blocked: this branch would carry ${#data_files[@]} notes/ data file(s) into its PR.
+
+		    Local main is ${unpushed} commit(s) ahead of origin/main, so this branch is
+		    built on data commits the remote has never seen. GitHub would merge them
+		    into the PR as new files and duplicate the data store.
+
+		    Fix — publish main, then re-push:
+
+		        git -C ../main push origin main
+		        git fetch origin
+		        git rebase origin/main
+		        git push
+
+		    Sample of the data files that would leak:
+	EOF
+
+	printf '        %s\n' "${data_files[@]:0:5}" >&2
+	[ "${#data_files[@]}" -gt 5 ] && printf '        … and %s more\n' "$((${#data_files[@]} - 5))" >&2
+
+	printf '\n    Deliberately reshaping notes/? Re-run with --no-verify.\n\n' >&2
+	exit 1
+done
+
+exit 0
