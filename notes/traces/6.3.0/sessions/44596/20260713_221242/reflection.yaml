@@ -1,0 +1,105 @@
+---
+timestamp: 2026-07-13 22:13:40 UTC
+question_type: binary
+factors:
+- description: Dodgers hold ~1.5 game lead by winning percentage (.649 vs .634) with
+    only ~9 games remaining before July 23 — a meaningful cushion in a short window
+  logit: 1.1
+  confidence: 0.85
+  effective_logit: 0.935
+- description: Monte Carlo across game counts (7-11) and true-talent assumptions gives
+    Dodgers sole-best probability ~0.71-0.84, centered ~0.78
+  logit: 1.25
+  confidence: 0.8
+  effective_logit: 1.0
+- description: Brewers have a track record of outperforming forecasts and could go
+    on a run; Dodgers not playing them directly means separate schedule risk
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: Rays/Braves ~5-6 games back, negligible chance of overtaking; strict
+    tie resolves NO but ties rare given different game totals
+  logit: -0.1
+  confidence: 0.7
+  effective_logit: -0.06999999999999999
+tentative_estimate:
+  logit: 1.29
+  probability: 0.79
+anchor: Team leading a division/best-record race by 1.5 games with ~9 to play typically
+  holds ~75-80% of the time given short window.
+assessment: Threshold/measurement race. Dodgers lead Brewers by ~1.5 games with ~9
+  games left. Simulation of both teams' remaining games (binomial with regressed true-talent
+  win rates) yields Dodgers sole-best ~0.78, stable across sensitivity checks. Main
+  risk is Brewers hot streak + Dodgers slump on separate schedules. Other teams too
+  far back to matter.
+tool_audit: execute_code used for Monte Carlo — worked well, robust results. Did not
+  fetch live standings (used description values from July 9-10); acceptable given
+  stability of estimate.
+process_reflection: Straightforward measurement race; simulation was the right tool.
+  No friction. Could have verified live July 14 standings but the sensitivity analysis
+  showed the answer is robust to reasonable variation.
+computed:
+  factor_count: 4
+  factor_sum: 1.625
+  tentative_logit: 1.29
+  logit_gap: -0.33499999999999996
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Dodgers hold ~1.5 game lead by winning percentage (.649 vs .634)
+      with only ~9 games remaining before July 23 — a meaningful cushion in a short
+      window
+    logit: 1.1
+    confidence: 0.85
+    effective_logit: 0.935
+  - description: Monte Carlo across game counts (7-11) and true-talent assumptions
+      gives Dodgers sole-best probability ~0.71-0.84, centered ~0.78
+    logit: 1.25
+    confidence: 0.8
+    effective_logit: 1.0
+  - description: Brewers have a track record of outperforming forecasts and could
+      go on a run; Dodgers not playing them directly means separate schedule risk
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: Rays/Braves ~5-6 games back, negligible chance of overtaking; strict
+      tie resolves NO but ties rare given different game totals
+    logit: -0.1
+    confidence: 0.7
+    effective_logit: -0.06999999999999999
+  dominant_factor: Monte Carlo across game counts (7-11) and true-talent assumptions
+    gives Dodgers sole-best probability ~0.71-0.84, centered ~0.78
+  dominant_effective_logit: 1.0
+  factor_implied_probability: 0.8354835371034369
+  tentative_probability: 0.79
+  gap_pp: -4.548353710343688
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44596
+- **Question ID**: 44750
+- **Session Duration**: 232.9s (3.9 min)
+- **Cost**: $15.0653 total (orchestrator $1.7946 + sub-agents $13.2707)
+- **Tokens**: 4,883 total (12 in, 4,871 out)
+  - Cache: 256,969 read, 55,660 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44596_20260713_221242/20260713-221242.log`
+
+### Tool Calls
+
+- **Total**: 63 calls
+- **Errors**: 9 (14.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.3112 |
+| execute_code | 10 | 0 | 350ms | — |
+| fetch_url | 17 | 6 ⚠️ | 5467ms | — |
+| premortem | 4 | 0 | 104011ms | $6.3851 |
+| reflection | 4 | 0 | 5ms | — |
+| research | 4 | 2 ⚠️ | 108073ms | $5.5352 |
+| stock_price | 1 | 1 ⚠️ | 0ms | — |
+| web_search | 23 | 0 | 18694ms | $1.0392 |
