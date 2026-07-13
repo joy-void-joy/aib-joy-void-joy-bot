@@ -8,8 +8,9 @@ import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
-from claude_agent_sdk import AssistantMessage, ResultMessage
+from claude_agent_sdk import AssistantMessage, ResultMessage, SdkMcpTool
 from claude_agent_sdk.types import McpHttpServerConfig, McpServerConfig, TextBlock
 from pydantic import BaseModel
 
@@ -79,8 +80,8 @@ Guidelines:
 EXCLUDED_TOOL_SETS = SANDBOX_TOOLS | SUBFORECAST_TOOLS | NOTES_TOOLS
 
 
-def build_resolver_servers() -> dict[str, McpServerConfig]:
-    """Build MCP servers for the resolver agent."""
+def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
+    """Session-free research tools, grouped by MCP server name."""
     from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
     from aib.tools.financial import (
         company_financials,
@@ -113,72 +114,64 @@ def build_resolver_servers() -> dict[str, McpServerConfig]:
     from aib.tools.trends import google_trends, google_trends_compare
 
     s = default_settings
-    servers: dict[str, McpServerConfig] = {
-        "search": create_mcp_server(
-            "search",
-            tools=[
-                web_search,
-                search_exa,
-                wikipedia,
-                fetch_url,
-                search_arxiv,
-                fetch_arxiv,
-            ],
-        ),
-        "financial": create_mcp_server(
-            "financial",
-            tools=[
-                fred_series,
-                fred_search,
-                company_financials,
-                stock_price,
-                stock_history,
-                stock_conditional_returns,
-                options_iv,
-                world_bank_indicator,
-                world_bank_search,
-            ],
-        ),
-        "government": create_mcp_server(
-            "government",
-            tools=[
-                bls_series,
-                census_data,
-            ],
-        ),
-        "markets": create_mcp_server(
-            "markets",
-            tools=[
-                polymarket_price,
-                polymarket_history,
-                manifold_price,
-                manifold_history,
-                kalshi_price,
-                kalshi_event,
-                kalshi_history,
-                get_metaculus_questions,
-                list_tournament_questions,
-                search_metaculus,
-                get_coherence_links,
-                get_cp_history,
-            ],
-        ),
-        "trends": create_mcp_server(
-            "trends",
-            tools=[
-                google_trends,
-                google_trends_compare,
-            ],
-        ),
+    groups: dict[str, list[SdkMcpTool[Any]]] = {
+        "search": [
+            web_search,
+            search_exa,
+            wikipedia,
+            fetch_url,
+            search_arxiv,
+            fetch_arxiv,
+        ],
+        "financial": [
+            fred_series,
+            fred_search,
+            company_financials,
+            stock_price,
+            stock_history,
+            stock_conditional_returns,
+            options_iv,
+            world_bank_indicator,
+            world_bank_search,
+        ],
+        "government": [
+            bls_series,
+            census_data,
+        ],
+        "markets": [
+            polymarket_price,
+            polymarket_history,
+            manifold_price,
+            manifold_history,
+            kalshi_price,
+            kalshi_event,
+            kalshi_history,
+            get_metaculus_questions,
+            list_tournament_questions,
+            search_metaculus,
+            get_coherence_links,
+            get_cp_history,
+        ],
+        "trends": [
+            google_trends,
+            google_trends_compare,
+        ],
     }
     if s.reddit_client_id and s.reddit_client_secret:
-        servers["reddit"] = create_mcp_server(
-            "reddit",
-            tools=[
-                reddit_search,
-                reddit_hot,
-            ],
-        )
+        groups["reddit"] = [
+            reddit_search,
+            reddit_hot,
+        ]
+    return groups
+
+
+def build_resolver_servers() -> dict[str, McpServerConfig]:
+    """Build MCP servers for the resolver agent."""
+    s = default_settings
+    servers: dict[str, McpServerConfig] = {
+        name: create_mcp_server(name, tools=tools)
+        for name, tools in build_research_tool_groups().items()
+    }
     if s.asknews_api_key:
         servers["asknews"] = McpHttpServerConfig(
             type="http",

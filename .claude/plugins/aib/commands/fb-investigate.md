@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(uv run aib-devtools:*), Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion
+allowed-tools: Bash(uv run lup-devtools:*), Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion
 description: Investigate resolved forecasts — error classification, counterfactuals, calibration
 argument-hint: <post_id1> [post_id2 ...]
 ---
@@ -15,7 +15,7 @@ For each resolved target forecast, annotate the version that produced it.
 ### 1. Get score and resolution
 
 ```bash
-uv run aib-devtools scores show --post-id <id>
+uv run lup-devtools scores show --post-id <id>
 ```
 
 Note the version in the output — this tells us which code to credit or blame.
@@ -61,7 +61,7 @@ For retrodict traces, note the `future_leak` verdict from summary.json. Only tru
 After investigating individual forecasts:
 
 ```bash
-uv run aib-devtools calibration summary --no-refresh
+uv run lup-devtools calibration summary --no-refresh
 ```
 
 Verify: does the calibration aggregate confirm or contradict individual findings?

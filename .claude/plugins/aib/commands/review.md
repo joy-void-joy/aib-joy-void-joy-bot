@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Grep, Glob, Bash(ls:*, wc:*, sort:*, tail:*, stat:*, uv run aib-devtools:*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(ls:*, wc:*, sort:*, tail:*, stat:*, uv run lup-devtools:*), AskUserQuestion
 description: Deep review of a single forecast trace — tool use, reasoning, workflow, pipeline health
 argument-hint: [paste trace.md, reflection.yaml, or forecast JSON]
 ---

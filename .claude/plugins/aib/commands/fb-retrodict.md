@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(uv run aib-devtools:*), Read, AskUserQuestion
+allowed-tools: Bash(uv run lup-devtools:*), Read, AskUserQuestion
 description: Queue retrodictions to build calibration data
 ---
 
@@ -19,13 +19,13 @@ Search broader Metaculus for recently resolved questions that test this session'
 
 ```bash
 # Search by topic — target areas where we made improvements
-uv run aib-devtools queue search "<topic>" --type <type> --limit 10
+uv run lup-devtools queue search "<topic>" --type <type> --limit 10
 
 # Example searches based on common improvement areas:
-uv run aib-devtools queue search "treasury yield" --type numeric
-uv run aib-devtools queue search "community prediction" --type binary
-uv run aib-devtools queue search "stock price" --type binary
-uv run aib-devtools queue search "volatility" --type numeric
+uv run lup-devtools queue search "treasury yield" --type numeric
+uv run lup-devtools queue search "community prediction" --type binary
+uv run lup-devtools queue search "stock price" --type binary
+uv run lup-devtools queue search "volatility" --type numeric
 ```
 
 ### 2. Filter

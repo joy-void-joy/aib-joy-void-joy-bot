@@ -34,9 +34,9 @@ def _find_project_root() -> Path:
 
 
 # ── Root paths ──────────────────────────────────────────────────────
-_PROJECT_ROOT = _find_project_root()
-NOTES_PATH = _PROJECT_ROOT / "notes"
-RUNTIME_LOGS_PATH = _PROJECT_ROOT / "logs"
+PROJECT_ROOT = _find_project_root()
+NOTES_PATH = PROJECT_ROOT / "notes"
+RUNTIME_LOGS_PATH = PROJECT_ROOT / "logs"
 
 # ── Versioned trace paths ───────────────────────────────────────────
 TRACES_PATH = NOTES_PATH / "traces"

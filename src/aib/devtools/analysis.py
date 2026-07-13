@@ -144,11 +144,11 @@ def dashboard(
     if refresh:
         typer.echo("Refreshing resolutions...")
         subprocess.run(
-            ["uv", "run", "aib-devtools", "resolution", "sync"],
+            ["uv", "run", "lup-devtools", "resolution", "sync"],
             check=False,
         )
         subprocess.run(
-            ["uv", "run", "aib-devtools", "resolution", "tentative", "--all"],
+            ["uv", "run", "lup-devtools", "resolution", "tentative", "--all"],
             check=False,
         )
         typer.echo()
