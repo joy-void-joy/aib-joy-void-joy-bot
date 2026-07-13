@@ -1,0 +1,141 @@
+{
+  "slug": "how-many-total-acres-will-have-burned-in-u-s-wildf-44571",
+  "question": "How many total acres will have burned in U.S. wildfires in 2026, per NIFC's year-to-date total published on July 24, 2026?",
+  "question_type": "discrete",
+  "probability": null,
+  "probabilities": null,
+  "median": 4.26,
+  "confidence_interval": [
+    3.86,
+    4.85
+  ],
+  "percentiles": {
+    "1": 3.63,
+    "5": 3.68,
+    "10": 3.86,
+    "20": 4.03,
+    "25": 4.08,
+    "30": 4.13,
+    "40": 4.2,
+    "50": 4.26,
+    "60": 4.33,
+    "70": 4.41,
+    "75": 4.45,
+    "80": 4.51,
+    "90": 4.85,
+    "95": 5.05,
+    "99": 5.25
+  },
+  "cdf": [
+    0.0010988,
+    0.004649115,
+    0.0098749598,
+    0.0219514561,
+    0.042207854,
+    0.0619692398,
+    0.0780262993,
+    0.0942398791,
+    0.1146674662,
+    0.1405586177,
+    0.1702955336,
+    0.2052575947,
+    0.249128054,
+    0.3032929763,
+    0.3685648654,
+    0.4419184723,
+    0.5167599148,
+    0.5873857097,
+    0.6521643166,
+    0.7106768491,
+    0.7589746611,
+    0.7928926287,
+    0.8143873082,
+    0.8303373287,
+    0.8451980761,
+    0.8599687646,
+    0.8746732939,
+    0.8890553109,
+    0.902738754,
+    0.9157181496,
+    0.9283028807,
+    0.9404584342,
+    0.9518169404,
+    0.962365276,
+    0.9723114381,
+    0.9809865626,
+    0.9870598303,
+    0.9905367146,
+    0.9928147137,
+    0.994856053,
+    0.9968788976,
+    0.9989012
+  ],
+  "numeric_bounds": {
+    "range_min": 3.475,
+    "range_max": 5.525,
+    "open_lower_bound": true,
+    "open_upper_bound": true,
+    "zero_point": null
+  },
+  "factors": [
+    {
+      "description": "Empirical July10->24 national YTD increment 2016-2025 (mean 732k, median 768k, std ~360k) applied to 3.445M anchor gives central ~4.2M with wide right-skewed spread.",
+      "supports": {
+        "center": 4.21,
+        "low": 3.75,
+        "high": 4.95
+      },
+      "logit": 0.0,
+      "confidence": 0.9,
+      "conditional": null,
+      "effective_logit": 0.0
+    },
+    {
+      "description": "2026 running hot: 137% of 10yr average, PL4, 44 active large fires, western heat dome forecast -> tilt above median; quiet-year (2020/2023) increments downweighted.",
+      "supports": {
+        "center": 4.3,
+        "low": 3.9,
+        "high": 5.0
+      },
+      "logit": 0.5,
+      "confidence": 0.65,
+      "conditional": null,
+      "effective_logit": 0.325
+    },
+    {
+      "description": "Metric increases monotonically; already 3.578M as of July 11, so floor ~3.6M and lower bound 3.475 essentially unreachable.",
+      "supports": {
+        "center": 4.27,
+        "low": 3.63,
+        "high": 5.2
+      },
+      "logit": 0.0,
+      "confidence": 0.95,
+      "conditional": null,
+      "effective_logit": 0.0
+    }
+  ],
+  "summary": "Discrete measurement of a monotonically increasing quantity: NIFC year-to-date acres burned, as displayed July 24, 2026. Anchored on the July 10 value of 3.445M (latest July 12 IMSR = 3.578M through July 11). I applied the empirical distribution of national July 10→24 YTD increments across 2016-2025 (mean ~732k, median ~768k, std ~360k acres; range 116k in quiet 2023 to 1.51M in extreme 2017). Because 2026 is running hot (137% of 10yr average, PL4, 44 large fires, western heat dome forecast), I downweighted the two quiet-season increments and applied a modest tilt, yielding a right-skewed distribution centered ~4.27M. Lower tail bounded near 3.6M (metric already at 3.578M and rising); upper tail reaches ~5.2M in a 2017/2022-style megafire-run scenario. P(<3.475)≈0, P(>5.525)≈0.",
+  "reasoning": "Forecast submitted. \n\n**Summary:** This is a measurement question on a monotonically increasing quantity — NIFC's year-to-date US wildfire acreage as displayed July 24, 2026.\n\n**Method:** The research sub-agent retrieved exact NIFC IMSR values, giving me two key inputs:\n- **Current state:** 3.445M acres (July 10 anchor), 3.578M as of July 11 — already rising fast in a hot season (137% of the 10-year average, PL4, 44 large fires, heat dome).\n- **Empirical increment distribution:** Across 2016-2025, the July 10→24 increment averaged ~732k acres (median 768k, std ~360k), ranging from +116k (quiet 2023) to +1.51M (extreme 2017).\n\nI ran a Monte Carlo bootstrapping those 10 empirical increments, downweighting the quiet years given 2026's active conditions, producing a right-skewed distribution centered at **~4.26M acres**:\n- P10: 3.86M · P50: 4.26M · P90: 4.85M\n- Lower tail floored near 3.6M (metric can't decrease meaningfully); upper tail to ~5.2M in a megafire-run scenario.\n\nThe premortem reviewer approved, independently arriving at ~4.20-4.27M and confirming all factors against primary NIFC sources.",
+  "created_at": "2026-07-13T06:51:17.027066Z",
+  "updated_at": "2026-07-13T06:51:17.027066Z",
+  "stale_after": "2026-07-13T09:10:27Z",
+  "resolvable_after": "2026-07-24T00:00:00Z",
+  "state": "fresh",
+  "superseded_by": null,
+  "revision_history": [],
+  "agent_version": "6.3.0",
+  "parent_post_id": 44571,
+  "parent_slug": null,
+  "depth": 0,
+  "tags": [
+    "main-forecast"
+  ],
+  "cost_usd": 2.4145095000000003,
+  "duration_seconds": 1496.958,
+  "resolved": false,
+  "resolution": null,
+  "resolved_at": null,
+  "resolution_source": null,
+  "score": null
+}
