@@ -1,0 +1,133 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the 2026 Clacton by-election, which was triggered by **Nigel Farage's resignation** as Clacton MP (announced 7 July, formalized 8 July 2026) amid a Parliamentary Commissioner for Standards investigation into an allegedly undeclared **£5m gift**. Polling day is confirmed for **Thursday 13 August 2026**. My first two `research` calls failed on a schema validation error (missing `questions` array); I corrected this on the third attempt and got rich, cross-validated data from PollCheck, Democracy Club (whocanivotefor), Wikipedia, and pollster primary sources. AskNews was unavailable (billing/quota limits), which I flagged.\n\n## Key Evidence\n\n- **Farage's 2024 baseline: 46.2%** (21,225 votes / 45,958 valid), majority 8,405 (18.3%), turnout 58.7%, against full competition (Con 27.9%, Lab 16.2%).\n- **All five major parties are boycotting** — Conservatives, Labour, Lib Dems, Greens, and Restore Britain — framing it as a \"vanity\"/\"fake\" by-election. This leaves novelty candidate **Count Binface** as the widely-described \"main challenger.\"\n- The ballot is a **12–15 candidate field** of mostly novelty/independent candidates (Democracy Club named 12; PollCheck ~15), with **no credible single challenger** to consolidate the anti-Farage vote.\n- **National attitude polling** (not Clacton-specific): Ipsos forced-choice 33% prefer Binface vs 21% Farage; Opinium 52% say Clacton should not re-elect Farage; YouGov 60% think he was dishonest; Prolific 69% think other parties should stand.\n- **Reform is nationally much stronger now** — 25–27% vs ~14% in 2024 — and Clacton is a strong Leave/Reform seat.\n- PollCheck's demographic seat model projects Reform **near 60%** in Clacton (a GE projection, not a by-election forecast).\n- I cited a **Bercow 2010 precedent** (~47% when major parties stood aside but a credible independent ran) as downside color — this was not actually researched in my primary trace.\n\n## Conclusion\n\nI built a **scenario-mixture Monte Carlo** (200K draws): 55% \"base\" comfortable win (~64%), 25% \"landslide\" from low opposition turnout (~73%), and 20% \"embarrassment\" where anti-Farage protest turnout consolidates on Binface (~55%). Reasoning: Farage's 46.2% baseline lifts well above baseline because ~54% of the previously-split serious opposition vote is removed from a strong Reform seat, no credible challenger exists, the residual vote fragments across many novelty candidates, and differential turnout favors the energized Reform base. I retained wide two-sided uncertainty because **no constituency-level poll exists**.\n\nFinal forecast: **center ~64.4%**, with P10 ~54.5%, P50 ~64.4%, P90 ~74.4%, and tails P1 ~47.5% / P99 ~80.9%. My premortem constructed a genuine two-sided counterargument (Binface consolidation downside vs. 70–80% upside), and my confidence was appropriately moderate (0.60) given the absence of local polling.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 3,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 10,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A tool providing historical vote shares in boycotted/uncontested UK by-elections would have let the agent build an empirical incumbent-dominance base rate instead of hand-specifying scenario means.",
+      "A prediction/betting-market lookup (odds) would have provided an external anchor in a contest with no constituency polling."
+    ],
+    "subtle_bugs": [
+      "The premortem/reviewer verified the Bercow precedent post-hoc and labeled it 'roughly accurate,' which risks laundering an un-sourced claim into an accepted factor — the claim was never in the actual research trace."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Scenario-mixture Monte Carlo anchored on Farage's 46.2% 2024 baseline, adjusted upward for the major-party boycott, ballot fragmentation, and stronger Reform position.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether intense national anti-Farage sentiment translates into local Clacton protest turnout consolidating on Count Binface, in a contest with no constituency-level poll."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The Bercow 2010 precedent (~47%), used as Factor 4 downside anchor, was never researched in the primary trace — no Bercow search was run. It was only verified post-hoc by an internal reviewer. It is a fabricated-then-luckily-accurate claim, used correctly with a negative logit, but introduced without contemporaneous sourcing.",
+      "severity": "minor"
+    },
+    {
+      "category": "wrong_base_rate",
+      "evidence": "No empirical base rate of vote shares in boycotted/uncontested UK by-elections was established. The three scenario means (64/73/55) and weights (55/25/20) are hand-specified judgment. The agent itself noted a tool for historical boycotted by-election shares 'would have helped calibrate the incumbent-dominance base rate.'",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "No prediction/betting market (e.g., odds referenced in the LBC source) was consulted for Farage's expected margin or vote share, which could have provided an external anchor given the absence of constituency polling.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "63-67% center; distribution roughly P10 54 / P50 65 / P90 75",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that the 46.2% baseline was set against FULL competition and that the 5-party boycott removes ~54% of the previously-split opposition vote — the core mechanism driving the upward adjustment.",
+    "Carefully distinguished national attitude polling (Ipsos 33% Binface, Opinium 52% anti-re-election) from an actual Clacton vote estimate, and did not let intense national anti-Farage sentiment naively drag the forecast down.",
+    "Built a genuinely two-sided scenario mixture with a real 20% 'embarrassment' downside (Binface consolidation) rather than a token counterargument, keeping a P1 ~47.5% tail.",
+    "Recovered gracefully from two research schema-validation failures and transparently disclosed the AskNews outage rather than hiding the data gap.",
+    "Cross-validated candidate lists across two independent trackers (Democracy Club 12, PollCheck ~15) and noted the discrepancy was because nominations had not closed."
+  ],
+  "weaknesses": [
+    "Introduced the Bercow 2010 precedent as a load-bearing downside factor without actually researching it in the primary trace — a hallucinated-then-verified claim that happened to be roughly accurate.",
+    "Did not establish an empirical base rate for boycotted/uncontested by-election vote shares; the scenario means and weights are entirely judgmental, so the model's precision is illusory relative to a hand-specified distribution.",
+    "Did not consult betting/prediction markets despite the LBC source mentioning Farage odds, missing a potential external anchor in a poll-free contest.",
+    "Did not explicitly model that boycotted by-elections often have very low, highly asymmetric turnout — this is folded implicitly into scenarios but never quantified against any turnout data."
+  ],
+  "pipeline": {
+    "issues": [
+      "AskNews returned 403 errors on all 3 attempts (n_articles tier limit, then billing overage) — fully unavailable this session.",
+      "WebFetch 403'd on Wikipedia, requiring a fallback to search__fetch_url.",
+      "The research MCP tool required two failed calls to discover the correct schema (needs a 'questions' array), wasting two round-trips.",
+      "Minor token waste from empty ToolSearch calls and duplicated sibling asknews calls."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
