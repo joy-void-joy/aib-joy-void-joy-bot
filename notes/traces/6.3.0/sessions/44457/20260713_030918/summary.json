@@ -1,0 +1,112 @@
+{
+  "condensed_reasoning": "## Research\n\nI started by querying my `research` tool for the current state of the 2026 Maine Senate race. The critical finding reshaped everything: **Graham Platner won the June 9 Democratic primary but withdrew on July 10, 2026** amid a Politico/CNN-reported sexual assault allegation and other controversies. That left Democrats with **no nominee** — they are selecting a replacement via an emergency nominating convention (**July 25–26 in Bangor, deadline July 27**), with ~600 delegates.\n\nI then pulled the polling picture (all against the now-defunct Platner):\n- **270toWin** average of 5 June polls: Platner 48.2% / Collins 47.2% (**Platner +1.0**)\n- **Pollsmax** weighted average (July 12, 26 polls): Dem 46.5% / GOP 47.4% (**R +0.9**)\n- Most recent major poll — **Fox News 6/30: Collins 50%, Platner 47%** — showing the race had tightened toward Collins\n- Siena 6/29: Platner 49–47; Wick 6/16: Platner 48–45; Quantus 6/12: 46–45; Tavern 6/8: 51–49; UMass Lowell 5/13–26: Platner 48–43 (Dem +5)\n\nI mapped the replacement field: **Troy Jackson** (former Maine Senate President, Sanders/Our Revolution-backed) as the early frontrunner, plus Nirav Shah, Shenna Bellows, Jordan Wood, Dan Kleban, Paige Loud, and Valli Geiger. Janet Mills showed no sign of re-entering. On market signals, **Polymarket's Maine Senate winner market moved to ~63.5%** for the Republican/Collins side (up from ~58.5% on July 6). Cook rated the race Toss-up; Inside Elections, Tilt Republican.\n\n## Key Evidence\n\nThe question resolves YES if Collins leads the Democratic nominee in the **RaceToTheWH** General Election polling average on Aug 31, 2026. I searched directly for the RaceToTheWH tracker but got no direct data back, so I substituted 270toWin and Pollsmax as equivalents — a gap I acknowledged.\n\nI decomposed the forecast into six factors: (1) pre-withdrawal average roughly tied with recent Collins-ward tightening (+0.3); (2) a fresh, lower-recognition Democratic nominee chosen only ~5 weeks before resolution typically trails/ties an established incumbent (+0.8, my dominant factor); (3) Polymarket's move toward the GOP (+0.4, modest weight since it's a winner market, not a polling-lead market); (4) Maine's Democratic federal lean plus a 2026 midterm out-party tailwind, with generic Democrats polling competitively (UMass Lowell Dem +5) (−0.5); (5) uncertainty about whether fresh polls exist by Aug 31 and how the aggregator handles the transition — a stale Platner-lean average would resolve NO (−0.1); (6) Troy Jackson's real name recognition weakening the \"unknown challenger\" advantage (−0.2). The factor-implied probability was **0.61**, aligning with my tentative **0.62**.\n\nMy premortem constructed a genuine NO case: RaceToTheWH could retain the stale Dem-leaning Platner average if few fresh polls exist; Maine's lean plus a favorable national environment could keep a Democrat ahead; and Jackson is a known statewide figure. The premortem returned a **warn** verdict — well-grounded factors, but flagging that I never retrieved the authoritative RaceToTheWH resolution source, whose transition-handling is a material unknown.\n\n## Conclusion\n\nNetting these, I concluded the forecast **modestly favors Collins leading, ~0.60**. The pre-withdrawal race was essentially tied with a recent tilt toward Collins; a newly-minted, lower-recognition Democrat set only ~5 weeks before resolution pushes the anchor slightly above 50% for Collins, offset by Maine's Democratic federal lean, the midterm out-party tailwind, and the material chance the aggregator carries a stale Dem-leaning average. My final probability was **0.60** (logit 0.4).",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct tool to fetch the RaceToTheWH tracker's current General Election polling average — the named resolution source — forcing substitution with 270toWin/Pollsmax.",
+      "No reliable way around repeated 403 paywalls/blocks on RealClearPolling and news sites for primary poll extraction."
+    ],
+    "subtle_bugs": [
+      "The pollsmax WebFetch returned the aggregate average but reported that per-poll numbers 'cannot be extracted from this document version' — a silent partial extraction that could have hidden the freshest post-withdrawal poll data had web_search not backfilled it.",
+      "asknews 403s were about plan limits, not the query, but could be misread as 'no news available' on this topic."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Qualitative factor decomposition of polling-average dynamics for a race in candidate flux, anchored to pre-withdrawal polls, prediction markets, and incumbent-vs-fresh-challenger base rates.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": true,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether fresh head-to-head polls of the new (post-July 27) Democratic nominee exist by Aug 31 and how the RaceToTheWH average handles the Platner-to-new-nominee transition."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The resolution source is the RaceToTheWH General Election polling average, but the agent searched for it (trace line 962) and got no direct data back, then substituted 270toWin/Pollsmax as 'equivalents' without ever retrieving the actual tracker. The aggregator's poll-weighting and transition-handling could differ materially, and Factor 5 itself notes a stale Platner-lean average would resolve NO.",
+      "severity": "major"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "Factor 2 (fresh nominee trails incumbent) was given logit +0.8 and treated as dominant, but this is asserted from general intuition rather than a specific base rate. In a Dem-leaning state with a strong midterm out-party tailwind and a genuinely recognizable likely nominee (Troy Jackson, former Senate President), a fresh Democrat could plausibly poll even or ahead, making +0.8 arguably too strong.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "58%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified Platner's July 10 withdrawal as the race-defining fact and refused to anchor naively on the stale Dem +1 average.",
+    "Cleanly separated the polling-average resolution mechanic from the November race outcome and appropriately down-weighted the Polymarket winner market.",
+    "Built a granular, well-dated poll table and identified the genuine late-June tightening toward Collins.",
+    "Premortem generated a real NO counter-narrative and honestly flagged the unretrieved RaceToTheWH resolution source."
+  ],
+  "weaknesses": [
+    "Never retrieved the named RaceToTheWH resolution source, leaving the core mechanic (transition handling / stale-average retention) as an unquantified unknown.",
+    "Left the crucial Factor 5 (do fresh polls even exist by Aug 31?) at a near-neutral -0.1 without any concrete reasoning about Maine polling cadence.",
+    "Dominant +0.8 name-recognition factor was asserted rather than grounded in an analogous mid-cycle-replacement base rate.",
+    "Burned calls on repeated 403 WebFetch failures and a binary-PDF parse without pivoting retrieval strategy for the resolution source."
+  ],
+  "pipeline": {
+    "issues": [
+      "research tool required a retry due to a schema mismatch (agent sent 'query' at top level instead of inside 'questions').",
+      "asknews search_news blocked twice by tier/overage limits — effectively unusable in this session.",
+      "WebFetch hit 403s on ~5 of 8 attempts (RealClearPolling, The Hill, NBC sibling errors), wasting calls before web_search recovered the data.",
+      "Token waste from repeated near-identical web_search results returning the same Wikipedia extract multiple times."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
