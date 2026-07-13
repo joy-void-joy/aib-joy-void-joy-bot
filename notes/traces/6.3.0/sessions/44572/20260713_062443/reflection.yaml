@@ -1,0 +1,118 @@
+---
+timestamp: 2026-07-13 06:31:39 UTC
+question_type: binary
+factors:
+- description: Pogačar is the dominant rider of the race, in yellow +2:42, 2 stage
+    wins by Stage 9, clearly at peak form and hunts stage wins aggressively
+  logit: 1.1
+  confidence: 0.85
+  effective_logit: 0.935
+- description: Alpe d'Huez historically favors breakaways (4 of 5 recent road-stage
+    finishes won by breaks; yellow-jersey wins very rare)
+  logit: -1.0
+  confidence: 0.75
+  effective_logit: -0.75
+- description: First of back-to-back Alpe d'Huez finishes with harder queen stage
+    (Galibier) next day → strong incentive to let a break win Stage 19
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Even in GC-decided scenario, other elite climbers (Vingegaard, del
+    Toro, Ayuso) can take the stage
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+- description: Crash/illness/abandonment risk over 10 intervening stages incl. mountains
+  logit: -0.25
+  confidence: 0.6
+  effective_logit: -0.15
+tentative_estimate:
+  logit: -0.9
+  probability: 0.29
+anchor: Base rate for a dominant favorite winning a specific mountain summit finish
+  ~30-35%, discounted by Alpe d'Huez breakaway tendency
+assessment: 'Probability-tree decomposition: P(starts healthy ~0.90) × [P(GC group
+  decides stage ~0.42) × P(Pogačar wins among GC ~0.62) + P(break wins but Pogačar
+  overpowers ~0.10)] ≈ 0.29. Sensitivity range 0.23–0.36. The dominant downward force
+  is Alpe d''Huez''s strong breakaway tendency amplified by the unique double-header
+  (Stage 19 is the ''lesser'' of two identical finishes, so teams likely conserve
+  for the Galibier queen stage on Stage 20). Countered by Pogačar''s exceptional current
+  dominance and appetite for prestigious stage wins on a climb he''s never won. A
+  single specific stage win for even a dominant rider rarely exceeds ~35-40%.'
+key_uncertainties: Whether UAE/Pogačar contest Stage 19 or concede it to a break to
+  save for Stage 20 queen stage; GC gap size by Stage 19 (larger gap = more likely
+  to let break go)
+tool_audit: research() returned excellent structured data on current GC standings
+  and Alpe d'Huez historical base rates. sandbox used for probability tree. No failures.
+process_reflection: Smooth. The research sub-agent gave directly usable base rates
+  (breakaway vs GC win split at Alpe d'Huez) and live race state, which is exactly
+  what a single-stage cycling forecast needs. No friction.
+computed:
+  factor_count: 5
+  factor_sum: -0.8749999999999999
+  tentative_logit: -0.9
+  logit_gap: -0.025000000000000133
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Pogačar is the dominant rider of the race, in yellow +2:42, 2 stage
+      wins by Stage 9, clearly at peak form and hunts stage wins aggressively
+    logit: 1.1
+    confidence: 0.85
+    effective_logit: 0.935
+  - description: Alpe d'Huez historically favors breakaways (4 of 5 recent road-stage
+      finishes won by breaks; yellow-jersey wins very rare)
+    logit: -1.0
+    confidence: 0.75
+    effective_logit: -0.75
+  - description: First of back-to-back Alpe d'Huez finishes with harder queen stage
+      (Galibier) next day → strong incentive to let a break win Stage 19
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Even in GC-decided scenario, other elite climbers (Vingegaard, del
+      Toro, Ayuso) can take the stage
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  - description: Crash/illness/abandonment risk over 10 intervening stages incl. mountains
+    logit: -0.25
+    confidence: 0.6
+    effective_logit: -0.15
+  dominant_factor: Pogačar is the dominant rider of the race, in yellow +2:42, 2 stage
+    wins by Stage 9, clearly at peak form and hunts stage wins aggressively
+  dominant_effective_logit: 0.935
+  factor_implied_probability: 0.2942149721629888
+  tentative_probability: 0.29
+  gap_pp: -0.4214972162988828
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44572
+- **Question ID**: 44726
+- **Session Duration**: 695.6s (11.6 min)
+- **Cost**: $15.5118 total (orchestrator $2.1832 + sub-agents $13.3286)
+- **Tokens**: 7,689 total (12 in, 7,677 out)
+  - Cache: 284,167 read, 62,984 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44572_20260713_062443/20260713-062443.log`
+
+### Tool Calls
+
+- **Total**: 71 calls
+- **Errors**: 1 (1.4%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2661 |
+| execute_code | 21 | 1 ⚠️ | 14288ms | — |
+| fetch_url | 16 | 0 | 8252ms | — |
+| install_package | 1 | 0 | 574ms | — |
+| premortem | 3 | 0 | 81902ms | $3.0846 |
+| reflection | 3 | 0 | 4ms | — |
+| research | 2 | 0 | 255267ms | $9.1867 |
+| web_search | 21 | 0 | 20734ms | $0.7913 |
+| wikipedia | 4 | 0 | 210ms | — |
