@@ -1,0 +1,120 @@
+---
+timestamp: 2026-07-13 01:31:57 UTC
+question_type: binary
+factors:
+- description: 'Status quo: no new confirmed case in Uganda for ~3 weeks (last onset
+    21 June, zero through 12 July). Strong downward momentum.'
+  logit: -1.4
+  confidence: 0.85
+  effective_logit: -1.19
+- description: Zero active contacts under follow-up (821/831 completed 21-day follow-up);
+    local transmission chains effectively extinguished, so secondary-case risk near
+    zero.
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: Ongoing large DRC outbreak (~1792 cases) plus continued cross-border
+    movement keeps residual importation risk nonzero; Uganda already had 15 importations.
+  logit: 0.8
+  confidence: 0.7
+  effective_logit: 0.5599999999999999
+- description: Border reportedly closed and surveillance now alert-driven with heightened
+    screening, reducing undetected importation.
+  logit: -0.5
+  confidence: 0.55
+  effective_logit: -0.275
+- description: 'Short window: only ~12 days remain (July 13-24) for a case to appear.'
+  logit: -0.5
+  confidence: 0.7
+  effective_logit: -0.35
+tentative_estimate:
+  logit: -2.0
+  probability: 0.12
+anchor: 'Poisson hazard estimate: current importation rate ~1 per 4-6 weeks given
+  3-week zero streak, yielding ~12-20% over a 12-day window.'
+assessment: 'Uganda''s outbreak is clearly winding down: 3-week zero streak, no active
+  contacts, controlled local transmission. The only realistic YES path is a fresh
+  importation from the still-active DRC outbreak within a ~12-day window. Poisson
+  reasoning: prior importation rate was ~2-3/week during the active phase but has
+  fallen to ~0 over 21 days, implying current hazard is low. If effective hazard is
+  ~1 event per 4-6 weeks, P(≥1 in 12 days) ≈ 12-25%. Given border closure and control,
+  I lean toward the lower end. Status quo strongly favors NO.'
+calibration_notes: Anchor ~15%. Factors push slightly below toward 12% due to border
+  closure and no active contacts. Not a lazy 50% — evidence clearly favors NO.
+key_uncertainties: True current importation hazard from DRC is the main unknown; could
+  spike if an undetected chain exists. Also possible a late case with onset in-window
+  gets reported after July 24.
+tool_audit: research() sub-agent returned excellent cross-validated data (Uganda MoH
+  dashboard, ECDC, WHO DON612) confirming 20 cases as of 12 July with 0 active contacts.
+  Highly useful, no failures.
+process_reflection: Straightforward low-complexity epidemiological question. The research
+  tool was efficient and sufficient; no need for heavy simulation. Scaffolding worked
+  well.
+computed:
+  factor_count: 5
+  factor_sum: -2.055
+  tentative_logit: -2.0
+  logit_gap: 0.05500000000000016
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: 'Status quo: no new confirmed case in Uganda for ~3 weeks (last onset
+      21 June, zero through 12 July). Strong downward momentum.'
+    logit: -1.4
+    confidence: 0.85
+    effective_logit: -1.19
+  - description: Zero active contacts under follow-up (821/831 completed 21-day follow-up);
+      local transmission chains effectively extinguished, so secondary-case risk near
+      zero.
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: Ongoing large DRC outbreak (~1792 cases) plus continued cross-border
+      movement keeps residual importation risk nonzero; Uganda already had 15 importations.
+    logit: 0.8
+    confidence: 0.7
+    effective_logit: 0.5599999999999999
+  - description: Border reportedly closed and surveillance now alert-driven with heightened
+      screening, reducing undetected importation.
+    logit: -0.5
+    confidence: 0.55
+    effective_logit: -0.275
+  - description: 'Short window: only ~12 days remain (July 13-24) for a case to appear.'
+    logit: -0.5
+    confidence: 0.7
+    effective_logit: -0.35
+  dominant_factor: 'Status quo: no new confirmed case in Uganda for ~3 weeks (last
+    onset 21 June, zero through 12 July). Strong downward momentum.'
+  dominant_effective_logit: -1.19
+  factor_implied_probability: 0.11354813321897779
+  tentative_probability: 0.12
+  gap_pp: 0.6451866781022206
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44561
+- **Question ID**: 44715
+- **Session Duration**: 294.8s (4.9 min)
+- **Cost**: $14.1069 total (orchestrator $1.8056 + sub-agents $12.3013)
+- **Tokens**: 5,127 total (10 in, 5,117 out)
+  - Cache: 215,796 read, 58,559 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44561_20260713_012813/20260713-012813.log`
+
+### Tool Calls
+
+- **Total**: 38 calls
+- **Errors**: 1 (2.6%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 497ms | — |
+| premortem | 4 | 0 | 111331ms | $6.3892 |
+| reflection | 5 | 0 | 6ms | — |
+| research | 4 | 1 ⚠️ | 146311ms | $5.2917 |
+| stock_price | 3 | 0 | 453ms | — |
+| web_search | 16 | 0 | 19247ms | $0.6204 |
+| wikipedia | 3 | 0 | 216ms | — |
