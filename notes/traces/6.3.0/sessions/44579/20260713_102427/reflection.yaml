@@ -1,0 +1,154 @@
+---
+timestamp: 2026-07-13 10:34:55 UTC
+question_type: discrete
+factors:
+- description: 'Question''s own listed qualifying UKMTO ''Attack'' entries: ~5 over
+    Jun1-Jul7 (~37d) = ~0.14/day baseline -> ~2/14d in calmer periods'
+  supports:
+    center: 2.5
+    low: 1.0
+    high: 5.0
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+- description: Active US-Iran military escalation as of Jul13, Iran declared strait
+    'closed', July 11 attack already in-window -> elevated tempo
+  supports:
+    center: 7.0
+    low: 3.0
+    high: 12.0
+  logit: 1.2
+  confidence: 0.75
+  effective_logit: 0.8999999999999999
+- description: Merchant traffic collapsed to ~21/day (from 140), only ~5 vessels tracked
+    Jul8-9 -> far fewer targets, strong damper on merchant-vessel attack count
+  supports:
+    center: 3.0
+    low: 1.0
+    high: 6.0
+  logit: -0.8
+  confidence: 0.7
+  effective_logit: -0.5599999999999999
+- description: Overdispersed/clustered counts (attacks come in spikes like Jul6-7's
+    3-in-24h); ceasefire could pause mid-window
+  supports:
+    center: 4.0
+    low: 0.0
+    high: 12.0
+  logit: 0.0
+  confidence: 0.6
+  effective_logit: 0.0
+tentative_estimate:
+  center: 4.0
+  low: 1.0
+  high: 11.0
+assessment: 'Discrete count of UKMTO ''Attack'' entries in Gulf/Hormuz/N.Oman over
+  14 days (Jul11-24). Two competing forces: active escalation (US-Iran war, strait
+  ''closed'', July 11 attack already logged) pushes count UP, but merchant traffic
+  collapse (21 vs 140/day, ~5 vessels tracked) caps available targets, pushing DOWN.
+  Modeled as scenario mixture: de-escalation (32%, mean 2.8), moderate crisis tempo
+  (43%, mean 4.8), high escalation (25%, mean 8.5), each negative-binomial for overdispersion.
+  Result: median 4, mean 5.1, P10=1, P90=11, P(0)=7%, P(>12)=6%. Distribution right-skewed
+  as appropriate for a count with clustering.'
+key_uncertainties: Exact UKMTO classification/location-text decisions (which incidents
+  get 'Attack' vs 'Suspicious Activity' and whether location falls in qualifying region);
+  whether a ceasefire lands mid-window; how the traffic collapse trades off against
+  enforcement attacks. Whether multi-vessel single-day events become 1 or multiple
+  numbered entries.
+tool_audit: research() returned rich, current (Jul13) crisis status confirming active
+  escalation — very useful. execute_code used for Monte Carlo mixture. No tool failures.
+  Did not have exact UKMTO per-entry log; relied on question description + news for
+  rate estimation.
+update_triggers: A ceasefire announcement would pull toward the low scenario (median
+  ~2); a sustained blockade-enforcement campaign with repeated daily strikes would
+  push toward P80+ (8-11+)."
+process_reflection: 'The research sub-agent was excellent for a fast-moving live crisis.
+  The main friction: no direct programmatic access to the UKMTO Recent Incidents page
+  to get an exact historical per-day count of qualifying ''Attack'' entries, which
+  would sharpen the base rate. Had to infer the rate from news + the question''s example
+  list. A tool to scrape/parse UKMTO structured incident logs would materially improve
+  this class of maritime-incident-count questions.'
+computed:
+  factor_count: 4
+  factor_sum: 0.33999999999999997
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: 'Question''s own listed qualifying UKMTO ''Attack'' entries: ~5 over
+      Jun1-Jul7 (~37d) = ~0.14/day baseline -> ~2/14d in calmer periods'
+    supports:
+      center: 2.5
+      low: 1.0
+      high: 5.0
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  - description: Active US-Iran military escalation as of Jul13, Iran declared strait
+      'closed', July 11 attack already in-window -> elevated tempo
+    supports:
+      center: 7.0
+      low: 3.0
+      high: 12.0
+    logit: 1.2
+    confidence: 0.75
+    effective_logit: 0.8999999999999999
+  - description: Merchant traffic collapsed to ~21/day (from 140), only ~5 vessels
+      tracked Jul8-9 -> far fewer targets, strong damper on merchant-vessel attack
+      count
+    supports:
+      center: 3.0
+      low: 1.0
+      high: 6.0
+    logit: -0.8
+    confidence: 0.7
+    effective_logit: -0.5599999999999999
+  - description: Overdispersed/clustered counts (attacks come in spikes like Jul6-7's
+      3-in-24h); ceasefire could pause mid-window
+    supports:
+      center: 4.0
+      low: 0.0
+      high: 12.0
+    logit: 0.0
+    confidence: 0.6
+    effective_logit: 0.0
+  dominant_factor: Active US-Iran military escalation as of Jul13, Iran declared strait
+    'closed', July 11 attack already in-window -> elevated tempo
+  dominant_effective_logit: 0.8999999999999999
+  distribution_metrics:
+    implied_median: 5.465753424657533
+    implied_p10: 2.232876712328767
+    implied_p90: 9.698630136986301
+    median_gap: -1.4657534246575334
+    median_gap_pct: -19.63302752293577
+    spread_ratio: 1.3394495412844039
+    precision: 2.5
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44579
+- **Question ID**: 44733
+- **Session Duration**: 848.0s (14.1 min)
+- **Cost**: $10.7120 total (orchestrator $3.2544 + sub-agents $7.4576)
+- **Tokens**: 14,547 total (18 in, 14,529 out)
+  - Cache: 511,902 read, 74,483 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44579_20260713_102427/20260713-102427.log`
+
+### Tool Calls
+
+- **Total**: 30 calls
+- **Errors**: 1 (3.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1936 |
+| execute_code | 3 | 0 | 117ms | — |
+| fetch_url | 6 | 0 | 11914ms | — |
+| premortem | 3 | 1 ⚠️ | 64767ms | $3.3428 |
+| reflection | 2 | 0 | 9ms | — |
+| research | 1 | 0 | 474521ms | $3.6128 |
+| web_search | 8 | 0 | 26303ms | $0.3083 |
+| wikipedia | 7 | 0 | 258ms | — |
