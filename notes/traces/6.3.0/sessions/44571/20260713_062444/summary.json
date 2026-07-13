@@ -1,0 +1,134 @@
+{
+  "condensed_reasoning": "## Research\n\nI treated this as a **discrete measurement of a monotonically increasing quantity**: NIFC's year-to-date acres-burned figure as it will display on July 24, 2026. I dispatched a research sub-agent with two targeted queries — (1) the latest 2026 NIFC YTD figures and daily burn rate, and (2) the historical July 10→24 YTD increment across 2016–2025.\n\nThe research returned excellent primary-source data, all traced to NIFC IMSR PDFs:\n- **Latest confirmed figure: 3,578,017 acres** (July 12, 2026 IMSR, through July 11), running at **137% of the 10-year average**, with **44 large fires**, **PL4**, and a western heat dome in the forecast.\n- The July 10 anchor was **3,445,499 acres**, implying a lumpy +132,518-acre one-day YTD jump (partly from perimeter re-mapping, since the \"acres yesterday\" small tally was only 7,060).\n\n## Key Evidence\n\nI built the crux dataset — the empirical **July 10→24 national YTD increment** for each year 2016–2025 — by parsing IMSR PDFs directly in the sandbox and cross-validating:\n\n| Year | Increment |\n|------|-----------|\n| 2016 | +619k | 2017 | +1,508k | 2018 | +580k | 2019 | +946k | 2020 | +299k |\n| 2021 | +882k | 2022 | +774k | 2023 | +116k | 2024 | +763k | 2025 | +839k |\n\nThis yields **mean ~732k, median ~768k, std ~359k acres**, strongly right-skewed (range 116k in quiet 2023 to 1.51M in extreme 2017).\n\n## Conclusion\n\nI ran a Monte Carlo (N=200,000) bootstrapping the empirical increments with kernel smoothing (bw ≈ 0.4·std). Because 2026 is running hot, I **downweighted the two quiet-season years** (2020, 2023) to weight 0.4, applied a modest **+5% tilt**, and floored increments at 180k. Applied to the 3.445M July-10 anchor, this produced a right-skewed distribution: **median ~4.26M, mean ~4.30M**, P10 ≈ 3.86M, P90 ≈ 4.85M, P99 ≈ 5.25M. Lower tail bounded near 3.6M (the metric already stands at 3.578M and only rises); upper tail reaches ~5.2M in a 2017/2022-style megafire-run scenario. I set P(<3.475)≈0 and P(>5.525)≈0. My final submission centered the forecast at **~4.26M acres** with a 1st–99th percentile span of roughly 3.63M–5.25M.",
+  "tool_audit": {
+    "by_tool": {
+      "execute_code": {
+        "calls": 36,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 21,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 16,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "install_package": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [],
+    "subtle_bugs": [
+      "The large +132,518-acre July 10->11 YTD jump vs. the 7,060-acre 'acres yesterday' small tally reflects perimeter re-mapping absorbed into YTD; the agent noted this lumpiness but did not model its effect on the tail width."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/climate",
+    "approach": "Monte Carlo bootstrap of the empirical 2016-2025 July 10->24 NIFC YTD acre increment, applied to the 2026 July-10 anchor with hot-season reweighting and a modest upward tilt.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether the forecast western heat dome triggers a 2017/2022-style megafire run (large upside) or fires stay relatively contained over the two-week window."
+  },
+  "risk_flags": [
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The question asks for the total 'per NIFC's year-to-date total published on July 24, 2026.' The agent anchored the historical increment window on the July 10 IMSR value and computed a July 24 increment, which correctly targets the published-July-24 figure. However, NIFC's July 24 IMSR reports figures 'through July 23,' and the agent did not explicitly reconcile whether the resolution refers to the IMSR published on July 24 or the statistics-page value displayed on that date. The empirical increments were built on the same-day IMSR convention (Jul10->Jul24 IMSR-to-IMSR), so the mapping is internally consistent, but the one-report-day ambiguity is unaddressed.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The Monte Carlo compresses the lower tail sharply (P1=3.625, P5=3.680, P10=3.863) by downweighting quiet years and flooring at 180k. Given day-to-day YTD deltas are 'lumpy' and NIFC revises figures, a slightly wider lower tail may be warranted; the empirical P10 increment was 281k (=>3.73M), yet the model's P10 outcome sits at 3.86M, implying the reweighting materially narrowed the left tail.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~4.2M acres (central), 5th-95th ~3.7M-5.1M",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Built the crux dataset from primary sources by parsing NIFC IMSR PDFs for all 10 years (2016-2025) in the sandbox and cross-validating, rather than trusting a single summary figure.",
+    "Correctly anchored the historical increment window (July 10->24) on the same July 10 base as the 2026 anchor (3.445M), making the increment distribution directly applicable.",
+    "Ran a 200K-sample Monte Carlo with kernel smoothing and explicit right-skew, appropriately reflecting the heavy variance (116k to 1.51M) of the July increment.",
+    "Recognized the monotonic-increase floor: the metric already read 3.578M through July 11, so the lower bound near 3.475M is essentially unreachable.",
+    "Justified the hot-season upward tilt with concrete 2026 signals (137% of 10yr avg, PL4, 44 large fires, heat dome forecast) and specifically downweighted the two identifiable quiet-season analogs (2020, 2023)."
+  ],
+  "weaknesses": [
+    "The +5% hot-conditions tilt and the 0.4 quiet-year downweight are ad hoc adjustments applied on top of the empirical distribution without sensitivity analysis of how much they shift the median.",
+    "Did not explicitly reconcile whether the resolution value is the IMSR-published July 24 figure vs. the nifc.gov statistics-page value on that date, though the increment convention used is internally consistent.",
+    "Lower-tail compression (P10 outcome 3.86M) is tighter than the raw empirical increment P10 (281k => 3.73M outcome) would suggest, driven by the reweighting/floor choices."
+  ],
+  "pipeline": {
+    "issues": [],
+    "clean": true
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "Session dated 2026-07-13; all 2026 data points are as-of July 12, 2026 or earlier (July 6/8/11/12).",
+      "The July 24, 2026 target date is in the future relative to the session; the agent forecasts it via historical increments rather than citing any July 24 value.",
+      "Historical July 24 values used are all from 2016-2025, prior to the session date."
+    ]
+  },
+  "actionable_improvements": []
+}
