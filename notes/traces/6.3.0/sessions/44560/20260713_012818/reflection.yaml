@@ -1,0 +1,89 @@
+---
+timestamp: 2026-07-13 01:28:50 UTC
+question_type: binary
+factors:
+- description: Max over 13-day window needs to reach $85 (8.9% above $78.07 start);
+    MC with 4.5% daily vol, ~0 drift gives P~0.44
+  logit: -0.1
+  confidence: 0.8
+  effective_logit: -0.08000000000000002
+- description: 'Bearish market tilt: soft BTC (-20% June), prediction markets favor
+    $70 support over $90 upside, negative drift bias'
+  logit: -0.4
+  confidence: 0.6
+  effective_logit: -0.24
+- description: Window is 13 days (max-over-window), which substantially raises probability
+    vs single-day crossing
+  logit: 0.3
+  confidence: 0.7
+  effective_logit: 0.21
+tentative_estimate:
+  logit: -0.32
+  probability: 0.42
+anchor: 'Random-walk max-over-window base rate: ~0.44 (MC, 4.5% daily vol, zero drift)'
+assessment: Threshold question modeled as max of SOL close over 13 days exceeding
+  $85. Start $78.07, need 8.9% gain. MC across vol 4-5.5% and small drifts gives 0.43-0.50.
+  Bearish context (soft BTC, prediction market bearish tilt) pulls slightly below
+  neutral. Settle ~0.42.
+tool_audit: sandbox execute_code worked for Monte Carlo. No research tool needed given
+  short-fuse quantitative question with data provided.
+process_reflection: Straightforward threshold/measurement question. Provided description
+  had enough price data to simulate directly. Scaffolding fine.
+computed:
+  factor_count: 3
+  factor_sum: -0.11000000000000001
+  tentative_logit: -0.32
+  logit_gap: -0.21
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Max over 13-day window needs to reach $85 (8.9% above $78.07 start);
+      MC with 4.5% daily vol, ~0 drift gives P~0.44
+    logit: -0.1
+    confidence: 0.8
+    effective_logit: -0.08000000000000002
+  - description: 'Bearish market tilt: soft BTC (-20% June), prediction markets favor
+      $70 support over $90 upside, negative drift bias'
+    logit: -0.4
+    confidence: 0.6
+    effective_logit: -0.24
+  - description: Window is 13 days (max-over-window), which substantially raises probability
+      vs single-day crossing
+    logit: 0.3
+    confidence: 0.7
+    effective_logit: 0.21
+  dominant_factor: 'Bearish market tilt: soft BTC (-20% June), prediction markets
+    favor $70 support over $90 upside, negative drift bias'
+  dominant_effective_logit: -0.24
+  factor_implied_probability: 0.47252769565540637
+  tentative_probability: 0.42
+  gap_pp: -5.252769565540638
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44560
+- **Question ID**: 44714
+- **Session Duration**: 251.8s (4.2 min)
+- **Cost**: $13.9585 total (orchestrator $1.6572 + sub-agents $12.3013)
+- **Tokens**: 3,517 total (12 in, 3,505 out)
+  - Cache: 255,021 read, 53,952 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44560_20260713_012818/20260713-012818.log`
+
+### Tool Calls
+
+- **Total**: 38 calls
+- **Errors**: 1 (2.6%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| execute_code | 3 | 0 | 497ms | — |
+| premortem | 4 | 0 | 111331ms | $6.3892 |
+| reflection | 5 | 0 | 6ms | — |
+| research | 4 | 1 ⚠️ | 146311ms | $5.2917 |
+| stock_price | 3 | 0 | 453ms | — |
+| web_search | 16 | 0 | 19247ms | $0.6204 |
+| wikipedia | 3 | 0 | 216ms | — |
