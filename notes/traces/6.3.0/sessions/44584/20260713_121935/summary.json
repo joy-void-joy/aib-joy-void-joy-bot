@@ -1,0 +1,130 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a threshold question that resolves on a **single poll** — the most recent 2027 French presidential first-round voting-intention poll listed on Wikipedia (fieldwork end date) as of 24 July 2026, testing **Marine Le Pen by name** as the RN candidate, using her **highest reported first-round figure** across scenarios.\n\nI dispatched two research sub-agents. The first pulled the current state of the Wikipedia polling article; the second gathered recent June–July 2026 polls by pollster, fieldwork date, and Le Pen percentage. The plain Wikipedia URL returned a `403`, so I fell back to the raw API (`action=raw`) which successfully extracted the poll tables. I then cross-verified two figures against primary/secondary sources (Ifop's own release and CNews).\n\n## Key Evidence\n\nThe pivotal fact: **Le Pen only declared her candidacy on 7 July 2026** (on TF1, after an appeals court upheld her conviction). Before that, most pollsters tested **Jordan Bardella** as the presumptive RN candidate — so June polls mostly *disqualify* (not testing Le Pen by name). Only the post-7-July wave tests her directly:\n\n- **Verian** — 10 Jul — **~37%**\n- **Elabe** — 10 Jul — **34–35.5%**\n- **OpinionWay** — 9 Jul — **34–36%** (35% main) ✓ verified via CNews\n- **Harris/Toluna** — 8 Jul — **34–36%** (five scenarios)\n- **Ifop** — 8 Jul — **36%** ✓ verified via Ifop\n\nAll these post-candidacy polls cluster at **34–37%**, with every high-end scenario at or above the 34% threshold. This represents a **declaration/clarification effect** lifting Le Pen from ~31–33% (May) to 34–37% (July). Historical context: April/May Harris readings were 31–33%, showing sub-34% figures are within recent memory.\n\n## Conclusion\n\nBecause the question resolves on the highest figure of the single most recent qualifying poll, and every currently-listed post-candidacy poll's high end is ≥34%, YES is strongly favored. The \"highest figure\" rule reinforces this — even lower-scenario polls resolve YES. The summer polling lull may mean the most recent qualifying poll is an already-listed July poll (all YES).\n\nThe main **NO path** I identified: a new pollster with a low RN house effect fielding the final pre-July-25 poll with a *maximum* scenario ≤33.9% — plausible given house-effect variance and April's 32–33% Harris reading, but contrary to the strong current clustering and post-candidacy momentum. I weighted this as a modest downside factor (logit −0.5).\n\nI set my anchor at ~80–85% (base rate of a recent qualifying poll resolving YES) and my final estimate slightly higher at **~0.89**, justified by the highest-figure rule pushing even lower-scenario polls to YES.",
+  "tool_audit": {
+    "by_tool": {
+      "wikipedia": {
+        "calls": 9,
+        "errors": 5,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 6,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A Wikipedia table-snapshot/monitoring tool would be ideal for a question that hinges on which specific poll is 'most recent' at a future date (24 July) — the agent had to reason about the distribution of likely final-poll values instead of observing it."
+    ],
+    "subtle_bugs": [
+      "mcp__search__fetch_url on the Wikipedia standard URL returned only the lead sentence ('This page lists...') without poll tables, silently omitting the data; only the action=raw variant surfaced the tables. A naive reliance on the first fetch would have missed all poll figures.",
+      "Two web_search sibling calls returned 'Sibling tool call errored' (parallel-call collision), silently dropping those queries without a clear error cause — the agent re-issued them serially."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Base rate over currently-listed post-candidacy polls combined with a house-effect variance adjustment for the single most-recent-poll resolution rule.",
+    "data_availability": "abundant",
+    "used_quantitative_model": false,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Which poll will be the single 'most recent' qualifying poll as of 24 July 2026, and whether any new low-house-effect pollster fields one with Le Pen's max scenario below 34%."
+  },
+  "risk_flags": [
+    {
+      "category": "stale_data",
+      "evidence": "The two research sub-agents returned slightly inconsistent fieldwork dates for the most-recent polls (summary 1: Verian/Elabe '10 July'; Wikipedia raw extract line 157-158: Elabe 'July 9-10', Verian 'July 9-10'; summary 2 omits Verian/OpinionWay entirely and lists Elabe pub 11 July). These minor discrepancies were not fully reconciled, though they do not change which poll is 'most recent' materially since all cluster 8-10 July.",
+      "severity": "minor"
+    },
+    {
+      "category": "overconfidence",
+      "evidence": "The single-poll resolution rule amplifies house-effect variance: with only ~2 weeks of new polling and pollsters like Cluster17/Odoxa capable of 2-point-lower readings, and April Harris at 32-33%, a max-scenario <34% final poll is a real tail. The agent's own premortem rated confidence 0.80, yet the final probability of 0.89 leaves relatively little room for this genuine tail. This is borderline, not clearly wrong.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "89%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the critical qualification distinction — that June polls mostly tested Bardella, not Le Pen by name — and excluded them, which is exactly the resolution criterion (trace lines 46-51).",
+    "Correctly engaged the 'highest figure among scenarios' resolution rule, making it a distinct factor (logit 1.0) and recognizing that even lower-scenario polls resolve YES because their high ends are >=34%.",
+    "Recovered from the Wikipedia 403 by falling back to the raw API (action=raw), extracting the poll tables directly rather than giving up.",
+    "Independently cross-verified two key figures (Ifop 36% via Ifop's own release; OpinionWay 34-36% via CNews), reducing reliance on single-source extraction.",
+    "Explicitly modeled the forward-looking NO path (a new low-house-effect pollster fielding the final poll) as a negative factor rather than treating currently-listed polls as already resolving the question."
+  ],
+  "weaknesses": [
+    "The tool_audit self-report in the reflection claimed 'No failures' despite a Wikipedia 403 (line 83) and a search_news 403 (line 488) visible in the trace — an inaccurate self-assessment flagged by the premortem.",
+    "Did not attempt to quantify the single-poll NO tail more rigorously (e.g., distribution of pollster house effects × probability a sub-34% pollster fields the final poll); the downside factor was set qualitatively.",
+    "Left minor unreconciled fieldwork-date inconsistencies between the two sub-agent reports (Verian/Elabe dated '10 July' vs '9-10 July'; Elabe fieldwork vs publication date), without confirming which is 'most recent' by fieldwork end date — the actual resolution metric."
+  ],
+  "pipeline": {
+    "issues": [
+      "asknews search_news returned a 403 because n_articles=15 exceeds the plan tier limit of 10 — a recurring parameter-tier mismatch that wastes a call.",
+      "Two parallel mcp__search__web_search calls collided ('Sibling tool call errored'), requiring serial re-issue.",
+      "Wikipedia standard-URL fetches (both WebFetch and fetch_url) failed or returned only the lead paragraph; only action=raw worked — a recurring fragility for Wikipedia table extraction.",
+      "The agent's reflection tool_audit inaccurately claimed 'No failures' despite visible 403s in the trace."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "Session dated 2026-07-13; question resolution window is before 25 July 2026. All poll data referenced is dated 7-11 July 2026, before the session date.",
+      "The agent explicitly reasons forward about polls that might appear between 13-24 July as an uncertain future event, rather than citing any poll dated after the session — consistent with no future-information access."
+    ]
+  },
+  "actionable_improvements": [
+    "Reconcile fieldwork end dates across sub-agent reports before finalizing, since the resolution metric is 'most recent by fieldwork end date' — a 1-day discrepancy could change which poll qualifies.",
+    "Make the tool_audit self-report accurate by acknowledging the Wikipedia and search_news 403s rather than claiming 'No failures'.",
+    "Quantify the single-poll NO tail explicitly (e.g., P(a sub-34%-max pollster fields the final pre-July-25 poll) × house-effect distribution) rather than a qualitative logit, to firm up calibration around 0.89.",
+    "Set asknews n_articles<=10 by default to avoid the recurring tier-limit 403."
+  ]
+}
