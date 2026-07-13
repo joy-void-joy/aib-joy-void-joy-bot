@@ -1,0 +1,134 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a **max-over-window** question: the highest daily maximum temperature at Death Valley's Furnace Creek station (`DEVC1`) across July 11–23, 2026. My first move was to dispatch two parallel research sub-agents — one for the **actual observations to date** and one for the **forward NWS/model forecast** plus the synoptic (heat-ridge) context.\n\nThe observation research pulled authoritative data from the **Iowa Environmental Mesonet (IEM) daily-summary archive** for `DEVC1` (network CA_DCP), cross-validated by two independent API queries:\n- Jul 7 = 117°F, Jul 8 = 117°F, Jul 9 = **119°F**, Jul 10 = **119°F**, Jul 11 = **119°F**, Jul 12 = 113°F, Jul 13 = null.\n\nThe forecast research pulled the **NWS point forecast** (retrieved 2026-07-13), **Open-Meteo 16-day guidance**, and **CPC outlooks**.\n\n## Key Evidence\n\n- **The floor is locked.** July 11 already recorded **119°F**, and July 11 is inside the resolution window. So the answer is **≥119°F with certainty**.\n- **NWS point forecast** peaks at **120°F on Jul 15–16**, with 116°F Jul 13–14, then 114–116°F through Jul 19.\n- **Open-Meteo** runs a few degrees cooler (peak ~118.3°F Jul 16) and signals a **monsoon-driven dip to ~106°F around Jul 22–23** (trace precip), then a rebuild.\n- **CPC** 6–10 day (Jul 18–22, conf 4/5) and 8–14 day (Jul 20–26, conf 3/5) favor **above-normal temps** across CA/NV/AZ/UT/CO/NM; the Hazards Outlook flags **extreme-heat risk** from persistent Four Corners high pressure. Weather West and news outlets describe a record-intensity western ridge — but I noted the **record heat is centered on the Intermountain West/Plains, not Death Valley itself**, where highs are only near-to-somewhat-above the ~116–117°F mid-July normal.\n\n## Modeling\n\nI ran a **Monte Carlo** simulation (200K samples) taking the max over each future day's forecasted high plus noise, with the 119°F floor locked. My first run used **independent per-day noise**, which artificially inflated the tail (P(≥122)=0.48). I recognized this and re-ran with a **correlated ridge-strength factor** (a systematic bias shared across days plus residual per-day noise), which is more physically appropriate. The correlated run gave: **median ~121°F**, P(≥120)=0.71, P(≥122)=0.35, P(≥124)=0.09, right-skewed to ~126°F.\n\n## Conclusion\n\nI concluded the distribution has a **hard floor at 119°F** (July 11 observed), a **median of ~120–121°F** anchored on the NWS 120°F peak, and a right-skewed upper tail toward the mid-120s if the ridge overperforms, capped somewhat by the signaled Jul 22–23 monsoon dip. My submitted percentiles: p10=119, p25=120, p50=**121**, p75=122, p90=123, p95=124, p99=126. A premortem stress-tested the cooler alternative (DV near its own normal, Open-Meteo ~118°F peak, earlier monsoon) at confidence 0.75, which I retained as genuine downside risk without moving the median.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 3,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "weather_forecast": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct tool to confirm which physical station the question's resolution source uses (co-op 'Death Valley' vs automated DEVC1), leaving a small station-identity ambiguity unresolved."
+    ],
+    "subtle_bugs": [
+      "The first Monte Carlo's independent-per-day noise produced a misleadingly fat upper tail (P(>=122)=0.48); this was not a tool error but a modeling artifact the agent correctly caught and fixed.",
+      "research() accepts a 'query' field silently in intent but hard-fails validation requiring 'questions' - a schema friction that cost two calls before the agent adapted."
+    ]
+  },
+  "classification": {
+    "question_domain": "science/climate",
+    "approach": "Correlated-forecast-error Monte Carlo over the July 11-23 window, anchored on a locked 119F observed floor (Jul 11) plus NWS/Open-Meteo daily-high forecasts.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the Jul 15-16 ridge peak verifies at NWS's 120F or overperforms into the 122-124F range before the signaled Jul 22-23 monsoon dip arrives."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The correlated Monte Carlo places the median at 121F, one degree above the observed floor and above BOTH the NWS peak (120F) and Open-Meteo peak (118.3F). The median rests on the max-over-window mechanic plus a +0.3 systematic upside bias in the model; if the mid-week ridge merely verifies at NWS's 120F and no other day beats it, resolution would be 119-120F. The p50=121 slightly over-weights ridge-overperformance relative to the two central forecast sources both sitting at <=120F.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent did not check whether the co-op 'Death Valley' NWS climate station of record (which sets record books) differs from the automated DEVC1 site; the observation sub-agent explicitly caveated 'DEVC1's readings can differ slightly from the official NWS Death Valley co-op climate station of record' but the resolution-source alignment was assumed rather than confirmed against the question's exact resolution criteria.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "median ~120-121F, floor 119F, P(>=120)~0.70, right tail to ~125-126F",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the max-over-window structure and recognized that July 11's observed 119F is INSIDE the window, locking a hard >=119F floor with certainty - the crux of the question.",
+    "Caught and corrected its own modeling error: the first Monte Carlo used independent per-day noise which inflated the max-tail (P(>=122)=0.48), then re-ran with a correlated ridge-strength factor (P(>=122)=0.35), which is the physically correct treatment for spatially/temporally correlated forecast error.",
+    "Used two independent IEM API queries to cross-validate the DEVC1 observations, and corroborated Jul 12 (113F) against Open-Meteo.",
+    "Correctly distinguished that the 'record heat' rhetoric was centered on the Intermountain West/Plains, not Death Valley itself, avoiding an over-hot anchor.",
+    "Ran a premortem that constructed a coherent cooler-alternative scenario with concrete falsifiers at calibrated 0.75 confidence."
+  ],
+  "weaknesses": [
+    "Self-reported 'No failures' in the tool_audit while research() actually errored on 2 of 3 calls (the first two research calls failed on a schema validation error - passing 'query' instead of 'questions'). The premortem flagged this inaccurate self-report.",
+    "Did not explicitly reconcile DEVC1 (automated visitor-center site) against the co-op 'Death Valley' station of record that the resolution source may use; assumed alignment.",
+    "The +0.3/+0.4 systematic upside bias in the Monte Carlo is a hand-tuned choice that nudges the median above both central forecasts (NWS 120F, Open-Meteo 118F) without strong justification beyond 'ridge overperformance' rhetoric."
+  ],
+  "pipeline": {
+    "issues": [
+      "research() MCP tool has a schema-validation friction: the agent's natural first attempt (passing 'query') failed twice before it learned to wrap inputs in a 'questions' array. Measured ~66.7% error rate on research() with ~56s avg latency.",
+      "ToolSearch calls inside sub-agents repeatedly returned empty results, wasting turns.",
+      "The agent's tool_audit self-report ('No failures') contradicted the actual non-zero research() error count - a self-reporting accuracy issue flagged by the premortem."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}

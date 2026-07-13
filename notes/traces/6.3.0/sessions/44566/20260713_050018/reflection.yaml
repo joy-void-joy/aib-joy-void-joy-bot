@@ -1,0 +1,149 @@
+---
+timestamp: 2026-07-13 05:04:57 UTC
+question_type: numeric
+factors:
+- description: July 11 already recorded 119F at DEVC1 — this is inside the window
+    and locks the floor at >=119F
+  supports:
+    center: 119.0
+    low: 119.0
+    high: 119.0
+  logit: 0.0
+  confidence: 1.0
+  effective_logit: 0.0
+- description: NWS point forecast peaks at 120F on Jul 15-16; DV near-to-somewhat-above
+    normal (normal ~116-117F)
+  supports:
+    center: 120.0
+    low: 118.0
+    high: 122.0
+  logit: 0.5
+  confidence: 0.8
+  effective_logit: 0.4
+- description: Strong persistent ridge / above-normal CPC signal + extreme-heat week-2
+    rhetoric adds upside; but record heat centered on Intermountain West/Plains not
+    DV itself
+  supports:
+    center: 122.0
+    low: 120.0
+    high: 126.0
+  logit: 0.6
+  confidence: 0.6
+  effective_logit: 0.36
+- description: Monsoon moisture intrusion signaled Jul 22-23 (dip to ~106F) caps late-window
+    upside
+  supports:
+    center: 120.0
+    low: 118.0
+    high: 121.0
+  logit: -0.2
+  confidence: 0.6
+  effective_logit: -0.12
+tentative_estimate:
+  center: 121.0
+  low: 119.0
+  high: 123.0
+anchor: 'Empirical/forecast-based: NWS peak 120F + locked 119F floor; median ~120-121F'
+assessment: Max-over-13-days question. July 11 (119F) is already inside the window,
+  so the floor is 119F with certainty. NWS forecasts a 120F peak on Jul 15-16 under
+  a strong western ridge, with above-normal signal through week 2 but a monsoon dip
+  Jul 22-23. Correlated-error Monte Carlo gives median 120-121F, P(>=120)=0.71, P(>=122)=0.35,
+  P(>=124)=0.09, upper tail to ~126F. DV is near its own climatological normal (record
+  heat is centered elsewhere), which limits how hard to push the upside. Distribution
+  is right-skewed with a hard practical floor at 119.
+key_uncertainties: Whether the Jul 15-16 ridge peak verifies at 120 vs overperforms
+  to 122-124; whether week-2 (Jul 20-23) produces another spike before monsoon moisture
+  arrives.
+tool_audit: 'research() returned excellent, specific data: actual DEVC1 observations
+  through Jul 12 (incl. locked Jul 11=119F) and NWS/CPC/Open-Meteo forecasts. sandbox
+  execute_code used for two Monte Carlo variants. No failures.'
+process_reflection: Smooth. The research sub-agent nailed exactly what was needed
+  (locked observation + forecast), which is the crux for a max-over-window weather
+  question. The main modeling subtlety was correlation of forecast errors across days
+  — independent noise inflates the max artificially; adding a systematic ridge factor
+  fixed it. No missing tools.
+computed:
+  factor_count: 4
+  factor_sum: 0.64
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: July 11 already recorded 119F at DEVC1 — this is inside the window
+      and locks the floor at >=119F
+    supports:
+      center: 119.0
+      low: 119.0
+      high: 119.0
+    logit: 0.0
+    confidence: 1.0
+    effective_logit: 0.0
+  - description: NWS point forecast peaks at 120F on Jul 15-16; DV near-to-somewhat-above
+      normal (normal ~116-117F)
+    supports:
+      center: 120.0
+      low: 118.0
+      high: 122.0
+    logit: 0.5
+    confidence: 0.8
+    effective_logit: 0.4
+  - description: Strong persistent ridge / above-normal CPC signal + extreme-heat
+      week-2 rhetoric adds upside; but record heat centered on Intermountain West/Plains
+      not DV itself
+    supports:
+      center: 122.0
+      low: 120.0
+      high: 126.0
+    logit: 0.6
+    confidence: 0.6
+    effective_logit: 0.36
+  - description: Monsoon moisture intrusion signaled Jul 22-23 (dip to ~106F) caps
+      late-window upside
+    supports:
+      center: 120.0
+      low: 118.0
+      high: 121.0
+    logit: -0.2
+    confidence: 0.6
+    effective_logit: -0.12
+  dominant_factor: NWS point forecast peaks at 120F on Jul 15-16; DV near-to-somewhat-above
+    normal (normal ~116-117F)
+  dominant_effective_logit: 0.4
+  distribution_metrics:
+    implied_median: 120.81818181818181
+    implied_p10: 118.81818181818183
+    implied_p90: 123.50000000000001
+    median_gap: 0.18181818181818699
+    median_gap_pct: 3.8834951456311737
+    spread_ratio: 0.854368932038834
+    precision: 0.03305785123966942
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44566
+- **Question ID**: 44720
+- **Session Duration**: 380.2s (6.3 min)
+- **Cost**: $7.0255 total (orchestrator $2.5799 + sub-agents $4.4456)
+- **Tokens**: 8,495 total (16 in, 8,479 out)
+  - Cache: 426,262 read, 69,563 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44566_20260713_050018/20260713-050018.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 2 (10.5%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.1176 |
+| execute_code | 2 | 0 | 195ms | — |
+| fetch_url | 3 | 0 | 7249ms | — |
+| premortem | 1 | 0 | 75386ms | $1.1868 |
+| reflection | 1 | 0 | 8ms | — |
+| research | 3 | 2 ⚠️ | 56346ms | $2.9637 |
+| weather_forecast | 2 | 0 | 201ms | — |
+| web_search | 5 | 0 | 16436ms | $0.1775 |
+| wikipedia | 2 | 0 | 215ms | — |
