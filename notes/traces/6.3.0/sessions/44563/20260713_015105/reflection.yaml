@@ -1,0 +1,149 @@
+---
+timestamp: 2026-07-13 01:52:48 UTC
+question_type: numeric
+factors:
+- description: Current TVL ~$816K (July 13), down from $1.64M a week ago and $2.8M
+    in mid-June — strong sustained decline for a post-exploit dying chain
+  supports:
+    center: 650000.0
+    low: 300000.0
+    high: 900000.0
+  logit: -1.0
+  confidence: 0.8
+  effective_logit: -0.8
+- description: Last 2 days flat at $816,130 (identical), suggesting possible stabilization
+    or stale data
+  supports:
+    center: 780000.0
+    low: 600000.0
+    high: 850000.0
+  logit: 0.5
+  confidence: 0.5
+  effective_logit: 0.25
+- description: Discrete large withdrawal events (June24, July9-10) drive the decline
+    — another could push TVL to 300-500K within 10 days
+  supports:
+    center: 500000.0
+    low: 250000.0
+    high: 700000.0
+  logit: -0.6
+  confidence: 0.6
+  effective_logit: -0.36
+- description: TVL priced partly via token price (crashed to $0.0038); a small-cap
+    bounce could lift TVL as upside volatility
+  supports:
+    center: 900000.0
+    low: 800000.0
+    high: 1300000.0
+  logit: 0.3
+  confidence: 0.4
+  effective_logit: 0.12
+tentative_estimate:
+  center: 650000.0
+  low: 292000.0
+  high: 896000.0
+anchor: Current value $816K with strong negative drift; random-walk over 10 days with
+  σ=0.135/day
+assessment: TAC is a post-exploit chain that has lost 99.9% of its peak TVL. Over
+  the 10-day horizon (July 13→23), the empirical decline-regime drift is strongly
+  negative (-3.9%/day full regime, -9.7%/day recent 7d) but dominated by discrete
+  withdrawal jumps between flat periods. Bootstrap Monte Carlo mixing (45% full-regime
+  with jumps, 15% steep recent, 40% stabilization) gives median ~$645K, P10 ~$292K,
+  P90 ~$896K. Recent 2-day flatness and the fact that easy liquidity already left
+  support some stabilization, but ongoing 40-90% weekly protocol declines support
+  continued bleed. Open bounds both sides; some mass below 200K and above 1M is warranted.
+key_uncertainties: Whether another discrete withdrawal occurs in the 10-day window;
+  whether the flat last-2-days is genuine stabilization or stale data; token price
+  swings.
+tool_audit: DefiLlama historical TVL API (v2/historicalChainTvl/TAC) returned clean
+  60-day daily series — primary and sufficient. Sandbox used for bootstrap MC. No
+  failures.
+process_reflection: Straightforward numeric measurement question. The DefiLlama API
+  gave exactly the resolution-source data needed. Main modeling challenge is the jump-diffusion
+  nature (discrete withdrawals vs flat periods) which bootstrap handles naturally.
+  Scaffolding worked well; no friction.
+computed:
+  factor_count: 4
+  factor_sum: -0.79
+  neutral_factor_count: 0
+  factor_breakdown:
+  - description: Current TVL ~$816K (July 13), down from $1.64M a week ago and $2.8M
+      in mid-June — strong sustained decline for a post-exploit dying chain
+    supports:
+      center: 650000.0
+      low: 300000.0
+      high: 900000.0
+    logit: -1.0
+    confidence: 0.8
+    effective_logit: -0.8
+  - description: Last 2 days flat at $816,130 (identical), suggesting possible stabilization
+      or stale data
+    supports:
+      center: 780000.0
+      low: 600000.0
+      high: 850000.0
+    logit: 0.5
+    confidence: 0.5
+    effective_logit: 0.25
+  - description: Discrete large withdrawal events (June24, July9-10) drive the decline
+      — another could push TVL to 300-500K within 10 days
+    supports:
+      center: 500000.0
+      low: 250000.0
+      high: 700000.0
+    logit: -0.6
+    confidence: 0.6
+    effective_logit: -0.36
+  - description: TVL priced partly via token price (crashed to $0.0038); a small-cap
+      bounce could lift TVL as upside volatility
+    supports:
+      center: 900000.0
+      low: 800000.0
+      high: 1300000.0
+    logit: 0.3
+    confidence: 0.4
+    effective_logit: 0.12
+  dominant_factor: Current TVL ~$816K (July 13), down from $1.64M a week ago and $2.8M
+    in mid-June — strong sustained decline for a post-exploit dying chain
+  dominant_effective_logit: -0.8
+  distribution_metrics:
+    implied_median: 655555.5555555555
+    implied_p10: 376470.5882352941
+    implied_p90: 876143.7908496732
+    median_gap: -5555.555555555504
+    median_gap_pct: -1.1118378024852742
+    spread_ratio: 1.2087900588620013
+    precision: 0.9292307692307692
+  sources:
+  - '[api.llama.fi](https://api.llama.fi/v2/historicalChainTvl/TAC)'
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44563
+- **Question ID**: 44717
+- **Session Duration**: 198.0s (3.3 min)
+- **Cost**: $3.0461 total (orchestrator $2.1658 + sub-agents $0.8803)
+- **Tokens**: 6,919 total (14 in, 6,905 out)
+  - Cache: 332,642 read, 61,268 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44563_20260713_015105/20260713-015105.log`
+
+### Tool Calls
+
+- **Total**: 5 calls
+- **Errors**: 0 (0.0%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.0458 |
+| execute_code | 2 | 0 | 153ms | — |
+| fetch_url | 1 | 0 | 20681ms | — |
+| premortem | 1 | 0 | 67518ms | $0.8345 |
+| reflection | 1 | 0 | 60ms | — |
+
+### Sources Consulted
+
+- [api.llama.fi](https://api.llama.fi/v2/historicalChainTvl/TAC)
