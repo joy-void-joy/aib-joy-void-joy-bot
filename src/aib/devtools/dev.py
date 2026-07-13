@@ -28,6 +28,8 @@ PLUGIN_VERSION_RE = re.compile(r'"version"\s*:\s*"([^"]+)"')
 
 GITIGNORED_DATA_DIRS = ["logs"]
 
+HOOKS_PATH = ".githooks"
+
 
 def _get_tree_dir() -> Path:
     """Get the tree directory that contains worktrees."""
@@ -48,6 +50,25 @@ def _get_tree_dir() -> Path:
 
     typer.echo(f"Error: Could not find tree/ directory from {cwd}", err=True)
     raise typer.Exit(1)
+
+
+def install_hooks() -> bool:
+    """Point git at the tracked hooks directory. Returns True if it changed."""
+    git = sh.Command("git")
+    current = str(git.config("--get", "core.hooksPath", _ok_code=[0, 1])).strip()
+    if current == HOOKS_PATH:
+        return False
+    git.config("core.hooksPath", HOOKS_PATH)
+    return True
+
+
+@app.command("setup-hooks")
+def setup_hooks_cmd() -> None:
+    """Install the tracked git hooks (core.hooksPath -> .githooks)."""
+    if install_hooks():
+        typer.echo(f"Installed git hooks: core.hooksPath -> {HOOKS_PATH}")
+    else:
+        typer.echo(f"Git hooks already installed (core.hooksPath -> {HOOKS_PATH})")
 
 
 @app.command("worktree")
@@ -96,6 +117,9 @@ def worktree_cmd(
     except sh.ErrorReturnCode as e:
         typer.echo(f"Error creating worktree: {e.stderr.decode()}", err=True)
         raise typer.Exit(1)
+
+    if install_hooks():
+        typer.echo(f"Installed git hooks (core.hooksPath -> {HOOKS_PATH})")
 
     env_local = cwd / ".env.local"
     if env_local.exists():

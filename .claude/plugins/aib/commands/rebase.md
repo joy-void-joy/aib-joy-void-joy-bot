@@ -78,14 +78,24 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 ## Process
 
-1. **Sync `<base>` with remote**:
+1. **Publish `<base>` before opening the PR** — this is load-bearing, not hygiene:
    ```bash
-   cd ../<base>
-   git pull
-   git push
-   cd -
+   git -C ../<base> pull
+   git -C ../<base> push
+   git fetch origin
+   # Must print nothing. Anything here is a data commit the remote has never seen.
+   git log --oneline origin/<base>..<base>
    ```
-   Ensure local `<base>` is up-to-date before rebasing.
+   The forecast loop commits `notes/` data straight to local `<base>`, so `<base>`
+   drifts ahead of the remote. A branch cut from that `<base>` inherits those
+   commits. If they are not on `origin/<base>` when the PR is opened, GitHub
+   computes the merge base against the stale remote and folds every inherited
+   data file into the merge — landing hundreds of `notes/` files in a code PR
+   with no shared ancestry, which then collides add/add against the real commits
+   on local `<base>` forever.
+
+   **Do not open or update the PR until `git log origin/<base>..<base>` is empty.**
+   The `pre-push` hook enforces this, but check it here so it fails early.
 
 2. **Push and open PR** (if not already open):
 
@@ -122,9 +132,17 @@ Before starting the rebase, ensure the branch is clean and passing all checks.
 
 5. **Reset and rebuild commits**:
 
-   Reset all commits back to staged changes:
+   Reset all commits back to staged changes. Squash against the **fork point**,
+   not the `<base>` ref — a stale ref silently pulls `<base>`'s own commits into
+   the squash:
    ```bash
-   git reset --soft <base>
+   git reset --soft "$(git merge-base HEAD origin/<base>)"
+   ```
+
+   Then confirm the staged diff is code only. If `notes/` appears here, `<base>`
+   was not published in step 1 — stop and fix that first:
+   ```bash
+   git diff --cached --name-only -- notes/   # must print nothing
    ```
 
    Now all changes are staged. For each logical unit of work:

@@ -192,6 +192,37 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 
 **Note:** The `worktrees/` directory is gitignored.
 
+### Keep `main` published
+
+**Push `main` after committing data.** The forecast loop commits `notes/` to local
+`main`, so `main` drifts ahead of `origin/main` unless you push. That drift is what
+breaks PRs:
+
+A feature branch is cut from local `main`, inheriting its unpushed data commits.
+When the PR is opened, GitHub computes the merge base against `origin/main` — which
+has never seen them — and folds every inherited `notes/` file into the merge as a
+fresh addition with no shared ancestry. Local `main` still holds those files as real
+commits, so the next `git pull` collides add/add on every one of them. This is what
+put 506 data files into PR #55.
+
+```bash
+git log --oneline origin/main..main   # should be empty before you open a PR
+git push origin main
+```
+
+### Git Hooks
+
+Tracked in `.githooks/`, wired up by `uv run lup-devtools dev setup-hooks` (also run
+automatically by `dev worktree`). Both enforce the data/code split:
+
+| Hook | Rejects |
+|---|---|
+| `pre-commit` | A commit mixing `notes/` data with code. Data goes to `main`; code goes through a worktree and a PR. |
+| `pre-push` | A feature branch whose PR would carry `notes/` files — i.e. `main` is unpushed and the base is stale. |
+
+Bypass with `--no-verify` when a branch deliberately reshapes `notes/` (e.g. a layout
+migration).
+
 ## Editing Style
 
 **Prefer small, atomic edits.** A PreToolUse hook counts "real" changed lines (ignoring imports, comments, whitespace, blank lines, docstrings) and auto-allows edits with ≤3 real changes. Pure deletions, TypedDict/BaseModel definitions, and single-line `replace_all` renames are always auto-allowed.
@@ -453,6 +484,7 @@ lup-devtools
 │
 ├── dev                Development tools
 │   ├── worktree       Create a new worktree with plugin refresh
+│   ├── setup-hooks    Install tracked git hooks (core.hooksPath -> .githooks)
 │   ├── plugin-bump    Bump plugin version and update plugin changelog
 │   └── plugin-version Display current plugin version
 │
