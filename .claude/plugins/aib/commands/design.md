@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Grep, Glob, Bash(ls:*, uv run aib-devtools:*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(ls:*, uv run lup-devtools:*), AskUserQuestion
 description: Evaluate agent capabilities, propose changes to improve forecasts
 argument-hint: [focus area]
 ---
@@ -88,8 +88,8 @@ Read the most recent 2-3 analysis docs from `notes/feedback_loop/`. Extract:
 ### 3b. Calibration data
 
 ```bash
-uv run aib-devtools calibration summary
-uv run aib-devtools scores summary
+uv run lup-devtools calibration summary
+uv run lup-devtools scores summary
 ```
 
 Where is the agent well-calibrated? Where is it systematically off?

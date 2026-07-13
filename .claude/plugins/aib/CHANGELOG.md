@@ -2,6 +2,10 @@
 
 aib-workflow plugin version history.
 
+## v1.2.0 (2026-07-12)
+
+rename aib-devtools to lup-devtools in commands and hooks; fix xargs allow pattern matching everything
+
 ## v1.1.1 (2026-05-09)
 
 add marketplace.json for plugin discovery

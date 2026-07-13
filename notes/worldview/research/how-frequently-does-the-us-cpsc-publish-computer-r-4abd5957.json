@@ -1,142 +1,110 @@
 {
   "slug": "how-frequently-does-the-us-cpsc-publish-computer-r-4abd5957",
   "query": "How frequently does the US CPSC publish computer-related recalls? Looking at CPSC.gov and SaferProducts.gov recall history for the category 'computers' - approximately how many recalls per year, and are there typically gaps of 2 months with no computer recalls? List recent computer-related recalls in 2024, 2025 and 2026 with dates (including laptops, power supplies, monitors, batteries, chargers).",
-  "answer": "I've completed the research. Here's a summary of the key findings:\n\n**Frequency of CPSC computer-related recalls:**\n\nThe most important finding is structural: **CPSC's literal \"Computers\" product category is essentially empty** — the SaferProducts.gov API returns an empty array for `ProductType=Computers` from 2024 onward. Computer-related recalls are instead filed under adjacent categories (power banks, chargers, AC adapters, batteries).\n\nThis creates two very different answers depending on definition:\n\n- **Narrow (laptops, AC adapters, PC power supplies):** Only ~1–3 recalls/year. **Gaps of 2+ months — even 1–2+ years — are completely normal.** For instance, there was a ~26-month gap between the Dynabook/Toshiba laptop-adapter recall (Feb 2024) and the Apex Gaming ATX power-supply recall (Apr 2026).\n- **Broad (adding power banks, chargers, lithium batteries):** ~15–25+ recalls/year — roughly one every 4–6 weeks in 2025. At this breadth, **2-month gaps are rare.**\n\n**Recent recalls listed with dates (2024–2026)** include the flagship laptop-hardware recalls — Dynabook/Toshiba 15.5M AC adapters (2024-02-21) and Apex Gaming ATX PC power supplies (2026-04-16, ~17,730 units) — plus a steady cadence of power-bank/charger recalls (Anker >1M units 2025-06-12, Belkin, INIU, ESR HaloLock, Casely, IKEA VARMFRONT, Baseus, HTRC chargers, etc.).\n\n**Bottom line on the gap question:** If a monitor watches only the exact \"computers\" category, 2-month gaps are expected and routine. If it watches the broader charger/battery/power-bank universe, recalls arrive roughly monthly. Full sourced data has been provided in the structured output.",
+  "answer": "I've completed the research. Here's a summary of the key findings:\n\n## Summary\n\n**CPSC does not maintain a discrete \"Computers\" recall category** — a direct API query for `ProductType=Computers` returns zero results. Computer-related recalls are spread across descriptors like *laptop*, *charger*, *power bank*, *AC adapter*, and *power supply*, and lithium-ion power banks dominate the space.\n\n**Frequency depends heavily on definition:**\n- **Narrow** (laptops, laptop adapters, computer PSUs): ~**1–2 per year**. Gaps of 2+ months — even a year or more — with NO strictly-computer recall are **the norm**.\n- **Broad** (including power banks, chargers, adapters): ~**8–12 per year, roughly one per month**. Under this definition, 2-month gaps are relatively uncommon.\n\n**On your specific 2-month-gap question:** Yes for strictly-computer recalls; but if you include the power-bank/charger accessory ecosystem, recalls occur nearly monthly.\n\n**Notable recent recalls with dates:**\n- **2024-02-21** — Dynabook/Toshiba laptop AC adapters (15.5M units) — the main laptop-hardware recall\n- **2026-04-16** — Apex/Manik ATX computer power supplies — the clearest true \"computer\" recall\n- Plus ~30+ power bank/charger recalls (Anker, Belkin, ESR, iWALK, Casely, IKEA, Baseus, INIU, HTRC, etc.)\n\n**On the sub-categories you named:**\n- **Laptops:** No recalls of laptop units themselves (only AC adapters)\n- **Monitors:** No computer-display recalls found (a \"monitor\" query returned only a *baby* monitor)\n- **Power supplies:** Apex/Manik ATX (Apr 2026)\n- **Batteries/chargers:** Dominate the list, overwhelmingly for fire/burn hazards\n\nThe full report, structured data points, and sourced recall list have been captured in the structured output.",
   "sources": [
     {
-      "url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=power%20bank&RecallDateStart=2024-01-01&format=json",
-      "title": "SaferProducts.gov REST Web Service — power bank recalls since 2024",
+      "url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=power%20bank",
+      "title": "CPSC SaferProducts REST API - power bank recalls",
       "domain": "saferproducts.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Lists power-bank recalls 2024-2026 including Anker, Belkin, INIU, ESR, Casely, IKEA VARMFRONT, Baseus, etc., with recall dates."
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "17 power bank recalls 2024-2026 including Anker, Belkin, ESR, iWALK, Casely, IKEA, Baseus."
     },
     {
-      "url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=battery%20charger&RecallDateStart=2024-01-01&format=json",
-      "title": "SaferProducts.gov REST Web Service — battery charger recalls since 2024",
+      "url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=charger",
+      "title": "CPSC SaferProducts REST API - charger recalls",
       "domain": "saferproducts.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "HTRC/Haisito T400 (2026-04-02), CT-ENERGY (2025-08-28), HTRC C240 (2024-12-12), Belkin smartwatch chargers (2024-12-05)."
-    },
-    {
-      "url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallDateStart=2024-01-01&ProductType=Computers&format=json",
-      "title": "SaferProducts.gov REST Web Service — ProductType=Computers (empty result)",
-      "domain": "saferproducts.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Returns empty array [] — no recalls classified under 'Computers' product type since 2024-01-01."
-    },
-    {
-      "url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=laptop&format=json",
-      "title": "SaferProducts.gov REST Web Service — laptop recall history",
-      "domain": "saferproducts.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Historical laptop recalls: Dynabook/Toshiba AC adapters 2024-02-21, Lenovo USB-C power banks 2023-11-22, Apple MacBook Pro 2019, Lenovo ThinkPad 2018, Sony VAIO, Toshiba, Panasonic battery packs 2016-2017."
-    },
-    {
-      "url": "https://www.cpsc.gov/Recalls/2026/Apex-Gaming-PCs-Recalls-Manik-and-Apex-branded-ATX-Computer-Power-Supplies-Due-to-Risk-of-Serious-Injury-or-Death-from-Electrical-Shock-and-Electrocution-Hazards",
-      "title": "Apex Gaming PCs Recalls Manik and Apex-branded ATX Computer Power Supplies",
-      "domain": "cpsc.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Recall Date: April 16, 2026. Units: about 17,730 (plus about 500 in Canada). Electrical shock/electrocution; missing on-product safety label."
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "9 charger recalls 2024-2026 including HTRC, Baseus, Belkin, myCharge, IKEA USB chargers."
     },
     {
       "url": "https://www.cpsc.gov/Recalls/2024/Dynabook-Americas-Recalls-15-5-Million-Toshiba-Laptop-AC-Adapters-Due-to-Burn-and-Fire-Hazards",
       "title": "Dynabook Americas Recalls 15.5 Million Toshiba Laptop AC Adapters",
       "domain": "cpsc.gov",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Announced February 21, 2024. AC adapters bundled with or sold separately for Toshiba-brand laptops; burn/fire hazard."
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "Recall dated 2024-02-21 for Toshiba laptop AC adapters, burn and fire hazards."
     },
     {
-      "url": "https://www.tomshardware.com/pc-components/power-supplies/apex-gaming-pcs-recalls-nearly-18000-power-supplies-over-missing-safety-labels",
-      "title": "Apex Gaming PCs recalls nearly 18,000 power supplies over missing safety labels",
-      "domain": "tomshardware.com",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "CPSC issued recall on April 16 for approximately 17,730 Manik and Apex-branded ATX power supplies."
+      "url": "https://www.cpsc.gov/Recalls/2026/Apex-Gaming-PCs-Recalls-Manik-and-Apex-branded-ATX-Computer-Power-Supplies-Due-to-Risk-of-Serious-Injury-or-Death-from-Electrical-Shock-and-Electrocution-Hazards",
+      "title": "Apex Gaming PCs Recalls Manik and Apex ATX Computer Power Supplies",
+      "domain": "cpsc.gov",
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "Recall dated 2026-04-16 for ATX computer PSUs, electrical shock/electrocution hazards."
     },
     {
-      "url": "https://recalls-rappels.canada.ca/en/alert-recall/atx-computer-power-supplies-recalled-due-electrical-hazard",
-      "title": "ATX Computer Power Supplies recalled due to electrical hazard (Health Canada)",
-      "domain": "canada.ca",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "Recall date 2026-04-16; Apex/Manik ATX power supplies; electrical hazard."
+      "url": "https://www.cpsc.gov/Recalls/2024/Lenovo-Recalls-USB-C-Laptop-Power-Banks-Due-to-Fire-Hazard",
+      "title": "Lenovo Recalls USB-C Laptop Power Banks Due to Fire Hazard",
+      "domain": "cpsc.gov",
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "Recall announced 2023-11-22; model PBLG2W/part 40ALLG2WW; ~2,850 US units."
     },
     {
-      "url": "https://www.prnewswire.com/news-releases/cpsc-posts-product-recalls-and-product-safety-warnings-to-its-web-site-302744973.html",
-      "title": "CPSC Posts Product Recalls and Product Safety Warnings (April 16, 2026)",
-      "domain": "prnewswire.com",
-      "accessed_at": "2026-07-01T00:00:00Z",
-      "snippet": "April 16, 2026 CPSC recall roundup including Casely power-bank re-announcement after a fatality."
+      "url": "https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations",
+      "title": "More than One Million Anker Power Banks Recalled",
+      "domain": "cpsc.gov",
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "Anker PowerCore 10000 (Model A1263) recalled 2025-06-12."
+    },
+    {
+      "url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=monitor",
+      "title": "CPSC SaferProducts REST API - monitor recalls",
+      "domain": "saferproducts.gov",
+      "accessed_at": "2026-07-09T00:00:00Z",
+      "snippet": "Only result was Babysense Max View baby monitors (2026-02-26); no computer displays."
     }
   ],
-  "key_facts": [
-    "CPSC/SaferProducts.gov API returns an empty array for ProductType=Computers for 2024 onward — the literal 'Computers' recall category is essentially unused.",
-    "Computer-related recalls are filed under adjacent categories: power banks/chargers (largest volume), battery chargers, AC adapters, laptop computers (rare), computer power supplies (rare).",
-    "Narrow computer/laptop-hardware definition: only ~1-3 recalls per year; gaps of 2+ months (often much longer) with no recall are normal.",
-    "Between the Feb 2024 Dynabook laptop-adapter recall and the April 2026 Apex Gaming PC power-supply recall there were no clear PC-hardware recalls — a gap over two years at the strict definition.",
-    "Broad computer-electronics definition (incl. power banks, chargers, batteries): ~15-25+ recalls per year; 2-month gaps are rare.",
-    "Power-bank recalls ran roughly one every 4-6 weeks through 2025.",
-    "Dynabook recalled 15.5 million Toshiba laptop AC adapters on 2024-02-21 (burn/fire hazard) — the flagship 2024 laptop-hardware recall.",
-    "Apex Gaming PCs recalled ~17,730 Manik/Apex ATX computer power supplies on 2026-04-16 (electrocution/missing safety label) — the clearest 2026 PC-hardware recall.",
-    "Anker recalled more than 1 million power banks on 2025-06-12 (fire/burn).",
-    "Genuine laptop-computer recalls are rare; most 'laptop' recalls concern the battery, adapter, or power bank rather than the computer."
-  ],
+  "key_facts": [],
   "data_points": [
     {
-      "metric": "Recalls under literal 'Computers' product type (2024-present)",
-      "value": 0.0,
+      "metric": "Strictly-computer recalls per year",
+      "value": 1.5,
+      "unit": "recalls/year (approx, range 1-2)",
+      "as_of": "2026-07-09",
+      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=laptop"
+    },
+    {
+      "metric": "Broad computer-accessory recalls per year (power banks/chargers/adapters)",
+      "value": 10.0,
+      "unit": "recalls/year (approx, range 8-12)",
+      "as_of": "2026-07-09",
+      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=power%20bank"
+    },
+    {
+      "metric": "Power bank recalls 2024-01 through 2026-07",
+      "value": 17.0,
       "unit": "recalls",
-      "as_of": "2026-07-01",
-      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallDateStart=2024-01-01&ProductType=Computers&format=json"
+      "as_of": "2026-07-09",
+      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=power%20bank"
     },
     {
-      "metric": "Approx. narrow computer/laptop-hardware recalls per year",
-      "value": 2.0,
-      "unit": "recalls/year (range 1-3)",
-      "as_of": "2026-07-01",
-      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=laptop&format=json"
+      "metric": "Charger recalls 2024-01 through 2026-07",
+      "value": 9.0,
+      "unit": "recalls",
+      "as_of": "2026-07-09",
+      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2024-01-01&RecallDateEnd=2026-12-31&ProductName=charger"
     },
     {
-      "metric": "Approx. broad computer-electronics recalls per year (power banks, chargers, batteries)",
-      "value": 20.0,
-      "unit": "recalls/year (range 15-25+)",
-      "as_of": "2026-07-01",
-      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=power%20bank&RecallDateStart=2024-01-01&format=json"
-    },
-    {
-      "metric": "Dynabook Toshiba laptop AC adapters recalled",
+      "metric": "Toshiba laptop AC adapters recalled (Dynabook)",
       "value": 15500000.0,
       "unit": "units",
       "as_of": "2024-02-21",
       "source_url": "https://www.cpsc.gov/Recalls/2024/Dynabook-Americas-Recalls-15-5-Million-Toshiba-Laptop-AC-Adapters-Due-to-Burn-and-Fire-Hazards"
     },
     {
-      "metric": "Apex Gaming ATX computer power supplies recalled (US)",
-      "value": 17730.0,
-      "unit": "units",
-      "as_of": "2026-04-16",
-      "source_url": "https://www.cpsc.gov/Recalls/2026/Apex-Gaming-PCs-Recalls-Manik-and-Apex-branded-ATX-Computer-Power-Supplies-Due-to-Risk-of-Serious-Injury-or-Death-from-Electrical-Shock-and-Electrocution-Hazards"
-    },
-    {
-      "metric": "Anker power banks recalled (2025)",
+      "metric": "Anker PowerCore 10000 power banks recalled",
       "value": 1000000.0,
       "unit": "units (more than)",
       "as_of": "2025-06-12",
-      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=power%20bank&RecallDateStart=2024-01-01&format=json"
-    },
-    {
-      "metric": "Gap between consecutive strict PC-hardware recalls (Dynabook Feb 2024 to Apex Apr 2026)",
-      "value": 26.0,
-      "unit": "months",
-      "as_of": "2026-04-16",
-      "source_url": "https://www.saferproducts.gov/RestWebServices/Recall?RecallTitle=laptop&format=json"
+      "source_url": "https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations"
     }
   ],
   "created_at": "2026-07-01T21:16:32.445166Z",
-  "updated_at": "2026-07-01T21:16:32.445166Z",
-  "stale_after": "2026-07-08T21:16:32.445166Z",
+  "updated_at": "2026-07-09T15:37:17.866630Z",
+  "stale_after": "2026-07-16T15:37:17.866630Z",
   "resolvable_after": null,
   "state": "fresh",
   "superseded_by": null,
   "revision_history": [],
-  "session_id": "48dc8371-c0bb-4526-8756-65746d5aa3ad",
+  "session_id": "00f64c1e-0041-44f8-9ea4-129ee3304b38",
   "follow_up_count": 0
 }

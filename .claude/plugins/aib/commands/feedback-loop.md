@@ -83,7 +83,7 @@ Find candidates and output ready-to-use commands.
 ### 8. Mark analyzed
 
 ```bash
-uv run aib-devtools analysis mark <post_ids>
+uv run lup-devtools analysis mark <post_ids>
 ```
 
 ## Principles

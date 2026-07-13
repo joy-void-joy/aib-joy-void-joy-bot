@@ -23,12 +23,16 @@ Maintenance Notes:
 - Monitor SDK changelog for MCP-related changes
 """
 
+import asyncio
 import logging
+import signal
+from types import FrameType
 from typing import Any, cast
 
 from claude_agent_sdk import SdkMcpTool
 from claude_agent_sdk.types import McpSdkServerConfig
 from mcp.server import Server
+from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, ContentBlock, ImageContent, TextContent, Tool
 from pydantic import TypeAdapter
 
@@ -168,3 +172,27 @@ def create_mcp_server(
             )
 
     return McpSdkServerConfig(type="sdk", name=name, instance=server)
+
+
+def serve_stdio(config: McpSdkServerConfig) -> None:
+    """Serve an in-process MCP server over stdio (blocking).
+
+    The subprocess half of tool serving: interactive Claude Code sessions
+    launch a tool-server subprocess (`lup-devtools agent serve-tools`), which
+    builds the same `create_mcp_server` config the in-process path registers
+    and exposes it here over a stdio transport. SIGTERM raises `SystemExit`
+    so cleanup runs when the parent stops the subprocess.
+    """
+    server = config["instance"]
+
+    def terminate(_signum: int, _frame: FrameType | None) -> None:
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, terminate)
+
+    async def run() -> None:
+        init_options = server.create_initialization_options()
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, init_options)
+
+    asyncio.run(run())

@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(uv run aib-devtools:*), Read, Grep, Glob, AskUserQuestion, WebSearch, WebFetch
+allowed-tools: Bash(uv run lup-devtools:*), Read, Grep, Glob, AskUserQuestion, WebSearch, WebFetch
 description: Attempt early resolution of unresolved forecasts using AI agents
 argument-hint: [post_id1] [post_id2] [--dry-run]
 ---
@@ -13,7 +13,7 @@ Attempt to resolve unresolved forecasts by checking their resolution criteria ag
 ### Phase 1: Survey unresolved forecasts
 
 ```bash
-uv run aib-devtools resolution status
+uv run lup-devtools resolution status
 ```
 
 Review the count of unresolved forecasts. If the user provided specific post IDs via $ARGUMENTS, parse them. Otherwise, check what's available.
@@ -24,13 +24,13 @@ Based on user direction, run the resolver with appropriate flags:
 
 ```bash
 # Dry run all unresolved (recommended first step)
-uv run aib-devtools resolution tentative --dry-run
+uv run lup-devtools resolution tentative --dry-run
 
 # Resolve specific posts
-uv run aib-devtools resolution tentative 42115 42395 --dry-run
+uv run lup-devtools resolution tentative 42115 42395 --dry-run
 
 # Apply with custom confidence threshold
-uv run aib-devtools resolution tentative --min-confidence 0.8
+uv run lup-devtools resolution tentative --min-confidence 0.8
 ```
 
 **Default workflow:**
@@ -49,14 +49,14 @@ After the resolver runs, review the output for:
 For any questionable results, investigate further:
 - Fetch the question page to read full criteria
 - Web search for the specific resolution event
-- Check `uv run aib-devtools api post <post_id>` for API-level details
+- Check `uv run lup-devtools api post <post_id>` for API-level details
 
 ### Phase 4: Official resolution sync
 
 After applying tentative resolutions, run the official check to ensure authoritative resolutions override any tentative ones:
 
 ```bash
-uv run aib-devtools resolution sync
+uv run lup-devtools resolution sync
 ```
 
 This scrapes the user's Metaculus profile page for resolutions and scores. Profile-sourced resolutions (source=scrape) always take precedence over tentative ones.
@@ -66,7 +66,7 @@ This scrapes the user's Metaculus profile page for resolutions and scores. Profi
 If resolutions were applied, optionally update scores:
 
 ```bash
-uv run aib-devtools scores show --resolved
+uv run lup-devtools scores show --resolved
 ```
 
 ## Resolution Source Priority
