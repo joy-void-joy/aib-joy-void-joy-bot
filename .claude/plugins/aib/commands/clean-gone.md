@@ -14,11 +14,15 @@ Review all local branches and worktrees. Identify branches that are fully merged
    git fetch --prune
    ```
 
-2. **Inventory** all local branches and worktrees:
+2. **Inventory** all local branches, remote branches, and worktrees:
    ```bash
    git branch -vv
+   git branch -r
    git worktree list
    ```
+   Remote-only branches (on origin with no local counterpart) are in scope too —
+   merged-PR heads accumulate on origin when branches are deleted locally but not
+   remotely. An empty local branch list does not mean there is nothing to clean.
 
 3. **Check containment** — for every pair of branches, check if one is an ancestor of another:
    ```bash
@@ -33,6 +37,9 @@ Review all local branches and worktrees. Identify branches that are fully merged
    A branch is also deletable if:
    - It has a merged PR (direct or via a `-rebase` suffix branch)
    - Its corresponding rebase branch's PR was merged (content reached main through rebased commits)
+
+   Apply the same rules to remote-only branches: merged PR → DELETE; closed-unmerged
+   PR → content check (step 5); no PR and unique commits → KEEP.
 
 5. **Detect transitive merges** — for branches still unresolved after steps 3-4, check if their content reached main through an intermediate branch that was rebased:
    ```bash
@@ -78,10 +85,16 @@ Review all local branches and worktrees. Identify branches that are fully merged
     ```
     Use `-d` (not `-D`). If `-d` fails (branch not recognized as merged due to rebase), report to user and ask if `-D` is acceptable.
 
-11. **Delete remote branches** if they still exist:
+11. **Delete remote branches** if they still exist (batch them into one push):
     ```bash
-    git push origin --delete <branch-name>
+    git push origin --delete <branch-name> [<branch-name>...]
     ```
+    If SSH auth is unavailable, push over HTTPS with gh as credential helper:
+    ```bash
+    git -c credential.helper='!gh auth git-credential' push https://github.com/<owner>/<repo>.git --delete <branches...>
+    ```
+    Pushing to a URL (rather than the named remote) does not update local `origin/*`
+    tracking refs — follow with a prune-fetch against the same URL to sync them.
 
 12. **Report results**: List what was cleaned up.
 
@@ -92,3 +105,4 @@ Review all local branches and worktrees. Identify branches that are fully merged
 - Skip the current branch — warn the user instead
 - A branch merged into ANY other active branch counts as consumed (not just main)
 - For rebased branches: the original feature branch content is in main via the rebase PR, even though `--is-ancestor` returns false (commits were rewritten)
+- Deleting a branch that had a PR loses no history: GitHub pins every PR head at `refs/pull/<N>/head` (the "Restore branch" button), independent of branch deletion. Only a branch with unique commits and **no PR** loses commits when deleted.

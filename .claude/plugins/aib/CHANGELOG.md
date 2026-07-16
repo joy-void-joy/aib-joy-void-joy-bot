@@ -2,6 +2,10 @@
 
 aib-workflow plugin version history.
 
+## v1.2.1 (2026-07-16)
+
+clean-gone: cover remote-only stale branches, SSH-fallback push, PR-ref recoverability
+
 ## v1.2.0 (2026-07-12)
 
 rename aib-devtools to lup-devtools in commands and hooks; fix xargs allow pattern matching everything
