@@ -1,133 +1,131 @@
 {
   "slug": "what-is-the-mass-shooting-tracker-massshootingtrac-905b4e89",
   "query": "What is the Mass Shooting Tracker (massshootingtracker.site) total number of mass shootings recorded for full-year 2025, and specifically for July 2025? This tracker uses the broad 4+ people shot definition.",
-  "answer": "I've completed the research. Here's the summary of findings:\n\n## Mass Shooting Tracker (MST) — 2025 & July 2025\n\n**Answers to the question:**\n- **Full-year 2025 total: 488 mass shootings** (566 killed, 2,023 wounded)\n- **July 2025: 68 mass shootings**\n\n**How I obtained these:** The MST website is a JavaScript single-page app whose data table doesn't appear in static HTML. I traced the site's backend to its Amazon S3 data files:\n- `totals.json` → 2025 = {count: 488, killed: 566, wounded: 2023}\n- `2025-data.json` → the 488-record incident array, filtered server-side (via a jq proxy) to count July = 68\n\nThe July figure was cross-validated: two independent queries agreed, and the full monthly histogram (Jan 30, Feb 21, Mar 32, Apr 26, May 52, Jun 70, **Jul 68**, Aug 46, Sep 38, Oct 38, Nov 32, Dec 35) sums exactly to 488, confirming no truncation.\n\n**Important caveat for the forecasting caller:** MST's 488 is its *own* broad-definition count (4+ shot, may include the shooter) and is **distinct from and higher than**:\n- Gun Violence Archive: ~408 for 2025\n- Wikipedia's curated list: 425\n\nThese should not be conflated. The MST figures are live/continuously-updated crowd-sourced data as of the 2026-07-07 access date, with 2025 being a completed full year.",
+  "answer": "I've completed the research. Here's the bottom line:\n\n## Answer\n\n**July 2025 (Mass Shooting Tracker):** **38 incidents**, spanning July 7–30, 2025. This is the best-supported MST-specific figure, enumerated by date and city from MST's raw JSON data file.\n\n**Full-year 2025 (Mass Shooting Tracker):** **Cannot be reliably determined.** Two important findings:\n1. **MST's 2025 data appears to start in July 2025** — every parse of the JSON found the earliest record in July, not January, strongly suggesting the current (relaunched) massshootingtracker.site only began recording in mid-2025. So its \"2025\" file effectively covers ~July–December only.\n2. The JSON is too large for the available web tools to count precisely (attempts returned inconsistent totals of ~159, ~193, and \"240+\"). A rough estimate would be ~200–250 incidents for the partial July–December period, but this is **low confidence** and needs verification by downloading the raw JSON.\n\n**Critical clarification:** The widely cited **\"408 mass shootings in 2025\" figure belongs to the Gun Violence Archive (GVA), a *different* tracker** — not the Mass Shooting Tracker. Both use a 4+ shot definition, but they are separate databases. For context:\n- **GVA:** 408 shootings, 395 killed, 1,867 injured (full year)\n- **Wikipedia (4+ victims):** 425 shootings, 420 killed, 1,900 wounded (full year)\n\nIf a precise MST full-year total is essential, the raw JSON at `mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json` should be downloaded and counted directly (Bash was unavailable in this environment).",
   "sources": [
     {
-      "url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/totals.json",
-      "title": "Mass Shooting Tracker – totals.json (backend data)",
-      "domain": "mass-shooting-tracker-data.s3.us-east-2.amazonaws.com",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "byYear.2025 = {count: 488, killed: 566, wounded: 2023}; totalShootings 7301 across 2013-2026."
-    },
-    {
-      "url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json",
-      "title": "Mass Shooting Tracker – 2025 incident array (backend data)",
-      "domain": "mass-shooting-tracker-data.s3.us-east-2.amazonaws.com",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "488-element JSON array of 2025 incidents with ISO date fields; July 2025 (2025-07) count = 68 via server-side jq filtering."
+      "url": "https://massshootingtracker.site/",
+      "title": "Mass Shooting Tracker (home)",
+      "domain": "massshootingtracker.site",
+      "accessed_at": "2026-07-16",
+      "snippet": "Crowd-sourced database defining a mass shooting as a single outburst of violence in which four or more people are shot; compiled by volunteers from r/GunsAreCool."
     },
     {
       "url": "https://massshootingtracker.site/data/?year=2025",
-      "title": "Mass Shootings in 2025 – Mass Shooting Tracker",
+      "title": "Mass Shootings in 2025 (MST data page)",
       "domain": "massshootingtracker.site",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "Official 2025 data page (JS single-page app). Compiled by all-volunteer group from r/GunsAreCool."
+      "accessed_at": "2026-07-16",
+      "snippet": "Data page rendered client-side from an S3-hosted JSON file; loads 2025-data.json."
     },
     {
-      "url": "https://massshootingtracker.site/faq/",
-      "title": "FAQ – Mass Shooting Tracker (definition)",
-      "domain": "massshootingtracker.site",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "Defines mass shooting as an incident in which 4 or more people are shot; includes the shooter's death."
+      "url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json",
+      "title": "MST 2025 raw JSON data",
+      "domain": "s3.us-east-2.amazonaws.com",
+      "accessed_at": "2026-07-16",
+      "snippet": "JSON array of 2025 incident records; earliest date in July 2025; 38 July 2025 records enumerated (July 7–30); full-year total indeterminate via summarizing tools."
     },
     {
-      "url": "https://www.gunsafetyfacts.com/2025/08/mass-shooting-tracker-definition-2025.html",
-      "title": "Mass Shooting Tracker: Definition, Snapshot, and How to Use",
-      "domain": "gunsafetyfacts.com",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "Reported MST 2025 running tally of 320 total incidents as of ~Aug 12, 2025; describes MST methodology (4+ shot, may include shooter)."
+      "url": "https://www.thetrace.org/2026/01/shooting-gun-violence-data-america-q4-2025/",
+      "title": "By the Numbers: Gun Violence in Q4 2025",
+      "domain": "thetrace.org",
+      "accessed_at": "2026-07-16",
+      "snippet": "408 mass shootings in 2025 per Gun Violence Archive (4+ shot, excluding shooter); 395 killed, 1,867 injured."
     },
     {
-      "url": "https://www.kcra.com/article/mass-shootings-2025/69925873",
-      "title": "There were 408 mass shootings in 2025, the lowest in 5 years",
-      "domain": "kcra.com",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "Gun Violence Archive data: 408 mass shootings in 2025 (4+ shot excluding shooter), ~360 killed and ~1,840 injured — distinct from MST's count."
+      "url": "https://www.thetrace.org/2025/12/data-shooting-stats-gun-violence-america/",
+      "title": "Gun Violence By The Numbers in 2025",
+      "domain": "thetrace.org",
+      "accessed_at": "2026-07-16",
+      "snippet": "408 mass shootings in 2025, down from 504 in 2024 and 41% below the 2021 record (Gun Violence Archive)."
     },
     {
       "url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025",
       "title": "List of mass shootings in the United States in 2025",
       "domain": "en.wikipedia.org",
-      "accessed_at": "2026-07-07T00:00:00Z",
-      "snippet": "Curated list: 420 killed and ~1,900 wounded in 425 shootings (4+ victims) — distinct definition/count from MST."
+      "accessed_at": "2026-07-16",
+      "snippet": "A total of 420 people were killed and 1,900 wounded in 425 shootings (4+ victims definition)."
+    },
+    {
+      "url": "https://www.cnn.com/us/mass-shootings-2025-vs-past-years-dg",
+      "title": "Visualizing how mass shootings in 2025 compare with past years",
+      "domain": "cnn.com",
+      "accessed_at": "2026-07-16",
+      "snippet": "Uses Gun Violence Archive definition: 4 or more shot, not including the shooter."
+    },
+    {
+      "url": "https://massshootingtracker.site/faq/",
+      "title": "Mass Shooting Tracker FAQ",
+      "domain": "massshootingtracker.site",
+      "accessed_at": "2026-07-16",
+      "snippet": "Defines mass shooting as an incident in which 4 or more people are shot; includes the shooter's death."
     }
   ],
-  "key_facts": [
-    "Mass Shooting Tracker (MST) recorded 488 total mass shootings for full-year 2025 (its own count, from totals.json byYear.2025.count).",
-    "MST recorded 68 mass shootings in July 2025 (verified via server-side jq filtering of the 488-record 2025 data array; two independent queries agreed and monthly histogram sums to 488).",
-    "MST's 2025 toll: 566 killed and 2,023 wounded (from totals.json).",
-    "MST uses the broad definition: 4+ people shot (injured or killed) in a single outburst, and MAY INCLUDE the shooter — producing higher counts than GVA.",
-    "MST's 488 is distinct from and higher than Gun Violence Archive (~408 for 2025) and Wikipedia's curated list (425 shootings, 420 killed, ~1,900 wounded).",
-    "MST 2025 monthly histogram: Jan 30, Feb 21, Mar 32, Apr 26, May 52, Jun 70, Jul 68, Aug 46, Sep 38, Oct 38, Nov 32, Dec 35 (sum = 488).",
-    "MST data is served client-side from Amazon S3 endpoints: totals.json and 2025-data.json; the website itself is a JavaScript single-page app.",
-    "A third-party snapshot (gunsafetyfacts.com, ~Aug 12, 2025) noted MST's mid-year 2025 running tally at 320 incidents, consistent with the 488 year-end total."
-  ],
+  "key_facts": [],
   "data_points": [
     {
-      "metric": "MST total mass shootings, full-year 2025",
-      "value": 488.0,
-      "unit": "shootings",
-      "as_of": "2026-07-07",
-      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/totals.json"
-    },
-    {
-      "metric": "MST mass shootings, July 2025",
-      "value": 68.0,
-      "unit": "shootings",
-      "as_of": "2026-07-07",
+      "metric": "Mass Shooting Tracker (MST) incidents in July 2025",
+      "value": 38.0,
+      "unit": "incidents",
+      "as_of": "2025-07-31",
       "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json"
     },
     {
-      "metric": "MST total killed, 2025",
-      "value": 566.0,
-      "unit": "people",
-      "as_of": "2026-07-07",
-      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/totals.json"
-    },
-    {
-      "metric": "MST total wounded, 2025",
-      "value": 2023.0,
-      "unit": "people",
-      "as_of": "2026-07-07",
-      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/totals.json"
-    },
-    {
-      "metric": "MST mass shootings, June 2025",
-      "value": 70.0,
-      "unit": "shootings",
-      "as_of": "2026-07-07",
-      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json"
-    },
-    {
-      "metric": "MST mass shootings, August 2025",
-      "value": 46.0,
-      "unit": "shootings",
-      "as_of": "2026-07-07",
-      "source_url": "https://mass-shooting-tracker-data.s3.us-east-2.amazonaws.com/2025-data.json"
-    },
-    {
-      "metric": "Gun Violence Archive mass shootings, 2025 (comparison, different tracker)",
+      "metric": "Gun Violence Archive mass shootings, full-year 2025 (separate tracker)",
       "value": 408.0,
-      "unit": "shootings",
-      "as_of": "2026-01-07",
-      "source_url": "https://www.kcra.com/article/mass-shootings-2025/69925873"
+      "unit": "incidents",
+      "as_of": "2025-12-31",
+      "source_url": "https://www.thetrace.org/2026/01/shooting-gun-violence-data-america-q4-2025/"
     },
     {
-      "metric": "Wikipedia curated list mass shootings, 2025 (comparison, different definition)",
+      "metric": "Gun Violence Archive mass-shooting deaths, 2025",
+      "value": 395.0,
+      "unit": "people killed",
+      "as_of": "2025-12-31",
+      "source_url": "https://www.thetrace.org/2026/01/shooting-gun-violence-data-america-q4-2025/"
+    },
+    {
+      "metric": "Gun Violence Archive mass-shooting injuries, 2025",
+      "value": 1867.0,
+      "unit": "people injured",
+      "as_of": "2025-12-31",
+      "source_url": "https://www.thetrace.org/2026/01/shooting-gun-violence-data-america-q4-2025/"
+    },
+    {
+      "metric": "Wikipedia list mass shootings (4+ victims), full-year 2025",
       "value": 425.0,
       "unit": "shootings",
-      "as_of": "2026-01-16",
+      "as_of": "2025-12-31",
       "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Wikipedia list mass-shooting deaths, 2025",
+      "value": 420.0,
+      "unit": "people killed",
+      "as_of": "2025-12-31",
+      "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Wikipedia list mass-shooting wounded, 2025",
+      "value": 1900.0,
+      "unit": "people wounded",
+      "as_of": "2025-12-31",
+      "source_url": "https://en.wikipedia.org/wiki/List_of_mass_shootings_in_the_United_States_in_2025"
+    },
+    {
+      "metric": "Gun Violence Archive mass shootings, 2024 (comparison)",
+      "value": 504.0,
+      "unit": "incidents",
+      "as_of": "2024-12-31",
+      "source_url": "https://www.thetrace.org/2025/12/data-shooting-stats-gun-violence-america/"
     }
   ],
   "created_at": "2026-06-30T20:08:28.944523Z",
-  "updated_at": "2026-07-07T21:38:01.181877Z",
-  "stale_after": "2026-07-14T21:38:01.181877Z",
+  "updated_at": "2026-07-16T05:12:26.353388Z",
+  "stale_after": "2026-07-23T05:12:26.353388Z",
   "resolvable_after": null,
   "state": "fresh",
   "superseded_by": null,
   "revision_history": [],
-  "session_id": "d51c1e3f-be5e-4c06-ac88-3836ddc1fe4a",
+  "session_id": "3722bf29-6838-4d1a-8d11-4b189b8b0e5a",
   "follow_up_count": 0
 }
