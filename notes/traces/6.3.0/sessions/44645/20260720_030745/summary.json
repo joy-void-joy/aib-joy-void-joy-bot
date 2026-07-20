@@ -1,0 +1,93 @@
+{
+  "condensed_reasoning": "## Research\n\nI began with a research sub-agent query on Halo: Campaign Evolved's release timing, nature, comparable Metacritic scores, and preview sentiment. My first `research` call errored (schema validation — I passed a bare `query` instead of the required `questions` array), but I immediately retried with the correct schema and got complete structured data. The nested research agent ran parallel `WebSearch` calls and a `WebFetch`, returning a well-sourced anchor set.\n\n## Key Evidence\n\n- **Release timing:** `Halo: Campaign Evolved` launches **July 28, 2026** (early access July 23), ~**34 days** before the Aug 31 checkpoint — so an established, stabilized Xbox Metascore will exist by the checkpoint. This is the single most confidence-setting fact.\n- **What it is:** A ground-up **Unreal Engine 5** remake of the `Halo: Combat Evolved` (2001) campaign by Halo Studios (ex-343), published by Xbox Game Studios. Adds 3 new missions and co-op; **omits the original competitive multiplayer**.\n- **Anchor set (Halo remasters/sequels):** CE Anniversary **82** (prior remaster of the *same* campaign — most analogous), MCC **85**, Halo 4 **87**, Halo 5 **84**, Halo Infinite Xbox **87**. Cluster is tight at **82–87**, center ~84–85. Originals (CE 97, Halo 2 95, Halo 3 94) score far higher than remasters.\n- **Preview sentiment (June 2026, mixed-to-positive):** Strong praise for UE5 visuals/Lumen (\"blockbuster campaign is back\"); criticism of a new **run/sprint button** and **power-ups** that \"don't quite fit,\" plus concern over missing multiplayer.\n\n## Conclusion\n\nI built the distribution via a **200K-sample Monte Carlo scenario mixture**: 72% base case centered **83** (σ2.8), 13% upside centered **87** (σ1.8), 15% downside centered **78** (σ3.5), clipped to [60,96]. This yields a median of **83**, mean 82.8, p10 77.9, p90 87.3 — an asymmetric downside tail. I set my four reflection factors: firm release/review runway (neutral, high confidence), analogous comparables anchoring 82-87 (+0.3 logit), sprint/power-up/no-MP criticism (−0.4 logit), and UE5 visual praise (+0.2 logit). The reflection tool's implied median (82.99) matched my Monte Carlo. I centered at **83** — modestly below the ~85 raw anchor — because the single most-analogous comparable (CE Anniversary, the same campaign remastered) scored 82 and verified criticisms add downside. My premortem confirmed all four factors were grounded with no double-counting and issued a \"warn\" only for my inaccurate \"No failures\" tool-audit self-report (the research schema error). Final submitted forecast: **median 83, p5 76.1, p95 88.3**.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No direct access to a live Metacritic/OpenCritic aggregation feed, which forced reliance on WebSearch for the MCC score after WebFetch returned only page scaffolding."
+    ],
+    "subtle_bugs": [
+      "WebFetch on the Metacritic MCC page returned JavaScript/CSS rather than the review score — a silent content-extraction failure that produced no error but yielded no usable data."
+    ]
+  },
+  "classification": {
+    "question_domain": "culture",
+    "approach": "Monte Carlo scenario mixture (200K samples) anchored on a base rate of comparable Halo remaster/sequel Metacritic scores, adjusted for verified preview sentiment.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether critics penalize the missing original competitive multiplayer and the controversial sprint/power-up changes (downside to high-70s) or reward UE5 remake quality (upside to high-80s)."
+  },
+  "risk_flags": [
+    {
+      "category": "wrong_base_rate",
+      "evidence": "The anchor set mixes structurally different products: CE Anniversary (82) and MCC (85) are remasters, but Halo 4 (87), Halo 5 (84), and Halo Infinite (87) are full original games with multiplayer. Including sequels in the base rate inflates the center toward ~85 when the truly analogous class (campaign-only remasters) is 82-85. The agent partially corrected for this by centering at 83, but the raw anchor is a slightly loose reference class.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The premortem itself flagged that 'several high-profile 2020s remakes underperformed their franchise averages' and that the downside band could be too narrow. A campaign-only remake with no competitive MP for a franchise defined by multiplayer plausibly carries more downside mass (into low-to-mid 70s) than the 15% downside scenario centered at 78 allocates. The distribution's p1 is only 72.7.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Median ~83 (range 77-88)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified the decisive structural fact — the July 28 launch gives a ~34-day review runway before the Aug 31 checkpoint — resolving the existence/timing risk with high confidence.",
+    "Assembled a genuinely analogous, well-sourced anchor set and correctly weighted CE Anniversary (82) as the single most-analogous comparable since it is literally the same campaign remastered.",
+    "Centered at 83, evidence-driven below the ~85 raw anchor, justified by specific verified criticisms (sprint button, power-ups, missing multiplayer) rather than narrative hand-waving.",
+    "Used a transparent 200K-sample scenario mixture with an explicit asymmetric downside tail; the reflection tool's implied median (82.99) independently matched the Monte Carlo median (83).",
+    "Recovered cleanly from the research schema error with an immediate correct retry, losing no data."
+  ],
+  "weaknesses": [
+    "Self-reported 'No failures' in the tool_audit despite the first research call failing schema validation (50% error rate on that tool) — an inaccurate self-report caught by the premortem.",
+    "The reference class blends campaign-only remasters with full multiplayer-inclusive sequels/originals, slightly inflating the anchor center; a cleaner remaster-only base rate would have been more defensible.",
+    "Did not attempt to check OpenCritic or any pre-release aggregation/prediction signal beyond franchise history, and did no sensitivity check on the downside-scenario weight, which the premortem itself flagged as possibly too thin."
+  ],
+  "pipeline": {
+    "issues": [
+      "research tool rejected the first call on a schema mismatch (query vs questions array) before a successful retry — minor token/turn waste.",
+      "StructuredOutput rejected the first call for a missing 'answer' property, requiring a retry.",
+      "WebFetch on Metacritic returned only JS/CSS scaffolding, not review content — a recurring content-extraction limitation for that domain."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
