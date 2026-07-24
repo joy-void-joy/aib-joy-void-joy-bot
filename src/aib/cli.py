@@ -17,11 +17,21 @@ from typing import Annotated, TextIO, TypedDict, cast
 
 import httpx
 import typer
+from pydantic import BaseModel
+
+from aib.paths import REGRESSION_SUITE_PATH
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.config import TOURNAMENTS as TOURNAMENT_IDS
 from aib.config import resolve_model, settings
 from aib.profiles import UnknownProfileError, resolve_config_dir
+from aib.variants import (
+    VARIANTS_PATH,
+    Variant,
+    load_registry,
+    select_variants,
+    variant_env,
+)
 from aib.version import AGENT_VERSION, load_agent_version
 from aib.agent.history import (
     RetrodictComparison,
@@ -1464,6 +1474,183 @@ def loop(
         except KeyboardInterrupt:
             print("\n\n👋 Loop stopped by user")
             raise typer.Exit(0)
+
+
+EXAMPLE_REGISTRY = """{
+  "variants": [
+    {"name": "baseline", "note": "current defaults, unmodified"},
+    {
+      "name": "sonnet-max",
+      "model": "sonnet",
+      "effort": "max",
+      "profile": "alt",
+      "note": "cheaper model at full effort"
+    }
+  ]
+}
+
+Give each arm its own `profile` so concurrent runs do not share a rate limit."""
+
+
+class ArmResult(BaseModel):
+    """Outcome of one (question, variant) forecast process."""
+
+    post_id: int
+    variant: str
+    returncode: int
+    duration_seconds: float
+    tail: str
+
+
+async def run_arm(
+    post_id: int,
+    variant: Variant,
+    retrodict_mode: bool,
+    semaphore: asyncio.Semaphore,
+) -> ArmResult:
+    """Forecast one question under one variant, in its own process."""
+    async with semaphore:
+        command = "retrodict" if retrodict_mode else "test"
+        started = time.monotonic()
+        process = await asyncio.create_subprocess_exec(
+            "uv",
+            "run",
+            "forecast",
+            command,
+            str(post_id),
+            env={**os.environ, **variant_env(variant)},
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await process.communicate()
+        elapsed = time.monotonic() - started
+        lines = stdout.decode(errors="replace").splitlines()
+        print(
+            f"{'✅' if process.returncode == 0 else '❌'} {post_id} [{variant.name}] "
+            f"in {elapsed / 60:.1f}m"
+        )
+        return ArmResult(
+            post_id=post_id,
+            variant=variant.name,
+            returncode=process.returncode or 0,
+            duration_seconds=elapsed,
+            tail="\n".join(lines[-15:]),
+        )
+
+
+@app.command()
+def ab(
+    question_ids: Annotated[
+        list[int] | None,
+        typer.Argument(help="Metaculus post IDs (default: the regression suite)"),
+    ] = None,
+    variant: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--variant",
+            "-v",
+            help="Variant name from notes/variants.json; repeat once per arm",
+        ),
+    ] = None,
+    concurrency: Annotated[
+        int,
+        typer.Option("--concurrency", "-j", help="Max simultaneous forecast processes"),
+    ] = 2,
+    retrodict_mode: Annotated[
+        bool,
+        typer.Option(
+            "--retrodict/--live",
+            help="Retrodict resolved questions (scoreable immediately) or forecast open ones",
+        ),
+    ] = True,
+    list_variants: Annotated[
+        bool, typer.Option("--list", help="List registered variants and exit")
+    ] = False,
+) -> None:
+    """Run the same questions under several agent configurations concurrently.
+
+    Each arm runs as its own process so the arms cannot share `settings.model`,
+    a Docker sandbox, or a crash. Give arms distinct `profile` values to keep
+    them off one account's rate limit.
+
+    Traces land in notes/traces/<version>+<variant>/, so the arms are directly
+    comparable with `lup-devtools scores compare`.
+
+    Examples:
+        uv run forecast ab --list
+        uv run forecast ab -v baseline -v sonnet-max
+        uv run forecast ab 41521 41454 -v baseline -v sonnet-max -j 4
+    """
+    registry = load_registry()
+    if list_variants:
+        if not registry.variants:
+            print(f"No variants registered. Create {VARIANTS_PATH}:\n")
+            print(EXAMPLE_REGISTRY)
+            raise typer.Exit(0)
+        for v in registry.variants:
+            spec = ", ".join(
+                f"{k}={getattr(v, k)}"
+                for k in ("model", "effort", "profile")
+                if getattr(v, k) is not None
+            )
+            print(f"  {v.name:<20} {spec or '(inherits defaults)'}")
+            if v.note:
+                print(f"  {'':<20} {v.note}")
+        raise typer.Exit(0)
+
+    if not variant:
+        print("❌ Need at least two arms: pass --variant twice (see --list)")
+        raise typer.Exit(1)
+    try:
+        variants = select_variants(variant)
+    except KeyError as e:
+        print(f"❌ {e.args[0]}")
+        raise typer.Exit(1) from e
+
+    if not question_ids:
+        suite = json.loads(REGRESSION_SUITE_PATH.read_text(encoding="utf-8"))
+        question_ids = [int(entry["post_id"]) for entry in suite]
+        print(f"Using the regression suite: {len(question_ids)} questions")
+
+    arms = [(q, v) for q in question_ids for v in variants]
+    print(
+        f"Running {len(arms)} forecasts "
+        f"({len(question_ids)} questions x {len(variants)} variants), "
+        f"{concurrency} at a time\n"
+    )
+
+    async def run_all() -> list[ArmResult]:
+        semaphore = asyncio.Semaphore(concurrency)
+        return await asyncio.gather(
+            *(run_arm(q, v, retrodict_mode, semaphore) for q, v in arms)
+        )
+
+    try:
+        results = asyncio.run(run_all())
+    except KeyboardInterrupt:
+        print("\n\n⏸  Interrupted — completed arms keep their traces.")
+        raise typer.Exit(130)
+
+    print("\n=== Summary ===")
+    for v in variants:
+        arm_results = [r for r in results if r.variant == v.name]
+        failed = [r for r in arm_results if r.returncode != 0]
+        minutes = sum(r.duration_seconds for r in arm_results) / 60
+        print(
+            f"  {v.name:<20} {len(arm_results) - len(failed)}/{len(arm_results)} ok, "
+            f"{minutes:.0f}m total"
+        )
+        for r in failed:
+            print(f"      ❌ {r.post_id} exited {r.returncode}")
+            print(f"         {r.tail.splitlines()[-1] if r.tail else '(no output)'}")
+
+    version = load_agent_version()
+    print("\nCompare with:")
+    for a, b in zip(variants, variants[1:]):
+        print(
+            f"  uv run lup-devtools scores compare "
+            f"{version}+{a.name} {version}+{b.name}"
+        )
 
 
 @app.command()
