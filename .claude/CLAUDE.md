@@ -70,6 +70,13 @@ uv run forecast submit <question_id>
 # Forecast, submit, and post reasoning as a private comment
 uv run forecast submit <question_id> --comment
 
+# Run on a specific Claude account (registered in ~/.lup/profiles.json)
+uv run forecast test <question_id> --profile work
+
+# Compare agent configurations side by side (see A/B Testing below)
+uv run forecast ab --list
+uv run forecast ab -v baseline -v sonnet-max
+
 # Forecast all open questions in a tournament (skips already forecast)
 uv run forecast tournament aib       # AIB Spring 2026
 uv run forecast tournament minibench # MiniBench
@@ -87,6 +94,32 @@ uv run ruff check .
 # Type check
 uv run pyright
 ```
+
+## A/B Testing
+
+Variants are named agent configurations registered in `notes/variants.json`:
+
+```json
+{
+  "variants": [
+    {"name": "baseline", "note": "current defaults"},
+    {"name": "sonnet-max", "model": "sonnet", "effort": "max", "profile": "alt"}
+  ]
+}
+```
+
+`uv run forecast ab -v baseline -v sonnet-max` runs every question (the
+regression suite by default) under each variant. Each arm is a separate
+process — `settings.model` is a process global read from many modules, so
+arms sharing an interpreter would fight over it. Give each arm its own
+`profile` so they don't share one account's rate limit.
+
+Traces land in `notes/traces/<version>+<variant>/`, which keeps arms from
+overwriting each other and keeps an in-flight experiment out of the released
+version's calibration numbers (`parse_semver` rejects the suffixed name).
+Compare arms with `lup-devtools scores compare <version>+a <version>+b`.
+
+Valid `effort` values are `low`, `medium`, `high`, `xhigh`, `max`.
 
 ## Testing
 
