@@ -138,6 +138,13 @@ class Settings(BaseSettings):
         description="Max thinking tokens (None = unlimited)",
     )
 
+    # === Profile ===
+    profile: str | None = Field(
+        default=None,
+        validation_alias="AIB_PROFILE",
+        description="Claude profile from ~/.lup/profiles.json (None = registry active, then ~/.claude)",
+    )
+
     # === Sandbox ===
     docker_image: str = Field(
         default="ghcr.io/astral-sh/uv:python3.12-bookworm-slim",

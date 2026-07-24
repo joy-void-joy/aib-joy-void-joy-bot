@@ -21,6 +21,7 @@ import typer
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.config import TOURNAMENTS as TOURNAMENT_IDS
 from aib.config import resolve_model, settings
+from aib.profiles import UnknownProfileError, resolve_config_dir
 from aib.version import AGENT_VERSION, load_agent_version
 from aib.agent.history import (
     RetrodictComparison,
@@ -499,6 +500,29 @@ def _resolve_text_arg(value: str) -> str:
     return value
 
 
+PROFILE_OPTION = typer.Option(
+    "--profile",
+    "-p",
+    help="Claude profile from ~/.lup/profiles.json (default: registry active)",
+)
+
+
+def apply_profile(profile: str | None) -> None:
+    """Pin this process's agent sessions to a named Claude account.
+
+    Resolving here rather than at session start turns an unregistered name
+    into an immediate error instead of a failure partway through a forecast.
+    """
+    if profile is None:
+        return
+    try:
+        resolve_config_dir(profile)
+    except UnknownProfileError as e:
+        print(f"❌ {e}")
+        raise typer.Exit(1) from e
+    settings.profile = profile
+
+
 def _build_overrides(
     description: str | None,
     resolution_criteria: str | None,
@@ -534,8 +558,10 @@ def test(
         str | None,
         typer.Option(help="Override fine print (prefix with @ to read from file)"),
     ] = None,
+    profile: Annotated[str | None, PROFILE_OPTION] = None,
 ) -> None:
     """Test forecasting on a single question without submitting."""
+    apply_profile(profile)
     meta = asyncio.run(get_question_meta(question_id))
     if meta is not None:
         display_question_preview(meta)
@@ -587,6 +613,7 @@ def retrodict(
             help="Enable blind mode (restrict to question published_at if no --forecast-date)",
         ),
     ] = True,
+    profile: Annotated[str | None, PROFILE_OPTION] = None,
 ) -> None:
     """Run forecasts on resolved questions for calibration.
 
@@ -605,6 +632,7 @@ def retrodict(
         uv run forecast retrodict 41835 --forecast-date 2026-01-15
         uv run forecast retrodict 41835 --no-blind  # No time restriction
     """
+    apply_profile(profile)
     parsed_forecast_date: datetime | None = None
     if forecast_date:
         try:
@@ -1049,8 +1077,10 @@ def submit(
         str | None,
         typer.Option(help="Override fine print (prefix with @ to read from file)"),
     ] = None,
+    profile: Annotated[str | None, PROFILE_OPTION] = None,
 ) -> None:
     """Forecast a question and submit the prediction to Metaculus."""
+    apply_profile(profile)
     meta = asyncio.run(get_question_meta(question_id))
     if meta is not None:
         display_question_preview(meta)
@@ -1254,8 +1284,10 @@ def tournament(
         bool,
         typer.Option("--dry-run", "-n", help="List questions without forecasting"),
     ] = False,
+    profile: Annotated[str | None, PROFILE_OPTION] = None,
 ) -> None:
     """Forecast all open questions in a tournament and submit to Metaculus."""
+    apply_profile(profile)
     # Resolve tournament ID alias
     resolved_id: int | str
     if tournament_id in TOURNAMENT_IDS:
@@ -1339,12 +1371,14 @@ def loop(
             help="Model to forecast with: alias ('fable', 'opus', 'sonnet', 'haiku') or full model ID (default: AIB_MODEL)",
         ),
     ] = None,
+    profile: Annotated[str | None, PROFILE_OPTION] = None,
 ) -> None:
     """Continuously forecast tournaments in a loop.
 
     Runs forever, checking each tournament for new questions every INTERVAL minutes.
     Use Ctrl+C to stop.
     """
+    apply_profile(profile)
     if tournaments is None:
         tournaments = ["futureeval", "minibench"]
     if model is not None:
