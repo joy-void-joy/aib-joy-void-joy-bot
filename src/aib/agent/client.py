@@ -41,8 +41,15 @@ DEFAULT_EXTRA_ARGS: dict[str, str | None] = {
     "no-session-persistence": None,
     "strict-mcp-config": None,
 }
+# ENABLE_TOOL_SEARCH: unset means the harness defers tool schemas once they
+# exceed 10% of the context window, leaving the agent only tool *names* and a
+# ToolSearch tool to load them. A search with the wrong terms returns nothing,
+# so the agent concludes the capability does not exist and gives up without
+# ever calling the tool. The research sub-agent carries ~35 data tools and sits
+# well past that threshold, so every session must load schemas eagerly.
 DEFAULT_ENV: dict[str, str] = {
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    "ENABLE_TOOL_SEARCH": "false",
 }
 
 
