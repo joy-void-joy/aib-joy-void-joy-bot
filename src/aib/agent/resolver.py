@@ -112,6 +112,7 @@ def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
     from aib.tools.reddit import reddit_hot, reddit_search
     from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
     from aib.tools.trends import google_trends, google_trends_compare
+    from aib.tools.wayback import wayback_snapshot
 
     s = default_settings
     groups: dict[str, list[SdkMcpTool[Any]]] = {
@@ -155,6 +156,9 @@ def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
         "trends": [
             google_trends,
             google_trends_compare,
+        ],
+        "wayback": [
+            wayback_snapshot,
         ],
     }
     if s.reddit_client_id and s.reddit_client_secret:
