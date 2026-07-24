@@ -138,6 +138,13 @@ class Settings(BaseSettings):
         description="Max thinking tokens (None = unlimited)",
     )
 
+    # === A/B variant ===
+    trace_variant: str | None = Field(
+        default=None,
+        validation_alias="AIB_TRACE_VARIANT",
+        description="Variant label; traces land in notes/traces/<version>+<label>/ so concurrent runs never collide",
+    )
+
     # === Profile ===
     profile: str | None = Field(
         default=None,

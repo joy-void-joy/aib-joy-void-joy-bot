@@ -27,9 +27,9 @@ from aib.paths import (
     iter_trace_log_files,
     parse_timestamp,
     retrodict_dir,
+    trace_version,
 )
 from aib.retrodict_context import effective_now
-from aib.version import AGENT_VERSION
 
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
@@ -238,7 +238,7 @@ def save_forecast(
         resolution_criteria=resolution_criteria,
         fine_print=fine_print,
         revision_history=revision_history,
-        agent_version=AGENT_VERSION,
+        agent_version=trace_version(),
         model=settings.model,
     )
 
