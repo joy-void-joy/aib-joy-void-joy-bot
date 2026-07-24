@@ -25,7 +25,7 @@ from claude_agent_sdk import (
     UserMessage,
 )
 from claude_agent_sdk.types import TextBlock, ToolUseBlock
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from aib.agent.client import REMOVE, build_client
 from aib.agent.display import make_agent_prefix, print_block
@@ -111,6 +111,24 @@ class ResearchInput(BaseModel):
             "Provide the updates in the first question's context field as JSON."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def lift_bare_question(cls, data: object) -> object:
+        """Wrap a single top-level question into the questions list.
+
+        `questions` holds `ResearchQuestion` objects whose own field is
+        `query`, so a single-question call reads naturally as
+        `research(query=...)` and callers write it that way. Accepting that
+        shape costs nothing and removes a guaranteed round-trip.
+        """
+        if not isinstance(data, dict) or "questions" in data:
+            return data
+        bare = {k: data[k] for k in ("query", "context", "ttl") if k in data}
+        if "query" not in bare:
+            return data
+        rest = {k: v for k, v in data.items() if k not in bare}
+        return {**rest, "questions": [bare]}
 
 
 class ResearchResult(BaseModel):
