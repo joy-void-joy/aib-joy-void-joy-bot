@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_ALIASES: dict[str, str] = {
     "fable": "claude-fable-5",
-    "opus": "claude-opus-4-8",
+    "opus": "claude-opus-5[1m]",
     "sonnet": "claude-sonnet-5",
     "haiku": "claude-haiku-4-5-20251001",
 }
@@ -128,7 +128,7 @@ class Settings(BaseSettings):
 
     # === Model ===
     model: str = Field(
-        default="claude-opus-4-8",
+        default="claude-opus-5[1m]",
         validation_alias="AIB_MODEL",
         description="Claude model to use for forecasting",
     )
