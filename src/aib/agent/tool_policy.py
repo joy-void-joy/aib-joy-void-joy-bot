@@ -165,6 +165,13 @@ WEATHER_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# Wayback tools (no API key required, uses the Internet Archive)
+WAYBACK_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__wayback__wayback_snapshot",
+    }
+)
+
 # Notes tools
 NOTES_TOOLS: frozenset[str] = frozenset(
     {
@@ -444,6 +451,7 @@ class ToolPolicy:
         from aib.tools.reddit import reddit_hot, reddit_search
         from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
         from aib.tools.trends import google_trends, google_trends_compare
+        from aib.tools.wayback import wayback_snapshot
         from aib.tools.weather import weather_forecast
 
         servers: dict[str, McpServerConfig] = {
@@ -498,6 +506,10 @@ class ToolPolicy:
                     search_arxiv,
                     fetch_arxiv,
                 ],
+            ),
+            "wayback": create_mcp_server(
+                "wayback",
+                tools=[wayback_snapshot],
             ),
         }
 

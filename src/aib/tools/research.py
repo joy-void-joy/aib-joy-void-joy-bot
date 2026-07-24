@@ -241,6 +241,7 @@ def get_research_allowed_tools() -> list[str]:
         SEARCH_TOOLS,
         STOCK_TOOLS,
         TRENDS_TOOLS,
+        WAYBACK_TOOLS,
         WEATHER_TOOLS,
         WIKIPEDIA_TOOLS,
         WORLD_BANK_TOOLS,
@@ -261,6 +262,7 @@ def get_research_allowed_tools() -> list[str]:
     tools.update(BLS_TOOLS)
     tools.update(CENSUS_TOOLS)
     tools.update(TRENDS_TOOLS)
+    tools.update(WAYBACK_TOOLS)
     tools.update(WEATHER_TOOLS)
     tools.update(REDDIT_TOOLS)
     tools.update(ASKNEWS_TOOLS)

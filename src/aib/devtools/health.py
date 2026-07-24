@@ -3,6 +3,7 @@
 import shutil
 from collections.abc import Callable
 
+import httpx
 import sh
 import typer
 
@@ -62,6 +63,24 @@ def _check_docker() -> tuple[bool, str]:
         return False, "docker not found"
 
 
+def check_wayback() -> tuple[bool, str]:
+    """Ping the Wayback availability API for a known-archived capture."""
+    try:
+        response = httpx.get(
+            "https://archive.org/wayback/available",
+            params={"url": "example.com", "timestamp": "20250101"},
+            timeout=15.0,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as e:
+        return False, str(e)
+
+    closest = response.json().get("archived_snapshots", {}).get("closest")
+    if not closest:
+        return False, "availability API returned no snapshot for example.com"
+    return True, f"snapshot {closest.get('timestamp')}"
+
+
 _CheckFn = Callable[[], tuple[bool, str]]
 
 CHECKS: list[tuple[str, _CheckFn]] = [
@@ -69,6 +88,7 @@ CHECKS: list[tuple[str, _CheckFn]] = [
     ("Exa Search", _check_exa),
     ("FRED API", _check_fred),
     ("Docker", _check_docker),
+    ("Wayback Machine", check_wayback),
 ]
 
 
