@@ -13,7 +13,7 @@ Bump rules:
 import importlib.util
 from pathlib import Path
 
-AGENT_VERSION = "6.3.0"
+AGENT_VERSION = "6.4.0"
 
 VERSION_FILE = Path(__file__)
 

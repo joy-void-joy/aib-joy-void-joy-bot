@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v6.4.0 (2026-07-24)
+
+Restore tool visibility and forecast on Opus 5
+- agent: ENABLE_TOOL_SEARCH=false on every SDK session — schemas were deferred past 10% of the context window, so the research sub-agent saw ~35 tool names without schemas and reported served capabilities (options_iv, twice) as missing. v6.2.0 allowed ToolSearch, which let the agent load a schema but still left it guessing the right search terms
+- tools: research() accepts a bare query alongside the questions list — the nested field is itself named query, and 14 of 70 v6.3.0 sessions burned a call on the validation error before retrying
+- tools: wayback_snapshot() exposes the Internet Archive to the orchestrator and the research sub-agent, clamped to the retrodict cutoff; the Wayback code existed but served only retrodict plumbing for search and exa
+- tools: mcp_tool resolves parameter annotations via get_type_hints, so a module using deferred annotations can register a tool
+- config: orchestrator and every nested agent forecast on claude-opus-5[1m]; tool-free one_shot helpers stay on haiku/sonnet
+
 ## v6.3.0 (2026-07-01)
 
 Embed nested sub-agent reasoning traces inline in the reviewed forecast trace
