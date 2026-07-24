@@ -50,11 +50,23 @@ RULES: list[Allow | Deny] = [
     ),
     # uv package management
     Allow(pattern=r"uv (sync|add|remove|lock)\b"),
-    Allow(pattern=r"uv run (pyright|pytest|ruff|forecast)\b"),
+    Allow(pattern=r"uv run (pyright|pytest|ruff)\b"),
     Allow(pattern=r"uv run \S+ --help$"),
     # Allow python scripts in specific folders (overrides the deny above)
     Allow(pattern=r"uv run (aib|lup)-devtools\b"),
     Allow(pattern=r"uv run (python )?(\./)?tmp/\S+\.py\b"),
+    # Spawning a forecasting agent is the user's call: it burns credits, runs
+    # for tens of minutes, and writes to notes/. Print the command instead.
+    Deny(
+        pattern=r"uv run forecast\b",
+        reason="Denied: forecasts are the user's to run. Print the exact"
+        " `uv run forecast ...` command and say what to look for in the output.",
+    ),
+    Deny(
+        pattern=r"uv run (aib|lup)-devtools (worldview loop|resolution tentative|analysis review)\b",
+        reason="Denied: this spawns a forecasting agent. Print the exact command"
+        " for the user to run instead.",
+    ),
 ]
 
 # ---------------------------------------------------------------------------

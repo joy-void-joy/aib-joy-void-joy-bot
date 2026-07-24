@@ -29,6 +29,32 @@ Built with Python 3.13+ and the Claude Agent SDK. Uses `uv` as the package manag
 - **src/aib/submission.py**: Metaculus API submission functions
 - **src/aib/tools/**: MCP tool implementations (forecasting, sandbox, composition, markets)
 
+## Never run a forecast yourself
+
+**`uv run forecast ...` is the user's command to run, never yours.** This covers
+`test`, `submit`, `tournament`, `loop`, `retrodict`, and `backfill-comments` —
+whether or not the variant submits to Metaculus. The same applies to any
+`lup-devtools` command that spawns a forecasting agent (`worldview loop`,
+`resolution tentative`, `analysis review`).
+
+A forecast burns real credits, takes tens of minutes, and writes to `notes/`.
+The user decides when to spend that, and watches it live.
+
+When a change needs a forecast to verify, finish everything you *can* verify —
+tests, `ruff`, `pyright`, `lup-devtools health check`, targeted probes of the
+changed code — then **print the exact command for the user to run** and say what
+to look for in the output:
+
+> Ready to verify. Run:
+> ```bash
+> uv run forecast test 44798
+> ```
+> Watch for: `mcp__research__research` succeeding on the first call (no pydantic
+> validation retry), and the reflection `tool_audit` listing no missing
+> capabilities.
+
+Do not launch it in the background, and do not offer to run it "just this once".
+
 ## Commands
 
 ```bash
