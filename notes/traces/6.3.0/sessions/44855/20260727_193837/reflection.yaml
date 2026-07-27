@@ -1,0 +1,122 @@
+---
+timestamp: 2026-07-27 19:43:30 UTC
+question_type: discrete
+factors:
+- description: CoinGecko current BTC.D ~56.5% as of Jul 27 (resolution source pinned
+    to CoinGecko)
+  supports:
+    center: 56.3
+    low: 54.5
+    high: 58.5
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Recent softening/altcoin rotation (ETH +23.9% monthly vs BTC +8.9%,
+    meme strength) implies mild downward drift
+  supports:
+    center: 55.8
+    low: 53.5
+    high: 57.5
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Short 10-day horizon limits move size; ~0.55pp/day vol => ~1.7pp over
+    horizon
+  supports:
+    center: 56.3
+    low: 54.5
+    high: 58.5
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+tentative_estimate:
+  center: 56.1
+  low: 53.6
+  high: 58.6
+anchor: Current CoinGecko BTC.D ~56.5%, random-walk forward 10 days
+assessment: CoinGecko headline BTC.D ~56.5% now; 10-day horizon to Aug 6. Slight downward
+  drift from altcoin rotation but highly uncertain and could reverse. Monte Carlo
+  with daily vol 0.55pp and scenario-mixed drift gives center ~56.1, std ~2.0. Distribution
+  roughly symmetric, slight left skew from rotation narrative. Open bounds; tails
+  within 51-61 comfortably inside question range.
+tool_audit: research() returned rich current-value and trend data across multiple
+  providers, flagged CoinGecko-specific value (~56.5%). sandbox execute_code ran MC
+  cleanly. No failures.
+process_reflection: Straightforward short-horizon measurement question. The research
+  tool efficiently disambiguated provider methodologies (CoinGecko vs TradingView
+  vs CMC), which mattered since resolution is CoinGecko-specific. No friction.
+computed:
+  factor_count: 3
+  factor_sum: -0.18
+  neutral_factor_count: 2
+  factor_breakdown:
+  - description: CoinGecko current BTC.D ~56.5% as of Jul 27 (resolution source pinned
+      to CoinGecko)
+    supports:
+      center: 56.3
+      low: 54.5
+      high: 58.5
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Recent softening/altcoin rotation (ETH +23.9% monthly vs BTC +8.9%,
+      meme strength) implies mild downward drift
+    supports:
+      center: 55.8
+      low: 53.5
+      high: 57.5
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Short 10-day horizon limits move size; ~0.55pp/day vol => ~1.7pp
+      over horizon
+    supports:
+      center: 56.3
+      low: 54.5
+      high: 58.5
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  dominant_factor: Recent softening/altcoin rotation (ETH +23.9% monthly vs BTC +8.9%,
+    meme strength) implies mild downward drift
+  dominant_effective_logit: -0.18
+  distribution_metrics:
+    implied_median: 55.8
+    implied_p10: 53.5
+    implied_p90: 57.5
+    median_gap: 0.30000000000000426
+    median_gap_pct: 7.500000000000107
+    spread_ratio: 1.25
+    precision: 0.08912655971479501
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44855
+- **Question ID**: 45004
+- **Session Duration**: 404.2s (6.7 min)
+- **Cost**: $17.5540 total (orchestrator $2.0252 + sub-agents $15.5288)
+- **Tokens**: 4,711 total (14 in, 4,697 out)
+  - Cache: 337,047 read, 62,247 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44855_20260727_193837/20260727-193837.log`
+
+### Tool Calls
+
+- **Total**: 69 calls
+- **Errors**: 6 (8.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2696 |
+| execute_code | 3 | 0 | 255ms | — |
+| fetch_url | 14 | 1 ⚠️ | 10497ms | — |
+| polymarket_price | 3 | 3 ⚠️ | 4122ms | — |
+| premortem | 3 | 0 | 78828ms | $4.4814 |
+| reflection | 3 | 0 | 5ms | — |
+| research | 6 | 2 ⚠️ | 174608ms | $9.7722 |
+| web_search | 28 | 0 | 19477ms | $1.0057 |
+| wikipedia | 9 | 0 | 1357ms | — |

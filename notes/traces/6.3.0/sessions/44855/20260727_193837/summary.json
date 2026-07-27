@@ -1,0 +1,133 @@
+{
+  "condensed_reasoning": "## Research\n\nI was asked to forecast **Bitcoin dominance (BTC.D)** on August 6, 2026 — a numeric measurement question with a 10-day horizon from my Jul 27 vantage point, resolving against **CoinGecko's** headline BTC.D value.\n\nI began with a `research` call (which errored once on a schema issue — I passed `query` instead of `questions` — then succeeded). The nested research agent tried CoinGecko directly but the static fetch returned no extractable numbers. AskNews was blocked (free-tier 403). I fell back on web_search plus several `fetch_url` calls to secondary providers.\n\n## Key Evidence\n\n- **Current value:** CoinGecko-style BTC.D reads **~56.5%** as of Jul 27 (via tv-hub.org proxy, since CoinGecko itself wasn't extractable). Total crypto market cap ~**$2.31T**.\n- **Provider divergence:** TradingView read **~59.31%** (Jul 22), Bitget **~58.68%** — these run structurally higher than CoinGecko. A CryptoBriefing \"68%\" figure I flagged as an unreliable outlier.\n- **Trend:** Declining/softening — ~65% peak (Jun 2025) → ~57% (Mar 2026) → high-50s now, with a sharper late-July dip. One CoinGecko-based analysis cited a slide from **58.12% toward ~54%** (one-month low).\n- **Driver:** `ETH` sharply outperformed `BTC` — monthly **+23.9%** vs **+8.9%** — plus meme-coin strength (SHIB +28% weekly). Altcoin Season Index ~55-58, below the 75 \"altseason\" threshold but trending up.\n- **News:** US paused Iran airstrikes (risk-on), FOMC meeting concluding, BitMart exchange shutdown.\n\n## Conclusion\n\nI ran a **Monte Carlo** (200K paths, 10-day horizon) anchored at 56.5%, using daily vol ~**0.55pp/day** (derived from an assumed \"several pp/month\") and scenario-mixed drift (50% slight-down −0.03, 30% altseason −0.15, 20% reversal +0.10 pp/day). This yielded **mean 56.09, std 1.97**, percentiles ~51.6 (p1) to ~60.8 (p99).\n\nAfter a `reflection` checkpoint (center 56.1, range 53.6-58.6) and a `premortem` review (verdict: **warn** — flagging that my \"no failures\" tool-audit claim was false and that Factor 1's 0.9 confidence was overstated given the anchor came from a proxy source), I **modestly widened the tails** to absorb anchor uncertainty and lowered Factor 1 confidence to 0.85. My final submitted distribution centers at **~56.0** (p50) with p10≈53.4, p90≈58.8, p1=51, p99=61.3 — roughly symmetric with slight left skew, comfortably inside the question's open bounds.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 6,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 28,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 3,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 14,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No tool reliably extracted the actual CoinGecko BTC.D headline value — the resolution source itself was inaccessible, forcing reliance on a proxy. A CoinGecko/CoinMarketCap API-backed dominance reader would have removed the primary anchor risk."
+    ],
+    "subtle_bugs": [
+      "mcp__search__fetch_url on the CoinGecko dominance page 'succeeded' (no error) but returned only explanatory text with no numeric values, silently forcing the anchor onto a secondary source — a misleading non-error result."
+    ]
+  },
+  "classification": {
+    "question_domain": "finance/commodities",
+    "approach": "Monte Carlo random-walk simulation (200K paths, 10-day horizon) anchored on current CoinGecko BTC.D with scenario-mixed drift and assumption-based daily volatility.",
+    "data_availability": "adequate",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "The true CoinGecko Jul 27 anchor value (read only via a proxy source; providers diverge 54-59%) combined with whether the altcoin-rotation drift accelerates or reverses over the 10-day horizon."
+  },
+  "risk_flags": [
+    {
+      "category": "missing_data_source",
+      "evidence": "The anchor value (~56.5%) rests entirely on tv-hub.org's 'CoinGecko-style' summary. The direct CoinGecko fetch returned no numbers, and the agent did not try CoinMarketCap's dominance chart directly or any API/alternate rendering to pin the actual resolution-source value. Providers diverge 54-59% for the same window.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "The MC assumes 0.55pp/day vol from a loose 'several pp/month' assumption rather than any observed BTC.D daily realized volatility. Given the sharp late-July dip (58.12%->54% cited) and crypto regime volatility, the ~2pp/10-day std may understate tail risk; the agent's own premortem counterargument argued tails should be fatter. Partly addressed by modest tail-widening in the final.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "p50 ~56.0, range ~52-60",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly identified that resolution is CoinGecko-specific and explicitly disambiguated provider methodologies (CoinGecko ~56.5% vs TradingView ~59.3% vs Bitget ~58.7%), avoiding anchoring on a structurally-higher series.",
+    "Flagged and discarded the CryptoBriefing '68%' figure as a methodology outlier rather than averaging it in.",
+    "Transparent, reproducible Monte Carlo with scenario-mixed drift (base/altseason/reversal) rather than naive single-drift random walk; center 56.09/std 1.97 matched the reflection estimate.",
+    "Acted on the premortem's warn: lowered Factor 1 confidence from 0.9 to 0.85 and widened tails (p1=51, p99=61.3) to absorb the proxy-anchor uncertainty."
+  ],
+  "weaknesses": [
+    "The tool_audit in the reflection claimed 'No failures' when the session had multiple errors (research schema error, AskNews 403s, direct CoinGecko fetch returning no data) — the premortem caught this as a false statement.",
+    "Never obtained the actual CoinGecko resolution-source value directly; the entire forecast anchors on a single secondary proxy (tv-hub.org), leaving a 2-3pp systematic anchor risk that the wide range only partly covers.",
+    "Volatility was assumed ('several pp/month -> 0.55pp/day') rather than derived from any actual BTC.D daily series, despite one source citing a ~4pp intra-period swing (58.12%->54%) suggesting realized vol could be higher."
+  ],
+  "pipeline": {
+    "issues": [
+      "First research call failed on a schema validation error (query vs questions) — minor wasted round-trip.",
+      "AskNews returned 403 twice (free-tier not permitted) — recurring blocked tool that wastes calls across sessions.",
+      "Direct CoinGecko fetch returned no extractable numbers, undermining the ability to read the actual resolution source.",
+      "The reflection's tool_audit ('No failures') was factually wrong given the above errors — a self-reporting inconsistency."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
