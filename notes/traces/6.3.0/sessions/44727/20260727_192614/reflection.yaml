@@ -1,0 +1,131 @@
+---
+timestamp: 2026-07-27 19:34:00 UTC
+question_type: discrete
+factors:
+- description: Mature half-month buckets in 2026 average ~64-65 cases (excl. one 111
+    outlier), representing the saturated 'true' level for a fortnight of AI-hallucination
+    decisions. Rate has plateaued (Q1 2026=435/qtr, Q2=395/qtr, no growth).
+  supports:
+    center: 64.0
+    low: 50.0
+    high: 78.0
+  logit: 0.0
+  confidence: 0.85
+  effective_logit: 0.0
+- description: 'Database is dated by DECISION date with multi-week reporting lag.
+    Observed today (Jul 27): Jul-H1 (age 12 days) = 52, Jul-H2 (in progress) = 24.
+    So a bucket observed shortly after it closes is undercounted (~55-80% of mature).'
+  supports:
+    center: 45.0
+    low: 30.0
+    high: 60.0
+  logit: 0.0
+  confidence: 0.8
+  effective_logit: 0.0
+- description: Resolution scheduled Sep 1; if snapshot taken promptly at close, Aug-H2
+    is age 0-5 days and heavily undercounted (~35-42). If delayed to mid-Sep, ~50-55.
+    If delayed weeks, near-mature ~65.
+  supports:
+    center: 44.0
+    low: 30.0
+    high: 62.0
+  logit: 0.0
+  confidence: 0.7
+  effective_logit: 0.0
+tentative_estimate:
+  center: 44.0
+  low: 29.0
+  high: 66.0
+anchor: Mature half-month rate ~64 cases (2026 buckets from database CSV), discounted
+  by reporting-lag maturity factor ~0.69 at expected snapshot age → ~44.
+assessment: 'Discrete count of AI-hallucination legal decisions with dates Aug 16-31,
+  2026, as recorded when the question resolves (~Sep 1). Two dominant uncertainties:
+  (1) the true mature half-month rate (~64, sd~11, plateaued), and (2) reporting-lag
+  maturity at snapshot time, which depends on exactly when the resolver pulls data.
+  I calibrated the lag curve from today''s single snapshot: age-12 buckets are ~80%
+  mature, age-0 ~55%. Monte Carlo mixing snapshot-timing scenarios (50% prompt age0-5,
+  30% age5-15, 20% delayed) gives median 44, P10 29, P90 65. Below the creator''s
+  implied midpoint (~55) because prompt resolution means significant recency undercounting.
+  Low tail bounded by non-collapsing rate; high tail bounded by fresh bucket unlikely
+  to exceed ~85 unless resolution heavily delayed.'
+key_uncertainties: Exact snapshot timing at resolution (age 0 vs age 15 days) is the
+  biggest driver, worth ~20 cases. Also the true underlying rate for late August (could
+  dip in summer or stay ~65).
+tool_audit: research() gave excellent trajectory context. Direct CSV download from
+  damiencharlotin.com (1809 rows) was the key data source — parsed decision dates
+  into half-month buckets and embedded timeline JSON confirmed quarterly rates. execute_code
+  Monte Carlo produced percentiles. All tools worked.
+process_reflection: The scaffolding worked well. The decisive move was fetching the
+  raw CSV rather than relying on summary counts — it revealed the half-month distribution
+  and the reporting-lag structure that dominates this forecast. The main irreducible
+  uncertainty (exact resolution snapshot timing vs. reporting lag) is not something
+  more tools could resolve; it's inherent to how the automated question resolves.
+computed:
+  factor_count: 3
+  factor_sum: 0.0
+  neutral_factor_count: 3
+  factor_breakdown:
+  - description: Mature half-month buckets in 2026 average ~64-65 cases (excl. one
+      111 outlier), representing the saturated 'true' level for a fortnight of AI-hallucination
+      decisions. Rate has plateaued (Q1 2026=435/qtr, Q2=395/qtr, no growth).
+    supports:
+      center: 64.0
+      low: 50.0
+      high: 78.0
+    logit: 0.0
+    confidence: 0.85
+    effective_logit: 0.0
+  - description: 'Database is dated by DECISION date with multi-week reporting lag.
+      Observed today (Jul 27): Jul-H1 (age 12 days) = 52, Jul-H2 (in progress) = 24.
+      So a bucket observed shortly after it closes is undercounted (~55-80% of mature).'
+    supports:
+      center: 45.0
+      low: 30.0
+      high: 60.0
+    logit: 0.0
+    confidence: 0.8
+    effective_logit: 0.0
+  - description: Resolution scheduled Sep 1; if snapshot taken promptly at close,
+      Aug-H2 is age 0-5 days and heavily undercounted (~35-42). If delayed to mid-Sep,
+      ~50-55. If delayed weeks, near-mature ~65.
+    supports:
+      center: 44.0
+      low: 30.0
+      high: 62.0
+    logit: 0.0
+    confidence: 0.7
+    effective_logit: 0.0
+  dominant_factor: Mature half-month buckets in 2026 average ~64-65 cases (excl. one
+    111 outlier), representing the saturated 'true' level for a fortnight of AI-hallucination
+    decisions. Rate has plateaued (Q1 2026=435/qtr, Q2=395/qtr, no growth).
+  dominant_effective_logit: 0.0
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44727
+- **Question ID**: 44876
+- **Session Duration**: 621.6s (10.4 min)
+- **Cost**: $9.0921 total (orchestrator $3.9054 + sub-agents $5.1867)
+- **Tokens**: 17,327 total (26 in, 17,301 out)
+  - Cache: 756,972 read, 78,508 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44727_20260727_192614/20260727-192614.log`
+
+### Tool Calls
+
+- **Total**: 19 calls
+- **Errors**: 1 (5.3%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2135 |
+| execute_code | 7 | 0 | 712ms | — |
+| fetch_url | 4 | 0 | 13980ms | — |
+| premortem | 1 | 0 | 116458ms | $3.0015 |
+| reflection | 1 | 0 | 9ms | — |
+| research | 2 | 1 ⚠️ | 115690ms | $1.8425 |
+| web_search | 4 | 0 | 17056ms | $0.1291 |

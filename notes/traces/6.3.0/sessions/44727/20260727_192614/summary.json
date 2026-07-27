@@ -1,0 +1,126 @@
+{
+  "condensed_reasoning": "## Research\n\nI began by querying my research tool for the trajectory and monthly rate of Damien Charlotin's AI Hallucination Cases database. This surfaced a clear growth history: **~200 (mid-2025) → 719 (Jan 2026) → 1,227 (Apr) → 1,598 (Jun 9) → 1,769 (Jul 17) → ~1,809 (late Jul 2026)**, with a net add-rate that had accelerated to ~150-190/month and then **plateaued**. Crucially, I confirmed via Charlotin's own FAQ that the database is dated by **decision date, not entry date**, with a multi-week-to-multi-month reporting lag (\"decisions from pleadings a few months past\"), and is explicitly \"an undercount.\"\n\nRather than rely on summary counts, I located and downloaded the raw database CSV directly from `damiencharlotin.com` (**1,809 rows**, max decision date `2026-07-24`) and parsed every decision date into half-month buckets. I also extracted the embedded timeline JSON, which confirmed quarterly decision counts: `Q1 2026 = 435`, `Q2 2026 = 395`, `Q3 2026 (partial) = 76`.\n\n## Key Evidence\n\n- **Mature 2026 half-month buckets** averaged **~65 cases** (mean 65.4, sd ~8) after excluding one `2026-03-H2 = 111` outlier. Including it, mean ~69.\n- **Rate has plateaued** — quarterly decisions went 435 → 395, no growth. So no structural break contaminates the level estimate.\n- **Reporting-lag structure** was the decisive insight. My snapshot (Jul 27) showed `2026-07-H1 = 52` at age ~12 days (vs mature ~65) and `2026-07-H2 = 24` still in-progress. This implies buckets observed shortly after they close are undercounted to ~55-80% of their eventual mature level.\n- Since the question resolves **~Sep 1, 2026**, the Aug 16-31 bucket will be very fresh (age 0-few days) at resolution and therefore substantially undercounted unless the resolver pulls data with delay.\n\nI ran a **Monte Carlo (200,000 draws)** mixing a true mature rate (`~64, sd 11`) against a piecewise lag-maturity curve calibrated from my single snapshot, with snapshot-age scenarios weighted 50% prompt (age 0-5), 30% (age 5-15), 20% delayed (age 15-45), plus multiplicative backfill noise and Poisson discreteness.\n\n## Conclusion\n\nThe simulation produced a **median of ~44-45**, pulled well below the naive mature level (~64) by expected recency undercounting. I submitted percentiles of **P10=29, P25=36, P50=45, P75=55, P90=68**, with an anchor of \"mature half-month rate ~64 discounted by a reporting-lag maturity factor ~0.70 → ~45.\" The dominant, irreducible uncertainty is the exact resolution snapshot date versus the reporting lag — worth roughly ±20 cases and not resolvable with more research.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 2,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 4,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 7,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 1,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "No way to verify the actual resolution snapshot mechanic (when/how the resolver reads the database), which is the dominant uncertainty.",
+      "No access to historical scrapes of the database to empirically calibrate the reporting-lag maturity curve instead of relying on one snapshot."
+    ],
+    "subtle_bugs": [
+      "The fetch_url summarization of the JS-rendered main page initially reported '180 cases' as the total before correcting to 1,809 — a source-parsing artifact that could have propagated an error had it not been caught."
+    ]
+  },
+  "classification": {
+    "question_domain": "meta",
+    "approach": "Downloaded the raw database CSV (1,809 rows), bucketed decision dates into half-months to get the mature ~65 rate, then ran a Monte Carlo mixing that rate against a reporting-lag maturity curve calibrated from the current snapshot.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": true,
+    "key_uncertainty": "The exact snapshot date the resolver uses (~Sep 1 prompt vs. delayed) relative to the multi-week reporting lag, which swings the count by roughly ±20 cases."
+  },
+  "risk_flags": [
+    {
+      "category": "overconfidence",
+      "evidence": "The entire lag-maturity curve (0.55 at age 0 rising to 1.0 at age 45) is calibrated from essentially a single snapshot observation (Jul-H1=52 at age 12, Jul-H2=24 in-progress). n=1-2 data points for the maturity curve is thin; the true lag could differ materially and the P10-P90 band (29-68) may be too narrow given this calibration fragility.",
+      "severity": "major"
+    },
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The agent assumed 50% probability the resolver snapshots promptly at age 0-5 days, which drives the median from ~64 down to ~45. If the automated resolution actually reads the database with a typical lag (e.g., resolves days/weeks after Aug 31, or the question resolves on a later scrape), the true answer would cluster nearer the mature ~65. The snapshot-timing weighting is an assumption not verified against the question's actual resolution mechanics.",
+      "severity": "major"
+    },
+    {
+      "category": "contradicting_evidence_ignored",
+      "evidence": "The embedded doc_month JSON shows August at 82 (counts [67,50,67,61,71,106,102,82,66,99,78,70]) — not a seasonally low month — yet the agent did not explicitly incorporate any month-of-year seasonality into the Aug-H2 mature rate, treating it as a generic ~64.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "~48 (median), range roughly 30-68",
+    "agrees_with_agent": true,
+    "divergence_reason": "I would place slightly more weight on the resolver pulling data with some delay rather than exactly at age-0, nudging the median a few cases above 45; but the direction and magnitude of the lag discount are sound."
+  },
+  "strengths": [
+    "Fetched and parsed the raw source CSV (1,809 rows) directly rather than trusting secondary summary counts, revealing the actual half-month decision-date distribution that dominates the forecast.",
+    "Correctly identified the decision-date-vs-entry-date dating with reporting lag as the crux, and grounded it in a live observation (Jul-H1=52 at age 12, Jul-H2=24 in-progress).",
+    "Excluded the 2026-03-H2=111 outlier and used only plateaued 2026 buckets, avoiding contamination from the earlier ramp-up regime (Q1 435 → Q2 395 confirms no growth break).",
+    "Ran a 200K-draw Monte Carlo that explicitly mixed the two orthogonal uncertainties (true mature level and snapshot-timing maturity), producing a coherent full percentile distribution rather than a point estimate."
+  ],
+  "weaknesses": [
+    "The lag-maturity curve is calibrated from a single snapshot with only ~2 relevant data points; the agent could have examined how earlier buckets (e.g., Jun-H2 at age 27) filled over time or compared prior scrapes to better constrain the curve.",
+    "The snapshot-timing weighting (50% prompt age-0) is the single biggest driver of the median yet is an unverified assumption about the resolution mechanic; the agent flagged this as the key uncertainty but did not attempt to check how this question type has resolved historically.",
+    "Did not apply August-specific seasonality despite having the doc_month distribution in hand.",
+    "The lag_frac at age 0 = 0.55 is itself a guess not directly observed (the youngest observed closed bucket was age ~12); the age-0-5 region driving the low tail is extrapolated."
+  ],
+  "pipeline": {
+    "issues": [
+      "First mcp__research__research call failed on a schema validation error (missing 'questions' field) — minor token waste, immediately retried successfully.",
+      "Bash tool was denied by a PreToolUse hook and an initial Glob failed on a path-permission error during the self-review portion, causing a couple of wasted tool calls."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": [
+    "Calibrate the reporting-lag maturity curve from multiple historical buckets (track how Jun-H2, May-H2 etc. filled across successive scrapes) rather than a single snapshot, to tighten the age-0-to-mature curve.",
+    "Investigate the actual resolution mechanic for this recurring question type (does the resolver snapshot promptly at period-end or with a lag?) since that assumption drives the median more than any data.",
+    "Incorporate the available month-of-year seasonality (doc_month JSON) into the mature-rate estimate for August specifically."
+  ]
+}
