@@ -1,0 +1,133 @@
+{
+  "condensed_reasoning": "## Research\n\nI approached this as a low-information, five-candidate primary forecast. I dispatched a research sub-agent to gather everything available on the **August 6, 2026 Tennessee Democratic U.S. Senate primary**. The nested agent hit several dead ends — `asknews` was blocked (Free-plan 403), Polymarket DNS resolution failed, and multiple `WebFetch`/Ballotpedia direct fetches returned 403 — but pivoted successfully to `mcp__search__web_search`, `mcp__search__wikipedia`, and `mcp__search__fetch_url`, which pulled clean content from Ballotpedia, FEC, Hoodline, and two `redstatebluevoter` Substack analyses.\n\n## Key Evidence\n\n- **Bradshaw is the only candidate with a statewide profile**: she won the **2020 Democratic Senate primary with 35.2%** in a 5-way field (an upset over DSCC-backed James Mackler) and took **~1,036,858 general-election votes (35.1%)** against Hagerty. She is the only prior statewide primary winner in the field.\n- **She lost the 2024 primary badly** — `24.4%` vs. Gloria Johnson's `70.6%`. I judged this weakly predictive because Johnson was a prominent sitting state Rep., and no comparable candidate exists in 2026.\n- **Structural mechanics favor a front-runner**: Tennessee has **no runoff**, so a plurality wins — exactly how she won 2020 with ~35%. Memphis base = large Black Democratic electorate.\n- **Downside signals**: FEC committee `C00846048` shows only **~$2,257** in 2026-cycle receipts; her campaign site is outdated (misspellings, \"Haggerty\" typo); no institutional endorsements (only informal \"Sway\" voting-group picks); Maria Brewer runs the most polished operation, and a fragmented 5-way field risks vote-splitting.\n- **No polling and no prediction markets** exist; every outlet explicitly declined to name a frontrunner and described the whole field as underfunded grassroots.\n\n## Conclusion\n\nI anchored on a reference class — in low-information, multi-candidate, low-turnout primaries the dominant-name-recognition candidate typically wins the plurality, base rate ~55–65%. I then adjusted **upward** because Bradshaw is uniquely recognizable against a field of near-unknowns, while capping below 0.75 due to the absence of polling, her anemic fundraising/dormant operation, and genuine vote-split risk. Net factors (logits +1.1, +0.5, +0.3, −0.4, −0.3, −0.3) summed to a logit of **0.75**, giving a final probability of **0.68** that Marquita Bradshaw wins the primary.",
+  "tool_audit": {
+    "by_tool": {
+      "web_search": {
+        "calls": 13,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 2,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "research": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 2,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A working prediction-market lookup (Polymarket errored on DNS) — though for this obscure race no market likely exists.",
+      "A reliable direct page-fetch path; WebFetch was 403-blocked for every call, forcing reliance on the search-fetch fallback."
+    ],
+    "subtle_bugs": [
+      "The nested agent initially asserted the contest was a 'special election' caused by Blackburn resigning to become Governor — a hallucinated premise — before self-correcting to 'regular election vs. Hagerty.' No downstream impact, but a latent reasoning hazard.",
+      "The '$5.9M raised' localcandidates.org figure was surfaced by search and could have misled a less careful reader; the agent correctly discounted it."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Reference-class base rate for a dominant-name-recognition candidate in a low-information multi-candidate plurality primary, adjusted by qualitative factors.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": true,
+    "used_base_rates": true,
+    "key_uncertainty": "Whether Bradshaw's residual name recognition still delivers a plurality despite a dormant, near-unfunded 2026 campaign, or whether a better-organized rival (Brewer/Miller-Watkins) wins the split field."
+  },
+  "risk_flags": [
+    {
+      "category": "underconfidence",
+      "evidence": "Bradshaw is the ONLY candidate with statewide name ID, is the only prior statewide primary winner, has a Memphis Black-Democratic base, and won an analogous 5-way field with 35% in 2020 — against four genuinely obscure opponents with no fundraising, no endorsements, and (for two of them) no functioning websites. In low-info primaries name ID is overwhelmingly dominant; a case could be made for 0.72-0.78 rather than 0.68.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The agent never obtained fundraising figures for the OTHER candidates (Brewer, Miller-Watkins, McCants, Onyejiaka) — only Bradshaw's ~$2,257 was confirmed. The relative-fundraising factor rests on the assumption competitors are 'equally low-budget,' which was inferred from press characterizations rather than verified FEC data.",
+      "severity": "minor"
+    },
+    {
+      "category": "stale_data",
+      "evidence": "The '$5.9M raised / 1 candidate' figure on localcandidates.org was encountered but dismissed as a stale aggregate without direct verification; the agent's reasoning that it is Bradshaw's 2020 cumulative number is plausible but unconfirmed.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "68%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly diagnosed the decisive 2024 loss as weakly predictive by identifying that the opponent (Gloria Johnson) was a prominent sitting elected official with no 2026 analog — avoiding a naive 'she lost last time' extrapolation.",
+    "Identified the correct analog (2020 5-way field of unknowns, won with 35% plurality) and correctly incorporated Tennessee's no-runoff plurality rule as a structural tailwind.",
+    "Recovered gracefully from multiple tool failures (asknews 403, Polymarket DNS error, WebFetch/Ballotpedia 403s) by pivoting to working search/fetch tools and still assembling well-sourced findings from Ballotpedia, FEC, and local reporting.",
+    "Caught and correctly flagged the misleading '$5.9M raised' localcandidates figure as a likely stale aggregate rather than treating it as 2026-cycle fundraising.",
+    "Explicitly verified the absence of polling and prediction markets rather than assuming, keeping the estimate appropriately uncertain."
+  ],
+  "weaknesses": [
+    "Did not confirm fundraising for the four rival candidates, leaving the 'competitors equally low-budget' premise partly assumed rather than verified.",
+    "The initial nested agent briefly mis-stated the race as a 'special election' (Blackburn resigning to become Governor) before self-correcting — a transient factual slip that could have propagated if unchecked.",
+    "No quantitative modeling (e.g., a simple vote-share simulation across the 5-way field) was attempted; the estimate is entirely a judgmental logit sum, which is defensible for a low-data race but leaves the 0.68 somewhat arbitrary between plausible 0.60-0.75 bounds."
+  ],
+  "pipeline": {
+    "issues": [
+      "asknews search_news and do_news_research both returned 403 (Free/Metaculus tier restrictions) — wasted two calls.",
+      "mcp__markets__polymarket_price failed twice with DNS 'Name or service not known' rather than returning a clean empty result.",
+      "WebFetch returned 403 on all four attempts, plus 'Sibling tool call errored' on parallel calls, forcing a fallback to mcp__search__fetch_url.",
+      "mcp__search__wikipedia returned only a shallow lede extract for the 2026 TN Senate article, limiting its usefulness."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
