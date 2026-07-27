@@ -1,0 +1,135 @@
+{
+  "condensed_reasoning": "## Research\n\nI researched the August 6, 2026 Tennessee Democratic gubernatorial primary via a single consolidated `research` call, supplemented by web searches and WebFetch on the underlying sources. My nested research agent pulled from Ballotpedia, Wikipedia, the Nashville Banner voter guide, the Tennessee Firefly tracker (a product of Tennesseans for Student Success), and the lines.com prediction-market writeup. A few tools failed: `asknews` returned a 403 (tier-gated), a Ballotpedia WebFetch returned 403, and the live `polymarket_price` call failed with a DNS error, so my market pricing is dated April 14, 2026.\n\n## Key Evidence\n\n- **Field**: Five Democrats — Jerri Green (Memphis City Councilwoman), Kevin Lee McCants, Carnita Atwater, Tim Cyr, and Adam \"Ditch\" Kurtz.\n- **Polling**: The only substantive poll is the **Targoz survey** (500 registered voters, ±4.38% MOE): **Green 14%, McCants 11%, 62% undecided**.\n- **Fundraising**: Green raised **~$703K** through Q1 2026, far outpacing the field — I framed this as a **~13x lead**.\n- **Prediction markets**: Polymarket (via lines.com, April 14, 2026, ~$90K volume) priced **Green at ~94%**, Atwater ~6%, Cyr ~1%, McCants and Kurtz <1%.\n- **Context**: Green is the only elected official and comes from Memphis, TN's largest Democratic base. Democrats haven't won statewide in TN since 2006.\n\n## Conclusion\n\nI anchored on the market's ~94% (anchor logit +2.7) but **discounted Green to 80%** to reflect the enormous 62% undecided share in a low-information, crowded primary, the stale/thin April market, and the possibility that Tennessee's disproportionately Black Democratic electorate could break toward McCants (a pastor) or Atwater in ways fundraising doesn't capture. I ran a `reflection` (four factors, favoring Green +2.16 logit vs McCants +0.45) and a `premortem` (confidence 0.72) that built a coherent alternative scenario but did not change my view. My final distribution: **Green 0.80, McCants 0.08, Atwater 0.07, Tim Cyr 0.02, \"Any other candidate\" 0.02, Kurtz 0.01**.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 6,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 27,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 8,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 3,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 13,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 3,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "Working live prediction-market price tool (polymarket_price failed via DNS); a functioning endpoint would have provided fresh July pricing.",
+      "Access to a direct state campaign-finance / FEC filing tool to independently verify the fundraising claim."
+    ],
+    "subtle_bugs": [
+      "The reflection's Monte Carlo distribution implied Green ~0.61, but the agent submitted 0.80 without reconciling the ~19pp gap — the tool output was effectively overridden without explanation."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Anchored on stale prediction-market pricing (~94%) then discounted to 80% via qualitative adjustment for a high-undecided, low-information crowded primary.",
+    "data_availability": "adequate",
+    "used_quantitative_model": false,
+    "used_prediction_markets": true,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether the 62% undecided bloc in a low-attention primary breaks toward Green's fundamentals or toward McCants/Atwater on demographic and name-recognition factors."
+  },
+  "risk_flags": [
+    {
+      "category": "stale_data",
+      "evidence": "The primary anchor is Polymarket pricing dated April 14, 2026 (~3.5 months old) with only ~$90K volume. The live polymarket_price call failed (DNS error), and no fresher market or July poll was obtained despite early voting already being underway.",
+      "severity": "minor"
+    },
+    {
+      "category": "missing_data_source",
+      "evidence": "The only poll used is a single advocacy-group-filtered Targoz survey (Tennesseans for Student Success). No FEC/state campaign-finance filing was directly checked to confirm the '13x' fundraising lead, and the Beacon May 2026 poll (surfaced in search results) was not fetched for the Democratic primary.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Jerri Green, ~80-85%",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Correctly recognized that the market's 94% was stale (April) and thin (~$90K volume) and explicitly discounted to 80% rather than mechanically adopting it.",
+    "Redistributed probability to McCants (8%) above the market's <1% by grounding it in the Targoz poll (11%, only 3pp behind, within MOE) rather than pure narrative.",
+    "The premortem built a substantive, falsifiable counterargument (heavily-Black Memphis/urban electorate consolidating behind McCants/Atwater) and stated concrete disconfirming evidence, rather than a token gesture.",
+    "Enumerated all five named candidates plus 'Any other candidate' consistent with the plurality resolution rule."
+  ],
+  "weaknesses": [
+    "tool_audit in the reflection claimed 'No tool failures' when there were actually multiple (asknews 403, Ballotpedia 403, three failed polymarket_price DNS errors) — a disclosure inconsistency, though the Polymarket staleness was acknowledged in caveats.",
+    "Relied on a single poll from an advocacy tracker without seeking independent confirmation of the exact primary numbers or checking direct campaign-finance filings.",
+    "Did not attempt any quantitative reconciliation of the poll (Green +3pp, within MOE, 62% undecided) with the 80% point estimate — the 80% is an eyeballed discount rather than a modeled distribution."
+  ],
+  "pipeline": {
+    "issues": [
+      "asknews search_news returned 403 (free-tier gated) — predictable failure that wasted a call.",
+      "polymarket_price failed with DNS error ('Name or service not known'), blocking fresh market data.",
+      "Two ToolSearch calls returned empty results, wasting early nested-research turns.",
+      "Ballotpedia WebFetch returned 403.",
+      "trace_at_premortem.md exceeded the 25k-token Read limit, forcing the premortem agent into offset/limit reads."
+    ],
+    "clean": false
+  },
+  "future_leak": null,
+  "actionable_improvements": []
+}
