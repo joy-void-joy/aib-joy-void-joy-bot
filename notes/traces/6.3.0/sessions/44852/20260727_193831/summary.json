@@ -1,0 +1,145 @@
+{
+  "condensed_reasoning": "## Research\n\nI set out to identify the last IBRiS/Rzeczpospolita \"gdyby wybory do Sejmu\" poll published on or before 7 Aug 2026 and compute KO's lead over PiS. My starting brief carried a premise (late-July KO 30.1 vs PiS 28.7, a +1.4pp lead). My research sub-agent immediately flagged that premise as unverifiable.\n\nI found the resolving poll: **IBRiS for Rzeczpospolita, fieldwork 24–25 July 2026** (CATI, n=1,000, published ~27 July). Every outlet — `rp.pl`, `GazetaPrawna`, `dorzeczy.pl`, `wp.pl` — reported the same sole \"gdyby wybory\" table: **KO 30.1% / PiS 17.3%**, with Morawiecki's new **Rozwój Plus at 7.4%** listed separately following the PiS split (Kaczyński expelled ~30 members on 24 July). That gives a lead of **+12.8pp**. I confirmed via `fetch_url` on the primary rp.pl article that **only one variant was published** — the fine print explicitly states \"the content does not show PiS at 28.7% in any variant.\"\n\n## Key Evidence\n\n- **Resolving figure as reported:** KO 30.1 − PiS 17.3 = **+12.8pp**, corroborated across four independent outlets.\n- **The author's PiS 28.7% premise is a factual error** — a conflation with the separate United Surveys/IPSOS series (~28%). I disregarded it; the open upper bound of the question permits values >10.\n- **The ~21.5% \"baseline\" PiS** (Rozwój Plus reabsorbed) exists **only in the WP/United Surveys-by-IBRiS series**, a different commissioner that the resolution fine print explicitly disregards. No baseline is published in the qualifying rp.pl series.\n- **Cadence:** IBRiS/Rz polls roughly monthly (late May → 16–17 Jun → 2–3 Jul → 24–25 Jul). The 24–25 Jul poll was an off-cycle, event-driven addition. The next scheduled poll would fall ~late August — outside the window. I estimated a **~28% chance** a new event-driven IBRiS/Rz poll publishes before Aug 7.\n\n## Conclusion\n\nI ran a mixture Monte Carlo. My first pass placed ~38% of the no-new-poll mass on a \"baseline reabsorption\" fork (~+6), pulling the median to ~10.5. The **premortem reviewer correctly caught this as a resolver-invalid interpretation** — the criteria say to use the figure \"as reported\" on rp.pl (17.3), and the only source publishing a baseline is the disregarded commissioner. I removed that fork. The recentered distribution is heavily concentrated at **12.8** (conditional on no new poll, ~72%, the answer is essentially exactly 12.8), with a modest lower tail driven almost entirely by the ~28% new-poll branch (where a fractured right likely still yields an elevated ~9–11 lead, plus a small residual resolver-judgment fork toward ~6). Final: **median ~12.6, P10 ~6.0, P90 ~13.2**, sub-zero (PiS ahead) negligible, open upper bound respected.",
+  "tool_audit": {
+    "by_tool": {
+      "research": {
+        "calls": 6,
+        "errors": 2,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "web_search": {
+        "calls": 28,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "wikipedia": {
+        "calls": 9,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "polymarket_price": {
+        "calls": 3,
+        "errors": 3,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "fetch_url": {
+        "calls": 14,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      },
+      "content_extract": {
+        "calls": 0,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "reflection": {
+        "calls": 5,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "execute_code": {
+        "calls": 6,
+        "errors": 0,
+        "error_cause": null,
+        "impact": "none",
+        "value": "medium",
+        "notes": null
+      },
+      "premortem": {
+        "calls": 5,
+        "errors": 1,
+        "error_cause": null,
+        "impact": "minor",
+        "value": "medium",
+        "notes": null
+      }
+    },
+    "capability_gaps": [
+      "A tool to reliably extract the structured Wikipedia polling table would have let the agent verify the backup resolution path (whether Wikipedia logs PiS at 17.3 vs low-20s), which it flagged as a key what-would-change-my-mind but could not confirm."
+    ],
+    "subtle_bugs": [
+      "The rp.pl fetch_url returned 'year not specified in excerpt, but context suggests 2024 based on reference to 2023 election' — a misdating artifact; the agent correctly ignored it since fieldwork dates were confirmed as 2026 elsewhere.",
+      "The goniec article slug '080726' could be misread as an 8 July / publication date, but the agent's later notes correctly treated it as a URL identifier describing the same 24-25 July poll, not a distinct newer poll."
+    ]
+  },
+  "classification": {
+    "question_domain": "politics/election",
+    "approach": "Identified the sole reported IBRiS/Rzeczpospolita 24-25 July table (KO 30.1/PiS 17.3=+12.8) as the resolving figure and modeled a mixture Monte Carlo over the ~28% chance of a new pre-Aug-7 poll.",
+    "data_availability": "abundant",
+    "used_quantitative_model": true,
+    "used_prediction_markets": false,
+    "used_base_rates": false,
+    "key_uncertainty": "Whether a new event-driven IBRiS/Rzeczpospolita poll publishes before Aug 7 (~28%), since without one the answer is mechanically exactly 12.8."
+  },
+  "risk_flags": [
+    {
+      "category": "resolution_criteria_misread",
+      "evidence": "The agent's OWN first-pass Monte Carlo assigned ~38% of the no-new-poll branch to a 'baseline reabsorption' PiS ~24 fork (lead ~6), which the premortem showed contradicts the resolution criteria ('as reported' = 17.3) and its own fetch_url finding ('Only ONE variant is reported'). This was corrected, but only after the adversarial gate — the initial estimate (median 10.5) was materially miscalibrated.",
+      "severity": "minor"
+    },
+    {
+      "category": "underconfidence",
+      "evidence": "Even after correction, ~28% new-poll probability plus a residual fork produce a lower tail (P10 6.0) that may be slightly fat: conditional on no new poll the answer is deterministically 12.8, and the ~28% new-poll estimate itself is a soft judgment with no hard scheduling signal, so the wide P1-P30 range (2.9-10.5) rests heavily on one uncertain parameter.",
+      "severity": "minor"
+    }
+  ],
+  "reviewer_estimate": {
+    "estimate": "Median ~12.6, P10 ~6.5, P90 ~13.2 (concentrated at 12.8)",
+    "agrees_with_agent": true,
+    "divergence_reason": null
+  },
+  "strengths": [
+    "Caught and corrected a factual error embedded in the question's own premise (PiS 28.7%/+1.4pp), tracing it to a conflation with the separate United Surveys/IPSOS series rather than anchoring to it.",
+    "Rigorously distinguished the qualifying rp.pl IBRiS series from the disregarded United Surveys-by-IBRiS (WP) and Polsat News series — the crux of correct resolution, since the WP series was the only source of the tempting ~21.5% baseline PiS.",
+    "Verified the resolving figure across four independent outlets and used fetch_url on the primary rp.pl article to confirm only ONE variant (with Rozwój Plus split out) was published.",
+    "Explicitly checked that no August 2026 IBRiS/Rz poll existed yet, confirming 24-25 July as the resolving poll.",
+    "Responded correctly to the premortem: removed the resolver-invalid baseline fork and recentered from median 10.5 to 12.6 with documented, re-run Monte Carlo percentiles."
+  ],
+  "weaknesses": [
+    "The initial Monte Carlo over-weighted a resolver-invalid 'baseline reabsorption' fork despite the agent's own findings file conceding 'rp.pl article ONLY presented the 17.3 scenario -> strongly favors +12.8' — an internal contradiction that required the premortem to resolve.",
+    "The ~28% new-poll probability is asserted from cadence reasoning but never stress-tested against a concrete signal (e.g., whether IBRiS pre-announced a follow-up), leaving the entire lower tail resting on one soft parameter.",
+    "Did not probe whether Wikipedia would log the poll with a low-20s baseline PiS (a plausible resolver backup path) beyond a single fetch that returned only the article intro — the Wikipedia table was never actually extracted."
+  ],
+  "pipeline": {
+    "issues": [
+      "Two asknews tools (search_news, do_news_research) returned 403 Forbidden due to plan-tier restrictions — minor wasted calls but no impact since search/research/fetch_url covered the need.",
+      "ToolSearch returned empty results twice, adding no value.",
+      "The parent trace file exceeded the read tool's size/token limits (345KB / 26k tokens), and the premortem sub-agent's trace_at_premortem.md hit a 102k-token read cap, forcing Grep-based navigation — a minor friction, not a forecast-affecting issue."
+    ],
+    "clean": false
+  },
+  "future_leak": {
+    "verdict": "CLEAN",
+    "evidence": [
+      "Question dated on/around 2026-07-27; resolving poll (fieldwork 24-25 July, published ~27 July) falls at the start of the window and was legitimately available.",
+      "The agent explicitly searched for and confirmed no August 2026 IBRiS/Rz poll existed as of 27 July, rather than assuming a future result.",
+      "All sources accessed carry accessed_at 2026-07-27; no post-cutoff information was used. This is effectively a live forecast, not a retrodict."
+    ]
+  },
+  "actionable_improvements": [
+    "Down-weight resolver-interpretation forks that contradict the criteria BEFORE the premortem gate — the agent's own findings file already noted 'rp.pl ONLY presented the 17.3 scenario,' so the baseline fork should never have received 38% weight in the first Monte Carlo.",
+    "Stress-test the single dominant free parameter (the ~28% new-poll probability) with an explicit sensitivity band, since the entire lower tail depends on it.",
+    "When a backup resolution source (Wikipedia) is cited as a what-would-change-my-mind, extract its actual table rather than settling for the article intro."
+  ]
+}
