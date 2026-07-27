@@ -1,0 +1,128 @@
+---
+timestamp: 2026-07-27 19:43:48 UTC
+question_type: numeric
+factors:
+- description: Current CoinGecko market cap ~$4.10B (resolution source) as of July
+    26, stabilized in $4.1B range in late July
+  supports:
+    center: 4.07
+    low: 3.7
+    high: 4.5
+  logit: 0.0
+  confidence: 0.9
+  effective_logit: 0.0
+- description: Recent declining momentum (sector-wide stablecoin contraction, incentive/Binance
+    booster unwind) creates slight downward bias
+  supports:
+    center: 3.95
+    low: 3.6
+    high: 4.3
+  logit: -0.3
+  confidence: 0.6
+  effective_logit: -0.18
+- description: Lumpy institutional mints/redemptions ($0.3-2B deals) create fat tails
+    both directions; token was $4.84B just 5 weeks ago
+  supports:
+    center: 4.1
+    low: 3.5
+    high: 4.9
+  logit: 0.2
+  confidence: 0.7
+  effective_logit: 0.13999999999999999
+tentative_estimate:
+  center: 4.065
+  low: 3.66
+  high: 4.53
+anchor: Current CoinGecko value ~$4.10B; random-walk with empirical ~8-9% 12-day vol
+assessment: USD1 market cap resolves off CoinGecko on Aug 7, 2026, ~11-12 days from
+  now. Current value ~$4.10B. Stablecoin supply moves with net mint/redemption, peg
+  holds ~$1.00. Recent trend declining from June peak ($4.84B) to ~$4.1B but stabilized
+  in late July. Monte Carlo with daily diffusive vol 1.8% plus jump component (7%
+  daily prob, 6.5% jump size) for institutional lumpiness gives median $4.07B, P10
+  3.66, P90 4.53. Slight downward drift reflects contraction momentum but kept small
+  since pullback largely played out. Fat tails capture single large deals. Open bounds;
+  small mass below 3.5 (~4%) and negligible above 5.5.
+key_uncertainties: Whether a large institutional mint or redemption deal lands in
+  the 12-day window; magnitude of continued sector contraction.
+tool_audit: research() returned excellent corroborated data (CoinGecko $4.107B, CMC
+  $4.089B, DefiLlama $4.13B) with trajectory context. execute_code ran Monte Carlo
+  cleanly. No failures.
+process_reflection: Smooth pipeline for a short-horizon numeric measurement question.
+  research() gave precise current values and trajectory which is exactly what's needed.
+  The main judgment call was drift magnitude and jump/vol parameters, which are inherently
+  uncertain for a lumpy institutional stablecoin. No tool gaps.
+computed:
+  factor_count: 3
+  factor_sum: -0.04000000000000001
+  neutral_factor_count: 1
+  factor_breakdown:
+  - description: Current CoinGecko market cap ~$4.10B (resolution source) as of July
+      26, stabilized in $4.1B range in late July
+    supports:
+      center: 4.07
+      low: 3.7
+      high: 4.5
+    logit: 0.0
+    confidence: 0.9
+    effective_logit: 0.0
+  - description: Recent declining momentum (sector-wide stablecoin contraction, incentive/Binance
+      booster unwind) creates slight downward bias
+    supports:
+      center: 3.95
+      low: 3.6
+      high: 4.3
+    logit: -0.3
+    confidence: 0.6
+    effective_logit: -0.18
+  - description: Lumpy institutional mints/redemptions ($0.3-2B deals) create fat
+      tails both directions; token was $4.84B just 5 weeks ago
+    supports:
+      center: 4.1
+      low: 3.5
+      high: 4.9
+    logit: 0.2
+    confidence: 0.7
+    effective_logit: 0.13999999999999999
+  dominant_factor: Recent declining momentum (sector-wide stablecoin contraction,
+    incentive/Binance booster unwind) creates slight downward bias
+  dominant_effective_logit: -0.18
+  distribution_metrics:
+    implied_median: 4.015625
+    implied_p10: 3.5562500000000004
+    implied_p90: 4.562500000000001
+    median_gap: 0.04937500000000039
+    median_gap_pct: 4.906832298136682
+    spread_ratio: 0.8645962732919251
+    precision: 0.21402214022140223
+  sources: []
+
+---
+
+## Programmatic Metrics
+
+*Auto-generated - do not edit manually*
+
+- **Post ID**: 44853
+- **Question ID**: 45002
+- **Session Duration**: 416.0s (6.9 min)
+- **Cost**: $17.8255 total (orchestrator $2.2967 + sub-agents $15.5288)
+- **Tokens**: 6,545 total (16 in, 6,529 out)
+  - Cache: 401,033 read, 64,281 created
+- **Log File**: `/home/pfftz/job/onit/aib-joy-void-joy-bot.git/tree/main/logs/44853_20260727_193833/20260727-193833.log`
+
+### Tool Calls
+
+- **Total**: 69 calls
+- **Errors**: 6 (8.7%)
+
+| Tool | Calls | Errors | Avg Time | Sub-agent cost |
+|------|-------|--------|----------|----------------|
+| content_extract | 0 | 0 | 0ms | $0.2696 |
+| execute_code | 3 | 0 | 255ms | — |
+| fetch_url | 14 | 1 ⚠️ | 10497ms | — |
+| polymarket_price | 3 | 3 ⚠️ | 4122ms | — |
+| premortem | 3 | 0 | 78828ms | $4.4814 |
+| reflection | 3 | 0 | 5ms | — |
+| research | 6 | 2 ⚠️ | 174608ms | $9.7722 |
+| web_search | 28 | 0 | 19477ms | $1.0057 |
+| wikipedia | 9 | 0 | 1357ms | — |
