@@ -37,7 +37,8 @@ from aib.agent.session import (
 from aib.paths import WORLDVIEW_PATH
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import get_collector, tracked
+from aib.tools.metrics import MetricsSummaryWithCost, costs, get_metrics_summary
+from lup.telemetry.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
 
 if TYPE_CHECKING:
@@ -275,7 +276,7 @@ state, key_facts (research), data_points (research).
 # --- Prompt Building ---
 
 
-def build_tool_metrics_section(summary: dict[str, Any]) -> str:
+def build_tool_metrics_section(summary: MetricsSummaryWithCost) -> str:
     """Render the programmatic tool-call metrics for the reviewer.
 
     The reviewer uses this as ground truth when cross-checking the agent's
@@ -387,7 +388,7 @@ def build_reviewer_prompt(
             f"## Tool audit (agent's narrative)\n\n{reflection_input.tool_audit}"
         )
 
-    metrics_summary = get_collector().get_summary()
+    metrics_summary = get_metrics_summary()
     if metrics_summary.get("total_tool_calls", 0) > 0:
         sections.append(build_tool_metrics_section(metrics_summary))
 
@@ -581,7 +582,7 @@ async def run_reviewer(
                 elif isinstance(message, ResultMessage):
                     structured_output = message.structured_output
                     if message.total_cost_usd is not None:
-                        get_collector().record_cost("premortem", message.total_cost_usd)
+                        costs.record("premortem", message.total_cost_usd)
 
         final_text = text_blocks[-1] if text_blocks else ""
 

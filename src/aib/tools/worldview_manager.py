@@ -20,7 +20,7 @@ from claude_agent_sdk.types import TextBlock
 from pydantic import BaseModel, Field
 
 from aib.agent.client import REMOVE, build_client
-from aib.tools.metrics import get_collector
+from aib.tools.metrics import costs
 from aib.agent.display import make_agent_prefix, print_block
 from aib.agent.hooks import create_allowed_tools_hook
 from aib.agent.resolver import (
@@ -701,9 +701,7 @@ async def run_survey() -> list[Issue]:
                         print_block(block, prefix=prefix)
                 if isinstance(message, ResultMessage):
                     if message.total_cost_usd is not None:
-                        get_collector().record_cost(
-                            "worldview_survey", message.total_cost_usd
-                        )
+                        costs.record("worldview_survey", message.total_cost_usd)
     finally:
         survey_issues.reset(token)
 
@@ -744,7 +742,7 @@ async def fix_issue(issue: Issue) -> str:
                         text_blocks.append(block.text)
             if isinstance(message, ResultMessage):
                 if message.total_cost_usd is not None:
-                    get_collector().record_cost("worldview_fix", message.total_cost_usd)
+                    costs.record("worldview_fix", message.total_cost_usd)
 
     return text_blocks[-1] if text_blocks else f"{issue.kind}: no report"
 

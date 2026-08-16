@@ -31,8 +31,8 @@ from aib.agent.models import (
 )
 from aib.agent.session import ReviewState
 from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from lup.telemetry.metrics import tracked
 
 logger = logging.getLogger(__name__)
 

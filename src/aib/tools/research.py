@@ -36,7 +36,7 @@ from aib.retrodict_context import retrodict_cutoff
 from aib.agent.session import get_session, register_nested_trace
 from aib.paths import WORLDVIEW_PATH
 from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.metrics import get_collector
+from aib.tools.metrics import costs
 from aib.worldview.lookup import (
     all_slugs,
     amend_research_entry,
@@ -352,7 +352,7 @@ async def run_research_agent(
                     len(so_tool_blocks),
                 )
                 if message.total_cost_usd is not None:
-                    get_collector().record_cost("research", message.total_cost_usd)
+                    costs.record("research", message.total_cost_usd)
                 session_id = message.session_id
                 if message.structured_output:
                     try:

@@ -14,8 +14,8 @@ from typing import Any
 from claude_agent_sdk import SdkMcpTool
 from pydantic import BaseModel
 
-from aib.tools.metrics import tracked
 from aib.tools.responses import mcp_error, mcp_success
+from lup.telemetry.metrics import tracked
 
 logger = logging.getLogger(__name__)
 

@@ -32,7 +32,7 @@ from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
 from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.metrics import get_collector
+from aib.tools.metrics import costs
 from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
@@ -313,7 +313,7 @@ async def _raw_web_search(
                     message.is_error,
                 )
                 if message.total_cost_usd is not None:
-                    get_collector().record_cost("web_search", message.total_cost_usd)
+                    costs.record("web_search", message.total_cost_usd)
 
     seen_urls: set[str] = set()
     results: list[SearchResult] = []

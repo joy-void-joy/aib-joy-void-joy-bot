@@ -204,9 +204,9 @@ async def one_shot(
                 structured_output = message.structured_output
                 result_text = message.result
                 if cost_tool_name and message.total_cost_usd is not None:
-                    from aib.tools.metrics import get_collector
+                    from aib.tools.metrics import costs
 
-                    get_collector().record_cost(cost_tool_name, message.total_cost_usd)
+                    costs.record(cost_tool_name, message.total_cost_usd)
 
     if result_text and result_text.startswith(AUP_REFUSAL_PREFIX):
         raise AupRefusalError(result_text)

@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from aib.tools.metrics import MetricsCollector
-
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
 
@@ -27,7 +25,6 @@ class ForecastSession:
 
     __slots__ = (
         "current_depth",
-        "metrics",
         "modified_inputs",
         "nested_traces",
         "parent_slug",
@@ -47,7 +44,6 @@ class ForecastSession:
         current_depth: int = 0,
         parent_slug: str | None = None,
     ) -> None:
-        self.metrics = MetricsCollector()
         self.modified_inputs: dict[str, dict[str, Any]] = {}
         self.nested_traces: dict[str, str] = {}
         self.run_forecast_fn = run_forecast_fn

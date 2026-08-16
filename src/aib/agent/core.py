@@ -72,7 +72,12 @@ from aib.paths import (
     sessions_dir,
     trace_logs_dir,
 )
-from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
+from aib.tools.metrics import (
+    MetricsSummaryWithCost,
+    get_metrics_summary,
+    log_metrics_summary,
+    reset_metrics,
+)
 from aib.tools.sandbox import Sandbox
 from aib.worldview.lookup import register_main_forecast
 
@@ -217,7 +222,7 @@ class ReasoningLogger:
 def append_metrics_to_reflection(
     meta_file: Path,
     *,
-    metrics: dict[str, Any] | None,
+    metrics: MetricsSummaryWithCost | None,
     duration_seconds: float | None,
     cost_usd: float | None,
     token_usage: TokenUsage | None,
@@ -1243,7 +1248,7 @@ async def run_forecast(
     # Log tool metrics summary
     log_metrics_summary()
     metrics = get_metrics_summary()
-    output.tool_metrics = metrics
+    output.tool_metrics = dict(metrics)
 
     # Check for reflection (required for top-level forecasts)
     if post_id > 0:
@@ -1259,7 +1264,7 @@ async def run_forecast(
         if reflection_file.exists():
             output.meta = ForecastMeta(
                 meta_file_path=str(reflection_file),
-                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                tools_used_count=metrics["total_tool_calls"],
                 subagents_used=subagents_used,
             )
             logger.info("Found reflection at %s", reflection_file)
@@ -1285,7 +1290,7 @@ async def run_forecast(
             )
             output.meta = ForecastMeta(
                 meta_file_path=None,
-                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                tools_used_count=metrics["total_tool_calls"],
                 subagents_used=subagents_used,
             )
 
