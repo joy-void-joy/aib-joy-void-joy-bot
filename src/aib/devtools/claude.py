@@ -17,8 +17,9 @@ import sh
 import typer
 from typer.core import TyperGroup
 
+from lup.workspace.paths import project_root
+
 from aib.devtools.usage import app as usage_app
-from aib.paths import PROJECT_ROOT
 from aib.profiles import (
     CLAUDE_CONFIG_DIR,
     UnknownProfileError,
@@ -66,7 +67,7 @@ def run_claude(
 
         args.extend(["--append-system-prompt", get_forecasting_system_prompt()])
 
-    plugin_dir = PROJECT_ROOT / ".claude" / "plugins" / "aib"
+    plugin_dir = project_root() / ".claude" / "plugins" / "aib"
     if not no_plugin:
         if plugin_dir.is_dir():
             args.extend(["--plugin-dir", str(plugin_dir)])

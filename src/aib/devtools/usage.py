@@ -192,7 +192,9 @@ def fetch_exa_usage() -> ExaUsage | None:
 
 def fetch_asknews_usage() -> AskNewsUsage | None:
     """Count AskNews API calls (monthly and tournament) from forecast traces."""
-    from aib.paths import iter_forecast_files, parse_timestamp
+    from lup.workspace.paths import parse_timestamp
+
+    from aib.paths import iter_forecast_files
 
     now = datetime.now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

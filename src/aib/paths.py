@@ -1,8 +1,13 @@
-"""Centralized path constants and helpers for forecast data.
+"""Forecast data paths — the layout that is this project's rather than lup's.
 
-All forecast-related paths are routed through this module. Writers use
-version-specific directories; readers default to the current AGENT_VERSION
-with progressive semver fallback when data is insufficient.
+The session kernel lives in :mod:`lup.workspace.paths`: the project root, the
+notes and traces directories, the feedback directory, the timestamp format,
+and the versioned ``sessions/`` and ``logs/`` directories. Both layouts are
+``notes/traces/<version>/…``, so this module reads the same tree lup writes.
+
+What stays here is what forecasting adds on top: the forecast and retrodict
+directories, the worldview store, the A/B trace variant, semver version-scope
+resolution, and the cross-version iteration those readers need.
 
 Layout:
     notes/traces/<version>/forecasts/<post_id>/<timestamp>.json
@@ -19,61 +24,31 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
-from aib.version import AGENT_VERSION
+from lup.workspace.paths import (
+    agent_version,
+    notes_path,
+    parse_timestamp,
+    traces_path,
+)
+from lup.workspace.paths import sessions_dir as lup_sessions_dir
+from lup.workspace.paths import trace_logs_dir as lup_trace_logs_dir
 
 logger = logging.getLogger(__name__)
 
-
-def _find_project_root() -> Path:
-    """Find project root by walking up to pyproject.toml."""
-    current = Path(__file__).resolve().parent
-    for parent in [current, *current.parents]:
-        if (parent / "pyproject.toml").exists():
-            return parent
-    raise RuntimeError("Could not find project root (no pyproject.toml found)")
-
-
-# ── Root paths ──────────────────────────────────────────────────────
-PROJECT_ROOT = _find_project_root()
-NOTES_PATH = PROJECT_ROOT / "notes"
-RUNTIME_LOGS_PATH = PROJECT_ROOT / "logs"
-
-# ── Versioned trace paths ───────────────────────────────────────────
-TRACES_PATH = NOTES_PATH / "traces"
-
-FEEDBACK_PATH = NOTES_PATH / "feedback_loop"
-
 # ── Agent SDK spawn cwd: real isolation outside the user's worktree ──
-# Lives under the system temp dir, not NOTES_PATH, so the SDK subprocess
-# working directory (and anything written relative to it) never lands in
-# or gets committed to the git tree.
+# Lives under the system temp dir, not the notes directory, so the SDK
+# subprocess working directory (and anything written relative to it) never
+# lands in or gets committed to the git tree.
 AGENT_CWD = Path(tempfile.gettempdir()) / "aib-agent-cwd"
 
 # ── Worldview store paths (version-independent) ───────────────────
-WORLDVIEW_PATH = NOTES_PATH / "worldview"
+WORLDVIEW_PATH = notes_path() / "worldview"
 WORLDVIEW_RESEARCH_PATH = WORLDVIEW_PATH / "research"
 WORLDVIEW_FORECASTS_PATH = WORLDVIEW_PATH / "forecasts"
 WORLDVIEW_ARCHIVE_PATH = WORLDVIEW_PATH / "archive"
 WORLDVIEW_TRACES_PATH = WORLDVIEW_PATH / "traces"
 
-_TIMESTAMP_FMT = "%Y%m%d_%H%M%S"
-_TIMESTAMP_RE = re.compile(r"\d{8}_\d{6}")
-
-
-def parse_timestamp(name: str) -> datetime:
-    """Parse the last YYYYMMDD_HHMMSS occurrence from a filename or string.
-
-    Handles both forecast filenames (YYYYMMDD_HHMMSS.json) and retrodict
-    filenames (YYYY-MM-DD_YYYYMMDD_HHMMSS.json) by extracting the last
-    matching pattern.
-    """
-    matches = _TIMESTAMP_RE.findall(Path(name).stem)
-    if not matches:
-        raise ValueError(f"No YYYYMMDD_HHMMSS timestamp found in: {name}")
-    return datetime.strptime(matches[-1], _TIMESTAMP_FMT)
-
-
-REGRESSION_SUITE_PATH = NOTES_PATH / "regression_suite.json"
+REGRESSION_SUITE_PATH = notes_path() / "regression_suite.json"
 
 
 # ── Write paths (version-specific) ─────────────────────────────────
@@ -90,28 +65,36 @@ def trace_version() -> str:
     from aib.config import settings
 
     if settings.trace_variant is None:
-        return AGENT_VERSION
-    return f"{AGENT_VERSION}+{settings.trace_variant}"
+        return agent_version()
+    return f"{agent_version()}+{settings.trace_variant}"
 
 
 def forecasts_dir(version: str | None = None) -> Path:
     """Directory for forecast JSONs: notes/traces/<version>/forecasts/"""
-    return TRACES_PATH / (version or trace_version()) / "forecasts"
+    return traces_path() / (version or trace_version()) / "forecasts"
 
 
 def retrodict_dir(version: str | None = None) -> Path:
     """Directory for retrodict JSONs: notes/traces/<version>/retrodict/"""
-    return TRACES_PATH / (version or trace_version()) / "retrodict"
+    return traces_path() / (version or trace_version()) / "retrodict"
 
 
 def sessions_dir(version: str | None = None) -> Path:
-    """Directory for session notes: notes/traces/<version>/sessions/"""
-    return TRACES_PATH / (version or trace_version()) / "sessions"
+    """Directory for session notes: notes/traces/<version>/sessions/
+
+    lup owns the layout; what this adds is the default. lup defaults to the
+    released ``agent_version()``, and an A/B arm has to write under its own
+    variant directory or overwrite the baseline it is being compared against.
+    """
+    return lup_sessions_dir(version or trace_version())
 
 
 def trace_logs_dir(version: str | None = None) -> Path:
-    """Directory for reasoning logs: notes/traces/<version>/logs/"""
-    return TRACES_PATH / (version or trace_version()) / "logs"
+    """Directory for reasoning logs: notes/traces/<version>/logs/
+
+    Variant-defaulted for the same reason as :func:`sessions_dir`.
+    """
+    return lup_trace_logs_dir(version or trace_version())
 
 
 # ── Read paths (cross-version iteration) ────────────────────────────
@@ -119,10 +102,11 @@ def trace_logs_dir(version: str | None = None) -> Path:
 
 def _version_dirs() -> list[Path]:
     """Return all version directories under notes/traces/, sorted."""
-    if not TRACES_PATH.exists():
+    traces = traces_path()
+    if not traces.exists():
         return []
     return sorted(
-        d for d in TRACES_PATH.iterdir() if d.is_dir() and not d.name.startswith(".")
+        d for d in traces.iterdir() if d.is_dir() and not d.name.startswith(".")
     )
 
 
@@ -135,7 +119,7 @@ def iter_forecast_dirs(
     Yields paths like: notes/traces/1.2.1/forecasts/42163/
     """
     if version:
-        ver_dirs = [TRACES_PATH / version]
+        ver_dirs = [traces_path() / version]
     else:
         ver_dirs = _version_dirs()
 
@@ -171,7 +155,7 @@ def iter_retrodict_dirs(
     Yields paths like: notes/traces/1.2.1/retrodict/42163/
     """
     if version:
-        ver_dirs = [TRACES_PATH / version]
+        ver_dirs = [traces_path() / version]
     else:
         ver_dirs = _version_dirs()
 
@@ -341,7 +325,7 @@ def resolve_version(
     if all_versions:
         return None, None
 
-    effective = version if version is not None else AGENT_VERSION
+    effective = version if version is not None else agent_version()
     semver = parse_semver(effective)
     available = [d.name for d in _version_dirs()]
 

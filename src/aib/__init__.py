@@ -1,5 +1,5 @@
 """AIB - Metaculus AI Benchmarking Forecasting Bot."""
 
-from aib.version import AGENT_VERSION
+from lup.workspace.paths import agent_version
 
-__version__ = AGENT_VERSION
+__version__ = agent_version()

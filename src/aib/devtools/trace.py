@@ -10,13 +10,13 @@ from pathlib import Path
 
 import typer
 
+from lup.workspace.paths import agent_version, runtime_logs_path
+
 from aib.paths import (
-    RUNTIME_LOGS_PATH,
     find_latest_forecast_file,
     iter_forecast_dirs,
     resolve_version,
 )
-from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -36,7 +36,7 @@ def find_forecast(post_id: int) -> dict | None:
 
 def find_log(post_id: int) -> Path | None:
     """Find the log directory for a post ID."""
-    log_dir = RUNTIME_LOGS_PATH / str(post_id)
+    log_dir = runtime_logs_path() / str(post_id)
     if log_dir.exists():
         return log_dir
     return None
@@ -108,7 +108,7 @@ def show(
 def list_forecasts(
     limit: int = typer.Option(20, "-n", "--limit", help="Number of forecasts to show"),
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -173,7 +173,7 @@ def list_forecasts(
 def show_errors(
     limit: int = typer.Option(10, "-n", "--limit", help="Number of forecasts to check"),
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -252,7 +252,7 @@ MAX_RESULT_LEN = 500
 
 def _find_log_file(post_id: int) -> Path | None:
     """Find the log file for a given post ID."""
-    candidates = sorted(RUNTIME_LOGS_PATH.glob(f"{post_id}_*/*.log"), reverse=True)
+    candidates = sorted(runtime_logs_path().glob(f"{post_id}_*/*.log"), reverse=True)
     return candidates[0] if candidates else None
 
 
@@ -379,11 +379,11 @@ def show_log(
 @app.command("logs")
 def list_logs() -> None:
     """List all available log directories."""
-    if not RUNTIME_LOGS_PATH.exists():
+    if not runtime_logs_path().exists():
         typer.echo("No logs directory found")
         raise typer.Exit(1)
 
-    dirs = sorted(RUNTIME_LOGS_PATH.iterdir())
+    dirs = sorted(runtime_logs_path().iterdir())
     for d in dirs:
         if d.is_dir():
             logs = list(d.glob("*.log"))

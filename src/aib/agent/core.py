@@ -65,9 +65,9 @@ from aib.agent.numeric import (
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.config import settings
 from aib.agent.session import ForecastSession, reset_session, set_session
+from lup.workspace.paths import runtime_logs_path, traces_path
+
 from aib.paths import (
-    RUNTIME_LOGS_PATH,
-    TRACES_PATH,
     forecasts_dir,
     sessions_dir,
     trace_logs_dir,
@@ -396,7 +396,7 @@ def setup_notes_folder(
         forecasts=forecasts_path,
         reasoning_log=reasoning_log,
         rw=[session_path, forecasts_path],
-        ro=[TRACES_PATH],
+        ro=[traces_path()],
     )
 
 
@@ -912,7 +912,9 @@ async def run_forecast(
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
     log_path = (
-        RUNTIME_LOGS_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
+        runtime_logs_path()
+        / session_id
+        / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if current_depth == 0:
@@ -926,11 +928,11 @@ async def run_forecast(
     logging.getLogger("aib").addHandler(_log_handler)
 
     # Session-specific scratch directory for sandbox file exchange
-    sandbox_shared_dir = RUNTIME_LOGS_PATH / session_id / "sandbox-shared"
+    sandbox_shared_dir = runtime_logs_path() / session_id / "sandbox-shared"
     sandbox_shared_dir.mkdir(parents=True, exist_ok=True)
 
     # Per-session downloads directory (PDFs, arXiv papers, etc.)
-    session_downloads = RUNTIME_LOGS_PATH / session_id / "downloads"
+    session_downloads = runtime_logs_path() / session_id / "downloads"
     session_downloads.mkdir(parents=True, exist_ok=True)
     downloads_token = downloads_dir.set(session_downloads)
 

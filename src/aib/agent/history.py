@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
 from aib.config import settings
+from lup.workspace.paths import parse_timestamp
+
 from aib.paths import (
     forecasts_dir,
     find_latest_forecast_file,
@@ -25,7 +27,6 @@ from aib.paths import (
     iter_retrodict_files,
     iter_session_dirs,
     iter_trace_log_files,
-    parse_timestamp,
     retrodict_dir,
     trace_version,
 )

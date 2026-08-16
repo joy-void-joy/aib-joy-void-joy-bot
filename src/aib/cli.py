@@ -32,7 +32,8 @@ from aib.variants import (
     select_variants,
     variant_env,
 )
-from aib.version import AGENT_VERSION, load_agent_version
+from lup.workspace.paths import agent_version, project_root, read_agent_version
+
 from aib.agent.history import (
     RetrodictComparison,
     commit_forecast,
@@ -1400,10 +1401,10 @@ def loop(
     print("Press Ctrl+C to stop\n")
 
     while True:
-        disk_version = load_agent_version()
-        if disk_version != AGENT_VERSION:
+        disk_version = read_agent_version(project_root())
+        if disk_version != agent_version():
             print(
-                f"\n🔄 Agent code changed on disk ({AGENT_VERSION} → {disk_version}); "
+                f"\n🔄 Agent code changed on disk ({agent_version()} → {disk_version}); "
                 "restarting loop to run the new version..."
             )
             sys.stdout.flush()
@@ -1644,7 +1645,7 @@ def ab(
             print(f"      ❌ {r.post_id} exited {r.returncode}")
             print(f"         {r.tail.splitlines()[-1] if r.tail else '(no output)'}")
 
-    version = load_agent_version()
+    version = read_agent_version(project_root())
     print("\nCompare with:")
     for a, b in zip(variants, variants[1:]):
         print(

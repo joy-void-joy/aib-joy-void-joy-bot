@@ -16,7 +16,9 @@ def test_loop_restarts_when_version_changes_on_disk(
     def fake_execv(executable: str, argv: list[str]) -> None:
         raise LoopRestart
 
-    monkeypatch.setattr(cli, "load_agent_version", lambda: cli.AGENT_VERSION + "-next")
+    monkeypatch.setattr(
+        cli, "read_agent_version", lambda _root: cli.agent_version() + "-next"
+    )
     monkeypatch.setattr(cli.os, "execv", fake_execv)
 
     with pytest.raises(LoopRestart):

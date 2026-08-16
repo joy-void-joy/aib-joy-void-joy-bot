@@ -15,9 +15,9 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from aib.paths import NOTES_PATH
+from lup.workspace.paths import notes_path
 
-VARIANTS_PATH = NOTES_PATH / "variants.json"
+VARIANTS_PATH = notes_path() / "variants.json"
 
 NAME_ALLOWED = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.")
 

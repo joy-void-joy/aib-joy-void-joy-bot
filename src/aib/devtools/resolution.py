@@ -857,13 +857,13 @@ def backfill_criteria(
     scheduled_resolve_time, and scheduled_close_time from trace files.
     """
     from aib.agent.history import _update_forecast_json
-    from aib.paths import TRACES_PATH
+    from lup.workspace.paths import traces_path
 
     from tqdm import tqdm
 
     fields_by_post: dict[int, dict[str, str | None]] = {}
     for version_dir in tqdm(
-        sorted(TRACES_PATH.iterdir()), desc="Scanning traces", unit="ver"
+        sorted(traces_path().iterdir()), desc="Scanning traces", unit="ver"
     ):
         sessions = version_dir / "sessions"
         if not sessions.is_dir():

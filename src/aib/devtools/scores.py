@@ -20,16 +20,16 @@ from typing import Literal
 
 import typer
 
+from lup.workspace.paths import agent_version, parse_timestamp
+
 from aib.paths import (
     load_all_forecast_jsons,
     load_all_retrodict_jsons,
     match_versions,
     parse_semver,
-    parse_timestamp,
     resolve_version,
 )
 from aib.scoring import load_all_score_rows
-from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -443,7 +443,7 @@ def show(
         [], "--post-id", "-p", help="Filter by post ID(s); repeatable"
     ),
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -469,7 +469,7 @@ def show(
             typer.echo(f"No version directories match '{version}'.")
             raise typer.Exit(1)
     else:
-        versions_filter = match_versions(AGENT_VERSION)
+        versions_filter = match_versions(agent_version())
         if not versions_filter:
             versions_filter = None
     rows = load_all_score_rows(versions=versions_filter)
@@ -536,7 +536,7 @@ def show(
 @app.command()
 def summary(
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -688,7 +688,7 @@ def compare(
 @app.command()
 def regression(
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -763,7 +763,7 @@ def regression(
 def extremes(
     top_n: int = typer.Option(10, "-n", help="Number of best/worst to show"),
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -1603,7 +1603,7 @@ def track_record_cmd(
     ),
 ) -> None:
     """Display peer and baseline scores from forecast JSONs."""
-    effective_version = version if version is not None else AGENT_VERSION
+    effective_version = version if version is not None else agent_version()
     effective, warning = resolve_version(effective_version, all_versions)
     if warning:
         typer.echo(warning)

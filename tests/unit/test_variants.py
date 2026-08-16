@@ -55,23 +55,25 @@ class TestTraceKeying:
     def test_baseline_version_is_untouched_without_a_variant(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        from lup.workspace.paths import agent_version
+
         from aib.config import settings
         from aib.paths import trace_version
-        from aib.version import AGENT_VERSION
 
         monkeypatch.setattr(settings, "trace_variant", None)
-        assert trace_version() == AGENT_VERSION
+        assert trace_version() == agent_version()
 
     def test_variant_shifts_the_write_directory(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        from lup.workspace.paths import agent_version
+
         from aib.config import settings
         from aib.paths import forecasts_dir, sessions_dir
-        from aib.version import AGENT_VERSION
 
         monkeypatch.setattr(settings, "trace_variant", "arm")
-        assert forecasts_dir().parent.name == f"{AGENT_VERSION}+arm"
-        assert sessions_dir().parent.name == f"{AGENT_VERSION}+arm"
+        assert forecasts_dir().parent.name == f"{agent_version()}+arm"
+        assert sessions_dir().parent.name == f"{agent_version()}+arm"
 
     def test_explicit_version_still_overrides(
         self, monkeypatch: pytest.MonkeyPatch
