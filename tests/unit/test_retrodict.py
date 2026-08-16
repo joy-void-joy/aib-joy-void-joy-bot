@@ -109,6 +109,7 @@ class TestRetrodictHooks:
         pre_hook = pre_hooks[0].hooks[0]
         input_data: PreToolUseHookInput = {
             "hook_event_name": "PreToolUse",
+            "tool_use_id": "",
             "tool_name": tool_name,
             "tool_input": tool_input,
             "session_id": "",
