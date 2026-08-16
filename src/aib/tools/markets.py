@@ -27,7 +27,7 @@ from aib.tools.redact import redact_future_info
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
 from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 from aib.tools.throttle import markets_throttle
 
 logger = logging.getLogger(__name__)

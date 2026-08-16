@@ -37,7 +37,7 @@ from aib.tools.exa import exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
 from aib.tools.fetch_routes import domain_dispatch
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 from aib.tools.throttle import exa_throttle, wikipedia_throttle
 from aib.tools.wayback import (
     WaybackRateLimitError,

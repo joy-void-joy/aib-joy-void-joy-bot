@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 
 logger = logging.getLogger(__name__)
 

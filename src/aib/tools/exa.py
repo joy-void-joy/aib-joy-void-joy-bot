@@ -12,7 +12,7 @@ import httpx
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 from aib.tools.wayback import wayback_validate_results
 
 logger = logging.getLogger(__name__)

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from playwright.async_api import Page
 
 from aib.devtools.scores import DEFAULT_USER_ID, fetch_scores, resolve_scraped
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 from aib.agent.history import update_forecast_file
 from aib.paths import (
     iter_forecast_dirs,

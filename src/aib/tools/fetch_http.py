@@ -18,7 +18,7 @@ from mcp.types import TextContent
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from aib.tools.responses import mcp_error, mcp_success
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
