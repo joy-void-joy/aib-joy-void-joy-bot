@@ -9,7 +9,7 @@ errors — the decorator handles all MCP response formatting and logging.
 import logging
 import re
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, get_type_hints
 
 from claude_agent_sdk import SdkMcpTool
 from pydantic import BaseModel
@@ -58,7 +58,7 @@ def mcp_tool(
     def decorator(
         fn: Callable[..., Awaitable[Any]],
     ) -> SdkMcpTool[Any]:
-        annotations = fn.__annotations__
+        annotations = get_type_hints(fn)
         params = [k for k in annotations if k != "return"]
         if not params:
             raise TypeError(f"mcp_tool '{name}': function must have a typed parameter")

@@ -2,6 +2,10 @@
 
 aib-workflow plugin version history.
 
+## v1.3.0 (2026-07-24)
+
+Deny agent-initiated forecast runs; forecasts are user-initiated
+
 ## v1.2.1 (2026-07-16)
 
 clean-gone: cover remote-only stale branches, SSH-fallback push, PR-ref recoverability

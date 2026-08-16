@@ -79,24 +79,39 @@ REGRESSION_SUITE_PATH = NOTES_PATH / "regression_suite.json"
 # ── Write paths (version-specific) ─────────────────────────────────
 
 
-def forecasts_dir(version: str = AGENT_VERSION) -> Path:
+def trace_version() -> str:
+    """The version directory this process writes to.
+
+    An A/B run appends its variant label as semver build metadata, so a
+    variant's output lands beside the baseline instead of overwriting it.
+    `parse_semver` rejects the result, which keeps experimental runs out of
+    the released version's calibration aggregates until they are named.
+    """
+    from aib.config import settings
+
+    if settings.trace_variant is None:
+        return AGENT_VERSION
+    return f"{AGENT_VERSION}+{settings.trace_variant}"
+
+
+def forecasts_dir(version: str | None = None) -> Path:
     """Directory for forecast JSONs: notes/traces/<version>/forecasts/"""
-    return TRACES_PATH / version / "forecasts"
+    return TRACES_PATH / (version or trace_version()) / "forecasts"
 
 
-def retrodict_dir(version: str = AGENT_VERSION) -> Path:
+def retrodict_dir(version: str | None = None) -> Path:
     """Directory for retrodict JSONs: notes/traces/<version>/retrodict/"""
-    return TRACES_PATH / version / "retrodict"
+    return TRACES_PATH / (version or trace_version()) / "retrodict"
 
 
-def sessions_dir(version: str = AGENT_VERSION) -> Path:
+def sessions_dir(version: str | None = None) -> Path:
     """Directory for session notes: notes/traces/<version>/sessions/"""
-    return TRACES_PATH / version / "sessions"
+    return TRACES_PATH / (version or trace_version()) / "sessions"
 
 
-def trace_logs_dir(version: str = AGENT_VERSION) -> Path:
+def trace_logs_dir(version: str | None = None) -> Path:
     """Directory for reasoning logs: notes/traces/<version>/logs/"""
-    return TRACES_PATH / version / "logs"
+    return TRACES_PATH / (version or trace_version()) / "logs"
 
 
 # ── Read paths (cross-version iteration) ────────────────────────────

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from aib.config import settings
 from aib.paths import AGENT_CWD
+from aib.profiles import profile_env
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,15 @@ DEFAULT_EXTRA_ARGS: dict[str, str | None] = {
     "no-session-persistence": None,
     "strict-mcp-config": None,
 }
+# ENABLE_TOOL_SEARCH: unset means the harness defers tool schemas once they
+# exceed 10% of the context window, leaving the agent only tool *names* and a
+# ToolSearch tool to load them. A search with the wrong terms returns nothing,
+# so the agent concludes the capability does not exist and gives up without
+# ever calling the tool. The research sub-agent carries ~35 data tools and sits
+# well past that threshold, so every session must load schemas eagerly.
 DEFAULT_ENV: dict[str, str] = {
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    "ENABLE_TOOL_SEARCH": "false",
 }
 
 
@@ -100,13 +108,17 @@ def reject_ajv_unsafe_schema(schema: object) -> None:
 
 @asynccontextmanager
 async def build_client(
-    *, defaults: bool = True, **kwargs: Any
+    *, defaults: bool = True, profile: str | None = None, **kwargs: Any
 ) -> AsyncIterator[ClaudeSDKClient]:
     """Return a configured ClaudeSDKClient with project-wide defaults.
 
     Defaults (caller values win on conflict):
     - extra_args: no-session-persistence
     - env: openrouter routing, disable adaptive thinking, max effort
+
+    `profile` names a Claude account from the registry, falling back to
+    settings.profile. Passing it per call rather than through the process
+    environment is what lets concurrent sessions run on different accounts.
 
     Pass defaults=False to skip all defaults. Use REMOVE as a value
     to selectively drop a single default key.
@@ -120,7 +132,11 @@ async def build_client(
 
     if defaults:
         merged_extra = _merge(DEFAULT_EXTRA_ARGS, caller_extra)
-        merged_env = _merge({**settings.openrouter_env, **DEFAULT_ENV}, caller_env)
+        selected = profile if profile is not None else settings.profile
+        merged_env = _merge(
+            {**settings.openrouter_env, **profile_env(selected), **DEFAULT_ENV},
+            caller_env,
+        )
     else:
         merged_extra = {k: v for k, v in caller_extra.items() if v is not REMOVE}
         merged_env = {k: v for k, v in caller_env.items() if v is not REMOVE}
