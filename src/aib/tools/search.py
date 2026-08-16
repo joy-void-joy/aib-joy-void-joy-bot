@@ -478,7 +478,7 @@ async def search_exa(params: SearchExaInput) -> Any:
         livecrawl,
     )
 
-    async with exa_throttle:
+    async with exa_throttle.slot():
         formatted = await exa_search(
             params.query,
             params.num_results,
@@ -662,7 +662,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
                 return results
 
         if not cutoff_date and settings.asknews_api_key:
-            async with wikipedia_throttle:
+            async with wikipedia_throttle.slot():
                 wiki_results, asknews_results = await asyncio.gather(
                     _search(),
                     _asknews_wikipedia_search(query),
@@ -682,7 +682,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
                     )
             results = wiki_results
         else:
-            async with wikipedia_throttle:
+            async with wikipedia_throttle.slot():
                 results = await _search()
 
         if cutoff_date and results:
@@ -714,7 +714,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
 
     else:
         if cutoff_date:
-            async with wikipedia_throttle:
+            async with wikipedia_throttle.slot():
                 historical = await _fetch_wikipedia_historical_content(
                     query, cutoff_date
                 )
@@ -780,7 +780,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
                     "mode": mode,
                 }
 
-        async with wikipedia_throttle:
+        async with wikipedia_throttle.slot():
             result = await _fetch()
         if params.prompt:
             result["extract"] = await extract_with_prompt(

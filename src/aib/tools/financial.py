@@ -281,7 +281,7 @@ async def fred_series(params: FredSeriesInput) -> dict[str, Any]:
     try:
         from fredapi import Fred
 
-        async with fred_throttle:
+        async with fred_throttle.slot():
             fred = Fred(api_key=api_key)
 
             info = fred.get_series_info(series_id)
@@ -397,7 +397,7 @@ async def fred_search(params: FredSearchInput) -> dict[str, Any]:
     try:
         from fredapi import Fred
 
-        async with fred_throttle:
+        async with fred_throttle.slot():
             fred = Fred(api_key=api_key)
             results = fred.search(params.query)
 

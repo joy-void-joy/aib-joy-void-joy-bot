@@ -462,7 +462,7 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        async with trends_throttle:
+        async with trends_throttle.slot():
             pytrends, df = _fetch_trends_data([keyword], timeframe, geo, tz)
 
         if df.empty:
@@ -551,7 +551,7 @@ async def google_trends_compare(params: TrendsCompareInput) -> dict[str, Any]:
         timeframe = _cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        async with trends_throttle:
+        async with trends_throttle.slot():
             _, df = _fetch_trends_data(keywords, timeframe, geo, tz)
 
         if df.empty:

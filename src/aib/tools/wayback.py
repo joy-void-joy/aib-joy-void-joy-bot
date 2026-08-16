@@ -99,7 +99,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with wayback_throttle, httpx.AsyncClient(timeout=15.0) as client:
+    async with wayback_throttle.slot(), httpx.AsyncClient(timeout=15.0) as client:
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -215,7 +215,7 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with wayback_throttle, httpx.AsyncClient(timeout=20.0) as client:
+    async with wayback_throttle.slot(), httpx.AsyncClient(timeout=20.0) as client:
         try:
             response = await client.get(wayback_url, follow_redirects=True)
             response.raise_for_status()

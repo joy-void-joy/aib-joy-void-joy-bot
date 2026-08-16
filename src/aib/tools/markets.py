@@ -146,7 +146,7 @@ POLYMARKET_GAMMA_API = "https://gamma-api.polymarket.com"
 async def _search_polymarket(query: str) -> list[PolymarketEventData]:
     """Search Polymarket for markets matching query."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -557,7 +557,7 @@ MANIFOLD_API = "https://api.manifold.markets/v0"
 async def _search_manifold(query: str) -> list[ManifoldMarketData]:
     """Search Manifold Markets for markets matching query."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -692,7 +692,7 @@ async def _fetch_polymarket_history(
 ) -> list[PolymarketPricePoint]:
     """Fetch price history from Polymarket CLOB API."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -770,7 +770,7 @@ async def _fetch_manifold_bets(
 ) -> list[ManifoldBet]:
     """Fetch bets from Manifold to reconstruct historical prices."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -865,7 +865,7 @@ async def _fetch_kalshi_events(*, status: str | None = "open") -> list[KalshiEve
     if status is not None:
         params["status"] = status
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -933,7 +933,7 @@ async def _filter_relevant_kalshi_events(
 async def _fetch_kalshi_event(event_ticker: str) -> KalshiEventData:
     """Fetch a single Kalshi event with all its markets."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(
@@ -953,7 +953,7 @@ async def _fetch_kalshi_candlestick(
 ) -> list[KalshiCandlestick]:
     """Fetch candlestick data for a Kalshi market."""
     async with (
-        markets_throttle,
+        markets_throttle.slot(),
         httpx.AsyncClient(timeout=settings.http_timeout_seconds) as client,
     ):
         response = await client.get(

@@ -98,7 +98,7 @@ async def search_arxiv(params: SearchArxivInput) -> dict[str, Any]:
         sort_by=arxiv.SortCriterion.Relevance,
     )
 
-    async with arxiv_throttle:
+    async with arxiv_throttle.slot():
         client = arxiv.Client()
         results: list[dict[str, Any]] = []
 
@@ -179,7 +179,7 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
 
     html_url = f"https://arxiv.org/html/{paper_id}"
     async with (
-        arxiv_throttle,
+        arxiv_throttle.slot(),
         httpx.AsyncClient(timeout=_ARXIV_TIMEOUT, follow_redirects=True) as client,
     ):
         try:

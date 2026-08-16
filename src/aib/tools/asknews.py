@@ -51,7 +51,7 @@ async def _call_remote_once(
     api_key: str, tool_name: str, arguments: dict[str, Any]
 ) -> str:
     """Single attempt to call a tool on the remote AskNews MCP server."""
-    async with asknews_throttle:
+    async with asknews_throttle.slot():
         http_client = httpx.AsyncClient(
             timeout=60,
             headers={"x-api-key": api_key},
