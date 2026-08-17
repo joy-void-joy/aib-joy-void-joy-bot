@@ -514,7 +514,7 @@ def _resolve_text_arg(value: str) -> str:
 PROFILE_OPTION = typer.Option(
     "--profile",
     "-p",
-    help="Claude profile from ~/.lup/profiles.json (default: registry active)",
+    help="Claude account from .lup/profiles, as `harness profile` registers one",
 )
 
 

@@ -78,7 +78,7 @@ uv run forecast submit <question_id>
 # Forecast, submit, and post reasoning as a private comment
 uv run forecast submit <question_id> --comment
 
-# Run on a specific Claude account (registered in ~/.lup/profiles.json)
+# Run on a specific Claude account (register one with `harness profile add`)
 uv run forecast test <question_id> --profile work
 
 # Compare agent configurations side by side (see A/B Testing below)

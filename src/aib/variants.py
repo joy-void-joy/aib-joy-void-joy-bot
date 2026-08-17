@@ -40,7 +40,7 @@ class Variant(BaseModel):
     )
     profile: str | None = Field(
         default=None,
-        description="Claude account from ~/.lup/profiles.json. Distinct accounts let arms run concurrently without sharing a rate limit.",
+        description="Claude account from .lup/profiles. Distinct accounts let arms run concurrently without sharing a rate limit.",
     )
     runtime: str | None = Field(
         default=None,

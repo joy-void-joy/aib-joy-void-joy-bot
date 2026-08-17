@@ -156,7 +156,7 @@ class Settings(BaseSettings):
     profile: str | None = Field(
         default=None,
         validation_alias="AIB_PROFILE",
-        description="Claude profile from ~/.lup/profiles.json (None = registry active, then ~/.claude)",
+        description="Claude account from .lup/profiles (None = the active one, then the home already selected)",
     )
 
     # === Sandbox ===
