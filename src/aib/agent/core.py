@@ -807,9 +807,7 @@ async def run_forecast(
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
     log_path = (
-        runtime_logs_path()
-        / session_id
-        / effective_now().strftime("%Y%m%d-%H%M%S.log")
+        runtime_logs_path() / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if current_depth == 0:

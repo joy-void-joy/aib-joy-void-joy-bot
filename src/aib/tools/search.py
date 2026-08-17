@@ -816,9 +816,7 @@ async def wikipedia(
             result = await _fetch()
         extract = result["extract"]
         if params.prompt:
-            extract = await extract_with_prompt(
-                extract, params.prompt, result["url"]
-            )
+            extract = await extract_with_prompt(extract, params.prompt, result["url"])
         return WikipediaArticle(
             title=result["title"],
             url=result["url"],

@@ -243,9 +243,7 @@ def bump(
 def list_cmd() -> None:
     """List all agent versions from git history."""
     try:
-        log = str(
-            git("log", "--all", "--oneline", "--", *VERSION_HISTORY_PATHS)
-        )
+        log = str(git("log", "--all", "--oneline", "--", *VERSION_HISTORY_PATHS))
     except sh.ErrorReturnCode:
         typer.echo("No version history found.")
         return

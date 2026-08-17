@@ -352,7 +352,9 @@ def census_rows(
             return dataset.state_county(fields, state_fips, params.county or "*")
         case "tract":
             if not state_fips or not params.county:
-                raise ToolError("State and county are required for tract-level queries.")
+                raise ToolError(
+                    "State and county are required for tract-level queries."
+                )
             return dataset.state_county_tract(fields, state_fips, params.county, "*")
         case "place":
             if not state_fips:

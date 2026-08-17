@@ -257,9 +257,7 @@ async def fetch_live(url: str) -> ToolResponse | FetchResult:
     # Non-retryable client errors (4xx except 429, which was retried above)
     if 400 <= resp.status_code < 500:
         hint = _ERROR_HINTS.get(resp.status_code, "")
-        return mcp_response(
-            f"HTTP {resp.status_code} for {url}. {hint}", is_error=True
-        )
+        return mcp_response(f"HTTP {resp.status_code} for {url}. {hint}", is_error=True)
 
     # Extract text
     ct = resp.headers.get("content-type", "")
@@ -298,6 +296,4 @@ async def fetch_live(url: str) -> ToolResponse | FetchResult:
             is_error=True,
         )
 
-    return mcp_response(
-        f"No content could be extracted from {url}.", is_error=True
-    )
+    return mcp_response(f"No content could be extracted from {url}.", is_error=True)

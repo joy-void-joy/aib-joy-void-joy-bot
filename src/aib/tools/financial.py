@@ -891,8 +891,6 @@ class ConditionalReturnsOutput(BaseModel):
     data_period: str
 
 
-
-
 def _augment_stock_history(ticker: object, result: StockPrice, days: int) -> None:
     """Add recent daily closing prices to a stock price result (best-effort)."""
     try:

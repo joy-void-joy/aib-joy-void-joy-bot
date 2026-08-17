@@ -303,7 +303,8 @@ def compute_tail_stats(
     trailing_window = min(7, n)
     trailing_values = values[-trailing_window:] if trailing_window >= 2 else []
     diffs = [
-        trailing_values[i] - trailing_values[i - 1] for i in range(1, len(trailing_values))
+        trailing_values[i] - trailing_values[i - 1]
+        for i in range(1, len(trailing_values))
     ]
 
     return TailStats(
@@ -373,9 +374,7 @@ def fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
         if not top_queries and not rising_queries:
             return None
 
-        return RelatedQueries(
-            top_queries=top_queries, rising_queries=rising_queries
-        )
+        return RelatedQueries(top_queries=top_queries, rising_queries=rising_queries)
     except Exception:
         logger.warning("Related queries failed for '%s'", keyword, exc_info=True)
         return None
