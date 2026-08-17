@@ -37,8 +37,8 @@ lup-devtools
 │   ├── compare        Compare two agent versions on overlapping questions
 │   ├── regression     Regression suite results
 │   ├── extremes       Best/worst forecasts (--non-meta, --version, --type, -n)
-│   ├── strip          Strip plot of scores by agent version (watch mode)
-│   ├── trend          Scatter plot of peer scores over time (watch mode)
+│   ├── strip          Strip plot by agent version (--min-version, watch mode)
+│   ├── trend          Peer scores over time (--min-version, watch mode)
 │   ├── track-record   Peer and baseline scores from forecast JSONs
 │   └── backfill-cdf   Backfill CDF/numeric_bounds via Metaculus API
 │
@@ -122,6 +122,16 @@ lup-devtools
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup`
 (Metaculus Cup), `all` (cross-tournament).
+
+## The version floor
+
+The views that pool several versions into one picture start at
+`aib.paths.MIN_CHART_VERSION`, currently v7.0.0. Below it the scores measure
+an agent on a different framework and a different SDK, so a chart carrying
+both reads as a trend where there is only a change of subject. Pass
+`--min-version 0.0.0` for the whole history, or any other release to move the
+floor. An A/B arm is scoped by the release in its `<version>+<name>` label,
+so an experiment charts alongside the version it branched from.
 
 ## Resolution versus grep
 
