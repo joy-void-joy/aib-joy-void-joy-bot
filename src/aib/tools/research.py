@@ -16,11 +16,11 @@ Supports:
 import asyncio
 import json
 import logging
+from collections.abc import Mapping
 from datetime import date, datetime, timedelta, timezone
 
 from claude_agent_sdk import (
     AssistantMessage,
-    McpServerConfig,
     ResultMessage,
     UserMessage,
 )
@@ -36,7 +36,7 @@ from aib.agent.retrodict import create_retrodict_hooks
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.session import get_session, register_nested_trace
 from aib.paths import WORLDVIEW_PATH
-from lup.mcp import ToolError, lup_tool
+from lup.mcp import McpServerEntry, ToolError, lup_tool
 from aib.tools.metrics import costs
 from aib.worldview.lookup import (
     all_slugs,
@@ -219,62 +219,35 @@ class ResearchFindings(BaseModel):
 # ── Sub-agent runner ──────────────────────────────────────────────
 
 
-def get_research_allowed_tools() -> list[str]:
-    """Get the allowed tool list for the research sub-agent.
+def get_research_allowed_tools(
+    servers: Mapping[str, McpServerEntry] | None = None,
+) -> list[str]:
+    """Every tool the research sub-agent may call, from the servers it has.
 
-    Includes built-in SDK tools plus all data-gathering MCP tools
-    that were moved off the main agent.
+    Derived rather than listed. The union this replaced named seventeen tool
+    groups, which is a second statement of what the servers already carry —
+    and a second statement drifts: a tool added to a server and not to the
+    union is registered and then refused by the allowlist hook, which reads
+    to the agent as the tool being broken rather than as it being ungranted.
+
+    Two things still have to be named, each because it is not on an
+    in-process server. The built-ins belong to the engine. AskNews is served
+    over HTTP, and an external MCP server cannot be enumerated without
+    connecting to it — ``server_tool_names`` answers ``[]`` for one — so its
+    four tools are named here. Naming them costs nothing when its server is
+    absent: the missing key that leaves the server unregistered also puts
+    those tools in the policy's exclusions, which the derivation subtracts.
+
+    Passing no servers answers with the built-ins alone, which is what a
+    sub-agent given no data tools should see.
     """
-    from aib.agent.tool_policy import (
-        ARXIV_TOOLS,
-        ASKNEWS_TOOLS,
-        BLS_TOOLS,
-        BUILTIN_TOOLS,
-        CENSUS_TOOLS,
-        COMPANY_FINANCIALS_TOOLS,
-        EXA_TOOLS,
-        FETCH_TOOLS,
-        FRED_TOOLS,
-        HISTORICAL_MARKET_TOOLS,
-        LIVE_MARKET_TOOLS,
-        REDDIT_TOOLS,
-        SANDBOX_TOOLS,
-        SEARCH_TOOLS,
-        STOCK_TOOLS,
-        TRENDS_TOOLS,
-        WAYBACK_TOOLS,
-        WEATHER_TOOLS,
-        WIKIPEDIA_TOOLS,
-        WORLD_BANK_TOOLS,
-    )
-
-    tools: set[str] = set()
-    tools.update(BUILTIN_TOOLS)
-    tools.update(SANDBOX_TOOLS)
-    tools.update(SEARCH_TOOLS)
-    tools.update(EXA_TOOLS)
-    tools.update(WIKIPEDIA_TOOLS)
-    tools.update(FETCH_TOOLS)
-    tools.update(ARXIV_TOOLS)
-    tools.update(FRED_TOOLS)
-    tools.update(COMPANY_FINANCIALS_TOOLS)
-    tools.update(STOCK_TOOLS)
-    tools.update(WORLD_BANK_TOOLS)
-    tools.update(BLS_TOOLS)
-    tools.update(CENSUS_TOOLS)
-    tools.update(TRENDS_TOOLS)
-    tools.update(WAYBACK_TOOLS)
-    tools.update(WEATHER_TOOLS)
-    tools.update(REDDIT_TOOLS)
-    tools.update(ASKNEWS_TOOLS)
-    tools.update(LIVE_MARKET_TOOLS)
-    tools.update(HISTORICAL_MARKET_TOOLS)
-
-    from aib.agent.tool_policy import ToolPolicy
+    from aib.agent.tool_policy import ASKNEWS_TOOLS, BUILTIN_TOOLS, ToolPolicy
     from aib.config import settings
 
     policy = ToolPolicy.from_settings(settings)
-    return sorted(t for t in tools if policy.is_tool_available(t))
+    return policy.get_allowed_tools(
+        dict(servers or {}), builtin_tools=BUILTIN_TOOLS | ASKNEWS_TOOLS
+    )
 
 
 async def run_research_agent(
@@ -282,7 +255,7 @@ async def run_research_agent(
     context: str,
     *,
     resume_session_id: str | None = None,
-    mcp_servers: dict[str, McpServerConfig] | None = None,
+    mcp_servers: Mapping[str, McpServerEntry] | None = None,
 ) -> NestedAgentReport[ResearchFindings]:
     """Run the Opus research sub-agent.
 
@@ -311,7 +284,7 @@ async def run_research_agent(
         "schema": ResearchFindings.model_json_schema(),
     }
     extra_args = {"no-session-persistence": REMOVE}
-    allowed_tools = get_research_allowed_tools()
+    allowed_tools = get_research_allowed_tools(mcp_servers)
 
     hooks = create_tool_allowlist_hook(allowed_tools)
     if retrodict_cutoff.get() is not None:
