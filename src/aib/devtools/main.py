@@ -12,7 +12,7 @@ ritual) over lup's session-trace and bare-bump versions of the same names.
 """
 
 import typer
-from lup.devtools.harness.composition import NativeTargets
+from lup.devtools.harness.app import create_harness_app
 from lup.devtools.py.app import SUBAPP as PY_SUBAPP
 from lup.devtools.report.app import create_report_app
 from lup.devtools.subapps import SubApp, compose, subapp
@@ -25,6 +25,11 @@ from aib.devtools.calibration import app as calibration_app
 from aib.devtools.claude import app as claude_app
 from aib.devtools.dev import app as dev_app
 from aib.devtools.git import app as git_app
+from aib.devtools.harness.composition import (
+    REPOSITORY_WIDE,
+    TARGETS,
+    profile_directory,
+)
 from aib.devtools.health import app as health_app
 from aib.devtools.migration import app as migration_app
 from aib.devtools.queue import app as queue_app
@@ -40,13 +45,14 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-NO_GENERATED_TREES = NativeTargets(builders={})
-"""This project generates no native harness tree.
+HARNESS_APP = create_harness_app(TARGETS, REPOSITORY_WIDE, profiles=profile_directory())
+"""Generate and check the native tree this project's declarations compile to.
 
-Everything under `.claude/plugins/aib/` is hand-maintained, so `report` has
-no targets to check for drift and no writers to run — it reports on the
-surfaces that do exist here (open notes, unlanded branches, resolver state)
-and finds nothing to say about generation."""
+`report` reads the same targets, so what it calls stale drift and what
+`harness check` refuses are one computation rather than two that can
+disagree. The forecasting skills under `.claude/plugins/aib/` are still hand
+-maintained and belong to no target here, which is why they neither drift
+nor regenerate."""
 
 SUBAPPS: list[SubApp] = [
     subapp("agent", "Agent tool serving for Claude Code", agent_app),
@@ -66,10 +72,11 @@ SUBAPPS: list[SubApp] = [
     subapp("worldview", "Worldview store management", worldview_app),
     PY_SUBAPP,
     SYNC_SUBAPP,
+    subapp("harness", "Generate and check the native harness", HARNESS_APP),
     subapp(
         "report",
         "Everything left to implement, across every surface",
-        create_report_app(NO_GENERATED_TREES, []),
+        create_report_app(TARGETS, REPOSITORY_WIDE),
     ),
 ]
 
