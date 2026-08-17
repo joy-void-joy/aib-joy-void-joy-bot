@@ -10,6 +10,7 @@ from pathlib import Path
 from lup.devtools.harness.composition import (
     NativeTargets,
     claude_composition,
+    codex_composition,
     local_claude_profile_directory,
 )
 from lup.devtools.harness.drift import RepositoryWriter
@@ -58,7 +59,19 @@ def claude_target(root: Path) -> NativeHarnessComposition:
     return claude_composition(root, project_content(root))
 
 
-TARGETS = NativeTargets(builders={"claude": claude_target})
+def codex_target(root: Path) -> NativeHarnessComposition:
+    """This project's content, compiled through the Codex adapter.
+
+    The same declarations the Claude tree compiles from. It has to be
+    generated rather than assumed: Codex refuses a session-level tool
+    allowlist and session hooks, and governs through the policy dispatcher
+    its harness tree installs — so this tree is the only place a Codex
+    session meets the permission policy this project declares.
+    """
+    return codex_composition(root, project_content(root))
+
+
+TARGETS = NativeTargets(builders={"claude": claude_target, "codex": codex_target})
 """Every native runtime this project generates a tree for, by CLI selector."""
 
 
