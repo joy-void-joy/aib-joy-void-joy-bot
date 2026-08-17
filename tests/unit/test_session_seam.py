@@ -14,7 +14,8 @@ folder.
 """
 
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.runtime.selection import SessionRequest
+from lup.adapters.claude.selection import claude_config
+from lup.adapters.codex.selection import codex_config
 
 from aib.agent.client import one_shot_request, session_env
 from aib.paths import AGENT_CWD
@@ -66,16 +67,22 @@ def test_a_tool_free_request_runs_in_that_same_contained_home() -> None:
     )
 
 
-def test_effort_still_travels_as_an_environment_variable() -> None:
-    """Portable requests have no word for it yet — joy-void-joy/lup#227.
-
-    Pinned so that when the field lands this fails and says where to move it,
-    rather than leaving two ways to ask for the same thing.
-    """
+def test_effort_is_asked_for_portably_rather_than_through_the_environment() -> None:
+    """`CLAUDE_CODE_EFFORT_LEVEL` is one runtime's variable and means nothing
+    to the other, so a request that only set it would run the Codex arm at
+    whatever its own configuration file happened to say."""
     request = one_shot_request("sonnet", "", None)
 
-    assert request.environment["CLAUDE_CODE_EFFORT_LEVEL"] == "max"
-    assert "effort" not in SessionRequest.model_fields
+    assert request.effort == "max"
+    assert "CLAUDE_CODE_EFFORT_LEVEL" not in request.environment
+
+
+def test_the_effort_asked_for_reaches_both_runtimes() -> None:
+    """A degree that rendered to None would be the silent fall-through itself."""
+    request = one_shot_request("sonnet", "", None)
+
+    assert claude_config(request).effort is not None
+    assert codex_config(request).effort is not None
 
 
 def test_the_runtime_a_session_opens_through_is_the_selected_one() -> None:

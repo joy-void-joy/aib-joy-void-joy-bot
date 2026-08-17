@@ -52,9 +52,16 @@ class AupRefusalError(Exception):
 # ever calling the tool. The research sub-agent carries ~35 data tools and sits
 # well past that threshold, so every session must load schemas eagerly.
 DEFAULT_ENV: dict[str, str] = {
-    "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ENABLE_TOOL_SEARCH": "false",
 }
+
+SESSION_EFFORT = "max"
+"""How hard every session this project opens is asked to think.
+
+Asked as a field rather than as `CLAUDE_CODE_EFFORT_LEVEL`, which only one
+runtime reads: a portable request now carries effort, and an environment
+variable naming one provider would have gone on quietly meaning nothing to
+the other."""
 
 
 SESSION_BUFFER_BYTES = 500 * 1024 * 1024
@@ -178,6 +185,9 @@ async def build_client(
     if "setting_sources" not in kwargs:
         kwargs["setting_sources"] = []
 
+    if "effort" not in kwargs:
+        kwargs["effort"] = SESSION_EFFORT
+
     # The one place lup's neutral server configs become the SDK's own shape.
     # It has to be here, at the boundary, and nowhere earlier:
     # `server_tool_names` reads `tool_names` off a `LupMcpServerConfig` and
@@ -249,6 +259,7 @@ def one_shot_request(
         model=model,
         instructions=system_prompt,
         cwd=AGENT_CWD,
+        effort=SESSION_EFFORT,
         environment=session_env(selected),
     )
 
