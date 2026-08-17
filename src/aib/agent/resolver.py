@@ -192,7 +192,7 @@ def build_resolver_servers() -> dict[str, McpServerEntry]:
 def build_resolver_tools() -> list[str]:
     """Build allowed tool list using ToolPolicy (all tools except sandbox/subforecast/notes)."""
     policy = ToolPolicy.from_settings(default_settings)
-    all_tools = policy.get_allowed_tools(allow_spawn=False)
+    all_tools = policy.orchestrator_allowlist(allow_spawn=False)
     return [t for t in all_tools if t not in EXCLUDED_TOOL_SETS]
 
 

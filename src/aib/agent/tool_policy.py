@@ -7,11 +7,12 @@ and other context. This replaces scattered conditional logic throughout core.py.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from lup.mcp import McpServerEntry, create_mcp_server
+from lup.tool_policy import BaseToolPolicy
+from pydantic import BaseModel
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.premortem import create_premortem_server
@@ -255,8 +256,15 @@ _STATIC_TOOL_DOCS: dict[str, str] = {
 }
 
 
-@dataclass
-class ToolPolicy:
+class Credentialed(BaseModel):
+    """One tool group and the credential it cannot run without."""
+
+    tools: frozenset[str]  # lup: ignore[frozenset-shape] — a fixed tool group
+    configured: bool
+    credential: str
+
+
+class ToolPolicy(BaseToolPolicy):
     """Centralized policy for tool availability.
 
     Determines which tools are available based on:
@@ -264,49 +272,94 @@ class ToolPolicy:
     - Retrodict mode via retrodict_cutoff ContextVar
     - Forecast context (e.g., allow_spawn for subquestions)
 
+    The exclusion machinery is lup's (:class:`BaseToolPolicy`): this decides
+    *what* is excluded and why, and the base owns *how* an exclusion applies.
+    Each entry carries its reason, so `exclusion_reason` can answer why a
+    tool is unavailable rather than only that it is.
+
+    The server builders and the orchestrator allowlist stay this project's
+    own: `orchestrator_servers` needs a session's directory, callbacks and
+    review state, and the allowlist is a deliberate split — the orchestrator
+    sees ~10 tools and delegates the other ~35 to the research sub-agent.
+    Neither is the shape the base's `get_mcp_servers` / `get_allowed_tools`
+    describe, so they are named for what they build rather than shadowing
+    those with an incompatible signature.
+
     Example:
         policy = ToolPolicy.from_settings(settings)
-        mcp_servers = policy.get_mcp_servers(sandbox, session_dir=Path("notes/traces/1.2.1/sessions/41906/20260202"))
-        allowed_tools = policy.get_allowed_tools(allow_spawn=True)
+        servers = policy.orchestrator_servers(sandbox, session_dir=session)
+        allowed = policy.orchestrator_allowlist(allow_spawn=True)
     """
 
-    # API keys (None means not available)
-    metaculus_token: str | None = None
-    exa_api_key: str | None = None
-    asknews_api_key: str | None = None
-    fred_api_key: str | None = None
-    reddit_client_id: str | None = None
-    reddit_client_secret: str | None = None
-    census_api_key: str | None = None
+    def __init__(
+        self,
+        metaculus_token: str | None = None,
+        exa_api_key: str | None = None,
+        asknews_api_key: str | None = None,
+        fred_api_key: str | None = None,
+        reddit_client_id: str | None = None,
+        reddit_client_secret: str | None = None,
+        census_api_key: str | None = None,
+    ) -> None:
+        self.metaculus_token = metaculus_token
+        self.exa_api_key = exa_api_key
+        self.asknews_api_key = asknews_api_key
+        self.fred_api_key = fred_api_key
+        self.reddit_client_id = reddit_client_id
+        self.reddit_client_secret = reddit_client_secret
+        self.census_api_key = census_api_key
 
-    # Computed sets (populated by __post_init__)
-    _excluded_tools: frozenset[str] = field(default_factory=frozenset, init=False)
+        requirements = [
+            Credentialed(
+                tools=METACULUS_TOOLS,
+                configured=bool(metaculus_token),
+                credential="METACULUS_TOKEN",
+            ),
+            Credentialed(
+                tools=EXA_TOOLS,
+                configured=bool(exa_api_key),
+                credential="EXA_API_KEY",
+            ),
+            Credentialed(
+                tools=ASKNEWS_TOOLS,
+                configured=bool(asknews_api_key),
+                credential="ASKNEWS_API_KEY",
+            ),
+            Credentialed(
+                tools=FRED_TOOLS,
+                configured=bool(fred_api_key),
+                credential="FRED_API_KEY",
+            ),
+            Credentialed(
+                tools=REDDIT_TOOLS,
+                configured=bool(reddit_client_id and reddit_client_secret),
+                credential="REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET",
+            ),
+            Credentialed(
+                tools=CENSUS_TOOLS,
+                configured=bool(census_api_key),
+                credential="CENSUS_API_KEY",
+            ),
+        ]
 
-    def __post_init__(self) -> None:
-        """Compute excluded tools based on configuration."""
-        excluded: set[str] = set()
+        reasons = {
+            tool: f"{requirement.credential} is not configured"
+            for requirement in requirements
+            if not requirement.configured
+            for tool in requirement.tools
+        }
 
-        # API key-based exclusions
-        if not self.metaculus_token:
-            excluded.update(METACULUS_TOOLS)
-        if not self.exa_api_key:
-            excluded.update(EXA_TOOLS)
-        if not self.asknews_api_key:
-            excluded.update(ASKNEWS_TOOLS)
-        if not self.fred_api_key:
-            excluded.update(FRED_TOOLS)
-        if not self.reddit_client_id or not self.reddit_client_secret:
-            excluded.update(REDDIT_TOOLS)
-        if not self.census_api_key:
-            excluded.update(CENSUS_TOOLS)
-
-        # Retrodict exclusions (tools with no date filtering)
+        # Retrodict exclusions, which win where they overlap a missing
+        # credential: these sources have no date filtering, so during a
+        # backtest they would answer with today's world.
         if self.is_retrodict:
-            excluded.update(ASKNEWS_TOOLS)
-            excluded.update(REDDIT_TOOLS)
-            excluded.update(WEATHER_TOOLS)
+            reasons |= {
+                tool: "retrodict mode: this source ignores the cutoff"
+                for tools in (ASKNEWS_TOOLS, REDDIT_TOOLS, WEATHER_TOOLS)
+                for tool in tools
+            }
 
-        self._excluded_tools = frozenset(excluded)
+        super().__init__(excluded_tools=reasons)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> ToolPolicy:
@@ -333,7 +386,7 @@ class ToolPolicy:
         """Whether retrodict mode is active (reads ContextVar)."""
         return retrodict_cutoff.get() is not None
 
-    def get_mcp_servers(
+    def orchestrator_servers(
         self,
         sandbox: Sandbox,
         *,
@@ -412,7 +465,7 @@ class ToolPolicy:
 
         return servers
 
-    def get_research_mcp_servers(
+    def research_servers(
         self,
         sandbox: Sandbox | None = None,
     ) -> dict[str, McpServerEntry]:
@@ -535,7 +588,7 @@ class ToolPolicy:
 
         return servers
 
-    def get_allowed_tools(self, *, allow_spawn: bool = True) -> list[str]:
+    def orchestrator_allowlist(self, *, allow_spawn: bool = True) -> list[str]:
         """Get list of allowed tools based on policy.
 
         Args:
@@ -562,24 +615,13 @@ class ToolPolicy:
         if allow_spawn:
             tools.update(SUBFORECAST_TOOLS)
 
-        # Remove excluded tools (API key gating)
-        tools -= self._excluded_tools
+        # Remove excluded tools (API key gating), which the base holds
+        tools -= self.excluded_tools.keys()
 
         if not allow_spawn:
             tools -= SUBFORECAST_TOOLS
 
         return sorted(tools)
-
-    def is_tool_available(self, tool_name: str) -> bool:
-        """Check if a specific tool is available under this policy.
-
-        Args:
-            tool_name: Name of the tool to check.
-
-        Returns:
-            True if the tool is available, False otherwise.
-        """
-        return tool_name not in self._excluded_tools
 
     def get_tool_docs(
         self,
@@ -598,7 +640,8 @@ class ToolPolicy:
         Returns:
             Markdown-formatted tool documentation.
         """
-        allowed = set(self.get_allowed_tools(allow_spawn=allow_spawn))
+        # lup: ignore[set-shape] — membership test over the allowlist
+        allowed = set(self.orchestrator_allowlist(allow_spawn=allow_spawn))
         descriptions: dict[str, str] = {}
 
         # Extract descriptions from SDK servers (which have _tools attribute)

@@ -85,49 +85,49 @@ class TestToolPolicyOrchestrator:
     def test_orchestrator_has_builtin_tools(self) -> None:
         """Main agent should have built-in SDK tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in BUILTIN_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_metaculus_tools(self) -> None:
         """Main agent should have Metaculus tools when token is set."""
         policy = ToolPolicy(metaculus_token="test-token")
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in METACULUS_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_excludes_metaculus_without_token(self) -> None:
         """Main agent should exclude Metaculus tools without token."""
         policy = ToolPolicy(metaculus_token=None)
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in METACULUS_TOOLS:
             assert tool not in allowed
 
     def test_orchestrator_has_research_tool(self) -> None:
         """Main agent should have the research tool."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in RESEARCH_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_sandbox(self) -> None:
         """Main agent should have sandbox tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in SANDBOX_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_notes(self) -> None:
         """Main agent should have notes/reflection tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in NOTES_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_no_data_tools(self) -> None:
         """Main agent should NOT have data-gathering tools (those are on research sub-agent)."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         # Data tools should not be on the main agent
         for tool in LIVE_MARKET_TOOLS:
             assert tool not in allowed
@@ -143,13 +143,13 @@ class TestToolPolicySpawn:
     def test_subforecast_allowed_by_default(self) -> None:
         """subforecast should be allowed by default."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools(allow_spawn=True)
+        allowed = policy.orchestrator_allowlist(allow_spawn=True)
         assert "mcp__subforecast__subforecast" in allowed
 
     def test_subforecast_excluded_when_disabled(self) -> None:
         """subforecast should be excluded when allow_spawn=False."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools(allow_spawn=False)
+        allowed = policy.orchestrator_allowlist(allow_spawn=False)
         assert "mcp__subforecast__subforecast" not in allowed
 
 
@@ -184,7 +184,7 @@ class TestToolPolicyMcpServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox)
+        servers = policy.orchestrator_servers(sandbox)
 
         assert "sandbox" in servers
         assert "subforecast" in servers
@@ -199,7 +199,7 @@ class TestToolPolicyMcpServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox)
+        servers = policy.orchestrator_servers(sandbox)
 
         assert "financial" not in servers
         assert "government" not in servers
@@ -216,7 +216,7 @@ class TestToolPolicyResearchServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "financial" in servers
         assert "government" in servers
@@ -231,7 +231,7 @@ class TestToolPolicyResearchServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy(asknews_api_key="test-key")
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "asknews" in servers
 
@@ -259,7 +259,7 @@ class TestToolPolicyToolDocs:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "asknews" not in servers
 
@@ -271,7 +271,7 @@ class TestToolPolicyToolDocs:
         token = retrodict_cutoff.set(date(2026, 1, 15))
         try:
             policy = ToolPolicy(asknews_api_key="test-key")
-            servers = policy.get_research_mcp_servers(sandbox)
+            servers = policy.research_servers(sandbox)
             assert "asknews" not in servers
         finally:
             retrodict_cutoff.reset(token)

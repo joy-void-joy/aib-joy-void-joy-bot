@@ -956,7 +956,7 @@ async def run_forecast(
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
-        allowed_tools = policy.get_allowed_tools(allow_spawn=allow_spawn)
+        allowed_tools = policy.orchestrator_allowlist(allow_spawn=allow_spawn)
 
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
@@ -984,7 +984,7 @@ async def run_forecast(
         hooks = merge_hooks(hooks, create_structured_output_hooks(review_state))
 
         # Create MCP servers first so we can extract tool descriptions
-        mcp_servers = policy.get_mcp_servers(
+        mcp_servers = policy.orchestrator_servers(
             sandbox,
             session_dir=notes.session,
             question_type=question_type,
@@ -1003,7 +1003,7 @@ async def run_forecast(
         )
 
         # Build data-gathering MCP servers for the research sub-agent
-        session.research_mcp_servers = policy.get_research_mcp_servers(sandbox)
+        session.research_mcp_servers = policy.research_servers(sandbox)
 
         try:
             async with build_client(
