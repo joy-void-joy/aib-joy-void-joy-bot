@@ -1,6 +1,22 @@
-"""Root CLI app composing all sub-apps."""
+"""Root CLI app composing all sub-apps.
+
+Two halves: what this project has of its own — forecasting analysis,
+calibration, scoring, the worldview store — and what lup ships for any
+project built on it. The lup half is declared by each module beside its own
+Typer app, so composing it is naming the declarations rather than repeating
+their names and help text here.
+
+`resolved()` lets the second half win on a shared name, which is how this
+project keeps its own `trace` and `version` (forecast traces and the release
+ritual) over lup's session-trace and bare-bump versions of the same names.
+"""
 
 import typer
+from lup.devtools.harness.composition import NativeTargets
+from lup.devtools.py.app import SUBAPP as PY_SUBAPP
+from lup.devtools.report.app import create_report_app
+from lup.devtools.subapps import SubApp, compose, subapp
+from lup.devtools.sync import SUBAPP as SYNC_SUBAPP
 
 from aib.devtools.agent import app as agent_app
 from aib.devtools.analysis import app as analysis_app
@@ -24,25 +40,40 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-app.add_typer(agent_app, name="agent", help="Agent tool serving for Claude Code")
-app.add_typer(
-    claude_app, name="claude", help="Run Claude Code for this project (+ usage)"
-)
-app.add_typer(analysis_app, name="analysis", help="Forecast analysis and feedback loop")
-app.add_typer(
-    calibration_app, name="calibration", help="Calibration analysis and diagnostics"
-)
-app.add_typer(scores_app, name="scores", help="Unified scores table")
-app.add_typer(queue_app, name="queue", help="Forecasting queue and priorities")
-app.add_typer(resolution_app, name="resolution", help="Resolution updates")
-app.add_typer(trace_app, name="trace", help="Forecast tracing and log analysis")
-app.add_typer(api_app, name="api", help="API inspection and debugging")
-app.add_typer(dev_app, name="dev", help="Development tools")
-app.add_typer(git_app, name="git", help="Git operations for forecasts")
-app.add_typer(health_app, name="health", help="Service health checks")
-app.add_typer(migration_app, name="migration", help="One-time data migrations")
-app.add_typer(version_app, name="version", help="Agent version management")
-app.add_typer(worldview_app, name="worldview", help="Worldview store management")
+NO_GENERATED_TREES = NativeTargets(builders={})
+"""This project generates no native harness tree.
+
+Everything under `.claude/plugins/aib/` is hand-maintained, so `report` has
+no targets to check for drift and no writers to run — it reports on the
+surfaces that do exist here (open notes, unlanded branches, resolver state)
+and finds nothing to say about generation."""
+
+SUBAPPS: list[SubApp] = [
+    subapp("agent", "Agent tool serving for Claude Code", agent_app),
+    subapp("claude", "Run Claude Code for this project (+ usage)", claude_app),
+    subapp("analysis", "Forecast analysis and feedback loop", analysis_app),
+    subapp("calibration", "Calibration analysis and diagnostics", calibration_app),
+    subapp("scores", "Unified scores table", scores_app),
+    subapp("queue", "Forecasting queue and priorities", queue_app),
+    subapp("resolution", "Resolution updates", resolution_app),
+    subapp("trace", "Forecast tracing and log analysis", trace_app),
+    subapp("api", "API inspection and debugging", api_app),
+    subapp("dev", "Development tools", dev_app),
+    subapp("git", "Git operations for forecasts", git_app),
+    subapp("health", "Service health checks", health_app),
+    subapp("migration", "One-time data migrations", migration_app),
+    subapp("version", "Agent version management", version_app),
+    subapp("worldview", "Worldview store management", worldview_app),
+    PY_SUBAPP,
+    SYNC_SUBAPP,
+    subapp(
+        "report",
+        "Everything left to implement, across every surface",
+        create_report_app(NO_GENERATED_TREES, []),
+    ),
+]
+
+compose(app, SUBAPPS)
 
 if __name__ == "__main__":
     app()
