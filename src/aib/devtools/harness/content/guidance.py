@@ -152,13 +152,11 @@ uv run pytest -k "test_forecast"
 - `tests/unit/` - Unit tests (mock external APIs)
 - `tests/integration/` - Integration tests (require API keys, use `@pytest.mark.integration`)
 
-**Tests are what the work is measured against, so editing one is a gate.** An
-ordinary session is asked before it changes a file under `tests/`, and a
-session launched as the resolver's implementer is refused outright: for that
-session these tests are the specification, and rewriting a specification to
-match an implementation is the failure the gate exists to catch. If a test
-encodes the wrong behaviour, say what it demands and why it cannot be met,
-and leave the change to whoever can weigh it.
+**A test is edited like any other file** — the ordinary lattice judges it, with
+no gate of its own. What the gate protected still holds as a norm: a test states
+the behaviour production owes, so changing one to match an implementation is
+backwards. Change the implementation, and edit the test only when it genuinely
+encodes the wrong behaviour — saying, in the commit, which it was.
 
 ## Debugging
 
@@ -523,11 +521,10 @@ permission policy is a declaration compiled into the plugin that enforces it,
 and every refusal names what it caught and how to answer.
 
 Every shell command, URL scope, and edit is classified. Segments join
-deny > ask > defer > allow, and malformed input fails conservatively. Three
+deny > ask > defer > allow, and malformed input fails conservatively. Two
 refusals are worth knowing before you meet them:
 
 - **A forecast, in any spelling.** Refused, with the instruction to print the command instead.
-- **An edit to `tests/`.** An approval question, and a refusal for the resolver's implementer.
 - **A hand edit to a generated tree.** The harness tree is compiled from the declarations under `src/aib/devtools/harness/`; edit those and regenerate.
 
 `# lup: escalate: <why>` as the leading line of a shell command promotes a
