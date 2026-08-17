@@ -42,6 +42,10 @@ class Variant(BaseModel):
         default=None,
         description="Claude account from ~/.lup/profiles.json. Distinct accounts let arms run concurrently without sharing a rate limit.",
     )
+    runtime: str | None = Field(
+        default=None,
+        description="Runtime this arm opens sessions through. None inherits the default.",
+    )
     note: str = Field(default="", description="Why this variant is being tested.")
 
     @field_validator("name")
@@ -63,6 +67,16 @@ class Variant(BaseModel):
     def check_effort_is_known(cls, value: str | None) -> str | None:
         if value is not None and value not in EFFORT_LEVELS:
             raise ValueError(f"effort {value!r} must be one of {EFFORT_LEVELS}")
+        return value
+
+    @field_validator("runtime")
+    @classmethod
+    def check_runtime_is_known(cls, value: str | None) -> str | None:
+        from aib.runtime import RUNTIMES
+
+        if value is not None and value not in RUNTIMES:
+            known = ", ".join(sorted(RUNTIMES))
+            raise ValueError(f"runtime {value!r} must be one of {known}")
         return value
 
     def trace_version(self, agent_version: str) -> str:
@@ -105,4 +119,6 @@ def variant_env(variant: Variant) -> dict[str, str]:
         env["CLAUDE_CODE_EFFORT_LEVEL"] = variant.effort
     if variant.profile is not None:
         env["AIB_PROFILE"] = variant.profile
+    if variant.runtime is not None:
+        env["AIB_RUNTIME"] = variant.runtime
     return env

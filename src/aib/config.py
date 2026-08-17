@@ -138,6 +138,13 @@ class Settings(BaseSettings):
         description="Max thinking tokens (None = unlimited)",
     )
 
+    # === Runtime ===
+    runtime: str = Field(
+        default="claude",
+        validation_alias="AIB_RUNTIME",
+        description="Runtime sessions open through; one of aib.runtime.RUNTIMES",
+    )
+
     # === A/B variant ===
     trace_variant: str | None = Field(
         default=None,
