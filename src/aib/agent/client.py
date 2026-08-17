@@ -14,14 +14,19 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, overload
 
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from claude_agent_sdk.types import McpSdkServerConfig
+from lup.adapters.claude.config_home import workspace_config_environment
 from lup.mcp import LupMcpServerConfig
+from lup.runtime.models import TurnResult
+from lup.runtime.selection import SessionRequest
+from lup.types import EnvVars, Usage
 from pydantic import BaseModel
 
 from aib.config import settings
 from aib.paths import AGENT_CWD
 from aib.profiles import profile_env
+from aib.runtime import select_runtime
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +45,6 @@ class AupRefusalError(Exception):
     """
 
 
-DEFAULT_EXTRA_ARGS: dict[str, str | None] = {
-    "no-session-persistence": None,
-    "strict-mcp-config": None,
-}
 # ENABLE_TOOL_SEARCH: unset means the harness defers tool schemas once they
 # exceed 10% of the context window, leaving the agent only tool *names* and a
 # ToolSearch tool to load them. A search with the wrong terms returns nothing,
@@ -54,6 +55,29 @@ DEFAULT_ENV: dict[str, str] = {
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "ENABLE_TOOL_SEARCH": "false",
 }
+
+
+SESSION_BUFFER_BYTES = 500 * 1024 * 1024
+"""How much of one CLI message the transport will hold.
+
+A tool result carrying a fetched page or a Wayback snapshot arrives as a
+single frame, and the SDK's default ceiling is well under what one weighs."""
+
+
+def session_env(profile: str | None) -> EnvVars:
+    """The environment every session this project opens runs under.
+
+    The configuration home is derived per workspace rather than shared, so
+    concurrent sessions do not read each other's half-written startup
+    document, and what one writes stays inside its own folder. Derived under
+    whichever home the selected profile names, so the account is still the
+    profile's to decide.
+    """
+    return {
+        **settings.openrouter_env,
+        **workspace_config_environment(profile_env(profile), AGENT_CWD),
+        **DEFAULT_ENV,
+    }
 
 
 def _merge(defaults: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
@@ -135,12 +159,9 @@ async def build_client(
     caller_hooks: LupHooksConfig = kwargs.pop("hooks", None) or LupHooksConfig()
 
     if defaults:
-        merged_extra = _merge(DEFAULT_EXTRA_ARGS, caller_extra)
+        merged_extra = _merge({}, caller_extra)
         selected = profile if profile is not None else settings.profile
-        merged_env = _merge(
-            {**settings.openrouter_env, **profile_env(selected), **DEFAULT_ENV},
-            caller_env,
-        )
+        merged_env = _merge(session_env(selected), caller_env)
     else:
         merged_extra = {k: v for k, v in caller_extra.items() if v is not REMOVE}
         merged_env = {k: v for k, v in caller_env.items() if v is not REMOVE}
@@ -179,7 +200,7 @@ async def build_client(
         # every factory speaks lup's normalized (LupHookInput) -> LupHookOutput
         # shape, and the adapter renders it into the SDK's native matchers.
         hooks=lup_hooks_to_claude(caller_hooks) if caller_hooks.by_event() else None,
-        max_buffer_size=500 * 1024 * 1024,
+        max_buffer_size=SESSION_BUFFER_BYTES,
         **kwargs,
     )
     async with ClaudeSDKClient(options=options) as client:
@@ -193,6 +214,8 @@ async def one_shot(
     model: str = ...,
     system_prompt: str = ...,
     cost_tool_name: str | None = ...,
+    profile: str | None = ...,
+    runtime: str | None = ...,
 ) -> str | None: ...
 
 
@@ -204,7 +227,58 @@ async def one_shot[T: BaseModel](
     system_prompt: str = ...,
     output_type: type[T],
     cost_tool_name: str | None = ...,
+    profile: str | None = ...,
+    runtime: str | None = ...,
 ) -> T | None: ...
+
+
+def one_shot_request(
+    model: str, system_prompt: str, profile: str | None
+) -> SessionRequest:
+    """The session a tool-free inference asks for, in portable words.
+
+    Tool-free is what makes this one portable at all: an empty allowlist is
+    not an allowlist and no hooks are declared, so it is the one session shape
+    this project opens that either runtime accepts unchanged. Effort still
+    travels in `DEFAULT_ENV` rather than as a field, because a portable
+    request has no word for it — see joy-void-joy/lup#227.
+    """
+    AGENT_CWD.mkdir(parents=True, exist_ok=True)
+    selected = profile if profile is not None else settings.profile
+    return SessionRequest(
+        model=model,
+        instructions=system_prompt,
+        cwd=AGENT_CWD,
+        environment=session_env(selected),
+    )
+
+
+def spoken_text(result: TurnResult[BaseModel] | TurnResult[None]) -> str | None:
+    """Everything a turn said, or None when it said nothing.
+
+    Asked of `text_payload` rather than of the block kinds that hold text, so
+    a runtime spelling its prose differently still reads here.
+    """
+    said = [
+        block.text_payload for block in result.blocks if block.text_payload is not None
+    ]
+    return "".join(said) if said else None
+
+
+def refuse_aup(text: str | None) -> str | None:
+    """Raise when the text is a content-moderation refusal, else pass it on."""
+    if text is not None and text.startswith(AUP_REFUSAL_PREFIX):
+        raise AupRefusalError(text)
+    return text
+
+
+def record_cost(cost_tool_name: str | None, usage: Usage) -> None:
+    """Attribute this turn's reported cost to the tool that spent it."""
+    if cost_tool_name is None or usage.cost_usd is None:
+        return
+    from aib.tools.metrics import costs
+
+    costs.record(cost_tool_name, usage.cost_usd)
 
 
 async def one_shot(
@@ -214,43 +288,24 @@ async def one_shot(
     system_prompt: str = "",
     output_type: type[BaseModel] | None = None,
     cost_tool_name: str | None = None,
+    profile: str | None = None,
+    runtime: str | None = None,
 ) -> BaseModel | str | None:
     """One-shot prompt→result convenience wrapper.
 
-    Without output_type: returns ResultMessage.result (str).
-    With output_type: sets output_format to JSON schema, returns validated model.
+    Without output_type: returns what the turn said.
+    With output_type: returns the model the runtime submitted, which each
+    serves its own way — Claude through a rendered output schema, Codex
+    through a submission tool — and neither of which this has to know.
     """
-    extra_kwargs: dict[str, Any] = {}
-    if output_type is not None:
-        extra_kwargs["output_format"] = {
-            "type": "json_schema",
-            "schema": output_type.model_json_schema(),
-        }
-
-    structured_output: dict[str, Any] | None = None
-    result_text: str | None = None
-
-    async with build_client(
-        model=model,
-        system_prompt=system_prompt,
-        allowed_tools=[],
-        **extra_kwargs,
-    ) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if isinstance(message, ResultMessage):
-                structured_output = message.structured_output
-                result_text = message.result
-                if cost_tool_name and message.total_cost_usd is not None:
-                    from aib.tools.metrics import costs
-
-                    costs.record(cost_tool_name, message.total_cost_usd)
-
-    if result_text and result_text.startswith(AUP_REFUSAL_PREFIX):
-        raise AupRefusalError(result_text)
-
-    if output_type is not None:
-        if structured_output:
-            return output_type.model_validate(structured_output)
-        return None
-    return result_text
+    factory = select_runtime(runtime).session_factory(
+        one_shot_request(model, system_prompt, profile)
+    )
+    if output_type is None:
+        untyped = await factory.query(prompt)
+        record_cost(cost_tool_name, untyped.usage)
+        return refuse_aup(spoken_text(untyped))
+    typed = await factory.query(prompt, output_type)
+    record_cost(cost_tool_name, typed.usage)
+    refuse_aup(spoken_text(typed))
+    return typed.output
