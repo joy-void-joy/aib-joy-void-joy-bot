@@ -2,6 +2,21 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v7.0.0 (2026-08-17)
+
+Replace the hand-copied lup with a real lup dependency — a new framework under the agent
+- major, by aib's own rule ("architecture changes: new LLM, new framework"): the Claude Agent SDK went 0.1.26 → 0.2.139, every tool crosses a new boundary, and a content-safety guard now rewrites every tool result
+- deps: lup is a git dependency with the [claude,codex,docker] extras. `aib.tools.{decorator,mcp_server,responses}` are deleted, as are the mechanisms behind `metrics`/`retry`/`throttle` and ~80 lines of `paths.py`
+- tools: all 40 tools moved from `@mcp_tool` to `lup.mcp.lup_tool` and declare an output model instead of returning a bare dict. Three that genuinely answer two ways — `wikipedia`, `get_cp_history`, `wv_read_entry` — declare a union, which keeps each arm's wire format exact instead of flattening both into one envelope
+- tools: every tool result now passes `guard_result`, which writes an oversized declared string field to disk and leaves a path and a preview in its place. Only fields a model declares as `str` are affected, so an oversized page, arXiv paper, Wikipedia article or Wayback snapshot no longer reaches the provider's truncation
+- tools: `TailStats` became a model with optional fields, so absent Google Trends statistics serialize as `null` rather than as missing keys
+- tools: URL routing moved to `lup.tool_routes`. A redirection now matches on the parsed host, so a registration for `bls.gov` no longer also answers for `bls.gov.evil.example`
+- paths: the session kernel — project root, notes/traces/feedback directories, the timestamp format, versioned sessions and logs — is `lup.workspace.paths`. Both layouts are already `notes/traces/<version>/…`, so no data moves
+- version: AGENT_VERSION moved from `src/aib/version.py` to `[tool.lup] agent_version` in pyproject.toml, which is what lup reads to key `notes/traces/<version>/`. The re-exec trick that defeated the import cache is gone — reading a value out of a manifest needs no such thing
+- policy: `ToolPolicy` subclasses `lup.tool_policy.BaseToolPolicy`, and each exclusion now carries its reason, so availability can answer *why* a tool is missing rather than only that it is
+- devtools: `py`, `sync` and `report` sub-apps composed from lup; `dev worktree` installs `aib-workflow@aib` rather than a marketplace name that never existed
+- fix: `ForecastMeta.tools_used_count` was always 0 — it read `total_calls`, a key no metrics summary has ever carried
+
 ## v6.4.0 (2026-07-24)
 
 Restore tool visibility and forecast on Opus 5
