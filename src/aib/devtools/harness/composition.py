@@ -11,7 +11,7 @@ from lup.devtools.harness.composition import (
     NativeTargets,
     claude_composition,
     codex_composition,
-    local_claude_profile_directory,
+    local_profile_directory,
 )
 from lup.devtools.harness.drift import RepositoryWriter
 from lup.devtools.harness.generate import NativeHarnessComposition, ProjectContent
@@ -19,6 +19,7 @@ from lup.runtime.profiles import ProfileDirectory
 from lup.workspace.paths import project_root
 
 from aib.devtools.harness.catalog import portable_harness
+from aib.runtime import select_runtime
 from aib.devtools.harness.content.docs.catalog import DOCUMENTS
 from aib.devtools.harness.content.settings import project_settings
 
@@ -41,12 +42,14 @@ def project_content(root: Path) -> ProjectContent:
 
 
 def profile_directory() -> ProfileDirectory:
-    """The Claude accounts this checkout keeps, under ``.lup/profiles``.
+    """The accounts this checkout keeps, under ``.lup/profiles``.
 
     Per-checkout rather than the operator's personal registry, so an A/B arm
-    naming a profile reaches the same account whoever runs it.
+    naming a profile reaches the same account whoever runs it. Whose accounts
+    they are is the selected runtime's login to say, which is what keeps a
+    name registered here resolving to a home the session it opens can use.
     """
-    return local_claude_profile_directory(project_root())
+    return local_profile_directory(project_root(), select_runtime().login)
 
 
 def claude_target(root: Path) -> NativeHarnessComposition:
