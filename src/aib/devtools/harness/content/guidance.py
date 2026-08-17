@@ -224,13 +224,16 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 **Bump the `aib` plugin's version** if the branch changes anything the
 hand-written `aib` plugin ships — its commands or its agents. Use
-`uv run lup-devtools dev plugin-bump <level> "<summary>"`. Plugin versions are
-cached by the runtime, so without a bump a new or renamed command does not
-appear after a reinstall. **Worktree caveat:** plugin installation resolves the
-marketplace's relative path from the main worktree rather than the current one,
-so plugin changes on a feature branch do not take effect until they reach
-`main`. The generated `lup` plugin needs none of this: its version is the
-harness generator's and moves when the declaration does.
+`uv run lup-devtools dev plugin-bump <level> "<summary>"`. The version is the
+plugin's own record of what it ships; nothing reinstalls it, so a bump is a
+statement rather than a cache invalidation. The generated `lup` plugin needs
+none of this: its version is the harness generator's and moves when the
+declaration does.
+
+Neither plugin is installed through a marketplace. `harness claude` launches
+the generated tree of whichever checkout it is run from, naming it with
+`--plugin-dir`, so a worktree carries its plugin by existing and a change on a
+feature branch takes effect there immediately.
 
 ### Commit Guidelines
 
