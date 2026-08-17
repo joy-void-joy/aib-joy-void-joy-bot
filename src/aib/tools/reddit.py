@@ -10,7 +10,7 @@ from typing import Any, TypedDict
 from pydantic import BaseModel, Field
 
 from aib.config import settings
-from aib.tools.decorator import ToolError, mcp_tool
+from lup.mcp import ToolError, lup_tool
 
 
 # --- Input Schemas ---
@@ -67,10 +67,30 @@ class RedditPost(TypedDict):
     author: str
 
 
+class RedditSearchOutput(BaseModel):
+    """Posts matching a search, with the query that found them."""
+
+    query: str
+    subreddit: str
+    sort: str
+    time_filter: str
+    result_count: int
+    posts: list[RedditPost]
+
+
+class RedditHotOutput(BaseModel):
+    """A subreddit's current hot posts."""
+
+    subreddit: str
+    result_count: int
+    posts: list[RedditPost]
+
+
 # --- Reddit API ---
 
 
-def _format_post(submission: Any) -> RedditPost:
+# lup: ignore[any-type] — asyncpraw ships no stubs; Submission is untyped
+def format_post(submission: Any) -> RedditPost:
     """Format an asyncpraw Submission into a RedditPost dict."""
     selftext = getattr(submission, "selftext", "") or ""
     if len(selftext) > 500:
@@ -78,20 +98,21 @@ def _format_post(submission: Any) -> RedditPost:
 
     created = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
 
-    return {
-        "title": submission.title,
-        "score": submission.score,
-        "url": submission.url,
-        "permalink": f"https://reddit.com{submission.permalink}",
-        "num_comments": submission.num_comments,
-        "selftext_snippet": selftext,
-        "created_utc": created.isoformat(),
-        "subreddit": str(submission.subreddit),
-        "author": str(submission.author) if submission.author else "[deleted]",
-    }
+    return RedditPost(
+        title=submission.title,
+        score=submission.score,
+        url=submission.url,
+        permalink=f"https://reddit.com{submission.permalink}",
+        num_comments=submission.num_comments,
+        selftext_snippet=selftext,
+        created_utc=created.isoformat(),
+        subreddit=str(submission.subreddit),
+        author=str(submission.author) if submission.author else "[deleted]",
+    )
 
 
-async def _get_reddit() -> Any:
+# lup: ignore[any-type] — asyncpraw ships no stubs; Reddit is untyped
+async def open_reddit() -> Any:
     """Create an asyncpraw Reddit instance in read-only mode."""
     import asyncpraw
 
@@ -102,8 +123,16 @@ async def _get_reddit() -> Any:
     )
 
 
-@mcp_tool(
-    "reddit_search",
+def require_credentials() -> None:
+    """Refuse the call when Reddit's API credentials are not configured."""
+    if not settings.reddit_client_id or not settings.reddit_client_secret:
+        raise ToolError(
+            "Reddit API credentials not configured. "
+            "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET."
+        )
+
+
+@lup_tool(
     "Search Reddit for posts matching a query. "
     "Returns post titles, scores, comment counts, and text snippets. "
     "Useful for gauging public sentiment, finding community discussions, "
@@ -111,71 +140,61 @@ async def _get_reddit() -> Any:
     "Search all of Reddit or within a specific subreddit. "
     "Common subreddits: economics, worldnews, technology, politics, science, "
     "AskReddit, dataisbeautiful, geopolitics.",
+    name="reddit_search",
 )
-async def reddit_search(args: RedditSearchInput) -> dict[str, Any]:
+async def reddit_search(args: RedditSearchInput) -> RedditSearchOutput:
     """Search Reddit posts."""
-    if not settings.reddit_client_id or not settings.reddit_client_secret:
-        raise ToolError(
-            "Reddit API credentials not configured. "
-            "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET."
-        )
+    require_credentials()
 
-    reddit = await _get_reddit()
+    reddit = await open_reddit()
     try:
-        if args.subreddit:
-            subreddit = await reddit.subreddit(args.subreddit)
-        else:
-            subreddit = await reddit.subreddit("all")
-
-        posts: list[RedditPost] = []
-        async for submission in subreddit.search(
-            args.query,
-            sort=args.sort,
-            time_filter=args.time_filter,
-            limit=args.limit,
-        ):
-            posts.append(_format_post(submission))
+        subreddit = await reddit.subreddit(args.subreddit or "all")
+        posts = [
+            format_post(submission)
+            async for submission in subreddit.search(
+                args.query,
+                sort=args.sort,
+                time_filter=args.time_filter,
+                limit=args.limit,
+            )
+        ]
     finally:
         await reddit.close()
 
-    return {
-        "query": args.query,
-        "subreddit": args.subreddit or "all",
-        "sort": args.sort,
-        "time_filter": args.time_filter,
-        "result_count": len(posts),
-        "posts": posts,
-    }
+    return RedditSearchOutput(
+        query=args.query,
+        subreddit=args.subreddit or "all",
+        sort=args.sort,
+        time_filter=args.time_filter,
+        result_count=len(posts),
+        posts=posts,
+    )
 
 
-@mcp_tool(
-    "reddit_hot",
+@lup_tool(
     "Get hot/trending posts from a subreddit. "
     "Returns the most active current discussions. "
     "Useful for understanding what topics are driving conversation right now. "
     "Common subreddits: economics, worldnews, technology, politics, science, "
     "AskReddit, dataisbeautiful, geopolitics, wallstreetbets, Futurology.",
+    name="reddit_hot",
 )
-async def reddit_hot(args: RedditHotInput) -> dict[str, Any]:
+async def reddit_hot(args: RedditHotInput) -> RedditHotOutput:
     """Get hot posts from a subreddit."""
-    if not settings.reddit_client_id or not settings.reddit_client_secret:
-        raise ToolError(
-            "Reddit API credentials not configured. "
-            "Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET."
-        )
+    require_credentials()
 
-    reddit = await _get_reddit()
+    reddit = await open_reddit()
     try:
         subreddit = await reddit.subreddit(args.subreddit)
-
-        posts: list[RedditPost] = []
-        async for submission in subreddit.hot(limit=args.limit):
-            posts.append(_format_post(submission))
+        posts = [
+            format_post(submission)
+            async for submission in subreddit.hot(limit=args.limit)
+        ]
     finally:
         await reddit.close()
 
-    return {
-        "subreddit": args.subreddit,
-        "result_count": len(posts),
-        "posts": posts,
-    }
+    return RedditHotOutput(
+        subreddit=args.subreddit,
+        result_count=len(posts),
+        posts=posts,
+    )

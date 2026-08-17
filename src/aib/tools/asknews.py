@@ -18,7 +18,7 @@ import logging
 from typing import Any
 
 import httpx
-from claude_agent_sdk.types import McpSdkServerConfig
+from lup.mcp import LupMcpServerConfig
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.server import Server
@@ -94,7 +94,7 @@ async def _call_remote(api_key: str, tool_name: str, arguments: dict[str, Any]) 
     raise last_err  # type: ignore[misc]
 
 
-def create_asknews_server(api_key: str) -> McpSdkServerConfig:
+def create_asknews_server(api_key: str) -> LupMcpServerConfig:
     """Create a throttled local proxy for the AskNews remote MCP server."""
     server = Server("asknews", version="1.0.0")
 
@@ -135,4 +135,7 @@ def create_asknews_server(api_key: str) -> McpSdkServerConfig:
                 content=_to_content(f"AskNews {name} failed"), isError=True
             )
 
-    return McpSdkServerConfig(type="sdk", name="asknews", instance=server)
+    # `tool_names` stays empty: this server discovers its tools from the
+    # remote at list_tools time, so there is no local list to advertise.
+    # The allowlist names them by hand in ASKNEWS_TOOLS instead.
+    return LupMcpServerConfig(name="asknews", server=server)

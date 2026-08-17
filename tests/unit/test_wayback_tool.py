@@ -5,6 +5,8 @@ from datetime import date
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
+from lup.mcp import ToolResponse, response_text
+
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.wayback import wayback_snapshot, wayback_url_variants
 
@@ -16,9 +18,9 @@ SNAPSHOT = {
 }
 
 
-def payload(result: dict[str, Any]) -> dict[str, Any]:
-    """Decode the JSON body an mcp_tool success wraps in its text block."""
-    parsed = json.loads(result["content"][0]["text"])
+def payload(result: ToolResponse) -> dict[str, Any]:
+    """Decode the JSON body a lup_tool success wraps in its text block."""
+    parsed = json.loads(response_text(result))
     assert isinstance(parsed, dict)
     return parsed
 
@@ -59,7 +61,8 @@ class TestWaybackSnapshot:
         result = await wayback_snapshot.handler(
             {"url": "https://example.com", "date": "01-2026"}
         )
-        assert result["is_error"] is True
+        # lup: ignore[dict-get] — is_error is an optional key on ToolResponse
+        assert result.get("is_error") is True
 
     async def test_missing_snapshot_is_an_error(self) -> None:
         with patch(
@@ -69,7 +72,8 @@ class TestWaybackSnapshot:
             result = await wayback_snapshot.handler(
                 {"url": "https://example.com", "date": "20260101"}
             )
-        assert result["is_error"] is True
+        # lup: ignore[dict-get] — is_error is an optional key on ToolResponse
+        assert result.get("is_error") is True
 
     async def test_falls_back_to_the_bare_url_form(self) -> None:
         availability = AsyncMock(side_effect=[None, SNAPSHOT])

@@ -31,13 +31,14 @@ from aib.agent.client import AupRefusalError
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
-from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.metrics import costs
-from aib.tools.exa import exa_search
+from aib.tools.exa import ExaResult, exa_search
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import FetchResult, fetch_live
-from aib.tools.fetch_routes import domain_dispatch
+from lup.mcp import ToolError, ToolResponse, lup_tool, response_text
 from lup.resilience.retry import with_retry
+from lup.tool_routes import routes
+from lup.types import JsonValue
 from aib.tools.throttle import exa_throttle, wikipedia_throttle
 from aib.tools.wayback import (
     WaybackRateLimitError,
@@ -340,11 +341,10 @@ async def _augment_with_api_data(
 ) -> list[AugmentedSearchResult]:
     """Augment search results with structured API data from recognized domains.
 
-    For each result URL, checks against domain routes (fetch_routes.py).
-    Matching URLs have their specialized tool handler called in parallel.
-    SUGGEST_ONLY domains get a hint string instead.
+    For each result URL, checks the registry every tool registers itself
+    against. Matching URLs have their specialized tool handler called in
+    parallel. Redirected domains get a hint string instead.
     """
-    from aib.tools.fetch_routes import SUGGEST_ONLY, domain_dispatch as _dispatch
 
     async def _augment_one(result: SearchResult) -> AugmentedSearchResult:
         url = result["url"]
@@ -356,15 +356,15 @@ async def _augment_with_api_data(
             hint=None,
         )
 
-        for domain, hint in SUGGEST_ONLY.items():
-            if domain in url.lower():
-                augmented["hint"] = hint
-                return augmented
+        advice = routes.advice(url)
+        if advice is not None:
+            augmented["hint"] = advice
+            return augmented
 
         try:
-            api_result = await _dispatch(url)
+            api_result = await routes.dispatch(url)
             if api_result is not None and not api_result.get("is_error"):
-                augmented["api_data"] = api_result
+                augmented["api_data"] = dict(api_result)
         except Exception as e:
             logger.warning("API augmentation failed for %s: %s", url, e)
 
@@ -374,8 +374,14 @@ async def _augment_with_api_data(
     return list(augmented)
 
 
-@mcp_tool(
-    "web_search",
+class WebSearchOutput(BaseModel):
+    """Search results for one query, each augmented where a tool knows better."""
+
+    query: str
+    results: list[AugmentedSearchResult]
+
+
+@lup_tool(
     (
         "Search the web for information. Returns titles, URLs, and snippets. "
         "When results match known data sources (stock quotes, arXiv, Wikipedia, "
@@ -383,8 +389,9 @@ async def _augment_with_api_data(
         "Supports allowed_domains/blocked_domains for domain filtering. "
         "Prefer this over WebSearch."
     ),
+    name="web_search",
 )
-async def web_search(params: WebSearchInput) -> dict[str, Any]:
+async def web_search(params: WebSearchInput) -> WebSearchOutput:
     """Perform web search via SDK sub-agent with API augmentation.
 
     Augments all results first, then in retrodict mode applies Wayback
@@ -423,7 +430,7 @@ async def web_search(params: WebSearchInput) -> dict[str, Any]:
             augmented = await _fetch_live_snippets(augmented)
 
         logger.info("[WebSearch] Returning %d results", len(augmented))
-        return {"query": params.query, "results": augmented}
+        return WebSearchOutput(query=params.query, results=augmented)
 
     except BaseException as e:
         cause = e
@@ -452,8 +459,14 @@ class SearchExaInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "search_exa",
+class SearchExaOutput(BaseModel):
+    """Exa's own result records, passed through as the vendor shaped them."""
+
+    query: str
+    results: list[ExaResult]
+
+
+@lup_tool(
     (
         "Search the web using Exa AI-powered search. Returns raw results with titles, URLs, and snippets. "
         f"Results are cached for 5 minutes. Optional num_results (default: {settings.search_default_limit}).\n\n"
@@ -463,8 +476,9 @@ class SearchExaInput(BaseModel):
         '  search_exa(query="Germany coalition government formation", published_before="2026-01-15")\n'
         "Use diverse query formulations — the same topic found with different keywords produces richer results."
     ),
+    name="search_exa",
 )
-async def search_exa(params: SearchExaInput) -> Any:
+async def search_exa(params: SearchExaInput) -> SearchExaOutput:
     """Search using Exa and return raw results (cached)."""
     cutoff = retrodict_cutoff.get()
     published_before = (
@@ -485,7 +499,7 @@ async def search_exa(params: SearchExaInput) -> Any:
             published_before=published_before,
             livecrawl=livecrawl,
         )
-    return formatted
+    return SearchExaOutput(query=params.query, results=formatted)
 
 
 # --- Wikipedia Tool ---
@@ -591,8 +605,43 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
         return []
 
 
-@mcp_tool(
-    "wikipedia",
+class WikipediaSearchOutput(BaseModel):
+    """Articles matching a query — the answer to `mode="search"`.
+
+    A hit always carries a title, snippet and url, and then whichever extras
+    the search that produced it has: a word count from keyword search, a
+    `source` label from AskNews's semantic search, a `revision_timestamp`
+    from a retrodict search. Declaring the envelope and passing the records
+    through keeps all three intact rather than flattening them to their
+    intersection.
+    """
+
+    query: str
+    mode: Literal["search"] = "search"
+    results: list[dict[str, JsonValue]]
+
+
+class WikipediaArticle(BaseModel):
+    """One article's text — the answer to `mode="summary"` or `mode="full"`.
+
+    `extract` is a whole article in full mode, so it is declared plainly as
+    a string: that is what lets `guard_result` spill an oversized one to
+    disk and hand back a pointer instead of losing it to truncation.
+
+    The revision fields are the retrodict answer, naming which historical
+    revision was read; a live fetch leaves them unset.
+    """
+
+    title: str
+    url: str
+    extract: str
+    mode: Literal["summary", "full"]
+    revision_id: int | None = None
+    revision_timestamp: str | None = None
+    revision_date: str | None = None
+
+
+@lup_tool(
     (
         "Search Wikipedia or fetch article content. "
         "Search mode combines keyword and semantic search for broader coverage. "
@@ -608,12 +657,11 @@ async def _asknews_wikipedia_search(query: str) -> list[dict[str, str]]:
         "Two-step workflow: search first to find the right article title, then summary/full to read it. "
         "Optional 'prompt' extracts specific information via Haiku (summary/full modes only)."
     ),
-    url_route=(
-        r"wikipedia\.org/wiki/(?!Special:|Wikipedia:)([^#?]+)",
-        lambda m: {"query": unquote(m.group(1)).replace("_", " "), "mode": "full"},
-    ),
+    name="wikipedia",
 )
-async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
+async def wikipedia(
+    params: WikipediaInput,
+) -> WikipediaSearchOutput | WikipediaArticle:
     """Unified Wikipedia search and article fetching."""
     query = params.query
     mode = params.mode
@@ -624,7 +672,8 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
     if mode == "search":
 
         @with_retry(max_attempts=3)
-        async def _search() -> list[dict[str, Any]]:
+        # lup: ignore[any-type] — MediaWiki/AskNews hit records, passed through
+        async def keyword_search() -> list[dict[str, Any]]:
             async with httpx.AsyncClient(
                 timeout=settings.http_timeout_seconds,
                 headers=WIKIPEDIA_HEADERS,
@@ -664,7 +713,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
         if not cutoff_date and settings.asknews_api_key:
             async with wikipedia_throttle.slot():
                 wiki_results, asknews_results = await asyncio.gather(
-                    _search(),
+                    keyword_search(),
                     _asknews_wikipedia_search(query),
                 )
             seen_titles = {r["title"].lower().strip() for r in wiki_results}
@@ -683,7 +732,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
             results = wiki_results
         else:
             async with wikipedia_throttle.slot():
-                results = await _search()
+                results = await keyword_search()
 
         if cutoff_date and results:
             historical_results = []
@@ -710,7 +759,7 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
                 raise ToolError(f"No Wikipedia articles found for '{query}'.")
             results = historical_results
 
-        return {"query": query, "mode": mode, "results": results}
+        return WikipediaSearchOutput(query=query, results=results)
 
     else:
         if cutoff_date:
@@ -725,15 +774,15 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
                 extract = await extract_with_prompt(
                     extract, params.prompt, historical["url"]
                 )
-            return {
-                "title": historical["title"],
-                "url": historical["url"],
-                "extract": extract,
-                "mode": mode,
-                "revision_id": historical["revision_id"],
-                "revision_timestamp": historical["revision_timestamp"],
-                "revision_date": historical["revision_timestamp"][:10],
-            }
+            return WikipediaArticle(
+                title=historical["title"],
+                url=historical["url"],
+                extract=extract,
+                mode=mode,
+                revision_id=historical["revision_id"],
+                revision_timestamp=historical["revision_timestamp"],
+                revision_date=historical["revision_timestamp"][:10],
+            )
 
         @with_retry(max_attempts=3)
         async def _fetch() -> dict[str, Any]:
@@ -782,11 +831,17 @@ async def wikipedia(params: WikipediaInput) -> dict[str, Any]:
 
         async with wikipedia_throttle.slot():
             result = await _fetch()
+        extract = result["extract"]
         if params.prompt:
-            result["extract"] = await extract_with_prompt(
-                result["extract"], params.prompt, result["url"]
+            extract = await extract_with_prompt(
+                extract, params.prompt, result["url"]
             )
-        return result
+        return WikipediaArticle(
+            title=result["title"],
+            url=result["url"],
+            extract=extract,
+            mode=mode,
+        )
 
 
 # --- Fetch URL Tool ---
@@ -802,21 +857,37 @@ class FetchUrlInput(BaseModel):
     )
 
 
-def _unwrap_mcp_response(response: dict[str, Any]) -> dict[str, Any]:
-    """Extract raw data from an MCP-formatted response.
+def unwrap_mcp_response(response: ToolResponse) -> JsonValue:
+    """Extract the raw payload a routed tool answered with.
 
-    Route handlers return MCP-formatted dicts (from mcp_success/mcp_error).
-    This unwraps them so @mcp_tool can re-wrap consistently.
+    A route dispatches to another tool, which returns an MCP tool result —
+    the text of which is that tool's own JSON. Unwrapping it here lets
+    `lup_tool` re-wrap the whole thing once, rather than nesting one tool
+    result inside another.
     """
-    if response.get("is_error"):
-        text = response.get("content", [{}])[0].get("text", "Unknown error")
-        raise ToolError(text)
-    text = response.get("content", [{}])[0].get("text", "{}")
-    return json.loads(text)
+    text = response_text(response)
+    if "is_error" in response and response["is_error"]:
+        raise ToolError(text or "Unknown error")
+    return json.loads(text or "{}")
 
 
-@mcp_tool(
-    "fetch_url",
+class FetchedPage(BaseModel):
+    """A page's extracted text, plus whatever structure came with it.
+
+    `content` is declared plainly as a string so `guard_result` can spill an
+    oversized page to disk instead of letting it be truncated on the wire.
+    `routed` is the answer of the tool a URL route reached instead — the
+    shape belongs to that tool, so it crosses as its own payload.
+    """
+
+    url: str
+    content: str = ""
+    title: str = ""
+    structured_data: list[str] = []
+    routed: JsonValue = None
+
+
+@lup_tool(
     (
         "Fetch and extract content from a URL. "
         "Automatically extracts readable text, renders JavaScript pages via Playwright, "
@@ -827,14 +898,15 @@ def _unwrap_mcp_response(response: dict[str, Any]) -> dict[str, Any]:
         "and surfaces relevant links for follow-up research. "
         "Prefer this over WebFetch for URL fetching."
     ),
+    name="fetch_url",
 )
-async def fetch_url(params: FetchUrlInput) -> dict[str, Any]:
+async def fetch_url(params: FetchUrlInput) -> FetchedPage:
     """Unified fetch: domain dispatch -> http/wayback -> trafilatura -> playwright -> prompt."""
     url, prompt = params.url, params.prompt
 
-    dispatched = await domain_dispatch(url)
+    dispatched = await routes.dispatch(url)
     if dispatched is not None:
-        return _unwrap_mcp_response(dispatched)
+        return FetchedPage(url=url, routed=unwrap_mcp_response(dispatched))
 
     if retrodict_cutoff.get() is not None:
         result = await _fetch_retrodict(url)
@@ -842,7 +914,7 @@ async def fetch_url(params: FetchUrlInput) -> dict[str, Any]:
         result = await fetch_live(url)
 
     if isinstance(result, dict):
-        return _unwrap_mcp_response(result)
+        return FetchedPage(url=url, routed=unwrap_mcp_response(result))
 
     if isinstance(result, FetchResult):
         text, title = result.text, result.title
@@ -861,12 +933,12 @@ async def fetch_url(params: FetchUrlInput) -> dict[str, Any]:
             logger.warning("Prompt extraction failed for %s: %s", url, e)
             text = f"[Prompt extraction failed, returning raw content]\n\n{text}"
 
-    response: dict[str, Any] = {"url": url, "content": text[:_MAX_CONTENT]}
-    if title:
-        response["title"] = title
-    if isinstance(result, FetchResult) and result.data:
-        response["structured_data"] = result.data
-    return response
+    return FetchedPage(
+        url=url,
+        content=text[:_MAX_CONTENT],
+        title=title,
+        structured_data=result.data if isinstance(result, FetchResult) else [],
+    )
 
 
 async def _fetch_retrodict(url: str) -> FetchResult | str:

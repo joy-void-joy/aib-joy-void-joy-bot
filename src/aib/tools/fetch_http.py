@@ -4,10 +4,11 @@ Pipeline: httpx GET (with_retry on 429/5xx) → trafilatura → Playwright
 """
 
 import hashlib
+import json
 import logging
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
 import httpx
 import trafilatura
@@ -17,7 +18,7 @@ from mcp.types import TextContent
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from aib.tools.responses import mcp_error, mcp_success
+from lup.mcp import ToolResponse, mcp_response
 from lup.resilience.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -177,36 +178,45 @@ downloads_dir: ContextVar[Path] = ContextVar("downloads_dir", default=Path("tmp"
 MAX_PDF_BYTES = 100 * 1024 * 1024
 
 
-def _save_pdf(url: str, content: bytes) -> dict[str, Any]:
+class SavedPdf(BaseModel):
+    """A downloaded PDF, named by where it landed rather than inlined."""
+
+    format: Literal["pdf"] = "pdf"
+    url: str
+    pdf_path: str
+    hint: str
+
+
+def save_pdf(url: str, content: bytes) -> ToolResponse:
     """Save PDF content to disk and return a path hint for the agent."""
     if len(content) > MAX_PDF_BYTES:
-        return mcp_error(
+        return mcp_response(
             f"PDF too large to process ({len(content) / 1024 / 1024:.0f} MB). "
-            f"Try finding the information from a different source."
+            f"Try finding the information from a different source.",
+            is_error=True,
         )
     target = downloads_dir.get() / "pdf"
     target.mkdir(parents=True, exist_ok=True)
     slug = hashlib.sha256(url.encode()).hexdigest()[:12]
     pdf_path = target / f"{slug}.pdf"
     pdf_path.write_bytes(content)
-    return mcp_success(
-        {
-            "format": "pdf",
-            "url": url,
-            "pdf_path": str(pdf_path.resolve()),
-            "hint": (
-                f"PDF downloaded to {pdf_path.resolve()}. "
-                "Use the Read tool to read the PDF content."
-            ),
-        }
+    saved = SavedPdf(
+        url=url,
+        pdf_path=str(pdf_path.resolve()),
+        hint=(
+            f"PDF downloaded to {pdf_path.resolve()}. "
+            "Use the Read tool to read the PDF content."
+        ),
     )
+    return mcp_response(json.dumps(saved.model_dump(mode="json")))
 
 
-async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
+async def fetch_live(url: str) -> ToolResponse | FetchResult:
     """Fetch URL in live mode: httpx → trafilatura → Playwright fallback.
 
     Creates a single httpx client so retries reuse the same TCP connection.
-    Returns extracted text on success, or an MCP error dict on failure.
+    Returns extracted text on success, or an MCP tool result on failure —
+    and for a PDF, which is answered by a path rather than by its bytes.
     """
     try:
         async with httpx.AsyncClient(
@@ -221,34 +231,42 @@ async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
 
             resp = await _get()
     except httpx.TimeoutException:
-        return mcp_error(f"Timeout fetching {url}. Try Playwright or search_exa.")
+        return mcp_response(
+            f"Timeout fetching {url}. Try Playwright or search_exa.", is_error=True
+        )
     except httpx.ConnectError:
-        return mcp_error(f"Could not connect to {url}. Check the URL.")
+        return mcp_response(
+            f"Could not connect to {url}. Check the URL.", is_error=True
+        )
     except httpx.HTTPStatusError as e:
         status = e.response.status_code
         if status == 429:
-            return mcp_error(
+            return mcp_response(
                 f"Rate limited by {url} after retries. "
-                "Try search_exa for cached content."
+                "Try search_exa for cached content.",
+                is_error=True,
             )
-        return mcp_error(
+        return mcp_response(
             f"HTTP {status} for {url}. "
-            "Server error. Try again later, or use search_exa."
+            "Server error. Try again later, or use search_exa.",
+            is_error=True,
         )
     except httpx.HTTPError as e:
-        return mcp_error(f"HTTP error fetching {url}: {e}")
+        return mcp_response(f"HTTP error fetching {url}: {e}", is_error=True)
 
     # Non-retryable client errors (4xx except 429, which was retried above)
     if 400 <= resp.status_code < 500:
         hint = _ERROR_HINTS.get(resp.status_code, "")
-        return mcp_error(f"HTTP {resp.status_code} for {url}. {hint}")
+        return mcp_response(
+            f"HTTP {resp.status_code} for {url}. {hint}", is_error=True
+        )
 
     # Extract text
     ct = resp.headers.get("content-type", "")
     raw = resp.text
 
     if "application/pdf" in ct:
-        return _save_pdf(url, resp.content)
+        return save_pdf(url, resp.content)
 
     if "text/plain" in ct or "application/json" in ct:
         return FetchResult(text=raw, title="")
@@ -274,9 +292,12 @@ async def fetch_live(url: str) -> dict[str, Any] | FetchResult:
         pw_result = await _playwright_render(url)
         if pw_result:
             return pw_result
-        return mcp_error(
+        return mcp_response(
             f"Could not extract text from {url} (JavaScript-rendered page). "
-            "Playwright also failed. Try search_exa for indexed content."
+            "Playwright also failed. Try search_exa for indexed content.",
+            is_error=True,
         )
 
-    return mcp_error(f"No content could be extracted from {url}.")
+    return mcp_response(
+        f"No content could be extracted from {url}.", is_error=True
+    )

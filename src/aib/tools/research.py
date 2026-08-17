@@ -35,7 +35,7 @@ from aib.agent.retrodict import create_retrodict_hooks
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.session import get_session, register_nested_trace
 from aib.paths import WORLDVIEW_PATH
-from aib.tools.decorator import ToolError, mcp_tool
+from lup.mcp import ToolError, lup_tool
 from aib.tools.metrics import costs
 from aib.worldview.lookup import (
     all_slugs,
@@ -670,8 +670,7 @@ def handle_amend(slug: str, updates_json: str) -> ResearchResult:
 # ── MCP Tool ──────────────────────────────────────────────────────
 
 
-@mcp_tool(
-    "research",
+@lup_tool(
     "Delegate factual research questions to an Opus sub-agent with full data-gathering "
     "tools (web search, financial APIs, government data, prediction markets, arXiv, "
     "news, trends). The sub-agent researches thoroughly and persists findings to the "
@@ -690,6 +689,7 @@ def handle_amend(slug: str, updates_json: str) -> ResearchResult:
     "Amend an existing entry without re-running Opus:\n"
     '  research(amend="us-measles-trajectory-2026-a7f2b3c1",\n'
     '           questions=[{context: \'{"key_facts": ["Updated fact"]}\'}])\n',
+    name="research",
 )
 async def research(args: ResearchInput) -> ResearchOutput:
     """Run parallel research via Opus sub-agents with worldview persistence."""

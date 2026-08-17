@@ -1,32 +1,19 @@
-"""Domain routing for the fetch tool.
+"""Which of this project's tools answers a URL better than fetching it.
 
-Routes self-register at import time when tools use @mcp_tool(url_route=...)
-via mcp_tool(url_route=...) at tool definition time — no centralized
-import list needed.
+The mechanism is lup's (:mod:`lup.tool_routes`) — matching, dispatch, and the
+host comparison that decides which redirection speaks for a URL. What lives
+here is only this project's own table.
+
+URL routes register beside the tool they reach, so this module carries just
+the *redirections*: domains with a better tool whose arguments are simply not
+in the URL. ``SUGGEST_ONLY`` is the declaration a reader (and the test suite)
+checks; registering it into lup's registry is what makes it answer.
 """
 
-import logging
-import re
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
-from typing import Any
-
-logger = logging.getLogger(__name__)
-
-Handler = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-ParamBuilder = Callable[[re.Match[str]], dict[str, Any]]
-
-
-@dataclass
-class DomainRoute:
-    """Maps a URL regex to a tool function via a param builder."""
-
-    pattern: re.Pattern[str]
-    handler: Handler
-    param_builder: ParamBuilder
-
+from lup.tool_routes import routes
 
 # Domains with dedicated tools but no simple URL → args mapping
+# lup: ignore[dict-str-payload] — domain → the redirection to show the agent
 SUGGEST_ONLY: dict[str, str] = {
     "tradingeconomics.com": "Use fred_series/fred_search for US data, or world_bank_indicator for international data.",
     "bls.gov": "Use fred_series (FRED mirrors BLS data). Try UNRATE, CPIAUCSL, PAYEMS.",
@@ -41,31 +28,5 @@ SUGGEST_ONLY: dict[str, str] = {
     "missingmigrants.iom.int": "Use search_exa for cached content, or web_search for migration data.",
 }
 
-_registry: list[DomainRoute] = []
-
-
-def register_route(pattern: str, handler: Handler, param_builder: ParamBuilder) -> None:
-    """Register a domain route. Called by @mcp_tool when url_route is provided."""
-    _registry.append(
-        DomainRoute(
-            pattern=re.compile(pattern),
-            handler=handler,
-            param_builder=param_builder,
-        )
-    )
-
-
-async def domain_dispatch(url: str) -> dict[str, Any] | None:
-    """Route URL to a specialized tool if possible. Returns None to fall through."""
-    for route in _registry:
-        match = route.pattern.search(url)
-        if match:
-            params = route.param_builder(match)
-            logger.info(
-                "Domain dispatch: %s → %s(%s)",
-                url[:60],
-                route.handler.__name__,
-                params,
-            )
-            return await route.handler(params)
-    return None
+for domain, redirection in SUGGEST_ONLY.items():
+    routes.redirect(domain, redirection)

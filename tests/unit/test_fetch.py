@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from lup.mcp import response_text
+
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.search import fetch_url as _fetch_url_tool
 
@@ -19,7 +21,7 @@ class TestSuggestOnlyPassthrough:
     async def test_tradingeconomics_fetched(self) -> None:
         with (
             patch(
-                "aib.tools.search.domain_dispatch",
+                "lup.tool_routes.ToolRoutes.dispatch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -33,14 +35,14 @@ class TestSuggestOnlyPassthrough:
                 {"url": "https://tradingeconomics.com/germany/gdp"}
             )
         assert result.get("is_error") is not True
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert data["content"] == "GDP data here"
 
     @pytest.mark.asyncio
     async def test_statista_fetched(self) -> None:
         with (
             patch(
-                "aib.tools.search.domain_dispatch",
+                "lup.tool_routes.ToolRoutes.dispatch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -52,7 +54,7 @@ class TestSuggestOnlyPassthrough:
         ):
             result = await fetch_url({"url": "https://www.statista.com/statistics/123"})
         assert result.get("is_error") is not True
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert data["content"] == "Stats page"
 
 
@@ -62,7 +64,7 @@ class TestDomainDispatch:
     @pytest.mark.asyncio
     async def test_yahoo_finance_dispatched(self) -> None:
         with patch(
-            "aib.tools.search.domain_dispatch",
+            "lup.tool_routes.ToolRoutes.dispatch",
             new_callable=AsyncMock,
             return_value={
                 "content": [
@@ -71,13 +73,13 @@ class TestDomainDispatch:
             },
         ):
             result = await fetch_url({"url": "https://finance.yahoo.com/quote/AAPL"})
-        assert "AAPL" in result["content"][0]["text"]
+        assert "AAPL" in response_text(result)
 
     @pytest.mark.asyncio
     async def test_unknown_domain_falls_through(self) -> None:
         with (
             patch(
-                "aib.tools.search.domain_dispatch",
+                "lup.tool_routes.ToolRoutes.dispatch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -88,7 +90,7 @@ class TestDomainDispatch:
             ),
         ):
             result = await fetch_url({"url": "https://example.com/page"})
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert data["content"] == "Page content here"
 
 
@@ -101,7 +103,7 @@ class TestRetrodictBranching:
         try:
             with (
                 patch(
-                    "aib.tools.search.domain_dispatch",
+                    "lup.tool_routes.ToolRoutes.dispatch",
                     new_callable=AsyncMock,
                     return_value=None,
                 ),
@@ -117,7 +119,7 @@ class TestRetrodictBranching:
                 ),
             ):
                 result = await fetch_url({"url": "https://example.com/page"})
-            data = json.loads(result["content"][0]["text"])
+            data = json.loads(response_text(result))
             assert data["content"] == "Wayback content"
         finally:
             retrodict_cutoff.reset(token)
@@ -130,7 +132,7 @@ class TestPromptExtractionFailure:
     async def test_extraction_failure_adds_note(self) -> None:
         with (
             patch(
-                "aib.tools.search.domain_dispatch",
+                "lup.tool_routes.ToolRoutes.dispatch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -152,7 +154,7 @@ class TestPromptExtractionFailure:
                 }
             )
 
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert "Prompt extraction failed" in data["content"]
         assert "Raw page content" in data["content"]
 
@@ -160,7 +162,7 @@ class TestPromptExtractionFailure:
     async def test_extraction_success_returns_extracted(self) -> None:
         with (
             patch(
-                "aib.tools.search.domain_dispatch",
+                "lup.tool_routes.ToolRoutes.dispatch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -182,5 +184,5 @@ class TestPromptExtractionFailure:
                 }
             )
 
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert data["content"] == "GDP is 3.2%"

@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from lup.mcp import response_text
+
 from aib.worldview.lookup import save_forecast_entry, save_research_entry
 from aib.worldview.models import (
     EntryState,
@@ -85,7 +87,7 @@ async def test_list_entries_returns_all_kinds(worldview_dir: Path) -> None:
     save_forecast_entry(make_forecast("f-1"))
 
     result = await wv_list_entries.handler({"kind": "all"})
-    content = result["content"][0]["text"]
+    content = response_text(result)
     assert "r-1" in content
     assert "f-1" in content
 
@@ -98,7 +100,7 @@ async def test_list_entries_filters_by_kind(worldview_dir: Path) -> None:
     save_forecast_entry(make_forecast("f-only"))
 
     research_only = await wv_list_entries.handler({"kind": "research"})
-    text = research_only["content"][0]["text"]
+    text = response_text(research_only)
     assert "r-only" in text
     assert "f-only" not in text
 
@@ -116,7 +118,7 @@ async def test_list_entries_excludes_superseded_by_default(
     save_forecast_entry(old)
 
     result = await wv_list_entries.handler({"kind": "forecast"})
-    text = result["content"][0]["text"]
+    text = response_text(result)
     assert "kept" in text
     assert "old" not in text
 
@@ -131,7 +133,7 @@ async def test_read_entry_returns_full_entry(worldview_dir: Path) -> None:
     save_forecast_entry(make_forecast("full-entry", question="Detailed?"))
 
     result = await wv_read_entry.handler({"slug": "full-entry", "kind": "forecasts"})
-    text = result["content"][0]["text"]
+    text = response_text(result)
     assert "Detailed?" in text
 
 
@@ -332,7 +334,7 @@ async def test_wv_refresh_replaces_entry(
 
     result = await wv_refresh.handler({"slug": "to-refresh"})
     assert result.get("is_error") is not True
-    assert "to-refresh" in result["content"][0]["text"]
+    assert "to-refresh" in response_text(result)
 
 
 @pytest.mark.asyncio

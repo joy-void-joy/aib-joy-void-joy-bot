@@ -13,7 +13,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, TypedDict
+
+# lup: ignore[any-type] — the Wayback availability API's own JSON payload
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 if TYPE_CHECKING:
@@ -32,8 +34,8 @@ from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
-from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.throttle import wayback_throttle
+from lup.mcp import ToolError, lup_tool
 
 logger = logging.getLogger(__name__)
 
@@ -353,19 +355,22 @@ class WaybackSnapshotInput(BaseModel):
     )
 
 
-class WaybackSnapshotResult(TypedDict):
-    """A resolved Wayback snapshot."""
+class WaybackSnapshotResult(BaseModel):
+    """A resolved Wayback snapshot.
+
+    `content` is declared plainly as a string so `guard_result` can spill an
+    oversized archived page to disk rather than let it be truncated.
+    """
 
     url: str
     requested_date: str
     snapshot_date: str
     snapshot_url: str
-    content: str | None
+    content: str | None = None
 
 
-@mcp_tool(
-    "wayback_snapshot",
-    description=(
+@lup_tool(
+    (
         "Retrieve a web page as it existed on a past date, via the Internet "
         "Archive's Wayback Machine. Use this to establish what a source said "
         "at a specific time — status-page incident history, superseded "

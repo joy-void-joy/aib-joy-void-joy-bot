@@ -1,3 +1,7 @@
+# lup: ignore[dict-get, any-type]
+# BLS and Census answer with untyped JSON, read key by key at this boundary.
+# The TypedDicts below are what this module promises its caller, not what the
+# APIs send; the `census` client is likewise unstubbed.
 """US government data tools: BLS (Bureau of Labor Statistics) and Census/ACS.
 
 These tools fetch official government statistics for questions about
@@ -5,6 +9,7 @@ employment, inflation, demographics, and housing.
 """
 
 import logging
+from collections.abc import Iterator
 from datetime import date
 from typing import Any, TypedDict
 
@@ -13,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.decorator import ToolError, mcp_tool
+from lup.mcp import ToolError, lup_tool
 from lup.resilience.retry import with_retry
 
 logger = logging.getLogger(__name__)
@@ -21,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # --- BLS Input/Output Schemas ---
 
-_BLS_SERIES_GUIDE = (
+BLS_SERIES_GUIDE = (
     "Common series IDs: "
     "LNS14000000 (U-3 unemployment rate), "
     "LNS13327709 (U-6 unemployment rate), "
@@ -40,7 +45,7 @@ class BLSSeriesInput(BaseModel):
     series_ids: list[str] = Field(
         min_length=1,
         max_length=25,
-        description=f"BLS series IDs to fetch. {_BLS_SERIES_GUIDE}",
+        description=f"BLS series IDs to fetch. {BLS_SERIES_GUIDE}",
     )
     start_year: int | None = Field(
         default=None,
@@ -70,9 +75,18 @@ class BLSSeriesResult(TypedDict):
     latest_period: str | None
 
 
+class BLSSeriesOutput(BaseModel):
+    """Every requested series over the resolved year window."""
+
+    start_year: int
+    end_year: int
+    series_count: int
+    series: list[BLSSeriesResult]
+
+
 # --- Census Input/Output Schemas ---
 
-_CENSUS_VARIABLES_GUIDE = (
+CENSUS_VARIABLES_GUIDE = (
     "Common variable codes: "
     "B01003_001E (total population), "
     "B19013_001E (median household income), "
@@ -91,7 +105,7 @@ class CensusDataInput(BaseModel):
     variables: list[str] = Field(
         min_length=1,
         max_length=25,
-        description=f"Census variable codes to fetch. {_CENSUS_VARIABLES_GUIDE}",
+        description=f"Census variable codes to fetch. {CENSUS_VARIABLES_GUIDE}",
     )
     geography: str = Field(
         default="state",
@@ -129,6 +143,17 @@ class CensusRecord(TypedDict):
     values: dict[str, str | None]
 
 
+class CensusDataOutput(BaseModel):
+    """Census records for the resolved dataset, year, and geography."""
+
+    dataset: str
+    year: int | str
+    geography: str
+    variables: list[str]
+    record_count: int
+    records: list[CensusRecord]
+
+
 # --- BLS Tools ---
 
 BLS_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
@@ -148,6 +173,36 @@ MONTH_NAMES = [
     "November",
     "December",
 ]
+
+
+def bls_observations(raw: list[Any]) -> Iterator[BLSObservation]:
+    """Every usable data point in one series' raw payload.
+
+    Skips the M13 annual-average pseudo-period and any value BLS marks
+    missing, so a caller never has to distinguish those from real readings.
+    """
+    for item in raw:
+        period = item.get("period", "")
+        if period == "M13":
+            continue
+        value = item.get("value", "")
+        if value in ("-", ""):
+            continue
+        try:
+            float(value)
+        except ValueError:
+            continue
+        month_num = int(period[1:]) if period.startswith("M") else 0
+        yield BLSObservation(
+            year=item.get("year", ""),
+            period=period,
+            period_name=(
+                MONTH_NAMES[month_num]
+                if 1 <= month_num <= 12
+                else item.get("periodName", period)
+            ),
+            value=value,
+        )
 
 
 @with_retry(max_attempts=3)
@@ -190,31 +245,7 @@ async def fetch_bls_series(
             sid = series["seriesID"]
             if sid not in all_observations:
                 continue
-            for item in series.get("data", []):
-                period = item.get("period", "")
-                if period == "M13":
-                    continue
-                value = item.get("value", "")
-                if value in ("-", ""):
-                    continue
-                try:
-                    float(value)
-                except ValueError:
-                    continue
-                year = item.get("year", "")
-                month_num = int(period[1:]) if period.startswith("M") else 0
-                all_observations[sid].append(
-                    BLSObservation(
-                        year=year,
-                        period=period,
-                        period_name=(
-                            MONTH_NAMES[month_num]
-                            if 1 <= month_num <= 12
-                            else item.get("periodName", period)
-                        ),
-                        value=value,
-                    )
-                )
+            all_observations[sid].extend(bls_observations(series.get("data", [])))
 
         chunk_start = chunk_end + 1
 
@@ -224,18 +255,18 @@ async def fetch_bls_series(
     return all_observations
 
 
-@mcp_tool(
-    "bls_series",
+@lup_tool(
     (
         "Get time series data from the Bureau of Labor Statistics. "
         "Returns monthly/quarterly observations for up to 25 series. "
         "Covers employment, inflation (CPI), producer prices (PPI), "
         "productivity, and wages. "
-        f"{_BLS_SERIES_GUIDE} "
+        f"{BLS_SERIES_GUIDE} "
         "Data typically lags 1-2 months. More granular than FRED for BLS-specific data."
     ),
+    name="bls_series",
 )
-async def bls_series(params: BLSSeriesInput) -> dict[str, Any]:
+async def bls_series(params: BLSSeriesInput) -> BLSSeriesOutput:
     """Get BLS time series data."""
     cutoff = retrodict_cutoff.get()
     reference_year = cutoff.year if cutoff else date.today().year
@@ -252,10 +283,8 @@ async def bls_series(params: BLSSeriesInput) -> dict[str, Any]:
         settings.bls_api_key,
     )
 
-    results: list[BLSSeriesResult] = []
-    for series_id in params.series_ids:
+    def observed(series_id: str) -> list[BLSObservation]:
         observations = all_obs.get(series_id, [])
-
         if cutoff is not None:
             cutoff_period = f"M{cutoff.month:02d}"
             cutoff_year = str(cutoff.year)
@@ -264,11 +293,13 @@ async def bls_series(params: BLSSeriesInput) -> dict[str, Any]:
                 for o in observations
                 if (o["year"], o["period"]) <= (cutoff_year, cutoff_period)
             ]
+        return observations[-60:]
 
-        observations = observations[-60:]
-        latest = observations[-1] if observations else None
-        results.append(
-            BLSSeriesResult(
+    def series_results() -> Iterator[BLSSeriesResult]:
+        for series_id in params.series_ids:
+            observations = observed(series_id)
+            latest = observations[-1] if observations else None
+            yield BLSSeriesResult(
                 series_id=series_id,
                 observations=observations,
                 latest_value=latest["value"] if latest else None,
@@ -276,20 +307,21 @@ async def bls_series(params: BLSSeriesInput) -> dict[str, Any]:
                     f"{latest['year']}-{latest['period']}" if latest else None
                 ),
             )
-        )
 
-    return {
-        "start_year": start_year,
-        "end_year": end_year,
-        "series_count": len(results),
-        "series": results,
-    }
+    results = list(series_results())
+
+    return BLSSeriesOutput(
+        start_year=start_year,
+        end_year=end_year,
+        series_count=len(results),
+        series=results,
+    )
 
 
 # --- Census Tools ---
 
 
-def _resolve_state_fips(state_input: str) -> str:
+def resolve_state_fips(state_input: str) -> str:
     """Resolve a state abbreviation or FIPS code to a FIPS code."""
     if state_input == "*":
         return "*"
@@ -305,18 +337,50 @@ def _resolve_state_fips(state_input: str) -> str:
     return state_input
 
 
-@mcp_tool(
-    "census_data",
+def census_rows(
+    dataset: Any, fields: tuple[str, ...], params: CensusDataInput
+) -> list[Any]:
+    """Query the Census dataset at the geography the caller asked for."""
+    state_fips = resolve_state_fips(params.state) if params.state else None
+
+    match params.geography:
+        case "state":
+            return dataset.state(fields, state_fips or "*")
+        case "county":
+            if not state_fips:
+                raise ToolError("State is required for county-level queries.")
+            return dataset.state_county(fields, state_fips, params.county or "*")
+        case "tract":
+            if not state_fips or not params.county:
+                raise ToolError("State and county are required for tract-level queries.")
+            return dataset.state_county_tract(fields, state_fips, params.county, "*")
+        case "place":
+            if not state_fips:
+                raise ToolError("State is required for place-level queries.")
+            return dataset.state_place(fields, state_fips, "*")
+        case "congressional_district":
+            if not state_fips:
+                raise ToolError("State is required for congressional district queries.")
+            return dataset.state_congressional_district(fields, state_fips, "*")
+        case _:
+            raise ToolError(
+                f"Unknown geography '{params.geography}'. "
+                "Use: state, county, tract, place, congressional_district."
+            )
+
+
+@lup_tool(
     (
         "Get Census Bureau / American Community Survey (ACS) data. "
         "Returns demographic, economic, and housing data at various geographic levels. "
-        f"{_CENSUS_VARIABLES_GUIDE} "
+        f"{CENSUS_VARIABLES_GUIDE} "
         "Geographic levels: state, county, tract, place, congressional_district. "
         "ACS 5-year estimates (2009-2023) have the most geographic detail. "
         "ACS 1-year estimates are more recent but limited to areas with 65k+ population."
     ),
+    name="census_data",
 )
-async def census_data(params: CensusDataInput) -> dict[str, Any]:
+async def census_data(params: CensusDataInput) -> CensusDataOutput:
     """Get Census/ACS data."""
     api_key = settings.census_api_key
     if not api_key:
@@ -341,55 +405,22 @@ async def census_data(params: CensusDataInput) -> dict[str, Any]:
         raise ToolError(f"Unknown dataset '{params.dataset}'. Use 'acs5' or 'acs1'.")
 
     fields = ("NAME", *params.variables)
+    data = census_rows(dataset, fields, params)
 
-    state_fips = _resolve_state_fips(params.state) if params.state else None
-
-    if params.geography == "state":
-        target = state_fips or "*"
-        data = dataset.state(fields, target)
-
-    elif params.geography == "county":
-        if not state_fips:
-            raise ToolError("State is required for county-level queries.")
-        county = params.county or "*"
-        data = dataset.state_county(fields, state_fips, county)
-
-    elif params.geography == "tract":
-        if not state_fips or not params.county:
-            raise ToolError("State and county are required for tract-level queries.")
-        data = dataset.state_county_tract(fields, state_fips, params.county, "*")
-
-    elif params.geography == "place":
-        if not state_fips:
-            raise ToolError("State is required for place-level queries.")
-        data = dataset.state_place(fields, state_fips, "*")
-
-    elif params.geography == "congressional_district":
-        if not state_fips:
-            raise ToolError("State is required for congressional district queries.")
-        data = dataset.state_congressional_district(fields, state_fips, "*")
-
-    else:
-        raise ToolError(
-            f"Unknown geography '{params.geography}'. "
-            "Use: state, county, tract, place, congressional_district."
+    records = [
+        CensusRecord(
+            NAME=row.get("NAME", ""),
+            state=row.get("state", ""),
+            values={var: row.get(var) for var in params.variables},
         )
+        for row in data[:100]
+    ]
 
-    records: list[CensusRecord] = []
-    for row in data[:100]:
-        records.append(
-            {
-                "NAME": row.get("NAME", ""),
-                "state": row.get("state", ""),
-                "values": {var: row.get(var) for var in params.variables},
-            }
-        )
-
-    return {
-        "dataset": params.dataset,
-        "year": year or "latest",
-        "geography": params.geography,
-        "variables": params.variables,
-        "record_count": len(records),
-        "records": records,
-    }
+    return CensusDataOutput(
+        dataset=params.dataset,
+        year=year or "latest",
+        geography=params.geography,
+        variables=params.variables,
+        record_count=len(records),
+        records=records,
+    )

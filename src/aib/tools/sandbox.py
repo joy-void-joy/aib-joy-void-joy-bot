@@ -19,12 +19,15 @@ from pathlib import Path
 from typing import Any, Literal, Self
 
 import docker
-from claude_agent_sdk import SdkMcpTool
 from pydantic import BaseModel, Field
 
-from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.mcp_server import create_mcp_server
-from claude_agent_sdk.types import McpSdkServerConfig
+from lup.mcp import (
+    LupMcpServerConfig,
+    LupMcpTool,
+    ToolError,
+    create_mcp_server,
+    lup_tool,
+)
 from docker.errors import APIError, DockerException, NotFound
 from docker.models.containers import Container, ExecResult
 from docker.utils.socket import next_frame_header, read_exactly, SocketError
@@ -676,7 +679,7 @@ class Sandbox:
 
     # --- MCP tool creation ---
 
-    def create_tools(self) -> list[SdkMcpTool[Any]]:
+    def create_tools(self) -> list[LupMcpTool]:
         """Create MCP tools bound to this sandbox instance.
 
         Returns:
@@ -687,8 +690,7 @@ class Sandbox:
 
         network_desc = "network access"
 
-        @mcp_tool(
-            "execute_code",
+        @lup_tool(
             (
                 "Execute Python code in an isolated Docker container with persistent state. "
                 "Variables, imports, and data persist between calls — no need to re-define them. "
@@ -709,8 +711,7 @@ class Sandbox:
             except (SandboxNotInitializedError, CodeExecutionTimeoutError) as e:
                 raise ToolError(str(e)) from e
 
-        @mcp_tool(
-            "install_package",
+        @lup_tool(
             "Install one or more Python packages from PyPI using uv. Packages persist "
             "in the container across executions.",
         )
@@ -726,7 +727,7 @@ class Sandbox:
         self,
         name: str = "sandbox",
         version: str = "1.0.0",
-    ) -> McpSdkServerConfig:
+    ) -> LupMcpServerConfig:
         """Create an MCP server with sandbox tools.
 
         Args:

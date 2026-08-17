@@ -197,7 +197,8 @@ class TestRetrodictToolSchemas:
 
         schema = search_exa.input_schema
         assert isinstance(schema, dict), "input_schema must be a dict"
-        props = schema.get("properties", schema)
+        props = schema["properties"]
+        assert isinstance(props, dict), "properties must be a JSON object"
         assert "published_before" in props, (
             "published_before must be in search_exa input_schema or it will be "
             "stripped by SDK validation before reaching the handler"

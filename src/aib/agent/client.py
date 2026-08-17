@@ -15,6 +15,8 @@ from contextlib import asynccontextmanager
 from typing import Any, cast, overload
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
+from claude_agent_sdk.types import McpSdkServerConfig
+from lup.mcp import LupMcpServerConfig
 from pydantic import BaseModel
 
 from aib.config import settings
@@ -152,6 +154,21 @@ async def build_client(
 
     if "setting_sources" not in kwargs:
         kwargs["setting_sources"] = []
+
+    # The one place lup's neutral server configs become the SDK's own shape.
+    # It has to be here, at the boundary, and nowhere earlier:
+    # `server_tool_names` reads `tool_names` off a `LupMcpServerConfig` and
+    # answers `[]` for anything already projected, so projecting sooner
+    # would silently empty the hook-enforced tool allowlist.
+    if "mcp_servers" in kwargs:
+        kwargs["mcp_servers"] = {
+            name: (
+                McpSdkServerConfig(type="sdk", name=cfg.name, instance=cfg.server)
+                if isinstance(cfg, LupMcpServerConfig)
+                else cfg
+            )
+            for name, cfg in kwargs["mcp_servers"].items()
+        }
 
     options = ClaudeAgentOptions(
         extra_args=merged_extra,

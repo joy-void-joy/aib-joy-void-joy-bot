@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 import aiofiles
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_agent_sdk import TextBlock, ToolUseBlock, tool
+from claude_agent_sdk import TextBlock, ToolUseBlock
 
 from aib.agent.hooks import HooksConfig
 from aib.agent.nested import NestedAgentReport
@@ -36,10 +36,13 @@ from aib.agent.session import (
 )
 from aib.paths import WORLDVIEW_PATH
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.mcp_server import create_mcp_server
 from aib.tools.metrics import MetricsSummaryWithCost, costs, get_metrics_summary
-from lup.telemetry.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from lup.mcp import (
+    LupMcpServerConfig,
+    ToolError,
+    create_mcp_server,
+    lup_tool,
+)
 
 if TYPE_CHECKING:
     from aib.tools.reflection import ReflectionInput
@@ -657,6 +660,19 @@ Call premortem() exactly once per forecast, after your final reflection() call.
 """
 
 
+class PremortemVerdict(BaseModel):
+    """What the reviewer said, and whether it let the forecast through.
+
+    `note` is set only on the escape hatch — a fail that was force-approved
+    after too many consecutive reviewer failures — so a plain fail is
+    distinguishable from one the gate gave up on.
+    """
+
+    verdict: str
+    assessment: str
+    note: str | None = None
+
+
 def create_premortem_tool(
     session_dir: Path | None,
     get_trace: Callable[[], str] | None = None,
@@ -666,20 +682,18 @@ def create_premortem_tool(
 ):
     """Create the premortem tool with session context."""
 
-    @tool("premortem", _PREMORTEM_DESCRIPTION, PremortemInput)
-    @tracked("premortem")
-    async def premortem_tool(args: dict[str, Any]) -> dict[str, Any]:
-        """Run the premortem reviewer and gate StructuredOutput."""
-        try:
-            validated = PremortemInput.model_validate(args)
-        except Exception as e:
-            return mcp_error(f"Invalid input: {e}")
+    @lup_tool(_PREMORTEM_DESCRIPTION, name="premortem")
+    async def premortem_tool(validated: PremortemInput) -> PremortemVerdict:
+        """Run the premortem reviewer and gate StructuredOutput.
 
+        Input validation and metric recording are the decorator's now, so
+        what remains here is the review and the gate it holds.
+        """
         if session_dir is None or review_state is None:
-            return mcp_error("premortem is not available in this context")
+            raise ToolError("premortem is not available in this context")
 
         if not review_state.reflection_done:
-            return mcp_error(
+            raise ToolError(
                 "You must call reflection() before premortem(). "
                 "Commit to your factors and tentative estimate first."
             )
@@ -700,11 +714,9 @@ def create_premortem_tool(
                 ),
                 reflection_input=reflection_input,
             )
-            return mcp_success(
-                {
-                    "verdict": "approve",
-                    "assessment": "Reviewer unavailable; auto-approved.",
-                }
+            return PremortemVerdict(
+                verdict="approve",
+                assessment="Reviewer unavailable; auto-approved.",
             )
 
         review_result: ReviewResult | None = None
@@ -730,11 +742,9 @@ def create_premortem_tool(
                 ),
                 reflection_input=reflection_input,
             )
-            return mcp_success(
-                {
-                    "verdict": "approve",
-                    "assessment": "Reviewer unavailable; auto-approved.",
-                }
+            return PremortemVerdict(
+                verdict="approve",
+                assessment="Reviewer unavailable; auto-approved.",
             )
 
         review_state.record(review_result, reflection_input=reflection_input)
@@ -750,26 +760,22 @@ def create_premortem_tool(
                     "Escape hatch: force-approving after %d consecutive fails",
                     review_state.consecutive_fails,
                 )
-                return mcp_success(
-                    {
-                        "verdict": "fail",
-                        "assessment": review_result.assessment,
-                        "note": (
-                            f"Force-approved after {review_state.consecutive_fails} "
-                            f"consecutive reviewer failures."
-                        ),
-                    }
+                return PremortemVerdict(
+                    verdict="fail",
+                    assessment=review_result.assessment,
+                    note=(
+                        f"Force-approved after {review_state.consecutive_fails} "
+                        f"consecutive reviewer failures."
+                    ),
                 )
-            return mcp_error(
+            raise ToolError(
                 f"REVIEWER FAILED: {review_result.assessment}\n\n"
                 f"Fix the issues above, then call premortem() again."
             )
 
-        return mcp_success(
-            {
-                "verdict": review_result.verdict.value,
-                "assessment": review_result.assessment,
-            }
+        return PremortemVerdict(
+            verdict=review_result.verdict.value,
+            assessment=review_result.assessment,
         )
 
     return premortem_tool
@@ -781,7 +787,7 @@ def create_premortem_server(
     question_context: dict[str, Any] | None = None,
     traces_dir: Path | None = None,
     review_state: ReviewState | None = None,
-):
+) -> LupMcpServerConfig:
     """Create the premortem MCP server with session context.
 
     Args:

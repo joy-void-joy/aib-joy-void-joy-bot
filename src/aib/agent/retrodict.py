@@ -97,7 +97,7 @@ def _parse_trends_duration(timeframe: str) -> int:
     return 365
 
 
-def _cap_trends_timeframe(timeframe: str, cutoff_date: date) -> str:
+def cap_trends_timeframe(timeframe: str, cutoff_date: date) -> str:
     """Convert trends timeframe to date range ending at cutoff.
 
     Preserves the requested duration while ensuring end date doesn't exceed

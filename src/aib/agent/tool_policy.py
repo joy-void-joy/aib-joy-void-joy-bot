@@ -9,14 +9,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
-from claude_agent_sdk.types import (
-    McpServerConfig,
-)
+from lup.mcp import McpServerEntry, create_mcp_server
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.mcp_server import create_mcp_server
 from aib.tools.premortem import create_premortem_server
 from aib.tools.reflection import create_reflection_server
 
@@ -347,7 +344,7 @@ class ToolPolicy:
         question_context: dict[str, Any] | None = None,
         traces_dir: Path | None = None,
         review_state: ReviewState | None = None,
-    ) -> dict[str, McpServerConfig]:
+    ) -> dict[str, McpServerEntry]:
         """Get MCP server configuration based on policy.
 
         Args:
@@ -381,7 +378,7 @@ class ToolPolicy:
         from aib.tools.subforecast import extract_cdf_threshold_tool, subforecast
 
         # Main agent: orchestrator tools only
-        servers: dict[str, McpServerConfig] = {
+        servers: dict[str, McpServerEntry] = {
             "sandbox": sandbox.create_mcp_server(),
             "subforecast": create_mcp_server(
                 "subforecast", tools=[subforecast, extract_cdf_threshold_tool]
@@ -413,12 +410,12 @@ class ToolPolicy:
             ),
         }
 
-        return cast(dict[str, McpServerConfig], servers)
+        return servers
 
     def get_research_mcp_servers(
         self,
         sandbox: Sandbox | None = None,
-    ) -> dict[str, McpServerConfig]:
+    ) -> dict[str, McpServerEntry]:
         """Get MCP servers for the research sub-agent.
 
         Includes all ~35 data-gathering tools that the main agent
@@ -454,7 +451,7 @@ class ToolPolicy:
         from aib.tools.wayback import wayback_snapshot
         from aib.tools.weather import weather_forecast
 
-        servers: dict[str, McpServerConfig] = {
+        servers: dict[str, McpServerEntry] = {
             "financial": create_mcp_server(
                 "financial",
                 tools=[
@@ -536,7 +533,7 @@ class ToolPolicy:
 
             servers["asknews"] = create_asknews_server(self.asknews_api_key)
 
-        return cast(dict[str, McpServerConfig], servers)
+        return servers
 
     def get_allowed_tools(self, *, allow_spawn: bool = True) -> list[str]:
         """Get list of allowed tools based on policy.
@@ -586,7 +583,7 @@ class ToolPolicy:
 
     def get_tool_docs(
         self,
-        mcp_servers: dict[str, McpServerConfig],
+        mcp_servers: dict[str, McpServerEntry],
         *,
         allow_spawn: bool = True,
     ) -> str:

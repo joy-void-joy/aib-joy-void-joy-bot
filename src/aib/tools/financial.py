@@ -16,8 +16,9 @@ import numpy as np
 from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.cache import cached
-from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.throttle import fred_throttle
+from lup.mcp import LupMcpServerConfig, ToolError, lup_tool
+from lup.tool_routes import routes
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,60 @@ class RateFuturesCurve(TypedDict):
     contracts: list[RateFuture]
     current_rate: float
     months_ahead: int
+
+
+class FredSeriesOutput(BaseModel):
+    """One FRED series over a window, with whatever context it supports.
+
+    `regime_stats` is present only when a level shift was detected, and
+    `rate_futures` only for the interest-rate series that have a futures
+    curve — so both stay optional rather than being forced to a null shape
+    every other series would carry.
+    """
+
+    series: FredSeriesInfo
+    latest_value: float | None = None
+    latest_date: str | None = None
+    observation_start: str
+    observation_end: str
+    data_points: int
+    observations: list[FredObservation]
+    regime_stats: RegimeStats | None = None
+    rate_futures: RateFuturesCurve | None = None
+
+
+class FredSearchHit(TypedDict):
+    """One series a FRED search matched."""
+
+    id: str
+    title: str
+    frequency: str
+    units: str
+    popularity: int
+
+
+class FredSearchOutput(BaseModel):
+    """Series matching a FRED keyword search."""
+
+    query: str
+    results: list[FredSearchHit]
+    total_found: int
+
+
+class CompanyFinancialsOutput(BaseModel):
+    """A company's reported statements, as the vendor lays each period out.
+
+    A period is whichever line items the filing carried, so the records
+    cross as their own mapping rather than being flattened to the fields
+    every company happens to share.
+    """
+
+    ticker: str
+    company_name: str
+    period_type: str
+    num_periods: int
+    # lup: ignore[dict-str-payload] — line items are the filing's own, open set
+    financials: list[dict[str, float]]
 
 
 _RATE_SERIES_TO_FUTURES: dict[str, str] = {
@@ -229,8 +284,7 @@ def _fetch_rate_futures(
         return None
 
 
-@mcp_tool(
-    "fred_series",
+@lup_tool(
     (
         "Get historical data for a FRED (Federal Reserve Economic Data) series. "
         "Returns observations and series metadata. Set observation_start/observation_end to control the date range.\n\n"
@@ -249,12 +303,9 @@ def _fetch_rate_futures(
         '  fred_series(series_id="CPIAUCSL", observation_start="2024-01-01", observation_end="2025-06-01") → CPI for a specific window\n'
         "Use fred_search first if you don't know the series ID."
     ),
-    url_route=(
-        r"fred\.stlouisfed\.org/series/([A-Za-z0-9]+)",
-        lambda m: {"series_id": m.group(1).upper()},
-    ),
+    name="fred_series",
 )
-async def fred_series(params: FredSeriesInput) -> dict[str, Any]:
+async def fred_series(params: FredSeriesInput) -> FredSeriesOutput:
     """Get FRED series data."""
     api_key = settings.fred_api_key
     if not api_key:
@@ -326,26 +377,21 @@ async def fred_series(params: FredSeriesInput) -> dict[str, Any]:
             "last_updated": raw_updated,
         }
 
-        result_data: dict[str, Any] = {
-            "series": series_info,
-            "latest_value": latest_value,
-            "latest_date": latest_date,
-            "observation_start": start_date,
-            "observation_end": end_date,
-            "data_points": len(obs_list),
-            "observations": obs_list[-params.limit :] if params.limit else obs_list,
-        }
-
-        regime = _detect_regime(obs_list)
-        if regime is not None:
-            result_data["regime_stats"] = regime
-
-        if latest_value is not None:
-            rate_futures = _fetch_rate_futures(series_id, latest_value, cutoff)
-            if rate_futures is not None:
-                result_data["rate_futures"] = rate_futures
-
-        return result_data
+        return FredSeriesOutput(
+            series=series_info,
+            latest_value=latest_value,
+            latest_date=latest_date,
+            observation_start=start_date,
+            observation_end=end_date,
+            data_points=len(obs_list),
+            observations=obs_list[-params.limit :] if params.limit else obs_list,
+            regime_stats=_detect_regime(obs_list),
+            rate_futures=(
+                _fetch_rate_futures(series_id, latest_value, cutoff)
+                if latest_value is not None
+                else None
+            ),
+        )
 
     except ToolError:
         raise
@@ -372,8 +418,7 @@ def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
         pass
 
 
-@mcp_tool(
-    "fred_search",
+@lup_tool(
     (
         "Search FRED for economic data series by keyword. USE THIS when you don't know "
         "the series ID for an economic indicator — search for 'inflation', 'GDP', "
@@ -386,7 +431,7 @@ def _enrich_fred_top_result(fred: object, top: dict[str, object]) -> None:
         "Two-step workflow: fred_search to find the ID, then fred_series to get data."
     ),
 )
-async def fred_search(params: FredSearchInput) -> dict[str, Any]:
+async def fred_search(params: FredSearchInput) -> FredSearchOutput:
     """Search for FRED series."""
     api_key = settings.fred_api_key
     if not api_key:
@@ -402,11 +447,7 @@ async def fred_search(params: FredSearchInput) -> dict[str, Any]:
             results = fred.search(params.query)
 
         if results is None or len(results) == 0:
-            return {
-                "query": params.query,
-                "results": [],
-                "total_found": 0,
-            }
+            return FredSearchOutput(query=params.query, results=[], total_found=0)
 
         # Convert to list of dicts (results is a DataFrame)
         series_list = []
@@ -424,11 +465,11 @@ async def fred_search(params: FredSearchInput) -> dict[str, Any]:
         if series_list:
             _enrich_fred_top_result(fred, series_list[0])
 
-        return {
-            "query": params.query,
-            "results": series_list,
-            "total_found": len(results),
-        }
+        return FredSearchOutput(
+            query=params.query,
+            results=series_list,
+            total_found=len(results),
+        )
 
     except ToolError:
         raise
@@ -511,8 +552,7 @@ class CompanyFinancialsInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "company_financials",
+@lup_tool(
     (
         "Get quarterly or annual income statements for a public company. "
         "USE THIS FIRST for any earnings/revenue forecast question — provides "
@@ -525,7 +565,9 @@ class CompanyFinancialsInput(BaseModel):
         "Returns: Revenue, Net Income, EPS, Operating Income, Gross Profit, etc. per period."
     ),
 )
-async def company_financials(params: CompanyFinancialsInput) -> dict[str, Any]:
+async def company_financials(
+    params: CompanyFinancialsInput,
+) -> CompanyFinancialsOutput:
     """Get company financial statements via yfinance."""
     try:
         import yfinance as yf
@@ -574,13 +616,14 @@ async def company_financials(params: CompanyFinancialsInput) -> dict[str, Any]:
         # Also get basic info
         info = ticker.info or {}
 
-        return {
-            "ticker": params.ticker.upper(),
-            "company_name": info.get("shortName", params.ticker.upper()),
-            "period_type": params.period,
-            "num_periods": len(periods),
-            "financials": periods[:8],  # Last 8 periods
-        }
+        return CompanyFinancialsOutput(
+            ticker=params.ticker.upper(),
+            # lup: ignore[dict-get] — yfinance's own untyped info mapping
+            company_name=info.get("shortName", params.ticker.upper()),
+            period_type=params.period,
+            num_periods=len(periods),
+            financials=periods[:8],  # Last 8 periods
+        )
 
     except ToolError:
         raise
@@ -757,6 +800,97 @@ class ConditionalReturnStats(TypedDict):
     pct_positive: float
     return_distribution: ReturnDistribution
     data_period: str
+
+
+class StockPriceOutput(BaseModel):
+    """A ticker's quote and whatever context the history supports.
+
+    The optional blocks are genuinely conditional: summary statistics need
+    enough history to compute, a futures curve exists only for symbols that
+    have one, and a shock alert only fires on a large single-day move.
+    """
+
+    symbol: str
+    name: str
+    current_price: float | None = None
+    previous_close: float | None = None
+    change_percent: float | None = None
+    currency: str
+    market_cap: float | None = None
+    fifty_two_week_high: float | None = None
+    fifty_two_week_low: float | None = None
+    recent_history: list[DailyClose] | None = None
+    summary_stats: SummaryStats | None = None
+    futures_curve: FuturesCurve | None = None
+    shock_alert: ShockAlert | None = None
+
+
+class FullPeriodStats(TypedDict):
+    """Volatility and return over the whole window a history covers."""
+
+    daily_volatility: float
+    annualized_volatility: float
+    daily_mean_return: float
+    total_return_pct: float
+    trading_days: int
+    high: float
+    low: float
+
+
+class StockHistoryOutput(BaseModel):
+    """A ticker's daily closes over a window, with period statistics.
+
+    `full_period_stats` needs at least two closes to compute, so a window
+    that returned one bar carries none rather than a zeroed block.
+    """
+
+    symbol: str
+    period: str
+    data_points: int
+    first_date: str | None = None
+    last_date: str | None = None
+    history: list[DailyClose]
+    full_period_stats: FullPeriodStats | None = None
+
+
+class WorldBankIndicatorOutput(BaseModel):
+    """One World Bank indicator for one country, over a year range."""
+
+    indicator: WBIndicatorInfo
+    country: str
+    start_year: int
+    end_year: int
+    latest_value: float | None = None
+    latest_year: int | None = None
+    data_points: int
+    observations: list[WBObservation]
+
+
+class WorldBankSearchOutput(BaseModel):
+    """Indicators matching a World Bank keyword search."""
+
+    query: str
+    results: list[WBSearchHit]
+    total_found: int
+
+
+class ConditionalReturnsOutput(BaseModel):
+    """What returns did historically, after drawdowns of a given size.
+
+    A model beside the `ConditionalReturnStats` the computation produces,
+    rather than in place of it: the statistics are computed and tested
+    independently of being served, and only the tool boundary needs a model.
+    """
+
+    reference_index: str
+    condition: str
+    horizon_days: int
+    total_events: int
+    pct_positive: float
+    return_distribution: ReturnDistribution
+    data_period: str
+
+
 
 
 def _augment_stock_history(ticker: object, result: StockPrice, days: int) -> None:
@@ -1095,8 +1229,7 @@ def _fetch_futures_curve(
     )
 
 
-@mcp_tool(
-    "stock_price",
+@lup_tool(
     (
         "Get current stock price and key metrics for a ticker symbol using Yahoo Finance. "
         "Returns current price, previous close, 52-week range, market cap, and recent "
@@ -1108,12 +1241,8 @@ def _fetch_futures_curve(
         "  stock_price(symbol='BZ=F') → Brent crude price, 30-day history, and futures curve\n"
         "  stock_price(symbol='^GSPC') → current S&P 500 level with recent history"
     ),
-    url_route=(
-        r"finance\.yahoo\.com/quote/([A-Za-z0-9^._-]+)",
-        lambda m: {"symbol": m.group(1).upper()},
-    ),
 )
-async def stock_price(params: StockPriceInput) -> Any:
+async def stock_price(params: StockPriceInput) -> StockPriceOutput:
     """Get stock price from Yahoo Finance."""
     symbol = params.symbol.upper()
     cutoff = retrodict_cutoff.get()
@@ -1165,7 +1294,7 @@ async def stock_price(params: StockPriceInput) -> Any:
                 if curve is not None:
                     result["futures_curve"] = curve
 
-            return result
+            return StockPriceOutput.model_validate(result)
 
         info = ticker.info
 
@@ -1203,7 +1332,7 @@ async def stock_price(params: StockPriceInput) -> Any:
             if curve is not None:
                 result["futures_curve"] = curve
 
-        return result
+        return StockPriceOutput.model_validate(result)
 
     except ToolError:
         raise
@@ -1212,8 +1341,7 @@ async def stock_price(params: StockPriceInput) -> Any:
         raise ToolError(f"Yahoo Finance lookup failed for {symbol}: {e}")
 
 
-@mcp_tool(
-    "stock_history",
+@lup_tool(
     (
         "Get historical stock prices for a ticker symbol. "
         "Returns OHLCV data for the specified period. "
@@ -1228,7 +1356,7 @@ async def stock_price(params: StockPriceInput) -> Any:
         "Feed the output to execute_code for Monte Carlo simulation or rolling volatility analysis."
     ),
 )
-async def stock_history(params: StockQueryInput) -> dict[str, Any]:
+async def stock_history(params: StockQueryInput) -> StockHistoryOutput:
     """Get historical stock prices from Yahoo Finance."""
     symbol = params.symbol.upper()
     period = params.period
@@ -1312,7 +1440,7 @@ async def stock_history(params: StockQueryInput) -> dict[str, Any]:
                     "low": round(min(closes), 4),
                 }
 
-        return result_data
+        return StockHistoryOutput.model_validate(result_data)
 
     except ToolError:
         raise
@@ -1488,8 +1616,7 @@ def _compute_single_day_shock_stats(
     )
 
 
-@mcp_tool(
-    "stock_conditional_returns",
+@lup_tool(
     (
         "Get the empirical distribution of forward returns conditioned on market events. "
         "Two trigger types:\n\n"
@@ -1502,7 +1629,9 @@ def _compute_single_day_shock_stats(
         "Works with any ticker: indices (^GSPC), stocks (AAPL), futures (BZ=F, CL=F)."
     ),
 )
-async def stock_conditional_returns(params: StockConditionalReturnsInput) -> Any:
+async def stock_conditional_returns(
+    params: StockConditionalReturnsInput,
+) -> ConditionalReturnsOutput:
     cutoff = retrodict_cutoff.get()
     end_date = cutoff.isoformat() if cutoff is not None else None
 
@@ -1524,7 +1653,7 @@ async def stock_conditional_returns(params: StockConditionalReturnsInput) -> Any
             raise ToolError(result)
 
         result["reference_index"] = params.reference_index
-        return result
+        return ConditionalReturnsOutput.model_validate(result)
 
     except ToolError:
         raise
@@ -1564,6 +1693,27 @@ class OptionsIVStrike(TypedDict):
     in_the_money: bool
 
 
+class OptionsIVOutput(BaseModel):
+    """Options-implied volatility around the money, for one expiry.
+
+    Every field past the identifying three is present only when the chain
+    had enough strikes to compute it, so a thin chain answers with what it
+    could rather than with zeros.
+    """
+
+    symbol: str
+    current_price: float | None = None
+    expiration: str
+    days_to_expiry: int
+    atm_call_iv: float | None = None
+    atm_put_iv: float | None = None
+    avg_atm_iv: float | None = None
+    annualized_iv_pct: float | None = None
+    daily_iv_pct: float | None = None
+    iv_skew: list[OptionsIVStrike] = []
+    put_call_skew: float | None = None
+
+
 class OptionsIVResult(TypedDict, total=False):
     """Options implied volatility summary."""
 
@@ -1580,8 +1730,7 @@ class OptionsIVResult(TypedDict, total=False):
     put_call_skew: float
 
 
-@mcp_tool(
-    "options_iv",
+@lup_tool(
     (
         "Get options-implied volatility for a ticker. Returns ATM implied "
         "volatility (annualized and daily), put-call skew, and the volatility "
@@ -1598,7 +1747,7 @@ class OptionsIVResult(TypedDict, total=False):
         "is probably too narrow."
     ),
 )
-async def options_iv(params: OptionsIVInput) -> OptionsIVResult:
+async def options_iv(params: OptionsIVInput) -> OptionsIVOutput:
     """Get options implied volatility from Yahoo Finance."""
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -1704,7 +1853,7 @@ async def options_iv(params: OptionsIVInput) -> OptionsIVResult:
         if pc_skew is not None:
             result["put_call_skew"] = round(pc_skew, 4)
 
-        return result
+        return OptionsIVOutput.model_validate(result)
 
     except ToolError:
         raise
@@ -1760,8 +1909,19 @@ class WBIndicatorInfo(TypedDict):
     name: str
 
 
-@mcp_tool(
-    "world_bank_indicator",
+class WBSearchHit(WBIndicatorInfo, total=False):
+    """A search hit, plus the global figure the top result is enriched with.
+
+    Only the first hit is enriched — one extra API call per search rather
+    than one per result — so the two fields are optional rather than a
+    shape every hit would have to fake.
+    """
+
+    latest_value: float
+    latest_year: int
+
+
+@lup_tool(
     (
         "Get time series data for a World Bank indicator and country. "
         "USE THIS for non-US economic data — FRED only covers US data, so questions "
@@ -1776,7 +1936,9 @@ class WBIndicatorInfo(TypedDict):
         "Use world_bank_search first if you don't know the indicator code."
     ),
 )
-async def world_bank_indicator(params: WorldBankIndicatorInput) -> dict[str, Any]:
+async def world_bank_indicator(
+    params: WorldBankIndicatorInput,
+) -> WorldBankIndicatorOutput:
     """Get World Bank indicator data for a country."""
     import wbgapi as wb  # type: ignore[import-untyped]
 
@@ -1834,16 +1996,16 @@ async def world_bank_indicator(params: WorldBankIndicatorInput) -> dict[str, Any
                 latest_year = obs["year"]
                 break
 
-        return {
-            "indicator": indicator_info,
-            "country": country,
-            "start_year": start_year,
-            "end_year": end_year,
-            "latest_value": latest_value,
-            "latest_year": latest_year,
-            "data_points": len(observations),
-            "observations": observations,
-        }
+        return WorldBankIndicatorOutput(
+            indicator=indicator_info,
+            country=country,
+            start_year=start_year,
+            end_year=end_year,
+            latest_value=latest_value,
+            latest_year=latest_year,
+            data_points=len(observations),
+            observations=observations,
+        )
 
     except ToolError:
         raise
@@ -1852,10 +2014,11 @@ async def world_bank_indicator(params: WorldBankIndicatorInput) -> dict[str, Any
         raise ToolError(f"Failed to fetch {params.indicator} for {params.country}: {e}")
 
 
-def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
+# lup: ignore[bare-object] — wbgapi ships no types; narrowed inside
+def enrich_wb_top_result(wb: object, top: WBSearchHit) -> None:
     """Fetch latest global (WLD) value for the top search result (best-effort)."""
     try:
-        indicator_id = str(top.get("id", ""))
+        indicator_id = str(top["id"])
         if not indicator_id:
             return
         data = list(wb.data.fetch(indicator_id, "WLD", mrnev=1))  # type: ignore[union-attr]
@@ -1868,8 +2031,7 @@ def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
         pass
 
 
-@mcp_tool(
-    "world_bank_search",
+@lup_tool(
     (
         "Search World Bank indicators by keyword. USE THIS when forecasting "
         "non-US economic questions — FRED only covers US data, World Bank covers "
@@ -1881,13 +2043,14 @@ def _enrich_wb_top_result(wb: object, top: dict[str, object]) -> None:
         "world_bank_indicator to get data."
     ),
 )
-async def world_bank_search(params: WorldBankSearchInput) -> dict[str, Any]:
+async def world_bank_search(params: WorldBankSearchInput) -> WorldBankSearchOutput:
     """Search for World Bank indicators by keyword."""
     try:
         import wbgapi as wb  # type: ignore[import-untyped]
 
         results_iter = wb.series.list(q=params.query)
-        results: list[dict[str, object]] = []
+        # lup: ignore[empty-collection] — bounded accumulation, breaks at the limit
+        results: list[WBSearchHit] = []
         for item in results_iter:
             results.append(
                 {
@@ -1899,13 +2062,13 @@ async def world_bank_search(params: WorldBankSearchInput) -> dict[str, Any]:
                 break
 
         if results:
-            _enrich_wb_top_result(wb, results[0])
+            enrich_wb_top_result(wb, results[0])
 
-        return {
-            "query": params.query,
-            "results": results,
-            "total_found": len(results),
-        }
+        return WorldBankSearchOutput(
+            query=params.query,
+            results=results,
+            total_found=len(results),
+        )
 
     except ToolError:
         raise
@@ -1931,12 +2094,24 @@ else:
 _financial_tools.extend([world_bank_indicator, world_bank_search])
 
 
-def create_financial_server():
+def create_financial_server() -> LupMcpServerConfig:
     """Create the financial MCP server with all economic/financial data tools."""
-    from aib.tools.mcp_server import create_mcp_server
+    from lup.mcp import create_mcp_server
 
     return create_mcp_server(
         name="financial",
         version="2.0.0",
         tools=_financial_tools,
     )
+
+
+routes.route(
+    r"fred\.stlouisfed\.org/series/([A-Za-z0-9]+)",
+    fred_series,
+    lambda m: {"series_id": m.group(1).upper()},
+)
+routes.route(
+    r"finance\.yahoo\.com/quote/([A-Za-z0-9^._-]+)",
+    stock_price,
+    lambda m: {"symbol": m.group(1).upper()},
+)

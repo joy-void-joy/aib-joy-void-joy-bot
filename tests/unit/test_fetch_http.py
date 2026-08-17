@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
+from lup.mcp import response_text
+
 from aib.tools.fetch_http import FetchResult, _ERROR_HINTS, fetch_live
 
 
@@ -91,9 +93,10 @@ class TestFetchLiveErrors:
 
             result = await fetch_live("https://slow.example.com")
 
-        assert isinstance(result, dict)
-        assert result["is_error"] is True
-        assert "Timeout" in result["content"][0]["text"]
+        assert not isinstance(result, FetchResult)
+        # lup: ignore[dict-get] — is_error is an optional key on ToolResponse
+        assert result.get("is_error") is True
+        assert "Timeout" in response_text(result)
 
     @pytest.mark.asyncio
     async def test_connect_error_returns_error(self) -> None:
@@ -105,9 +108,10 @@ class TestFetchLiveErrors:
 
             result = await fetch_live("https://down.example.com")
 
-        assert isinstance(result, dict)
-        assert result["is_error"] is True
-        assert "Could not connect" in result["content"][0]["text"]
+        assert not isinstance(result, FetchResult)
+        # lup: ignore[dict-get] — is_error is an optional key on ToolResponse
+        assert result.get("is_error") is True
+        assert "Could not connect" in response_text(result)
 
     @pytest.mark.asyncio
     async def test_4xx_returns_error_with_hint(self) -> None:
@@ -119,9 +123,10 @@ class TestFetchLiveErrors:
 
             result = await fetch_live("https://blocked.example.com")
 
-        assert isinstance(result, dict)
-        assert result["is_error"] is True
-        text = result["content"][0]["text"]
+        assert not isinstance(result, FetchResult)
+        # lup: ignore[dict-get] — is_error is an optional key on ToolResponse
+        assert result.get("is_error") is True
+        text = response_text(result)
         assert "403" in text
         assert "Access denied" in text
 

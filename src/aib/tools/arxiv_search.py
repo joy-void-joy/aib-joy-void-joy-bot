@@ -1,3 +1,7 @@
+# lup: ignore[import-re, re-call]
+# An arXiv identifier (2301.12345v2) is a pattern, not a parseable structure —
+# urllib.parse finds the path but not the id inside it, in either the URL or
+# the bare form this tool also accepts.
 """arXiv paper search tool.
 
 Provides access to academic papers from arXiv.org with reliable publication
@@ -8,8 +12,10 @@ Uses the arxiv Python library: https://pypi.org/project/arxiv/
 
 import logging
 import re
+from collections.abc import Iterator
 from datetime import datetime, timedelta
-from typing import Any, TypedDict
+from itertools import islice
+from typing import Literal, TypedDict
 
 import arxiv
 import httpx
@@ -17,9 +23,10 @@ import trafilatura
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.extract import extract_with_prompt
 from aib.tools.fetch_http import MAX_PDF_BYTES, downloads_dir
+from lup.mcp import ToolError, lup_tool
+from lup.tool_routes import routes
 from aib.tools.throttle import arxiv_throttle
 
 logger = logging.getLogger(__name__)
@@ -48,27 +55,34 @@ class SearchArxivInput(BaseModel):
     )
 
 
-def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, Any]:
-    """Convert arXiv Result to serializable dict."""
+class ArxivSearchOutput(BaseModel):
+    """Papers matching a search, with the query that found them."""
+
+    query: str
+    results: list[ArxivPaper]
+    count: int
+
+
+def result_to_paper(result: arxiv.Result, cutoff: datetime | None) -> ArxivPaper | None:
+    """Convert an arXiv Result, or None when it postdates the retrodict cutoff."""
     published = result.published
     if cutoff and published > cutoff:
-        return {}  # Skip papers after cutoff
+        return None
 
-    return {
-        "id": result.entry_id,
-        "title": result.title,
-        "summary": result.summary if result.summary else None,
-        "authors": [str(a) for a in result.authors],
-        "published": published.strftime("%Y-%m-%d"),
-        "updated": result.updated.strftime("%Y-%m-%d") if result.updated else None,
-        "categories": result.categories,
-        "primary_category": result.primary_category,
-        "pdf_url": result.pdf_url,
-    }
+    return ArxivPaper(
+        id=result.entry_id,
+        title=result.title,
+        summary=result.summary if result.summary else None,
+        authors=[str(a) for a in result.authors],
+        published=published.strftime("%Y-%m-%d"),
+        updated=result.updated.strftime("%Y-%m-%d") if result.updated else None,
+        categories=result.categories,
+        primary_category=result.primary_category,
+        pdf_url=result.pdf_url,
+    )
 
 
-@mcp_tool(
-    "search_arxiv",
+@lup_tool(
     (
         "Search arXiv for academic papers. USE THIS for questions about AI benchmarks, "
         "scientific discoveries, medical research, climate science, or any topic where "
@@ -80,8 +94,9 @@ def _result_to_dict(result: arxiv.Result, cutoff: datetime | None) -> dict[str, 
         "  search_arxiv(query='cat:cs.AI AND ti:reasoning', max_results=20) → AI reasoning papers\n"
         "  search_arxiv(query='au:hinton AND ti:capsule') → papers by author on topic"
     ),
+    name="search_arxiv",
 )
-async def search_arxiv(params: SearchArxivInput) -> dict[str, Any]:
+async def search_arxiv(params: SearchArxivInput) -> ArxivSearchOutput:
     """Search arXiv for academic papers."""
     retrodict_date = retrodict_cutoff.get()
     cutoff: datetime | None = None
@@ -100,16 +115,16 @@ async def search_arxiv(params: SearchArxivInput) -> dict[str, Any]:
 
     async with arxiv_throttle.slot():
         client = arxiv.Client()
-        results: list[dict[str, Any]] = []
 
-        for result in client.results(search):
-            paper = _result_to_dict(result, cutoff)
-            if paper:
-                results.append(paper)
-                if len(results) >= params.max_results:
-                    break
+        def papers() -> Iterator[ArxivPaper]:
+            for result in client.results(search):
+                paper = result_to_paper(result, cutoff)
+                if paper is not None:
+                    yield paper
 
-    return {"query": params.query, "results": results, "count": len(results)}
+        results = list(islice(papers(), params.max_results))
+
+    return ArxivSearchOutput(query=params.query, results=results, count=len(results))
 
 
 class FetchArxivInput(BaseModel):
@@ -127,20 +142,38 @@ class FetchArxivInput(BaseModel):
     )
 
 
-_ARXIV_ID_PATTERN = re.compile(
+class ArxivHtmlPaper(BaseModel):
+    """A paper whose HTML rendering arXiv serves, read inline."""
+
+    paper_id: str
+    format: Literal["html"] = "html"
+    url: str
+    content: str
+
+
+class ArxivPdfPaper(BaseModel):
+    """A paper with no HTML rendering, downloaded for the Read tool."""
+
+    paper_id: str
+    format: Literal["pdf"] = "pdf"
+    url: str
+    pdf_path: str
+    hint: str
+
+
+ARXIV_ID_PATTERN = re.compile(
     r"(?:https?://arxiv\.org/(?:abs|html|pdf)/)?(\d{4}\.\d{4,5}(?:v\d+)?)"
 )
-_ARXIV_TIMEOUT = 30.0
+ARXIV_TIMEOUT = 30.0
 
 
-def _parse_arxiv_id(raw: str) -> str | None:
+def parse_arxiv_id(raw: str) -> str | None:
     """Extract a bare arXiv ID from a URL or raw ID string."""
-    m = _ARXIV_ID_PATTERN.search(raw)
+    m = ARXIV_ID_PATTERN.search(raw)
     return m.group(1) if m else None
 
 
-@mcp_tool(
-    "fetch_arxiv",
+@lup_tool(
     (
         "Fetch an arXiv paper's full text. Tries HTML first (fast, searchable); "
         "if unavailable, downloads the PDF and returns the file path for reading.\n\n"
@@ -150,14 +183,11 @@ def _parse_arxiv_id(raw: str) -> str | None:
         "  fetch_arxiv(paper_id='2301.12345') → full paper text\n"
         "  fetch_arxiv(paper_id='2301.12345', prompt='What datasets were used?') → targeted extraction"
     ),
-    url_route=(
-        r"arxiv\.org/(?:abs|pdf)/(\d+\.\d+)",
-        lambda m: {"paper_id": m.group(1)},
-    ),
+    name="fetch_arxiv",
 )
-async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
+async def fetch_arxiv(params: FetchArxivInput) -> ArxivHtmlPaper | ArxivPdfPaper:
     """Fetch full arXiv paper content (HTML preferred, PDF fallback)."""
-    paper_id = _parse_arxiv_id(params.paper_id)
+    paper_id = parse_arxiv_id(params.paper_id)
     if not paper_id:
         raise ToolError(
             f"Could not parse arXiv ID from '{params.paper_id}'. "
@@ -180,7 +210,7 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
     html_url = f"https://arxiv.org/html/{paper_id}"
     async with (
         arxiv_throttle.slot(),
-        httpx.AsyncClient(timeout=_ARXIV_TIMEOUT, follow_redirects=True) as client,
+        httpx.AsyncClient(timeout=ARXIV_TIMEOUT, follow_redirects=True) as client,
     ):
         try:
             resp = await client.get(html_url)
@@ -194,12 +224,11 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
                         content = await extract_with_prompt(
                             content, params.prompt, html_url
                         )
-                    return {
-                        "paper_id": paper_id,
-                        "format": "html",
-                        "url": html_url,
-                        "content": content[:30000],
-                    }
+                    return ArxivHtmlPaper(
+                        paper_id=paper_id,
+                        url=html_url,
+                        content=content[:30000],
+                    )
         except httpx.HTTPError:
             logger.debug("HTML fetch failed for %s, trying PDF", paper_id)
 
@@ -222,13 +251,19 @@ async def fetch_arxiv(params: FetchArxivInput) -> dict[str, Any]:
     pdf_path = target / f"{paper_id.replace('/', '_')}.pdf"
     pdf_path.write_bytes(resp.content)
 
-    return {
-        "paper_id": paper_id,
-        "format": "pdf",
-        "url": pdf_url,
-        "pdf_path": str(pdf_path.resolve()),
-        "hint": (
+    return ArxivPdfPaper(
+        paper_id=paper_id,
+        url=pdf_url,
+        pdf_path=str(pdf_path.resolve()),
+        hint=(
             f"PDF downloaded to {pdf_path.resolve()}. "
             "Use the Read tool to read the PDF content."
         ),
-    }
+    )
+
+
+routes.route(
+    r"arxiv\.org/(?:abs|pdf)/(\d+\.\d+)",
+    fetch_arxiv,
+    lambda m: {"paper_id": m.group(1)},
+)

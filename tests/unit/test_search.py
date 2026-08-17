@@ -7,6 +7,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from lup.mcp import response_text
+from lup.tool_routes import routes
+
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.search import (
     AugmentedSearchResult,
@@ -59,7 +62,7 @@ class TestWebSearchLiveMode:
             result = await _handler({"query": "test"})
 
         assert "is_error" not in result
-        data = json.loads(result["content"][0]["text"])
+        data = json.loads(response_text(result))
         assert len(data["results"]) == 1
         assert data["results"][0]["url"] == "https://example.com"
 
@@ -209,14 +212,33 @@ def _make_fake_route(
     pattern: str,
     handler: AsyncMock,
 ) -> Any:
-    """Create a fake DomainRoute for testing."""
-    import re
-    from aib.tools.fetch_routes import DomainRoute
+    """Create a fake ToolRoute for testing.
 
-    return DomainRoute(
+    A route holds a whole `LupMcpTool`; dispatch reaches only its `name` and
+    `handler`, so the rest is filled with the least that constructs. Going
+    through the real class rather than a stub is what keeps the route
+    model's own validation in play.
+    """
+    import re
+
+    from lup.mcp import LupMcpTool
+    from lup.tool_routes import ToolRoute
+    from pydantic import BaseModel
+
+    class FakeInput(BaseModel):
+        symbol: str = ""
+
+    return ToolRoute(
         pattern=re.compile(pattern),
-        handler=handler,
-        param_builder=lambda m: {"symbol": m.group(1)},
+        tool=LupMcpTool(
+            name=domain,
+            description="fake",
+            input_schema={},
+            handler=handler,
+            call_handler=handler,
+            input_model=FakeInput,
+        ),
+        build_params=lambda m: {"symbol": m.group(1)},
     )
 
 
@@ -233,7 +255,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes._registry", fake_routes):
+        with patch.object(routes, "routes", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -246,7 +268,7 @@ class TestAugmentWithApiData:
     async def test_suggest_only_gets_hint(self) -> None:
         results = [_make_result("https://tradingeconomics.com/us/gdp")]
 
-        with patch("aib.tools.fetch_routes._registry", []):
+        with patch.object(routes, "routes", []):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -265,7 +287,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes._registry", fake_routes):
+        with patch.object(routes, "routes", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -282,7 +304,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes._registry", fake_routes):
+        with patch.object(routes, "routes", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -302,7 +324,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes._registry", fake_routes):
+        with patch.object(routes, "routes", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 1
@@ -323,7 +345,7 @@ class TestAugmentWithApiData:
             )
         ]
 
-        with patch("aib.tools.fetch_routes._registry", fake_routes):
+        with patch.object(routes, "routes", fake_routes):
             augmented = await _augment_with_api_data(results)
 
         assert len(augmented) == 3

@@ -29,8 +29,8 @@ from aib.agent.resolver import (
     resolve_question,
 )
 from aib.paths import WORLDVIEW_PATH
-from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.mcp_server import create_mcp_server
+from lup.mcp import ToolError, create_mcp_server, lup_tool
+from lup.types import JsonValue
 from aib.worldview.lookup import (
     all_slugs,
     archive_entry,
@@ -46,6 +46,7 @@ from aib.worldview.lookup import (
 from aib.worldview.models import (
     EntryState,
     WorldviewForecastEntry,
+    WorldviewResearchEntry,
 )
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,73 @@ async def resolve_ready_forecasts(
 # ── Maintenance sub-agent MCP tools ──────────────────────────────
 
 
+class EntryListing(BaseModel):
+    """Worldview entries in summary, without their bodies.
+
+    A summary carries whichever fields its kind has — research entries name
+    a query, forecast entries a question and a probability — so the records
+    cross as their own shape rather than the intersection of both kinds.
+    """
+
+    count: int
+    entries: list[dict[str, JsonValue]]
+
+
+class EntryArchived(BaseModel):
+    """Confirmation that one entry was archived, and why."""
+
+    archived: str
+    kind: str
+    reason: str
+
+
+class EntrySuperseded(BaseModel):
+    """Confirmation that one entry now defers to a newer one."""
+
+    superseded: str
+    superseded_by: str
+    kind: str
+    reason: str
+
+
+class EntriesReconciled(BaseModel):
+    """The entry two or more contradicting ones were reconciled into."""
+
+    reconciled_into: str
+    superseded: list[str]
+    claim: str
+
+
+class ForecastTagged(BaseModel):
+    """A forecast entry's tags after merging in the new ones."""
+
+    slug: str
+    tags: list[str]
+
+
+class ForecastResolved(BaseModel):
+    """A forecast entry's recorded outcome, and what it scored."""
+
+    resolved: str
+    resolution: float
+    source: str
+    score: float | None = None
+
+
+class EntryRefreshed(BaseModel):
+    """A research entry re-researched in place, with its new TTL."""
+
+    refreshed: str
+    stale_after: str
+
+
+class IssueRegistered(BaseModel):
+    """One survey finding recorded, and how many now stand."""
+
+    registered: str
+    total: int
+
+
 class ListEntriesInput(BaseModel):
     """Input for wv_list_entries."""
 
@@ -176,17 +244,17 @@ class ListEntriesInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_list_entries",
+@lup_tool(
     (
         "List worldview entries with summary info (slug, kind, query/question, "
         "state, updated_at, tags, resolvable_after). Call this first to see "
         "what exists; then use wv_read_entry to drill into specific entries."
     ),
 )
-async def wv_list_entries(args: ListEntriesInput) -> dict[str, object]:
+async def wv_list_entries(args: ListEntriesInput) -> EntryListing:
     """List worldview entries (summaries only)."""
-    entries: list[dict[str, object]] = []
+    # lup: ignore[empty-collection] — two guarded loops fold into one list
+    entries: list[dict[str, JsonValue]] = []
 
     if args.kind in ("research", "all"):
         for r in iter_research_entries():
@@ -225,7 +293,7 @@ async def wv_list_entries(args: ListEntriesInput) -> dict[str, object]:
                 }
             )
 
-    return {"count": len(entries), "entries": entries}
+    return EntryListing(count=len(entries), entries=entries)
 
 
 class ReadEntryInput(BaseModel):
@@ -235,22 +303,28 @@ class ReadEntryInput(BaseModel):
     kind: Literal["research", "forecasts"]
 
 
-@mcp_tool(
-    "wv_read_entry",
+@lup_tool(
     (
         "Read a worldview entry in full. Use this to inspect details before "
         "deciding to archive, supersede, tag, or resolve it."
     ),
 )
-async def wv_read_entry(args: ReadEntryInput) -> dict[str, object]:
-    """Read a worldview entry in full."""
+async def wv_read_entry(
+    args: ReadEntryInput,
+) -> WorldviewResearchEntry | WorldviewForecastEntry:
+    """Read a worldview entry in full.
+
+    Answers with the stored entry itself — the two kinds are genuinely
+    different documents, and a union keeps each one's own fields on the
+    wire instead of flattening them into a shared envelope.
+    """
     if args.kind == "research":
         entry = load_research_entry(args.slug)
     else:
         entry = load_forecast_entry(args.slug)
     if entry is None:
         raise ToolError(f"Entry {args.slug!r} ({args.kind}) not found")
-    return entry.model_dump(mode="json")
+    return entry
 
 
 class ArchiveEntryInput(BaseModel):
@@ -263,14 +337,13 @@ class ArchiveEntryInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_archive_entry",
+@lup_tool(
     (
         "Move an entry to the worldview archive directory. Use for resolved "
         "entries or ones clearly past their stale window. Include a reason."
     ),
 )
-async def wv_archive_entry(args: ArchiveEntryInput) -> dict[str, object]:
+async def wv_archive_entry(args: ArchiveEntryInput) -> EntryArchived:
     """Archive a worldview entry."""
     success = archive_entry(args.slug, args.kind)
     if not success:
@@ -278,7 +351,7 @@ async def wv_archive_entry(args: ArchiveEntryInput) -> dict[str, object]:
     logger.info(
         "Maintenance agent archived %s %s: %s", args.kind, args.slug, args.reason
     )
-    return {"archived": args.slug, "kind": args.kind, "reason": args.reason}
+    return EntryArchived(archived=args.slug, kind=args.kind, reason=args.reason)
 
 
 class SupersedeEntryInput(BaseModel):
@@ -292,15 +365,14 @@ class SupersedeEntryInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_supersede_entry",
+@lup_tool(
     (
         "Mark an older entry as superseded by a newer one. Use only when two "
         "entries genuinely cover the same question (not just share keywords). "
         "Include a reason explaining why they are redundant."
     ),
 )
-async def wv_supersede_entry(args: SupersedeEntryInput) -> dict[str, object]:
+async def wv_supersede_entry(args: SupersedeEntryInput) -> EntrySuperseded:
     """Supersede an older worldview entry with a newer one."""
     if args.older_slug == args.newer_slug:
         raise ToolError("older_slug and newer_slug must differ")
@@ -315,12 +387,12 @@ async def wv_supersede_entry(args: SupersedeEntryInput) -> dict[str, object]:
         args.newer_slug,
         args.reason,
     )
-    return {
-        "superseded": args.older_slug,
-        "superseded_by": args.newer_slug,
-        "kind": args.kind,
-        "reason": args.reason,
-    }
+    return EntrySuperseded(
+        superseded=args.older_slug,
+        superseded_by=args.newer_slug,
+        kind=args.kind,
+        reason=args.reason,
+    )
 
 
 class ReconcileInput(BaseModel):
@@ -345,8 +417,7 @@ class ReconcileInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_reconcile",
+@lup_tool(
     (
         "Reconcile a contradiction by re-researching the disputed claim and "
         "superseding the conflicting entries with one fresh, authoritative "
@@ -355,7 +426,7 @@ class ReconcileInput(BaseModel):
         "truth per fact."
     ),
 )
-async def wv_reconcile(args: ReconcileInput) -> dict[str, object]:
+async def wv_reconcile(args: ReconcileInput) -> EntriesReconciled:
     """Re-research a disputed claim and supersede the conflicting entries."""
     from aib.tools.research import ResearchQuestion, run_single_research
 
@@ -378,11 +449,11 @@ async def wv_reconcile(args: ReconcileInput) -> dict[str, object]:
         if supersede_entry(slug, "research", new_slug):
             superseded.append(slug)
     logger.info("Maintenance agent reconciled %s into %s", superseded, new_slug)
-    return {
-        "reconciled_into": new_slug,
-        "superseded": superseded,
-        "claim": args.claim,
-    }
+    return EntriesReconciled(
+        reconciled_into=new_slug,
+        superseded=superseded,
+        claim=args.claim,
+    )
 
 
 class TagForecastInput(BaseModel):
@@ -397,22 +468,21 @@ class TagForecastInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_tag_forecast",
+@lup_tool(
     (
         "Add tags to a forecast entry. Commonly used to link research to "
         "forecasts with a 'research:<slug>' tag. Tags are merged into the "
         "existing tag set. Only forecast entries are taggable."
     ),
 )
-async def wv_tag_forecast(args: TagForecastInput) -> dict[str, object]:
+async def wv_tag_forecast(args: TagForecastInput) -> ForecastTagged:
     """Add tags to a forecast entry."""
     forecast = load_forecast_entry(args.slug)
     if forecast is None:
         raise ToolError(f"Forecast entry {args.slug!r} not found")
     merged = sorted(set(forecast.tags) | set(args.tags))
     save_forecast_entry(forecast.model_copy(update={"tags": merged}))
-    return {"slug": args.slug, "tags": merged}
+    return ForecastTagged(slug=args.slug, tags=merged)
 
 
 class ResolveForecastInput(BaseModel):
@@ -430,15 +500,14 @@ class ResolveForecastInput(BaseModel):
     )
 
 
-@mcp_tool(
-    "wv_resolve_forecast",
+@lup_tool(
     (
         "Set the resolution for a worldview forecast entry. Use only after "
         "you have verified the resolution from a reliable source. Automatically "
         "computes the Brier score for binary forecasts."
     ),
 )
-async def wv_resolve_forecast(args: ResolveForecastInput) -> dict[str, object]:
+async def wv_resolve_forecast(args: ResolveForecastInput) -> ForecastResolved:
     """Resolve a worldview forecast entry."""
     entry = load_forecast_entry(args.slug)
     if entry is None:
@@ -454,12 +523,12 @@ async def wv_resolve_forecast(args: ResolveForecastInput) -> dict[str, object]:
         resolution_source=args.source,
         score=score,
     )
-    return {
-        "resolved": args.slug,
-        "resolution": args.resolution,
-        "source": args.source,
-        "score": score,
-    }
+    return ForecastResolved(
+        resolved=args.slug,
+        resolution=args.resolution,
+        source=args.source,
+        score=score,
+    )
 
 
 class AiResolveForecastInput(BaseModel):
@@ -468,8 +537,7 @@ class AiResolveForecastInput(BaseModel):
     slug: str = Field(description="Slug of the forecast entry to resolve via AI.")
 
 
-@mcp_tool(
-    "wv_ai_resolve_forecast",
+@lup_tool(
     (
         "Run the AI resolver agent on a forecast entry. Returns the resolver's "
         "verdict with confidence and reasoning. Use this for subforecasts where "
@@ -479,7 +547,7 @@ class AiResolveForecastInput(BaseModel):
 )
 async def wv_ai_resolve_forecast(
     args: AiResolveForecastInput,
-) -> dict[str, object]:
+) -> ResolutionVerdict:
     """Run AI resolution on a worldview forecast entry."""
     entry = load_forecast_entry(args.slug)
     if entry is None:
@@ -501,7 +569,7 @@ async def wv_ai_resolve_forecast(
         reason="Agent produced no structured output",
         sources=[],
     )
-    return verdict.model_dump(mode="json")
+    return verdict
 
 
 class RefreshEntryInput(BaseModel):
@@ -510,15 +578,14 @@ class RefreshEntryInput(BaseModel):
     slug: str = Field(description="Slug of the research entry to re-research in place.")
 
 
-@mcp_tool(
-    "wv_refresh",
+@lup_tool(
     (
         "Re-research a research entry in place, keeping its slug and TTL. Use "
         "for an outdated entry to replace it with the current state of the "
         "world; the prior version is archived as a trajectory snapshot."
     ),
 )
-async def wv_refresh(args: RefreshEntryInput) -> dict[str, object]:
+async def wv_refresh(args: RefreshEntryInput) -> EntryRefreshed:
     """Re-research a stale research entry in place."""
     from aib.tools.research import refresh_research_entry
 
@@ -528,10 +595,10 @@ async def wv_refresh(args: RefreshEntryInput) -> dict[str, object]:
     result = await refresh_research_entry(entry)
     if result.entry is None:
         raise ToolError(f"Refresh failed: {result.error or 'no entry produced'}")
-    return {
-        "refreshed": args.slug,
-        "stale_after": result.entry.stale_after.isoformat(),
-    }
+    return EntryRefreshed(
+        refreshed=args.slug,
+        stale_after=result.entry.stale_after.isoformat(),
+    )
 
 
 # ── Survey + fix agents ───────────────────────────────────────────
@@ -562,8 +629,7 @@ survey_issues: ContextVar[list[Issue] | None] = ContextVar(
 )
 
 
-@mcp_tool(
-    "add_issue",
+@lup_tool(
     (
         "Register one issue you found in the worldview store. Call once per "
         "distinct issue. Kinds: 'contradiction' (entries disagree on a metric), "
@@ -574,13 +640,13 @@ survey_issues: ContextVar[list[Issue] | None] = ContextVar(
         "to re-research."
     ),
 )
-async def add_issue(args: Issue) -> dict[str, object]:
+async def add_issue(args: Issue) -> IssueRegistered:
     """Register an issue during a survey."""
     issues = survey_issues.get()
     if issues is None:
         raise ToolError("add_issue called outside a survey run")
     issues.append(args)
-    return {"registered": args.kind, "total": len(issues)}
+    return IssueRegistered(registered=args.kind, total=len(issues))
 
 
 SURVEY_TOOLS = [wv_list_entries, wv_read_entry, add_issue]
