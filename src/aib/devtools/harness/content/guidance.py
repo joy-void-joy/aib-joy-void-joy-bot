@@ -20,15 +20,15 @@ def guidance_parts() -> list[models.PromptPart]:
     """This repository's guidance, with its gates named as they now work."""
     return [
         models.TextPart(
-            text=r"""# CLAUDE.md
+            text=r"""# Repository guidance
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is what an agent working in this repository is given before it reads anything else.
 
-**Note:** This file is generated. Its source is `src/aib/devtools/harness/content/guidance.py`; edit that and run `uv run lup-devtools harness generate all`.
+**Note:** It is generated. The source is `src/aib/devtools/harness/content/guidance.py`; edit that and run `uv run lup-devtools harness generate all`.
 
 ## Project Overview
 
-A forecasting bot for the [Metaculus AI Benchmarking Tournament](https://www.metaculus.com/aib/). Uses Claude Code with extended capabilities (web search, Python execution, etc.) to generate accurate predictions on forecasting questions.
+A forecasting bot for the [Metaculus AI Benchmarking Tournament](https://www.metaculus.com/aib/). Uses the Claude Agent SDK with extended capabilities (web search, Python execution, etc.) to generate accurate predictions on forecasting questions.
 
 Built with Python 3.14+ and the Claude Agent SDK. Uses `uv` as the package manager, and `lup` as the agent framework beneath it.
 
@@ -125,29 +125,11 @@ uv run pyright
 
 ## A/B Testing
 
-Variants are named agent configurations registered in `notes/variants.json`:
-
-```json
-{
-  "variants": [
-    {"name": "baseline", "note": "current defaults"},
-    {"name": "sonnet-max", "model": "sonnet", "effort": "max", "profile": "alt"}
-  ]
-}
-```
-
-`uv run forecast ab -v baseline -v sonnet-max` runs every question (the
-regression suite by default) under each variant. Each arm is a separate
-process — `settings.model` is a process global read from many modules, so
-arms sharing an interpreter would fight over it. Give each arm its own
-`profile` so they don't share one account's rate limit.
-
-Traces land in `notes/traces/<version>+<variant>/`, which keeps arms from
-overwriting each other and keeps an in-flight experiment out of the released
-version's calibration numbers (`parse_semver` rejects the suffixed name).
-Compare arms with `lup-devtools scores compare <version>+a <version>+b`.
-
-Valid `effort` values are `low`, `medium`, `high`, `xhigh`, `max`.
+Variants are named agent configurations registered in `notes/variants.json`,
+run side by side with `uv run forecast ab`. Each arm is a separate process
+and wants its own `profile`, and traces land under `<version>+<variant>` so
+an in-flight experiment stays out of the released version's calibration
+numbers. `docs/devtools.md` carries the registry format and the rest.
 
 ## Testing
 
@@ -194,17 +176,8 @@ Use """
 2. Check `notes/traces/<version>/sessions/<session_id>/` for the agent's intermediate reasoning and meta-reflection
 3. Check API key configuration: missing keys log warnings at startup
 
-**Common issues:**
-
-- `METACULUS_TOKEN` not set → Startup fails (required)
-- `EXA_API_KEY` not set → Web search fails
-- `FRED_API_KEY` not set → FRED economic data tools fail
-- Docker not running → Sandbox code execution fails
-
-**Inspecting tool outputs:**
-
-- Tool results are JSON-encoded; parse with `json.loads()` if debugging
-- Check `src/aib/tools/*.py` for expected input/output schemas
+`docs/devtools.md` lists the common startup failures and what each missing
+key breaks.
 
 ---
 
@@ -249,9 +222,15 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
         models.TextPart(
             text=r"""** — Once the PR is approved, merges it and cleans up the branch.
 
-The plugin-version step this list used to carry is gone: the plugin is
-generated now, so its version is the harness generator's and moves when the
-declaration does.
+**Bump the `aib` plugin's version** if the branch changes anything the
+hand-written `aib` plugin ships — its commands or its agents. Use
+`uv run lup-devtools dev plugin-bump <level> "<summary>"`. Plugin versions are
+cached by the runtime, so without a bump a new or renamed command does not
+appear after a reinstall. **Worktree caveat:** plugin installation resolves the
+marketplace's relative path from the main worktree rather than the current one,
+so plugin changes on a feature branch do not take effect until they reach
+`main`. The generated `lup` plugin needs none of this: its version is the
+harness generator's and moves when the declaration does.
 
 ### Commit Guidelines
 
@@ -478,18 +457,30 @@ decorator, not to the handler.
 
 ### Code Intelligence
 
-The `codeintel` tools resolve code through a language server. **Use these
-actively** — they are faster and more accurate than grep for anything about a
-name.
+Code intelligence tools answer questions about code by *resolving* it, through
+a language server. **Use these actively** — they are faster and more accurate
+than grep-based searches for code understanding and refactoring.
 
-- **find-definition** — Jump to where a symbol is defined. Use this instead of grepping for `def foo` or `class Foo`.
+**Navigation (use before editing unfamiliar code):**
+
+- **go-to-definition** — Jump to where a symbol is defined. Use this instead of grepping for `def foo` or `class Foo`.
 - **find-references** — Find all usages of a symbol. Use this instead of grepping for a symbol name.
-- **hover** — Get type info and docs for a symbol at a position.
-- **list-symbols** — List every symbol a file declares. Use this instead of grepping for `def ` or `class `.
-- **rename-symbol** — Plan a workspace-wide rename. **Always prefer this over `Edit` with `replace_all`**, which cannot tell one scope from another; apply the edits it reports yourself.
+- **hover-documentation** — Get type info and docs for a symbol at a position.
+- **list-symbols** — List all symbols in a file. Use this instead of grepping for `def ` or `class `.
+- **find-implementations** — Find implementations of an interface or abstract method.
+- **trace-call-hierarchy** — Understand call chains. Use this instead of manually tracing function calls.
 
-`grep` is still right for what is genuinely characters: a string literal, a
-comment, a non-Python file.
+**Refactoring:**
+
+- **rename-symbol** — Rename a symbol across the workspace. **Always prefer this over `Edit` with `replace_all`** for identifier renames — it understands scope and won't rename unrelated identifiers that happen to share the same name. Where the tool reports the edits rather than applying them, apply them yourself.
+
+**Diagnostics:**
+
+- After every file edit, the type checker analyzes the change and reports errors. Pay attention to these — they catch issues immediately.
+
+`grep` stays right for what is genuinely characters: a string literal, a
+comment, a non-Python file. Anything about a *name* — where it is defined,
+who calls it, what it is called now — goes through resolution.
 
 ---
 
@@ -510,12 +501,17 @@ rather than power: an agent may already edit `devtools/` and run it.
 
 ## lup-devtools CLI
 
-Source: `src/aib/devtools/`. Run `uv run lup-devtools --help` for the command
-tree; the sub-apps are `agent`, `analysis`, `api`, `calibration`, `claude`,
-`dev`, `git`, `health`, `migration`, `py`, `queue`, `report`, `resolution`,
-`scores`, `sync`, `trace`, `version`, and `worldview`.
+Source: `src/aib/devtools/`. Two halves: what only this project has —
+forecasting analysis, calibration, scoring, the worldview store — and what
+the library ships for any project built on it.
 
-Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup` (Metaculus Cup), `all` (cross-tournament)
+**Always use `lup-devtools` instead of ad-hoc commands.** If you find
+yourself running the same thing repeatedly, add a command: to
+`src/aib/devtools/` when only this project wants it, and upstream to `lup`
+when another project built on it would.
+
+`docs/devtools.md` carries the whole command tree, the tournament names, and
+the three verbs that spawn a forecasting agent and are therefore refused.
 
 ## The Gates You Will Meet
 
@@ -529,7 +525,7 @@ refusals are worth knowing before you meet them:
 
 - **A forecast, in any spelling.** Refused, with the instruction to print the command instead.
 - **An edit to `tests/`.** An approval question, and a refusal for the resolver's implementer.
-- **A hand edit to a generated tree.** `.claude/` is compiled from the declarations under `src/aib/devtools/harness/`; edit those and regenerate.
+- **A hand edit to a generated tree.** The harness tree is compiled from the declarations under `src/aib/devtools/harness/`; edit those and regenerate.
 
 `# lup: escalate: <why>` as the leading line of a shell command promotes a
 classified deny or ask into an approval question carrying that reason.
@@ -546,7 +542,18 @@ Settings are project-level, in the tree the harness owns ("""
         ),
         models.NativePath(location="project_settings"),
         models.TextPart(
-            text=r'''), never user-level — and generated, so the source to edit is `harness/content/settings.py`.
+            text=r"""), never user-level — and generated, so the source to edit is `harness/content/settings.py`.
+
+### Merging Local Settings
+
+**Every time you respond to the user**, check whether a local settings file
+sits beside the generated one. If it does, review it for sensible defaults
+worth keeping. The merge target is the declaration in
+`harness/content/settings.py` rather than the generated file — a permission
+added to the artifact is reverted by the next generation, and one added to the
+declaration is what every later tree carries.
+
+### Environment
 
 `.env` holds defaults; `.env.local` holds secrets, is gitignored, and overrides them. Configuration is loaded through pydantic-settings in `src/aib/config.py`, which is the only module that reads the environment.
 
@@ -590,35 +597,21 @@ places, chosen by what it is attached to:
 `uv run lup-devtools report` answers what is left across every surface: open
 notes, unverified claims, stale generated artifacts, and unlanded branches.
 
+This replaces the rule that `PLAN.md` is the source of truth for what has been
+built and what remains. The root `PLAN.md` is not deleted — it holds real
+history — but it is no longer maintained as a tracking file, and work still
+live in it belongs in a `# lup: defer:` note at the site it concerns, where
+`report` will keep surfacing it.
+
 ## Code Change Reports
 
-After completing code modifications, provide an **extensive report** including:
+After completing code modifications, provide an **extensive report**: a
+one-paragraph summary, the files modified, the detailed changes with
+surrounding context and a rationale for each, the architectural
+considerations, and what was tested.
 
-1. **Summary** — One paragraph explaining the overall change and its purpose
-
-2. **Files Modified** — List each file with path, nature of change, and brief description
-
-3. **Detailed Changes** — For each significant change:
-   - **Context**: Show surrounding code (10-20 lines)
-   - **Before/After**: If modifying existing code, show both versions
-   - **Rationale**: Why this approach was chosen
-
-4. **Architectural Considerations** — Did you consider unifying with existing patterns? Are there similar functions that could be consolidated?
-
-5. **Testing** — What tests were added/modified?
-
-**Code block format:**
-
-```python
-# src/aib/tools/example.py (lines 45-67)
-
-def existing_function():
-    """Show enough context to understand the change."""
-    # ... existing code ...
-    new_behavior = do_something_different()
-    # ... more existing code ...
-    return result
-```
+`docs/devtools.md` carries the section-by-section format and a worked
+example.
 
 ## Slash Commands & Skills
 
@@ -662,16 +655,15 @@ the component that owns the fix — which for anything about the harness, the
 policy, or the devtools skeleton is `lup` rather than this repository, so the
 issue is filed against `joy-void-joy/lup` and not here.
 
-`uv run lup-devtools dev report-friction` is the command that preserves that
-shape, and this repository's `dev` sub-app does not have it yet: its `dev` is
-its own four commands rather than the library's tree. Until it does, write
-the issue by hand with those five fields.
+This repository's `dev` sub-app is its own four commands rather than the
+library's tree, so it has no `report-friction` yet. Write the issue by hand
+with those five fields.
 
 ## External Resources
 
-When questions involve Claude Code, the Agent SDK, or the Claude API, read
+When a question is about the harness you are running under, its agent SDK, or its model API, read
 that runtime's own documentation rather than answering from memory: delegate
-to the documentation subagent where one is available, or fetch '''
+to the documentation subagent where one is available, or fetch """
         ),
         models.RuntimeDocs(),
         models.TextPart(

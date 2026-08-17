@@ -16,7 +16,7 @@ dependencies = [
     "docker>=7.1.0",
     "fredapi>=0.5.2",
     "httpx>=0.28.1",
-    "lup[claude,codex,docker]",
+    "lup[claude,codex,docker,web]",
     "nest-asyncio>=1.6.0",
     "numpy>=2.4.1",
     "openmeteo-requests>=1.7.5",
@@ -60,8 +60,11 @@ build-backend = "setuptools.build_meta"
 agent_version = "7.0.0"
 
 [tool.pyright]
+# The generated hook tree is deliberately absent. The `extraPaths` entry that
+# used to sit here named hand-written hook scripts this repository owned; the
+# dispatcher that replaced them is compiled from source lup already checks,
+# and nothing here can fix a finding in it except regenerating.
 include = ["src", "tests"]
-extraPaths = [".claude/plugins/aib/hooks/scripts"]
 exclude = ["tmp"]
 
 [tool.pytest.ini_options]
