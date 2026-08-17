@@ -1,47 +1,51 @@
-"""Named Claude account selection, backed by lup's profile registry.
+"""Named Claude account selection, over the accounts this checkout keeps.
 
-The registry lives at `~/.lup/profiles.json` — machine-wide and shared with
-other lup projects, because Claude accounts are reused across projects. A
-profile names a Claude configuration home; pointing a session at one selects
-the account, its subscription, and its rate limits.
+The accounts live under `.lup/profiles` in the checkout rather than in the
+operator's home, so an A/B arm naming a profile reaches the same account
+whoever runs it. `lup-devtools harness profile` curates this same directory,
+which is the point: a name that command registers is a name `--profile` can
+select, and there is no second registry for one of them to be missing from.
 
-Selection order is explicit name, then the registry's active profile, then
-`~/.claude`.
+Selection order is explicit name, then the directory's active profile, then
+whatever configuration home the environment already selected. A checkout that
+keeps no accounts resolves nothing and leaves that inherited home alone.
 """
 
 from pathlib import Path
 
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.adapters.claude.profile_store import AccountFile
+from lup.devtools.harness.composition import local_claude_profile_directory
+from lup.runtime.profiles import ProfileDirectory, UnknownProfile
+from lup.workspace.paths import project_root
 
-STORE = AccountFile()
+PROFILES: ProfileDirectory = local_claude_profile_directory(project_root())
+"""The accounts this checkout keeps, as the one directory every caller reads."""
+
+UnknownProfileError = UnknownProfile
+"""A name no profile answers to, under the name this project already catches."""
 
 
-class UnknownProfileError(Exception):
-    """A named profile is absent from the registry."""
-
-
-def resolve_config_dir(name: str | None = None) -> Path:
-    """Resolve a Claude config home for a profile name."""
-    try:
-        return STORE.resolve_config_dir(name)
-    except KeyError as error:
-        known = ", ".join(known_profiles()) or "none"
-        raise UnknownProfileError(
-            f"unknown profile {name!r} in {STORE.registry_path} (known: {known})"
-        ) from error
+def resolve_config_dir(name: str | None = None) -> Path | None:
+    """The Claude configuration home a name selects, or None to inherit one."""
+    return PROFILES.launch_home(name)
 
 
 def profile_env(name: str | None = None) -> dict[str, str]:
-    """Env mapping that points an Agent SDK session at the selected account."""
-    return {CLAUDE_CONFIG_DIR: str(resolve_config_dir(name))}
+    """Env mapping that points an Agent SDK session at the selected account.
+
+    Empty when nothing is selected, so a session inherits the home its
+    environment already names rather than being pinned to a default one.
+    """
+    home = resolve_config_dir(name)
+    return {} if home is None else {CLAUDE_CONFIG_DIR: str(home)}
 
 
 def known_profiles() -> list[str]:
-    """Profile names registered on this machine."""
-    return sorted(STORE.load_registry().profiles)
+    """Profile names this checkout keeps, in the directory's display order."""
+    return [profile.name for profile in PROFILES.entries()]
 
 
 def active_profile() -> str | None:
-    """The profile marked active in the registry, if any."""
-    return STORE.load_registry().active
+    """The profile answering for a caller naming none, if there is one."""
+    selected = PROFILES.active()
+    return None if selected is None else selected.name

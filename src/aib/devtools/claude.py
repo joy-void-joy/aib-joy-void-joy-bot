@@ -21,9 +21,9 @@ from lup.workspace.paths import project_root
 
 from aib.devtools.usage import app as usage_app
 from aib.profiles import (
-    CLAUDE_CONFIG_DIR,
     UnknownProfileError,
     active_profile,
+    profile_env,
     resolve_config_dir,
 )
 
@@ -90,9 +90,11 @@ def run_claude(
     except UnknownProfileError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
-    env = {**os.environ, CLAUDE_CONFIG_DIR: str(config_dir)}
+    # lup: ignore[os-environ] — exact child-process inheritance
+    env = {**os.environ, **profile_env(profile)}
     shown = profile or active_profile() or "default"
-    typer.echo(f"Launching claude (profile: {shown}, config dir: {config_dir})")
+    inherited = "inherited" if config_dir is None else config_dir
+    typer.echo(f"Launching claude (profile: {shown}, config dir: {inherited})")
 
     try:
         sh.Command("claude")(*args, _fg=True, _env=env)
