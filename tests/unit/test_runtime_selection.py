@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from aib.runtime import RUNTIMES, UnknownRuntimeError, select_runtime
-from aib.variants import Variant, variant_env
+from aib.variants import Variant, load_registry, variant_env
 
 
 class TestRuntimeRegistry:
@@ -49,3 +49,22 @@ class TestVariantRuntime:
     def test_an_arm_naming_an_unknown_runtime_is_rejected(self) -> None:
         with pytest.raises(ValidationError, match="claude, codex"):
             Variant(name="broken", runtime="gpt")
+
+
+class TestShippedRegistry:
+    """The registry this repository ships is what `forecast ab` reads."""
+
+    def test_it_validates(self) -> None:
+        registry = load_registry()
+        assert [v.name for v in registry.variants] == ["baseline", "gpt-5.6-sol"]
+
+    def test_the_arms_differ_in_runtime(self) -> None:
+        registry = load_registry()
+        assert {v.name: v.runtime for v in registry.variants} == {
+            "baseline": "claude",
+            "gpt-5.6-sol": "codex",
+        }
+
+    def test_each_arm_traces_somewhere_of_its_own(self) -> None:
+        traces = {v.trace_version("7.0.0") for v in load_registry().variants}
+        assert traces == {"7.0.0+baseline", "7.0.0+gpt-5.6-sol"}
