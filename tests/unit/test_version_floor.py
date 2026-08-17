@@ -74,6 +74,56 @@ class TestVersionsAtLeast:
             versions_at_least("7.0")
 
 
+class TestScoresTablesHonourTheFloor:
+    def test_summary_pools_from_the_floor_up(self, traces: Path) -> None:
+        from aib.devtools.scores import app
+
+        result = runner.invoke(app, ["summary", "--all-versions", "--no-refresh"])
+
+        assert result.exit_code == 0
+        assert "7.0.0" in result.output
+        assert "6.3.0" not in result.output
+
+    def test_summary_widens_to_a_lower_floor(self, traces: Path) -> None:
+        from aib.devtools.scores import app
+
+        result = runner.invoke(
+            app,
+            ["summary", "--all-versions", "--no-refresh", "--min-version", "0.0.0"],
+        )
+
+        assert result.exit_code == 0
+        assert "6.3.0" in result.output
+
+    def test_show_leaves_earlier_versions_out(self, traces: Path) -> None:
+        from aib.devtools.scores import app
+
+        result = runner.invoke(app, ["show", "--all-versions", "--no-refresh"])
+
+        assert result.exit_code == 0
+        assert "7.0.0" in result.output
+        assert "6.3.0" not in result.output
+
+    def test_a_named_post_is_exempt_from_the_floor(self, traces: Path) -> None:
+        """Naming a post asks for that post, whichever version forecast it."""
+        from aib.devtools.scores import app
+
+        result = runner.invoke(app, ["show", "--post-id", "1", "--no-refresh"])
+
+        assert result.exit_code == 0
+        assert "6.3.0" in result.output
+
+    def test_track_record_starts_at_the_floor(self, traces: Path) -> None:
+        from aib.devtools.scores import app
+
+        result = runner.invoke(app, ["track-record", "--all-versions"])
+
+        assert result.exit_code == 0
+        assert "+20.0" in result.output
+        assert "+30.0" in result.output
+        assert "+10.0" not in result.output
+
+
 class TestStripHonoursTheFloor:
     def test_earlier_versions_are_left_out_by_default(self, traces: Path) -> None:
         from aib.devtools.scores import app

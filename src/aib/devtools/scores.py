@@ -35,6 +35,12 @@ from aib.scoring import load_all_score_rows
 
 app = typer.Typer(no_args_is_help=True)
 
+MIN_VERSION_OPTION = typer.Option(
+    MIN_CHART_VERSION,
+    "--min-version",
+    help="Lowest agent version to include (0.0.0 for every version)",
+)
+
 REGRESSION_SUITE_PATH = Path("./notes/regression_suite.json")
 
 META_PATTERNS = [
@@ -454,26 +460,32 @@ def show(
         None, "--source", "-s", help="Filter by source (live/retrodict)"
     ),
     resolved_only: bool = typer.Option(False, "--resolved", help="Only show resolved"),
+    min_version: str = MIN_VERSION_OPTION,
     no_refresh: bool = typer.Option(
         False, "--no-refresh", help="Skip track-record scrape"
     ),
 ) -> None:
-    """Show the scores table (formatted)."""
+    """Show the scores table (formatted).
+
+    Explicit post IDs are exempt from the version floor: naming a post asks
+    for that post, whichever version forecast it.
+    """
     all_post_ids = list(post_id) + (post_ids or [])
     if not no_refresh:
         refresh_scrape()
-    widen = all_versions or len(all_post_ids) > 0
-    if widen:
+    if all_post_ids:
         versions_filter: list[str] | None = None
+    elif all_versions:
+        versions_filter = scoped_versions(min_version)
     elif version is not None:
         versions_filter = match_versions(version)
         if not versions_filter:
             typer.echo(f"No version directories match '{version}'.")
             raise typer.Exit(1)
     else:
-        versions_filter = match_versions(agent_version())
-        if not versions_filter:
-            versions_filter = None
+        versions_filter = match_versions(agent_version()) or scoped_versions(
+            min_version
+        )
     rows = load_all_score_rows(versions=versions_filter)
     if not rows:
         typer.echo("No forecast data found.")
@@ -543,6 +555,7 @@ def summary(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
+    min_version: str = MIN_VERSION_OPTION,
     no_refresh: bool = typer.Option(
         False, "--no-refresh", help="Skip track-record scrape"
     ),
@@ -553,7 +566,7 @@ def summary(
     effective, warning = resolve_version(version, all_versions)
     if warning:
         typer.echo(warning)
-    rows = load_all_score_rows(versions=effective)
+    rows = load_all_score_rows(versions=floored_scope(effective, min_version))
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
@@ -778,6 +791,7 @@ def extremes(
     qtype: str | None = typer.Option(
         None, "--type", "-t", help="Filter by question type (binary/numeric)"
     ),
+    min_version: str = MIN_VERSION_OPTION,
     no_refresh: bool = typer.Option(
         False, "--no-refresh", help="Skip track-record scrape"
     ),
@@ -788,7 +802,7 @@ def extremes(
     effective, warning = resolve_version(version, all_versions)
     if warning:
         typer.echo(warning)
-    rows = load_all_score_rows(versions=effective)
+    rows = load_all_score_rows(versions=floored_scope(effective, min_version))
     if not rows:
         typer.echo("No forecast data found.")
         raise typer.Exit(1)
@@ -1049,6 +1063,18 @@ def scoped_versions(min_version: str) -> list[str]:
         return versions_at_least(min_version)
     except ValueError as e:
         raise typer.BadParameter(str(e), param_hint="--min-version") from e
+
+
+def floored_scope(effective: list[str] | None, min_version: str) -> list[str]:
+    """A resolved version scope, bounded below by the floor.
+
+    ``resolve_version`` answers None for "every version that ever wrote a
+    trace", which is the unbounded case the floor exists for. A scope that
+    already names its versions has said what it wants and passes through.
+    """
+    if effective is not None:
+        return effective
+    return scoped_versions(min_version)
 
 
 def _load_peer_data(versions: list[str] | None = None) -> dict[int, tuple[float, str]]:
@@ -1530,11 +1556,7 @@ def strip(
     min_n: int = typer.Option(
         0, "--min-n", help="Minimum scored forecasts to include a version"
     ),
-    min_version: str = typer.Option(
-        MIN_CHART_VERSION,
-        "--min-version",
-        help="Lowest agent version to chart (0.0.0 for every version)",
-    ),
+    min_version: str = MIN_VERSION_OPTION,
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
     ),
@@ -1583,11 +1605,7 @@ def trend(
     min_n: int = typer.Option(
         0, "--min-n", help="Minimum forecasts to include a version"
     ),
-    min_version: str = typer.Option(
-        MIN_CHART_VERSION,
-        "--min-version",
-        help="Lowest agent version to chart (0.0.0 for every version)",
-    ),
+    min_version: str = MIN_VERSION_OPTION,
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
     ),
@@ -1633,12 +1651,14 @@ def track_record_cmd(
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
     ),
+    min_version: str = MIN_VERSION_OPTION,
 ) -> None:
     """Display peer and baseline scores from forecast JSONs."""
     effective_version = version if version is not None else agent_version()
-    effective, warning = resolve_version(effective_version, all_versions)
+    resolved, warning = resolve_version(effective_version, all_versions)
     if warning:
         typer.echo(warning)
+    effective = floored_scope(resolved, min_version)
 
     forecasts: list[dict[str, object]] = []
     for d in load_all_forecast_jsons(versions=effective):

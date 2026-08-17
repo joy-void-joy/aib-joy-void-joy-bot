@@ -45,14 +45,14 @@ lup-devtools
 │
 ├── scores             Unified scores table (wraps aib.scoring)
 │   ├── scrape         Scrape track record, update forecast JSONs with peer scores
-│   ├── show           Show scores table (--post-id, --version, --source, --resolved)
-│   ├── summary        Aggregate statistics by type, source, version
+│   ├── show           Scores table (--post-id, --version, --min-version, --source)
+│   ├── summary        Aggregate by type, source, version (--min-version)
 │   ├── compare        Compare two agent versions on overlapping questions
 │   ├── regression     Regression suite results
-│   ├── extremes       Best/worst forecasts (--non-meta, --version, --type, -n)
+│   ├── extremes       Best/worst forecasts (--non-meta, --min-version, --type, -n)
 │   ├── strip          Strip plot by agent version (--min-version, watch mode)
 │   ├── trend          Peer scores over time (--min-version, watch mode)
-│   ├── track-record   Peer and baseline scores from forecast JSONs
+│   ├── track-record   Peer and baseline scores from forecast JSONs (--min-version)
 │   └── backfill-cdf   Backfill CDF/numeric_bounds via Metaculus API
 │
 ├── queue              Forecasting queue and priorities
@@ -145,6 +145,10 @@ both reads as a trend where there is only a change of subject. Pass
 `--min-version 0.0.0` for the whole history, or any other release to move the
 floor. An A/B arm is scoped by the release in its `<version>+<name>` label,
 so an experiment charts alongside the version it branched from.
+
+The floor bounds the unbounded case only. `--version 6.3.0` names what it
+wants and is served, and so is a post named by `scores show --post-id`:
+asking for a post asks for that post, whichever version forecast it.
 
 ## Resolution versus grep
 
