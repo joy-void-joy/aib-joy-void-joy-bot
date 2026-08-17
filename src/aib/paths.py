@@ -288,7 +288,18 @@ def iter_trace_log_files(post_id: int | None = None) -> Iterator[Path]:
 
 MIN_VERSION_DATAPOINTS = 10
 
+MIN_CHART_VERSION = "7.0.0"
+"""Floor for the views that pool several versions into one picture.
+
+Below it the scores answer a different question: v7.0.0 put the agent on a
+new framework and a new SDK, so a point from before it measures an agent
+that no longer exists, and a chart carrying both reads as a trend where
+there is only a change of subject.
+"""
+
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+TRACE_VERSION_RE = re.compile(r"^(?P<release>\d+\.\d+\.\d+)(?:\+(?P<variant>[^+]+))?$")
 
 
 def parse_semver(version: str) -> tuple[int, int, int] | None:
@@ -297,6 +308,30 @@ def parse_semver(version: str) -> tuple[int, int, int] | None:
     if not m:
         return None
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
+def parse_trace_version(label: str) -> tuple[int, int, int] | None:
+    """The release a trace directory names, ignoring any A/B variant suffix.
+
+    An experiment arm writes under ``<version>+<name>``, and it is the
+    release that decides whether the arm belongs in a version scope.
+    """
+    m = TRACE_VERSION_RE.match(label)
+    if m is None:
+        return None
+    return parse_semver(m.group("release"))
+
+
+def versions_at_least(min_version: str) -> list[str]:
+    """Trace directory names at or above *min_version*, variant arms included."""
+    floor = parse_semver(min_version)
+    if floor is None:
+        raise ValueError(f"minimum version {min_version!r} is not an X.Y.Z version")
+    return [
+        d.name
+        for d in _version_dirs()
+        if (release := parse_trace_version(d.name)) is not None and release >= floor
+    ]
 
 
 def _count_forecasts_for_versions(versions: list[str]) -> int:
