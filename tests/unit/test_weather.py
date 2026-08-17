@@ -37,20 +37,20 @@ class TestSummarizeForecasts:
         ]
         result = summarize_forecasts("Chicago", forecasts)
 
-        assert result["location"] == "Chicago"
-        assert result["forecast_days"] == 3
-        assert result["min_temp_c"] == -2.0
-        assert result["max_temp_c"] == 15.0
-        assert result["total_precipitation_mm"] == 7.3
-        assert len(result["daily"]) == 3
+        assert result.location == "Chicago"
+        assert result.forecast_days == 3
+        assert result.min_temp_c == -2.0
+        assert result.max_temp_c == 15.0
+        assert result.total_precipitation_mm == 7.3
+        assert len(result.daily) == 3
 
     def test_single_day(self) -> None:
         forecasts = [_make_forecast("2026-04-01", temp_min_c=5.0, temp_max_c=5.0)]
         result = summarize_forecasts("Test", forecasts)
 
-        assert result["min_temp_c"] == 5.0
-        assert result["max_temp_c"] == 5.0
-        assert result["forecast_days"] == 1
+        assert result.min_temp_c == 5.0
+        assert result.max_temp_c == 5.0
+        assert result.forecast_days == 1
 
     def test_precipitation_rounding(self) -> None:
         forecasts = [
@@ -58,7 +58,7 @@ class TestSummarizeForecasts:
             _make_forecast("2026-04-02", precip_mm=0.2),
         ]
         result = summarize_forecasts("Test", forecasts)
-        assert result["total_precipitation_mm"] == 0.3
+        assert result.total_precipitation_mm == 0.3
 
 
 class TestRetrodictExclusion:

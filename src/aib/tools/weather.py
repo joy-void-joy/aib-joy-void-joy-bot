@@ -6,6 +6,7 @@ free API — no API key required.
 
 import asyncio
 import logging
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
@@ -14,7 +15,7 @@ import openmeteo_requests
 from pydantic import BaseModel, Field
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.decorator import ToolError, mcp_tool
+from lup.mcp import ToolError, lup_tool
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,26 @@ class DailyForecast(TypedDict):
     precipitation_mm: float
 
 
+class LocationForecast(BaseModel):
+    """One location's forecast window, summarized."""
+
+    location: str
+    forecast_days: int
+    daily: list[DailyForecast]
+    min_temp_c: float
+    max_temp_c: float
+    total_precipitation_mm: float
+
+
+class MultiLocationForecast(BaseModel):
+    """Several locations' forecasts, with the roll-up of how many answered."""
+
+    locations_queried: int
+    locations_returned: int
+    forecast_days: int
+    by_location: list[LocationForecast]
+
+
 # --- Open-Meteo API ---
 
 
@@ -97,20 +118,18 @@ async def query_open_meteo(
     if temp_min is None or temp_max is None or precip is None:
         return []
 
-    result: list[DailyForecast] = []
     time_range = range(daily.Time(), daily.TimeEnd(), daily.Interval())
     temp_min_values = temp_min.ValuesAsNumpy()
     temp_max_values = temp_max.ValuesAsNumpy()
     precip_values = precip.ValuesAsNumpy()
 
-    for i, ts in enumerate(time_range):
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc).date()
-        t_min = float(temp_min_values[i])
-        t_max = float(temp_max_values[i])
-        p = float(precip_values[i]) if not np.isnan(precip_values[i]) else 0.0
-
-        result.append(
-            DailyForecast(
+    def days() -> Iterator[DailyForecast]:
+        for i, ts in enumerate(time_range):
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc).date()
+            t_min = float(temp_min_values[i])
+            t_max = float(temp_max_values[i])
+            p = float(precip_values[i]) if not np.isnan(precip_values[i]) else 0.0
+            yield DailyForecast(
                 date=dt.isoformat(),
                 temp_min_c=round(t_min, 1),
                 temp_max_c=round(t_max, 1),
@@ -118,27 +137,23 @@ async def query_open_meteo(
                 temp_max_f=round(t_max * 9 / 5 + 32, 1),
                 precipitation_mm=round(p, 1),
             )
-        )
 
-    return result
+    return list(days())
 
 
-def summarize_forecasts(name: str, forecasts: list[DailyForecast]) -> dict[str, Any]:
+def summarize_forecasts(name: str, forecasts: list[DailyForecast]) -> LocationForecast:
     """Build a location summary from daily forecasts."""
-    return {
-        "location": name,
-        "forecast_days": len(forecasts),
-        "daily": forecasts,
-        "min_temp_c": min(f["temp_min_c"] for f in forecasts),
-        "max_temp_c": max(f["temp_max_c"] for f in forecasts),
-        "total_precipitation_mm": round(
-            sum(f["precipitation_mm"] for f in forecasts), 1
-        ),
-    }
+    return LocationForecast(
+        location=name,
+        forecast_days=len(forecasts),
+        daily=forecasts,
+        min_temp_c=min(f["temp_min_c"] for f in forecasts),
+        max_temp_c=max(f["temp_max_c"] for f in forecasts),
+        total_precipitation_mm=round(sum(f["precipitation_mm"] for f in forecasts), 1),
+    )
 
 
-@mcp_tool(
-    "weather_forecast",
+@lup_tool(
     (
         "Get weather forecasts for one or more locations (up to 16 days ahead). "
         "Returns daily min/max temperatures (°C and °F) and precipitation (mm). "
@@ -148,8 +163,11 @@ def summarize_forecasts(name: str, forecasts: list[DailyForecast]) -> dict[str, 
         "Pass multiple locations for regional scans (e.g. cities across a region "
         "for weather-related Google Trends questions). Max 20 locations per call."
     ),
+    name="weather_forecast",
 )
-async def weather_forecast(params: WeatherForecastInput) -> dict[str, Any]:
+async def weather_forecast(
+    params: WeatherForecastInput,
+) -> LocationForecast | MultiLocationForecast:
     """Get weather forecasts for one or more locations."""
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
@@ -162,15 +180,17 @@ async def weather_forecast(params: WeatherForecastInput) -> dict[str, Any]:
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        location_results: list[dict[str, Any]] = []
-        for loc, result in zip(params.locations, results):
-            if isinstance(result, BaseException):
-                logger.warning("Weather query failed for %s: %s", loc.name, result)
-                continue
-            if not result:
-                continue
-            name = loc.name or f"{loc.latitude}, {loc.longitude}"
-            location_results.append(summarize_forecasts(name, result))
+        def answered() -> Iterator[LocationForecast]:
+            for loc, result in zip(params.locations, results):
+                if isinstance(result, BaseException):
+                    logger.warning("Weather query failed for %s: %s", loc.name, result)
+                    continue
+                if not result:
+                    continue
+                name = loc.name or f"{loc.latitude}, {loc.longitude}"
+                yield summarize_forecasts(name, result)
+
+        location_results = list(answered())
 
         if not location_results:
             raise ToolError("No forecast data returned from Open-Meteo")
@@ -178,12 +198,12 @@ async def weather_forecast(params: WeatherForecastInput) -> dict[str, Any]:
         if len(location_results) == 1:
             return location_results[0]
 
-        return {
-            "locations_queried": len(params.locations),
-            "locations_returned": len(location_results),
-            "forecast_days": params.forecast_days,
-            "by_location": location_results,
-        }
+        return MultiLocationForecast(
+            locations_queried=len(params.locations),
+            locations_returned=len(location_results),
+            forecast_days=params.forecast_days,
+            by_location=location_results,
+        )
 
     except ToolError:
         raise

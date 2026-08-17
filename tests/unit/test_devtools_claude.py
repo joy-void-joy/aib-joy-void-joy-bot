@@ -13,7 +13,8 @@ import typer
 from typer.testing import CliRunner
 
 import aib.devtools.claude as claude_mod
-from aib.devtools.claude import Account, Registry, app, resolve_config_dir
+from aib.devtools.claude import app
+from aib.profiles import UnknownProfileError
 
 runner = CliRunner()
 
@@ -67,36 +68,19 @@ def test_usage_subcommand_is_not_forwarded(forwarded: list[list[str]]) -> None:
     assert forwarded == []
 
 
-class TestResolveConfigDir:
-    def test_default_when_no_registry(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        monkeypatch.setattr(claude_mod, "REGISTRY_PATH", tmp_path / "profiles.json")
-        assert resolve_config_dir() == claude_mod.DEFAULT_CONFIG_DIR
+def test_unknown_profile_exits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unregistered profile name fails the launcher instead of silently using the default account."""
 
-    def test_named_profile(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        registry_path = tmp_path / "profiles.json"
-        registry = Registry(profiles={"work": Account(config_dir=str(tmp_path))})
-        registry_path.write_text(registry.model_dump_json())
-        monkeypatch.setattr(claude_mod, "REGISTRY_PATH", registry_path)
-        assert resolve_config_dir("work") == tmp_path
+    def raise_unknown(name: str | None = None) -> Path:
+        raise UnknownProfileError(f"unknown profile {name!r} in registry (known: none)")
 
-    def test_active_profile_when_unnamed(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        registry_path = tmp_path / "profiles.json"
-        registry = Registry(
-            profiles={"work": Account(config_dir=str(tmp_path))}, active="work"
+    monkeypatch.setattr(claude_mod, "resolve_config_dir", raise_unknown)
+    with pytest.raises(typer.Exit):
+        claude_mod.run_claude(
+            profile="nope",
+            model=None,
+            no_tools=True,
+            no_plugin=True,
+            with_prompt=False,
+            extra_args=[],
         )
-        registry_path.write_text(registry.model_dump_json())
-        monkeypatch.setattr(claude_mod, "REGISTRY_PATH", registry_path)
-        assert resolve_config_dir() == tmp_path
-
-    def test_unknown_profile_exits(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        monkeypatch.setattr(claude_mod, "REGISTRY_PATH", tmp_path / "profiles.json")
-        with pytest.raises(typer.Exit):
-            resolve_config_dir("nope")

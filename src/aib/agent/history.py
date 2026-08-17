@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 
 from aib.agent.models import TokenUsage
 from aib.config import settings
+from lup.workspace.paths import parse_timestamp
+
 from aib.paths import (
     forecasts_dir,
     find_latest_forecast_file,
@@ -25,11 +27,10 @@ from aib.paths import (
     iter_retrodict_files,
     iter_session_dirs,
     iter_trace_log_files,
-    parse_timestamp,
     retrodict_dir,
+    trace_version,
 )
 from aib.retrodict_context import effective_now
-from aib.version import AGENT_VERSION
 
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
@@ -238,7 +239,7 @@ def save_forecast(
         resolution_criteria=resolution_criteria,
         fine_print=fine_print,
         revision_history=revision_history,
-        agent_version=AGENT_VERSION,
+        agent_version=trace_version(),
         model=settings.model,
     )
 

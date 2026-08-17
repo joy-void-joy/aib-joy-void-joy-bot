@@ -18,9 +18,15 @@ from typing import TYPE_CHECKING, Any, cast
 import aiofiles
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_agent_sdk import TextBlock, ToolUseBlock, tool
+from claude_agent_sdk import TextBlock, ToolUseBlock
 
-from aib.agent.hooks import HooksConfig
+from lup.hooks import (
+    LupHooksConfig,
+    create_permission_hooks,
+    create_tool_allowlist_hook,
+    merge_hooks,
+)
+
 from aib.agent.nested import NestedAgentReport
 from aib.agent.models import (
     BinaryEstimate,
@@ -36,9 +42,13 @@ from aib.agent.session import (
 )
 from aib.paths import WORLDVIEW_PATH
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import get_collector, tracked
-from aib.tools.responses import mcp_error, mcp_success
+from aib.tools.metrics import MetricsSummaryWithCost, costs, get_metrics_summary
+from lup.mcp import (
+    LupMcpServerConfig,
+    ToolError,
+    create_mcp_server,
+    lup_tool,
+)
 
 if TYPE_CHECKING:
     from aib.tools.reflection import ReflectionInput
@@ -275,7 +285,7 @@ state, key_facts (research), data_points (research).
 # --- Prompt Building ---
 
 
-def build_tool_metrics_section(summary: dict[str, Any]) -> str:
+def build_tool_metrics_section(summary: MetricsSummaryWithCost) -> str:
     """Render the programmatic tool-call metrics for the reviewer.
 
     The reviewer uses this as ground truth when cross-checking the agent's
@@ -387,7 +397,7 @@ def build_reviewer_prompt(
             f"## Tool audit (agent's narrative)\n\n{reflection_input.tool_audit}"
         )
 
-    metrics_summary = get_collector().get_summary()
+    metrics_summary = get_metrics_summary()
     if metrics_summary.get("total_tool_calls", 0) > 0:
         sections.append(build_tool_metrics_section(metrics_summary))
 
@@ -401,19 +411,15 @@ def build_reviewer_prompt(
     return "\n\n".join(sections)
 
 
-def build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
-    """Build permission hooks restricting the reviewer to specific directories."""
-    from claude_agent_sdk import HookMatcher
-    from claude_agent_sdk.types import (
-        HookContext,
-        HookInput,
-        HookJSONOutput,
-        PreToolUseHookSpecificOutput,
-        SyncHookJSONOutput,
-    )
+def build_reviewer_hooks(allowed_dirs: list[Path]) -> LupHooksConfig:
+    """Build permission hooks restricting the reviewer to specific directories.
 
-    from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
-
+    Both halves are lup's: the allowlist that says which tools exist for
+    this reviewer, and the directory rules that say where its read tools may
+    look. `tool_path` is resolved once at the adapter seam, so the hook no
+    longer has to know that Read spells its target `file_path` and Glob
+    spells it `path`.
+    """
     allowed = [
         "Read",
         "Glob",
@@ -422,52 +428,14 @@ def build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
         "mcp__search__fetch_url",
         "StructuredOutput",
     ]
-    hooks = create_allowed_tools_hook(allowed)
+    hooks = create_tool_allowlist_hook(allowed)
 
     if not allowed_dirs:
         return hooks
 
-    resolved_dirs = [d.resolve() for d in allowed_dirs]
-
-    def _deny(reason: str) -> HookJSONOutput:
-        return SyncHookJSONOutput(
-            hookSpecificOutput=PreToolUseHookSpecificOutput(
-                hookEventName="PreToolUse",
-                permissionDecision="deny",
-                permissionDecisionReason=reason,
-            ),
-        )
-
-    def _is_under_allowed(path: Path) -> bool:
-        resolved = path.resolve()
-        return any(resolved == d or resolved.is_relative_to(d) for d in resolved_dirs)
-
-    async def path_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> HookJSONOutput:
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return SyncHookJSONOutput()
-
-        tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
-
-        if tool_name in ("Read", "Glob", "Grep"):
-            file_path = tool_input.get("file_path") or tool_input.get("path", "")
-            if not file_path:
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Path required. Allowed directories: {dirs}")
-            if not _is_under_allowed(Path(file_path)):
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Access restricted to: {dirs}")
-
-        return SyncHookJSONOutput()
-
-    path_hooks: HooksConfig = {
-        "PreToolUse": [HookMatcher(hooks=[path_hook])],
-    }
-    return merge_hooks(hooks, path_hooks)
+    # The reviewer reads and never writes, so every directory it may reach
+    # is read-only and the read-write list is empty.
+    return merge_hooks(hooks, create_permission_hooks(rw_dirs=[], ro_dirs=allowed_dirs))
 
 
 # --- Trace File Writing ---
@@ -581,7 +549,7 @@ async def run_reviewer(
                 elif isinstance(message, ResultMessage):
                     structured_output = message.structured_output
                     if message.total_cost_usd is not None:
-                        get_collector().record_cost("premortem", message.total_cost_usd)
+                        costs.record("premortem", message.total_cost_usd)
 
         final_text = text_blocks[-1] if text_blocks else ""
 
@@ -656,6 +624,19 @@ Call premortem() exactly once per forecast, after your final reflection() call.
 """
 
 
+class PremortemVerdict(BaseModel):
+    """What the reviewer said, and whether it let the forecast through.
+
+    `note` is set only on the escape hatch — a fail that was force-approved
+    after too many consecutive reviewer failures — so a plain fail is
+    distinguishable from one the gate gave up on.
+    """
+
+    verdict: str
+    assessment: str
+    note: str | None = None
+
+
 def create_premortem_tool(
     session_dir: Path | None,
     get_trace: Callable[[], str] | None = None,
@@ -665,20 +646,18 @@ def create_premortem_tool(
 ):
     """Create the premortem tool with session context."""
 
-    @tool("premortem", _PREMORTEM_DESCRIPTION, PremortemInput)
-    @tracked("premortem")
-    async def premortem_tool(args: dict[str, Any]) -> dict[str, Any]:
-        """Run the premortem reviewer and gate StructuredOutput."""
-        try:
-            validated = PremortemInput.model_validate(args)
-        except Exception as e:
-            return mcp_error(f"Invalid input: {e}")
+    @lup_tool(_PREMORTEM_DESCRIPTION, name="premortem")
+    async def premortem_tool(validated: PremortemInput) -> PremortemVerdict:
+        """Run the premortem reviewer and gate StructuredOutput.
 
+        Input validation and metric recording are the decorator's now, so
+        what remains here is the review and the gate it holds.
+        """
         if session_dir is None or review_state is None:
-            return mcp_error("premortem is not available in this context")
+            raise ToolError("premortem is not available in this context")
 
         if not review_state.reflection_done:
-            return mcp_error(
+            raise ToolError(
                 "You must call reflection() before premortem(). "
                 "Commit to your factors and tentative estimate first."
             )
@@ -699,11 +678,9 @@ def create_premortem_tool(
                 ),
                 reflection_input=reflection_input,
             )
-            return mcp_success(
-                {
-                    "verdict": "approve",
-                    "assessment": "Reviewer unavailable; auto-approved.",
-                }
+            return PremortemVerdict(
+                verdict="approve",
+                assessment="Reviewer unavailable; auto-approved.",
             )
 
         review_result: ReviewResult | None = None
@@ -729,11 +706,9 @@ def create_premortem_tool(
                 ),
                 reflection_input=reflection_input,
             )
-            return mcp_success(
-                {
-                    "verdict": "approve",
-                    "assessment": "Reviewer unavailable; auto-approved.",
-                }
+            return PremortemVerdict(
+                verdict="approve",
+                assessment="Reviewer unavailable; auto-approved.",
             )
 
         review_state.record(review_result, reflection_input=reflection_input)
@@ -749,26 +724,22 @@ def create_premortem_tool(
                     "Escape hatch: force-approving after %d consecutive fails",
                     review_state.consecutive_fails,
                 )
-                return mcp_success(
-                    {
-                        "verdict": "fail",
-                        "assessment": review_result.assessment,
-                        "note": (
-                            f"Force-approved after {review_state.consecutive_fails} "
-                            f"consecutive reviewer failures."
-                        ),
-                    }
+                return PremortemVerdict(
+                    verdict="fail",
+                    assessment=review_result.assessment,
+                    note=(
+                        f"Force-approved after {review_state.consecutive_fails} "
+                        f"consecutive reviewer failures."
+                    ),
                 )
-            return mcp_error(
+            raise ToolError(
                 f"REVIEWER FAILED: {review_result.assessment}\n\n"
                 f"Fix the issues above, then call premortem() again."
             )
 
-        return mcp_success(
-            {
-                "verdict": review_result.verdict.value,
-                "assessment": review_result.assessment,
-            }
+        return PremortemVerdict(
+            verdict=review_result.verdict.value,
+            assessment=review_result.assessment,
         )
 
     return premortem_tool
@@ -780,7 +751,7 @@ def create_premortem_server(
     question_context: dict[str, Any] | None = None,
     traces_dir: Path | None = None,
     review_state: ReviewState | None = None,
-):
+) -> LupMcpServerConfig:
     """Create the premortem MCP server with session context.
 
     Args:

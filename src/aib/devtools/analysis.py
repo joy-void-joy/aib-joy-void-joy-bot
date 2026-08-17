@@ -14,17 +14,16 @@ from pathlib import Path
 import typer
 
 from aib.agent.models import ForecastSummary
+from lup.workspace.paths import agent_version, feedback_path, traces_path
+
 from aib.paths import (
-    FEEDBACK_PATH,
-    TRACES_PATH,
     iter_forecast_files,
     _version_dirs,
 )
-from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
-ANALYZED_FILE = FEEDBACK_PATH / "analyzed.json"
+ANALYZED_FILE = feedback_path() / "analyzed.json"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -39,7 +38,7 @@ def _load_analyzed() -> set[int]:
 
 
 def _save_analyzed(post_ids: set[int]) -> None:
-    FEEDBACK_PATH.mkdir(parents=True, exist_ok=True)
+    feedback_path().mkdir(parents=True, exist_ok=True)
     ANALYZED_FILE.write_text(
         json.dumps({"analyzed": sorted(post_ids)}, indent=2) + "\n"
     )
@@ -54,7 +53,7 @@ def _iter_session_timestamp_dirs(
     Yields paths like: notes/traces/3.6.0/sessions/42163/20260315_120000/
     """
     if version:
-        ver_dirs = [TRACES_PATH / version]
+        ver_dirs = [traces_path() / version]
     else:
         ver_dirs = _version_dirs()
 
@@ -154,11 +153,11 @@ def dashboard(
         typer.echo()
 
     typer.echo("=== Feedback Loop Dashboard ===\n")
-    typer.echo(f"Agent version: {AGENT_VERSION}")
+    typer.echo(f"Agent version: {agent_version()}")
 
     # Forecast counts
     forecasts = _load_forecasts()
-    current_version = _load_forecasts(version=AGENT_VERSION)
+    current_version = _load_forecasts(version=agent_version())
     resolved = [f for f in forecasts if f.get("resolution") is not None]
     resolved_current = [f for f in current_version if f.get("resolution") is not None]
     typer.echo(
@@ -208,7 +207,7 @@ def dashboard(
         typer.echo("Git: clean")
 
     # Previous analysis
-    analysis_dir = FEEDBACK_PATH
+    analysis_dir = feedback_path()
     if analysis_dir.exists():
         analysis_files = sorted(analysis_dir.glob("*_analysis.md"), reverse=True)
         if analysis_files:

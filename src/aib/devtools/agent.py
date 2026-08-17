@@ -35,7 +35,7 @@ def serve_tools_cmd(
     trends, and reddit when configured).
     """
     from aib.agent.resolver import build_research_tool_groups
-    from aib.tools.mcp_server import create_mcp_server, serve_stdio
+    from lup.mcp import create_mcp_server, serve_stdio
 
     groups = build_research_tool_groups()
     if server is None:

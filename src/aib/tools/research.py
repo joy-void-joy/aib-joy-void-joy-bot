@@ -16,27 +16,28 @@ Supports:
 import asyncio
 import json
 import logging
+from collections.abc import Mapping
 from datetime import date, datetime, timedelta, timezone
 
 from claude_agent_sdk import (
     AssistantMessage,
-    McpServerConfig,
     ResultMessage,
     UserMessage,
 )
 from claude_agent_sdk.types import TextBlock, ToolUseBlock
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from aib.agent.client import REMOVE, build_client
 from aib.agent.display import make_agent_prefix, print_block
-from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
+from lup.hooks import create_tool_allowlist_hook, merge_hooks
+
 from aib.agent.nested import NestedAgentReport
 from aib.agent.retrodict import create_retrodict_hooks
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.session import get_session, register_nested_trace
 from aib.paths import WORLDVIEW_PATH
-from aib.tools.decorator import ToolError, mcp_tool
-from aib.tools.metrics import get_collector
+from lup.mcp import McpServerEntry, ToolError, lup_tool
+from aib.tools.metrics import costs
 from aib.worldview.lookup import (
     all_slugs,
     amend_research_entry,
@@ -111,6 +112,24 @@ class ResearchInput(BaseModel):
             "Provide the updates in the first question's context field as JSON."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def lift_bare_question(cls, data: object) -> object:
+        """Wrap a single top-level question into the questions list.
+
+        `questions` holds `ResearchQuestion` objects whose own field is
+        `query`, so a single-question call reads naturally as
+        `research(query=...)` and callers write it that way. Accepting that
+        shape costs nothing and removes a guaranteed round-trip.
+        """
+        if not isinstance(data, dict) or "questions" in data:
+            return data
+        bare = {k: data[k] for k in ("query", "context", "ttl") if k in data}
+        if "query" not in bare:
+            return data
+        rest = {k: v for k, v in data.items() if k not in bare}
+        return {**rest, "questions": [bare]}
 
 
 class ResearchResult(BaseModel):
@@ -200,60 +219,35 @@ class ResearchFindings(BaseModel):
 # ── Sub-agent runner ──────────────────────────────────────────────
 
 
-def get_research_allowed_tools() -> list[str]:
-    """Get the allowed tool list for the research sub-agent.
+def get_research_allowed_tools(
+    servers: Mapping[str, McpServerEntry] | None = None,
+) -> list[str]:
+    """Every tool the research sub-agent may call, from the servers it has.
 
-    Includes built-in SDK tools plus all data-gathering MCP tools
-    that were moved off the main agent.
+    Derived rather than listed. The union this replaced named seventeen tool
+    groups, which is a second statement of what the servers already carry —
+    and a second statement drifts: a tool added to a server and not to the
+    union is registered and then refused by the allowlist hook, which reads
+    to the agent as the tool being broken rather than as it being ungranted.
+
+    Two things still have to be named, each because it is not on an
+    in-process server. The built-ins belong to the engine. AskNews is served
+    over HTTP, and an external MCP server cannot be enumerated without
+    connecting to it — ``server_tool_names`` answers ``[]`` for one — so its
+    four tools are named here. Naming them costs nothing when its server is
+    absent: the missing key that leaves the server unregistered also puts
+    those tools in the policy's exclusions, which the derivation subtracts.
+
+    Passing no servers answers with the built-ins alone, which is what a
+    sub-agent given no data tools should see.
     """
-    from aib.agent.tool_policy import (
-        ARXIV_TOOLS,
-        ASKNEWS_TOOLS,
-        BLS_TOOLS,
-        BUILTIN_TOOLS,
-        CENSUS_TOOLS,
-        COMPANY_FINANCIALS_TOOLS,
-        EXA_TOOLS,
-        FETCH_TOOLS,
-        FRED_TOOLS,
-        HISTORICAL_MARKET_TOOLS,
-        LIVE_MARKET_TOOLS,
-        REDDIT_TOOLS,
-        SANDBOX_TOOLS,
-        SEARCH_TOOLS,
-        STOCK_TOOLS,
-        TRENDS_TOOLS,
-        WEATHER_TOOLS,
-        WIKIPEDIA_TOOLS,
-        WORLD_BANK_TOOLS,
-    )
-
-    tools: set[str] = set()
-    tools.update(BUILTIN_TOOLS)
-    tools.update(SANDBOX_TOOLS)
-    tools.update(SEARCH_TOOLS)
-    tools.update(EXA_TOOLS)
-    tools.update(WIKIPEDIA_TOOLS)
-    tools.update(FETCH_TOOLS)
-    tools.update(ARXIV_TOOLS)
-    tools.update(FRED_TOOLS)
-    tools.update(COMPANY_FINANCIALS_TOOLS)
-    tools.update(STOCK_TOOLS)
-    tools.update(WORLD_BANK_TOOLS)
-    tools.update(BLS_TOOLS)
-    tools.update(CENSUS_TOOLS)
-    tools.update(TRENDS_TOOLS)
-    tools.update(WEATHER_TOOLS)
-    tools.update(REDDIT_TOOLS)
-    tools.update(ASKNEWS_TOOLS)
-    tools.update(LIVE_MARKET_TOOLS)
-    tools.update(HISTORICAL_MARKET_TOOLS)
-
-    from aib.agent.tool_policy import ToolPolicy
+    from aib.agent.tool_policy import ASKNEWS_TOOLS, BUILTIN_TOOLS, ToolPolicy
     from aib.config import settings
 
     policy = ToolPolicy.from_settings(settings)
-    return sorted(t for t in tools if policy.is_tool_available(t))
+    return policy.get_allowed_tools(
+        dict(servers or {}), builtin_tools=BUILTIN_TOOLS | ASKNEWS_TOOLS
+    )
 
 
 async def run_research_agent(
@@ -261,7 +255,7 @@ async def run_research_agent(
     context: str,
     *,
     resume_session_id: str | None = None,
-    mcp_servers: dict[str, McpServerConfig] | None = None,
+    mcp_servers: Mapping[str, McpServerEntry] | None = None,
 ) -> NestedAgentReport[ResearchFindings]:
     """Run the Opus research sub-agent.
 
@@ -290,9 +284,9 @@ async def run_research_agent(
         "schema": ResearchFindings.model_json_schema(),
     }
     extra_args = {"no-session-persistence": REMOVE}
-    allowed_tools = get_research_allowed_tools()
+    allowed_tools = get_research_allowed_tools(mcp_servers)
 
-    hooks = create_allowed_tools_hook(allowed_tools)
+    hooks = create_tool_allowlist_hook(allowed_tools)
     if retrodict_cutoff.get() is not None:
         hooks = merge_hooks(hooks, create_retrodict_hooks())
 
@@ -352,7 +346,7 @@ async def run_research_agent(
                     len(so_tool_blocks),
                 )
                 if message.total_cost_usd is not None:
-                    get_collector().record_cost("research", message.total_cost_usd)
+                    costs.record("research", message.total_cost_usd)
                 session_id = message.session_id
                 if message.structured_output:
                     try:
@@ -650,8 +644,7 @@ def handle_amend(slug: str, updates_json: str) -> ResearchResult:
 # ── MCP Tool ──────────────────────────────────────────────────────
 
 
-@mcp_tool(
-    "research",
+@lup_tool(
     "Delegate factual research questions to an Opus sub-agent with full data-gathering "
     "tools (web search, financial APIs, government data, prediction markets, arXiv, "
     "news, trends). The sub-agent researches thoroughly and persists findings to the "
@@ -670,6 +663,7 @@ def handle_amend(slug: str, updates_json: str) -> ResearchResult:
     "Amend an existing entry without re-running Opus:\n"
     '  research(amend="us-measles-trajectory-2026-a7f2b3c1",\n'
     '           questions=[{context: \'{"key_facts": ["Updated fact"]}\'}])\n',
+    name="research",
 )
 async def research(args: ResearchInput) -> ResearchOutput:
     """Run parallel research via Opus sub-agents with worldview persistence."""

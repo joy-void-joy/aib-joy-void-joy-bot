@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from playwright.async_api import Page
 
 from aib.devtools.scores import DEFAULT_USER_ID, fetch_scores, resolve_scraped
-from aib.tools.retry import with_retry
+from lup.resilience.retry import with_retry
 from aib.agent.history import update_forecast_file
 from aib.paths import (
     iter_forecast_dirs,
@@ -857,13 +857,13 @@ def backfill_criteria(
     scheduled_resolve_time, and scheduled_close_time from trace files.
     """
     from aib.agent.history import _update_forecast_json
-    from aib.paths import TRACES_PATH
+    from lup.workspace.paths import traces_path
 
     from tqdm import tqdm
 
     fields_by_post: dict[int, dict[str, str | None]] = {}
     for version_dir in tqdm(
-        sorted(TRACES_PATH.iterdir()), desc="Scanning traces", unit="ver"
+        sorted(traces_path().iterdir()), desc="Scanning traces", unit="ver"
     ):
         sessions = version_dir / "sessions"
         if not sessions.is_dir():

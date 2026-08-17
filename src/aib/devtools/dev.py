@@ -17,8 +17,15 @@ app = typer.Typer(no_args_is_help=True)
 # Worktree management
 # ---------------------------------------------------------------------------
 
+MARKETPLACE = "aib"
+"""What `.claude-plugin/marketplace.json` calls this marketplace.
+
+`settings.json` enables the plugin as `aib-workflow@aib`, so this is the
+name both the install and the cache path have to use. Spelled `local` they
+installed a plugin nobody enables and cleared a path that never exists."""
+
 PLUGIN_CACHE_DIR = (
-    Path.home() / ".claude" / "plugins" / "cache" / "local" / "aib-workflow"
+    Path.home() / ".claude" / "plugins" / "cache" / MARKETPLACE / "aib-workflow"
 )
 
 PLUGIN_DIR = Path(".claude/plugins/aib")
@@ -158,7 +165,7 @@ def worktree_cmd(
             claude(
                 "plugin",
                 "install",
-                "aib-workflow@local",
+                f"aib-workflow@{MARKETPLACE}",
                 "--scope",
                 "project",
                 _cwd=str(new_worktree_path),

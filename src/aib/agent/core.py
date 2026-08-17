@@ -10,12 +10,10 @@ from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, TypedDict, cast
 
-from claude_agent_sdk.types import HookContext, HookInput, SyncHookJSONOutput
 
 from claude_agent_sdk import (
     AssistantMessage,
     ContentBlock,
-    HookMatcher,
     ResultMessage,
     SystemMessage,
     TextBlock,
@@ -37,7 +35,15 @@ from aib.agent.history import (
     save_forecast,
 )
 from aib.agent.sources import extract_sources
-from aib.agent.hooks import HooksConfig, create_allowed_tools_hook, merge_hooks
+from lup.hooks import (
+    LupHookInput,
+    LupHooksConfig,
+    create_nudge_hook,
+    create_permission_hooks,
+    create_tool_allowlist_hook,
+    merge_hooks,
+)
+from lup.tool_routes import routes
 from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
@@ -65,14 +71,19 @@ from aib.agent.numeric import (
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
 from aib.config import settings
 from aib.agent.session import ForecastSession, reset_session, set_session
+from lup.workspace.paths import runtime_logs_path, traces_path
+
 from aib.paths import (
-    RUNTIME_LOGS_PATH,
-    TRACES_PATH,
     forecasts_dir,
     sessions_dir,
     trace_logs_dir,
 )
-from aib.tools.metrics import get_metrics_summary, log_metrics_summary, reset_metrics
+from aib.tools.metrics import (
+    MetricsSummaryWithCost,
+    get_metrics_summary,
+    log_metrics_summary,
+    reset_metrics,
+)
 from aib.tools.sandbox import Sandbox
 from aib.worldview.lookup import register_main_forecast
 
@@ -217,7 +228,7 @@ class ReasoningLogger:
 def append_metrics_to_reflection(
     meta_file: Path,
     *,
-    metrics: dict[str, Any] | None,
+    metrics: MetricsSummaryWithCost | None,
     duration_seconds: float | None,
     cost_usd: float | None,
     token_usage: TokenUsage | None,
@@ -391,148 +402,37 @@ def setup_notes_folder(
         forecasts=forecasts_path,
         reasoning_log=reasoning_log,
         rw=[session_path, forecasts_path],
-        ro=[TRACES_PATH],
+        ro=[traces_path()],
     )
 
 
-def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
-    """Check if a file path is under one of the allowed directories."""
-    try:
-        path = Path(file_path).resolve()
-    except (OSError, ValueError):
-        return False
-
-    for allowed in allowed_dirs:
-        try:
-            path.relative_to(allowed.resolve())
-            return True
-        except ValueError:
-            continue
-    return False
+# `create_permission_hooks` and `path_is_under` are lup's now
+# (`lup.hooks`, `lup.workspace.paths`): same rules, same messages —
+# Write/Edit inside the read-write directories, Read/Glob/Grep inside those
+# plus the read-only ones, everything else allowed because `allowed_tools`
+# has already filtered it.
 
 
-def create_permission_hooks(
-    rw_dirs: list[Path],
-    ro_dirs: list[Path],
-) -> HooksConfig:
-    """Create permission hooks with directory-based access control.
+def create_suggest_only_nudge_hooks() -> LupHooksConfig:
+    """Nudge the agent toward the better tool after it fetches a routed domain.
 
-    Args:
-        rw_dirs: Directories where Write/Edit/Read are allowed
-        ro_dirs: Additional directories where only Read is allowed
-
-    Returns:
-        Hooks configuration dict for ClaudeAgentOptions.
+    The mechanism is `lup.hooks.create_nudge_hook` and the table is
+    `lup.tool_routes`, so this is now only the check: given the fetch that
+    just ran, what should it have reached for instead. `routes.advice`
+    parses the host, where the loop this replaced matched by substring — so
+    a registration for `bls.gov` no longer answers for a lookalike domain
+    that merely ends in it.
     """
-    all_readable = rw_dirs + ro_dirs
 
-    async def permission_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        """Control tool access based on directory permissions."""
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return {}
+    def advise(event: LupHookInput) -> str | None:
+        # lup: ignore[dict-get] — the agent's raw tool arguments off the wire
+        url = event.tool_input.get("url")
+        if not isinstance(url, str):
+            return None
+        advice = routes.advice(url)
+        return f"Tip: {advice}" if advice else None
 
-        tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
-        hook_event = input_data["hook_event_name"]
-
-        def deny(reason: str) -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
-
-        def allow() -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                }
-            }
-
-        # Write: allow in RW directories only
-        if tool_name == "Write":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-            if _path_is_under(file_path, rw_dirs):
-                return allow()
-            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
-
-        # File edit operations: only allowed in RW directories
-        if tool_name == "Edit":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-
-            if _path_is_under(file_path, rw_dirs):
-                return allow()
-            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
-
-        # Read: requires file_path, must be in readable directories
-        if tool_name == "Read":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-
-            if _path_is_under(file_path, all_readable):
-                return allow()
-            return deny(f"Read denied. Allowed: {[str(d) for d in all_readable]}")
-
-        # Glob/Grep: require explicit path in readable directories (no cwd default)
-        if tool_name in ("Glob", "Grep"):
-            file_path = tool_input.get("path", "")
-            if not file_path:
-                return deny(
-                    f"Path required for {tool_name}. "
-                    f"Specify path in: {[str(d) for d in all_readable]}"
-                )
-
-            if _path_is_under(file_path, all_readable):
-                return allow()
-            return deny(
-                f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}"
-            )
-
-        # Auto-allow everything else (WebSearch, WebFetch, MCP tools, Task)
-        # These are already filtered by allowed_tools in options
-        return allow()
-
-    return {
-        "PreToolUse": [HookMatcher(hooks=[permission_hook])],  # type: ignore[list-item]
-    }
-
-
-def create_suggest_only_nudge_hooks() -> HooksConfig:
-    """PostToolUse hook that nudges the agent toward structured APIs for known domains."""
-    from aib.tools.fetch_routes import SUGGEST_ONLY
-
-    async def nudge_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> SyncHookJSONOutput:
-        if input_data.get("hook_event_name") != "PostToolUse":
-            return SyncHookJSONOutput()
-        if input_data.get("tool_name") != "mcp__search__fetch_url":
-            return SyncHookJSONOutput()
-
-        tool_input = input_data.get("tool_input", {})
-        url = (tool_input.get("url") or "").lower()
-        for domain_key, hint in SUGGEST_ONLY.items():
-            if domain_key in url:
-                return SyncHookJSONOutput(systemMessage=f"Tip: {hint}")
-        return SyncHookJSONOutput()
-
-    return {
-        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
-    }
+    return create_nudge_hook({"mcp__search__fetch_url": advise})
 
 
 async def fetch_question(question_id: int) -> dict:
@@ -907,7 +807,7 @@ async def run_forecast(
 
     # Setup unified log file: captures ALL log output (stream, tools, HTTP, etc.)
     log_path = (
-        RUNTIME_LOGS_PATH / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
+        runtime_logs_path() / session_id / effective_now().strftime("%Y%m%d-%H%M%S.log")
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if current_depth == 0:
@@ -921,11 +821,11 @@ async def run_forecast(
     logging.getLogger("aib").addHandler(_log_handler)
 
     # Session-specific scratch directory for sandbox file exchange
-    sandbox_shared_dir = RUNTIME_LOGS_PATH / session_id / "sandbox-shared"
+    sandbox_shared_dir = runtime_logs_path() / session_id / "sandbox-shared"
     sandbox_shared_dir.mkdir(parents=True, exist_ok=True)
 
     # Per-session downloads directory (PDFs, arXiv papers, etc.)
-    session_downloads = RUNTIME_LOGS_PATH / session_id / "downloads"
+    session_downloads = runtime_logs_path() / session_id / "downloads"
     session_downloads.mkdir(parents=True, exist_ok=True)
     downloads_token = downloads_dir.set(session_downloads)
 
@@ -949,7 +849,7 @@ async def run_forecast(
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
-        allowed_tools = policy.get_allowed_tools(allow_spawn=allow_spawn)
+        allowed_tools = policy.orchestrator_allowlist(allow_spawn=allow_spawn)
 
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
@@ -957,7 +857,7 @@ async def run_forecast(
 
         # Enforce allowed_tools whitelist (bypassPermissions ignores the
         # ClaudeAgentOptions.allowed_tools field, so we hook-enforce it).
-        hooks = merge_hooks(hooks, create_allowed_tools_hook(allowed_tools))
+        hooks = merge_hooks(hooks, create_tool_allowlist_hook(allowed_tools))
 
         # Nudge agent toward structured APIs for SUGGEST_ONLY domains
         hooks = merge_hooks(hooks, create_suggest_only_nudge_hooks())
@@ -977,7 +877,7 @@ async def run_forecast(
         hooks = merge_hooks(hooks, create_structured_output_hooks(review_state))
 
         # Create MCP servers first so we can extract tool descriptions
-        mcp_servers = policy.get_mcp_servers(
+        mcp_servers = policy.orchestrator_servers(
             sandbox,
             session_dir=notes.session,
             question_type=question_type,
@@ -996,7 +896,7 @@ async def run_forecast(
         )
 
         # Build data-gathering MCP servers for the research sub-agent
-        session.research_mcp_servers = policy.get_research_mcp_servers(sandbox)
+        session.research_mcp_servers = policy.research_servers(sandbox)
 
         try:
             async with build_client(
@@ -1243,7 +1143,7 @@ async def run_forecast(
     # Log tool metrics summary
     log_metrics_summary()
     metrics = get_metrics_summary()
-    output.tool_metrics = metrics
+    output.tool_metrics = dict(metrics)
 
     # Check for reflection (required for top-level forecasts)
     if post_id > 0:
@@ -1259,7 +1159,7 @@ async def run_forecast(
         if reflection_file.exists():
             output.meta = ForecastMeta(
                 meta_file_path=str(reflection_file),
-                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                tools_used_count=metrics["total_tool_calls"],
                 subagents_used=subagents_used,
             )
             logger.info("Found reflection at %s", reflection_file)
@@ -1285,7 +1185,7 @@ async def run_forecast(
             )
             output.meta = ForecastMeta(
                 meta_file_path=None,
-                tools_used_count=metrics.get("total_calls", 0) if metrics else 0,
+                tools_used_count=metrics["total_tool_calls"],
                 subagents_used=subagents_used,
             )
 

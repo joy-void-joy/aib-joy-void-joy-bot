@@ -242,9 +242,9 @@ def format_reasoning_comment(output: ForecastOutput) -> str:
             lines.append(f"- {source}")
 
     # Meta info
-    from aib.version import AGENT_VERSION
+    from lup.workspace.paths import agent_version
 
-    meta_parts = [f"Agent: v{AGENT_VERSION}"]
+    meta_parts = [f"Agent: v{agent_version()}"]
     if output.meta:
         if output.meta.subagents_used:
             meta_parts.append(f"Sub-questions: {', '.join(output.meta.subagents_used)}")

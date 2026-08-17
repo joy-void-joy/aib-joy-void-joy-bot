@@ -370,18 +370,18 @@ def debug_metaculus(
 
 @app.command("mcp-error")
 def mcp_error_test() -> None:
-    """Test if is_error property works on our CallToolResult subclass."""
-    from aib.tools.mcp_server import _CallToolResultWithAlias
+    """Test if is_error property works on lup's CallToolResult subclass."""
+    from lup.mcp import CallToolResultWithAlias
     from mcp.types import TextContent
 
     print("=== MCP Error Propagation Test ===\n")
 
-    result = _CallToolResultWithAlias(
+    result = CallToolResultWithAlias(
         content=[TextContent(type="text", text="Test error message")],
         isError=True,
     )
 
-    print("Created _CallToolResultWithAlias with isError=True")
+    print("Created CallToolResultWithAlias with isError=True")
     print(f"  type(result): {type(result).__name__}")
     print(f"  result.isError: {result.isError}")
     print(f"  hasattr(result, 'is_error'): {hasattr(result, 'is_error')}")
@@ -393,11 +393,11 @@ def mcp_error_test() -> None:
         print(f"  result.is_error FAILED: {type(e).__name__}: {e}")
         is_error_val = None
 
-    result2 = _CallToolResultWithAlias(
+    result2 = CallToolResultWithAlias(
         content=[TextContent(type="text", text="Success")],
         isError=False,
     )
-    print("\nCreated _CallToolResultWithAlias with isError=False")
+    print("\nCreated CallToolResultWithAlias with isError=False")
     print(f"  result2.isError: {result2.isError}")
     print(f"  result2.is_error: {result2.is_error}")
 

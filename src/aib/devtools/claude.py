@@ -15,56 +15,19 @@ from typing import Annotated
 import click
 import sh
 import typer
-from pydantic import BaseModel, Field
 from typer.core import TyperGroup
 
+from lup.workspace.paths import project_root
+
 from aib.devtools.usage import app as usage_app
-from aib.paths import PROJECT_ROOT
+from aib.profiles import (
+    CLAUDE_CONFIG_DIR,
+    UnknownProfileError,
+    active_profile,
+    resolve_config_dir,
+)
 
 MCP_SERVER_NAME = "research"
-DEFAULT_CONFIG_DIR = Path.home() / ".claude"
-CONFIG_DIR_ENV = "CLAUDE_CONFIG_DIR"
-REGISTRY_PATH = Path.home() / ".lup" / "profiles.json"
-
-
-class Account(BaseModel):
-    """One registered account: the config dir the runner reads as its home."""
-
-    config_dir: str
-
-
-class Registry(BaseModel):
-    """The registry document as stored on disk: named profiles plus the active pick."""
-
-    profiles: dict[str, Account] = Field(default_factory=dict)
-    active: str | None = None
-
-
-def load_registry() -> Registry:
-    """Read the profile registry; a missing file reads as empty.
-
-    The registry lives at `~/.lup/profiles.json` — machine-wide and shared
-    with lup projects, because Claude accounts are reused across projects.
-    """
-    if not REGISTRY_PATH.exists():
-        return Registry()
-    return Registry.model_validate_json(REGISTRY_PATH.read_text())
-
-
-def resolve_config_dir(name: str | None = None) -> Path:
-    """Resolve a Claude config dir: explicit name > active profile > default."""
-    registry = load_registry()
-    chosen = name or registry.active
-    if chosen is None:
-        return DEFAULT_CONFIG_DIR
-    if chosen not in registry.profiles:
-        known = ", ".join(sorted(registry.profiles)) or "none"
-        typer.echo(
-            f"Error: unknown profile '{chosen}' in {REGISTRY_PATH} (known: {known})",
-            err=True,
-        )
-        raise typer.Exit(1)
-    return Path(registry.profiles[chosen].config_dir).expanduser()
 
 
 def write_mcp_config() -> str:
@@ -104,7 +67,7 @@ def run_claude(
 
         args.extend(["--append-system-prompt", get_forecasting_system_prompt()])
 
-    plugin_dir = PROJECT_ROOT / ".claude" / "plugins" / "aib"
+    plugin_dir = project_root() / ".claude" / "plugins" / "aib"
     if not no_plugin:
         if plugin_dir.is_dir():
             args.extend(["--plugin-dir", str(plugin_dir)])
@@ -122,9 +85,13 @@ def run_claude(
 
     args.extend(extra_args)
 
-    config_dir = resolve_config_dir(profile)
-    env = {**os.environ, CONFIG_DIR_ENV: str(config_dir)}
-    shown = profile or load_registry().active or "default"
+    try:
+        config_dir = resolve_config_dir(profile)
+    except UnknownProfileError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+    env = {**os.environ, CLAUDE_CONFIG_DIR: str(config_dir)}
+    shown = profile or active_profile() or "default"
     typer.echo(f"Launching claude (profile: {shown}, config dir: {config_dir})")
 
     try:

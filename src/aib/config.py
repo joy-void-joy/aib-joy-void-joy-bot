@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_ALIASES: dict[str, str] = {
     "fable": "claude-fable-5",
-    "opus": "claude-opus-4-8",
+    "opus": "claude-opus-5[1m]",
     "sonnet": "claude-sonnet-5",
     "haiku": "claude-haiku-4-5-20251001",
 }
@@ -128,7 +128,7 @@ class Settings(BaseSettings):
 
     # === Model ===
     model: str = Field(
-        default="claude-opus-4-8",
+        default="claude-opus-5[1m]",
         validation_alias="AIB_MODEL",
         description="Claude model to use for forecasting",
     )
@@ -136,6 +136,20 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="AIB_MAX_THINKING_TOKENS",
         description="Max thinking tokens (None = unlimited)",
+    )
+
+    # === A/B variant ===
+    trace_variant: str | None = Field(
+        default=None,
+        validation_alias="AIB_TRACE_VARIANT",
+        description="Variant label; traces land in notes/traces/<version>+<label>/ so concurrent runs never collide",
+    )
+
+    # === Profile ===
+    profile: str | None = Field(
+        default=None,
+        validation_alias="AIB_PROFILE",
+        description="Claude profile from ~/.lup/profiles.json (None = registry active, then ~/.claude)",
     )
 
     # === Sandbox ===

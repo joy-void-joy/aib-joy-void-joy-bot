@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, ValidationError
 from aib.agent.session import get_session
 from aib.paths import WORLDVIEW_TRACES_PATH
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.decorator import ToolError, mcp_tool
+from lup.mcp import ToolError, lup_tool
 from aib.worldview.lookup import (
     all_slugs,
     amend_forecast_entry,
@@ -346,8 +346,7 @@ def extract_cdf_threshold(slug: str, threshold: float) -> float | None:
 # ── MCP Tool ─────────────────────────────────────────────────────
 
 
-@mcp_tool(
-    "subforecast",
+@lup_tool(
     "Spawn independent sub-forecasts, each with its own full pipeline (research, "
     "computation, calibration). Results are persisted to the worldview store for "
     "reuse and resolution tracking.\n\n"
@@ -377,6 +376,7 @@ def extract_cdf_threshold(slug: str, threshold: float) -> float | None:
     '  subforecast(amend="us-measles-cases-apr24-e9d4f7a2",\n'
     '             specs=[{context: \'{"probability": 0.62, '
     '"summary": "Adjusted to match CDF"}\'}])\n',
+    name="subforecast",
 )
 async def subforecast(args: SubforecastInput) -> SubforecastOutput:
     """Run parallel sub-forecasts with worldview persistence."""
@@ -451,14 +451,14 @@ class ThresholdOutput(BaseModel):
     error: str | None = None
 
 
-@mcp_tool(
-    "extract_cdf_threshold",
+@lup_tool(
     "Extract P(value > threshold) from a numeric worldview forecast entry's CDF.\n\n"
     "Use this after spawning a numeric subforecast to derive binary probabilities.\n"
     "For example, if you have a numeric subforecast for 'How many measles cases by "
     "April 24?' and need to answer 'Will measles exceed 2,000?', call:\n"
     "  extract_cdf_threshold(slug='measles-cases-apr24-xxxx', threshold=2000)\n"
     "Returns P(>2000) which you can use as a strong anchor for the binary forecast.",
+    name="extract_cdf_threshold",
 )
 async def extract_cdf_threshold_tool(args: ThresholdInput) -> ThresholdOutput:
     """Extract binary probability from a numeric CDF."""

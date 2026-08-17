@@ -16,7 +16,8 @@ from typing import Annotated
 import typer
 from pydantic import BaseModel
 
-from aib.paths import FEEDBACK_PATH as REPORTS_PATH
+from lup.workspace.paths import agent_version, feedback_path
+
 from aib.paths import (
     iter_forecast_dirs,
     iter_retrodict_dirs,
@@ -24,7 +25,6 @@ from aib.paths import (
     load_all_retrodict_jsons,
     resolve_version,
 )
-from aib.version import AGENT_VERSION
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -516,7 +516,7 @@ def binary_cmd(
     version: Annotated[
         str | None,
         typer.Option("--version", "-v", help="Agent version (default: current)"),
-    ] = AGENT_VERSION,
+    ] = agent_version(),
     all_versions: Annotated[
         bool, typer.Option("--all-versions", help="Include all versions")
     ] = False,
@@ -593,7 +593,7 @@ def numeric_cmd(
     version: Annotated[
         str | None,
         typer.Option("--version", "-v", help="Agent version (default: current)"),
-    ] = AGENT_VERSION,
+    ] = agent_version(),
     all_versions: Annotated[
         bool, typer.Option("--all-versions", help="Include all versions")
     ] = False,
@@ -661,7 +661,7 @@ def summary_cmd(
     version: Annotated[
         str | None,
         typer.Option("--version", "-v", help="Agent version (default: current)"),
-    ] = AGENT_VERSION,
+    ] = agent_version(),
     all_versions: Annotated[
         bool, typer.Option("--all-versions", help="Include all versions")
     ] = False,
@@ -737,7 +737,7 @@ def export_cmd(
     version: Annotated[
         str | None,
         typer.Option("--version", "-v", help="Agent version (default: current)"),
-    ] = AGENT_VERSION,
+    ] = agent_version(),
     all_versions: Annotated[
         bool, typer.Option("--all-versions", help="Include all versions")
     ] = False,
@@ -765,7 +765,7 @@ def export_cmd(
 
     if output is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output = REPORTS_PATH / f"{timestamp}_calibration_analysis.json"
+        output = feedback_path() / f"{timestamp}_calibration_analysis.json"
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2))
@@ -827,7 +827,7 @@ def _get_calibration_bucket(probability: float) -> str:
 @app.command("report")
 def report_cmd(
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -909,7 +909,7 @@ def report_cmd(
 def detail_cmd(
     limit: int = typer.Option(20, "-n", "--limit", help="Max forecasts to show"),
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_versions: bool = typer.Option(
         False, "--all-versions", help="Include all versions"
@@ -1033,7 +1033,7 @@ def _compute_pit(data: dict[str, object]) -> float | None:
 @app.command("cdf")
 def cdf_cmd(
     version: str | None = typer.Option(
-        AGENT_VERSION, "--version", "-v", help="Agent version (default: current)"
+        agent_version(), "--version", "-v", help="Agent version (default: current)"
     ),
     all_ver: bool = typer.Option(False, "--all-versions", help="Include all versions"),
     source: str | None = typer.Option(None, "--source", "-s"),

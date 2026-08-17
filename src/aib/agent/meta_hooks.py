@@ -10,12 +10,17 @@ Combines two concerns into a single hook to work around CLI bug #15897
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from claude_agent_sdk import HookMatcher
-from claude_agent_sdk.types import HookContext
-
-from aib.agent.hooks import HooksConfig
+from lup.hooks import (
+    LupHookInput,
+    LupHookMatcher,
+    LupHookOutput,
+    LupHooksConfig,
+    allow_hook,
+    block_hook,
+    deny_hook,
+)
 
 if TYPE_CHECKING:
     from aib.agent.session import ReviewState
@@ -25,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 def create_structured_output_hooks(
     review_state: ReviewState | None = None,
-) -> HooksConfig:
+) -> LupHooksConfig:
     """Combined StructuredOutput hook: unwrap + optional reviewer gate.
 
-    Must be the LAST PreToolUse hook registered to ensure updatedInput
+    Must be the LAST PreToolUse hook registered to ensure updated input
     is not overwritten by subsequent hooks (CLI bug #15897).
 
     Args:
@@ -36,22 +41,15 @@ def create_structured_output_hooks(
             is denied until the reviewer passes. If None, gate is skipped.
 
     Returns:
-        HooksConfig with a single PreToolUse hook.
+        LupHooksConfig with a single PreToolUse hook.
     """
 
-    async def pre_tool_use_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return {}
+    async def pre_tool_use_hook(event: LupHookInput) -> LupHookOutput:
+        if event.event != "PreToolUse":
+            return LupHookOutput()
 
-        if input_data.get("tool_name") != "StructuredOutput":
-            return {}
-
-        hook_event = input_data["hook_event_name"]
-        tool_input = input_data.get("tool_input", {})
+        if event.tool_name != "StructuredOutput":
+            return LupHookOutput()
 
         # --- Gate: deny until reflection + premortem have both run ---
         if review_state is not None and not (
@@ -85,42 +83,28 @@ def create_structured_output_hooks(
                 review_state.last_verdict,
                 review_state.passed,
             )
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
+            return deny_hook(reason)
 
         # --- Unwrap {"parameter": {...}} wrapper ---
-        if "parameter" in tool_input and isinstance(tool_input["parameter"], dict):
-            unwrapped = tool_input["parameter"]
+        # lup: ignore[dict-get] — the agent's raw tool arguments off the wire
+        wrapper = event.tool_input.get("parameter")
+        if isinstance(wrapper, dict):
             logger.info(
                 "Unwrapping StructuredOutput 'parameter' wrapper (%d fields)",
-                len(unwrapped),
+                len(wrapper),
             )
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                    "updatedInput": unwrapped,
-                }
-            }
+            return LupHookOutput(decision="allow", updated_input=wrapper)
 
-        return {
-            "hookSpecificOutput": {
-                "hookEventName": hook_event,
-                "permissionDecision": "allow",
-            }
-        }
+        return allow_hook()
 
-    return {
-        "PreToolUse": [HookMatcher(hooks=[pre_tool_use_hook])],  # type: ignore[list-item]
-    }
+    return LupHooksConfig(
+        pre_tool_use=[
+            LupHookMatcher(hook=pre_tool_use_hook, tag="structured_output_gate")
+        ],
+    )
 
 
-def create_structured_output_enforcement() -> HooksConfig:
+def create_structured_output_enforcement() -> LupHooksConfig:
     """Block the Stop event until StructuredOutput has been called.
 
     Pairs with output_format=json_schema on ClaudeAgentOptions. The SDK
@@ -137,42 +121,30 @@ def create_structured_output_enforcement() -> HooksConfig:
     """
     state = {"called": False}
 
-    async def post_tool_use(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        if (
-            input_data.get("hook_event_name") == "PostToolUse"
-            and input_data.get("tool_name") == "StructuredOutput"
-        ):
+    async def post_tool_use(event: LupHookInput) -> LupHookOutput:
+        if event.event == "PostToolUse" and event.tool_name == "StructuredOutput":
             state["called"] = True
-        return {}
+        return LupHookOutput()
 
-    async def stop_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        if input_data.get("hook_event_name") != "Stop":
-            return {}
-        if state["called"] or input_data.get("stop_hook_active"):
-            return {}
+    async def stop_hook(event: LupHookInput) -> LupHookOutput:
+        if event.event != "Stop":
+            return LupHookOutput()
+        if state["called"] or event.stop_hook_active:
+            return LupHookOutput()
         logger.warning(
             "Blocking Stop — agent ended turn without calling StructuredOutput"
         )
-        return {
-            "decision": "block",
-            "reason": (
-                "You ended your turn without calling the StructuredOutput "
-                "tool. Your response format requires it. Call "
-                "StructuredOutput now with your complete findings. Do not "
-                "write the answer as prose text — only the StructuredOutput "
-                "call is read by the caller."
-            ),
-        }
+        return block_hook(
+            "You ended your turn without calling the StructuredOutput "
+            "tool. Your response format requires it. Call "
+            "StructuredOutput now with your complete findings. Do not "
+            "write the answer as prose text — only the StructuredOutput "
+            "call is read by the caller."
+        )
 
-    return {
-        "PostToolUse": [HookMatcher(hooks=[post_tool_use])],  # type: ignore[list-item]
-        "Stop": [HookMatcher(hooks=[stop_hook])],  # type: ignore[list-item]
-    }
+    return LupHooksConfig(
+        post_tool_use=[
+            LupHookMatcher(hook=post_tool_use, tag="structured_output_seen")
+        ],
+        stop=[LupHookMatcher(hook=stop_hook, tag="structured_output_required")],
+    )

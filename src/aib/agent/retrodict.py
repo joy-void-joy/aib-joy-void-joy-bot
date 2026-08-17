@@ -19,10 +19,15 @@ import socket
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from claude_agent_sdk import HookMatcher
-from claude_agent_sdk.types import HookContext
+from lup.hooks import (
+    LupHookInput,
+    LupHookMatcher,
+    LupHookOutput,
+    LupHooksConfig,
+    allow_hook,
+    deny_hook,
+)
 
-from aib.agent.hooks import HooksConfig
 from aib.retrodict_context import retrodict_cutoff
 
 from aib.agent.session import get_session
@@ -97,7 +102,7 @@ def _parse_trends_duration(timeframe: str) -> int:
     return 365
 
 
-def _cap_trends_timeframe(timeframe: str, cutoff_date: date) -> str:
+def cap_trends_timeframe(timeframe: str, cutoff_date: date) -> str:
     """Convert trends timeframe to date range ending at cutoff.
 
     Preserves the requested duration while ensuring end date doesn't exceed
@@ -115,58 +120,34 @@ def _cap_trends_timeframe(timeframe: str, cutoff_date: date) -> str:
     return f"{start_date.strftime('%Y-%m-%d')} {cutoff_date.strftime('%Y-%m-%d')}"
 
 
-def create_retrodict_hooks() -> HooksConfig:
+def create_retrodict_hooks() -> LupHooksConfig:
     """Create hooks that restrict tool access to data before the retrodict cutoff.
 
     Reads the cutoff date from the retrodict_cutoff ContextVar at invocation time.
     If no cutoff is set, all tools pass through unmodified.
 
     Returns:
-        HooksConfig for ClaudeAgentOptions with PreToolUse hook.
+        LupHooksConfig with a PreToolUse hook.
     """
 
-    async def pre_tool_use_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
+    async def pre_tool_use_hook(event: LupHookInput) -> LupHookOutput:
         """Filter and modify tool inputs for time restriction."""
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return {}
+        if event.event != "PreToolUse":
+            return LupHookOutput()
 
-        cutoff = retrodict_cutoff.get()
+        cutoff = retrodict_cutoff.get()  # lup: ignore[dict-get] — a ContextVar
         if cutoff is None:
-            return {}
+            return LupHookOutput()
 
-        tool_name = input_data.get("tool_name", "")
-        hook_event = input_data["hook_event_name"]
-
-        def deny(reason: str) -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
-
-        def allow() -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                }
-            }
-
-        if tool_name in _DENIED_TOOLS:
-            return deny(f"{tool_name} is not available.")
+        if event.tool_name in _DENIED_TOOLS:
+            return deny_hook(f"{event.tool_name} is not available.")
 
         # All other tools read retrodict_cutoff ContextVar internally
-        return allow()
+        return allow_hook()
 
-    return {
-        "PreToolUse": [HookMatcher(hooks=[pre_tool_use_hook])],  # type: ignore[list-item]
-    }
+    return LupHooksConfig(
+        pre_tool_use=[LupHookMatcher(hook=pre_tool_use_hook, tag="retrodict")],
+    )
 
 
 def get_pypi_allowed_ips() -> set[str]:

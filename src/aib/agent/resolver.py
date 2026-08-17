@@ -8,15 +8,20 @@ import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
-from claude_agent_sdk import AssistantMessage, ResultMessage, SdkMcpTool
-from claude_agent_sdk.types import McpHttpServerConfig, McpServerConfig, TextBlock
+from claude_agent_sdk import AssistantMessage, ResultMessage
+from claude_agent_sdk.types import TextBlock
+from lup.mcp import (
+    LupMcpTool,
+    McpServerEntry,
+    RawHttpServerConfig,
+    create_mcp_server,
+)
 from pydantic import BaseModel
 
 from aib.agent.client import build_client
 from aib.agent.display import make_agent_prefix, print_block
-from aib.agent.hooks import create_allowed_tools_hook
+from lup.hooks import create_tool_allowlist_hook
 from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
     NOTES_TOOLS,
@@ -25,7 +30,6 @@ from aib.agent.tool_policy import (
     ToolPolicy,
 )
 from aib.config import settings as default_settings
-from aib.tools.mcp_server import create_mcp_server
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +84,7 @@ Guidelines:
 EXCLUDED_TOOL_SETS = SANDBOX_TOOLS | SUBFORECAST_TOOLS | NOTES_TOOLS
 
 
-def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
+def build_research_tool_groups() -> dict[str, list[LupMcpTool]]:
     """Session-free research tools, grouped by MCP server name."""
     from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
     from aib.tools.financial import (
@@ -112,9 +116,10 @@ def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
     from aib.tools.reddit import reddit_hot, reddit_search
     from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
     from aib.tools.trends import google_trends, google_trends_compare
+    from aib.tools.wayback import wayback_snapshot
 
     s = default_settings
-    groups: dict[str, list[SdkMcpTool[Any]]] = {
+    groups: dict[str, list[LupMcpTool]] = {
         "search": [
             web_search,
             search_exa,
@@ -156,6 +161,9 @@ def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
             google_trends,
             google_trends_compare,
         ],
+        "wayback": [
+            wayback_snapshot,
+        ],
     }
     if s.reddit_client_id and s.reddit_client_secret:
         groups["reddit"] = [
@@ -165,15 +173,15 @@ def build_research_tool_groups() -> dict[str, list[SdkMcpTool[Any]]]:
     return groups
 
 
-def build_resolver_servers() -> dict[str, McpServerConfig]:
+def build_resolver_servers() -> dict[str, McpServerEntry]:
     """Build MCP servers for the resolver agent."""
     s = default_settings
-    servers: dict[str, McpServerConfig] = {
+    servers: dict[str, McpServerEntry] = {
         name: create_mcp_server(name, tools=tools)
         for name, tools in build_research_tool_groups().items()
     }
     if s.asknews_api_key:
-        servers["asknews"] = McpHttpServerConfig(
+        servers["asknews"] = RawHttpServerConfig(
             type="http",
             url="https://mcp.asknews.app",
             headers={"x-api-key": s.asknews_api_key},
@@ -184,14 +192,14 @@ def build_resolver_servers() -> dict[str, McpServerConfig]:
 def build_resolver_tools() -> list[str]:
     """Build allowed tool list using ToolPolicy (all tools except sandbox/subforecast/notes)."""
     policy = ToolPolicy.from_settings(default_settings)
-    all_tools = policy.get_allowed_tools(allow_spawn=False)
+    all_tools = policy.orchestrator_allowlist(allow_spawn=False)
     return [t for t in all_tools if t not in EXCLUDED_TOOL_SETS]
 
 
 async def resolve_question(
     question: QuestionForResolution,
     *,
-    mcp_servers: dict[str, McpServerConfig] | None = None,
+    mcp_servers: dict[str, McpServerEntry] | None = None,
     allowed_tools: list[str] | None = None,
 ) -> NestedAgentReport[ResolutionVerdict]:
     """Run a resolver agent to check if a question has resolved."""
@@ -218,7 +226,7 @@ async def resolve_question(
         system_prompt=RESOLVER_SYSTEM_PROMPT,
         mcp_servers=servers,
         allowed_tools=tools,
-        hooks=create_allowed_tools_hook(tools),
+        hooks=create_tool_allowlist_hook(tools),
         permission_mode="bypassPermissions",
         output_format={
             "type": "json_schema",

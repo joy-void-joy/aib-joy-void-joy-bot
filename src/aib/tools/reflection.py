@@ -15,12 +15,10 @@ import math
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import aiofiles
 from pydantic import BaseModel, Field, model_validator
 
-from claude_agent_sdk import tool
 
 from aib.agent.models import (
     BinaryEstimate,
@@ -30,9 +28,12 @@ from aib.agent.models import (
     NumericSupport,
 )
 from aib.agent.session import ReviewState
-from aib.tools.mcp_server import create_mcp_server
-from aib.tools.metrics import tracked
-from aib.tools.responses import mcp_error, mcp_success
+from lup.mcp import (
+    LupMcpServerConfig,
+    ToolError,
+    create_mcp_server,
+    lup_tool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -431,17 +432,15 @@ def create_reflection_tool(
 ):
     """Create the reflection tool with session context."""
 
-    @tool("reflection", _REFLECTION_DESCRIPTION, ReflectionInput)
-    @tracked("reflection")
-    async def reflection_tool(args: dict[str, Any]) -> dict[str, Any]:
-        """Compute and log a reflection checkpoint."""
-        try:
-            validated = ReflectionInput.model_validate(args)
-        except Exception as e:
-            return mcp_error(f"Invalid input: {e}")
+    @lup_tool(_REFLECTION_DESCRIPTION, name="reflection")
+    async def reflection_tool(validated: ReflectionInput) -> ReflectionOutput:
+        """Compute and log a reflection checkpoint.
 
+        Input validation and metric recording are the decorator's now, so
+        what remains here is the checkpoint itself.
+        """
         if session_dir is None:
-            return mcp_error("reflection is not available in this context")
+            raise ToolError("reflection is not available in this context")
 
         computed = compute_reflection(validated, question_type)
 
@@ -458,9 +457,9 @@ def create_reflection_tool(
             logger.info("Appended reflection entry to %s", filepath)
         except Exception as e:
             logger.exception("Failed to write reflection")
-            return mcp_error(f"Failed to write reflection: {e}")
+            raise ToolError(f"Failed to write reflection: {e}") from e
 
-        return mcp_success(computed.model_dump(exclude_none=True))
+        return computed
 
     return reflection_tool
 
@@ -470,7 +469,7 @@ def create_reflection_server(
     question_type: str = "binary",
     get_sources: Callable[[], list[str]] | None = None,
     review_state: ReviewState | None = None,
-):
+) -> LupMcpServerConfig:
     """Create the reflection MCP server with session context.
 
     Args:

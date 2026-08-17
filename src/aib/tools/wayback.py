@@ -13,7 +13,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
+
+# lup: ignore[any-type] — the Wayback availability API's own JSON payload
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from aib.tools.exa import ExaResult
@@ -27,8 +30,12 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+from pydantic import BaseModel, Field
+
+from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
 from aib.tools.throttle import wayback_throttle
+from lup.mcp import ToolError, lup_tool
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +106,7 @@ async def check_wayback_availability(
 
     API docs: https://archive.org/help/wayback_api.php
     """
-    async with wayback_throttle, httpx.AsyncClient(timeout=15.0) as client:
+    async with wayback_throttle.slot(), httpx.AsyncClient(timeout=15.0) as client:
         try:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(3),
@@ -215,7 +222,7 @@ async def fetch_wayback_content(url: str, timestamp: str) -> str | None:
     actual_ts = snapshot.get("timestamp", timestamp)
     wayback_url = rewrite_to_wayback(url, actual_ts)
 
-    async with wayback_throttle, httpx.AsyncClient(timeout=20.0) as client:
+    async with wayback_throttle.slot(), httpx.AsyncClient(timeout=20.0) as client:
         try:
             response = await client.get(wayback_url, follow_redirects=True)
             response.raise_for_status()
@@ -312,4 +319,102 @@ async def wayback_validate_results(
         wayback_ts,
         get_url=lambda r: r["url"] or "",
         set_snippet=_set_exa_snippet,
+    )
+
+
+def wayback_url_variants(url: str) -> list[str]:
+    """Return the URL forms to try against the availability API, in order.
+
+    The availability endpoint indexes some captures only under a bare
+    host form: `https://www.bbc.com/news` reports no snapshot for a date
+    where `bbc.com/news` returns one. Querying the bare form as a
+    fallback recovers those captures.
+    """
+    parsed = urlsplit(url if "//" in url else f"https://{url}")
+    host = parsed.netloc.removeprefix("www.")
+    bare = urlunsplit(("", "", host + parsed.path, parsed.query, "")).lstrip("/")
+    return [url] if bare == url else [url, bare]
+
+
+class WaybackSnapshotInput(BaseModel):
+    """Input for a Wayback Machine snapshot lookup."""
+
+    url: str = Field(description="The URL to look up in the Internet Archive.")
+    date: str = Field(
+        description=(
+            "Date to retrieve the page as of, YYYYMMDD or YYYY-MM-DD. "
+            "Returns the closest snapshot at or before this date."
+        )
+    )
+    include_content: bool = Field(
+        default=True,
+        description=(
+            "Extract and return the archived page's text. "
+            "Set False for an availability check only."
+        ),
+    )
+
+
+class WaybackSnapshotResult(BaseModel):
+    """A resolved Wayback snapshot.
+
+    `content` is declared plainly as a string so `guard_result` can spill an
+    oversized archived page to disk rather than let it be truncated.
+    """
+
+    url: str
+    requested_date: str
+    snapshot_date: str
+    snapshot_url: str
+    content: str | None = None
+
+
+@lup_tool(
+    (
+        "Retrieve a web page as it existed on a past date, via the Internet "
+        "Archive's Wayback Machine. Use this to establish what a source said "
+        "at a specific time — status-page incident history, superseded "
+        "official guidance, a tracker's earlier counts, or a claim that has "
+        "since been edited.\n\n"
+        "Returns the closest snapshot at or before the requested date, so the "
+        "result never reflects later revisions.\n\n"
+        'wayback_snapshot(url="https://status.example.com", date="20260601")\n'
+        'wayback_snapshot(url="https://example.org/tracker", date="2026-03-15")'
+    ),
+)
+async def wayback_snapshot(params: WaybackSnapshotInput) -> WaybackSnapshotResult:
+    """Return the archived copy of a page at or before the requested date."""
+    requested = params.date.replace("-", "")  # lup: ignore[string-replace]
+    if not (requested.isdigit() and len(requested) in (8, 14)):
+        raise ToolError(f"date must be YYYYMMDD or YYYY-MM-DD, got {params.date!r}")
+
+    cutoff = retrodict_cutoff.get()
+    if cutoff is not None:
+        cutoff_ts = cutoff.strftime("%Y%m%d")
+        if normalize_wayback_timestamp(requested) > normalize_wayback_timestamp(
+            cutoff_ts
+        ):
+            requested = cutoff_ts
+
+    for candidate in wayback_url_variants(params.url):
+        snapshot = await check_wayback_availability(candidate, requested)
+        if snapshot is not None:
+            break
+    else:
+        raise ToolError(
+            f"No archived snapshot of {params.url} at or before {params.date}"
+        )
+
+    snapshot_ts = snapshot.get("timestamp", requested)
+    content = (
+        await fetch_wayback_content(candidate, requested)
+        if params.include_content
+        else None
+    )
+    return WaybackSnapshotResult(
+        url=params.url,
+        requested_date=requested,
+        snapshot_date=snapshot_ts,
+        snapshot_url=rewrite_to_wayback(candidate, snapshot_ts),
+        content=content,
     )

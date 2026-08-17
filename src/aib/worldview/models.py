@@ -14,8 +14,9 @@ from unicodedata import normalize
 
 from pydantic import BaseModel, Field, model_validator
 
+from lup.workspace.paths import agent_version as current_agent_version
+
 from aib.agent.models import Factor
-from aib.version import AGENT_VERSION
 
 if TYPE_CHECKING:
     from aib.agent.models import ForecastOutput
@@ -161,7 +162,7 @@ class WorldviewForecastEntry(BaseModel):
     state: EntryState = EntryState.fresh
     superseded_by: str | None = None
     revision_history: list[Revision] = Field(default_factory=list)
-    agent_version: str = AGENT_VERSION
+    agent_version: str = Field(default_factory=current_agent_version)
     parent_post_id: int | None = None
     parent_slug: str | None = None
     depth: int = 0
@@ -209,7 +210,7 @@ def from_forecast_output(
         updated_at=now,
         stale_after=stale_after,
         resolvable_after=resolvable_after,
-        agent_version=AGENT_VERSION,
+        agent_version=current_agent_version(),
         parent_post_id=parent_post_id,
         parent_slug=parent_slug,
         depth=depth,

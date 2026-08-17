@@ -1,3 +1,6 @@
+# lup: ignore[any-type, dict-get]
+# pandas, pytrends and Exa all answer untyped; the shapes below are what this
+# module promises its caller, read key by key at that boundary.
 """Google Trends tools for search interest data.
 
 These tools fetch Google Trends data to provide signal for questions
@@ -6,7 +9,8 @@ about search interest, trending topics, and relative popularity.
 
 import logging
 import statistics
-from typing import Any, TypedDict, cast
+from itertools import takewhile
+from typing import Any, Literal, TypedDict, cast
 
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -20,10 +24,12 @@ from tenacity import (
 )
 
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.decorator import ToolError, mcp_tool
 from aib.tools.throttle import trends_throttle
+from lup.mcp import ToolError, lup_tool
 
 logger = logging.getLogger(__name__)
+
+type TrendDirection = Literal["up", "down", "stable", "insufficient_data"]
 
 
 # --- Input Schemas ---
@@ -117,16 +123,21 @@ class StableTailRange(TypedDict):
     high: int
 
 
-class TailStats(TypedDict, total=False):
-    """Trailing-window statistics for regime detection."""
+class TailStats(BaseModel):
+    """Trailing-window statistics for regime detection.
 
-    stable_tail_days: int
-    stable_tail_range: StableTailRange
-    peak: ValuePoint
-    trough: ValuePoint
-    drawdown_from_peak_pct: float
-    trailing_change_stats: ChangeStats
-    trailing_volatility: float
+    Every field is optional because each answers only when the series is long
+    enough to support it — a three-point history has a peak but no trailing
+    volatility.
+    """
+
+    stable_tail_days: int | None = None
+    stable_tail_range: StableTailRange | None = None
+    peak: ValuePoint | None = None
+    trough: ValuePoint | None = None
+    drawdown_from_peak_pct: float | None = None
+    trailing_change_stats: ChangeStats | None = None
+    trailing_volatility: float | None = None
 
 
 class NewsItem(TypedDict):
@@ -137,12 +148,7 @@ class NewsItem(TypedDict):
     published_date: str | None
 
 
-class _TrendsResultOptional(TypedDict, total=False):
-    tail_stats: TailStats
-    recent_news: list[NewsItem]
-
-
-class TrendsResult(_TrendsResultOptional):
+class TrendsResult(BaseModel):
     """Result from Google Trends query."""
 
     keyword: str
@@ -153,45 +159,83 @@ class TrendsResult(_TrendsResultOptional):
     max_value: int
     min_value: int
     average_value: float
-    trend_direction: str  # "up", "down", "stable"
+    trend_direction: TrendDirection
     change_stats: ChangeStats
     history: list[TrendDataPoint]
     related: RelatedQueries | None
+    tail_stats: TailStats | None = None
+    recent_news: list[NewsItem] | None = None
+
+
+class TrendsEmpty(BaseModel):
+    """Google Trends returned nothing for this query."""
+
+    keyword: str
+    timeframe: str
+    geo: str
+    data_points: int = 0
+    message: str = "No data available for this query"
+    history: list[TrendDataPoint] = []
+
+
+class KeywordComparison(BaseModel):
+    """One keyword's standing within a comparison."""
+
+    latest_value: int | None
+    max_value: int
+    average_value: float
+    trend_direction: TrendDirection
+
+
+class TrendsCompareResult(BaseModel):
+    """Relative interest across the compared keywords."""
+
+    keywords: list[str]
+    timeframe: str
+    geo: str
+    data_points: int
+    comparison: dict[str, KeywordComparison]
+    highest_average: str | None
+
+
+class TrendsCompareEmpty(BaseModel):
+    """Google Trends returned nothing for this comparison."""
+
+    keywords: list[str]
+    timeframe: str
+    geo: str
+    message: str = "No data available for this query"
+    comparison: dict[str, KeywordComparison] = {}
 
 
 # --- Google Trends API ---
 
 
-def _calculate_change_stats(values: list[int], threshold: int = 3) -> ChangeStats:
+def calculate_change_stats(values: list[int], threshold: int = 3) -> ChangeStats:
     """Compute period-over-period change statistics from a time series.
 
     Uses ±threshold to match MiniBench resolution criteria: changes within
     the threshold count as "no_change", not as increases or decreases.
     """
-    increases = decreases = no_change = 0
-    for i in range(1, len(values)):
-        diff = values[i] - values[i - 1]
-        if diff > threshold:
-            increases += 1
-        elif diff < -threshold:
-            decreases += 1
-        else:
-            no_change += 1
-    total = increases + decreases + no_change
-    result: ChangeStats = {
-        "increases": increases,
-        "decreases": decreases,
-        "no_change": no_change,
-        "total": total,
-        "increase_rate": round(increases / total, 3) if total else 0.0,
-        "decrease_rate": round(decreases / total, 3) if total else 0.0,
-        "no_change_rate": round(no_change / total, 3) if total else 0.0,
-        "threshold": threshold,
-    }
-    return result
+    diffs = [values[i] - values[i - 1] for i in range(1, len(values))]
+    increases = sum(1 for d in diffs if d > threshold)
+    decreases = sum(1 for d in diffs if d < -threshold)
+    total = len(diffs)
+    no_change = total - increases - decreases
+
+    return ChangeStats(
+        increases=increases,
+        decreases=decreases,
+        no_change=no_change,
+        total=total,
+        increase_rate=round(increases / total, 3) if total else 0.0,
+        decrease_rate=round(decreases / total, 3) if total else 0.0,
+        no_change_rate=round(no_change / total, 3) if total else 0.0,
+        threshold=threshold,
+    )
 
 
-def _calculate_trend_direction(values: list[int]) -> str:
+def calculate_trend_direction(values: list[int]) -> TrendDirection:
     """Determine trend direction from recent values."""
     if len(values) < 3:
         return "insufficient_data"
@@ -208,13 +252,35 @@ def _calculate_trend_direction(values: list[int]) -> str:
 
     if change_pct > 0.15:
         return "up"
-    elif change_pct < -0.15:
+    if change_pct < -0.15:
         return "down"
-    else:
-        return "stable"
+    return "stable"
 
 
-def _compute_tail_stats(
+def stable_tail_length(values: list[int], threshold: int) -> int:
+    """How many trailing points move by no more than *threshold* each step."""
+    n = len(values)
+    steps = (abs(values[i] - values[i - 1]) for i in range(n - 1, 0, -1))
+    return sum(1 for _ in takewhile(lambda step: step <= threshold, steps))
+
+
+def trough_point(values: list[int], dates: list[str]) -> ValuePoint | None:
+    """The lowest reading, ignoring the leading zeros before a term existed."""
+    first_nonzero = next((i for i, v in enumerate(values) if v > 0), 0)
+    nonzero_values = values[first_nonzero:]
+    if not nonzero_values:
+        return None
+    nonzero_dates = dates[first_nonzero:]
+    min_val = min(nonzero_values)
+    min_idx = nonzero_values.index(min_val)
+    return ValuePoint(
+        value=min_val,
+        date=nonzero_dates[min_idx],
+        days_ago=len(values) - 1 - (first_nonzero + min_idx),
+    )
+
+
+def compute_tail_stats(
     history: list[TrendDataPoint], threshold: int = 3
 ) -> TailStats | None:
     """Compute trailing-window statistics for regime detection.
@@ -228,68 +294,40 @@ def _compute_tail_stats(
     dates = [p["date"] for p in history]
     n = len(values)
 
-    stats = TailStats()
+    stable_count = stable_tail_length(values, threshold)
+    tail_values = values[n - stable_count - 1 :] if stable_count else []
 
-    # --- Stable tail: consecutive days at end where |day-over-day| <= threshold ---
-    stable_count = 0
-    for i in range(n - 1, 0, -1):
-        if abs(values[i] - values[i - 1]) <= threshold:
-            stable_count += 1
-        else:
-            break
-
-    if stable_count > 0:
-        tail_values = values[n - stable_count - 1 :]
-        stats["stable_tail_days"] = stable_count
-        stats["stable_tail_range"] = StableTailRange(
-            low=min(tail_values), high=max(tail_values)
-        )
-
-    # --- Peak and trough ---
     max_val = max(values)
     max_idx = values.index(max_val)
-    stats["peak"] = ValuePoint(
-        value=max_val, date=dates[max_idx], days_ago=n - 1 - max_idx
-    )
 
-    # Trough: lowest value excluding leading zeros
-    first_nonzero = 0
-    for i, v in enumerate(values):
-        if v > 0:
-            first_nonzero = i
-            break
-    nonzero_values = values[first_nonzero:]
-    nonzero_dates = dates[first_nonzero:]
-    if nonzero_values:
-        min_val = min(nonzero_values)
-        min_idx_in_nonzero = nonzero_values.index(min_val)
-        abs_idx = first_nonzero + min_idx_in_nonzero
-        stats["trough"] = ValuePoint(
-            value=min_val,
-            date=nonzero_dates[min_idx_in_nonzero],
-            days_ago=n - 1 - abs_idx,
-        )
-
-    # --- Drawdown from peak ---
-    latest = values[-1]
-    if max_val > 0:
-        stats["drawdown_from_peak_pct"] = round((latest - max_val) / max_val * 100, 1)
-
-    # --- Trailing change stats and volatility (last 7 days) ---
     trailing_window = min(7, n)
-    if trailing_window >= 2:
-        trailing_values = values[-trailing_window:]
-        stats["trailing_change_stats"] = _calculate_change_stats(
-            trailing_values, threshold
-        )
-        if trailing_window >= 3:
-            diffs = [
-                trailing_values[i] - trailing_values[i - 1]
-                for i in range(1, len(trailing_values))
-            ]
-            stats["trailing_volatility"] = round(statistics.stdev(diffs), 2)
+    trailing_values = values[-trailing_window:] if trailing_window >= 2 else []
+    diffs = [
+        trailing_values[i] - trailing_values[i - 1]
+        for i in range(1, len(trailing_values))
+    ]
 
-    return stats
+    return TailStats(
+        stable_tail_days=stable_count or None,
+        stable_tail_range=(
+            StableTailRange(low=min(tail_values), high=max(tail_values))
+            if tail_values
+            else None
+        ),
+        peak=ValuePoint(value=max_val, date=dates[max_idx], days_ago=n - 1 - max_idx),
+        trough=trough_point(values, dates),
+        drawdown_from_peak_pct=(
+            round((values[-1] - max_val) / max_val * 100, 1) if max_val > 0 else None
+        ),
+        trailing_change_stats=(
+            calculate_change_stats(trailing_values, threshold)
+            if trailing_values
+            else None
+        ),
+        trailing_volatility=(
+            round(statistics.stdev(diffs), 2) if trailing_window >= 3 else None
+        ),
+    )
 
 
 @retry(
@@ -298,7 +336,7 @@ def _compute_tail_stats(
     retry=retry_if_exception_type(TooManyRequestsError),
     reraise=True,
 )
-def _fetch_trends_data(
+def fetch_trends_data(
     keywords: list[str], timeframe: str, geo: str, tz: int
 ) -> tuple[TrendReq, pd.DataFrame]:
     """Fetch Google Trends data with retry on rate limits."""
@@ -308,7 +346,7 @@ def _fetch_trends_data(
     return pytrends, df
 
 
-def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
+def fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None:
     """Fetch related queries using an existing pytrends session."""
     try:
         related = pytrends.related_queries()
@@ -316,30 +354,33 @@ def _fetch_related_queries(pytrends: Any, keyword: str) -> RelatedQueries | None
             return None
 
         kw_data = related[keyword]
-        top_queries: list[dict[str, Any]] = []
-        if kw_data.get("top") is not None and not kw_data["top"].empty:
-            top_queries = [
+        top_queries = (
+            [
                 {"query": row["query"], "value": int(row["value"])}
                 for _, row in kw_data["top"].head(10).iterrows()
             ]
-
-        rising_queries: list[dict[str, Any]] = []
-        if kw_data.get("rising") is not None and not kw_data["rising"].empty:
-            rising_queries = [
+            if kw_data.get("top") is not None and not kw_data["top"].empty
+            else []
+        )
+        rising_queries = (
+            [
                 {"query": row["query"], "value": str(row["value"])}
                 for _, row in kw_data["rising"].head(10).iterrows()
             ]
+            if kw_data.get("rising") is not None and not kw_data["rising"].empty
+            else []
+        )
 
         if not top_queries and not rising_queries:
             return None
 
-        return {"top_queries": top_queries, "rising_queries": rising_queries}
+        return RelatedQueries(top_queries=top_queries, rising_queries=rising_queries)
     except Exception:
         logger.warning("Related queries failed for '%s'", keyword, exc_info=True)
         return None
 
 
-async def _fetch_recent_news(
+async def fetch_recent_news(
     keyword: str, max_results: int = 5
 ) -> list[NewsItem] | None:
     """Fetch recent news headlines for an elevated trends topic via Exa."""
@@ -378,67 +419,19 @@ async def _fetch_recent_news(
         return None
 
 
-@mcp_tool(
-    "google_trends",
+@lup_tool(
     (
         "Get Google Trends interest over time for a search term. Returns relative "
-        "search interest over the specified timeframe, plus `change_stats` "
-        "(historical base rates for how often interest rises, falls, or stays flat "
-        "under the question's resolution threshold), `tail_stats` (whether interest "
-        "has plateaued recently), `recent_news` headlines for context, and "
-        "`related_queries` for emerging catalysts.\n\n"
-        "Timeframes: 'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m', "
-        "'today 3-m', 'today 12-m', 'today 5-y', 'all', or 'YYYY-MM-DD YYYY-MM-DD'. "
-        "Geo: ISO country code (e.g., 'US', 'GB') or empty for worldwide. "
-        "Tz: timezone offset in minutes. Use tz=0 and the exact resolution date "
-        "range to match SerpAPI-based resolution scripts.\n\n"
-        "## How to use this tool for directional-change questions\n\n"
-        "Metaculus has a family of multiple-choice questions that resolve on "
-        "whether a search term's interest 'Increases', 'Decreases', or \"Doesn't "
-        'change" over a window. These are threshold questions: the end-window '
-        "value has to move by more than a fixed amount (defined by the question's "
-        "resolution criteria) for Increases/Decreases to resolve. Start by reading "
-        "the resolution criteria to pin down the exact threshold, then:\n\n"
-        "- Use `change_stats` as your empirical prior — it already reports how "
-        "often this specific term historically crossed that threshold. Start from "
-        "those base rates and adjust based on current context. Small samples are "
-        "weak evidence; prefer longer timeframes when the recent history is thin.\n"
-        "- Use `tail_stats` to check whether recent interest has plateaued. A "
-        'stable tail strongly favors "Doesn\'t change"; an active upslope or '
-        "downslope signals directional movement.\n"
-        "- Use `recent_news` to decide whether the story is winding down or "
-        "escalating. A term whose news coverage has fresh developments is still "
-        "live; one whose news has gone quiet is likely decaying.\n"
-        "- Use `related_queries` to catch emerging catalysts the headline search "
-        "term misses.\n\n"
-        "**Asymmetric possibility space.** Compute which outcomes are even "
-        "reachable from the current value given the threshold. A term already at "
-        "its baseline floor cannot decrease; a term already at its ceiling cannot "
-        "increase. When the arithmetic clearly identifies one dominant outcome, "
-        "match your research depth to the genuine uncertainty rather than hunting "
-        "for narrative catalysts that inflate an already-unlikely outcome.\n\n"
-        "**Post-spike dynamics.** After a news spike, distinguish 'already decayed "
-        "to baseline' from 'still elevated and active'. A term that has returned "
-        "to its sustained baseline is most likely to stay there next period — "
-        "don't extrapolate the earlier decline as if it were still happening. A "
-        "term still well above baseline is in an active regime: check whether "
-        "interest is decaying monotonically or showing upticks, and read "
-        "recent_news to judge whether the story has ongoing developments. "
-        "Exponential decay models overpredict the decline for topics with "
-        "active real-world developments; model the end value as the recent tail "
-        "average rather than an exponential projection when news keeps arriving.\n\n"
-        "**Scheduled events in the forecast window.** When a hearing, trial date, "
-        "product launch, earnings report, or similar scheduled event falls inside "
-        "the window and the topic is still elevated, default to expecting "
-        "sustained or increased interest — scheduled events in active stories "
-        "generate multi-day follow-on coverage.\n\n"
-        "**Weather-dependent terms.** For weather-related search terms (freeze "
-        "watch, frost, heat wave, winter storm), pair this tool with "
-        "`weather_forecast` to check whether a relevant weather event is expected "
-        "in the window. Weather forecasts lose reliability at longer horizons — "
-        "discount the confidence of a long-range weather forecast, and remember "
-        "that a new weather system can re-spike search interest after a prior "
-        "spike has decayed.\n\n"
+        "search interest (0-100) over the requested window, period-over-period "
+        "change statistics, trailing-window regime statistics, and — when interest "
+        "is elevated — recent news headlines explaining the movement.\n\n"
+        "**Timeframe.** Presets cover the common windows; a custom "
+        "'YYYY-MM-DD YYYY-MM-DD' range matches a resolution URL exactly, which is "
+        "what a resolution-sensitive question needs.\n\n"
+        "**Regime nuance.** A decayed spike and a flat baseline look alike in the "
+        "latest value alone; tail_stats separates them, and a re-spike is common "
+        "in weather- and event-driven terms, meaning a new weather system can "
+        "re-spike search interest after a prior spike has decayed.\n\n"
         "**Resolution mechanism nuance.** Directional-change questions usually "
         "resolve via SerpAPI rather than the pytrends-derived values this tool "
         "returns. Small numeric differences between the two sources can flip the "
@@ -447,8 +440,9 @@ async def _fetch_recent_news(
         "date range, and leave meaningful probability on outcomes that a small "
         "measurement shift would produce."
     ),
+    name="google_trends",
 )
-async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
+async def google_trends(params: TrendsQueryInput) -> TrendsResult | TrendsEmpty:
     """Get Google Trends interest over time for a keyword."""
     keyword = params.keyword
     timeframe = params.timeframe
@@ -457,23 +451,18 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
-        from aib.agent.retrodict import _cap_trends_timeframe
+        from aib.agent.retrodict import cap_trends_timeframe
 
-        timeframe = _cap_trends_timeframe(timeframe, cutoff)
+        timeframe = cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        async with trends_throttle:
-            pytrends, df = _fetch_trends_data([keyword], timeframe, geo, tz)
+        async with trends_throttle.slot():
+            pytrends, df = fetch_trends_data([keyword], timeframe, geo, tz)
 
         if df.empty:
-            return {
-                "keyword": keyword,
-                "timeframe": timeframe,
-                "geo": geo or "worldwide",
-                "data_points": 0,
-                "message": "No data available for this query",
-                "history": [],
-            }
+            return TrendsEmpty(
+                keyword=keyword, timeframe=timeframe, geo=geo or "worldwide"
+            )
 
         if keyword not in df.columns:
             raise ToolError(f"Keyword '{keyword}' not found in response")
@@ -481,45 +470,41 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
         values = df[keyword].tolist()
         dates = [d.strftime("%Y-%m-%d") for d in pd.DatetimeIndex(df.index)]
 
-        # Build history
         history: list[TrendDataPoint] = [
-            {"date": d, "value": int(v)} for d, v in zip(dates, values)
+            TrendDataPoint(date=d, value=int(v)) for d, v in zip(dates, values)
         ]
 
         # Limit history to last 50 points for response size
-        if len(history) > 50:
-            history = history[-50:]
+        history = history[-50:]
 
-        # Fetch related queries on the same session (no extra payload needed)
-        related: RelatedQueries | None = None
-        if params.include_related:
-            related = _fetch_related_queries(pytrends, keyword)
+        related = (
+            fetch_related_queries(pytrends, keyword) if params.include_related else None
+        )
+        ints = [int(v) for v in values]
+        latest_value = int(values[-1]) if values else None
 
-        result: dict[str, Any] = {
-            "keyword": keyword,
-            "timeframe": timeframe,
-            "geo": geo or "worldwide",
-            "data_points": len(values),
-            "latest_value": int(values[-1]) if values else None,
-            "max_value": int(max(values)) if values else 0,
-            "min_value": int(min(values)) if values else 0,
-            "average_value": round(sum(values) / len(values), 1) if values else 0,
-            "trend_direction": _calculate_trend_direction([int(v) for v in values]),
-            "change_stats": _calculate_change_stats([int(v) for v in values]),
-            "history": history,
-            "related": related,
-        }
+        recent_news = (
+            await fetch_recent_news(keyword)
+            if latest_value is not None and latest_value >= 10
+            else None
+        )
 
-        tail_stats = _compute_tail_stats(history)
-        if tail_stats is not None:
-            result["tail_stats"] = tail_stats
-
-        if result["latest_value"] is not None and result["latest_value"] >= 10:
-            recent_news = await _fetch_recent_news(keyword)
-            if recent_news:
-                result["recent_news"] = recent_news
-
-        return result
+        return TrendsResult(
+            keyword=keyword,
+            timeframe=timeframe,
+            geo=geo or "worldwide",
+            data_points=len(values),
+            latest_value=latest_value,
+            max_value=int(max(values)) if values else 0,
+            min_value=int(min(values)) if values else 0,
+            average_value=round(sum(values) / len(values), 1) if values else 0,
+            trend_direction=calculate_trend_direction(ints),
+            change_stats=calculate_change_stats(ints),
+            history=history,
+            related=related,
+            tail_stats=compute_tail_stats(history),
+            recent_news=recent_news,
+        )
 
     except ToolError:
         raise
@@ -528,16 +513,18 @@ async def google_trends(params: TrendsQueryInput) -> dict[str, Any]:
         raise ToolError(f"Google Trends lookup failed for '{keyword}': {e}") from e
 
 
-@mcp_tool(
-    "google_trends_compare",
+@lup_tool(
     (
         "Compare Google Trends interest for multiple search terms. "
         "Returns relative search interest (0-100) for up to 5 terms. "
         "Values are relative to each other within the comparison. "
         "Useful for comparing popularity of different topics or candidates."
     ),
+    name="google_trends_compare",
 )
-async def google_trends_compare(params: TrendsCompareInput) -> dict[str, Any]:
+async def google_trends_compare(
+    params: TrendsCompareInput,
+) -> TrendsCompareResult | TrendsCompareEmpty:
     """Compare Google Trends interest for multiple keywords."""
     keywords = params.keywords
     timeframe = params.timeframe
@@ -546,55 +533,44 @@ async def google_trends_compare(params: TrendsCompareInput) -> dict[str, Any]:
 
     cutoff = retrodict_cutoff.get()
     if cutoff is not None:
-        from aib.agent.retrodict import _cap_trends_timeframe
+        from aib.agent.retrodict import cap_trends_timeframe
 
-        timeframe = _cap_trends_timeframe(timeframe, cutoff)
+        timeframe = cap_trends_timeframe(timeframe, cutoff)
 
     try:
-        async with trends_throttle:
-            _, df = _fetch_trends_data(keywords, timeframe, geo, tz)
+        async with trends_throttle.slot():
+            _, df = fetch_trends_data(keywords, timeframe, geo, tz)
 
         if df.empty:
-            return {
-                "keywords": keywords,
-                "timeframe": timeframe,
-                "geo": geo or "worldwide",
-                "message": "No data available for this query",
-                "comparison": {},
-            }
-
-        # Build comparison results
-        comparison: dict[str, dict[str, Any]] = {}
-        for kw in keywords:
-            if kw in df.columns:
-                values = df[kw].tolist()
-                comparison[kw] = {
-                    "latest_value": int(values[-1]) if values else None,
-                    "max_value": int(max(values)) if values else 0,
-                    "average_value": round(sum(values) / len(values), 1)
-                    if values
-                    else 0,
-                    "trend_direction": _calculate_trend_direction(
-                        [int(v) for v in values]
-                    ),
-                }
-
-        # Find the "winner" - highest average
-        if comparison:
-            winner = max(
-                comparison.keys(), key=lambda k: comparison[k]["average_value"]
+            return TrendsCompareEmpty(
+                keywords=keywords, timeframe=timeframe, geo=geo or "worldwide"
             )
-        else:
-            winner = None
 
-        return {
-            "keywords": keywords,
-            "timeframe": timeframe,
-            "geo": geo or "worldwide",
-            "data_points": len(df) if not df.empty else 0,
-            "comparison": comparison,
-            "highest_average": winner,
-        }
+        def compared(kw: str) -> KeywordComparison:
+            values = df[kw].tolist()
+            return KeywordComparison(
+                latest_value=int(values[-1]) if values else None,
+                max_value=int(max(values)) if values else 0,
+                average_value=round(sum(values) / len(values), 1) if values else 0,
+                trend_direction=calculate_trend_direction([int(v) for v in values]),
+            )
+
+        comparison = {kw: compared(kw) for kw in keywords if kw in df.columns}
+
+        winner = (
+            max(comparison.keys(), key=lambda k: comparison[k].average_value)
+            if comparison
+            else None
+        )
+
+        return TrendsCompareResult(
+            keywords=keywords,
+            timeframe=timeframe,
+            geo=geo or "worldwide",
+            data_points=len(df),
+            comparison=comparison,
+            highest_average=winner,
+        )
 
     except ToolError:
         raise

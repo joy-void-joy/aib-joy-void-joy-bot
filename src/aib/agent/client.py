@@ -12,13 +12,16 @@ Exports:
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, cast, overload
+from typing import Any, overload
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
+from claude_agent_sdk.types import McpSdkServerConfig
+from lup.mcp import LupMcpServerConfig
 from pydantic import BaseModel
 
 from aib.config import settings
 from aib.paths import AGENT_CWD
+from aib.profiles import profile_env
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +44,15 @@ DEFAULT_EXTRA_ARGS: dict[str, str | None] = {
     "no-session-persistence": None,
     "strict-mcp-config": None,
 }
+# ENABLE_TOOL_SEARCH: unset means the harness defers tool schemas once they
+# exceed 10% of the context window, leaving the agent only tool *names* and a
+# ToolSearch tool to load them. A search with the wrong terms returns nothing,
+# so the agent concludes the capability does not exist and gives up without
+# ever calling the tool. The research sub-agent carries ~35 data tools and sits
+# well past that threshold, so every session must load schemas eagerly.
 DEFAULT_ENV: dict[str, str] = {
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    "ENABLE_TOOL_SEARCH": "false",
 }
 
 
@@ -100,7 +110,7 @@ def reject_ajv_unsafe_schema(schema: object) -> None:
 
 @asynccontextmanager
 async def build_client(
-    *, defaults: bool = True, **kwargs: Any
+    *, defaults: bool = True, profile: str | None = None, **kwargs: Any
 ) -> AsyncIterator[ClaudeSDKClient]:
     """Return a configured ClaudeSDKClient with project-wide defaults.
 
@@ -108,19 +118,29 @@ async def build_client(
     - extra_args: no-session-persistence
     - env: openrouter routing, disable adaptive thinking, max effort
 
+    `profile` names a Claude account from the registry, falling back to
+    settings.profile. Passing it per call rather than through the process
+    environment is what lets concurrent sessions run on different accounts.
+
     Pass defaults=False to skip all defaults. Use REMOVE as a value
     to selectively drop a single default key.
     """
-    from aib.agent.hooks import HooksConfig, merge_hooks
+    from lup.adapters.claude.hooks import lup_hooks_to_claude
+    from lup.hooks import LupHooksConfig, merge_hooks
+
     from aib.agent.meta_hooks import create_structured_output_enforcement
 
     caller_extra = kwargs.pop("extra_args", None) or {}
     caller_env = kwargs.pop("env", None) or {}
-    caller_hooks: HooksConfig = kwargs.pop("hooks", None) or cast(HooksConfig, {})
+    caller_hooks: LupHooksConfig = kwargs.pop("hooks", None) or LupHooksConfig()
 
     if defaults:
         merged_extra = _merge(DEFAULT_EXTRA_ARGS, caller_extra)
-        merged_env = _merge({**settings.openrouter_env, **DEFAULT_ENV}, caller_env)
+        selected = profile if profile is not None else settings.profile
+        merged_env = _merge(
+            {**settings.openrouter_env, **profile_env(selected), **DEFAULT_ENV},
+            caller_env,
+        )
     else:
         merged_extra = {k: v for k, v in caller_extra.items() if v is not REMOVE}
         merged_env = {k: v for k, v in caller_env.items() if v is not REMOVE}
@@ -137,10 +157,28 @@ async def build_client(
     if "setting_sources" not in kwargs:
         kwargs["setting_sources"] = []
 
+    # The one place lup's neutral server configs become the SDK's own shape.
+    # It has to be here, at the boundary, and nowhere earlier:
+    # `server_tool_names` reads `tool_names` off a `LupMcpServerConfig` and
+    # answers `[]` for anything already projected, so projecting sooner
+    # would silently empty the hook-enforced tool allowlist.
+    if "mcp_servers" in kwargs:
+        kwargs["mcp_servers"] = {
+            name: (
+                McpSdkServerConfig(type="sdk", name=cfg.name, instance=cfg.server)
+                if isinstance(cfg, LupMcpServerConfig)
+                else cfg
+            )
+            for name, cfg in kwargs["mcp_servers"].items()
+        }
+
     options = ClaudeAgentOptions(
         extra_args=merged_extra,
         env=merged_env,
-        hooks=cast(Any, caller_hooks) if caller_hooks else None,
+        # The hook seam's other projection point, beside mcp_servers above:
+        # every factory speaks lup's normalized (LupHookInput) -> LupHookOutput
+        # shape, and the adapter renders it into the SDK's native matchers.
+        hooks=lup_hooks_to_claude(caller_hooks) if caller_hooks.by_event() else None,
         max_buffer_size=500 * 1024 * 1024,
         **kwargs,
     )
@@ -204,9 +242,9 @@ async def one_shot(
                 structured_output = message.structured_output
                 result_text = message.result
                 if cost_tool_name and message.total_cost_usd is not None:
-                    from aib.tools.metrics import get_collector
+                    from aib.tools.metrics import costs
 
-                    get_collector().record_cost(cost_tool_name, message.total_cost_usd)
+                    costs.record(cost_tool_name, message.total_cost_usd)
 
     if result_text and result_text.startswith(AUP_REFUSAL_PREFIX):
         raise AupRefusalError(result_text)

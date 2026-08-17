@@ -3,6 +3,8 @@
 from datetime import date
 from unittest.mock import MagicMock
 
+from lup.mcp import McpServerEntry, server_tool_names
+
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.tool_policy import (
     ASKNEWS_TOOLS,
@@ -85,49 +87,49 @@ class TestToolPolicyOrchestrator:
     def test_orchestrator_has_builtin_tools(self) -> None:
         """Main agent should have built-in SDK tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in BUILTIN_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_metaculus_tools(self) -> None:
         """Main agent should have Metaculus tools when token is set."""
         policy = ToolPolicy(metaculus_token="test-token")
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in METACULUS_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_excludes_metaculus_without_token(self) -> None:
         """Main agent should exclude Metaculus tools without token."""
         policy = ToolPolicy(metaculus_token=None)
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in METACULUS_TOOLS:
             assert tool not in allowed
 
     def test_orchestrator_has_research_tool(self) -> None:
         """Main agent should have the research tool."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in RESEARCH_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_sandbox(self) -> None:
         """Main agent should have sandbox tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in SANDBOX_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_has_notes(self) -> None:
         """Main agent should have notes/reflection tools."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         for tool in NOTES_TOOLS:
             assert tool in allowed
 
     def test_orchestrator_no_data_tools(self) -> None:
         """Main agent should NOT have data-gathering tools (those are on research sub-agent)."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools()
+        allowed = policy.orchestrator_allowlist()
         # Data tools should not be on the main agent
         for tool in LIVE_MARKET_TOOLS:
             assert tool not in allowed
@@ -143,13 +145,13 @@ class TestToolPolicySpawn:
     def test_subforecast_allowed_by_default(self) -> None:
         """subforecast should be allowed by default."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools(allow_spawn=True)
+        allowed = policy.orchestrator_allowlist(allow_spawn=True)
         assert "mcp__subforecast__subforecast" in allowed
 
     def test_subforecast_excluded_when_disabled(self) -> None:
         """subforecast should be excluded when allow_spawn=False."""
         policy = ToolPolicy()
-        allowed = policy.get_allowed_tools(allow_spawn=False)
+        allowed = policy.orchestrator_allowlist(allow_spawn=False)
         assert "mcp__subforecast__subforecast" not in allowed
 
 
@@ -184,7 +186,7 @@ class TestToolPolicyMcpServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox)
+        servers = policy.orchestrator_servers(sandbox)
 
         assert "sandbox" in servers
         assert "subforecast" in servers
@@ -199,7 +201,7 @@ class TestToolPolicyMcpServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_mcp_servers(sandbox)
+        servers = policy.orchestrator_servers(sandbox)
 
         assert "financial" not in servers
         assert "government" not in servers
@@ -216,7 +218,7 @@ class TestToolPolicyResearchServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "financial" in servers
         assert "government" in servers
@@ -231,7 +233,7 @@ class TestToolPolicyResearchServers:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy(asknews_api_key="test-key")
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "asknews" in servers
 
@@ -259,7 +261,7 @@ class TestToolPolicyToolDocs:
         sandbox.create_mcp_server.return_value = MagicMock()
 
         policy = ToolPolicy()
-        servers = policy.get_research_mcp_servers(sandbox)
+        servers = policy.research_servers(sandbox)
 
         assert "asknews" not in servers
 
@@ -271,7 +273,78 @@ class TestToolPolicyToolDocs:
         token = retrodict_cutoff.set(date(2026, 1, 15))
         try:
             policy = ToolPolicy(asknews_api_key="test-key")
-            servers = policy.get_research_mcp_servers(sandbox)
+            servers = policy.research_servers(sandbox)
             assert "asknews" not in servers
         finally:
             retrodict_cutoff.reset(token)
+
+
+class TestAllowlistsMatchTheServersRegistered:
+    """Each allowlist against the tools its own servers actually serve.
+
+    Both lists were hand-kept unions of named constants, which is a second
+    statement of what the servers already carry — and a second statement
+    drifts. A tool added to a server and not to the union is registered and
+    then refused by the allowlist hook, which reads to the agent as the tool
+    being broken rather than as it being ungranted.
+
+    The sandbox server is subtracted from both sides: it is built by a
+    `Sandbox` instance a unit test has no reason to construct, so its two
+    tools are the one part of the surface these compare nothing about.
+    """
+
+    def derived(
+        self,
+        servers: dict[str, McpServerEntry],
+        policy: ToolPolicy,
+        named: frozenset[str] = frozenset(),  # lup: ignore[frozenset-shape]
+    ) -> set[str]:
+        """What the tools on `servers` come to, minus the sandbox's.
+
+        `named` is for tools no introspection can reach. An external MCP
+        server — AskNews is served over HTTP — cannot be enumerated without
+        connecting to it, so `server_tool_names` answers `[]` for one and
+        its tools have to be named the way built-ins are.
+        """
+        names = set(
+            policy.get_allowed_tools(servers, builtin_tools=BUILTIN_TOOLS | named)
+        )
+        return names - SANDBOX_TOOLS
+
+    def test_the_orchestrator_allowlist_is_what_its_servers_serve(self) -> None:
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+        policy = ToolPolicy(metaculus_token="t")
+
+        servers = policy.orchestrator_servers(sandbox)
+        declared = set(policy.orchestrator_allowlist()) - SANDBOX_TOOLS
+
+        assert self.derived(servers, policy) == declared
+
+    def test_the_research_allowlist_refuses_nothing_its_servers_serve(self) -> None:
+        """Every registered tool is granted, which is the failure that hurts.
+
+        A tool the sub-agent is served but not granted is refused by the
+        allowlist hook at the moment it is called, which reads to the agent
+        as the tool being broken rather than as it being ungranted — so it
+        retries, works around it, and reports a capability gap that is
+        really a bookkeeping one.
+
+        The derivation makes this true by construction, so what the test
+        actually pins is that the call site hands over the servers it has:
+        passing none is a legal call that answers with the built-ins alone,
+        and that is exactly what the old drift looked like from here.
+        """
+        from aib.tools.research import get_research_allowed_tools
+
+        policy = ToolPolicy(fred_api_key="f", exa_api_key="e")
+        servers = policy.research_servers()
+        granted = set(get_research_allowed_tools(servers))
+
+        served = {
+            f"mcp__{name}__{tool}"
+            for name, server in servers.items()
+            for tool in server_tool_names(server)
+        }
+        assert served
+        assert served - policy.excluded_tools.keys() <= granted
