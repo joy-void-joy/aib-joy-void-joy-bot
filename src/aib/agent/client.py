@@ -249,9 +249,7 @@ def one_shot_request(
 
     Tool-free is what makes this one portable at all: an empty allowlist is
     not an allowlist and no hooks are declared, so it is the one session shape
-    this project opens that either runtime accepts unchanged. Effort still
-    travels in `DEFAULT_ENV` rather than as a field, because a portable
-    request has no word for it — see joy-void-joy/lup#227.
+    this project opens that either runtime accepts unchanged.
     """
     AGENT_CWD.mkdir(parents=True, exist_ok=True)
     selected = profile if profile is not None else settings.profile
