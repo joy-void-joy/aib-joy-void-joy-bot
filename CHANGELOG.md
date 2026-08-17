@@ -14,7 +14,12 @@ Replace the hand-copied lup with a real lup dependency — a new framework under
 - paths: the session kernel — project root, notes/traces/feedback directories, the timestamp format, versioned sessions and logs — is `lup.workspace.paths`. Both layouts are already `notes/traces/<version>/…`, so no data moves
 - version: AGENT_VERSION moved from `src/aib/version.py` to `[tool.lup] agent_version` in pyproject.toml, which is what lup reads to key `notes/traces/<version>/`. The re-exec trick that defeated the import cache is gone — reading a value out of a manifest needs no such thing
 - policy: `ToolPolicy` subclasses `lup.tool_policy.BaseToolPolicy`, and each exclusion now carries its reason, so availability can answer *why* a tool is missing rather than only that it is
-- devtools: `py`, `sync` and `report` sub-apps composed from lup; `dev worktree` installs `aib-workflow@aib` rather than a marketplace name that never existed
+- devtools: `py`, `sync`, `report` and `harness` sub-apps composed from lup; `dev worktree` installs `aib-workflow@aib` rather than a marketplace name that never existed
+- plugin: the permission policy is a declaration compiled into `.claude/plugins/lup/`, and the regex scripts under `.claude/plugins/aib/hooks/` are deleted. They judged the raw command *string* with unanchored patterns and last-match-wins, so `rm -rf x && git status` matched the `git status` allow and was auto-approved; the policy now parses a command into segments and joins them deny > ask > defer > allow. Refusing a forecast becomes a gate rather than a norm — `uv run forecast` and the three `lup-devtools` verbs that open the same agent are declared refused, each carrying the instruction to print the command instead
+- plugin: editing anything under `tests/` is an approval question, and a refusal for the resolver's implementer — the first time that contract is enforced rather than stated in a prompt
+- plugin: `.claude/CLAUDE.md` and `.claude/settings.json` are generated from `src/aib/devtools/harness/`. The guidance was 2858 bytes past the size at which a runtime silently truncates it, so its reference sections moved to `docs/devtools.md`
+- gates: the pre-push quality check moved from a PreToolUse hook into the tracked `.githooks/pre-push`, where it covers human pushes too, has no 30-second ceiling, and cannot race a second hook engine for the same decision
+- tools: the research sub-agent's allowlist is derived from the servers it is actually given rather than from a union of seventeen named groups. Measured before and after — the two lists are identical, so nothing the agent may call changes
 - fix: `ForecastMeta.tools_used_count` was always 0 — it read `total_calls`, a key no metrics summary has ever carried
 
 ## v6.4.0 (2026-07-24)
