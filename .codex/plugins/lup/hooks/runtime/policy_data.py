@@ -1639,34 +1639,42 @@ PATH_ROLES: list[PathRoleRow] = [
     {
         "root": "tests",
         "role": "test",
+        "kind": "subtree",
     },
     {
         "root": "tmp",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": "logs",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": ".venv",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": ".ruff_cache",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": ".pytest_cache",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": "build",
         "role": "scratch",
+        "kind": "subtree",
     },
     {
         "root": "dist",
         "role": "scratch",
+        "kind": "subtree",
     },
 ]
 
