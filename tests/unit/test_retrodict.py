@@ -1,14 +1,13 @@
 """Tests for retrodict mode hooks and utilities."""
 
 from datetime import date
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from claude_agent_sdk.types import HookContext, PreToolUseHookInput
+from lup.hooks import LupHookInput, LupHookOutput, LupHooksConfig
 
-from aib.agent.hooks import HooksConfig
 from aib.tools.exa import ExaResult
 from aib.agent.retrodict import (
     create_retrodict_hooks,
@@ -96,55 +95,49 @@ class TestRetrodictHooks:
         retrodict_cutoff.reset(token)
 
     @pytest.fixture
-    def hooks(self) -> HooksConfig:
+    def hooks(self) -> LupHooksConfig:
         """Create hooks (reads ContextVar internally)."""
         return create_retrodict_hooks()
 
     async def _invoke_hook(
-        self, hooks: HooksConfig, tool_name: str, tool_input: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Helper to invoke the PreToolUse hook."""
-        pre_hooks = hooks.get("PreToolUse")
-        assert pre_hooks is not None, "PreToolUse hooks must be configured"
-        pre_hook = pre_hooks[0].hooks[0]
-        input_data: PreToolUseHookInput = {
-            "hook_event_name": "PreToolUse",
-            "tool_use_id": "",
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "session_id": "",
-            "transcript_path": "",
-            "cwd": "",
-        }
-        ctx: HookContext = {"signal": None}
-        result = await pre_hook(input_data, None, ctx)
-        return cast(dict[str, Any], result)
+        self, hooks: LupHooksConfig, tool_name: str, tool_input: dict[str, Any]
+    ) -> LupHookOutput:
+        """Invoke the PreToolUse hook through lup's normalized seam.
+
+        The adapter builds this input from a provider payload in production;
+        constructing it directly is what lets the hook be tested without one.
+        """
+        assert hooks.pre_tool_use, "PreToolUse hooks must be configured"
+        hook = hooks.pre_tool_use[0].hook
+        return await hook(
+            LupHookInput(
+                event="PreToolUse",
+                tool_name=tool_name,
+                tool_input=tool_input,
+            )
+        )
 
     # --- Denial tests ---
 
     @pytest.mark.asyncio
-    async def test_bash_denied(self, hooks: HooksConfig) -> None:
+    async def test_bash_denied(self, hooks: LupHooksConfig) -> None:
         """Bash should be denied in retrodict mode."""
         result = await self._invoke_hook(hooks, "Bash", {"command": "ls"})
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "deny"
-        assert output["permissionDecisionReason"] == "Bash is not available."
+        assert result.decision == "deny"
+        assert result.reason == "Bash is not available."
 
     @pytest.mark.asyncio
-    async def test_web_tools_denied_in_retrodict(self, hooks: HooksConfig) -> None:
+    async def test_web_tools_denied_in_retrodict(self, hooks: LupHooksConfig) -> None:
         """Native WebSearch/WebFetch bypass the cutoff, so retrodict denies them."""
         for tool_name in ("WebSearch", "WebFetch"):
             result = await self._invoke_hook(hooks, tool_name, {"query": "x"})
-            output = result["hookSpecificOutput"]
-            assert output["permissionDecision"] == "deny"
-            assert (
-                output["permissionDecisionReason"] == f"{tool_name} is not available."
-            )
+            assert result.decision == "deny"
+            assert result.reason == f"{tool_name} is not available."
 
     @pytest.mark.asyncio
-    async def test_excluded_tools_pass_through(self, hooks: HooksConfig) -> None:
+    async def test_excluded_tools_pass_through(self, hooks: LupHooksConfig) -> None:
         """Tools excluded from allowed_tools (asknews, playwright) pass through
-        the retrodict hook — they're denied upstream by create_allowed_tools_hook
+        the retrodict hook — they're denied upstream by the tool allowlist
         in both live and retrodict mode with identical wording.
         """
         excluded_tools = [
@@ -155,31 +148,29 @@ class TestRetrodictHooks:
         ]
         for tool_name in excluded_tools:
             result = await self._invoke_hook(hooks, tool_name, {"query": "test"})
-            output = result["hookSpecificOutput"]
-            assert output["permissionDecision"] == "allow", (
+            assert result.decision == "allow", (
                 f"{tool_name} should pass through retrodict hook (denied upstream)"
             )
 
     # --- Passthrough tests ---
 
     @pytest.mark.asyncio
-    async def test_unmodified_tools_pass_through(self, hooks: HooksConfig) -> None:
+    async def test_unmodified_tools_pass_through(self, hooks: LupHooksConfig) -> None:
         """Tools without special handling should be allowed without modification."""
         result = await self._invoke_hook(hooks, "Read", {"file_path": "/some/path"})
 
-        output = result["hookSpecificOutput"]
-        assert output["permissionDecision"] == "allow"
-        assert "updatedInput" not in output
+        assert result.decision == "allow"
+        assert result.updated_input is None
 
     @pytest.mark.asyncio
     async def test_no_cutoff_passes_through(self) -> None:
-        """When no cutoff is set, all tools should pass through."""
+        """When no cutoff is set, all tools should pass through undecided."""
         # Reset the cutoff set by the autouse fixture
         token = retrodict_cutoff.set(None)
         try:
             hooks = create_retrodict_hooks()
             result = await self._invoke_hook(hooks, "WebSearch", {"query": "test"})
-            assert result == {}
+            assert result.decision is None
         finally:
             retrodict_cutoff.reset(token)
 

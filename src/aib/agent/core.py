@@ -10,12 +10,10 @@ from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, TypedDict, cast
 
-from claude_agent_sdk.types import HookContext, HookInput, SyncHookJSONOutput
 
 from claude_agent_sdk import (
     AssistantMessage,
     ContentBlock,
-    HookMatcher,
     ResultMessage,
     SystemMessage,
     TextBlock,
@@ -37,7 +35,15 @@ from aib.agent.history import (
     save_forecast,
 )
 from aib.agent.sources import extract_sources
-from aib.agent.hooks import HooksConfig, create_allowed_tools_hook, merge_hooks
+from lup.hooks import (
+    LupHookInput,
+    LupHooksConfig,
+    create_nudge_hook,
+    create_permission_hooks,
+    create_tool_allowlist_hook,
+    merge_hooks,
+)
+from lup.tool_routes import routes
 from aib.agent.meta_hooks import create_structured_output_hooks
 from aib.agent.retrodict import create_retrodict_hooks, get_modified_input
 from aib.retrodict_context import effective_now, retrodict_cutoff
@@ -400,144 +406,33 @@ def setup_notes_folder(
     )
 
 
-def _path_is_under(file_path: str, allowed_dirs: list[Path]) -> bool:
-    """Check if a file path is under one of the allowed directories."""
-    try:
-        path = Path(file_path).resolve()
-    except (OSError, ValueError):
-        return False
-
-    for allowed in allowed_dirs:
-        try:
-            path.relative_to(allowed.resolve())
-            return True
-        except ValueError:
-            continue
-    return False
+# `create_permission_hooks` and `path_is_under` are lup's now
+# (`lup.hooks`, `lup.workspace.paths`): same rules, same messages —
+# Write/Edit inside the read-write directories, Read/Glob/Grep inside those
+# plus the read-only ones, everything else allowed because `allowed_tools`
+# has already filtered it.
 
 
-def create_permission_hooks(
-    rw_dirs: list[Path],
-    ro_dirs: list[Path],
-) -> HooksConfig:
-    """Create permission hooks with directory-based access control.
+def create_suggest_only_nudge_hooks() -> LupHooksConfig:
+    """Nudge the agent toward the better tool after it fetches a routed domain.
 
-    Args:
-        rw_dirs: Directories where Write/Edit/Read are allowed
-        ro_dirs: Additional directories where only Read is allowed
-
-    Returns:
-        Hooks configuration dict for ClaudeAgentOptions.
+    The mechanism is `lup.hooks.create_nudge_hook` and the table is
+    `lup.tool_routes`, so this is now only the check: given the fetch that
+    just ran, what should it have reached for instead. `routes.advice`
+    parses the host, where the loop this replaced matched by substring — so
+    a registration for `bls.gov` no longer answers for a lookalike domain
+    that merely ends in it.
     """
-    all_readable = rw_dirs + ro_dirs
 
-    async def permission_hook(
-        input_data: Any,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> dict[str, Any]:
-        """Control tool access based on directory permissions."""
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return {}
+    def advise(event: LupHookInput) -> str | None:
+        # lup: ignore[dict-get] — the agent's raw tool arguments off the wire
+        url = event.tool_input.get("url")
+        if not isinstance(url, str):
+            return None
+        advice = routes.advice(url)
+        return f"Tip: {advice}" if advice else None
 
-        tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
-        hook_event = input_data["hook_event_name"]
-
-        def deny(reason: str) -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
-
-        def allow() -> dict[str, Any]:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event,
-                    "permissionDecision": "allow",
-                }
-            }
-
-        # Write: allow in RW directories only
-        if tool_name == "Write":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-            if _path_is_under(file_path, rw_dirs):
-                return allow()
-            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
-
-        # File edit operations: only allowed in RW directories
-        if tool_name == "Edit":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-
-            if _path_is_under(file_path, rw_dirs):
-                return allow()
-            return deny(f"Write denied. Allowed: {[str(d) for d in rw_dirs]}")
-
-        # Read: requires file_path, must be in readable directories
-        if tool_name == "Read":
-            file_path = tool_input.get("file_path", "")
-            if not file_path:
-                return {}  # Let SDK handle missing required param
-
-            if _path_is_under(file_path, all_readable):
-                return allow()
-            return deny(f"Read denied. Allowed: {[str(d) for d in all_readable]}")
-
-        # Glob/Grep: require explicit path in readable directories (no cwd default)
-        if tool_name in ("Glob", "Grep"):
-            file_path = tool_input.get("path", "")
-            if not file_path:
-                return deny(
-                    f"Path required for {tool_name}. "
-                    f"Specify path in: {[str(d) for d in all_readable]}"
-                )
-
-            if _path_is_under(file_path, all_readable):
-                return allow()
-            return deny(
-                f"{tool_name} denied. Allowed: {[str(d) for d in all_readable]}"
-            )
-
-        # Auto-allow everything else (WebSearch, WebFetch, MCP tools, Task)
-        # These are already filtered by allowed_tools in options
-        return allow()
-
-    return {
-        "PreToolUse": [HookMatcher(hooks=[permission_hook])],  # type: ignore[list-item]
-    }
-
-
-def create_suggest_only_nudge_hooks() -> HooksConfig:
-    """PostToolUse hook that nudges the agent toward structured APIs for known domains."""
-    from aib.tools.fetch_routes import SUGGEST_ONLY
-
-    async def nudge_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> SyncHookJSONOutput:
-        if input_data.get("hook_event_name") != "PostToolUse":
-            return SyncHookJSONOutput()
-        if input_data.get("tool_name") != "mcp__search__fetch_url":
-            return SyncHookJSONOutput()
-
-        tool_input = input_data.get("tool_input", {})
-        url = (tool_input.get("url") or "").lower()
-        for domain_key, hint in SUGGEST_ONLY.items():
-            if domain_key in url:
-                return SyncHookJSONOutput(systemMessage=f"Tip: {hint}")
-        return SyncHookJSONOutput()
-
-    return {
-        "PostToolUse": [HookMatcher(hooks=[nudge_hook])],
-    }
+    return create_nudge_hook({"mcp__search__fetch_url": advise})
 
 
 async def fetch_question(question_id: int) -> dict:
@@ -964,7 +859,7 @@ async def run_forecast(
 
         # Enforce allowed_tools whitelist (bypassPermissions ignores the
         # ClaudeAgentOptions.allowed_tools field, so we hook-enforce it).
-        hooks = merge_hooks(hooks, create_allowed_tools_hook(allowed_tools))
+        hooks = merge_hooks(hooks, create_tool_allowlist_hook(allowed_tools))
 
         # Nudge agent toward structured APIs for SUGGEST_ONLY domains
         hooks = merge_hooks(hooks, create_suggest_only_nudge_hooks())

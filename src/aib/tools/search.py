@@ -12,19 +12,18 @@ fetched live (or from the Wayback Machine in retrodict mode).
 import asyncio
 import json
 import logging
+from collections.abc import Iterator
 from typing import Any, Literal, TypedDict
 from urllib.parse import unquote
 
 import httpx
-from claude_agent_sdk import (
-    AssistantMessage,
-    HookCallback,
-    HookInput,
-    HookJSONOutput,
-    HookMatcher,
-    ResultMessage,
+from claude_agent_sdk import AssistantMessage, ResultMessage
+from lup.hooks import (
+    LupHookInput,
+    create_capture_hook,
+    create_tool_allowlist_hook,
+    merge_hooks,
 )
-from claude_agent_sdk.types import HookContext
 from pydantic import BaseModel, Field
 
 from aib.agent.client import AupRefusalError
@@ -55,30 +54,10 @@ from aib.tools.wikipedia import (
 logger = logging.getLogger(__name__)
 
 
-def _make_tool_filter_hook(allowed: frozenset[str]) -> HookCallback:
-    """Create a PreToolUse hook that only allows the specified tools.
-
-    Needed because bypassPermissions ignores allowed_tools.
-    """
-
-    async def hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> HookJSONOutput:
-        raw: dict[str, Any] = dict(input_data)
-        if raw.get("hook_event_name") != "PreToolUse":
-            return {}
-        tool_name = str(raw.get("tool_name", ""))
-        decision = "allow" if tool_name in allowed else "deny"
-        return {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": decision,
-            }
-        }
-
-    return hook
+# The PreToolUse tool filter this file used to build by hand is
+# `lup.hooks.create_tool_allowlist_hook` — same reason for existing
+# (bypassPermissions ignores allowed_tools), and its denial names the tools
+# that ARE available so the sub-agent can re-plan instead of retrying.
 
 
 class WebSearchInput(BaseModel):
@@ -91,6 +70,13 @@ class WebSearchInput(BaseModel):
     blocked_domains: list[str] | None = Field(
         default=None, description="Never include results from these domains"
     )
+
+
+class SearchLink(TypedDict):
+    """One link a WebSearch result carried, captured for the sources list."""
+
+    title: str
+    url: str
 
 
 class SearchResult(TypedDict):
@@ -214,35 +200,33 @@ async def _fetch_live_snippets(
     return list(await asyncio.gather(*[_fetch_one(r) for r in results]))
 
 
-def _make_websearch_capture_hook() -> tuple[HookCallback, list[dict[str, str]]]:
-    """Create a PostToolUse hook that captures WebSearch result links.
+def websearch_links(event: LupHookInput) -> list[SearchLink]:
+    """Every {title, url} link a WebSearch tool result carried.
 
-    Returns (hook_callback, captured_links). After the sub-agent finishes,
-    captured_links contains {title, url} dicts from the raw tool response.
+    The extract half of `lup.hooks.create_capture_hook`: lup owns the
+    accumulator and the PostToolUse wiring, and this says what is worth
+    keeping out of one response.
     """
-    captured: list[dict[str, str]] = []
 
-    async def hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> HookJSONOutput:
-        raw: dict[str, Any] = dict(input_data)
-        if raw.get("hook_event_name") != "PostToolUse":
-            return {}
-        if raw.get("tool_name") != "WebSearch":
-            return {}
-        tool_response = raw.get("tool_response")
-        if not isinstance(tool_response, dict):
-            return {}
-        for item in tool_response.get("results", []):
-            if isinstance(item, dict):
-                for link in item.get("content", []):
-                    if isinstance(link, dict) and link.get("url"):
-                        captured.append(link)
-        return {}
+    def links() -> Iterator[SearchLink]:
+        try:
+            payload = json.loads(event.tool_result)
+        except (json.JSONDecodeError, TypeError):
+            return
+        if not isinstance(payload, dict):
+            return
+        # lup: ignore[dict-get] — the provider's own WebSearch response
+        for item in payload.get("results", []):
+            if not isinstance(item, dict):
+                continue
+            for link in item.get("content", []):  # lup: ignore[dict-get] — same
+                if isinstance(link, dict) and link.get("url"):  # lup: ignore[dict-get]
+                    yield SearchLink(
+                        title=str(link.get("title", "")),  # lup: ignore[dict-get]
+                        url=str(link["url"]),
+                    )
 
-    return hook, captured
+    return list(links())
 
 
 async def _raw_web_search(
@@ -286,19 +270,18 @@ async def _raw_web_search(
     from aib.agent.client import build_client
     from aib.agent.display import make_agent_prefix, print_block
 
-    capture_hook, captured_links = _make_websearch_capture_hook()
+    capture = create_capture_hook("WebSearch", websearch_links)
+    captured_links = capture["captured"]
     prefix = make_agent_prefix("websearch", search_query)
 
     async with build_client(
         model="haiku",
         permission_mode="bypassPermissions",
         allowed_tools=["WebSearch"],
-        hooks={
-            "PreToolUse": [
-                HookMatcher(hooks=[_make_tool_filter_hook(frozenset({"WebSearch"}))])
-            ],
-            "PostToolUse": [HookMatcher(hooks=[capture_hook])],
-        },
+        hooks=merge_hooks(
+            create_tool_allowlist_hook(["WebSearch"]),
+            capture["hooks"],
+        ),
         system_prompt="You are a web search assistant. Use WebSearch to find information.",
     ) as client:
         await client.query(prompt)

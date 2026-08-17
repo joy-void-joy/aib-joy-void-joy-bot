@@ -20,7 +20,13 @@ from pydantic import BaseModel, Field, ValidationError
 
 from claude_agent_sdk import TextBlock, ToolUseBlock
 
-from aib.agent.hooks import HooksConfig
+from lup.hooks import (
+    LupHooksConfig,
+    create_permission_hooks,
+    create_tool_allowlist_hook,
+    merge_hooks,
+)
+
 from aib.agent.nested import NestedAgentReport
 from aib.agent.models import (
     BinaryEstimate,
@@ -405,19 +411,15 @@ def build_reviewer_prompt(
     return "\n\n".join(sections)
 
 
-def build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
-    """Build permission hooks restricting the reviewer to specific directories."""
-    from claude_agent_sdk import HookMatcher
-    from claude_agent_sdk.types import (
-        HookContext,
-        HookInput,
-        HookJSONOutput,
-        PreToolUseHookSpecificOutput,
-        SyncHookJSONOutput,
-    )
+def build_reviewer_hooks(allowed_dirs: list[Path]) -> LupHooksConfig:
+    """Build permission hooks restricting the reviewer to specific directories.
 
-    from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
-
+    Both halves are lup's: the allowlist that says which tools exist for
+    this reviewer, and the directory rules that say where its read tools may
+    look. `tool_path` is resolved once at the adapter seam, so the hook no
+    longer has to know that Read spells its target `file_path` and Glob
+    spells it `path`.
+    """
     allowed = [
         "Read",
         "Glob",
@@ -426,52 +428,14 @@ def build_reviewer_hooks(allowed_dirs: list[Path]) -> HooksConfig:
         "mcp__search__fetch_url",
         "StructuredOutput",
     ]
-    hooks = create_allowed_tools_hook(allowed)
+    hooks = create_tool_allowlist_hook(allowed)
 
     if not allowed_dirs:
         return hooks
 
-    resolved_dirs = [d.resolve() for d in allowed_dirs]
-
-    def _deny(reason: str) -> HookJSONOutput:
-        return SyncHookJSONOutput(
-            hookSpecificOutput=PreToolUseHookSpecificOutput(
-                hookEventName="PreToolUse",
-                permissionDecision="deny",
-                permissionDecisionReason=reason,
-            ),
-        )
-
-    def _is_under_allowed(path: Path) -> bool:
-        resolved = path.resolve()
-        return any(resolved == d or resolved.is_relative_to(d) for d in resolved_dirs)
-
-    async def path_hook(
-        input_data: HookInput,
-        _tool_use_id: str | None,
-        _context: HookContext,
-    ) -> HookJSONOutput:
-        if input_data.get("hook_event_name") != "PreToolUse":
-            return SyncHookJSONOutput()
-
-        tool_name = input_data.get("tool_name", "")
-        tool_input = input_data.get("tool_input", {})
-
-        if tool_name in ("Read", "Glob", "Grep"):
-            file_path = tool_input.get("file_path") or tool_input.get("path", "")
-            if not file_path:
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Path required. Allowed directories: {dirs}")
-            if not _is_under_allowed(Path(file_path)):
-                dirs = ", ".join(str(d) for d in allowed_dirs)
-                return _deny(f"Access restricted to: {dirs}")
-
-        return SyncHookJSONOutput()
-
-    path_hooks: HooksConfig = {
-        "PreToolUse": [HookMatcher(hooks=[path_hook])],
-    }
-    return merge_hooks(hooks, path_hooks)
+    # The reviewer reads and never writes, so every directory it may reach
+    # is read-only and the read-write list is empty.
+    return merge_hooks(hooks, create_permission_hooks(rw_dirs=[], ro_dirs=allowed_dirs))
 
 
 # --- Trace File Writing ---

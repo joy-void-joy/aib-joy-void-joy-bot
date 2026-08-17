@@ -29,7 +29,8 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from aib.agent.client import REMOVE, build_client
 from aib.agent.display import make_agent_prefix, print_block
-from aib.agent.hooks import create_allowed_tools_hook, merge_hooks
+from lup.hooks import create_tool_allowlist_hook, merge_hooks
+
 from aib.agent.nested import NestedAgentReport
 from aib.agent.retrodict import create_retrodict_hooks
 from aib.retrodict_context import retrodict_cutoff
@@ -312,7 +313,7 @@ async def run_research_agent(
     extra_args = {"no-session-persistence": REMOVE}
     allowed_tools = get_research_allowed_tools()
 
-    hooks = create_allowed_tools_hook(allowed_tools)
+    hooks = create_tool_allowlist_hook(allowed_tools)
     if retrodict_cutoff.get() is not None:
         hooks = merge_hooks(hooks, create_retrodict_hooks())
 

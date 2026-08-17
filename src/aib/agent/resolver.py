@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from aib.agent.client import build_client
 from aib.agent.display import make_agent_prefix, print_block
-from aib.agent.hooks import create_allowed_tools_hook
+from lup.hooks import create_tool_allowlist_hook
 from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
     NOTES_TOOLS,
@@ -226,7 +226,7 @@ async def resolve_question(
         system_prompt=RESOLVER_SYSTEM_PROMPT,
         mcp_servers=servers,
         allowed_tools=tools,
-        hooks=create_allowed_tools_hook(tools),
+        hooks=create_tool_allowlist_hook(tools),
         permission_mode="bypassPermissions",
         output_format={
             "type": "json_schema",

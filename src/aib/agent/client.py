@@ -12,7 +12,7 @@ Exports:
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, cast, overload
+from typing import Any, overload
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
 from claude_agent_sdk.types import McpSdkServerConfig
@@ -125,12 +125,14 @@ async def build_client(
     Pass defaults=False to skip all defaults. Use REMOVE as a value
     to selectively drop a single default key.
     """
-    from aib.agent.hooks import HooksConfig, merge_hooks
+    from lup.adapters.claude.hooks import lup_hooks_to_claude
+    from lup.hooks import LupHooksConfig, merge_hooks
+
     from aib.agent.meta_hooks import create_structured_output_enforcement
 
     caller_extra = kwargs.pop("extra_args", None) or {}
     caller_env = kwargs.pop("env", None) or {}
-    caller_hooks: HooksConfig = kwargs.pop("hooks", None) or cast(HooksConfig, {})
+    caller_hooks: LupHooksConfig = kwargs.pop("hooks", None) or LupHooksConfig()
 
     if defaults:
         merged_extra = _merge(DEFAULT_EXTRA_ARGS, caller_extra)
@@ -173,7 +175,10 @@ async def build_client(
     options = ClaudeAgentOptions(
         extra_args=merged_extra,
         env=merged_env,
-        hooks=cast(Any, caller_hooks) if caller_hooks else None,
+        # The hook seam's other projection point, beside mcp_servers above:
+        # every factory speaks lup's normalized (LupHookInput) -> LupHookOutput
+        # shape, and the adapter renders it into the SDK's native matchers.
+        hooks=lup_hooks_to_claude(caller_hooks) if caller_hooks.by_event() else None,
         max_buffer_size=500 * 1024 * 1024,
         **kwargs,
     )
