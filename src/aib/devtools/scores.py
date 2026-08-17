@@ -23,11 +23,13 @@ import typer
 from lup.workspace.paths import agent_version, parse_timestamp
 
 from aib.paths import (
+    MIN_CHART_VERSION,
     load_all_forecast_jsons,
     load_all_retrodict_jsons,
     match_versions,
     parse_semver,
     resolve_version,
+    versions_at_least,
 )
 from aib.scoring import load_all_score_rows
 
@@ -1041,13 +1043,21 @@ def _build_strip(
     return "\n".join(lines)
 
 
-def _load_peer_data() -> dict[int, tuple[float, str]]:
+def scoped_versions(min_version: str) -> list[str]:
+    """The trace versions a cross-version view covers, given its floor."""
+    try:
+        return versions_at_least(min_version)
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--min-version") from e
+
+
+def _load_peer_data(versions: list[str] | None = None) -> dict[int, tuple[float, str]]:
     """Load one peer score per post_id, deduped (first with version wins).
 
     Returns {post_id: (peer_score, version)}.  Missing version defaults to "0.0.0".
     """
     best: dict[int, dict[str, object]] = {}
-    for forecast in load_all_forecast_jsons():
+    for forecast in load_all_forecast_jsons(versions=versions):
         pid = forecast.get("post_id")
         if not isinstance(pid, int):
             continue
@@ -1071,15 +1081,16 @@ def _load_peer_data() -> dict[int, tuple[float, str]]:
 def _load_strip_data(
     min_n: int,
     score_mode: ScoreMode = "peer",
+    versions: list[str] | None = None,
 ) -> dict[str, list[float]] | None:
     """Aggregate scores by version, applying min_n filter."""
     if score_mode == "peer":
-        peer_data = _load_peer_data()
+        peer_data = _load_peer_data(versions)
         by_version: dict[str, list[float]] = {}
         for peer_score, version in peer_data.values():
             by_version.setdefault(version, []).append(peer_score)
     else:
-        by_version = _load_baseline_strip_data()
+        by_version = _load_baseline_strip_data(versions)
 
     by_version = {v: s for v, s in by_version.items() if len(s) >= min_n}
     if not by_version:
@@ -1088,10 +1099,12 @@ def _load_strip_data(
     return by_version
 
 
-def _load_baseline_strip_data() -> dict[str, list[float]]:
+def _load_baseline_strip_data(
+    versions: list[str] | None = None,
+) -> dict[str, list[float]]:
     """Aggregate baseline scores by version (deduped by post_id)."""
     best: dict[int, dict[str, object]] = {}
-    for forecast in load_all_forecast_jsons():
+    for forecast in load_all_forecast_jsons(versions=versions):
         pid = forecast.get("post_id")
         if not isinstance(pid, int):
             continue
@@ -1122,7 +1135,9 @@ TrendPoint = tuple[
 ]  # (forecast_day, resolved_day, baseline_score, peer_score, version, post_id)
 
 
-def _load_trend_data() -> tuple[list[TrendPoint], dict[str, list[float]]] | None:
+def _load_trend_data(
+    versions: list[str] | None = None,
+) -> tuple[list[TrendPoint], dict[str, list[float]]] | None:
     """Load scored forecasts for trend scatter plots.
 
     Returns (points, version_forecast_dates). Each point carries both dates
@@ -1131,14 +1146,14 @@ def _load_trend_data() -> tuple[list[TrendPoint], dict[str, list[float]]] | None
     from datetime import timezone
 
     forecast_by_post: dict[int, dict[str, object]] = {}
-    for forecast in load_all_forecast_jsons():
+    for forecast in load_all_forecast_jsons(versions=versions):
         pid = forecast.get("post_id")
         if isinstance(pid, int):
             prev = forecast_by_post.get(pid)
             if prev is None or prev.get("agent_version") is None:
                 forecast_by_post[pid] = forecast
 
-    peer_data = _load_peer_data()
+    peer_data = _load_peer_data(versions)
 
     version_forecast_dates: dict[str, list[float]] = {}
     points: list[TrendPoint] = []
@@ -1257,10 +1272,12 @@ def _pick_colors_hierarchical(
     return colors
 
 
-def _version_color_map_and_totals() -> tuple[dict[str, int], dict[str, int]]:
+def _version_color_map_and_totals(
+    versions: list[str] | None = None,
+) -> tuple[dict[str, int], dict[str, int]]:
     """Stable version→color mapping and per-version forecast totals (deduped by post)."""
     post_versions: dict[int, str] = {}
-    for d in load_all_forecast_jsons():
+    for d in load_all_forecast_jsons(versions=versions):
         pid = d.get("post_id")
         if not isinstance(pid, int):
             continue
@@ -1513,6 +1530,11 @@ def strip(
     min_n: int = typer.Option(
         0, "--min-n", help="Minimum scored forecasts to include a version"
     ),
+    min_version: str = typer.Option(
+        MIN_CHART_VERSION,
+        "--min-version",
+        help="Lowest agent version to chart (0.0.0 for every version)",
+    ),
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
     ),
@@ -1528,12 +1550,16 @@ def strip(
     console = Console()
     version_dates = load_version_dates()
     mode_ref: list[ScoreMode] = ["baseline"]
+    versions = scoped_versions(min_version)
 
     def build_output() -> str:
-        by_version = _load_strip_data(min_n, mode_ref[0]) or {}
-        cmap, totals = _version_color_map_and_totals()
+        by_version = _load_strip_data(min_n, mode_ref[0], versions) or {}
+        cmap, totals = _version_color_map_and_totals(versions)
         if not by_version and not totals:
-            return f"No versions with >= {min_n} scored forecasts."
+            return (
+                f"No versions at or above v{min_version} "
+                f"with >= {min_n} scored forecasts."
+            )
         return _build_strip(
             by_version,
             version_dates,
@@ -1557,6 +1583,11 @@ def trend(
     min_n: int = typer.Option(
         0, "--min-n", help="Minimum forecasts to include a version"
     ),
+    min_version: str = typer.Option(
+        MIN_CHART_VERSION,
+        "--min-version",
+        help="Lowest agent version to chart (0.0.0 for every version)",
+    ),
     no_watch: bool = typer.Option(
         False, "--no-watch", help="Disable watch mode (default: refresh every 10m)"
     ),
@@ -1569,11 +1600,12 @@ def trend(
 
     console = Console()
     mode_ref: list[ScoreMode] = ["baseline"]
+    versions = scoped_versions(min_version)
 
     def build_output() -> str:
-        result = _load_trend_data()
+        result = _load_trend_data(versions)
         if not result:
-            return "No scored forecasts found."
+            return f"No scored forecasts found at or above v{min_version}."
         pts, ver_dates = result
         return _build_trend_output(
             pts,
