@@ -2,6 +2,14 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v7.1.0 (2026-08-18)
+
+Open every agent session through the portable runtime seam
+- agent: the Claude-only settings — the bash sandbox
+- the roots read outside cwd
+- the transport ceiling — ride a ConfigTransform stacked after rendering
+- so the portable request stays one both runtimes accept
+
 ## v7.0.0 (2026-08-17)
 
 Replace the hand-copied lup with a real lup dependency — a new framework under the agent
