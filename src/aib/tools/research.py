@@ -151,10 +151,10 @@ class ResearchOutput(BaseModel):
 
 
 class NestedAgentNoStructuredOutputError(BaseException):
-    """Nested agent stream ended without a structured_output payload.
+    """Nested agent turn ended without a structured payload.
 
-    Raised when output_format was set on a nested ClaudeSDKClient but the
-    final ResultMessage carried no structured_output. Intentionally inherits
+    Raised when a nested session asked for structured findings but its turn
+    finished without a valid submission. Intentionally inherits
     from BaseException (not Exception) so it bypasses every `except Exception`
     in the call chain — the broad catches in run_single_research, the
     @mcp_tool decorator, and core.py's partial-save handler — and crashes
