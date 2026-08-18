@@ -88,10 +88,8 @@ lup-devtools
 │   └── earnings       Check earnings dates for a ticker
 │
 ├── dev                Development tools
-│   ├── worktree       Create a new worktree with plugin refresh
-│   ├── setup-hooks    Install tracked git hooks (core.hooksPath -> .githooks)
-│   ├── plugin-bump    Bump the hand-written `aib` plugin's version
-│   └── plugin-version Display that plugin's current version
+│   ├── worktree       Create a new worktree, synced and hooked
+│   └── setup-hooks    Install tracked git hooks (core.hooksPath -> .githooks)
 │
 ├── version            Agent version management
 │   ├── show           Display the current agent version

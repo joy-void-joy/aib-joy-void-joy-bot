@@ -147,4 +147,3 @@ def worktree_cmd(
     except (sh.CommandNotFound, sh.ErrorReturnCode):
         typer.echo("Done! To switch to the new worktree:")
         typer.echo(f"  {cd_command}")
-
