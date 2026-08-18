@@ -17,7 +17,13 @@ from pathlib import Path
 
 import pytest
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.adapters.claude.runtime import SUBMISSION_TOOL, ClaudeSandboxConfig
+from lup.adapters.claude.runtime import (
+    SUBMISSION_TOOL,
+    ClaudeSandboxConfig,
+    build_claude_options,
+)
+from lup.runtime.output import SubmissionResponse, TurnSubmission
+from lup.types import JsonValue
 from lup.adapters.claude.selection import claude_config
 from lup.adapters.codex.login import CODEX_HOME
 from lup.adapters.codex.selection import CODEX_AUTONOMY, codex_config
@@ -166,9 +172,16 @@ def test_the_degree_a_session_states_is_the_one_both_runtimes_render(
     assert CODEX_AUTONOMY[autonomy] == sandbox
 
 
-def test_the_allowlist_and_the_hook_enforcing_it_both_reach_claude() -> None:
-    """Under bypassPermissions the SDK field alone is ignored, so the hook is
-    what actually holds the line — and it has to render alongside it."""
+async def accept_submission(_: JsonValue) -> SubmissionResponse:
+    """Stand in for the handler a turn binds, which nothing here calls."""
+    return SubmissionResponse(accepted=True, message="")
+
+
+def test_the_roster_reaches_the_field_that_bounds_a_session() -> None:
+    """`tools` is the engine's set of built-ins and `allowed_tools` auto-approves
+    without restricting, so a roster stated only through the second bounds
+    nothing. A session naming one built-in gets exactly it — not the default
+    set, which is what an unstated roster would have left standing."""
     rendered = claude_config(
         agent_request(
             model="sonnet",
@@ -178,31 +191,77 @@ def test_the_allowlist_and_the_hook_enforcing_it_both_reach_claude() -> None:
         )
     )
 
+    assert rendered.tools == ["Read"]
     assert "Read" in rendered.allowed_tools
-    assert rendered.hooks is not None
 
 
-def test_the_allowlist_admits_the_tool_a_structured_turn_finishes_through() -> None:
-    """A structured turn is served by a submission tool the runtime installs.
-    The allowlist hook is enforced by name, so one written without it denies
-    the single tool the turn cannot end without — and the failure would be an
-    agent that researched correctly and could not answer."""
-    request = agent_request(
-        model="sonnet", system_prompt="", autonomy="unattended", allowed_tools=["Read"]
+def test_a_session_wanting_no_builtin_is_given_none_rather_than_all() -> None:
+    """The worldview sessions work entirely through their own MCP servers. An
+    empty roster is what says so; the absent one they had before is the whole
+    default set, which is the opposite instruction."""
+    rendered = claude_config(
+        agent_request(
+            model="sonnet",
+            system_prompt="",
+            autonomy="ask",
+            allowed_tools=["mcp__worldview_maintenance__wv_read_entry"],
+        )
     )
 
-    assert SUBMISSION_TOOL in request.allowed_tools
+    assert rendered.tools == []
 
 
-def test_codex_refuses_a_tool_using_session_by_design() -> None:
-    """Not a gap to close here: on Codex the dispatcher generated into its
-    harness tree governs, so a session-level allowlist would be a second
-    answer to a question that already has one."""
+def test_a_session_declares_no_hook_where_the_caller_asked_for_none() -> None:
+    """The allowlist hook stood in for a roster field this project was not
+    using. With the roster stated, a session carries only the hooks its caller
+    actually wanted — and `hooks` being unset is half of what a Codex session
+    is no longer refused for."""
     request = agent_request(
-        model="sonnet", system_prompt="", autonomy="unattended", allowed_tools=["Read"]
+        model="sonnet", system_prompt="", autonomy="ask", allowed_tools=["Read"]
     )
 
-    with pytest.raises(ValueError, match="no session-level"):
+    assert request.hooks is None
+
+
+def test_the_submission_tool_is_auto_approved_by_the_runtime_installing_it() -> None:
+    """A structured turn ends through a tool the runtime installs, so at `ask`
+    it has to be auto-approved or the turn cannot finish. This project used to
+    name it into every allowlist because its own hook was enforced by name;
+    the runtime does it, and this pins that rather than restating it."""
+    options = build_claude_options(
+        claude_config(
+            agent_request(
+                model="sonnet",
+                system_prompt="",
+                autonomy="ask",
+                allowed_tools=["Read"],
+            )
+        ),
+        binding=lambda: TurnSubmission(schema={}, submit=accept_submission),
+        resume=None,
+        session_id=None,
+    )
+
+    assert SUBMISSION_TOOL in options.allowed_tools
+
+
+def test_codex_refuses_a_tool_using_session_for_what_it_really_lacks() -> None:
+    """Codex refused three fields here, and one of the three was this project's
+    own doing: a hook built by hand to enforce a roster stated through a field
+    that does not restrict. That hook is gone, and with it the refusal it
+    caused.
+
+    Two remain and both are the runtime's own: the app-server has no field for
+    a built-in roster, and no concept of an auto-approval list. Neither is
+    something this project can stop asking for — the roster is what bounds a
+    session, and the approval list is what lets one open below `unattended`
+    without stalling on a question nobody hears.
+    """
+    request = agent_request(
+        model="sonnet", system_prompt="", autonomy="ask", allowed_tools=["Read"]
+    )
+
+    with pytest.raises(ValueError, match="no session-level tools, allowed_tools;"):
         codex_config(request)
 
 

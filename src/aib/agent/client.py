@@ -16,13 +16,12 @@ from pathlib import Path
 from typing import overload
 
 from lup.adapters.claude.runtime import (
-    SUBMISSION_TOOL,
     ClaudeSandboxConfig,
     ClaudeSessionConfig,
     create_claude_session_factory,
 )
 from lup.adapters.claude.selection import CLAUDE_RUNTIME, claude_config
-from lup.hooks import LupHooksConfig, create_tool_allowlist_hook, merge_hooks
+from lup.hooks import LupHooksConfig
 from lup.mcp import McpServerEntry
 from lup.runtime.config import ConfigTransform
 from lup.runtime.factory import SessionFactory
@@ -151,29 +150,36 @@ def agent_request(
     permission but a mode that asks the model to present a plan instead of
     acting, and a session that must return a model never returns one.
 
-    The allowlist and the hook enforcing it both travel as fields: Claude
-    renders them, and Codex refuses them by design because the dispatcher
-    generated into its harness tree is what governs a session there.
+    A caller states one roster, and it reaches the two fields that between
+    them bound a session. `tools` is the engine's own set of built-ins, so
+    the built-in half is derived by intersection and a session naming no
+    built-in gets none rather than all of them. The MCP half needs no field:
+    every server here is built carrying exactly the tools its session may
+    call, so wiring already says it, and saying it twice is what drifts.
 
-    The hook is built here rather than by the caller because bypassPermissions
-    ignores the SDK's allowlist field, which leaves the hook as the only thing
-    holding the line — and a structured turn is served by a submission tool the
-    runtime installs, so an allowlist written without it denies the one tool
-    the turn cannot finish without. Callers state the tools they want and pass
-    anything further as `extra_hooks`.
+    `allowed_tools` keeps the job the SDK documents for it — auto-approval,
+    not restriction. That is not redundant now that sessions open below
+    `unattended`: at `ask` a tool outside it raises a permission request no
+    programmatic session can answer.
+
+    Codex refuses `tools`, having no roster of its own, which is one honest
+    refusal against a real gap where there were three. Callers pass anything
+    further as `extra_hooks`.
     """
+    from aib.agent.tool_policy import BUILTIN_TOOLS
+
     resolved = AGENT_CWD if cwd is None else cwd
     resolved.mkdir(parents=True, exist_ok=True)
-    tools = [*allowed_tools, SUBMISSION_TOOL]
-    hooks = create_tool_allowlist_hook(tools)
+    roster = list(allowed_tools)
     return SessionRequest(
         model=model,
         instructions=system_prompt,
         cwd=resolved,
         autonomy=autonomy,
         effort=SESSION_EFFORT,
-        allowed_tools=tools,
-        hooks=hooks if extra_hooks is None else merge_hooks(hooks, extra_hooks),
+        tools=[name for name in roster if name in BUILTIN_TOOLS],
+        allowed_tools=roster,
+        hooks=extra_hooks,
         tool_servers=dict(tool_servers or {}),
         max_thinking_tokens=max_thinking_tokens,
         environment=session_env(profile if profile is not None else settings.profile),

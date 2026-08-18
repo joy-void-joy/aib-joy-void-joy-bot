@@ -67,6 +67,19 @@ async def test_the_probe_prompt_reaches_the_shell_when_the_roster_admits_it() ->
     assert "Bash" in await tools_called(None)
 
 
+async def test_a_name_the_engine_does_not_know_leaves_the_roster_standing() -> None:
+    """This project's roster is derived by intersecting what a session asked
+    for with the built-ins it declares, and that declaration carries names the
+    engine has no built-in for — `StructuredOutput` among them, which is served
+    over MCP. A roster that refused such a name would turn a derivation into a
+    list every caller had to curate against a set nobody publishes.
+
+    Asked as "does the roster still bind", which separates the three outcomes
+    that matter: a raised error fails here, a roster quietly discarded shows up
+    as the shell being reachable, and a name harmlessly ignored passes."""
+    assert "Bash" not in await tools_called(["Read", "StructuredOutput"])
+
+
 async def test_a_roster_bounds_a_session_that_bypasses_permissions() -> None:
     """The gate. `tools` naming only Read leaves a session at `unattended`
     unable to reach the shell, which is what makes the field a roster rather
