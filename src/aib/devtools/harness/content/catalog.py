@@ -31,25 +31,11 @@ PROJECT_SKILLS: list[models.Skill] = [
     SKILL_FB_RETRODICT,
     SKILL_LEAK,
 ]
-"""The forecasting skills this repository declares beyond the library's.
-
-# lup: solved: The six `/aib:*` skills under `.claude/plugins/aib/commands/`
-# are the last hand-maintained half of this tree. Declaring them here would
-# put every skill this repository ships under one generator, and retire the
-# `aib` plugin entirely.
-"""
+"""The forecasting skills this repository declares beyond the library's."""
 
 PROJECT_AGENTS: list[models.Agent] = []
 """The four agents this repository had were lup's, copied. They come back
-from the library rather than being declared again.
-
-# lup: defer: This project's `dev` sub-app is its own four commands, so it
-# has none of the library's — `check`, `comments`, `rules`, `report-friction`,
-# `conflict`, `git-hooks`. Composing `create_dev_app` would bring them, and
-# needs one decision first: the library's `dev worktree` is a sub-tree with
-# `create`/`list`/`remove` where this project's is a flat command, and they
-# collide on the name.
-"""
+from the library rather than being declared again."""
 
 SKILLS = [*LIBRARY_SKILLS, *PROJECT_SKILLS]
 """Every skill this repository's generated plugin ships."""
