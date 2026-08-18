@@ -20,8 +20,8 @@ from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
 from lup.adapters.claude.runtime import SUBMISSION_TOOL, ClaudeSandboxConfig
 from lup.adapters.claude.selection import claude_config
 from lup.adapters.codex.login import CODEX_HOME
-from lup.adapters.codex.selection import codex_config
-from lup.runtime.selection import Runtime, SessionRequest
+from lup.adapters.codex.selection import CODEX_AUTONOMY, codex_config
+from lup.runtime.selection import Runtime, SessionAutonomy, SessionRequest
 
 from aib.agent.client import (
     SESSION_BUFFER_BYTES,
@@ -107,7 +107,9 @@ def test_both_session_shapes_are_contained_in_the_same_home(tmp_path: Path) -> N
     """The portable path and the streaming path have to agree on containment."""
     runtime = select_runtime("claude")
     tool_free = one_shot_request("sonnet", "", None)
-    tool_using = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+    tool_using = agent_request(
+        model="sonnet", system_prompt="", autonomy="unattended", allowed_tools=["Read"]
+    )
 
     assert contained_home(runtime, tmp_path, tool_free) == contained_home(
         runtime, tmp_path, tool_using
@@ -137,19 +139,43 @@ def test_the_runtime_a_session_opens_through_is_the_selected_one() -> None:
     assert select_runtime("codex").name == "Codex"
 
 
-def test_a_tool_using_session_asks_for_unattended_autonomy() -> None:
-    """`bypassPermissions` is Claude's spelling of a degree both runtimes have."""
-    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+@pytest.mark.parametrize(
+    ("autonomy", "permission_mode", "sandbox"),
+    [
+        ("ask", "default", "read-only"),
+        ("accept_edits", "acceptEdits", "workspace-write"),
+        ("unattended", "bypassPermissions", "danger-full-access"),
+    ],
+)
+def test_the_degree_a_session_states_is_the_one_both_runtimes_render(
+    autonomy: SessionAutonomy, permission_mode: str, sandbox: str
+) -> None:
+    """Autonomy is what each session says about its own reach, so the degree a
+    caller states has to survive rendering — as a permission mode on Claude and
+    as a sandbox on Codex, which is the whole of what bounds a session there.
 
-    assert request.autonomy == "unattended"
-    assert claude_config(request).permission_mode == "bypassPermissions"
+    `plan` is absent because no session here opens at it: Claude renders it as
+    plan mode, where the model presents a plan instead of acting, and every
+    session this project opens has to act and then answer.
+    """
+    request = agent_request(
+        model="sonnet", system_prompt="", autonomy=autonomy, allowed_tools=["Read"]
+    )
+
+    assert claude_config(request).permission_mode == permission_mode
+    assert CODEX_AUTONOMY[autonomy] == sandbox
 
 
 def test_the_allowlist_and_the_hook_enforcing_it_both_reach_claude() -> None:
     """Under bypassPermissions the SDK field alone is ignored, so the hook is
     what actually holds the line — and it has to render alongside it."""
     rendered = claude_config(
-        agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+        agent_request(
+            model="sonnet",
+            system_prompt="",
+            autonomy="unattended",
+            allowed_tools=["Read"],
+        )
     )
 
     assert "Read" in rendered.allowed_tools
@@ -161,7 +187,9 @@ def test_the_allowlist_admits_the_tool_a_structured_turn_finishes_through() -> N
     The allowlist hook is enforced by name, so one written without it denies
     the single tool the turn cannot end without — and the failure would be an
     agent that researched correctly and could not answer."""
-    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+    request = agent_request(
+        model="sonnet", system_prompt="", autonomy="unattended", allowed_tools=["Read"]
+    )
 
     assert SUBMISSION_TOOL in request.allowed_tools
 
@@ -170,7 +198,9 @@ def test_codex_refuses_a_tool_using_session_by_design() -> None:
     """Not a gap to close here: on Codex the dispatcher generated into its
     harness tree governs, so a session-level allowlist would be a second
     answer to a question that already has one."""
-    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+    request = agent_request(
+        model="sonnet", system_prompt="", autonomy="unattended", allowed_tools=["Read"]
+    )
 
     with pytest.raises(ValueError, match="no session-level"):
         codex_config(request)
@@ -183,7 +213,9 @@ def test_claude_only_settings_ride_a_transform_rather_than_the_request() -> None
         sandbox=ClaudeSandboxConfig(enabled=True),
     )
     rendered = extras.apply(
-        claude_config(agent_request(model="sonnet", system_prompt=""))
+        claude_config(
+            agent_request(model="sonnet", system_prompt="", autonomy="unattended")
+        )
     )
 
     assert rendered.add_dirs == [Path("/tmp/notes")]
@@ -193,7 +225,9 @@ def test_claude_only_settings_ride_a_transform_rather_than_the_request() -> None
 def test_a_session_holds_one_whole_frame_of_a_fetched_page() -> None:
     """A Wayback snapshot arrives as a single frame well past the SDK ceiling."""
     rendered = ClaudeExtras().apply(
-        claude_config(agent_request(model="sonnet", system_prompt=""))
+        claude_config(
+            agent_request(model="sonnet", system_prompt="", autonomy="unattended")
+        )
     )
 
     assert rendered.max_buffer_size == SESSION_BUFFER_BYTES

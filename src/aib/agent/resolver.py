@@ -226,6 +226,7 @@ async def resolve_question(
         agent_request(
             model=default_settings.model,
             system_prompt=RESOLVER_SYSTEM_PROMPT,
+            autonomy="ask",
             tool_servers=servers,
             allowed_tools=tools,
         ),

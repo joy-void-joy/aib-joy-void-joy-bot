@@ -27,7 +27,7 @@ from lup.mcp import McpServerEntry
 from lup.runtime.config import ConfigTransform
 from lup.runtime.factory import SessionFactory
 from lup.runtime.models import TurnResult
-from lup.runtime.selection import SessionRequest
+from lup.runtime.selection import SessionAutonomy, SessionRequest
 from lup.types import EnvVars, Usage
 from pydantic import BaseModel
 
@@ -131,6 +131,7 @@ def agent_request(
     *,
     model: str,
     system_prompt: str,
+    autonomy: SessionAutonomy,
     allowed_tools: Sequence[str] = (),
     extra_hooks: LupHooksConfig | None = None,
     tool_servers: Mapping[str, McpServerEntry] | None = None,
@@ -140,10 +141,19 @@ def agent_request(
 ) -> SessionRequest:
     """What a tool-using session this project opens asks for, portably.
 
-    `unattended` is the portable degree Claude spells `bypassPermissions`. The
-    allowlist and the hook enforcing it both travel as fields: Claude renders
-    them, and Codex refuses them by design because the dispatcher generated
-    into its harness tree is what governs a session there.
+    Autonomy is stated by the caller rather than defaulted, because it is the
+    portable word for what a session may do to the world and no two of these
+    sessions mean the same thing by it. Claude reads it as a permission mode
+    and Codex as a sandbox, so a degree left to a default would be a sandbox
+    nobody chose.
+
+    `plan` is not among the degrees to reach for here. It is not a read-only
+    permission but a mode that asks the model to present a plan instead of
+    acting, and a session that must return a model never returns one.
+
+    The allowlist and the hook enforcing it both travel as fields: Claude
+    renders them, and Codex refuses them by design because the dispatcher
+    generated into its harness tree is what governs a session there.
 
     The hook is built here rather than by the caller because bypassPermissions
     ignores the SDK's allowlist field, which leaves the hook as the only thing
@@ -160,7 +170,7 @@ def agent_request(
         model=model,
         instructions=system_prompt,
         cwd=resolved,
-        autonomy="unattended",
+        autonomy=autonomy,
         effort=SESSION_EFFORT,
         allowed_tools=tools,
         hooks=hooks if extra_hooks is None else merge_hooks(hooks, extra_hooks),
