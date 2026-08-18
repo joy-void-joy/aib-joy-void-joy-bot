@@ -10,14 +10,24 @@ Exports:
 """
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, overload
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from claude_agent_sdk.types import McpSdkServerConfig
 from lup.adapters.claude.config_home import workspace_config_environment
-from lup.mcp import LupMcpServerConfig
+from lup.adapters.claude.runtime import (
+    ClaudeSandboxConfig,
+    ClaudeSessionConfig,
+    create_claude_session_factory,
+)
+from lup.adapters.claude.selection import CLAUDE_RUNTIME, claude_config
+from lup.hooks import LupHooksConfig
+from lup.mcp import LupMcpServerConfig, McpServerEntry
+from lup.runtime.config import ConfigTransform
+from lup.runtime.factory import SessionFactory
 from lup.runtime.models import TurnResult
 from lup.runtime.selection import SessionRequest
 from lup.types import EnvVars, Usage
@@ -85,6 +95,91 @@ def session_env(profile: str | None) -> EnvVars:
         **workspace_config_environment(profile_env(profile), AGENT_CWD),
         **DEFAULT_ENV,
     }
+
+
+class ClaudeExtras(ConfigTransform[ClaudeSessionConfig]):
+    """Session settings only Claude has a word for, stacked after rendering.
+
+    A portable request states what both runtimes share. A bash sandbox, the
+    roots a session may read outside its cwd, and the transport ceiling are
+    not among them, and a request carrying them would be asking Codex for
+    something it has no way to answer. Rendering first and transforming after
+    is the seam lup leaves for exactly this, so the Claude-only half is
+    additive rather than a second way to open a session.
+    """
+
+    def __init__(
+        self,
+        *,
+        add_dirs: Sequence[Path] = (),
+        sandbox: ClaudeSandboxConfig | None = None,
+        max_buffer_size: int | None = SESSION_BUFFER_BYTES,
+    ) -> None:
+        self.add_dirs = list(add_dirs)
+        self.sandbox = sandbox
+        self.max_buffer_size = max_buffer_size
+
+    def apply(self, config: ClaudeSessionConfig) -> ClaudeSessionConfig:
+        """Return the rendered configuration with this project's extras on it."""
+        return config.model_copy(
+            update={
+                "add_dirs": self.add_dirs,
+                "sandbox": self.sandbox,
+                "max_buffer_size": self.max_buffer_size,
+            }
+        )
+
+
+def agent_request(
+    *,
+    model: str,
+    system_prompt: str,
+    allowed_tools: Sequence[str] = (),
+    hooks: LupHooksConfig | None = None,
+    tool_servers: Mapping[str, McpServerEntry] | None = None,
+    cwd: Path | None = None,
+    max_thinking_tokens: int | None = None,
+    profile: str | None = None,
+) -> SessionRequest:
+    """What a tool-using session this project opens asks for, portably.
+
+    `unattended` is the portable degree Claude spells `bypassPermissions`. The
+    allowlist and the hook enforcing it both travel as fields: Claude renders
+    them, and Codex refuses them by design because the dispatcher generated
+    into its harness tree is what governs a session there.
+    """
+    resolved = AGENT_CWD if cwd is None else cwd
+    resolved.mkdir(parents=True, exist_ok=True)
+    return SessionRequest(
+        model=model,
+        instructions=system_prompt,
+        cwd=resolved,
+        autonomy="unattended",
+        effort=SESSION_EFFORT,
+        allowed_tools=list(allowed_tools),
+        hooks=hooks,
+        tool_servers=dict(tool_servers or {}),
+        max_thinking_tokens=max_thinking_tokens,
+        environment=session_env(profile if profile is not None else settings.profile),
+    )
+
+
+def agent_session(
+    request: SessionRequest,
+    *,
+    extras: ClaudeExtras | None = None,
+    runtime: str | None = None,
+) -> SessionFactory:
+    """The configured factory the selected runtime answers this request with.
+
+    Extras are shown to Claude and to nothing else: they are that runtime's
+    own configuration, so offering them to another would be handing it a
+    vocabulary it never agreed to.
+    """
+    selected = select_runtime(runtime)
+    if extras is None or selected is not CLAUDE_RUNTIME:
+        return selected.session_factory(request)
+    return create_claude_session_factory(extras.apply(claude_config(request)))
 
 
 def _merge(defaults: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:

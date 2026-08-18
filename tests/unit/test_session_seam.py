@@ -13,11 +13,22 @@ that cannot happen, and so what one session writes stays inside its own
 folder.
 """
 
+from pathlib import Path
+
+import pytest
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
+from lup.adapters.claude.runtime import ClaudeSandboxConfig
 from lup.adapters.claude.selection import claude_config
 from lup.adapters.codex.selection import codex_config
+from lup.hooks import LupHooksConfig
 
-from aib.agent.client import one_shot_request, session_env
+from aib.agent.client import (
+    SESSION_BUFFER_BYTES,
+    ClaudeExtras,
+    agent_request,
+    one_shot_request,
+    session_env,
+)
 from aib.paths import AGENT_CWD
 from aib.runtime import select_runtime
 
@@ -88,3 +99,57 @@ def test_the_effort_asked_for_reaches_both_runtimes() -> None:
 def test_the_runtime_a_session_opens_through_is_the_selected_one() -> None:
     assert select_runtime("claude").name == "Claude Code"
     assert select_runtime("codex").name == "Codex"
+
+
+def test_a_tool_using_session_asks_for_unattended_autonomy() -> None:
+    """`bypassPermissions` is Claude's spelling of a degree both runtimes have."""
+    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+
+    assert request.autonomy == "unattended"
+    assert claude_config(request).permission_mode == "bypassPermissions"
+
+
+def test_the_allowlist_and_the_hook_enforcing_it_both_reach_claude() -> None:
+    """Under bypassPermissions the SDK field alone is ignored, so the hook is
+    what actually holds the line — and it has to render alongside it."""
+    hooks = LupHooksConfig()
+    request = agent_request(
+        model="sonnet", system_prompt="", allowed_tools=["Read"], hooks=hooks
+    )
+    rendered = claude_config(request)
+
+    assert rendered.allowed_tools == ["Read"]
+    assert rendered.hooks is hooks
+
+
+def test_codex_refuses_a_tool_using_session_by_design() -> None:
+    """Not a gap to close here: on Codex the dispatcher generated into its
+    harness tree governs, so a session-level allowlist would be a second
+    answer to a question that already has one."""
+    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+
+    with pytest.raises(ValueError, match="no session-level"):
+        codex_config(request)
+
+
+def test_claude_only_settings_ride_a_transform_rather_than_the_request() -> None:
+    """A request carrying these would be asking Codex for what it cannot answer."""
+    extras = ClaudeExtras(
+        add_dirs=[Path("/tmp/notes")],
+        sandbox=ClaudeSandboxConfig(enabled=True),
+    )
+    rendered = extras.apply(
+        claude_config(agent_request(model="sonnet", system_prompt=""))
+    )
+
+    assert rendered.add_dirs == [Path("/tmp/notes")]
+    assert rendered.sandbox is not None and rendered.sandbox.enabled
+
+
+def test_a_session_holds_one_whole_frame_of_a_fetched_page() -> None:
+    """A Wayback snapshot arrives as a single frame well past the SDK ceiling."""
+    rendered = ClaudeExtras().apply(
+        claude_config(agent_request(model="sonnet", system_prompt=""))
+    )
+
+    assert rendered.max_buffer_size == SESSION_BUFFER_BYTES
