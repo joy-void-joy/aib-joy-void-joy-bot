@@ -24,7 +24,6 @@ from pydantic import AnyHttpUrl
 from lup.adapters.claude.harness import ClaudeSpellings
 from lup.harness.contracts import NativeSpellings
 from lup.harness.models import (
-    AcceptanceGuard,
     Harness,
     HookPathRole,
     HookSandbox,
@@ -223,9 +222,6 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
             ],
             path_roles=path_roles(),
             human_owned_files=[Path("README.md")],
-            # This repository runs the resolver, and its tests are what a
-            # leased worker implements against.
-            acceptance_guard=AcceptanceGuard(),
             diagnostics_command=[".venv/bin/pyright", "--outputjson"],
             shell_rules=SHELL_RULES,
             runner_targets=RUNNER_TARGETS,

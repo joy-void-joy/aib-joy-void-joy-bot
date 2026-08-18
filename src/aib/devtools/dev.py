@@ -17,17 +17,6 @@ app = typer.Typer(no_args_is_help=True)
 # Worktree management
 # ---------------------------------------------------------------------------
 
-MARKETPLACE = "aib"
-"""What `.claude-plugin/marketplace.json` calls this marketplace.
-
-`settings.json` enables the plugin as `aib-workflow@aib`, so this is the
-name both the install and the cache path have to use. Spelled `local` they
-installed a plugin nobody enables and cleared a path that never exists."""
-
-PLUGIN_CACHE_DIR = (
-    Path.home() / ".claude" / "plugins" / "cache" / MARKETPLACE / "aib-workflow"
-)
-
 PLUGIN_DIR = Path(".claude/plugins/aib")
 PLUGIN_JSON = PLUGIN_DIR / ".claude-plugin" / "plugin.json"
 PLUGIN_CHANGELOG = PLUGIN_DIR / "CHANGELOG.md"
@@ -82,16 +71,18 @@ def setup_hooks_cmd() -> None:
 def worktree_cmd(
     name: str = typer.Argument(..., help="Name for the new worktree/branch"),
     no_sync: bool = typer.Option(False, "--no-sync", help="Skip running uv sync"),
-    no_plugin_refresh: bool = typer.Option(
-        False, "--no-plugin-refresh", help="Skip plugin cache refresh and install"
-    ),
     copy_data: bool = typer.Option(
         True,
         "--copy-data/--no-copy-data",
         help="Copy gitignored data directories to new worktree",
     ),
 ) -> None:
-    """Create a new worktree with plugin cache refresh."""
+    """Create a worktree, synced and with the tracked hooks armed.
+
+    Nothing here installs a plugin: `harness claude` launches the generated
+    tree of whichever checkout it is run from, with `--plugin-dir`, so a
+    worktree carries its own plugin by existing.
+    """
     cwd = Path.cwd().resolve()
     tree_dir = _get_tree_dir()
     new_worktree_path = tree_dir / name
@@ -154,26 +145,6 @@ def worktree_cmd(
             typer.echo("Dependencies synced")
         except sh.ErrorReturnCode as e:
             typer.echo(f"Warning: uv sync failed: {e.stderr.decode()}", err=True)
-
-    if not no_plugin_refresh:
-        if PLUGIN_CACHE_DIR.exists():
-            shutil.rmtree(PLUGIN_CACHE_DIR)
-            typer.echo("Cleared plugin cache (aib-workflow)")
-
-        claude = sh.Command("claude")
-        try:
-            claude(
-                "plugin",
-                "install",
-                f"aib-workflow@{MARKETPLACE}",
-                "--scope",
-                "project",
-                _cwd=str(new_worktree_path),
-                _tty_out=False,
-            )
-            typer.echo("Installed aib-workflow plugin (project scope)")
-        except sh.ErrorReturnCode as e:
-            typer.echo(f"Warning: plugin install failed: {e.stderr.decode()}", err=True)
 
     typer.echo()
     cd_command = f"cd /; cd {new_worktree_path}; claude"
@@ -292,10 +263,6 @@ def plugin_bump_cmd(
     typer.echo(f"Plugin: {old_version} -> {new_version} ({level})")
 
     _write_plugin_changelog(new_version, summary, details)
-
-    if PLUGIN_CACHE_DIR.exists():
-        shutil.rmtree(PLUGIN_CACHE_DIR)
-        typer.echo("Cleared plugin cache (reinstall to pick up changes)")
 
 
 @app.command("plugin-version")

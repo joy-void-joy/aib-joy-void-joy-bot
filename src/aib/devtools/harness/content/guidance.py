@@ -98,7 +98,7 @@ uv run forecast submit <question_id>
 # Forecast, submit, and post reasoning as a private comment
 uv run forecast submit <question_id> --comment
 
-# Run on a specific Claude account (registered in ~/.lup/profiles.json)
+# Run on a specific Claude account (register one with `harness profile add`)
 uv run forecast test <question_id> --profile work
 
 # Compare agent configurations side by side (see A/B Testing below)
@@ -152,13 +152,11 @@ uv run pytest -k "test_forecast"
 - `tests/unit/` - Unit tests (mock external APIs)
 - `tests/integration/` - Integration tests (require API keys, use `@pytest.mark.integration`)
 
-**Tests are what the work is measured against, so editing one is a gate.** An
-ordinary session is asked before it changes a file under `tests/`, and a
-session launched as the resolver's implementer is refused outright: for that
-session these tests are the specification, and rewriting a specification to
-match an implementation is the failure the gate exists to catch. If a test
-encodes the wrong behaviour, say what it demands and why it cannot be met,
-and leave the change to whoever can weigh it.
+**A test is edited like any other file** — the ordinary lattice judges it, with
+no gate of its own. What the gate protected still holds as a norm: a test states
+the behaviour production owes, so changing one to match an implementation is
+backwards. Change the implementation, and edit the test only when it genuinely
+encodes the wrong behaviour — saying, in the commit, which it was.
 
 ## Debugging
 
@@ -224,13 +222,16 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 **Bump the `aib` plugin's version** if the branch changes anything the
 hand-written `aib` plugin ships — its commands or its agents. Use
-`uv run lup-devtools dev plugin-bump <level> "<summary>"`. Plugin versions are
-cached by the runtime, so without a bump a new or renamed command does not
-appear after a reinstall. **Worktree caveat:** plugin installation resolves the
-marketplace's relative path from the main worktree rather than the current one,
-so plugin changes on a feature branch do not take effect until they reach
-`main`. The generated `lup` plugin needs none of this: its version is the
-harness generator's and moves when the declaration does.
+`uv run lup-devtools dev plugin-bump <level> "<summary>"`. The version is the
+plugin's own record of what it ships; nothing reinstalls it, so a bump is a
+statement rather than a cache invalidation. The generated `lup` plugin needs
+none of this: its version is the harness generator's and moves when the
+declaration does.
+
+Neither plugin is installed through a marketplace. `harness claude` launches
+the generated tree of whichever checkout it is run from, naming it with
+`--plugin-dir`, so a worktree carries its plugin by existing and a change on a
+feature branch takes effect there immediately.
 
 ### Commit Guidelines
 
@@ -520,11 +521,10 @@ permission policy is a declaration compiled into the plugin that enforces it,
 and every refusal names what it caught and how to answer.
 
 Every shell command, URL scope, and edit is classified. Segments join
-deny > ask > defer > allow, and malformed input fails conservatively. Three
+deny > ask > defer > allow, and malformed input fails conservatively. Two
 refusals are worth knowing before you meet them:
 
 - **A forecast, in any spelling.** Refused, with the instruction to print the command instead.
-- **An edit to `tests/`.** An approval question, and a refusal for the resolver's implementer.
 - **A hand edit to a generated tree.** The harness tree is compiled from the declarations under `src/aib/devtools/harness/`; edit those and regenerate.
 
 `# lup: escalate: <why>` as the leading line of a shell command promotes a

@@ -71,8 +71,8 @@ def test_usage_subcommand_is_not_forwarded(forwarded: list[list[str]]) -> None:
 def test_unknown_profile_exits(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unregistered profile name fails the launcher instead of silently using the default account."""
 
-    def raise_unknown(name: str | None = None) -> Path:
-        raise UnknownProfileError(f"unknown profile {name!r} in registry (known: none)")
+    def raise_unknown(name: str | None = None) -> Path | None:
+        raise UnknownProfileError(name or "", [])
 
     monkeypatch.setattr(claude_mod, "resolve_config_dir", raise_unknown)
     with pytest.raises(typer.Exit):
