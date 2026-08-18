@@ -100,8 +100,18 @@ lup-devtools
 │   ├── websearch      Debug web search tool
 │   └── earnings       Check earnings dates for a ticker
 │
-├── dev                Development tools
-│   ├── worktree       Create a new worktree, synced and hooked
+├── dev                Worktrees, branches, and pre-flight checks (the library's,
+│   │                  wired over this project's declarations)
+│   ├── worktree       create / list / remove
+│   ├── check          ruff format, ruff check, pyright, pytest
+│   ├── comments       Open `# lup:` feedback, and the pass that retires a claim
+│   ├── issues         The open issues a resolver run would take as evidence
+│   ├── pr             PR lifecycle (status, merge, push, checks)
+│   ├── conflict       Merge/rebase conflict resolution
+│   ├── rules          Generate the Lup rule and typed-suppression reference
+│   ├── policy         What the declared permission policy decides, and why
+│   ├── report-friction File or correct workflow friction in this checkout
+│   ├── git-hooks      The library's own guards (this project's live in .githooks/)
 │   └── setup-hooks    Install tracked git hooks (core.hooksPath -> .githooks)
 │
 ├── version            Agent version management
