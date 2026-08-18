@@ -647,6 +647,14 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "strength": "soft",
         },
         {
+            "id": "silent-truncation",
+            "pattern": "\\[\\s*:\\s*(?:\\d[\\d_]*\\d|[A-Z][A-Z0-9_]{2,})\\s*\\]",
+            "message": "Slicing a prefix discards the rest with nothing said, and a cut artifact looks exactly like a complete one. Emit the whole value: the container grows to fit what it holds, not the reverse. Cut only for a hard limit a document format or a function contract imposes \u2014 never for printing space, log volume, or ease of reading \u2014 and where a cut is forced, save the full copy and point at it from what survives. On a bound that is genuinely one of those, add `# lup: ignore[silent-truncation]` naming which",
+            "context": "code",
+            "refiner": "slice_exempt_lines",
+            "strength": "soft",
+        },
+        {
             "id": "bare-except",
             "pattern": "\\bexcept\\s*:",
             "message": "Bare `except:` catches SystemExit/KeyboardInterrupt \u2014 name the exception",
@@ -1006,6 +1014,14 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "message": "Avoid .strip(chars)/.lstrip/.rstrip for structured data \u2014 parse it instead (urllib.parse for URLs, pathlib.Path for paths, json for JSON, datetime for dates)",
             "context": "code",
             "refiner": "",
+            "strength": "soft",
+        },
+        {
+            "id": "silent-truncation",
+            "pattern": "\\[\\s*:\\s*(?:\\d[\\d_]*\\d|[A-Z][A-Z0-9_]{2,})\\s*\\]",
+            "message": "Slicing a prefix discards the rest with nothing said, and a cut artifact looks exactly like a complete one. Emit the whole value: the container grows to fit what it holds, not the reverse. Cut only for a hard limit a document format or a function contract imposes \u2014 never for printing space, log volume, or ease of reading \u2014 and where a cut is forced, save the full copy and point at it from what survives. On a bound that is genuinely one of those, add `# lup: ignore[silent-truncation]` naming which",
+            "context": "code",
+            "refiner": "slice_exempt_lines",
             "strength": "soft",
         },
         {
@@ -1639,42 +1655,34 @@ PATH_ROLES: list[PathRoleRow] = [
     {
         "root": "tests",
         "role": "test",
-        "kind": "subtree",
     },
     {
         "root": "tmp",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": "logs",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": ".venv",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": ".ruff_cache",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": ".pytest_cache",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": "build",
         "role": "scratch",
-        "kind": "subtree",
     },
     {
         "root": "dist",
         "role": "scratch",
-        "kind": "subtree",
     },
 ]
 
@@ -2732,20 +2740,6 @@ SHELL_RULES: list[ShellRuleRow] = [
         "reason": "copying over files requires approval",
     },
     {
-        "command": "touch",
-        "subcommand": "",
-        "operation": "",
-        "effect": "ask",
-        "effect_source": "command",
-        "ask_flags": [],
-        "allow_flags": [],
-        "read_verbs": [],
-        "value_flags": [],
-        "sandbox": "ambient",
-        "sandbox_source": "root",
-        "reason": "creating files requires approval \u2014 prefer the Write tool",
-    },
-    {
         "command": "chmod",
         "subcommand": "",
         "operation": "",
@@ -3235,6 +3229,20 @@ SHELL_RULES: list[ShellRuleRow] = [
     },
     {
         "command": "mkdir",
+        "subcommand": "",
+        "operation": "",
+        "effect": "allow",
+        "effect_source": "command",
+        "ask_flags": [],
+        "allow_flags": [],
+        "read_verbs": [],
+        "value_flags": [],
+        "sandbox": "ambient",
+        "sandbox_source": "root",
+        "reason": "",
+    },
+    {
+        "command": "touch",
         "subcommand": "",
         "operation": "",
         "effect": "allow",
@@ -6996,7 +7004,7 @@ KNOWN_ALLOWANCES: list[str] = [
 
 MAXIMUM_ADDED_LINES = 3
 
-RECOVERABLE_TARGET_LIMIT = 5
+RECOVERABLE_TARGET_LIMIT = 20
 
 RUNNER_TARGETS: list[RunnerTargetRow] = [
     {

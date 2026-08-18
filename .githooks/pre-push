@@ -67,12 +67,17 @@ while read -r _local_ref local_sha remote_ref _remote_sha; do
 	# Pushing main is how data is *supposed* to reach the remote.
 	[ "$remote_ref" = 'refs/heads/main' ] && continue
 
+	# Only unpublished main commits can be inherited. Once main is pushed the
+	# PR's merge base is correct by construction, so every notes/ file left in
+	# the diff is one this branch authored — a config registry the code reads,
+	# say — and blocking it would name a cause that is not there.
+	unpushed="$(git rev-list --count origin/main..main 2>/dev/null || echo '?')"
+	[ "$unpushed" = '0' ] && continue
+
 	base="$(git merge-base "$local_sha" origin/main 2>/dev/null)" || continue
 
 	mapfile -t data_files < <(git diff --name-only "$base" "$local_sha" -- 'notes/')
 	[ "${#data_files[@]}" -eq 0 ] && continue
-
-	unpushed="$(git rev-list --count origin/main..main 2>/dev/null || echo '?')"
 
 	cat >&2 <<-EOF
 

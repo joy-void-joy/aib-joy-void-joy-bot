@@ -297,6 +297,28 @@ def recoverable_write_targets(
     ]
 
 
+def empty_directory_targets(targets: list[str], root: Path | None = None) -> list[str]:
+    """Report which targets are directories with nothing in them.
+
+    An archive unpacked into one replaces nothing, whatever the archive
+    holds — which is the only way to answer that without reading the archive
+    itself. A path that is absent, a file, or unreadable is not reported, so
+    an unanswerable question reads as "something is already there".
+    """
+    where = Path.cwd() if root is None else root
+    found: list[str] = []
+    for target in targets:
+        path = where / target
+        if not path.is_dir():
+            continue
+        try:
+            if not any(path.iterdir()):
+                found.append(target)
+        except OSError:
+            continue
+    return found
+
+
 def directory_write_targets(targets: list[str], root: Path | None = None) -> list[str]:
     """Report which of a command's targets are directories on disk.
 
@@ -412,6 +434,7 @@ def bash_decision(
             [*shell_write_targets(command), *acted_on]
         ),
         directory_targets=directory_write_targets(acted_on),
+        empty_directories=empty_directory_targets(acted_on),
         recoverable_target_limit=RECOVERABLE_TARGET_LIMIT,
         runner_targets=RUNNER_TARGETS,
         target_tables=RUNNER_TARGET_TABLES,
@@ -491,9 +514,15 @@ def edit_decision(
     )
 
 
+def hook_environment():
+    """The native environment passed to this bare hook process."""
+    # lup: ignore[os-environ] — bare hooks have no settings package
+    return os.environ
+
+
 def managed_root():
     """The home Codex installs and trusts packages beneath."""
-    environ = os.environ  # lup: ignore[os-environ]
+    environ = hook_environment()
     return Path(environ["CODEX_HOME"]) if "CODEX_HOME" in environ else None
 
 
@@ -503,6 +532,73 @@ def spent_escape(tool_input):
         "sandbox_permissions" in tool_input
         and tool_input["sandbox_permissions"] == "require_escalated"
     )
+
+
+def approval_fingerprint(payload):
+    """Identify the fields both approval events carry for one Bash call."""
+    fields = ("session_id", "turn_id", "cwd", "tool_name")
+    if any(
+        field not in payload
+        or not isinstance(payload[field], str)
+        or not payload[field]
+        for field in fields
+    ):
+        return None
+    tool_input = payload["tool_input"]
+    if (
+        payload["tool_name"] != "Bash"
+        or not isinstance(tool_input, dict)
+        or "command" not in tool_input
+        or not isinstance(tool_input["command"], str)
+    ):
+        return None
+    identity = [payload[field] for field in fields]
+    identity.append(tool_input["command"])
+    return json.dumps(identity, ensure_ascii=True, separators=(",", ":"))
+
+
+def approval_receipt_root():
+    """The plugin-owned writable directory shared by hook processes."""
+    environ = hook_environment()
+    if "PLUGIN_DATA" not in environ:
+        return None
+    return Path(environ["PLUGIN_DATA"]) / "approval-receipts"
+
+
+def record_approval(payload, max_pending=256):
+    """Record one native permission event without merging identical calls."""
+    fingerprint = approval_fingerprint(payload)
+    root = approval_receipt_root()
+    if fingerprint is None or root is None:
+        return
+    root.mkdir(parents=True, exist_ok=True)
+    receipts = list(root.iterdir())
+    overflow = len(receipts) - max_pending + 1
+    for receipt in receipts[: max(0, overflow)]:
+        receipt.unlink(missing_ok=True)
+    receipt = root / os.urandom(16).hex()
+    receipt.write_text(fingerprint, encoding="utf-8")
+
+
+def spend_approval(payload):
+    """Consume one pending permission event matching this exact Bash call."""
+    fingerprint = approval_fingerprint(payload)
+    root = approval_receipt_root()
+    if fingerprint is None or root is None or not root.exists():
+        return False
+    for receipt in root.iterdir():
+        try:
+            matches = receipt.read_text(encoding="utf-8") == fingerprint
+        except (FileNotFoundError, UnicodeDecodeError):
+            continue
+        if not matches:
+            continue
+        try:
+            receipt.unlink()
+        except FileNotFoundError:
+            continue
+        return True
+    return False
 
 
 def joined(decisions):
@@ -613,14 +709,23 @@ def main():
             observe(payload)
             return
         permission_request = event == "PermissionRequest"
+        permission_evidenced = event == "PreToolUse" and spend_approval(payload)
+        decision = dispatch(payload, permission_request or permission_evidenced)
+        # PermissionRequest has no tool-use id. A matching PreToolUse is the
+        # native proof that its session-, turn-, cwd-, tool-, and command-bound
+        # request proceeded; the policy is still re-run so a deny still wins.
+        if permission_evidenced and decision.effect == "ask":
+            decision = KernelDecision("allow", decision.reason, decision.sandbox)
+        # Record before replying: an undecided request reaches a human, and a
+        # later matching PreToolUse exists only when that human accepted it.
+        if permission_request and decision.effect != "deny":
+            record_approval(payload)
         # A verdict from here places nothing: this hook answers, and the call
         # runs with the arguments the model wrote, so a placement is degraded
         # to its plain effect rather than carrying an intent no channel here
         # performs. The agent's own escape is the other question and Codex
         # does have one, so a permission to escalate survives as reason text.
-        decision = dispatch(payload, permission_request).placed(
-            escapable=False, agent_escalates=True
-        )
+        decision = decision.placed(escapable=False, agent_escalates=True)
     # Every way this can fail means one thing — the call went unjudged — and
     # one answer is right for all of them. Naming the exceptions instead is
     # what let a plain unreadable file escape, and a traceback exit is not the
