@@ -19,7 +19,9 @@ import pytest
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
 from lup.adapters.claude.runtime import SUBMISSION_TOOL, ClaudeSandboxConfig
 from lup.adapters.claude.selection import claude_config
+from lup.adapters.codex.login import CODEX_HOME
 from lup.adapters.codex.selection import codex_config
+from lup.runtime.selection import Runtime, SessionRequest
 
 from aib.agent.client import (
     SESSION_BUFFER_BYTES,
@@ -30,6 +32,25 @@ from aib.agent.client import (
 )
 from aib.paths import AGENT_CWD
 from aib.runtime import select_runtime
+
+
+def contained_home(runtime: Runtime, account: Path, request: SessionRequest) -> str:
+    """The home that runtime derives for one of this project's sessions.
+
+    Read off a contained request rather than off the environment a request is
+    built with: the home appears when a session is opened, which is the only
+    moment both the workspace and the runtime opening it are known.
+
+    The account is named rather than inherited so the derivation lands under
+    a directory the test owns. Containment derives under whichever home the
+    environment already selects, and a suite that let it select the operator's
+    own would write there to assert that it does not.
+    """
+    variable = runtime.login.config_home_env
+    rooted = request.model_copy(
+        update={"environment": {**request.environment, variable: str(account)}}
+    )
+    return runtime.contained(rooted).environment[variable]
 
 
 def test_a_tool_free_request_is_one_either_runtime_accepts() -> None:
@@ -49,18 +70,22 @@ def test_a_tool_free_request_carries_the_model_prompt_and_cwd() -> None:
     assert request.cwd == AGENT_CWD
 
 
-def test_a_session_runs_in_a_configuration_home_of_its_own() -> None:
+def test_a_session_runs_in_a_configuration_home_of_its_own(tmp_path: Path) -> None:
     """Shared, two concurrent startups read each other's half-written document."""
-    home = session_env(None)[CLAUDE_CONFIG_DIR]
+    home = contained_home(
+        select_runtime("claude"), tmp_path, one_shot_request("sonnet", "", None)
+    )
 
     assert AGENT_CWD.name in home
 
 
-def test_the_derived_home_sits_under_the_one_the_profile_names() -> None:
+def test_the_derived_home_sits_under_the_one_the_profile_names(tmp_path: Path) -> None:
     """Containment narrows what a session writes, never which login it runs as."""
-    home = session_env(None)[CLAUDE_CONFIG_DIR]
+    home = contained_home(
+        select_runtime("claude"), tmp_path, one_shot_request("sonnet", "", None)
+    )
 
-    assert ".lup-sessions" in home
+    assert home.startswith(str(tmp_path))
 
 
 def test_every_session_loads_its_tool_schemas_eagerly() -> None:
@@ -68,12 +93,24 @@ def test_every_session_loads_its_tool_schemas_eagerly() -> None:
     assert session_env(None)["ENABLE_TOOL_SEARCH"] == "false"
 
 
-def test_a_tool_free_request_runs_in_that_same_contained_home() -> None:
-    """The portable path and the streaming path have to agree on containment."""
+def test_stating_a_request_asks_for_no_home_and_touches_no_disk() -> None:
+    """A request is a declaration. Deriving the home here did a real `mkdir`
+    seeded from the selected account, so building a session nobody opened cost
+    a directory — and picked a runtime before one had been named."""
     request = one_shot_request("sonnet", "", None)
 
-    assert (
-        request.environment[CLAUDE_CONFIG_DIR] == session_env(None)[CLAUDE_CONFIG_DIR]
+    assert CLAUDE_CONFIG_DIR not in request.environment
+    assert CODEX_HOME not in request.environment
+
+
+def test_both_session_shapes_are_contained_in_the_same_home(tmp_path: Path) -> None:
+    """The portable path and the streaming path have to agree on containment."""
+    runtime = select_runtime("claude")
+    tool_free = one_shot_request("sonnet", "", None)
+    tool_using = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+
+    assert contained_home(runtime, tmp_path, tool_free) == contained_home(
+        runtime, tmp_path, tool_using
     )
 
 
@@ -160,3 +197,22 @@ def test_a_session_holds_one_whole_frame_of_a_fetched_page() -> None:
     )
 
     assert rendered.max_buffer_size == SESSION_BUFFER_BYTES
+
+
+def test_a_session_is_pointed_at_the_home_of_the_runtime_opening_it(
+    tmp_path: Path,
+) -> None:
+    """Containment is a per-runtime fact, so the variable naming it has to be
+    the selected runtime's own. Naming Claude's unconditionally pointed a
+    Codex session at a home its CLI never reads, and dropped the `CODEX_HOME`
+    the profile selected — so the arm ran under whichever account happened to
+    be logged in rather than the one asked for."""
+    request = one_shot_request("sonnet", "", None)
+    codex = select_runtime("codex")
+
+    opened = codex.contained(
+        request.model_copy(update={"environment": {CODEX_HOME: str(tmp_path)}})
+    ).environment
+
+    assert CODEX_HOME in opened
+    assert CLAUDE_CONFIG_DIR not in opened

@@ -15,7 +15,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import overload
 
-from lup.adapters.claude.config_home import workspace_config_environment
 from lup.adapters.claude.runtime import (
     SUBMISSION_TOOL,
     ClaudeSandboxConfig,
@@ -81,15 +80,16 @@ single frame, and the SDK's default ceiling is well under what one weighs."""
 def session_env(profile: str | None) -> EnvVars:
     """The environment every session this project opens runs under.
 
-    The configuration home is derived per workspace rather than shared, so
-    concurrent sessions do not read each other's half-written startup
-    document, and what one writes stays inside its own folder. Derived under
-    whichever home the selected profile names, so the account is still the
-    profile's to decide.
+    States which account to run as and leaves the rest to the runtime that
+    opens the session. That runtime derives a configuration home private to
+    this workspace under the one named here, so concurrent sessions do not
+    read each other's half-written startup document — but which variable
+    carries that home is its own to say, and deriving it here would have to
+    pick a runtime before one was selected.
     """
     return {
         **settings.openrouter_env,
-        **workspace_config_environment(profile_env(profile), AGENT_CWD),
+        **profile_env(profile),
         **DEFAULT_ENV,
     }
 
@@ -181,11 +181,16 @@ def agent_session(
     Extras are shown to Claude and to nothing else: they are that runtime's
     own configuration, so offering them to another would be handing it a
     vocabulary it never agreed to.
+
+    Containment is applied before either path, because the second renders the
+    request itself rather than going through the selection — and a session
+    opened with extras is as concurrent as one opened without.
     """
     selected = select_runtime(runtime)
+    contained = selected.contained(request)
     if extras is None or selected is not CLAUDE_RUNTIME:
-        return selected.session_factory(request)
-    return create_claude_session_factory(extras.apply(claude_config(request)))
+        return selected.session_factory(contained)
+    return create_claude_session_factory(extras.apply(claude_config(contained)))
 
 
 @overload
