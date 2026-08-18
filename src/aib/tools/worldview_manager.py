@@ -19,7 +19,7 @@ from claude_agent_sdk import AssistantMessage, ResultMessage
 from claude_agent_sdk.types import TextBlock
 from pydantic import BaseModel, Field
 
-from aib.agent.client import REMOVE, build_client
+from aib.agent.client import build_client
 from aib.tools.metrics import costs
 from aib.agent.display import make_agent_prefix, print_block
 from lup.hooks import create_tool_allowlist_hook
@@ -753,7 +753,6 @@ async def run_survey() -> list[Issue]:
             system_prompt=SURVEY_SYSTEM_PROMPT,
             permission_mode="bypassPermissions",
             cwd=str(WORLDVIEW_PATH),
-            extra_args={"no-session-persistence": REMOVE},
             allowed_tools=SURVEY_TOOL_NAMES,
             hooks=create_tool_allowlist_hook(SURVEY_TOOL_NAMES),
             mcp_servers={"worldview_maintenance": survey_server},
@@ -794,7 +793,6 @@ async def fix_issue(issue: Issue) -> str:
         system_prompt=FIX_SYSTEM_PROMPT,
         permission_mode="bypassPermissions",
         cwd=str(WORLDVIEW_PATH),
-        extra_args={"no-session-persistence": REMOVE},
         allowed_tools=FIX_TOOL_NAMES,
         hooks=create_tool_allowlist_hook(FIX_TOOL_NAMES),
         mcp_servers={"worldview_maintenance": fix_server},

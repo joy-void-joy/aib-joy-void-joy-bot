@@ -1,10 +1,10 @@
 """Centralized Agent SDK client creation.
 
 All Agent SDK client construction goes through this module to ensure
-consistent defaults (session persistence, OpenRouter routing).
+consistent defaults (configuration home, OpenRouter routing).
 
 Exports:
-- REMOVE — sentinel to drop a single default from extra_args or env
+- REMOVE — sentinel to drop a single default from env
 - build_client(**kwargs) — AsyncContextManager[ClaudeSDKClient] with defaults
 - one_shot(prompt, ...) — prompt→result convenience for tool-free LLM calls
 """
@@ -146,8 +146,8 @@ async def build_client(
     """Return a configured ClaudeSDKClient with project-wide defaults.
 
     Defaults (caller values win on conflict):
-    - extra_args: no-session-persistence
-    - env: openrouter routing, disable adaptive thinking, max effort
+    - env: openrouter routing, a per-workspace configuration home, eager
+      tool schemas
 
     `profile` names a Claude account from the registry, falling back to
     settings.profile. Passing it per call rather than through the process

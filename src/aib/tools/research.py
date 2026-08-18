@@ -27,7 +27,7 @@ from claude_agent_sdk import (
 from claude_agent_sdk.types import TextBlock, ToolUseBlock
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
-from aib.agent.client import REMOVE, build_client
+from aib.agent.client import build_client
 from aib.agent.display import make_agent_prefix, print_block
 from lup.hooks import create_tool_allowlist_hook, merge_hooks
 
@@ -283,7 +283,6 @@ async def run_research_agent(
         "type": "json_schema",
         "schema": ResearchFindings.model_json_schema(),
     }
-    extra_args = {"no-session-persistence": REMOVE}
     allowed_tools = get_research_allowed_tools(mcp_servers)
 
     hooks = create_tool_allowlist_hook(allowed_tools)
@@ -307,7 +306,6 @@ async def run_research_agent(
         system_prompt=build_research_system_prompt(retrodict_cutoff.get()),
         permission_mode="bypassPermissions",
         cwd=str(WORLDVIEW_PATH),
-        extra_args=extra_args,
         allowed_tools=allowed_tools,
         hooks=hooks,
         output_format=output_format,
