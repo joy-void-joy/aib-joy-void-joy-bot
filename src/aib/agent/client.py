@@ -56,7 +56,10 @@ class AupRefusalError(Exception):
 # so the agent concludes the capability does not exist and gives up without
 # ever calling the tool. The research sub-agent carries ~35 data tools and sits
 # well past that threshold, so every session must load schemas eagerly.
-DEFAULT_ENV: dict[str, str] = {
+#
+# Claude Code's own variable, which is why it rides the transform below rather
+# than the environment a portable request carries.
+CLAUDE_ONLY_ENV: EnvVars = {
     "ENABLE_TOOL_SEARCH": "false",
 }
 
@@ -89,7 +92,6 @@ def session_env(profile: str | None) -> EnvVars:
     return {
         **settings.openrouter_env,
         **profile_env(profile),
-        **DEFAULT_ENV,
     }
 
 
@@ -102,6 +104,12 @@ class ClaudeExtras(ConfigTransform[ClaudeSessionConfig]):
     something it has no way to answer. Rendering first and transforming after
     is the seam lup leaves for exactly this, so the Claude-only half is
     additive rather than a second way to open a session.
+
+    An environment variable only one runtime reads belongs here for the same
+    reason effort does not: effort became a field because a variable naming
+    one provider goes on quietly meaning nothing to the other. That is a
+    reason to carry such a variable on this seam, where it is visibly one
+    runtime's, rather than in the environment every session shares.
     """
 
     def __init__(
@@ -122,6 +130,7 @@ class ClaudeExtras(ConfigTransform[ClaudeSessionConfig]):
                 "add_dirs": self.add_dirs,
                 "sandbox": self.sandbox,
                 "max_buffer_size": self.max_buffer_size,
+                "environment": {**config.environment, **CLAUDE_ONLY_ENV},
             }
         )
 

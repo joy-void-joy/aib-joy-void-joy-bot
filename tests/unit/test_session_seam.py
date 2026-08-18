@@ -94,9 +94,25 @@ def test_the_derived_home_sits_under_the_one_the_profile_names(tmp_path: Path) -
     assert home.startswith(str(tmp_path))
 
 
-def test_every_session_loads_its_tool_schemas_eagerly() -> None:
-    """Deferred schemas left the research agent guessing search terms."""
-    assert session_env(None)["ENABLE_TOOL_SEARCH"] == "false"
+def test_every_claude_session_loads_its_tool_schemas_eagerly() -> None:
+    """Deferred schemas left the research agent guessing search terms.
+
+    Asked of the rendered configuration rather than of the shared environment:
+    the variable is Claude Code's own, so it rides the transform that carries
+    what only one runtime reads — and the thing worth pinning is that it
+    reaches the session, not where it was written down."""
+    rendered = ClaudeExtras().apply(
+        claude_config(agent_request(model="sonnet", system_prompt="", autonomy="ask"))
+    )
+
+    assert rendered.environment["ENABLE_TOOL_SEARCH"] == "false"
+
+
+def test_the_shared_environment_names_no_single_runtimes_variable() -> None:
+    """The argument that made effort a field: a variable naming one provider
+    goes on quietly meaning nothing to the other, and the Codex arm would run
+    with deferral on and nothing saying so."""
+    assert "ENABLE_TOOL_SEARCH" not in session_env(None)
 
 
 def test_stating_a_request_asks_for_no_home_and_touches_no_disk() -> None:
