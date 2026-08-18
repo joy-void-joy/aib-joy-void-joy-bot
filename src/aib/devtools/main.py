@@ -15,11 +15,8 @@ from pathlib import Path
 
 import typer
 from lup.devtools.dev.app import create_dev_app
-from lup.devtools.harness.app import create_harness_app
-from lup.devtools.py.app import SUBAPP as PY_SUBAPP
-from lup.devtools.report.app import create_report_app
+from lup.devtools.roster import DevtoolsDeclarations
 from lup.devtools.subapps import SubApp, compose, subapp
-from lup.devtools.sync import SUBAPP as SYNC_SUBAPP
 
 from aib.devtools.agent import app as agent_app
 from aib.devtools.analysis import app as analysis_app
@@ -39,6 +36,7 @@ from aib.devtools.migration import app as migration_app
 from aib.devtools.queue import app as queue_app
 from aib.devtools.resolution import app as resolution_app
 from aib.devtools.scores import app as scores_app
+from aib.devtools.subapps import RETIRED_SUBAPPS, agent_prompt
 from aib.devtools.trace import app as trace_app
 from aib.devtools.version import app as version_app
 from aib.devtools.worldview import app as worldview_app
@@ -48,14 +46,6 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
     no_args_is_help=True,
 )
-
-HARNESS_APP = create_harness_app(TARGETS, REPOSITORY_WIDE, profiles=profile_directory())
-"""Generate and check the native tree this project's declarations compile to.
-
-`report` reads the same targets, so what it calls stale drift and what
-`harness check` refuses are one computation rather than two that can
-disagree. Every skill this project ships is declared, so every one of them
-belongs to both targets and drifts or regenerates with them."""
 
 DEV_APP = create_dev_app(
     declared=dev.declared,
@@ -72,7 +62,25 @@ a gate, a PR, a pass over the notes — is not this project's to hold an opinion
 about, and every one it declined to compose was one it then did not have.
 `extend` mounts the single moment that is this project's own."""
 
-SUBAPPS: list[SubApp] = [
+DECLARED = DevtoolsDeclarations(
+    dev=dev.declared,
+    targets=TARGETS,
+    repository_writers=REPOSITORY_WIDE,
+    guidance=guidance_document(),
+    prompt=agent_prompt,
+    profiles=profile_directory(),
+)
+"""Everything the library's sub-apps need to know about this repository.
+
+Each field is a fact this project already held for another reason, which is
+what lets the roster itself stop being this project's to write.
+
+One set of targets reaches both `harness` and `report` from here, so what
+one calls stale drift and what the other refuses are a single computation
+rather than two that can disagree.
+"""
+
+PROJECT_SUBAPPS: list[SubApp] = [
     subapp("agent", "Agent tool serving for Claude Code", agent_app),
     subapp("claude", "Run Claude Code for this project (+ usage)", claude_app),
     subapp("analysis", "Forecast analysis and feedback loop", analysis_app),
@@ -88,17 +96,16 @@ SUBAPPS: list[SubApp] = [
     subapp("migration", "One-time data migrations", migration_app),
     subapp("version", "Agent version management", version_app),
     subapp("worldview", "Worldview store management", worldview_app),
-    PY_SUBAPP,
-    SYNC_SUBAPP,
-    subapp("harness", "Generate and check the native harness", HARNESS_APP),
-    subapp(
-        "report",
-        "Everything left to implement, across every surface",
-        create_report_app(TARGETS, REPOSITORY_WIDE),
-    ),
 ]
+"""The sub-apps only this project has, because only it has their subject.
 
-compose(app, SUBAPPS)
+`dev`, `trace` and `version` name library sub-apps deliberately: an added
+entry naming a default replaces it, which is how this project keeps forecast
+traces over session traces, its release ritual over a bare bump, and the
+library's dev tree with its own one moment mounted on.
+"""
+
+compose(app, RETIRED_SUBAPPS.over(DECLARED.roster(), PROJECT_SUBAPPS))
 
 if __name__ == "__main__":
     app()
