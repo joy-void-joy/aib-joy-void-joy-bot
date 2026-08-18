@@ -12,6 +12,7 @@ from .decision import (
     SUBSTITUTION_SENTINEL,
     unjudged,
 )
+from .archives import archive_write
 from .roles import path_role
 from .rows import PathRoleRow, PathRuleRow
 from .words import (
@@ -576,13 +577,6 @@ def resolve_redirection(
         return Redirection(decision=None, resume=target + 1)
     if tokens[target].text in (recoverable_targets or []):
         return Redirection(decision=None, resume=target + 1)
-    # lup: solved: This asks too often too. "file redirection is never
-    # auto-allowed" fires on the everyday `2>&1` / `>/dev/null` shapes that
-    # carry no write a reviewer would care about; auto-allow those the way the
-    # rest of the read-only vocabulary is meant to be.
-    # Landing review-fixes added the recoverable/inert target handling above:
-    # `ls -la >/dev/null` and `uv run pytest -q 2>&1|tail -3` both classify
-    # allow now, verified with `lup-devtools hooks classify`.
     return Redirection(
         decision=KernelDecision("ask", "file redirection is never auto-allowed"),
         resume=target + 1,
@@ -747,6 +741,12 @@ def shell_path_verb_targets(command: str) -> list[str]:
         restore = git_restore_operands(words)
         if restore is not None:
             targets.extend(restore["paths"])
+            continue
+        archived = archive_write(words)
+        if archived is not None:
+            targets.extend([*archived["authored"], *archived["consumed"]])
+            if archived["directory"] is not None:
+                targets.append(archived["directory"])
             continue
         if posixpath.basename(words[0]) not in SCRATCH_VERB_FLAGS:
             continue
