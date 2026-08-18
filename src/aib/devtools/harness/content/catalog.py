@@ -16,7 +16,7 @@ under a second plugin until this declaration replaced it.
 """
 
 import lup.harness.models as models
-from lup.devtools.harness.content.catalog import LIBRARY_AGENTS, LIBRARY_SKILLS
+from lup.devtools.harness.content.catalog import LIBRARY_CONTENT
 
 from aib.devtools.harness.content.skills.audit import SKILL as SKILL_AUDIT
 from aib.devtools.harness.content.skills.design import SKILL as SKILL_DESIGN
@@ -24,6 +24,7 @@ from aib.devtools.harness.content.skills.fb_retrodict import (
     SKILL as SKILL_FB_RETRODICT,
 )
 from aib.devtools.harness.content.skills.leak import SKILL as SKILL_LEAK
+from aib.devtools.subapps import RETIRED_CONTENT
 
 PROJECT_SKILLS: list[models.Skill] = [
     SKILL_AUDIT,
@@ -37,8 +38,20 @@ PROJECT_AGENTS: list[models.Agent] = []
 """The four agents this repository had were lup's, copied. They come back
 from the library rather than being declared again."""
 
-SKILLS = [*LIBRARY_SKILLS, *PROJECT_SKILLS]
+CONTENT = LIBRARY_CONTENT.selected(RETIRED_CONTENT).extended(
+    PROJECT_SKILLS, PROJECT_AGENTS
+)
+"""Everything this repository's generated plugin ships, in that order.
+
+The selection is applied here rather than named here, so what the gate reports
+as retired is what the plugin actually declines. Narrowing the roster is also
+what keeps a retirement out of every surface at once: a skill taken out is not
+compiled, not rendered into the documents saying what the plugin ships, and
+not named by prose describing something nobody can invoke.
+"""
+
+SKILLS = CONTENT.skills
 """Every skill this repository's generated plugin ships."""
 
-AGENTS = [*LIBRARY_AGENTS, *PROJECT_AGENTS]
+AGENTS = CONTENT.agents
 """Every agent it ships."""

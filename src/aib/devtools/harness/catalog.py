@@ -46,6 +46,7 @@ from lup.workspace.paths import project_root, read_project_name
 from aib.devtools.harness.content.catalog import AGENTS, SKILLS
 from aib.devtools.harness.content.guidance import document as guidance_document
 from aib.devtools.harness.content.shell_vocabulary import RUNNER_TARGETS, SHELL_RULES
+from aib.devtools.subapps import RETIRED_CONTENT, RETIRED_SUBAPPS
 
 EXCLUDED_COMMANDS = [
     # Egress the sandbox proxy cannot carry: it allowlists hostnames over
@@ -194,6 +195,10 @@ def dev_project() -> DevProject:
     The roles and the rule selection come from the same hook set the generated
     trees enforce, so a scan and a hook cannot disagree about what a path is
     for, nor about which rules are live here.
+
+    Every selection is taken from the module that applies it, for the same
+    reason: what the gate reports as retired is then what the CLI and the
+    plugin actually decline, rather than a second answer written down here.
     """
     hooks = declared_hook_set()
     return DevProject(
@@ -201,6 +206,8 @@ def dev_project() -> DevProject:
         roots=application_roots(),
         rules=hooks.rules,
         path_roles=declared_role_rows(list(hooks.path_roles)),
+        subapps=RETIRED_SUBAPPS,
+        content=RETIRED_CONTENT,
     )
 
 
