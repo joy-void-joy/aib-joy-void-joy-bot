@@ -50,9 +50,8 @@ HARNESS_APP = create_harness_app(TARGETS, REPOSITORY_WIDE, profiles=profile_dire
 
 `report` reads the same targets, so what it calls stale drift and what
 `harness check` refuses are one computation rather than two that can
-disagree. The forecasting skills under `.claude/plugins/aib/` are still hand
--maintained and belong to no target here, which is why they neither drift
-nor regenerate."""
+disagree. Every skill this project ships is declared, so every one of them
+belongs to both targets and drifts or regenerates with them."""
 
 SUBAPPS: list[SubApp] = [
     subapp("agent", "Agent tool serving for Claude Code", agent_app),

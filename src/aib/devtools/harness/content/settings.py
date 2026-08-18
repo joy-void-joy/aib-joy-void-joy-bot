@@ -18,11 +18,6 @@ DECLARED = Settings(
         "claude-md-management@claude-plugins-official": True,
         "github@claude-plugins-official": True,
         "pyright-lsp@claude-plugins-official": True,
-        # Not a vendor plugin: this repository's own, which still carries the
-        # forecasting skills the generated tree does not. It is enabled by
-        # name for the same reason the vendor ones are — the field is what a
-        # project turns on beyond the plugin it declares, and this is one.
-        "aib-workflow@aib": True,
     },
     allowed=[
         "WebSearch",
