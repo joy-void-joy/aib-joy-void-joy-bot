@@ -17,12 +17,10 @@ from typing import Any, Literal, TypedDict
 from urllib.parse import unquote
 
 import httpx
-from claude_agent_sdk import AssistantMessage, ResultMessage
+from lup.runtime.models import MessageCompletedEvent, turn_request
 from lup.hooks import (
     LupHookInput,
     create_capture_hook,
-    create_tool_allowlist_hook,
-    merge_hooks,
 )
 from pydantic import BaseModel, Field
 
@@ -267,37 +265,42 @@ async def _raw_web_search(
         "Return the search results."
     )
 
-    from aib.agent.client import build_client
+    from aib.agent.client import ClaudeExtras, agent_request, agent_session
     from aib.agent.display import make_agent_prefix, print_block
 
     capture = create_capture_hook("WebSearch", websearch_links)
     captured_links = capture["captured"]
     prefix = make_agent_prefix("websearch", search_query)
 
-    async with build_client(
-        model="haiku",
-        permission_mode="bypassPermissions",
-        allowed_tools=["WebSearch"],
-        hooks=merge_hooks(
-            create_tool_allowlist_hook(["WebSearch"]),
-            capture["hooks"],
+    factory = agent_session(
+        agent_request(
+            model="haiku",
+            system_prompt=(
+                "You are a web search assistant. Use WebSearch to find information."
+            ),
+            allowed_tools=["WebSearch"],
+            extra_hooks=capture["hooks"],
         ),
-        system_prompt="You are a web search assistant. Use WebSearch to find information.",
-    ) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    print_block(block, prefix=prefix)
-            if isinstance(message, ResultMessage):
-                logger.debug(
-                    "[WebSearch] sub-agent result: subtype=%s turns=%d is_error=%s",
-                    message.subtype,
-                    message.num_turns,
-                    message.is_error,
-                )
-                if message.total_cost_usd is not None:
-                    costs.record("web_search", message.total_cost_usd)
+        extras=ClaudeExtras(),
+    )
+    async with factory.open() as handle:
+        turn = await handle.session.start(turn_request(prompt))
+        if turn.events is not None:
+            async for event in turn.events.events():
+                if (
+                    isinstance(event, MessageCompletedEvent)
+                    and event.message.role == "assistant"
+                ):
+                    for block in event.message.blocks:
+                        print_block(block, prefix=prefix)
+        result = await turn.turn.result()
+        logger.debug(
+            "[WebSearch] sub-agent result: messages=%d duration=%s",
+            len(result.messages),
+            result.duration,
+        )
+        if result.usage.cost_usd is not None:
+            costs.record("web_search", result.usage.cost_usd)
 
     seen_urls: set[str] = set()
     results: list[SearchResult] = []

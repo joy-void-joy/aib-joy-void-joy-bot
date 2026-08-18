@@ -15,14 +15,16 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Literal
 
-from claude_agent_sdk import AssistantMessage, ResultMessage
-from claude_agent_sdk.types import TextBlock
+from lup.runtime.models import (
+    MessageCompletedEvent,
+    TurnTextBlock,
+    turn_request,
+)
 from pydantic import BaseModel, Field
 
-from aib.agent.client import REMOVE, build_client
+from aib.agent.client import ClaudeExtras, agent_request, agent_session
 from aib.tools.metrics import costs
 from aib.agent.display import make_agent_prefix, print_block
-from lup.hooks import create_tool_allowlist_hook
 from aib.agent.resolver import (
     QuestionForResolution,
     ResolutionVerdict,
@@ -747,27 +749,34 @@ async def run_survey() -> list[Issue]:
 
     from aib.config import settings
 
-    try:
-        async with build_client(
+    factory = agent_session(
+        agent_request(
             model=settings.model,
             system_prompt=SURVEY_SYSTEM_PROMPT,
-            permission_mode="bypassPermissions",
-            cwd=str(WORLDVIEW_PATH),
-            extra_args={"no-session-persistence": REMOVE},
+            cwd=WORLDVIEW_PATH,
             allowed_tools=SURVEY_TOOL_NAMES,
-            hooks=create_tool_allowlist_hook(SURVEY_TOOL_NAMES),
-            mcp_servers={"worldview_maintenance": survey_server},
-        ) as client:
-            await client.query(
-                "Survey the worldview store and register every issue you find."
+            tool_servers={"worldview_maintenance": survey_server},
+        ),
+        extras=ClaudeExtras(),
+    )
+    try:
+        async with factory.open() as handle:
+            turn = await handle.session.start(
+                turn_request(
+                    "Survey the worldview store and register every issue you find."
+                )
             )
-            async for message in client.receive_response():
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        print_block(block, prefix=prefix)
-                if isinstance(message, ResultMessage):
-                    if message.total_cost_usd is not None:
-                        costs.record("worldview_survey", message.total_cost_usd)
+            if turn.events is not None:
+                async for event in turn.events.events():
+                    if (
+                        isinstance(event, MessageCompletedEvent)
+                        and event.message.role == "assistant"
+                    ):
+                        for block in event.message.blocks:
+                            print_block(block, prefix=prefix)
+            usage = (await turn.turn.result()).usage
+            if usage.cost_usd is not None:
+                costs.record("worldview_survey", usage.cost_usd)
     finally:
         survey_issues.reset(token)
 
@@ -789,26 +798,31 @@ async def fix_issue(issue: Issue) -> str:
         f"Claim to research: {issue.claim or '(none)'}\n\n"
         "Resolve this issue, then report what you did."
     )
-    async with build_client(
-        model=settings.model,
-        system_prompt=FIX_SYSTEM_PROMPT,
-        permission_mode="bypassPermissions",
-        cwd=str(WORLDVIEW_PATH),
-        extra_args={"no-session-persistence": REMOVE},
-        allowed_tools=FIX_TOOL_NAMES,
-        hooks=create_tool_allowlist_hook(FIX_TOOL_NAMES),
-        mcp_servers={"worldview_maintenance": fix_server},
-    ) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    print_block(block, prefix=prefix)
-                    if isinstance(block, TextBlock):
-                        text_blocks.append(block.text)
-            if isinstance(message, ResultMessage):
-                if message.total_cost_usd is not None:
-                    costs.record("worldview_fix", message.total_cost_usd)
+    factory = agent_session(
+        agent_request(
+            model=settings.model,
+            system_prompt=FIX_SYSTEM_PROMPT,
+            cwd=WORLDVIEW_PATH,
+            allowed_tools=FIX_TOOL_NAMES,
+            tool_servers={"worldview_maintenance": fix_server},
+        ),
+        extras=ClaudeExtras(),
+    )
+    async with factory.open() as handle:
+        turn = await handle.session.start(turn_request(prompt))
+        if turn.events is not None:
+            async for event in turn.events.events():
+                if (
+                    isinstance(event, MessageCompletedEvent)
+                    and event.message.role == "assistant"
+                ):
+                    for block in event.message.blocks:
+                        print_block(block, prefix=prefix)
+                        if isinstance(block, TurnTextBlock):
+                            text_blocks.append(block.text)
+        usage = (await turn.turn.result()).usage
+        if usage.cost_usd is not None:
+            costs.record("worldview_fix", usage.cost_usd)
 
     return text_blocks[-1] if text_blocks else f"{issue.kind}: no report"
 

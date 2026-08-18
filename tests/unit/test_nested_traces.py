@@ -1,10 +1,9 @@
 """Inline expansion of nested sub-agent traces in build_trace."""
 
-from claude_agent_sdk.types import (
-    AssistantMessage,
-    ToolResultBlock,
-    ToolUseBlock,
-    UserMessage,
+from lup.runtime.models import (
+    TurnMessage,
+    TurnToolCallBlock,
+    TurnToolResultBlock,
 )
 
 from aib.agent.core import build_trace
@@ -17,16 +16,18 @@ from aib.agent.session import (
 )
 
 
-def tool_call(
-    tool_use_id: str, name: str, tool_input: dict
-) -> list[AssistantMessage | UserMessage]:
-    """A main-agent tool call plus its result, as (assistant, user) messages."""
+def tool_call(tool_use_id: str, name: str, tool_input: dict) -> list[TurnMessage]:
+    """A main-agent tool call plus its result, as (assistant, tool) messages."""
     return [
-        AssistantMessage(
-            content=[ToolUseBlock(id=tool_use_id, name=name, input=tool_input)],
+        TurnMessage(
+            role="assistant",
+            blocks=[TurnToolCallBlock(id=tool_use_id, name=name, arguments=tool_input)],
             model="opus",
         ),
-        UserMessage(content=[ToolResultBlock(tool_use_id=tool_use_id, content="ok")]),
+        TurnMessage(
+            role="tool",
+            blocks=[TurnToolResultBlock(tool_call_id=tool_use_id, content="ok")],
+        ),
     ]
 
 

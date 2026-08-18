@@ -9,8 +9,11 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from claude_agent_sdk import AssistantMessage, ResultMessage
-from claude_agent_sdk.types import TextBlock
+from lup.runtime.models import (
+    MessageCompletedEvent,
+    TurnTextBlock,
+    turn_request,
+)
 from lup.mcp import (
     LupMcpTool,
     McpServerEntry,
@@ -19,9 +22,8 @@ from lup.mcp import (
 )
 from pydantic import BaseModel
 
-from aib.agent.client import build_client
+from aib.agent.client import ClaudeExtras, agent_request, agent_session
 from aib.agent.display import make_agent_prefix, print_block
-from lup.hooks import create_tool_allowlist_hook
 from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
     NOTES_TOOLS,
@@ -218,35 +220,35 @@ async def resolve_question(
     if question.scheduled_resolve_time:
         prompt += f"\n**Scheduled Resolve Time:** {question.scheduled_resolve_time}\n"
 
-    result_output: dict[str, object] | None = None
     text_blocks: list[str] = []
     prefix = make_agent_prefix("resolver", question.question_title)
-    async with build_client(
-        model=default_settings.model,
-        system_prompt=RESOLVER_SYSTEM_PROMPT,
-        mcp_servers=servers,
-        allowed_tools=tools,
-        hooks=create_tool_allowlist_hook(tools),
-        permission_mode="bypassPermissions",
-        output_format={
-            "type": "json_schema",
-            "schema": ResolutionVerdict.model_json_schema(),
-        },
-    ) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    print_block(block, prefix=prefix)
-                    if isinstance(block, TextBlock):
-                        text_blocks.append(block.text)
-            if isinstance(message, ResultMessage):
-                result_output = message.structured_output
+    factory = agent_session(
+        agent_request(
+            model=default_settings.model,
+            system_prompt=RESOLVER_SYSTEM_PROMPT,
+            tool_servers=servers,
+            allowed_tools=tools,
+        ),
+        extras=ClaudeExtras(),
+    )
+    async with factory.open() as handle:
+        turn = await handle.session.start(turn_request(prompt, ResolutionVerdict))
+        if turn.events is not None:
+            async for event in turn.events.events():
+                if (
+                    isinstance(event, MessageCompletedEvent)
+                    and event.message.role == "assistant"
+                ):
+                    for block in event.message.blocks:
+                        print_block(block, prefix=prefix)
+                        if isinstance(block, TurnTextBlock):
+                            text_blocks.append(block.text)
+        verdict = (await turn.turn.result()).output
 
     final_text = text_blocks[-1] if text_blocks else ""
-    if result_output:
+    if verdict is not None:
         return NestedAgentReport[ResolutionVerdict](
-            payload=ResolutionVerdict.model_validate(result_output),
+            payload=verdict,
             final_text=final_text,
         )
 

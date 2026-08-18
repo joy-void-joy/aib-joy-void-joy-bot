@@ -8,11 +8,10 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
-from claude_agent_sdk import (
-    AssistantMessage,
-    ToolResultBlock,
-    ToolUseBlock,
-    UserMessage,
+from lup.runtime.models import (
+    TurnMessage,
+    TurnToolCallBlock,
+    TurnToolResultBlock,
 )
 
 
@@ -171,18 +170,6 @@ def _format_source(url: str, title: str = "", label: str = "") -> str:
     return f"[{display}]({url})"
 
 
-def _extract_result_texts(block: ToolResultBlock) -> list[str]:
-    """Extract text strings from a ToolResultBlock's content."""
-    texts: list[str] = []
-    if isinstance(block.content, str):
-        texts.append(block.content)
-    elif isinstance(block.content, list):
-        for item in block.content:
-            if isinstance(item, dict) and item.get("type") == "text":
-                texts.append(item["text"])
-    return texts
-
-
 def _extract_augmented_urls(data: object) -> list[tuple[str, str]]:
     """Extract (url, title) pairs from results that have api_data set."""
     results: list[tuple[str, str]] = []
@@ -204,7 +191,7 @@ def _extract_augmented_urls(data: object) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[str]:
+def extract_sources(messages: Sequence[TurnMessage]) -> list[str]:
     """Extract deduplicated source URLs as markdown links from tool calls and results."""
     seen: set[str] = set()
     sources: list[str] = []
@@ -218,52 +205,52 @@ def extract_sources(messages: Sequence[AssistantMessage | UserMessage]) -> list[
             sources.append(_format_source(url, title, label))
 
     for msg in messages:
-        content = msg.content
-        if isinstance(content, str):
-            continue
-        for block in content:
-            if isinstance(block, ToolUseBlock) and isinstance(block.input, dict):
+        for block in msg.blocks:
+            if isinstance(block, TurnToolCallBlock):
                 if block.name in ("WebFetch", "mcp__search__fetch_url") and (
-                    url := block.input.get("url")
+                    url := block.arguments.get("url")  # lup: ignore[dict-get]
                 ):
                     pending_fetch[block.id] = str(url)
                 elif block.name in _AUGMENTED_RESULT_TOOLS:
                     pending_augmented.add(block.id)
                 elif (entry := _SOURCE_TOOLS.get(block.name)) is not None:
                     if isinstance(entry, ApiSourceTool):
-                        if val := block.input.get(entry.input_key):
+                        val = block.arguments.get(  # lup: ignore[dict-get]
+                            entry.input_key
+                        )
+                        if val:
                             _add(entry.url_template.format(val), str(val), entry.label)
                     else:
                         pending_result[block.id] = entry.label
-            elif isinstance(block, ToolResultBlock):
-                if block.tool_use_id in pending_augmented:
-                    pending_augmented.discard(block.tool_use_id)
-                    for text in _extract_result_texts(block):
-                        try:
-                            for url, title in _extract_augmented_urls(json.loads(text)):
-                                _add(url, title)
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-                elif block.tool_use_id in pending_fetch:
-                    url = pending_fetch.pop(block.tool_use_id)
+            elif isinstance(block, TurnToolResultBlock):
+                if block.tool_call_id in pending_augmented:
+                    pending_augmented.discard(block.tool_call_id)
+                    try:
+                        for url, title in _extract_augmented_urls(
+                            json.loads(block.content)
+                        ):
+                            _add(url, title)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                elif block.tool_call_id in pending_fetch:
+                    url = pending_fetch.pop(block.tool_call_id)
                     title = ""
-                    for text in _extract_result_texts(block):
-                        try:
-                            data = json.loads(text)
-                            if isinstance(data, dict):
-                                title = str(data.get("title") or "")
-                        except (json.JSONDecodeError, TypeError):
-                            pass
+                    try:
+                        data = json.loads(block.content)
+                        if isinstance(data, dict):
+                            # lup: ignore[dict-get]
+                            title = str(data.get("title") or "")
+                    except (json.JSONDecodeError, TypeError):
+                        pass
                     if not title:
                         title = _fetch_title(url)
                     _add(url, title)
-                elif block.tool_use_id in pending_result:
-                    label = pending_result.pop(block.tool_use_id)
-                    for text in _extract_result_texts(block):
-                        try:
-                            for url, title in _walk_urls(json.loads(text)):
-                                _add(url, title, label)
-                        except (json.JSONDecodeError, TypeError):
-                            pass
+                elif block.tool_call_id in pending_result:
+                    label = pending_result.pop(block.tool_call_id)
+                    try:
+                        for url, title in _walk_urls(json.loads(block.content)):
+                            _add(url, title, label)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
 
     return sources
