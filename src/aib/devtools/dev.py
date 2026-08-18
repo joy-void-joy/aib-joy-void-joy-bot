@@ -25,12 +25,27 @@ HOOKS_PATH = ".githooks"
 
 
 def declared() -> DevDeclarations:
-    """What this repository tells the dev tree, read where a command runs."""
+    """What this repository tells the dev tree, read where a command runs.
+
+    No `GitGuard`, because this repository does not install its hooks that
+    way: they are tracked in `.githooks/` and armed by pointing
+    `core.hooksPath` there, so one setting arms every clone instead of each
+    one remembering an install command. Left unstated, the field defaults to
+    the pair lup writes, and the declaration said this repository armed two
+    hooks it does not have while `dev git-hooks` read the two it does have as
+    foreign.
+
+    # lup: defer: express the three moments as GitGuard declarations and let
+    # lup write them, once its guard vocabulary has a word for refusing a
+    # commit that mixes data with code — the tracked hooks are the honest
+    # interim, not the end state
+    """
     return DevDeclarations(
         project=catalog.dev_project(),
         hooks=catalog.declared_hook_set(),
         plugin=catalog.declared_plugin(),
         test_roots=[check.TestRoot(name="pytest", directory=Path.cwd())],
+        git_guards=[],
     )
 
 
