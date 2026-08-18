@@ -1,4 +1,8 @@
-"""Named Claude account selection, over the accounts this checkout keeps.
+"""Named account selection, over the accounts this checkout keeps.
+
+Whose accounts they are is the selected runtime's login to say: it names the
+subdirectory each takes inside a profile and the variable that points a CLI
+at one, so a checkout running either runtime keeps both under one name.
 
 The accounts live under `.lup/profiles` in the checkout rather than in the
 operator's home, so an A/B arm naming a profile reaches the same account
@@ -13,12 +17,15 @@ keeps no accounts resolves nothing and leaves that inherited home alone.
 
 from pathlib import Path
 
-from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.devtools.harness.composition import local_claude_profile_directory
+from lup.devtools.harness.composition import local_profile_directory
 from lup.runtime.profiles import ProfileDirectory, UnknownProfile
 from lup.workspace.paths import project_root
 
-PROFILES: ProfileDirectory = local_claude_profile_directory(project_root())
+from aib.runtime import select_runtime
+
+PROFILES: ProfileDirectory = local_profile_directory(
+    project_root(), select_runtime().login
+)
 """The accounts this checkout keeps, as the one directory every caller reads."""
 
 UnknownProfileError = UnknownProfile
@@ -26,7 +33,7 @@ UnknownProfileError = UnknownProfile
 
 
 def resolve_config_dir(name: str | None = None) -> Path | None:
-    """The Claude configuration home a name selects, or None to inherit one."""
+    """The configuration home a name selects, or None to inherit one."""
     return PROFILES.launch_home(name)
 
 
@@ -37,7 +44,7 @@ def profile_env(name: str | None = None) -> dict[str, str]:
     environment already names rather than being pinned to a default one.
     """
     home = resolve_config_dir(name)
-    return {} if home is None else {CLAUDE_CONFIG_DIR: str(home)}
+    return {} if home is None else dict(select_runtime().login.environment(home))
 
 
 def known_profiles() -> list[str]:

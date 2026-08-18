@@ -15,9 +15,10 @@ from pathlib import Path
 
 import pytest
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.devtools.harness.composition import local_claude_profile_directory
+from lup.devtools.harness.composition import local_profile_directory
 
 import aib.profiles as profiles
+from aib.runtime import select_runtime
 from aib.profiles import (
     UnknownProfileError,
     active_profile,
@@ -30,7 +31,11 @@ from aib.profiles import (
 @pytest.fixture
 def checkout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Point the module at an empty temp checkout and return its root."""
-    monkeypatch.setattr(profiles, "PROFILES", local_claude_profile_directory(tmp_path))
+    monkeypatch.setattr(
+        profiles,
+        "PROFILES",
+        local_profile_directory(tmp_path, select_runtime().login),
+    )
     return tmp_path
 
 
