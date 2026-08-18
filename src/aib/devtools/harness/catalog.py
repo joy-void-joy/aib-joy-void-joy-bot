@@ -22,7 +22,11 @@ from pathlib import Path
 from pydantic import AnyHttpUrl
 
 from lup.adapters.claude.harness import ClaudeSpellings
+from lup.adapters.codex.harness import CodexSpellings
+from lup.codescan.boundaries import ApplicationRoots, generated_tree_paths
+from lup.devtools.project import DevProject
 from lup.harness.contracts import NativeSpellings
+from lup.harness.enforcement import declared_role_rows
 from lup.harness.models import (
     Harness,
     HookPathRole,
@@ -81,12 +85,13 @@ last rather than for anyone's reason.
 HARNESS_SESSION = "harness"
 """The session a natively launched tool server opens for itself."""
 
-NATIVE_RUNTIMES: list[NativeSpellings] = [ClaudeSpellings()]
+NATIVE_RUNTIMES: list[NativeSpellings] = [ClaudeSpellings(), CodexSpellings()]
 """Every runtime this project generates a tree for.
 
-Claude alone, because that is what the bot runs on and what the hand-written
-tree already targeted. A Codex tree costs one entry here and nothing else,
-since every declaration below is runtime-neutral."""
+Both, because every declaration below is runtime-neutral and the A/B arms run
+on either. The list is what tells a scan which roots hold compiled output
+rather than authored source, so a runtime missing here has its tree judged as
+though somebody had written it by hand."""
 
 
 def research_servers() -> list[McpServer]:
@@ -150,6 +155,53 @@ lattice already uses, and gets an approval question carrying this reason.
 def declared_hook_set() -> HookSet:
     """The hook set this project declares, for a session composed in process."""
     return portable_harness().declared_hooks
+
+
+def declared_plugin() -> Plugin:
+    """The one plugin this project publishes, as generation renders it."""
+    return portable_harness().plugins[0]
+
+
+def application_roots() -> ApplicationRoots:
+    """Where this project composes concrete native implementations.
+
+    The generated trees are asked of the runtimes rather than written down, so
+    a location a runtime learns sanctions its own tree. The rest are this
+    project's own homes: the harness declarations, whose whole job is to name
+    a runtime, and the CLI root that decides which sub-app answers to a name.
+    """
+    package = Path(__file__).resolve().parents[2].relative_to(project_root()).as_posix()
+    harness = f"{package}/devtools/harness/"
+    generated = generated_tree_paths(
+        NATIVE_RUNTIMES, [plugin.name for plugin in portable_harness().plugins]
+    )
+    return ApplicationRoots(
+        generated=generated,
+        composition=[
+            *generated,
+            "tests/",
+            harness,
+            f"{package}/devtools/main.py",
+            f"{package}/runtime.py",
+        ],
+        portable_prose=[f"{harness}content/"],
+    )
+
+
+def dev_project() -> DevProject:
+    """What this project tells the shared development tooling about itself.
+
+    The roles and the rule selection come from the same hook set the generated
+    trees enforce, so a scan and a hook cannot disagree about what a path is
+    for, nor about which rules are live here.
+    """
+    hooks = declared_hook_set()
+    return DevProject(
+        package=Path(__file__).resolve().parents[2].name,
+        roots=application_roots(),
+        rules=hooks.rules,
+        path_roles=declared_role_rows(list(hooks.path_roles)),
+    )
 
 
 def documentation_scopes() -> list[HookUrlScope]:
