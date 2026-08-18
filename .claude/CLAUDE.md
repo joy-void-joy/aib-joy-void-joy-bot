@@ -188,16 +188,11 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run the rebase skill (it rebuilds the history and force-pushes, updating the PR).
 7. **/lup:close** — Once the PR is approved, merges it and cleans up the branch.
 
-**Bump the `aib` plugin's version** if the branch changes anything the
-hand-written `aib` plugin ships — its commands or its agents. Use
-`uv run lup-devtools dev plugin-bump <level> "<summary>"`. The version is the
-plugin's own record of what it ships; nothing reinstalls it, so a bump is a
-statement rather than a cache invalidation. The generated `lup` plugin needs
-none of this: its version is the harness generator's and moves when the
-declaration does.
+The plugin needs no version bump of its own: it is generated, so its version is
+the harness generator's and moves when the declaration does.
 
-Neither plugin is installed through a marketplace. `harness claude` launches
-the generated tree of whichever checkout it is run from, naming it with
+It is not installed through a marketplace. `harness claude` launches the
+generated tree of whichever checkout it is run from, naming it with
 `--plugin-dir`, so a worktree carries its plugin by existing and a change on a
 feature branch takes effect there immediately.
 
@@ -575,12 +570,17 @@ example.
 
 ## Slash Commands & Skills
 
-This repository carries two plugins. The generated one ships the framework
-skills under `/lup:` — the git and review loop, the resolver, code work,
-harness authoring, and the feedback loop. The hand-written `aib` plugin ships
-the forecasting ones under `/aib:` — `audit`, `design`, `leak`,
-`fb-retrodict`, `clean-gone`, and `merge-conflict`. The prefixes are what keep
-them from colliding, so a skill under one is never shadowed by the other.
+This repository carries one plugin, generated, under the `lup` prefix. Most of
+its roster is the library's — the git and review loop, the resolver, code work,
+harness authoring, and the feedback loop. Four are this repository's own, and
+they are the forecasting ones: `audit`, `design`, `fb-retrodict`, and `leak`.
+
+A skill that only looked like this repository's own is not among them.
+Clearing branches and worktrees is `land`, resolving a conflicted tree is
+`merge`, and the feedback-loop phases are the library's. Each was maintained
+twice under a second, hand-written plugin until the declaration replaced it —
+so when a workflow here seems to want a new skill, look for the library's word
+for it first.
 
 **After every command invocation**, reflect on how it was actually used vs. documented:
 
@@ -595,10 +595,11 @@ them from colliding, so a skill under one is never shadowed by the other.
 - User asks for something the command should cover → Expand scope
 - User ignores sections → Consider simplifying
 
-A `/lup:` skill is generated: its source is a declaration under
-`packages/lup` in the library, so an improvement to one is a change to send
-upstream rather than a file to edit here. A `/aib:` skill is this
-repository's own markdown and is edited in place.
+Every skill is generated, so none is edited in place — the markdown each
+harness tree carries is output. A library skill's source is a declaration under
+`packages/lup`, so improving one is a change to send upstream; this
+repository's four are declared under
+`src/aib/devtools/harness/content/skills/`, and change here.
 
 ## Reporting Friction
 

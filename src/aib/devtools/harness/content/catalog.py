@@ -4,22 +4,36 @@
 # is finally made rather than passed on, so there is no caller above it.
 """This repository's harness content: what it inherits, and what it does not.
 
-The whole roster is the library's. The forecasting skills this repository
-also has — `/aib:audit`, `/aib:design`, `/aib:leak`, `/aib:fb-retrodict`,
-`/aib:clean-gone`, `/aib:merge-conflict` — stay hand-written under
-`.claude/plugins/aib/`, where they answer to their own prefix and cannot
-collide with anything here. Moving them into a declaration is worth doing
-and is not what this change is: one migration that both replaced the hooks
-engine and rewrote six skills would leave any later surprise unattributable.
+Most of the roster is the library's. What this repository adds is the work no
+library word covers, because it is forecasting rather than development:
+auditing a forecast against how its question actually resolved, queueing
+retrodictions, and tracing a future leak in one.
+
+A skill that only *looked* like this repository's own is not here. Clearing
+branches and worktrees is `land`, resolving a conflicted tree is `merge`, and
+the feedback-loop phases are the library's own — each was maintained twice
+under a second plugin until this declaration replaced it.
 """
 
 import lup.harness.models as models
 from lup.devtools.harness.content.catalog import LIBRARY_AGENTS, LIBRARY_SKILLS
 
-PROJECT_SKILLS: list[models.Skill] = []
-"""No skill here is declared yet; the ones this repository has are hand-written.
+from aib.devtools.harness.content.skills.audit import SKILL as SKILL_AUDIT
+from aib.devtools.harness.content.skills.design import SKILL as SKILL_DESIGN
+from aib.devtools.harness.content.skills.fb_retrodict import (
+    SKILL as SKILL_FB_RETRODICT,
+)
+from aib.devtools.harness.content.skills.leak import SKILL as SKILL_LEAK
 
-# lup: defer: The six `/aib:*` skills under `.claude/plugins/aib/commands/`
+PROJECT_SKILLS: list[models.Skill] = [
+    SKILL_AUDIT,
+    SKILL_DESIGN,
+    SKILL_FB_RETRODICT,
+    SKILL_LEAK,
+]
+"""The forecasting skills this repository declares beyond the library's.
+
+# lup: solved: The six `/aib:*` skills under `.claude/plugins/aib/commands/`
 # are the last hand-maintained half of this tree. Declaring them here would
 # put every skill this repository ships under one generator, and retire the
 # `aib` plugin entirely.
