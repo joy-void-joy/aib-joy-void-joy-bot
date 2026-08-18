@@ -11,12 +11,12 @@ import logging
 from rich.console import Console
 from rich.style import Style
 
-from claude_agent_sdk import (
-    ContentBlock,
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
+from lup.runtime.models import (
+    TurnBlock,
+    TurnTextBlock,
+    TurnThinkingBlock,
+    TurnToolCallBlock,
+    TurnToolResultBlock,
 )
 
 _TOOL_COLORS = [
@@ -116,7 +116,7 @@ def make_agent_prefix(agent_type: str, label: str | None = None) -> str:
     return f"  ↳ {Style(color=next(_agent_color_cycle)).render(tag)} "
 
 
-def print_block(block: ContentBlock, prefix: str = "") -> None:
+def print_block(block: TurnBlock, prefix: str = "") -> None:
     """Print a content block with appropriate emoji prefix and log it.
 
     Args:
@@ -124,36 +124,36 @@ def print_block(block: ContentBlock, prefix: str = "") -> None:
         prefix: Optional prefix for visual nesting (e.g. "  ↳ [search] ").
     """
     match block:
-        case ThinkingBlock():
+        case TurnThinkingBlock():
             print(f"{prefix}💭 {block.thinking}")
             stream_log.info("%sTHINKING: %s", prefix, block.thinking)
-        case TextBlock():
+        case TurnTextBlock():
             print(f"{prefix}💬 {block.text}")
             stream_log.info("%sTEXT: %s", prefix, block.text)
-        case ToolUseBlock():
+        case TurnToolCallBlock():
             color = next(_color_cycle)
             _id_to_color[block.id] = color
             print(f"{prefix}🔧 {block.name} ", end="")
             _console.print(f"[{block.id}]", style=color)
-            if block.input:
-                print(json.dumps(block.input, indent=2))
+            if block.arguments:
+                print(json.dumps(block.arguments, indent=2))
             stream_log.info(
                 "%sTOOL_USE [%s] %s: %s",
                 prefix,
                 block.id,
                 block.name,
-                json.dumps(block.input) if block.input else "",
+                json.dumps(block.arguments) if block.arguments else "",
             )
-        case ToolResultBlock():
-            color = _id_to_color.pop(block.tool_use_id, "default")
+        case TurnToolResultBlock():
+            color = _id_to_color.pop(block.tool_call_id, "default")
             formatted = _format_tool_result(block.content)
             print(f"{prefix}📋 Result ", end="")
-            _console.print(f"[{block.tool_use_id}]", style=color)
+            _console.print(f"[{block.tool_call_id}]", style=color)
             print(formatted)
             stream_log.info(
                 "%sTOOL_RESULT [%s]: %s",
                 prefix,
-                block.tool_use_id,
+                block.tool_call_id,
                 formatted,
             )
         case _:

@@ -19,17 +19,18 @@ import logging
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta, timezone
 
-from claude_agent_sdk import (
-    AssistantMessage,
-    ResultMessage,
-    UserMessage,
+from lup.runtime.models import (
+    MessageCompletedEvent,
+    SessionId,
+    TurnMessage,
+    TurnTextBlock,
+    TurnToolCallBlock,
+    turn_request,
 )
-from claude_agent_sdk.types import TextBlock, ToolUseBlock
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
-from aib.agent.client import build_client
+from aib.agent.client import ClaudeExtras, agent_request, agent_session
 from aib.agent.display import make_agent_prefix, print_block
-from lup.hooks import create_tool_allowlist_hook, merge_hooks
 
 from aib.agent.nested import NestedAgentReport
 from aib.agent.retrodict import create_retrodict_hooks
@@ -279,112 +280,89 @@ async def run_research_agent(
         prompt_parts.append(f"\nAdditional context: {context}")
     prompt = "\n".join(prompt_parts)
 
-    output_format = {
-        "type": "json_schema",
-        "schema": ResearchFindings.model_json_schema(),
-    }
     allowed_tools = get_research_allowed_tools(mcp_servers)
-
-    hooks = create_tool_allowlist_hook(allowed_tools)
-    if retrodict_cutoff.get() is not None:
-        hooks = merge_hooks(hooks, create_retrodict_hooks())
 
     from aib.config import settings
 
-    findings: ResearchFindings | None = None
-    session_id: str | None = None
-    so_tool_blocks: list[ToolUseBlock] = []
-    text_blocks: list[str] = []
-    nested_messages: list[AssistantMessage | UserMessage] = []
+    # One pass over the stream feeds four accumulators and prints as it goes,
+    # so the fold carries control flow no comprehension expresses.
+    so_tool_blocks: list[TurnToolCallBlock] = []  # lup: ignore[empty-collection]
+    text_blocks: list[str] = []  # lup: ignore[empty-collection]
+    nested_messages: list[TurnMessage] = []  # lup: ignore[empty-collection]
     assistant_msg_count = 0
     tool_use_count = 0
-    result_message_seen = False
     prefix = make_agent_prefix("research", query)
+    cutoff = retrodict_cutoff.get()  # lup: ignore[dict-get] — a ContextVar
+    retrodict_hooks = None if cutoff is None else create_retrodict_hooks()
 
-    async with build_client(
-        model=settings.model,
-        system_prompt=build_research_system_prompt(retrodict_cutoff.get()),
-        permission_mode="bypassPermissions",
-        cwd=str(WORLDVIEW_PATH),
-        allowed_tools=allowed_tools,
-        hooks=hooks,
-        output_format=output_format,
-        mcp_servers=mcp_servers or {},
-        resume=resume_session_id,
-    ) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if isinstance(message, (AssistantMessage, UserMessage)):
-                nested_messages.append(message)
-            if isinstance(message, AssistantMessage):
+    factory = agent_session(
+        agent_request(
+            model=settings.model,
+            system_prompt=build_research_system_prompt(cutoff),
+            cwd=WORLDVIEW_PATH,
+            allowed_tools=allowed_tools,
+            extra_hooks=retrodict_hooks,
+            tool_servers=mcp_servers or {},
+        ),
+        extras=ClaudeExtras(),
+    )
+    resume = None if resume_session_id is None else SessionId(value=resume_session_id)
+    async with factory.open(resume) as handle:
+        turn = await handle.session.start(turn_request(prompt, ResearchFindings))
+        if turn.events is not None:
+            async for event in turn.events.events():
+                if not isinstance(event, MessageCompletedEvent):
+                    continue
+                nested_messages.append(event.message)
+                if event.message.role != "assistant":
+                    continue
                 assistant_msg_count += 1
-                for block in message.content:
+                for block in event.message.blocks:
                     print_block(block, prefix=prefix)
-                    if isinstance(block, ToolUseBlock):
+                    if isinstance(block, TurnToolCallBlock):
                         tool_use_count += 1
                         if block.name == "StructuredOutput":
                             so_tool_blocks.append(block)
-                    elif isinstance(block, TextBlock):
+                    elif isinstance(block, TurnTextBlock):
                         text_blocks.append(block.text)
-            if isinstance(message, ResultMessage):
-                result_message_seen = True
-                logger.info(
-                    "Research sub-agent ResultMessage: session=%s is_error=%s "
-                    "num_turns=%s duration_ms=%s cost_usd=%s usage=%s "
-                    "assistant_msgs=%d tool_uses=%d text_blocks=%d so_blocks=%d",
-                    message.session_id,
-                    message.is_error,
-                    message.num_turns,
-                    message.duration_ms,
-                    message.total_cost_usd,
-                    message.usage,
-                    assistant_msg_count,
-                    tool_use_count,
-                    len(text_blocks),
-                    len(so_tool_blocks),
-                )
-                if message.total_cost_usd is not None:
-                    costs.record("research", message.total_cost_usd)
-                session_id = message.session_id
-                if message.structured_output:
-                    try:
-                        findings = ResearchFindings.model_validate(
-                            message.structured_output
-                        )
-                    except ValidationError:
-                        logger.exception(
-                            "Research sub-agent produced invalid structured output for: %s",
-                            query,
-                        )
-                elif so_tool_blocks:
-                    last_block = so_tool_blocks[-1]
-                    try:
-                        findings = ResearchFindings.model_validate(last_block.input)
-                        logger.warning(
-                            "Recovered research findings from ToolUseBlock fallback "
-                            "(SDK did not capture structured_output): %s",
-                            query[:80],
-                        )
-                    except ValidationError:
-                        raise NestedAgentNoStructuredOutputError(
-                            f"Research nested agent called StructuredOutput but "
-                            f"payload failed validation. "
-                            f"session_id={message.session_id} "
-                            f"blocks={len(so_tool_blocks)}"
-                        ) from None
-                else:
-                    raise NestedAgentNoStructuredOutputError(
-                        f"Research nested agent ended without structured_output. "
-                        f"session_id={message.session_id} "
-                        f"is_error={message.is_error} "
-                        f"result={(message.result or '')[:500]!r}"
-                    )
+        result = await turn.turn.result()
 
-    if not result_message_seen:
+    session_id = result.identifiers.session.value
+    logger.info(
+        "Research sub-agent turn: session=%s duration=%s cost_usd=%s "
+        "assistant_msgs=%d tool_uses=%d text_blocks=%d so_blocks=%d",
+        session_id,
+        result.duration,
+        result.usage.cost_usd,
+        assistant_msg_count,
+        tool_use_count,
+        len(text_blocks),
+        len(so_tool_blocks),
+    )
+    if result.usage.cost_usd is not None:
+        costs.record("research", result.usage.cost_usd)
+
+    findings = result.output
+    if findings is None and so_tool_blocks:
+        try:
+            findings = ResearchFindings.model_validate(so_tool_blocks[-1].arguments)
+            logger.warning(
+                "Recovered research findings from the tool call the runtime did "
+                "not fold into an output: %s",
+                query[:80],
+            )
+        except ValidationError:
+            raise NestedAgentNoStructuredOutputError(
+                f"Research nested agent called StructuredOutput but "
+                f"payload failed validation. "
+                f"session_id={session_id} "
+                f"blocks={len(so_tool_blocks)}"
+            ) from None
+    if findings is None:
         raise NestedAgentNoStructuredOutputError(
-            f"Research nested agent stream ended without a ResultMessage. "
+            f"Research nested agent ended without structured output. "
+            f"session_id={session_id} "
             f"assistant_msgs={assistant_msg_count} tool_uses={tool_use_count} "
-            f"text_blocks={len(text_blocks)} so_blocks={len(so_tool_blocks)} "
             f"last_text={(text_blocks[-1] if text_blocks else '')[:300]!r}"
         )
 

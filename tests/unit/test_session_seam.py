@@ -17,10 +17,9 @@ from pathlib import Path
 
 import pytest
 from lup.adapters.claude.login import CLAUDE_CONFIG_DIR
-from lup.adapters.claude.runtime import ClaudeSandboxConfig
+from lup.adapters.claude.runtime import SUBMISSION_TOOL, ClaudeSandboxConfig
 from lup.adapters.claude.selection import claude_config
 from lup.adapters.codex.selection import codex_config
-from lup.hooks import LupHooksConfig
 
 from aib.agent.client import (
     SESSION_BUFFER_BYTES,
@@ -112,14 +111,22 @@ def test_a_tool_using_session_asks_for_unattended_autonomy() -> None:
 def test_the_allowlist_and_the_hook_enforcing_it_both_reach_claude() -> None:
     """Under bypassPermissions the SDK field alone is ignored, so the hook is
     what actually holds the line — and it has to render alongside it."""
-    hooks = LupHooksConfig()
-    request = agent_request(
-        model="sonnet", system_prompt="", allowed_tools=["Read"], hooks=hooks
+    rendered = claude_config(
+        agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
     )
-    rendered = claude_config(request)
 
-    assert rendered.allowed_tools == ["Read"]
-    assert rendered.hooks is hooks
+    assert "Read" in rendered.allowed_tools
+    assert rendered.hooks is not None
+
+
+def test_the_allowlist_admits_the_tool_a_structured_turn_finishes_through() -> None:
+    """A structured turn is served by a submission tool the runtime installs.
+    The allowlist hook is enforced by name, so one written without it denies
+    the single tool the turn cannot end without — and the failure would be an
+    agent that researched correctly and could not answer."""
+    request = agent_request(model="sonnet", system_prompt="", allowed_tools=["Read"])
+
+    assert SUBMISSION_TOOL in request.allowed_tools
 
 
 def test_codex_refuses_a_tool_using_session_by_design() -> None:

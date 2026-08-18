@@ -11,25 +11,25 @@ from collections.abc import Sequence
 from typing import Any, TypedDict, cast
 
 
-from claude_agent_sdk import (
-    AssistantMessage,
-    ContentBlock,
-    ResultMessage,
-    SystemMessage,
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
-    UserMessage,
+from lup.adapters.claude.runtime import ClaudeSandboxConfig
+from lup.runtime.models import (
+    MessageCompletedEvent,
+    TurnBlock,
+    TurnMessage,
+    TurnResult,
+    TurnTextBlock,
+    TurnThinkingBlock,
+    TurnToolCallBlock,
+    TurnToolResultBlock,
+    turn_request,
 )
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from aib.agent.client import build_client
+from aib.agent.client import ClaudeExtras, agent_request, agent_session
 from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
-    stream_log as _stream_log,
 )
 from aib.agent.history import (
     save_forecast,
@@ -40,7 +40,6 @@ from lup.hooks import (
     LupHooksConfig,
     create_nudge_hook,
     create_permission_hooks,
-    create_tool_allowlist_hook,
     merge_hooks,
 )
 from lup.tool_routes import routes
@@ -150,21 +149,21 @@ class ReasoningLogger:
         self.lines.append(f"# Reasoning Log: {question_title}\n")
         self.lines.append(f"*Generated: {effective_now().isoformat()}*\n\n")
 
-    def format_block(self, block: ContentBlock) -> str:
+    def format_block(self, block: TurnBlock) -> str:
         """Format a content block as markdown."""
         match block:
-            case ThinkingBlock():
+            case TurnThinkingBlock():
                 # Claude 4.x returns summarized thinking; dangling fragments
                 # at section seams are upstream artifacts, not parse bugs.
                 return f"## 💭 Thinking\n\n{block.thinking}\n"
-            case TextBlock():
+            case TurnTextBlock():
                 return f"## 💬 Response\n\n{block.text}\n"
-            case ToolUseBlock():
-                self._pending_inputs[block.id] = (block.name, block.input or {})
+            case TurnToolCallBlock():
+                self._pending_inputs[block.id] = (block.name, block.arguments)
                 return f"## 🔧 Tool: {block.name}\n\n"
-            case ToolResultBlock():
+            case TurnToolResultBlock():
                 parts: list[str] = []
-                tool_use_id = block.tool_use_id
+                tool_use_id = block.tool_call_id
                 original = self._pending_inputs.pop(tool_use_id, None)
                 actual_input = get_modified_input(tool_use_id)
                 if actual_input is None and original is not None:
@@ -215,7 +214,7 @@ class ReasoningLogger:
             f"### ↳ End nested {short} agent trace\n"
         )
 
-    def log_block(self, block: ContentBlock) -> None:
+    def log_block(self, block: TurnBlock) -> None:
         """Add a formatted block to the log."""
         self.lines.append(self.format_block(block))
 
@@ -492,7 +491,7 @@ def build_question_context(post_data: dict) -> dict:
 
 
 def build_trace(
-    messages: Sequence[AssistantMessage | UserMessage],
+    messages: Sequence[TurnMessage],
     title: str = "",
     exclude_tools: frozenset[str] = frozenset(),
     nested_traces: dict[str, str] | None = None,
@@ -500,15 +499,14 @@ def build_trace(
     """Build a markdown trace from conversation messages.
 
     Args:
-        messages: Conversation messages (assistant and user) to format.
-            ToolUseBlock arrives in AssistantMessage, ToolResultBlock
-            arrives in UserMessage — both are needed for a complete trace.
+        messages: Conversation messages to format. A tool call arrives on an
+            assistant message and its result on a tool one — both are needed
+            for a complete trace.
         title: Question title for the log header.
-        exclude_tools: Tool names whose ToolUseBlock/ToolResultBlock pairs
-            should be omitted from the trace. Uses the same id-tracking
-            pattern as extract_sources: when a ToolUseBlock.name matches,
-            its id is recorded and the corresponding ToolResultBlock is
-            also skipped.
+        exclude_tools: Tool names whose call/result pairs should be omitted
+            from the trace. Uses the same id-tracking pattern as
+            extract_sources: when a call's name matches, its id is recorded
+            and the corresponding result is also skipped.
         nested_traces: Sub-agent traces keyed by tool+identifier, expanded
             inline beneath the research/subforecast/premortem result that
             produced them.
@@ -516,14 +514,14 @@ def build_trace(
     excluded_ids: set[str] = set()
     rl = ReasoningLogger(Path("/dev/null"), title, nested_traces=nested_traces)
     for msg in messages:
-        content = msg.content
-        if isinstance(content, str):
-            continue
-        for block in content:
-            if isinstance(block, ToolUseBlock) and block.name in exclude_tools:
+        for block in msg.blocks:
+            if isinstance(block, TurnToolCallBlock) and block.name in exclude_tools:
                 excluded_ids.add(block.id)
                 continue
-            if isinstance(block, ToolResultBlock) and block.tool_use_id in excluded_ids:
+            if (
+                isinstance(block, TurnToolResultBlock)
+                and block.tool_call_id in excluded_ids
+            ):
                 continue
             rl.log_block(block)
     return "\n".join(rl.lines)
@@ -644,23 +642,17 @@ async def review_forecast_trace(
     )
 
     try:
-        result_output: dict[str, Any] | None = None
-        async with build_client(
-            model=settings.model,
-            system_prompt=REVIEWER_SYSTEM_PROMPT,
-            allowed_tools=["Read"],
-            permission_mode="bypassPermissions",
-            output_format={
-                "type": "json_schema",
-                "schema": ForecastSummary.model_json_schema(),
-            },
-        ) as client:
-            await client.query(prompt)
-            async for message in client.receive_response():
-                if isinstance(message, ResultMessage):
-                    result_output = message.structured_output
-        if result_output:
-            summary = ForecastSummary.model_validate(result_output)
+        factory = agent_session(
+            agent_request(
+                model=settings.model,
+                system_prompt=REVIEWER_SYSTEM_PROMPT,
+                allowed_tools=["Read"],
+            ),
+            extras=ClaudeExtras(),
+        )
+        summary = await factory.query(prompt, ForecastSummary)
+        if summary.output is not None:
+            summary = summary.output
             by_tool_metrics = cast(
                 dict[str, ToolCallMetrics],
                 get_metrics_summary().get("by_tool", {}),
@@ -767,7 +759,6 @@ async def run_forecast(
     # Get type-specific output schema and guidance
     mc_options = context.get("options") if question_type == "multiple_choice" else None
     model_class = create_forecast_model(question_type, mc_options)
-    output_schema = model_class.model_json_schema()
     type_guidance = get_type_specific_guidance(question_type, context)
 
     prompt = f"Analyze this forecasting question and provide your forecast:\n\n{json.dumps(context, indent=2)}\n\n{type_guidance}"
@@ -776,10 +767,12 @@ async def run_forecast(
     print(prompt)
     print(f"{'─' * 60}\n")
 
-    collected_text: list[str] = []
-    assistant_messages: list[AssistantMessage] = []
-    all_messages: list[AssistantMessage | UserMessage] = []
-    result: ResultMessage | None = None
+    # One pass over the stream feeds three accumulators, prints as it goes, and
+    # raises on a credit-exhaustion text — control flow no comprehension carries.
+    collected_text: list[str] = []  # lup: ignore[empty-collection]
+    assistant_messages: list[TurnMessage] = []  # lup: ignore[empty-collection]
+    all_messages: list[TurnMessage] = []  # lup: ignore[empty-collection]
+    result: TurnResult[BaseModel] | None = None
     partial_saved = False
 
     def save_partial(reason: str) -> None:
@@ -855,10 +848,6 @@ async def run_forecast(
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
         hooks = permission_hooks
 
-        # Enforce allowed_tools whitelist (bypassPermissions ignores the
-        # ClaudeAgentOptions.allowed_tools field, so we hook-enforce it).
-        hooks = merge_hooks(hooks, create_tool_allowlist_hook(allowed_tools))
-
         # Nudge agent toward structured APIs for SUGGEST_ONLY domains
         hooks = merge_hooks(hooks, create_suggest_only_nudge_hooks())
 
@@ -899,92 +888,56 @@ async def run_forecast(
         session.research_mcp_servers = policy.research_servers(sandbox)
 
         try:
-            async with build_client(
-                model=settings.model,
-                system_prompt=_build_system_prompt(
-                    cutoff=cutoff,
-                    tool_docs=policy.get_tool_docs(
-                        mcp_servers, allow_spawn=allow_spawn
+            factory = agent_session(
+                agent_request(
+                    model=settings.model,
+                    system_prompt=_build_system_prompt(
+                        cutoff=cutoff,
+                        tool_docs=policy.get_tool_docs(
+                            mcp_servers, allow_spawn=allow_spawn
+                        ),
+                        sandbox_shared_dir=str(sandbox_shared_dir),
+                        session_dir=str(notes.session),
+                        question_type=question_type,
                     ),
-                    sandbox_shared_dir=str(sandbox_shared_dir),
-                    session_dir=str(notes.session),
-                    question_type=question_type,
+                    max_thinking_tokens=128_000 - 1,
+                    extra_hooks=hooks,
+                    tool_servers=mcp_servers,
+                    allowed_tools=allowed_tools,
                 ),
-                max_thinking_tokens=128_000 - 1,
-                permission_mode="bypassPermissions",
-                hooks=hooks,
-                sandbox={
-                    "enabled": True,
-                    "autoAllowBashIfSandboxed": True,
-                    "allowUnsandboxedCommands": False,
-                },
-                mcp_servers=mcp_servers,
-                add_dirs=[
-                    *notes.all_dirs,
-                    sandbox_shared_dir,
-                    session_downloads,
-                ],
-                allowed_tools=allowed_tools,
-                output_format={
-                    "type": "json_schema",
-                    "schema": output_schema,
-                },
-            ) as client:
-                await client.query(prompt)
-
-                async for message in client.receive_response():
-                    match message:
-                        case AssistantMessage():
+                extras=ClaudeExtras(
+                    sandbox=ClaudeSandboxConfig(
+                        enabled=True,
+                        auto_allow_bash_if_sandboxed=True,
+                        allow_unsandboxed_commands=False,
+                    ),
+                    add_dirs=[
+                        *notes.all_dirs,
+                        sandbox_shared_dir,
+                        session_downloads,
+                    ],
+                ),
+            )
+            async with factory.open() as handle:
+                turn = await handle.session.start(turn_request(prompt, model_class))
+                if turn.events is not None:
+                    async for event in turn.events.events():
+                        if not isinstance(event, MessageCompletedEvent):
+                            continue
+                        message = event.message
+                        all_messages.append(message)
+                        if message.role == "assistant":
                             assistant_messages.append(message)
-                            all_messages.append(message)
-                            for block in message.content:
-                                print_block(block)
-                                match block:
-                                    case TextBlock():
-                                        collected_text.append(block.text)
-                                        # Check for credit exhaustion
-                                        credit_error = (
-                                            CreditExhaustedError.from_message(
-                                                block.text
-                                            )
-                                        )
-                                        if credit_error:
-                                            raise credit_error
-                                    case ThinkingBlock():
-                                        pass
-                                    case ToolUseBlock():
-                                        pass
-                                    case ToolResultBlock():
-                                        pass
-                                    case _:
-                                        logger.debug(
-                                            "Unhandled content block: %s",
-                                            type(block).__name__,
-                                        )
-                        case ResultMessage():
-                            result = message
-                            if message.is_error:
-                                raise RuntimeError(f"Agent error: {message.result}")
-                        case SystemMessage():
-                            _stream_log.info(
-                                "SYSTEM [%s]: %s",
-                                message.subtype,
-                                json.dumps(message.data, indent=2),
-                            )
-                        case UserMessage():
-                            all_messages.append(message)
-                            _stream_log.info(
-                                "USER_MESSAGE: %s",
-                                _normalize_content(message.content),
-                            )
-                            if isinstance(message.content, list):
-                                for block in message.content:
-                                    print_block(block)
-                        case _:
-                            print(f"📨 {type(message).__name__}: {message}")
-                            logger.debug(
-                                "Unhandled message type: %s", type(message).__name__
-                            )
+                        for block in message.blocks:
+                            print_block(block)
+                            if isinstance(block, TurnTextBlock):
+                                collected_text.append(block.text)
+                                credit_error = CreditExhaustedError.from_message(
+                                    block.text
+                                )
+                                if credit_error:
+                                    raise credit_error
+                result = await turn.turn.result()
         except Exception as exc:
             save_partial(f"{type(exc).__name__}: {exc}")
             logging.getLogger("aib").removeHandler(_log_handler)
@@ -1007,7 +960,9 @@ async def run_forecast(
             trace_md,
             question_title,
             notes.session,
-            structured_output=result.structured_output,
+            structured_output=(
+                None if result.output is None else result.output.model_dump()
+            ),
             is_retrodict=cutoff is not None,
         )
     except Exception as exc:
@@ -1026,8 +981,8 @@ async def run_forecast(
             (
                 block.text
                 for msg in reversed(assistant_messages)
-                for block in reversed(msg.content)
-                if isinstance(block, TextBlock)
+                for block in reversed(msg.blocks)
+                if isinstance(block, TurnTextBlock)
             ),
             "",
         ),
@@ -1035,15 +990,20 @@ async def run_forecast(
             forecast_summary.condensed_reasoning if forecast_summary else None
         ),
         sources_consulted=extract_sources(all_messages),
-        duration_seconds=(result.duration_ms / 1000) if result.duration_ms else None,
-        cost_usd=result.total_cost_usd,
-        token_usage=cast(TokenUsage, result.usage) if result.usage else None,
+        duration_seconds=result.duration.total_seconds(),
+        cost_usd=result.usage.cost_usd,
+        token_usage=TokenUsage(
+            input_tokens=result.usage.input_tokens,
+            output_tokens=result.usage.output_tokens,
+            cache_read_input_tokens=result.usage.cache_read_input_tokens,
+            cache_creation_input_tokens=result.usage.cache_creation_input_tokens,
+        ),
         retrodict_date=cutoff,
     )
     output.trace = trace_md
 
-    if result.structured_output:
-        forecast = model_class.model_validate(result.structured_output)
+    if result.output is not None:
+        forecast = result.output
 
         if isinstance(forecast, Forecast):
             output.summary = forecast.summary

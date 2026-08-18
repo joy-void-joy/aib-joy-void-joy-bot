@@ -1,31 +1,30 @@
-"""Centralized Agent SDK client creation.
+"""What every agent session this project opens asks for.
 
-All Agent SDK client construction goes through this module to ensure
-consistent defaults (configuration home, OpenRouter routing).
+Sessions are stated portably and opened through the selected runtime, so this
+module is the only place either provider's own configuration is named.
 
 Exports:
-- REMOVE — sentinel to drop a single default from env
-- build_client(**kwargs) — AsyncContextManager[ClaudeSDKClient] with defaults
+- agent_request(...) — a tool-using session, in words both runtimes share
+- agent_session(request, extras=...) — the factory the selection answers with
+- ClaudeExtras — the settings only Claude has a word for
 - one_shot(prompt, ...) — prompt→result convenience for tool-free LLM calls
 """
 
 import logging
-from collections.abc import AsyncIterator, Mapping, Sequence
-from contextlib import asynccontextmanager
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, overload
+from typing import overload
 
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
-from claude_agent_sdk.types import McpSdkServerConfig
 from lup.adapters.claude.config_home import workspace_config_environment
 from lup.adapters.claude.runtime import (
+    SUBMISSION_TOOL,
     ClaudeSandboxConfig,
     ClaudeSessionConfig,
     create_claude_session_factory,
 )
 from lup.adapters.claude.selection import CLAUDE_RUNTIME, claude_config
-from lup.hooks import LupHooksConfig
-from lup.mcp import LupMcpServerConfig, McpServerEntry
+from lup.hooks import LupHooksConfig, create_tool_allowlist_hook, merge_hooks
+from lup.mcp import McpServerEntry
 from lup.runtime.config import ConfigTransform
 from lup.runtime.factory import SessionFactory
 from lup.runtime.models import TurnResult
@@ -39,8 +38,6 @@ from aib.profiles import profile_env
 from aib.runtime import select_runtime
 
 logger = logging.getLogger(__name__)
-
-REMOVE = object()
 
 AUP_REFUSAL_PREFIX = "API Error: Claude Code is unable to respond to this request"
 
@@ -135,7 +132,7 @@ def agent_request(
     model: str,
     system_prompt: str,
     allowed_tools: Sequence[str] = (),
-    hooks: LupHooksConfig | None = None,
+    extra_hooks: LupHooksConfig | None = None,
     tool_servers: Mapping[str, McpServerEntry] | None = None,
     cwd: Path | None = None,
     max_thinking_tokens: int | None = None,
@@ -147,17 +144,26 @@ def agent_request(
     allowlist and the hook enforcing it both travel as fields: Claude renders
     them, and Codex refuses them by design because the dispatcher generated
     into its harness tree is what governs a session there.
+
+    The hook is built here rather than by the caller because bypassPermissions
+    ignores the SDK's allowlist field, which leaves the hook as the only thing
+    holding the line — and a structured turn is served by a submission tool the
+    runtime installs, so an allowlist written without it denies the one tool
+    the turn cannot finish without. Callers state the tools they want and pass
+    anything further as `extra_hooks`.
     """
     resolved = AGENT_CWD if cwd is None else cwd
     resolved.mkdir(parents=True, exist_ok=True)
+    tools = [*allowed_tools, SUBMISSION_TOOL]
+    hooks = create_tool_allowlist_hook(tools)
     return SessionRequest(
         model=model,
         instructions=system_prompt,
         cwd=resolved,
         autonomy="unattended",
         effort=SESSION_EFFORT,
-        allowed_tools=list(allowed_tools),
-        hooks=hooks,
+        allowed_tools=tools,
+        hooks=hooks if extra_hooks is None else merge_hooks(hooks, extra_hooks),
         tool_servers=dict(tool_servers or {}),
         max_thinking_tokens=max_thinking_tokens,
         environment=session_env(profile if profile is not None else settings.profile),
@@ -180,136 +186,6 @@ def agent_session(
     if extras is None or selected is not CLAUDE_RUNTIME:
         return selected.session_factory(request)
     return create_claude_session_factory(extras.apply(claude_config(request)))
-
-
-def _merge(defaults: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
-    merged = {**defaults, **overrides}
-    return {k: v for k, v in merged.items() if v is not REMOVE}
-
-
-def _find_format_path(schema: object, path: str = "") -> str | None:
-    """Return the JSON path of the first `format` key found, or None."""
-    if isinstance(schema, dict):
-        if "format" in schema:
-            return f"{path}.format" if path else "format"
-        for key, value in schema.items():
-            sub_path = f"{path}.{key}" if path else key
-            found = _find_format_path(value, sub_path)
-            if found is not None:
-                return found
-    elif isinstance(schema, list):
-        for i, item in enumerate(schema):
-            found = _find_format_path(item, f"{path}[{i}]")
-            if found is not None:
-                return found
-    return None
-
-
-def reject_ajv_unsafe_schema(schema: object) -> None:
-    """Raise ValueError if schema contains a `format` field.
-
-    The bundled Claude Code CLI compiles output_format json_schemas via
-    Ajv in strict mode. Strict-mode Ajv rejects any schema containing a
-    `format` keyword it does not have a validator registered for, and
-    the bundled CLI does not register any format validators. When the
-    schema is rejected, StructuredOutput is silently NOT added to the
-    agent's tool list — the agent then has no way to finalize its
-    response, writes the answer as prose, and hits the Stop hook
-    enforcement (or silently produces no structured output).
-
-    Pydantic emits `"format": "date"` / `"format": "date-time"` /
-    `"format": "email"` / etc. for typed fields like `date`, `datetime`,
-    `EmailStr`, etc. Use `str` with a `Field(description=...)` instead.
-    """
-    offending = _find_format_path(schema)
-    if offending is not None:
-        raise ValueError(
-            f"output_format json_schema contains `format` at {offending!r}. "
-            "The Claude Code CLI's Ajv compiler silently rejects schemas "
-            "with format keywords in strict mode, which prevents "
-            "StructuredOutput from being registered at all. Replace the "
-            "Pydantic `date`/`datetime`/`EmailStr`/etc. field with `str` "
-            "and document the expected format via `Field(description=...)`. "
-            "See memory/bug_json_schema_date_format.md."
-        )
-
-
-@asynccontextmanager
-async def build_client(
-    *, defaults: bool = True, profile: str | None = None, **kwargs: Any
-) -> AsyncIterator[ClaudeSDKClient]:
-    """Return a configured ClaudeSDKClient with project-wide defaults.
-
-    Defaults (caller values win on conflict):
-    - env: openrouter routing, a per-workspace configuration home, eager
-      tool schemas
-
-    `profile` names a Claude account from the registry, falling back to
-    settings.profile. Passing it per call rather than through the process
-    environment is what lets concurrent sessions run on different accounts.
-
-    Pass defaults=False to skip all defaults. Use REMOVE as a value
-    to selectively drop a single default key.
-    """
-    from lup.adapters.claude.hooks import lup_hooks_to_claude
-    from lup.hooks import LupHooksConfig, merge_hooks
-
-    from aib.agent.meta_hooks import create_structured_output_enforcement
-
-    caller_extra = kwargs.pop("extra_args", None) or {}
-    caller_env = kwargs.pop("env", None) or {}
-    caller_hooks: LupHooksConfig = kwargs.pop("hooks", None) or LupHooksConfig()
-
-    if defaults:
-        merged_extra = _merge({}, caller_extra)
-        selected = profile if profile is not None else settings.profile
-        merged_env = _merge(session_env(selected), caller_env)
-    else:
-        merged_extra = {k: v for k, v in caller_extra.items() if v is not REMOVE}
-        merged_env = {k: v for k, v in caller_env.items() if v is not REMOVE}
-
-    output_format = kwargs.get("output_format")
-    if isinstance(output_format, dict) and output_format.get("type") == "json_schema":
-        reject_ajv_unsafe_schema(output_format.get("schema"))
-        caller_hooks = merge_hooks(create_structured_output_enforcement(), caller_hooks)
-
-    if "cwd" not in kwargs:
-        AGENT_CWD.mkdir(parents=True, exist_ok=True)
-        kwargs["cwd"] = str(AGENT_CWD)
-
-    if "setting_sources" not in kwargs:
-        kwargs["setting_sources"] = []
-
-    if "effort" not in kwargs:
-        kwargs["effort"] = SESSION_EFFORT
-
-    # The one place lup's neutral server configs become the SDK's own shape.
-    # It has to be here, at the boundary, and nowhere earlier:
-    # `server_tool_names` reads `tool_names` off a `LupMcpServerConfig` and
-    # answers `[]` for anything already projected, so projecting sooner
-    # would silently empty the hook-enforced tool allowlist.
-    if "mcp_servers" in kwargs:
-        kwargs["mcp_servers"] = {
-            name: (
-                McpSdkServerConfig(type="sdk", name=cfg.name, instance=cfg.server)
-                if isinstance(cfg, LupMcpServerConfig)
-                else cfg
-            )
-            for name, cfg in kwargs["mcp_servers"].items()
-        }
-
-    options = ClaudeAgentOptions(
-        extra_args=merged_extra,
-        env=merged_env,
-        # The hook seam's other projection point, beside mcp_servers above:
-        # every factory speaks lup's normalized (LupHookInput) -> LupHookOutput
-        # shape, and the adapter renders it into the SDK's native matchers.
-        hooks=lup_hooks_to_claude(caller_hooks) if caller_hooks.by_event() else None,
-        max_buffer_size=SESSION_BUFFER_BYTES,
-        **kwargs,
-    )
-    async with ClaudeSDKClient(options=options) as client:
-        yield client
 
 
 @overload

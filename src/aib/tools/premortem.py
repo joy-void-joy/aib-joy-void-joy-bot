@@ -13,12 +13,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 from pydantic import BaseModel, Field, ValidationError
 
-from claude_agent_sdk import TextBlock, ToolUseBlock
 
 from lup.hooks import (
     LupHooksConfig,
@@ -465,14 +464,15 @@ async def run_reviewer(
     Returns a NestedAgentReport wrapping the ReviewResult (or None if
     the sub-agent failed), the agent's final text block, and any error.
     """
-    from claude_agent_sdk import (
-        AssistantMessage as _AssistantMessage,
-        ResultMessage,
-        UserMessage,
+    from lup.runtime.models import (
+        MessageCompletedEvent,
+        TurnMessage,
+        TurnTextBlock,
+        TurnToolCallBlock,
+        turn_request,
     )
-    from claude_agent_sdk.types import HookEvent, HookMatcher as HookMatcherType
 
-    from aib.agent.client import build_client
+    from aib.agent.client import ClaudeExtras, agent_request, agent_session
     from aib.agent.display import make_agent_prefix, print_block
 
     prompt = build_reviewer_prompt(
@@ -485,19 +485,13 @@ async def run_reviewer(
         worldview_dir=WORLDVIEW_PATH,
     )
 
-    add_dirs: list[str | Path] = [WORLDVIEW_PATH]
     hook_dirs: list[Path] = [WORLDVIEW_PATH]
     if traces_dir and traces_dir.exists():
-        add_dirs.append(traces_dir)
         hook_dirs.append(traces_dir)
     if trace_file:
-        add_dirs.append(trace_file.parent)
         hook_dirs.append(trace_file.parent)
 
-    reviewer_hooks: dict[HookEvent, list[HookMatcherType]] = cast(
-        dict[HookEvent, list[HookMatcherType]],
-        build_reviewer_hooks(hook_dirs),
-    )
+    reviewer_hooks = build_reviewer_hooks(hook_dirs)
 
     from aib.config import settings
     from aib.tools.search import fetch_url, web_search
@@ -507,49 +501,50 @@ async def run_reviewer(
     }
 
     try:
-        structured_output: dict[str, Any] | None = None
-        so_tool_blocks: list[ToolUseBlock] = []
-        text_blocks: list[str] = []
-        nested_messages: list[_AssistantMessage | UserMessage] = []
+        # One pass feeds three accumulators and prints as it goes, so the fold
+        # carries control flow no comprehension expresses.
+        so_tool_blocks: list[TurnToolCallBlock] = []  # lup: ignore[empty-collection]
+        text_blocks: list[str] = []  # lup: ignore[empty-collection]
+        nested_messages: list[TurnMessage] = []  # lup: ignore[empty-collection]
         review_label = question_context.get("title") if question_context else None
         prefix = make_agent_prefix("premortem", review_label)
-        async with build_client(
-            model=settings.model,
-            allowed_tools=[
-                "Read",
-                "Glob",
-                "Grep",
-                "mcp__search__web_search",
-                "mcp__search__fetch_url",
-            ],
-            mcp_servers=search_servers,
-            permission_mode="bypassPermissions",
-            system_prompt=system_prompt,
-            hooks=reviewer_hooks,
-            add_dirs=add_dirs,
-            output_format={
-                "type": "json_schema",
-                "schema": ReviewResult.model_json_schema(),
-            },
-        ) as client:
-            await client.query(prompt)
-            async for message in client.receive_response():
-                if isinstance(message, (_AssistantMessage, UserMessage)):
-                    nested_messages.append(message)
-                if isinstance(message, _AssistantMessage):
-                    for block in message.content:
+        factory = agent_session(
+            agent_request(
+                model=settings.model,
+                system_prompt=system_prompt,
+                allowed_tools=[
+                    "Read",
+                    "Glob",
+                    "Grep",
+                    "mcp__search__web_search",
+                    "mcp__search__fetch_url",
+                ],
+                extra_hooks=reviewer_hooks,
+                tool_servers=search_servers,
+            ),
+            extras=ClaudeExtras(add_dirs=hook_dirs),
+        )
+        async with factory.open() as handle:
+            turn = await handle.session.start(turn_request(prompt, ReviewResult))
+            if turn.events is not None:
+                async for event in turn.events.events():
+                    if not isinstance(event, MessageCompletedEvent):
+                        continue
+                    nested_messages.append(event.message)
+                    if event.message.role != "assistant":
+                        continue
+                    for block in event.message.blocks:
                         print_block(block, prefix=prefix)
                         if (
-                            isinstance(block, ToolUseBlock)
+                            isinstance(block, TurnToolCallBlock)
                             and block.name == "StructuredOutput"
                         ):
                             so_tool_blocks.append(block)
-                        elif isinstance(block, TextBlock):
+                        elif isinstance(block, TurnTextBlock):
                             text_blocks.append(block.text)
-                elif isinstance(message, ResultMessage):
-                    structured_output = message.structured_output
-                    if message.total_cost_usd is not None:
-                        costs.record("premortem", message.total_cost_usd)
+            turn_result = await turn.turn.result()
+        if turn_result.usage.cost_usd is not None:
+            costs.record("premortem", turn_result.usage.cost_usd)
 
         final_text = text_blocks[-1] if text_blocks else ""
 
@@ -557,9 +552,9 @@ async def run_reviewer(
 
         nested_trace = build_trace(nested_messages, review_label or "premortem")
 
-        if structured_output:
+        if turn_result.output is not None:
             return NestedAgentReport[ReviewResult](
-                payload=ReviewResult.model_validate(structured_output),
+                payload=turn_result.output,
                 final_text=final_text,
                 trace=nested_trace,
             )
@@ -567,7 +562,7 @@ async def run_reviewer(
         if so_tool_blocks:
             last_block = so_tool_blocks[-1]
             try:
-                json_output = last_block.input["json_output"]
+                json_output = last_block.arguments["json_output"]
                 result = ReviewResult.model_validate(json_output)
                 logger.warning(
                     "Recovered premortem verdict from ToolUseBlock fallback: %s",
