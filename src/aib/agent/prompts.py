@@ -363,7 +363,9 @@ Call premortem() **once** per forecast, after your final reflection(). Don't cal
 # Section assembly
 # ---------------------------------------------------------------------------
 
-_SECTIONS: dict[str, str] = {
+# lup: ignore[dict-str-payload] — an ordered table of prose, consumed by
+# iteration in assembly order; no reader names a key
+SECTIONS: dict[str, str] = {
     "core_principles": _CORE_PRINCIPLES,
     "output_format": _OUTPUT_FORMAT,
     "step1_parse": _STEP1_PARSE,
@@ -417,7 +419,7 @@ def _format_system_prompt(
     )
 
     parts: list[str] = [header, workspace, ""]
-    for name, text in _SECTIONS.items():
+    for name, text in SECTIONS.items():
         if name in skip:
             continue
         parts.append(text)

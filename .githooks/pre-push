@@ -37,7 +37,8 @@ quality_gate() {
 		'uv run ruff format --check .' \
 		'uv run ruff check .' \
 		'uv run pyright' \
-		'uv run pytest -m "not integration" -q'; do
+		'uv run pytest -m "not integration" -q' \
+		'uv run lup-devtools harness check all'; do
 		printf '  → %s\n' "$step" >&2
 		if ! eval "$step" >&2; then
 			cat >&2 <<-EOF

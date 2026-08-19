@@ -178,7 +178,7 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 1. **Create a worktree** (if the user hasn't already created one):
    ```bash
-   uv run lup-devtools dev worktree feat-name
+   uv run lup-devtools dev worktree create feat-name
    ```
    This creates the worktree as a sibling under `tree/` (e.g., `tree/feat-name` alongside `tree/main`), syncs dependencies, and refreshes plugins. **Never** use `git worktree add ./worktrees/...` — worktrees must be siblings, not nested inside another checkout.
 2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
@@ -265,10 +265,14 @@ git push origin main
 
 ### Git Hooks
 
-Tracked in `.githooks/`, wired up by `uv run lup-devtools dev setup-hooks` (also run
-automatically by `dev worktree`). Tracked rather than written into `.git/hooks`
-so one `core.hooksPath` setting arms every clone, instead of each one having to
-remember an install command.
+Tracked in `.githooks/`, wired up by `uv run lup-devtools dev setup-hooks`. Tracked
+rather than written into `.git/hooks` so one `core.hooksPath` setting arms every
+clone, instead of each one having to remember an install command — and because
+that setting is repository-wide, a worktree created after it is armed by existing.
+
+`dev git-hooks` is the library's own pair and a different thing: it writes hook
+bodies that run the drift check and the gate. It reads this project's tracked
+hooks as foreign and leaves them alone rather than displacing them.
 
 | Hook | Rejects |
 |---|---|
