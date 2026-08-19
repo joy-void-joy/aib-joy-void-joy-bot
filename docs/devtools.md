@@ -98,8 +98,11 @@ lup-devtools
 │   ├── rules          Generate the Lup rule and typed-suppression reference
 │   ├── policy         What the declared permission policy decides, and why
 │   ├── report-friction File or correct workflow friction in this checkout
-│   ├── git-hooks      The library's own guards (this project's live in .githooks/)
-│   └── setup-hooks    Install tracked git hooks (core.hooksPath -> .githooks)
+│   ├── git-hooks      Write the declared guards into the tracked .githooks/
+│   ├── setup-hooks    Point git at them (core.hooksPath -> .githooks)
+│   ├── data-split     Refuse a commit mixing forecast data with code
+│   ├── pr-base        Refuse a push whose PR would carry inherited data
+│   └── gate           The checks a branch is held to before it leaves
 │
 ├── version            Agent version management
 │   ├── show           Display the current agent version
@@ -130,6 +133,48 @@ lup-devtools
 
 Tournaments: `aib` (AIB Spring 2026), `minibench` (MiniBench), `cup`
 (Metaculus Cup), `all` (cross-tournament).
+
+## Worktrees rather than branches
+
+`git switch -c` creates a branch and stays where it is, so switching changes
+every file in place. `git worktree add` creates a directory with its own
+working copy, so several branches are open at once in separate directories —
+which is why this repository develops in worktrees, and why `dev worktree
+create` makes them siblings under `tree/` rather than nested inside another
+checkout.
+
+## Commit types
+
+| Type | For |
+|---|---|
+| `feat` | A new feature or capability |
+| `fix` | A bug fix |
+| `refactor` | A change that neither fixes a bug nor adds a feature |
+| `docs` | Documentation only |
+| `test` | Adding or updating tests |
+| `chore` | Maintenance — dependencies, build config |
+| `meta` | The harness declarations and the trees they generate |
+| `data` | Generated data and output — forecasts, metrics, logs |
+
+```
+feat(agent): add permission handler for read-only directories
+fix(tools): handle missing API key gracefully
+refactor(sandbox): extract Docker client initialization
+meta(harness): declare the fetch scope for a new data source
+data(forecasts): add Feb 4 2026 forecast batch
+```
+
+## What an unpublished `main` does to a pull request
+
+A feature branch is cut from local `main`, inheriting its unpushed data
+commits. When the PR is opened, GitHub computes the merge base against
+`origin/main` — which has never seen them — and folds every inherited
+`notes/` file into the merge as a fresh addition with no shared ancestry.
+Local `main` still holds those files as real commits, so the next `git pull`
+collides add/add on every one of them.
+
+That is what put 506 data files into PR #55. The push guard refuses at the
+moment it would happen again; publishing `main` first is what settles it.
 
 ## The version floor
 
