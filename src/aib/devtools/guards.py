@@ -93,22 +93,53 @@ def unpushed_main() -> int:
     return len(git.lines("rev-list", "origin/main..main", _ok_code=[0]))
 
 
-def inherited_data(local_oid: str) -> list[Path]:
-    """The data files this ref would carry into a pull request, if any.
+def unpublished_data() -> list[Path]:
+    """The data files local `main` holds that `origin/main` has never seen."""
+    return [
+        Path(name)
+        for name in git.lines(
+            "diff",
+            "--name-only",
+            "origin/main..main",
+            "--",
+            f"{DATA_ROOT}/",
+            _ok_code=[0],
+        )
+        if name
+    ]
 
-    Read against the merge base a request would be computed against, so what
-    is counted is exactly what that request would show as added.
+
+def inherited_data(local_oid: str) -> list[Path]:
+    """The data files this ref would carry in *because* main is unpublished.
+
+    Two readings, and only their overlap is the hazard. What a request would
+    show as added is the diff from the merge base it is computed against;
+    what it would show *wrongly* is the part of that which arrived from
+    commits the remote has never seen.
+
+    Intersected rather than taking the first alone, because a branch may
+    author a data file of its own — a config registry the code reads — and
+    such a file sits in the diff at every moment, published main or not.
+    Refusing over it names a cause that is not there, and a guard that fires
+    on a cause that is not there is one people learn to pass `--no-verify`
+    to, which costs the refusal that was right.
+
+    The unpushed count alone cannot stand in for this. A forecast loop
+    commits to local main continuously, so main is unpublished through most
+    of a working day, and a branch carrying one authored data file would be
+    refused on every push until somebody stopped the loop.
     """
     try:
         base = git.out("merge-base", local_oid, "origin/main")
     except sh.ErrorReturnCode:
         return []
+    unpublished = dict.fromkeys(unpublished_data())
     return [
-        Path(name)
+        path
         for name in git.lines(
             "diff", "--name-only", base, local_oid, "--", f"{DATA_ROOT}/", _ok_code=[0]
         )
-        if name
+        if name and (path := Path(name)) in unpublished
     ]
 
 
