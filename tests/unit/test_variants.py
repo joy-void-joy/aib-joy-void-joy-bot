@@ -133,6 +133,29 @@ class TestVariantEnv:
         """An arm saying nothing about research must not pin it either way."""
         assert "AIB_RESEARCH" not in variant_env(Variant(name="v", model="sonnet"))
 
+    def test_the_name_the_arm_exports_is_the_one_settings_reads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The two halves of the chain agree, which nothing else checks.
+
+        A variant hands its child an environment and the child builds its own
+        `Settings`; between them the name is written twice, in two files. A
+        mismatch would not fail — the child would read the default and run the
+        shipped topology under the experiment's label, which is the arm
+        quietly measuring its own control.
+        """
+        from aib.agent.tool_policy import ToolPolicy
+        from aib.config import Settings
+
+        exported = variant_env(Variant(name="v", research="direct"))
+        for name, value in exported.items():
+            monkeypatch.setenv(name, value)
+
+        settings = Settings(metaculus_token="unused-here")
+
+        assert settings.research == "direct"
+        assert ToolPolicy.from_settings(settings).research == "direct"
+
 
 class TestRegisteredVariants:
     """The arms this repository actually has registered.
