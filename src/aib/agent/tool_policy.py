@@ -14,6 +14,7 @@ from lup.mcp import McpServerEntry, create_mcp_server
 from lup.tool_policy import BaseToolPolicy
 from pydantic import BaseModel
 
+from aib.config import ResearchTopology
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.premortem import create_premortem_server
 from aib.tools.reflection import create_reflection_server
@@ -300,7 +301,9 @@ class ToolPolicy(BaseToolPolicy):
         reddit_client_id: str | None = None,
         reddit_client_secret: str | None = None,
         census_api_key: str | None = None,
+        research: ResearchTopology = "delegated",
     ) -> None:
+        self.research = research
         self.metaculus_token = metaculus_token
         self.exa_api_key = exa_api_key
         self.asknews_api_key = asknews_api_key
@@ -379,6 +382,7 @@ class ToolPolicy(BaseToolPolicy):
             reddit_client_id=settings.reddit_client_id,
             reddit_client_secret=settings.reddit_client_secret,
             census_api_key=settings.census_api_key,
+            research=settings.research,
         )
 
     @property
@@ -462,6 +466,16 @@ class ToolPolicy(BaseToolPolicy):
                 review_state=review_state,
             ),
         }
+
+        if self.research == "direct":
+            # The data tools move onto the forecaster and `research()` goes
+            # with them: leaving it mounted would let the agent delegate
+            # anyway, and an arm that may or may not have delegated measures
+            # neither shape. The research groups are merged over these, which
+            # is what widens `search` from two tools to six — the orchestrator
+            # carries the narrow pair only because the wide one was elsewhere.
+            del servers["research"]
+            servers.update(self.research_servers(sandbox))
 
         return servers
 
@@ -588,11 +602,22 @@ class ToolPolicy(BaseToolPolicy):
 
         return servers
 
-    def orchestrator_allowlist(self, *, allow_spawn: bool = True) -> list[str]:
+    def orchestrator_allowlist(
+        self,
+        *,
+        allow_spawn: bool = True,
+        mounted: dict[str, McpServerEntry] | None = None,
+    ) -> list[str]:
         """Get list of allowed tools based on policy.
 
         Args:
             allow_spawn: Whether to allow subforecast (False for leaf sub-forecasts).
+            mounted: The servers this session actually carries, which under
+                `direct` research is what the roster is read off. Derived
+                rather than listed for the reason `get_research_allowed_tools`
+                gives: a second statement of what the servers hold drifts, and
+                a tool registered but left out of the roster reads to the agent
+                as broken rather than as ungranted.
 
         Returns:
             List of tool names that are allowed for this forecast.
@@ -614,6 +639,12 @@ class ToolPolicy(BaseToolPolicy):
 
         if allow_spawn:
             tools.update(SUBFORECAST_TOOLS)
+
+        if self.research == "direct":
+            from aib.tools.research import get_research_allowed_tools
+
+            tools -= RESEARCH_TOOLS
+            tools.update(get_research_allowed_tools(mounted))
 
         # Remove excluded tools (API key gating), which the base holds
         tools -= self.excluded_tools.keys()

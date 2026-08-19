@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from lup.workspace.paths import notes_path
 
+from aib.config import ResearchTopology
+
 VARIANTS_PATH = notes_path() / "variants.json"
 
 NAME_ALLOWED = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.")
@@ -45,6 +47,10 @@ class Variant(BaseModel):
     runtime: str | None = Field(
         default=None,
         description="Runtime this arm opens sessions through. None inherits the default.",
+    )
+    research: ResearchTopology | None = Field(
+        default=None,
+        description="'delegated' reaches the data tools through a research sub-agent; 'direct' mounts them on the forecaster. None inherits the default.",
     )
     note: str = Field(default="", description="Why this variant is being tested.")
 
@@ -121,4 +127,6 @@ def variant_env(variant: Variant) -> dict[str, str]:
         env["AIB_PROFILE"] = variant.profile
     if variant.runtime is not None:
         env["AIB_RUNTIME"] = variant.runtime
+    if variant.research is not None:
+        env["AIB_RESEARCH"] = variant.research
     return env
