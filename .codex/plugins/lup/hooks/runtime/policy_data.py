@@ -7400,7 +7400,7 @@ AUTO_ESCAPE_PREFIXES: list[list[str]] = [
 ]
 
 DIAGNOSTICS_COMMAND: list[str] = [
-    ".venv/bin/pyright",
+    "pyright",
     "--outputjson",
 ]
 
