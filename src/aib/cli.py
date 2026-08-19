@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from aib.paths import REGRESSION_SUITE_PATH
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
+from aib.agent.display import make_arm_prefix
 from aib.config import TOURNAMENTS as TOURNAMENT_IDS
 from aib.config import resolve_model, settings
 from aib.profiles import UnknownProfileError, resolve_config_dir
@@ -1503,6 +1504,43 @@ class ArmResult(BaseModel):
     tail: str
 
 
+ARM_LINE_LIMIT = 16 * 1024 * 1024
+"""How long one line of an arm's output may be before reading it fails.
+
+A `StreamReader` defaults to 64 KiB and *raises* past it rather than
+truncating, so an arm printing a tool result carrying a page of JSON would
+die on its own output. Large enough that this is the protection against an
+unbounded read rather than a size a forecast meets.
+"""
+
+ARM_TAIL_LINES = 15
+"""How much of a failed arm the summary repeats.
+
+Every line was streamed as it arrived, so this is for the reader who has
+scrolled past — enough to see how an arm ended without reprinting the run.
+"""
+
+
+async def stream_arm(stdout: asyncio.StreamReader, prefix: str) -> list[str]:
+    """Print an arm's output as it arrives, keeping the lines for the summary.
+
+    Read line by line rather than collected at exit. An arm is a forecast —
+    tens of minutes — and a command printing nothing for that long cannot be
+    told apart from one that has hung, which is what this was taken for.
+
+    Returned as well as printed because the summary reports how a failed arm
+    ended, and a stream cannot be read twice.
+    """
+    lines: list[str] = []  # lup: ignore[empty-collection]
+    async for raw in stdout:
+        # `splitlines` rather than a strip: the terminator is framing, and a
+        # read at end of stream carries none to remove.
+        for line in raw.decode(errors="replace").splitlines():
+            lines.append(line)
+            print(f"{prefix}{line}", flush=True)
+    return lines
+
+
 async def run_arm(
     post_id: int,
     variant: Variant,
@@ -1522,10 +1560,13 @@ async def run_arm(
             env={**os.environ, **variant_env(variant)},
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
+            limit=ARM_LINE_LIMIT,
         )
-        stdout, _ = await process.communicate()
+        if process.stdout is None:
+            raise RuntimeError(f"arm {post_id} [{variant.name}] opened with no stream")
+        lines = await stream_arm(process.stdout, make_arm_prefix(post_id, variant.name))
+        await process.wait()
         elapsed = time.monotonic() - started
-        lines = stdout.decode(errors="replace").splitlines()
         print(
             f"{'✅' if process.returncode == 0 else '❌'} {post_id} [{variant.name}] "
             f"in {elapsed / 60:.1f}m"
@@ -1535,7 +1576,7 @@ async def run_arm(
             variant=variant.name,
             returncode=process.returncode or 0,
             duration_seconds=elapsed,
-            tail="\n".join(lines[-15:]),
+            tail="\n".join(lines[-ARM_TAIL_LINES:]),
         )
 
 

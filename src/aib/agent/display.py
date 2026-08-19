@@ -116,6 +116,20 @@ def make_agent_prefix(agent_type: str, label: str | None = None) -> str:
     return f"  ↳ {Style(color=next(_agent_color_cycle)).render(tag)} "
 
 
+def make_arm_prefix(post_id: int, variant: str) -> str:
+    """Build a prefix like '[45181 baseline] ' for one A/B arm's output.
+
+    Arms are separate processes writing to one terminal at once, so a line
+    that does not say which arm it came from belongs to none of them. The
+    colour is drawn once per arm rather than per line, which is what lets a
+    reader follow one arm down the screen instead of reading every label.
+
+    No `↳`: an arm is not nested under the process printing it, and borrowing
+    the sub-agent's mark would say it was.
+    """
+    return f"{Style(color=next(_agent_color_cycle)).render(f'[{post_id} {variant}]')} "
+
+
 def print_block(block: TurnBlock, prefix: str = "") -> None:
     """Print a content block with appropriate emoji prefix and log it.
 
