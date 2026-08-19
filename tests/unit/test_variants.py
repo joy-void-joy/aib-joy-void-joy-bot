@@ -6,6 +6,7 @@ import pytest
 
 from aib.variants import (
     EFFORT_LEVELS,
+    VARIANTS_PATH,
     Variant,
     VariantRegistry,
     load_registry,
@@ -121,3 +122,59 @@ class TestVariantEnv:
             "CLAUDE_CODE_EFFORT_LEVEL": "max",
             "AIB_PROFILE": "alt",
         }
+
+    def test_a_topology_reaches_the_child_that_reads_it(self) -> None:
+        """The arm runs in its own process, so the choice travels as env."""
+        assert variant_env(Variant(name="v", research="direct"))["AIB_RESEARCH"] == (
+            "direct"
+        )
+
+    def test_an_unstated_topology_leaves_the_child_on_the_default(self) -> None:
+        """An arm saying nothing about research must not pin it either way."""
+        assert "AIB_RESEARCH" not in variant_env(Variant(name="v", model="sonnet"))
+
+    def test_the_name_the_arm_exports_is_the_one_settings_reads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The two halves of the chain agree, which nothing else checks.
+
+        A variant hands its child an environment and the child builds its own
+        `Settings`; between them the name is written twice, in two files. A
+        mismatch would not fail — the child would read the default and run the
+        shipped topology under the experiment's label, which is the arm
+        quietly measuring its own control.
+        """
+        from aib.agent.tool_policy import ToolPolicy
+        from aib.config import Settings
+
+        exported = variant_env(Variant(name="v", research="direct"))
+        for name, value in exported.items():
+            monkeypatch.setenv(name, value)
+
+        settings = Settings(metaculus_token="unused-here")
+
+        assert settings.research == "direct"
+        assert ToolPolicy.from_settings(settings).research == "direct"
+
+
+class TestRegisteredVariants:
+    """The arms this repository actually has registered.
+
+    Which arms exist is pinned in `test_runtime_selection.py`; what is asked
+    here is whether the topology arm is shaped to measure anything.
+    """
+
+    def test_the_topology_arm_differs_from_baseline_in_one_field(self) -> None:
+        """An arm differing in two things measures neither of them."""
+        registry = load_registry(VARIANTS_PATH)
+        baseline = registry.by_name("baseline")
+        arm = registry.by_name("direct-research")
+
+        assert arm.research == "direct"
+        assert baseline.research is None
+        assert (arm.model, arm.effort, arm.profile, arm.runtime) == (
+            baseline.model,
+            baseline.effort,
+            baseline.profile,
+            baseline.runtime,
+        )
