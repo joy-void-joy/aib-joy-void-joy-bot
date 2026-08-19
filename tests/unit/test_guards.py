@@ -186,6 +186,41 @@ def test_the_same_branch_is_allowed_once_main_is_published(
     guards.refuse_stale_base(f"refs/heads/feat {head} refs/heads/feat {ZERO}\n")
 
 
+def test_a_branch_authoring_its_own_data_file_is_not_refused_over_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The false refusal, met twice in one afternoon.
+
+    A branch registering an A/B arm authors `notes/variants.json` — data by
+    path, and a config registry the code reads. It inherits nothing. But a
+    forecast loop commits to local main continuously, so main is unpublished
+    for most of a working day, and reading the unpushed count alone refused
+    that branch on every push while naming a cause that was not there.
+
+    What makes it worth a test rather than a bypass: a guard that fires
+    wrongly is one people learn to pass `--no-verify` to, and the habit costs
+    the refusal that was right.
+    """
+    root = tmp_path / "repo"
+    git = push_setup(root)
+    monkeypatch.chdir(root)
+
+    # Main drifts, the way a loop leaves it.
+    write(root, "notes/worldview/research/something-a-loop-found.json")
+    git("add", "-A")
+    git("commit", "-m", "research: a question the loop looked into")
+
+    # The branch is cut from the published main and authors one data file.
+    git("checkout", "-b", "feat", "origin/main")
+    write(root, "notes/variants.json", '{"variants": []}\n')
+    git("add", "-A")
+    git("commit", "-m", "data(variants): register an arm")
+    head = str(git("rev-parse", "HEAD")).strip()
+
+    assert guards.unpushed_main()
+    guards.refuse_stale_base(f"refs/heads/feat {head} refs/heads/feat {ZERO}\n")
+
+
 def test_pushing_main_itself_is_how_data_is_meant_to_reach_the_remote(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
