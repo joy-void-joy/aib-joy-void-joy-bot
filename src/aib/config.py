@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -158,6 +158,29 @@ class Settings(BaseSettings):
         validation_alias="AIB_RESEARCH",
         description="Whether the forecaster delegates research or holds the tools",
     )
+
+    @field_validator("model")
+    @classmethod
+    def resolve_model_alias(cls, value: str) -> str:
+        """Resolve an alias wherever the model was named, not only on a flag.
+
+        `resolve_model` was reached from one command's `--model` option, so a
+        name arriving through the environment stayed an alias — and the
+        environment is the path an A/B arm uses, since a variant pins its
+        child process by exporting `AIB_MODEL`.
+
+        The alias was then passed to the runtime, which has aliases of its
+        own and resolves them by its own table. `opus` there is not
+        `claude-opus-5[1m]`: the suffix this repository's default carries is
+        the 1M context window, so an arm naming `opus` ran a shorter one than
+        the configuration it was meant to be the control for, and reported a
+        difference that was partly the window.
+
+        Resolved here so every route agrees — flag, environment, `.env` file
+        and default alike. Idempotent, because an unrecognized name passes
+        through: resolving an already-resolved id returns it.
+        """
+        return resolve_model(value)
 
     # === Runtime ===
     runtime: str = Field(
