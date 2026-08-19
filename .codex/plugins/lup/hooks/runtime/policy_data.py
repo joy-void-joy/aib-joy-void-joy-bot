@@ -233,6 +233,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -241,6 +242,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -249,6 +251,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -257,6 +260,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -265,6 +269,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -273,6 +278,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -281,6 +287,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -289,6 +296,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -297,6 +305,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -305,6 +314,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -313,6 +323,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -321,6 +332,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -329,6 +341,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -337,6 +350,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".jsx": [
@@ -347,6 +361,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -355,6 +370,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -363,6 +379,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -371,6 +388,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -379,6 +397,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -387,6 +406,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -395,6 +415,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -403,6 +424,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -411,6 +433,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -419,6 +442,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -427,6 +451,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -435,6 +460,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -443,6 +469,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -451,6 +478,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".py": [
@@ -461,6 +489,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "type-ignore",
@@ -469,6 +498,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "pyright-ignore",
@@ -477,6 +507,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "noqa",
@@ -485,6 +516,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "generic-base",
@@ -493,6 +525,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "typing-union",
@@ -501,6 +534,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "typing-generics",
@@ -509,6 +543,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "all-export",
@@ -517,6 +552,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-str-object",
@@ -525,6 +561,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-str-payload",
@@ -533,6 +570,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-get",
@@ -541,6 +579,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "dict_get_exempt_lines",
             "strength": "soft",
+            "resolution": "required",
         },
         {
             "id": "bare-object",
@@ -549,6 +588,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "bare-basemodel",
@@ -557,6 +597,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tuple-shape",
@@ -565,6 +606,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "tuple_shape_exempt_lines",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "frozenset-shape",
@@ -573,6 +615,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "set-shape",
@@ -581,6 +624,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "default-factory",
@@ -589,6 +633,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "default_factory_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "empty-collection",
@@ -597,6 +642,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "empty_collection_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "cast",
@@ -605,6 +651,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "import-re",
@@ -613,6 +660,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "re-call",
@@ -621,6 +669,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-replace",
@@ -629,6 +678,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-split",
@@ -637,6 +687,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-strip",
@@ -645,6 +696,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "silent-truncation",
@@ -653,6 +705,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "slice_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "bare-except",
@@ -661,6 +714,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "except-baseexception",
@@ -669,6 +723,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "suppress",
@@ -677,6 +732,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "suppress-import",
@@ -685,6 +741,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dataclass",
@@ -693,6 +750,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "namedtuple",
@@ -701,6 +759,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "model-config",
@@ -709,6 +768,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "subprocess",
@@ -717,6 +777,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-shell",
@@ -725,6 +786,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "argparse",
@@ -733,6 +795,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "rich-progress",
@@ -741,6 +804,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-path",
@@ -749,6 +813,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-file-ops",
@@ -757,6 +822,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-environ",
@@ -765,6 +831,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eval-exec",
@@ -773,6 +840,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "utcnow",
@@ -781,6 +849,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "global-statement",
@@ -789,6 +858,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-function",
@@ -797,6 +867,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-class",
@@ -805,6 +876,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-variable",
@@ -813,6 +885,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "pdf-extraction",
@@ -821,6 +894,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".pyi": [
@@ -831,6 +905,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "type-ignore",
@@ -839,6 +914,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "pyright-ignore",
@@ -847,6 +923,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "noqa",
@@ -855,6 +932,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "generic-base",
@@ -863,6 +941,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "typing-union",
@@ -871,6 +950,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "typing-generics",
@@ -879,6 +959,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "all-export",
@@ -887,6 +968,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-str-object",
@@ -895,6 +977,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-str-payload",
@@ -903,6 +986,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dict-get",
@@ -911,6 +995,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "dict_get_exempt_lines",
             "strength": "soft",
+            "resolution": "required",
         },
         {
             "id": "bare-object",
@@ -919,6 +1004,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "bare-basemodel",
@@ -927,6 +1013,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tuple-shape",
@@ -935,6 +1022,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "tuple_shape_exempt_lines",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "frozenset-shape",
@@ -943,6 +1031,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "set-shape",
@@ -951,6 +1040,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "default-factory",
@@ -959,6 +1049,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "default_factory_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "empty-collection",
@@ -967,6 +1058,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "empty_collection_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "cast",
@@ -975,6 +1067,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "import-re",
@@ -983,6 +1076,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "re-call",
@@ -991,6 +1085,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-replace",
@@ -999,6 +1094,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-split",
@@ -1007,6 +1103,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "string-strip",
@@ -1015,6 +1112,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "silent-truncation",
@@ -1023,6 +1121,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "slice_exempt_lines",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "bare-except",
@@ -1031,6 +1130,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "except-baseexception",
@@ -1039,6 +1139,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "suppress",
@@ -1047,6 +1148,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "suppress-import",
@@ -1055,6 +1157,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "dataclass",
@@ -1063,6 +1166,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "namedtuple",
@@ -1071,6 +1175,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "model-config",
@@ -1079,6 +1184,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "subprocess",
@@ -1087,6 +1193,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-shell",
@@ -1095,6 +1202,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "argparse",
@@ -1103,6 +1211,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "rich-progress",
@@ -1111,6 +1220,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-path",
@@ -1119,6 +1229,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-file-ops",
@@ -1127,6 +1238,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "os-environ",
@@ -1135,6 +1247,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eval-exec",
@@ -1143,6 +1256,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "utcnow",
@@ -1151,6 +1265,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "global-statement",
@@ -1159,6 +1274,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-function",
@@ -1167,6 +1283,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-class",
@@ -1175,6 +1292,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "private-variable",
@@ -1183,6 +1301,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "pdf-extraction",
@@ -1191,6 +1310,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".svelte": [
@@ -1201,6 +1321,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -1209,6 +1330,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -1217,6 +1339,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -1225,6 +1348,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -1233,6 +1357,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -1241,6 +1366,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -1249,6 +1375,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -1257,6 +1384,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -1265,6 +1393,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -1273,6 +1402,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -1281,6 +1411,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -1289,6 +1420,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -1297,6 +1429,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -1305,6 +1438,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".ts": [
@@ -1315,6 +1449,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -1323,6 +1458,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -1331,6 +1467,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -1339,6 +1476,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -1347,6 +1485,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -1355,6 +1494,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -1363,6 +1503,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -1371,6 +1512,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -1379,6 +1521,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -1387,6 +1530,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -1395,6 +1539,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -1403,6 +1548,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -1411,6 +1557,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -1419,6 +1566,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".tsx": [
@@ -1429,6 +1577,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -1437,6 +1586,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -1445,6 +1595,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -1453,6 +1604,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -1461,6 +1613,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -1469,6 +1622,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -1477,6 +1631,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -1485,6 +1640,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -1493,6 +1649,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -1501,6 +1658,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -1509,6 +1667,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -1517,6 +1676,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -1525,6 +1685,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -1533,6 +1694,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
     ".vue": [
@@ -1543,6 +1705,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "as-unknown",
@@ -1551,6 +1714,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-annotation",
@@ -1559,6 +1723,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "any-assertion",
@@ -1567,6 +1732,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-ignore",
@@ -1575,6 +1741,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-expect-error",
@@ -1583,6 +1750,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "ts-nocheck",
@@ -1591,6 +1759,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable",
@@ -1599,6 +1768,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "eslint-disable-block",
@@ -1607,6 +1777,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "tslint-disable",
@@ -1615,6 +1786,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "comment",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "non-null-assertion",
@@ -1623,6 +1795,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "var-declaration",
@@ -1631,6 +1804,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "strong",
+            "resolution": "",
         },
         {
             "id": "function-object-type",
@@ -1639,6 +1813,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
         {
             "id": "console-log",
@@ -1647,6 +1822,7 @@ ANTI_PATTERN_ROWS: dict[str, list[AntiPatternRow]] = {
             "context": "code",
             "refiner": "",
             "strength": "soft",
+            "resolution": "",
         },
     ],
 }
@@ -7227,3 +7403,5 @@ DIAGNOSTICS_COMMAND: list[str] = [
     ".venv/bin/pyright",
     "--outputjson",
 ]
+
+RESOLUTION_COMMAND: list[str] = []
