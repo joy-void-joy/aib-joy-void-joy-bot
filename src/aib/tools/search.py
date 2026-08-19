@@ -278,6 +278,7 @@ async def _raw_web_search(
             system_prompt=(
                 "You are a web search assistant. Use WebSearch to find information."
             ),
+            autonomy="ask",
             allowed_tools=["WebSearch"],
             extra_hooks=capture["hooks"],
         ),

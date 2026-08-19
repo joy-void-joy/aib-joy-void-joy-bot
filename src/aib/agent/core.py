@@ -646,6 +646,7 @@ async def review_forecast_trace(
             agent_request(
                 model=settings.model,
                 system_prompt=REVIEWER_SYSTEM_PROMPT,
+                autonomy="ask",
                 allowed_tools=["Read"],
             ),
             extras=ClaudeExtras(),
@@ -900,6 +901,7 @@ async def run_forecast(
                         session_dir=str(notes.session),
                         question_type=question_type,
                     ),
+                    autonomy="unattended",
                     max_thinking_tokens=128_000 - 1,
                     extra_hooks=hooks,
                     tool_servers=mcp_servers,

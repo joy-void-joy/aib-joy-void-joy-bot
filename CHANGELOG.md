@@ -2,6 +2,16 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v7.2.0 (2026-08-18)
+
+Govern each session by the fields that actually bound it
+- agent: every session states its own autonomy instead of all eight opening at `bypassPermissions`. Six read and answer at `ask`; the worldview fixer mutates its store at `accept_edits`; the forecaster keeps `unattended` for the Docker sandbox and its own notes
+- agent: the tool roster moves to `tools` — the field that bounds a session — from `allowed_tools`, which the SDK documents as auto-approval that explicitly does not restrict. Measured against a live session: a roster of `Read` at `bypassPermissions` cannot reach the shell
+- agent: the hand-built PreToolUse allowlist hook is gone. It stood in for the roster field this project was not using. MCP tools needed no field either — every server here is built carrying exactly the tools its session may call, so wiring already bounded them
+- agent: a session naming no built-in is now given none, rather than Claude Code's entire default set. The two worldview sessions work solely through their own servers and had been getting the lot
+- agent: `plan` is used nowhere, against the shape this change was sketched with. Measured to complete a turn without ever submitting its output, which would have cost six sub-agents their structured answer
+- agent: `ENABLE_TOOL_SEARCH` moves onto the Claude-only transform, since a Codex session would otherwise have run with schema deferral on and nothing saying so
+
 ## v7.1.0 (2026-08-18)
 
 Open every agent session through the portable runtime seam

@@ -753,6 +753,7 @@ async def run_survey() -> list[Issue]:
         agent_request(
             model=settings.model,
             system_prompt=SURVEY_SYSTEM_PROMPT,
+            autonomy="ask",
             cwd=WORLDVIEW_PATH,
             allowed_tools=SURVEY_TOOL_NAMES,
             tool_servers={"worldview_maintenance": survey_server},
@@ -802,6 +803,7 @@ async def fix_issue(issue: Issue) -> str:
         agent_request(
             model=settings.model,
             system_prompt=FIX_SYSTEM_PROMPT,
+            autonomy="accept_edits",
             cwd=WORLDVIEW_PATH,
             allowed_tools=FIX_TOOL_NAMES,
             tool_servers={"worldview_maintenance": fix_server},

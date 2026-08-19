@@ -512,6 +512,7 @@ async def run_reviewer(
             agent_request(
                 model=settings.model,
                 system_prompt=system_prompt,
+                autonomy="ask",
                 allowed_tools=[
                     "Read",
                     "Glob",

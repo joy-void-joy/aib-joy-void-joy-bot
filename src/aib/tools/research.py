@@ -299,6 +299,7 @@ async def run_research_agent(
         agent_request(
             model=settings.model,
             system_prompt=build_research_system_prompt(cutoff),
+            autonomy="ask",
             cwd=WORLDVIEW_PATH,
             allowed_tools=allowed_tools,
             extra_hooks=retrodict_hooks,

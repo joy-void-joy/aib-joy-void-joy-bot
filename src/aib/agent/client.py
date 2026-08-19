@@ -16,18 +16,17 @@ from pathlib import Path
 from typing import overload
 
 from lup.adapters.claude.runtime import (
-    SUBMISSION_TOOL,
     ClaudeSandboxConfig,
     ClaudeSessionConfig,
     create_claude_session_factory,
 )
 from lup.adapters.claude.selection import CLAUDE_RUNTIME, claude_config
-from lup.hooks import LupHooksConfig, create_tool_allowlist_hook, merge_hooks
+from lup.hooks import LupHooksConfig
 from lup.mcp import McpServerEntry
 from lup.runtime.config import ConfigTransform
 from lup.runtime.factory import SessionFactory
 from lup.runtime.models import TurnResult
-from lup.runtime.selection import SessionRequest
+from lup.runtime.selection import SessionAutonomy, SessionRequest
 from lup.types import EnvVars, Usage
 from pydantic import BaseModel
 
@@ -57,7 +56,10 @@ class AupRefusalError(Exception):
 # so the agent concludes the capability does not exist and gives up without
 # ever calling the tool. The research sub-agent carries ~35 data tools and sits
 # well past that threshold, so every session must load schemas eagerly.
-DEFAULT_ENV: dict[str, str] = {
+#
+# Claude Code's own variable, which is why it rides the transform below rather
+# than the environment a portable request carries.
+CLAUDE_ONLY_ENV: EnvVars = {
     "ENABLE_TOOL_SEARCH": "false",
 }
 
@@ -90,7 +92,6 @@ def session_env(profile: str | None) -> EnvVars:
     return {
         **settings.openrouter_env,
         **profile_env(profile),
-        **DEFAULT_ENV,
     }
 
 
@@ -103,6 +104,12 @@ class ClaudeExtras(ConfigTransform[ClaudeSessionConfig]):
     something it has no way to answer. Rendering first and transforming after
     is the seam lup leaves for exactly this, so the Claude-only half is
     additive rather than a second way to open a session.
+
+    An environment variable only one runtime reads belongs here for the same
+    reason effort does not: effort became a field because a variable naming
+    one provider goes on quietly meaning nothing to the other. That is a
+    reason to carry such a variable on this seam, where it is visibly one
+    runtime's, rather than in the environment every session shares.
     """
 
     def __init__(
@@ -123,6 +130,7 @@ class ClaudeExtras(ConfigTransform[ClaudeSessionConfig]):
                 "add_dirs": self.add_dirs,
                 "sandbox": self.sandbox,
                 "max_buffer_size": self.max_buffer_size,
+                "environment": {**config.environment, **CLAUDE_ONLY_ENV},
             }
         )
 
@@ -131,6 +139,7 @@ def agent_request(
     *,
     model: str,
     system_prompt: str,
+    autonomy: SessionAutonomy,
     allowed_tools: Sequence[str] = (),
     extra_hooks: LupHooksConfig | None = None,
     tool_servers: Mapping[str, McpServerEntry] | None = None,
@@ -140,30 +149,46 @@ def agent_request(
 ) -> SessionRequest:
     """What a tool-using session this project opens asks for, portably.
 
-    `unattended` is the portable degree Claude spells `bypassPermissions`. The
-    allowlist and the hook enforcing it both travel as fields: Claude renders
-    them, and Codex refuses them by design because the dispatcher generated
-    into its harness tree is what governs a session there.
+    Autonomy is stated by the caller rather than defaulted, because it is the
+    portable word for what a session may do to the world and no two of these
+    sessions mean the same thing by it. Claude reads it as a permission mode
+    and Codex as a sandbox, so a degree left to a default would be a sandbox
+    nobody chose.
 
-    The hook is built here rather than by the caller because bypassPermissions
-    ignores the SDK's allowlist field, which leaves the hook as the only thing
-    holding the line — and a structured turn is served by a submission tool the
-    runtime installs, so an allowlist written without it denies the one tool
-    the turn cannot finish without. Callers state the tools they want and pass
-    anything further as `extra_hooks`.
+    `plan` is not among the degrees to reach for here. It is not a read-only
+    permission but a mode that asks the model to present a plan instead of
+    acting, and a session that must return a model never returns one.
+
+    A caller states one roster, and it reaches the two fields that between
+    them bound a session. `tools` is the engine's own set of built-ins, so
+    the built-in half is derived by intersection and a session naming no
+    built-in gets none rather than all of them. The MCP half needs no field:
+    every server here is built carrying exactly the tools its session may
+    call, so wiring already says it, and saying it twice is what drifts.
+
+    `allowed_tools` keeps the job the SDK documents for it — auto-approval,
+    not restriction. That is not redundant now that sessions open below
+    `unattended`: at `ask` a tool outside it raises a permission request no
+    programmatic session can answer.
+
+    Codex refuses `tools`, having no roster of its own, which is one honest
+    refusal against a real gap where there were three. Callers pass anything
+    further as `extra_hooks`.
     """
+    from aib.agent.tool_policy import BUILTIN_TOOLS
+
     resolved = AGENT_CWD if cwd is None else cwd
     resolved.mkdir(parents=True, exist_ok=True)
-    tools = [*allowed_tools, SUBMISSION_TOOL]
-    hooks = create_tool_allowlist_hook(tools)
+    roster = list(allowed_tools)
     return SessionRequest(
         model=model,
         instructions=system_prompt,
         cwd=resolved,
-        autonomy="unattended",
+        autonomy=autonomy,
         effort=SESSION_EFFORT,
-        allowed_tools=tools,
-        hooks=hooks if extra_hooks is None else merge_hooks(hooks, extra_hooks),
+        tools=[name for name in roster if name in BUILTIN_TOOLS],
+        allowed_tools=roster,
+        hooks=extra_hooks,
         tool_servers=dict(tool_servers or {}),
         max_thinking_tokens=max_thinking_tokens,
         environment=session_env(profile if profile is not None else settings.profile),

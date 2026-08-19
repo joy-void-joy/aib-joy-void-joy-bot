@@ -36,6 +36,7 @@ from lup.harness.models import (
     ResolveSpec,
     SkillInvocation,
 )
+from lup.policy.refused_tools import RefusedTool
 from lup.workspace.paths import project_root, read_project_name
 
 from aib.devtools.harness.content.catalog import AGENTS, SKILLS
@@ -114,6 +115,36 @@ def research_servers() -> list[McpServer]:
         )
         for name in RESEARCH_TOOL_GROUPS
     ]
+
+
+ARTIFACT_REFUSAL = (
+    "publishing a page leaves the repository, and this project already owns"
+    " surfaces that do not — run `uv run lup-devtools report` for everything"
+    " left to implement, or /lup:report to write it whole under tmp/"
+)
+"""Why an artifact is the wrong reflex here, and what answers the same need.
+
+The redirect is the point rather than the refusal. This repository already
+refuses the paper version of the same move — a `TODO.md` or a roadmap file
+parks a decision where no workflow surfaces it again — and a published page
+is that failure with a URL: further out of reach of `report`, the note
+passes, and the gates, not nearer.
+"""
+
+REFUSED_TOOLS = [
+    RefusedTool(tool="Artifact", reason=ARTIFACT_REFUSAL),
+    RefusedTool(tool="Skill", specifier="artifact-design", reason=ARTIFACT_REFUSAL),
+]
+"""The calls this project has decided against, each naming what to reach for.
+
+Declaring one is also what lets a runtime see it. The Codex dispatcher
+registers the tools it decodes widened by the tools refused here, so a table
+that named nothing left its matcher at the three tools the runtime already
+routes — and a refusal no hook is registered for is a refusal in name.
+
+Neither is walled off: a deliberate use escalates with the marker the shell
+lattice already uses, and gets an approval question carrying this reason.
+"""
 
 
 def declared_hook_set() -> HookSet:
@@ -209,6 +240,7 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
         hooks=HookSet(
             id="hooks.lup-policy",
             policy_ids=["fetch", "shell", "edit", "unknown-tool"],
+            refused_tools=REFUSED_TOOLS,
             allowed_fetch=documentation_scopes(),
             protected_edit_roots=[
                 Path(".claude"),
