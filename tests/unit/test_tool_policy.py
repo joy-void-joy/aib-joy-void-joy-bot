@@ -208,6 +208,65 @@ class TestToolPolicyMcpServers:
         assert "trends" not in servers
         assert "markets" not in servers
 
+    def test_direct_research_mounts_the_data_servers_on_the_forecaster(self) -> None:
+        """The other topology: the tools the forecaster reasons with are its own."""
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+
+        servers = ToolPolicy(research="direct").orchestrator_servers(sandbox)
+
+        assert "financial" in servers
+        assert "government" in servers
+        assert "trends" in servers
+        assert "markets" in servers
+        assert "notes" in servers
+        assert "metaculus" in servers
+
+    def test_direct_research_withdraws_the_tool_that_would_delegate(self) -> None:
+        """An arm that may or may not have delegated measures neither shape.
+
+        Leaving `research()` mounted beside the tools it delegates to would
+        let the agent keep delegating, so the comparison this setting exists
+        for would be between "delegated" and "delegated when it felt like it".
+        """
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+
+        policy = ToolPolicy(research="direct")
+        servers = policy.orchestrator_servers(sandbox)
+
+        assert "research" not in servers
+        assert not RESEARCH_TOOLS & set(
+            policy.orchestrator_allowlist(mounted=servers)
+        )
+
+    def test_direct_research_grants_every_tool_it_mounts(self) -> None:
+        """A tool registered and left out of the roster reads as broken, not ungranted.
+
+        The roster is read off the servers the session actually carries, so
+        the two cannot disagree — which is the whole reason the allowlist
+        takes them rather than restating their contents.
+        """
+        sandbox = MagicMock()
+        sandbox.create_mcp_server.return_value = MagicMock()
+
+        policy = ToolPolicy(research="direct", fred_api_key="f", exa_api_key="e")
+        servers = policy.orchestrator_servers(sandbox)
+        granted = set(policy.orchestrator_allowlist(mounted=servers))
+
+        served = {
+            f"mcp__{name}__{tool}"
+            for name, server in servers.items()
+            for tool in server_tool_names(server)
+        }
+        assert served
+        assert served - policy.excluded_tools.keys() <= granted
+
+    def test_the_shipped_topology_is_the_delegating_one(self) -> None:
+        """The setting is an experiment to turn, not a change already taken."""
+        assert ToolPolicy().research == "delegated"
+        assert "research" in ToolPolicy().orchestrator_servers(MagicMock())
+
 
 class TestToolPolicyResearchServers:
     """Tests for get_research_mcp_servers method."""

@@ -2,12 +2,28 @@
 
 import logging
 import os
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+type ResearchTopology = Literal["delegated", "direct"]
+"""Where the data-gathering tools sit relative to the forecaster.
+
+``delegated`` is the shipped shape: the forecaster holds about ten
+orchestration tools and reaches the other thirty-five through ``research()``,
+which opens a sub-agent that gathers and returns a digest. ``direct`` mounts
+them on the forecaster itself and withdraws ``research()``, so the same tools
+are called from the one context that reasons about the answer.
+
+The trade is context against depth, and it is not obvious which way it falls:
+delegating keeps raw tool output out of the forecaster's window and lets it
+fan out across several research agents at once, while holding the tools puts
+every observation in front of the reasoning that uses it. Which is why this
+is a setting an experiment can turn rather than a decision taken here.
+"""
 
 MODEL_ALIASES: dict[str, str] = {
     "fable": "claude-fable-5",
@@ -136,6 +152,11 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="AIB_MAX_THINKING_TOKENS",
         description="Max thinking tokens (None = unlimited)",
+    )
+    research: ResearchTopology = Field(
+        default="delegated",
+        validation_alias="AIB_RESEARCH",
+        description="Whether the forecaster delegates research or holds the tools",
     )
 
     # === Runtime ===

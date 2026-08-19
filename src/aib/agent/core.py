@@ -843,7 +843,6 @@ async def run_forecast(
 
         # Centralized tool policy determines MCP servers and allowed tools
         policy = ToolPolicy.from_settings(settings)
-        allowed_tools = policy.orchestrator_allowlist(allow_spawn=allow_spawn)
 
         # Create base permission hooks
         permission_hooks = create_permission_hooks(rw_dirs=rw_dirs, ro_dirs=ro_dirs)
@@ -883,6 +882,12 @@ async def run_forecast(
             question_context=context,
             traces_dir=forecasts_dir().parent if cutoff is None else None,
             review_state=review_state,
+        )
+
+        # Read off the servers rather than beside them: under `direct`
+        # research the roster is whatever those servers turned out to carry.
+        allowed_tools = policy.orchestrator_allowlist(
+            allow_spawn=allow_spawn, mounted=mcp_servers
         )
 
         # Build data-gathering MCP servers for the research sub-agent
