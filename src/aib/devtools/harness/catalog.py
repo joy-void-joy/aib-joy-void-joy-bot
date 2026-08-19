@@ -313,7 +313,7 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
             ],
             path_roles=path_roles(),
             human_owned_files=[Path("README.md")],
-            diagnostics_command=[".venv/bin/pyright", "--outputjson"],
+            diagnostics_command=["pyright", "--outputjson"],
             shell_rules=SHELL_RULES,
             runner_targets=RUNNER_TARGETS,
             sandbox=HookSandbox(

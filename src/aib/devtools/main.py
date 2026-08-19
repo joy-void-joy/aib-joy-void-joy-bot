@@ -13,8 +13,6 @@ that tree for now lives in the library, and this project mounts only the one
 command that has to know where its own version used to be declared.
 """
 
-from pathlib import Path
-
 import typer
 from lup.devtools.dev.app import create_dev_app
 from lup.devtools.roster import DevtoolsDeclarations
@@ -50,22 +48,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-DEV_APP = create_dev_app(
-    declared=dev.declared,
-    native_targets=TARGETS,
-    repository_writers=REPOSITORY_WIDE,
-    guidance=guidance_document(),
-    relocate_roots=[Path("src"), Path("tests")],
-)
-dev.extend(DEV_APP)
-version.extend(LIBRARY_VERSION.app)
-"""The library's development tree, wired over what this project declares.
-
-Composed rather than replaced: the workflow the commands express — a worktree,
-a gate, a PR, a pass over the notes — is not this project's to hold an opinion
-about, and every one it declined to compose was one it then did not have.
-`extend` mounts the single moment that is this project's own."""
-
 DECLARED = DevtoolsDeclarations(
     dev=dev.declared,
     targets=TARGETS,
@@ -83,6 +65,28 @@ One set of targets reaches both `harness` and `report` from here, so what
 one calls stale drift and what the other refuses are a single computation
 rather than two that can disagree.
 """
+
+DEV_APP = create_dev_app(
+    declared=DECLARED.dev,
+    native_targets=DECLARED.targets,
+    repository_writers=DECLARED.repository_writers,
+    guidance=DECLARED.guidance,
+    relocate_roots=DECLARED.relocate_roots,
+)
+dev.extend(DEV_APP)
+version.extend(LIBRARY_VERSION.app)
+"""The library's development tree, wired over what this project declares.
+
+Composed rather than replaced: the workflow the commands express — a worktree,
+a gate, a PR, a pass over the notes — is not this project's to hold an opinion
+about, and every one it declined to compose was one it then did not have.
+`extend` mounts the moments that are this project's own.
+
+Built from :data:`DECLARED` field for field, which is what makes the entry
+that replaces the roster's `dev` the app the roster would have built — plus
+the commands mounted onto it. Restating the arguments beside the declaration
+they come from is how the two drift, and it already had them stating one
+thing twice."""
 
 PROJECT_SUBAPPS: list[SubApp] = [
     subapp("agent", "Agent tool serving for Claude Code", agent_app),
@@ -104,7 +108,7 @@ PROJECT_SUBAPPS: list[SubApp] = [
 
 `dev` and `trace` name library sub-apps deliberately: an added entry naming a
 default replaces it, which is how this project keeps forecast traces over
-session traces, and the library's dev tree with its own one moment mounted on.
+session traces, and the library's dev tree with its own commands mounted on.
 
 `version` is absent because it is no longer replaced. Its one project-specific
 command is mounted onto the library's tree instead, the way `dev`'s is.

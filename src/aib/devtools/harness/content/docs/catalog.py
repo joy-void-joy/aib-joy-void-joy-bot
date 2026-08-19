@@ -13,6 +13,7 @@ from pathlib import Path
 import lup.harness.models as models
 
 import aib.devtools.harness.content.docs.devtools as devtools
+import aib.devtools.harness.content.docs.subagents as subagents
 
 DOCUMENTS = [
     models.Document(
@@ -21,9 +22,18 @@ DOCUMENTS = [
         source=devtools.__name__,
         document=devtools.DOCUMENT,
     ),
+    models.Document(
+        path=Path("docs/subagents.md"),
+        semantic_id="docs.subagents",
+        source=subagents.__name__,
+        document=subagents.DOCUMENT,
+    ),
 ]
 """What the always-loaded guidance points at instead of carrying.
 
-One document so far. The guidance has a hard byte budget — past it a runtime
-truncates the file silently rather than reporting it — so a section that is
-looked up rather than read moves here and leaves a pointer behind."""
+Two kinds. The first is reference: the guidance has a hard byte budget — past
+it a runtime truncates the file silently rather than reporting it — so a
+section that is looked up rather than read moves here and leaves a pointer
+behind. The second is a decision, published for whoever proposes reopening it,
+because a decision whose reasons live in one session's narration is one the
+next session makes again from nothing."""

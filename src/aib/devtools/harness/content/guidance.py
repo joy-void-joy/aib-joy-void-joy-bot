@@ -86,42 +86,24 @@ Do not launch it in the background, and do not offer to run it "just this once".
 ## Commands
 
 ```bash
-# Install dependencies
 uv sync
-
-# Run a test forecast (does not submit to Metaculus)
-uv run forecast test <question_id>
-
-# Forecast and submit to Metaculus
-uv run forecast submit <question_id>
-
-# Forecast, submit, and post reasoning as a private comment
-uv run forecast submit <question_id> --comment
-
-# Run on a specific Claude account (register one with `harness profile add`)
-uv run forecast test <question_id> --profile work
-
-# Compare agent configurations side by side (see A/B Testing below)
-uv run forecast ab --list
-uv run forecast ab -v baseline -v sonnet-max
-
-# Forecast all open questions in a tournament (skips already forecast)
-uv run forecast tournament aib       # AIB Spring 2026
-uv run forecast tournament minibench # MiniBench
-uv run forecast tournament cup       # Metaculus Cup
-
-# Add a new dependency (DO NOT modify pyproject.toml directly)
-uv add <package-name>
-
-# Format code
+uv add <package-name>     # never edit pyproject.toml directly
 uv run ruff format .
-
-# Lint code
 uv run ruff check .
-
-# Type check
 uv run pyright
 ```
+
+The forecasting commands are the user's to run and yours to print:
+
+```bash
+uv run forecast test <question_id>              # no submission
+uv run forecast submit <question_id> [--comment]
+uv run forecast tournament <aib|minibench|cup>  # skips already forecast
+uv run forecast ab --list | -v <variant> -v <variant>
+```
+
+Any of them takes `--profile <name>` to run on a registered Claude account.
+`docs/devtools.md` carries the tournament names and the rest.
 
 ## A/B Testing
 
@@ -189,11 +171,6 @@ This project uses **git worktrees** (not regular branches) to develop multiple f
 
 **Exception:** Data commits (`data(forecasts):`) can go directly to main—forecast outputs don't need review.
 
-### Worktrees vs Branches
-
-- **`git switch -c`**: Creates a branch but stays in the same directory. Switching branches changes all files in place.
-- **`git worktree add`**: Creates a new directory with its own working copy. Multiple branches can be worked on simultaneously in separate directories.
-
 ### If already in a worktree
 
 **You are typically already in a worktree subbranch.** Check with `git worktree list` to confirm. If you're in a feature worktree, just work directly—no need to create another worktree or branch out.
@@ -238,28 +215,10 @@ feature branch takes effect there immediately.
 
 ### Commit Message Format
 
-Use conventional commit syntax: `type(scope): description`
-
-**Types:**
-
-- `feat` — New feature or capability
-- `fix` — Bug fix
-- `refactor` — Code change that neither fixes a bug nor adds a feature
-- `docs` — Documentation only (README, standalone docs)
-- `test` — Adding or updating tests
-- `chore` — Maintenance (dependencies, build config, etc.)
-- `meta` — Changes to the harness declarations and the trees they generate
-- `data` — Generated data and outputs (forecasts, metrics, logs)
-
-**Examples:**
-
-```
-feat(agent): add permission handler for read-only directories
-fix(tools): handle missing API key gracefully
-refactor(sandbox): extract Docker client initialization
-meta(harness): declare the fetch scope for a new data source
-data(forecasts): add Feb 4 2026 forecast batch
-```
+Conventional commits, `type(scope): description`. Two types are this
+repository's own: `meta` for the harness declarations and the trees they
+generate, and `data` for generated output. `docs/devtools.md` lists every
+type with an example.
 
 ### Forecast Commits
 
@@ -280,15 +239,10 @@ Forecast outputs use `data(forecasts):` and can be committed directly to main (n
 ### Keep `main` published
 
 **Push `main` after committing data.** The forecast loop commits `notes/` to local
-`main`, so `main` drifts ahead of `origin/main` unless you push. That drift is what
-breaks PRs:
-
-A feature branch is cut from local `main`, inheriting its unpushed data commits.
-When the PR is opened, GitHub computes the merge base against `origin/main` — which
-has never seen them — and folds every inherited `notes/` file into the merge as a
-fresh addition with no shared ancestry. Local `main` still holds those files as real
-commits, so the next `git pull` collides add/add on every one of them. This is what
-put 506 data files into PR #55.
+`main`, so `main` drifts ahead of `origin/main` unless you push. A feature branch
+cut from that `main` inherits the unpushed commits, and the PR folds every one of
+their `notes/` files in as a fresh addition. `docs/devtools.md` carries how that
+happens and what it cost.
 
 ```bash
 git log --oneline origin/main..main   # should be empty before you open a PR
@@ -297,22 +251,23 @@ git push origin main
 
 ### Git Hooks
 
-Tracked in `.githooks/`, wired up by `uv run lup-devtools dev setup-hooks`. Tracked
-rather than written into `.git/hooks` so one `core.hooksPath` setting arms every
-clone, instead of each one having to remember an install command — and because
-that setting is repository-wide, a worktree created after it is armed by existing.
+Four guards over two moments, declared in `src/aib/devtools/dev.py` and written
+by `uv run lup-devtools dev git-hooks install`. Each moment runs its guards in
+declaration order and stops at the first refusal, so the nearly-free check goes
+first.
 
-`dev git-hooks` is the library's own pair and a different thing: it writes hook
-bodies that run the drift check and the gate. It reads this project's tracked
-hooks as foreign and leaves them alone rather than displacing them.
-
-| Hook | Rejects |
+| Moment | Refuses |
 |---|---|
-| `pre-commit` | A commit mixing `notes/` data with code. Data goes to `main`; code goes through a worktree and a PR. |
-| `pre-push` | A feature branch whose PR would carry `notes/` files — i.e. `main` is unpushed and the base is stale. Then the quality gate: `pyright`, `ruff check`, and the non-integration tests, so a branch meets the bar before it leaves rather than minutes later in CI. |
+| `pre-commit` | A generated artifact behind its source. Then a commit mixing `notes/` data with code — data goes to `main`, code through a worktree and a PR. |
+| `pre-push` | A branch whose PR would carry `notes/` files, i.e. `main` is unpushed and the base is stale. Then `dev gate`: `ruff`, `pyright`, the non-integration tests, and `harness check all`. |
 
-Bypass with `--no-verify` when a branch deliberately reshapes `notes/` (e.g. a layout
-migration).
+Both push guards read git's ref list, which git delivers once, so the hook
+captures it and replays it to each.
+
+The bodies are tracked, and `core.hooksPath` is what points git at them — one
+setting per clone, which every worktree cut from it inherits. `dev setup-hooks`
+writes that setting; `dev git-hooks install` writes the bodies. Bypass either
+moment with `--no-verify` when a branch deliberately reshapes `notes/`.
 
 ## Editing Style
 

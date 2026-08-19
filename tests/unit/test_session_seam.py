@@ -85,13 +85,29 @@ def test_a_session_runs_in_a_configuration_home_of_its_own(tmp_path: Path) -> No
     assert AGENT_CWD.name in home
 
 
-def test_the_derived_home_sits_under_the_one_the_profile_names(tmp_path: Path) -> None:
-    """Containment narrows what a session writes, never which login it runs as."""
-    home = contained_home(
-        select_runtime("claude"), tmp_path, one_shot_request("sonnet", "", None)
+def test_the_derived_home_still_runs_as_the_login_the_profile_names(
+    tmp_path: Path,
+) -> None:
+    """Containment narrows what a session writes, never which login it runs as.
+
+    Asked of the login rather than of where the home sits. A derived home is
+    this project's own state and belongs in the tree it serves, while the
+    home a profile names belongs to the account — so one sitting inside the
+    other was never what made the account carry over. The stored login is
+    reached by symlink, which is also why it is not copied: a refresh rotates
+    the token, and a copy is what would go stale still holding the old one.
+    """
+    credentials = tmp_path / ".credentials.json"
+    credentials.write_text("{}", encoding="utf-8")
+
+    home = Path(
+        contained_home(
+            select_runtime("claude"), tmp_path, one_shot_request("sonnet", "", None)
+        )
     )
 
-    assert home.startswith(str(tmp_path))
+    assert (home / ".credentials.json").is_symlink()
+    assert (home / ".credentials.json").resolve() == credentials
 
 
 def test_every_claude_session_loads_its_tool_schemas_eagerly() -> None:
