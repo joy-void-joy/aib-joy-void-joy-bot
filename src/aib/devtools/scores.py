@@ -31,6 +31,7 @@ from aib.paths import (
     resolve_version,
     versions_at_least,
 )
+from aib.devtools.version import VersionHistory
 from aib.scoring import load_all_score_rows
 
 app = typer.Typer(no_args_is_help=True)
@@ -911,7 +912,7 @@ def _print_numeric_rows(rows: list[dict[str, str]]) -> None:
 
 def _build_strip(
     by_version: dict[str, list[float]],
-    version_dates: dict[str, str],
+    version_dates: VersionHistory,
     term_width: int,
     color_map: dict[str, int] | None = None,
     version_totals: dict[str, int] | None = None,
@@ -956,8 +957,8 @@ def _build_strip(
     score_range = range_max - range_min
 
     def _date_short(v: str) -> str:
-        d = version_dates.get(v, "")
-        return d[5:] if len(d) >= 10 else (d or "—")
+        day = version_dates.shipped(v)
+        return "—" if day is None else day.strftime("%m-%d")
 
     def _label(v: str, n: int) -> str:
         ds = _date_short(v)
@@ -1567,10 +1568,8 @@ def strip(
     """Strip plot of scores by agent version (from track record)."""
     from rich.console import Console
 
-    from aib.devtools.version import load_version_dates
-
     console = Console()
-    version_dates = load_version_dates()
+    version_dates = VersionHistory.read()
     mode_ref: list[ScoreMode] = ["baseline"]
     versions = scoped_versions(min_version)
 

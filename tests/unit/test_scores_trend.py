@@ -1,12 +1,13 @@
 """Tests for the `scores trend` command and its helpers."""
 
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
 
-from aib.devtools.version import load_version_dates
+from aib.devtools.version import VersionHistory
 from aib.paths import parse_semver
 
 
@@ -30,7 +31,14 @@ class TestParseSemver:
         assert parse_semver("3.2") is None
 
 
-class TestLoadVersionDates:
+class TestVersionHistory:
+    """When each version shipped, read as releases rather than as text.
+
+    A date is parsed here rather than carried as a string, because what reads
+    this joins a version against when it shipped — and a comparison between
+    two dates is wrong the moment either one is text that looks like a date.
+    """
+
     def test_parse_changelog(self, tmp_path: Path) -> None:
         changelog = tmp_path / "CHANGELOG.md"
         changelog.write_text(
@@ -39,22 +47,27 @@ class TestLoadVersionDates:
             "## v3.4.0 (2026-02-27)\n\nOther changes\n\n"
             "## v1.0.0 (2026-02-14)\n\nInitial\n"
         )
-        result = load_version_dates(path=changelog)
-        assert result == {
-            "3.5.0": "2026-03-02",
-            "3.4.0": "2026-02-27",
-            "1.0.0": "2026-02-14",
-        }
+        history = VersionHistory.read(path=changelog)
+
+        assert history.shipped("3.5.0") == date(2026, 3, 2)
+        assert history.shipped("3.4.0") == date(2026, 2, 27)
+        assert history.shipped("1.0.0") == date(2026, 2, 14)
 
     def test_missing_file(self, tmp_path: Path) -> None:
-        result = load_version_dates(path=tmp_path / "nonexistent.md")
-        assert result == {}
+        assert VersionHistory.read(path=tmp_path / "nonexistent.md").releases == []
 
     def test_no_version_lines(self, tmp_path: Path) -> None:
         changelog = tmp_path / "CHANGELOG.md"
         changelog.write_text("# Changelog\n\nNo versions here.\n")
-        result = load_version_dates(path=changelog)
-        assert result == {}
+
+        assert VersionHistory.read(path=changelog).releases == []
+
+    def test_an_unrecorded_version_has_no_date(self, tmp_path: Path) -> None:
+        """A plot asks about versions the changelog may never have named."""
+        changelog = tmp_path / "CHANGELOG.md"
+        changelog.write_text("# Changelog\n\n## v1.0.0 (2026-02-14)\n\nInitial\n")
+
+        assert VersionHistory.read(path=changelog).shipped("9.9.9") is None
 
 
 def _make_forecast(

@@ -7,8 +7,10 @@ Typer app, so composing it is naming the declarations rather than repeating
 their names and help text here.
 
 `resolved()` lets the second half win on a shared name, which is how this
-project keeps its own `trace` and `version` (forecast traces and the release
-ritual) over lup's session-trace and bare-bump versions of the same names.
+project keeps its own `trace` — forecast traces rather than session traces —
+over lup's. `version` is not among them: the release ritual it once replaced
+that tree for now lives in the library, and this project mounts only the one
+command that has to know where its own version used to be declared.
 """
 
 from pathlib import Path
@@ -17,6 +19,7 @@ import typer
 from lup.devtools.dev.app import create_dev_app
 from lup.devtools.roster import DevtoolsDeclarations
 from lup.devtools.subapps import SubApp, compose, subapp
+from lup.devtools.version import SUBAPP as LIBRARY_VERSION
 
 from aib.devtools.agent import app as agent_app
 from aib.devtools.analysis import app as analysis_app
@@ -38,7 +41,7 @@ from aib.devtools.resolution import app as resolution_app
 from aib.devtools.scores import app as scores_app
 from aib.devtools.subapps import RETIRED_SUBAPPS, agent_prompt
 from aib.devtools.trace import app as trace_app
-from aib.devtools.version import app as version_app
+import aib.devtools.version as version
 from aib.devtools.worldview import app as worldview_app
 
 app = typer.Typer(
@@ -55,6 +58,7 @@ DEV_APP = create_dev_app(
     relocate_roots=[Path("src"), Path("tests")],
 )
 dev.extend(DEV_APP)
+version.extend(LIBRARY_VERSION.app)
 """The library's development tree, wired over what this project declares.
 
 Composed rather than replaced: the workflow the commands express — a worktree,
@@ -94,15 +98,16 @@ PROJECT_SUBAPPS: list[SubApp] = [
     subapp("git", "Git operations for forecasts", git_app),
     subapp("health", "Service health checks", health_app),
     subapp("migration", "One-time data migrations", migration_app),
-    subapp("version", "Agent version management", version_app),
     subapp("worldview", "Worldview store management", worldview_app),
 ]
 """The sub-apps only this project has, because only it has their subject.
 
-`dev`, `trace` and `version` name library sub-apps deliberately: an added
-entry naming a default replaces it, which is how this project keeps forecast
-traces over session traces, its release ritual over a bare bump, and the
-library's dev tree with its own one moment mounted on.
+`dev` and `trace` name library sub-apps deliberately: an added entry naming a
+default replaces it, which is how this project keeps forecast traces over
+session traces, and the library's dev tree with its own one moment mounted on.
+
+`version` is absent because it is no longer replaced. Its one project-specific
+command is mounted onto the library's tree instead, the way `dev`'s is.
 """
 
 compose(app, RETIRED_SUBAPPS.over(DECLARED.roster(), PROJECT_SUBAPPS))

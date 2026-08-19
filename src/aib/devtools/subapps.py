@@ -42,10 +42,13 @@ RETIRED_SUBAPPS = SubAppSelection(
 )
 """The library sub-apps this project's CLI does not serve, and why.
 
-`trace` and `version` are absent because they are not declined: this project
-declares its own under both names — forecast traces rather than session
-traces, and the release ritual rather than a bare bump — and an added entry
-naming a default replaces it.
+`trace` is absent because it is not declined: this project declares its own
+under that name — forecast traces rather than session traces — and an added
+entry naming a default replaces it.
+
+`version` was the same until the release ritual it differed over moved into
+the library. It is now served as the library writes it, with the one command
+that has to know this repository's own past mounted onto that tree.
 """
 
 RETIRED_CONTENT = ContentSelection()
