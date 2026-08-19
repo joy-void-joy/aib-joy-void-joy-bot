@@ -236,9 +236,7 @@ class TestToolPolicyMcpServers:
         servers = policy.orchestrator_servers(sandbox)
 
         assert "research" not in servers
-        assert not RESEARCH_TOOLS & set(
-            policy.orchestrator_allowlist(mounted=servers)
-        )
+        assert not RESEARCH_TOOLS & set(policy.orchestrator_allowlist(mounted=servers))
 
     def test_direct_research_grants_every_tool_it_mounts(self) -> None:
         """A tool registered and left out of the roster reads as broken, not ungranted.

@@ -55,16 +55,28 @@ class TestShippedRegistry:
     """The registry this repository ships is what `forecast ab` reads."""
 
     def test_it_validates(self) -> None:
-        registry = load_registry()
-        assert [v.name for v in registry.variants] == ["baseline", "gpt-5.6-sol"]
+        """Every arm the repository means to keep is still registered.
+
+        Stated as a subset rather than as the list. An experiment is added
+        by registering an arm, and a test that fails on the addition is one
+        whoever adds it edits without reading — which is how the arm that
+        was silently *dropped* would go through too.
+        """
+        registered = {v.name for v in load_registry().variants}
+
+        assert registered >= {"baseline", "gpt-5.6-sol", "direct-research"}
 
     def test_the_arms_differ_in_runtime(self) -> None:
         registry = load_registry()
-        assert {v.name: v.runtime for v in registry.variants} == {
-            "baseline": "claude",
-            "gpt-5.6-sol": "codex",
-        }
+        runtimes = {v.name: v.runtime for v in registry.variants}
+
+        assert runtimes["baseline"] == "claude"
+        assert runtimes["gpt-5.6-sol"] == "codex"
 
     def test_each_arm_traces_somewhere_of_its_own(self) -> None:
-        traces = {v.trace_version("7.0.0") for v in load_registry().variants}
-        assert traces == {"7.0.0+baseline", "7.0.0+gpt-5.6-sol"}
+        """Two arms writing one directory would pool the comparison away."""
+        registered = load_registry().variants
+        traces = {v.trace_version("7.0.0") for v in registered}
+
+        assert len(traces) == len(registered)
+        assert all(trace.startswith("7.0.0+") for trace in traces)

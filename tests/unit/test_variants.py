@@ -135,16 +135,11 @@ class TestVariantEnv:
 
 
 class TestRegisteredVariants:
-    """The arms this repository actually has registered."""
+    """The arms this repository actually has registered.
 
-    def test_the_registry_this_repository_ships_parses(self) -> None:
-        """A malformed registry is a broken experiment nobody sees until it runs."""
-        registered = load_registry(VARIANTS_PATH).variants
-
-        assert {variant.name for variant in registered} >= {
-            "baseline",
-            "direct-research",
-        }
+    Which arms exist is pinned in `test_runtime_selection.py`; what is asked
+    here is whether the topology arm is shaped to measure anything.
+    """
 
     def test_the_topology_arm_differs_from_baseline_in_one_field(self) -> None:
         """An arm differing in two things measures neither of them."""
