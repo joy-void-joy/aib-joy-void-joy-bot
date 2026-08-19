@@ -6,6 +6,7 @@ import pytest
 
 from aib.variants import (
     EFFORT_LEVELS,
+    VARIANTS_PATH,
     Variant,
     VariantRegistry,
     load_registry,
@@ -121,3 +122,41 @@ class TestVariantEnv:
             "CLAUDE_CODE_EFFORT_LEVEL": "max",
             "AIB_PROFILE": "alt",
         }
+
+    def test_a_topology_reaches_the_child_that_reads_it(self) -> None:
+        """The arm runs in its own process, so the choice travels as env."""
+        assert variant_env(Variant(name="v", research="direct"))["AIB_RESEARCH"] == (
+            "direct"
+        )
+
+    def test_an_unstated_topology_leaves_the_child_on_the_default(self) -> None:
+        """An arm saying nothing about research must not pin it either way."""
+        assert "AIB_RESEARCH" not in variant_env(Variant(name="v", model="sonnet"))
+
+
+class TestRegisteredVariants:
+    """The arms this repository actually has registered."""
+
+    def test_the_registry_this_repository_ships_parses(self) -> None:
+        """A malformed registry is a broken experiment nobody sees until it runs."""
+        registered = load_registry(VARIANTS_PATH).variants
+
+        assert {variant.name for variant in registered} >= {
+            "baseline",
+            "direct-research",
+        }
+
+    def test_the_topology_arm_differs_from_baseline_in_one_field(self) -> None:
+        """An arm differing in two things measures neither of them."""
+        registry = load_registry(VARIANTS_PATH)
+        baseline = registry.by_name("baseline")
+        arm = registry.by_name("direct-research")
+
+        assert arm.research == "direct"
+        assert baseline.research is None
+        assert (arm.model, arm.effort, arm.profile, arm.runtime) == (
+            baseline.model,
+            baseline.effort,
+            baseline.profile,
+            baseline.runtime,
+        )
