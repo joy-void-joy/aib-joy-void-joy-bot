@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from lup.mcp import McpServerEntry, create_mcp_server
+from lup.mcp import LupMcpTool, McpServerEntry, create_mcp_server
 from lup.tool_policy import BaseToolPolicy
 from pydantic import BaseModel
 
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 
 # Built-in SDK tools the agent is allowed to use. Bash is excluded — code runs
 # only in the Docker-isolated mcp__sandbox__execute_code, never the host shell.
-# WebSearch/WebFetch are allowed for live forecasts but denied during retrodict
-# (see retrodict._DENIED_TOOLS) since they don't honor the cutoff; the agent
-# also has mcp__search__web_search / fetch_url, which add API augmentation and
-# enforce the cutoff. ToolSearch loads deferred MCP tool schemas.
+# WebSearch and WebFetch are excluded too: `search` and `fetch` supersede them
+# with API augmentation, and the pair's one remaining distinction is that they
+# do not honour `retrodict_cutoff` — which makes a granted-but-unused tool a
+# standing way to leak. ToolSearch loads deferred MCP tool schemas.
 BUILTIN_TOOLS: frozenset[str] = frozenset(
     {
         "Read",
@@ -40,59 +40,58 @@ BUILTIN_TOOLS: frozenset[str] = frozenset(
         "Grep",
         "Task",
         "ToolSearch",
-        "WebSearch",
-        "WebFetch",
         "StructuredOutput",
     }
 )
 
-# Metaculus tools (require METACULUS_TOKEN)
+# The condensed data surface. Each of these fans out over the narrow tools
+# that used to be registered one by one: `search` over sixteen sources,
+# `series` over three statistical publishers, `stock` over four ticker
+# facets, `market` and `metaculus` over their drill-downs. The narrow tools
+# are still there and still called — they are simply no longer the surface.
+DATA_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__search__search",
+        "mcp__search__fetch",
+        "mcp__financial__series",
+        "mcp__financial__stock",
+        "mcp__financial__stock_conditional_returns",
+        "mcp__government__census",
+        "mcp__markets__market",
+        "mcp__markets__metaculus",
+        "mcp__trends__trends",
+        "mcp__weather__weather",
+    }
+)
+
+# What the forecaster keeps in either topology: retrieval it can reach for
+# without opening a sub-agent, and the question record it is forecasting.
+CORE_DATA_TOOLS: frozenset[str] = frozenset(
+    {
+        "mcp__search__search",
+        "mcp__search__fetch",
+        "mcp__markets__metaculus",
+    }
+)
+
+# Metaculus question drill-down (requires METACULUS_TOKEN)
 METACULUS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__metaculus__get_metaculus_questions",
-        "mcp__metaculus__list_tournament_questions",
-        "mcp__metaculus__search_metaculus",
-        "mcp__metaculus__get_coherence_links",
-        "mcp__metaculus__get_cp_history",
+        "mcp__markets__metaculus",
     }
 )
 
-# Wikipedia tool (no API key required)
-WIKIPEDIA_TOOLS: frozenset[str] = frozenset(
+# Census data (requires CENSUS_API_KEY)
+CENSUS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__search__wikipedia",
+        "mcp__government__census",
     }
 )
 
-# Exa search tools (require EXA_API_KEY)
-EXA_TOOLS: frozenset[str] = frozenset(
+# Weather (no API key required, uses Open-Meteo)
+WEATHER_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__search__search_exa",
-    }
-)
-
-# AskNews tools (require ASKNEWS_API_KEY, served by remote MCP server)
-ASKNEWS_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__asknews__search_news",
-        "mcp__asknews__search_google",
-        "mcp__asknews__search_x_twitter",
-        "mcp__asknews__do_news_research",
-    }
-)
-
-# FRED tools (require FRED_API_KEY)
-FRED_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__financial__fred_series",
-        "mcp__financial__fred_search",
-    }
-)
-
-# Company financials tools (no API key required, uses yfinance)
-COMPANY_FINANCIALS_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__financial__company_financials",
+        "mcp__weather__weather",
     }
 )
 
@@ -104,7 +103,7 @@ SANDBOX_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Subforecast tools (replaces composition)
+# Subforecast tools
 SUBFORECAST_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__subforecast__subforecast",
@@ -112,62 +111,46 @@ SUBFORECAST_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Research tool (Opus sub-agent for data gathering)
+# Research tool (sub-agent for delegated data gathering)
 RESEARCH_TOOLS: frozenset[str] = frozenset(
     {
         "mcp__research__research",
     }
 )
 
-# Market tools - live prices
-LIVE_MARKET_TOOLS: frozenset[str] = frozenset(
+# AskNews, served over HTTP and so unenumerable. A lane inside `search` for
+# the two condensed topologies; four tools of its own under `direct`, which
+# is the only place this has to be named.
+# lup: ignore[frozenset-shape] — a fixed tool group, like the others here
+ASKNEWS_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__markets__search_markets",
-        "mcp__markets__polymarket_price",
-        "mcp__markets__manifold_price",
-        "mcp__markets__kalshi_price",
-        "mcp__markets__kalshi_event",
+        "mcp__asknews__search_news",
+        "mcp__asknews__search_google",
+        "mcp__asknews__search_x_twitter",
+        "mcp__asknews__do_news_research",
     }
 )
 
-# Market tools - historical data
-HISTORICAL_MARKET_TOOLS: frozenset[str] = frozenset(
+# The narrow sources a credential governs where `direct` mounts them one at
+# a time. Under the condensed topologies each of these is a lane rather than
+# a tool, so none of these names is in `DATA_TOOLS` and excluding them there
+# subtracts nothing.
+# lup: ignore[frozenset-shape] — a fixed tool group, like the others here
+EXA_TOOLS: frozenset[str] = frozenset({"mcp__search__search_exa"})
+
+# lup: ignore[frozenset-shape] — a fixed tool group, like the others here
+FRED_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__markets__polymarket_history",
-        "mcp__markets__manifold_history",
-        "mcp__markets__kalshi_history",
+        "mcp__financial__fred_series",
+        "mcp__financial__fred_search",
     }
 )
 
-# Stock tools (now in financial server)
-STOCK_TOOLS: frozenset[str] = frozenset(
+# lup: ignore[frozenset-shape] — a fixed tool group, like the others here
+REDDIT_TOOLS: frozenset[str] = frozenset(
     {
-        "mcp__financial__stock_price",
-        "mcp__financial__stock_history",
-        "mcp__financial__stock_conditional_returns",
-        "mcp__financial__options_iv",
-    }
-)
-
-# Google Trends tools (no API key required)
-TRENDS_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__trends__google_trends",
-        "mcp__trends__google_trends_compare",
-    }
-)
-
-# Weather tools (no API key required, uses Open-Meteo)
-WEATHER_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__weather__weather_forecast",
-    }
-)
-
-# Wayback tools (no API key required, uses the Internet Archive)
-WAYBACK_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__wayback__wayback_snapshot",
+        "mcp__reddit__reddit_search",
+        "mcp__reddit__reddit_hot",
     }
 )
 
@@ -185,76 +168,33 @@ PREMORTEM_TOOLS: frozenset[str] = frozenset(
     }
 )
 
-# Fetch tool (now in search server)
-FETCH_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__search__fetch_url",
+
+def data_tool_groups() -> dict[str, list[LupMcpTool]]:
+    """The condensed data surface, grouped by the server that serves it.
+
+    One declaration, because everything that reaches these tools reads it:
+    the forecaster mounts it, `research()` is handed it, the resolver builds
+    its servers from it, and `lup-devtools agent serve-tools` offers it to an
+    interactive session. A second list would let one of those drift onto a
+    surface the allowlist no longer grants, and a tool served but not granted
+    is refused at the moment it is called — which reads to the agent as the
+    tool being broken rather than as it being ungranted.
+    """
+    from aib.tools.financial import series, stock, stock_conditional_returns
+    from aib.tools.government import census
+    from aib.tools.markets import market, metaculus
+    from aib.tools.search import fetch, search
+    from aib.tools.trends import trends
+    from aib.tools.weather import weather
+
+    return {
+        "search": [search, fetch],
+        "financial": [series, stock, stock_conditional_returns],
+        "government": [census],
+        "markets": [market, metaculus],
+        "trends": [trends],
+        "weather": [weather],
     }
-)
-
-# Web search tools (Haiku sub-agent with WebSearch + API augmentation)
-SEARCH_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__search__web_search",
-    }
-)
-
-# arXiv tools (no API key required, supports date filtering)
-ARXIV_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__search__search_arxiv",
-        "mcp__search__fetch_arxiv",
-    }
-)
-
-# World Bank tools (now in financial server)
-WORLD_BANK_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__financial__world_bank_indicator",
-        "mcp__financial__world_bank_search",
-    }
-)
-
-# Reddit tools (require REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET)
-REDDIT_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__reddit__reddit_search",
-        "mcp__reddit__reddit_hot",
-    }
-)
-
-# BLS tools (optional BLS_API_KEY, always registered)
-BLS_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__government__bls_series",
-    }
-)
-
-# Census tools (require CENSUS_API_KEY)
-CENSUS_TOOLS: frozenset[str] = frozenset(
-    {
-        "mcp__government__census_data",
-    }
-)
-
-
-_STATIC_TOOL_DOCS: dict[str, str] = {
-    "mcp__asknews__search_news": (
-        "Search 50k+ global news sources for breaking and recent news. "
-        "Covers the last 48-72 hours. Use when recency matters."
-    ),
-    "mcp__asknews__search_google": (
-        "Google search via AskNews. Complement to web_search for different result coverage."
-    ),
-    "mcp__asknews__search_x_twitter": (
-        "Search X/Twitter for real-time public sentiment, expert opinions, "
-        "and breaking developments."
-    ),
-    "mcp__asknews__do_news_research": (
-        "Deep, multi-step news research on a topic. Synthesizes across many "
-        "sources for complex questions requiring extensive news coverage."
-    ),
-}
 
 
 class Credentialed(BaseModel):
@@ -301,9 +241,9 @@ class ToolPolicy(BaseToolPolicy):
         reddit_client_id: str | None = None,
         reddit_client_secret: str | None = None,
         census_api_key: str | None = None,
-        research: ResearchTopology = "delegated",
+        research: ResearchTopology = "condensed",
     ) -> None:
-        self.research = research
+        self.research: ResearchTopology = research
         self.metaculus_token = metaculus_token
         self.exa_api_key = exa_api_key
         self.asknews_api_key = asknews_api_key
@@ -312,21 +252,28 @@ class ToolPolicy(BaseToolPolicy):
         self.reddit_client_secret = reddit_client_secret
         self.census_api_key = census_api_key
 
+        # A credential governs a whole tool only where that tool is one
+        # source. Exa, AskNews, Reddit and FRED are each one lane of nine
+        # inside `search` or one publisher of three inside `series`, so
+        # nothing here withholds those: `available_lanes` drops the lane, and
+        # `series` says which publisher it could not reach.
+        #
+        # The narrow names are still listed, because `direct` mounts those
+        # sources as tools of their own. Under the condensed topologies each
+        # entry is a no-op — no narrow name is in `DATA_TOOLS` to subtract —
+        # and under `direct` it is the only thing that can gate them: the
+        # module-level tool lists read the process settings, so a policy
+        # built with a key argument of its own would not otherwise be obeyed.
         requirements = [
             Credentialed(
-                tools=METACULUS_TOOLS,
-                configured=bool(metaculus_token),
-                credential="METACULUS_TOKEN",
+                tools=ASKNEWS_TOOLS,
+                configured=bool(asknews_api_key),
+                credential="ASKNEWS_API_KEY",
             ),
             Credentialed(
                 tools=EXA_TOOLS,
                 configured=bool(exa_api_key),
                 credential="EXA_API_KEY",
-            ),
-            Credentialed(
-                tools=ASKNEWS_TOOLS,
-                configured=bool(asknews_api_key),
-                credential="ASKNEWS_API_KEY",
             ),
             Credentialed(
                 tools=FRED_TOOLS,
@@ -337,6 +284,11 @@ class ToolPolicy(BaseToolPolicy):
                 tools=REDDIT_TOOLS,
                 configured=bool(reddit_client_id and reddit_client_secret),
                 credential="REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET",
+            ),
+            Credentialed(
+                tools=METACULUS_TOOLS,
+                configured=bool(metaculus_token),
+                credential="METACULUS_TOKEN",
             ),
             Credentialed(
                 tools=CENSUS_TOOLS,
@@ -353,12 +305,13 @@ class ToolPolicy(BaseToolPolicy):
         }
 
         # Retrodict exclusions, which win where they overlap a missing
-        # credential: these sources have no date filtering, so during a
-        # backtest they would answer with today's world.
+        # credential: a forecast for a past date cannot ask for a forecast of
+        # the weather now, and AskNews carries no publication date this could
+        # filter on.
         if self.is_retrodict:
             reasons |= {
                 tool: "retrodict mode: this source ignores the cutoff"
-                for tools in (ASKNEWS_TOOLS, REDDIT_TOOLS, WEATHER_TOOLS)
+                for tools in (WEATHER_TOOLS, ASKNEWS_TOOLS)
                 for tool in tools
             }
 
@@ -423,34 +376,18 @@ class ToolPolicy(BaseToolPolicy):
         Returns:
             Dict mapping server name to server config.
         """
-        from aib.tools.markets import (
-            get_coherence_links,
-            get_cp_history,
-            get_metaculus_questions,
-            list_tournament_questions,
-            search_metaculus,
-        )
+        from aib.tools.markets import metaculus
         from aib.tools.research import research
-        from aib.tools.search import fetch_url, web_search
+        from aib.tools.search import fetch, search
         from aib.tools.subforecast import extract_cdf_threshold_tool, subforecast
 
-        # Main agent: orchestrator tools only
+        # What the forecaster holds whatever the topology: the sandbox it
+        # computes in, the instruments it forecasts with, and the notes it
+        # keeps.
         servers: dict[str, McpServerEntry] = {
             "sandbox": sandbox.create_mcp_server(),
             "subforecast": create_mcp_server(
                 "subforecast", tools=[subforecast, extract_cdf_threshold_tool]
-            ),
-            "research": create_mcp_server("research", tools=[research]),
-            "search": create_mcp_server("search", tools=[web_search, fetch_url]),
-            "metaculus": create_mcp_server(
-                "metaculus",
-                tools=[
-                    get_metaculus_questions,
-                    list_tournament_questions,
-                    search_metaculus,
-                    get_coherence_links,
-                    get_cp_history,
-                ],
             ),
             "notes": create_reflection_server(
                 session_dir,
@@ -467,133 +404,63 @@ class ToolPolicy(BaseToolPolicy):
             ),
         }
 
-        if self.research == "direct":
-            # The data tools move onto the forecaster and `research()` goes
-            # with them: leaving it mounted would let the agent delegate
-            # anyway, and an arm that may or may not have delegated measures
-            # neither shape. The research groups are merged over these, which
-            # is what widens `search` from two tools to six — the orchestrator
-            # carries the narrow pair only because the wide one was elsewhere.
-            del servers["research"]
-            servers.update(self.research_servers(sandbox))
+        if self.research == "delegated":
+            # research() opens a sub-agent holding the whole data surface and
+            # answers with a digest, so the forecaster keeps only what it
+            # needs to check one fact for itself and to read its own question.
+            servers["research"] = create_mcp_server("research", tools=[research])
+            servers["search"] = create_mcp_server("search", tools=[search, fetch])
+            servers["markets"] = create_mcp_server("markets", tools=[metaculus])
+            return servers
 
+        if self.research == "direct":
+            servers.update(self.narrow_servers())
+            return servers
+
+        servers.update(self.data_servers())
         return servers
 
-    def research_servers(
-        self,
-        sandbox: Sandbox | None = None,
-    ) -> dict[str, McpServerEntry]:
-        """Get MCP servers for the research sub-agent.
+    def narrow_servers(self) -> dict[str, McpServerEntry]:
+        """The forty tools the condensed sixteen were drawn out of.
 
-        Includes all ~35 data-gathering tools that the main agent
-        delegates via research(). A sandbox server for data analysis
-        is included only when a sandbox is provided.
+        Reached only by `direct`, which is the surface this project ran
+        before them. They are the same functions every condensed tool calls,
+        so this mounts nothing that was resurrected — it hands the agent one
+        at a time what `search` and the rest now ask for it.
+
+        Each group carries its own credential conditional, so a session
+        without a key is served what it can answer rather than granted what
+        it cannot: the reason those lists live beside their tools.
         """
-        from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
-        from aib.tools.financial import (
-            company_financials,
-            fred_search,
-            fred_series,
-            options_iv,
-            stock_conditional_returns,
-            stock_history,
-            stock_price,
-            world_bank_indicator,
-            world_bank_search,
-        )
-        from aib.tools.government import bls_series, census_data
+        from aib.tools.financial import FINANCIAL_TOOLS
+        from aib.tools.government import bls_series, census
         from aib.tools.markets import (
-            kalshi_event,
-            kalshi_history,
-            kalshi_price,
-            manifold_history,
-            manifold_price,
-            polymarket_history,
-            polymarket_price,
-            search_markets,
+            METACULUS_QUESTION_TOOLS,
+            PREDICTION_MARKET_TOOLS,
         )
         from aib.tools.reddit import reddit_hot, reddit_search
-        from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
+        from aib.tools.search import BASE_SEARCH_TOOLS, OPTIONAL_SEARCH_TOOLS
         from aib.tools.trends import google_trends, google_trends_compare
         from aib.tools.wayback import wayback_snapshot
-        from aib.tools.weather import weather_forecast
+        from aib.tools.weather import weather
 
-        servers: dict[str, McpServerEntry] = {
-            "financial": create_mcp_server(
-                "financial",
-                tools=[
-                    fred_series,
-                    fred_search,
-                    company_financials,
-                    stock_price,
-                    stock_history,
-                    stock_conditional_returns,
-                    options_iv,
-                    world_bank_indicator,
-                    world_bank_search,
-                ],
-            ),
-            "government": create_mcp_server(
-                "government",
-                tools=[
-                    bls_series,
-                    census_data,
-                ],
-            ),
-            "markets": create_mcp_server(
-                "markets",
-                tools=[
-                    search_markets,
-                    polymarket_price,
-                    polymarket_history,
-                    manifold_price,
-                    manifold_history,
-                    kalshi_price,
-                    kalshi_event,
-                    kalshi_history,
-                ],
-            ),
-            "trends": create_mcp_server(
-                "trends",
-                tools=[
-                    google_trends,
-                    google_trends_compare,
-                ],
-            ),
-            "search": create_mcp_server(
-                "search",
-                tools=[
-                    web_search,
-                    search_exa,
-                    wikipedia,
-                    fetch_url,
-                    search_arxiv,
-                    fetch_arxiv,
-                ],
-            ),
-            "wayback": create_mcp_server(
-                "wayback",
-                tools=[wayback_snapshot],
-            ),
+        groups: dict[str, list[LupMcpTool]] = {
+            "search": [*BASE_SEARCH_TOOLS, *OPTIONAL_SEARCH_TOOLS],
+            "financial": FINANCIAL_TOOLS,
+            "government": [bls_series, census],
+            "markets": [*PREDICTION_MARKET_TOOLS, *METACULUS_QUESTION_TOOLS],
+            "trends": [google_trends, google_trends_compare],
+            "wayback": [wayback_snapshot],
         }
 
-        if sandbox is not None:
-            servers["sandbox"] = sandbox.create_mcp_server()
-
         if not self.is_retrodict:
-            servers["weather"] = create_mcp_server(
-                "weather",
-                tools=[weather_forecast],
-            )
+            groups["weather"] = [weather]
+            if self.reddit_client_id and self.reddit_client_secret:
+                groups["reddit"] = [reddit_search, reddit_hot]
 
-        if (
-            self.reddit_client_id
-            and self.reddit_client_secret
-            and not self.is_retrodict
-        ):
-            servers["reddit"] = create_mcp_server(
-                "reddit", tools=[reddit_search, reddit_hot]
-            )
+        servers: dict[str, McpServerEntry] = {
+            name: create_mcp_server(name, tools=tools) for name, tools in groups.items()
+        }
 
         if self.asknews_api_key and not self.is_retrodict:
             from aib.tools.asknews import create_asknews_server
@@ -601,6 +468,55 @@ class ToolPolicy(BaseToolPolicy):
             servers["asknews"] = create_asknews_server(self.asknews_api_key)
 
         return servers
+
+    def data_servers(
+        self,
+        sandbox: Sandbox | None = None,
+    ) -> dict[str, McpServerEntry]:
+        """The condensed data surface: ten tools over forty-odd sources.
+
+        Mounted on the forecaster under `condensed`, and handed to the
+        research sub-agent under `delegated`. The same surface either way,
+        so re-plugging research() cannot resurrect an older one — which is
+        what a second list of what the servers hold would eventually do.
+
+        A sandbox server for data analysis is included only when a sandbox
+        is passed, since the sub-agent is given one and the forecaster
+        already mounts its own. Weather is withheld from a backtest, which
+        cannot ask what the weather will be.
+        """
+        servers: dict[str, McpServerEntry] = {
+            name: create_mcp_server(name, tools=tools)
+            for name, tools in data_tool_groups().items()
+            if not (name == "weather" and self.is_retrodict)
+        }
+
+        if sandbox is not None:
+            servers["sandbox"] = sandbox.create_mcp_server()
+
+        return servers
+
+    def narrow_allowlist(
+        self,
+        mounted: dict[str, McpServerEntry] | None = None,
+    ) -> list[str]:
+        """Every narrow tool a `direct` session is served, from its servers.
+
+        Derived rather than listed. A tool registered and left out of the
+        roster is refused by the allowlist hook at the moment it is called,
+        which reads to the agent as the tool being broken rather than as it
+        being ungranted — so it retries, works around it, and reports a
+        capability gap that is really a bookkeeping one.
+
+        AskNews is the exception the derivation cannot cover: an external
+        MCP server cannot be enumerated without connecting to it, so
+        `server_tool_names` answers `[]` for one and its four tools are
+        named. Naming them costs nothing when its server is absent, since
+        the same condition that leaves it unregistered leaves the tools
+        uncalled.
+        """
+        servers = dict(mounted) if mounted is not None else self.narrow_servers()
+        return self.get_allowed_tools(servers, builtin_tools=ASKNEWS_TOOLS)
 
     def orchestrator_allowlist(
         self,
@@ -613,44 +529,39 @@ class ToolPolicy(BaseToolPolicy):
         Args:
             allow_spawn: Whether to allow subforecast (False for leaf sub-forecasts).
             mounted: The servers this session actually carries, which under
-                `direct` research is what the roster is read off. Derived
-                rather than listed for the reason `get_research_allowed_tools`
-                gives: a second statement of what the servers hold drifts, and
-                a tool registered but left out of the roster reads to the agent
-                as broken rather than as ungranted.
+                `direct` is what the roster is read off. The condensed
+                surface is small enough to declare, so both other topologies
+                name it; forty tools are not, and a second statement of what
+                forty servers hold is a thing that drifts.
 
         Returns:
             List of tool names that are allowed for this forecast.
         """
-        # Orchestrator tool surface: research(), subforecast(), reflection,
-        # execute_code, Metaculus tools, built-in SDK tools, and web_search /
-        # fetch_url for single-fact verification and fallback when research()
-        # fails. Heavy data-gathering tools (~35) live on the research sub-agent.
+        # The whole surface, because the whole surface now fits. `delegated`
+        # is the narrower case rather than the wider one: the data tools move
+        # behind research(), and the forecaster keeps the retrieval pair and
+        # its own question record.
+        # lup: ignore[set-shape] — an accumulating roster of tool names
         tools: set[str] = set()
 
         tools.update(BUILTIN_TOOLS)
-        tools.update(METACULUS_TOOLS)
         tools.update(SANDBOX_TOOLS)
         tools.update(NOTES_TOOLS)
         tools.update(PREMORTEM_TOOLS)
-        tools.update(RESEARCH_TOOLS)
-        tools.update(SEARCH_TOOLS)
-        tools.update(FETCH_TOOLS)
+
+        if self.research == "delegated":
+            tools.update(RESEARCH_TOOLS)
+            tools.update(CORE_DATA_TOOLS)
+        elif self.research == "direct":
+            tools.update(self.narrow_allowlist(mounted))
+        else:
+            tools.update(DATA_TOOLS)
 
         if allow_spawn:
             tools.update(SUBFORECAST_TOOLS)
 
-        if self.research == "direct":
-            from aib.tools.research import get_research_allowed_tools
-
-            tools -= RESEARCH_TOOLS
-            tools.update(get_research_allowed_tools(mounted))
-
         # Remove excluded tools (API key gating), which the base holds
         tools -= self.excluded_tools.keys()
-
-        if not allow_spawn:
-            tools -= SUBFORECAST_TOOLS
 
         return sorted(tools)
 
@@ -700,13 +611,6 @@ class ToolPolicy(BaseToolPolicy):
                 full_name = f"mcp__{server_name}__{tool.name}"
                 if full_name in allowed:
                     descriptions[full_name] = tool.description
-
-        server_names = set(mcp_servers.keys())
-        for full_name, desc in _STATIC_TOOL_DOCS.items():
-            if full_name in allowed:
-                parts = full_name.split("__")
-                if len(parts) >= 3 and parts[1] in server_names:
-                    descriptions[full_name] = desc
 
         return self._format_tool_docs(descriptions)
 

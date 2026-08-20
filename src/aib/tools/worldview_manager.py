@@ -846,7 +846,7 @@ def worldview_research_session() -> Iterator[None]:
     from aib.config import settings
 
     policy = ToolPolicy.from_settings(settings)
-    session = ForecastSession(research_mcp_servers=policy.research_servers())
+    session = ForecastSession(research_mcp_servers=policy.data_servers())
     set_session(session)
     try:
         yield

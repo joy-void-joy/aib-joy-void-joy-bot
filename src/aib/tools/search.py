@@ -1,8 +1,9 @@
-"""Unified search and content retrieval tools.
+"""Search and content retrieval.
 
-Provides web search (via Haiku sub-agent + API augmentation), Exa AI search,
-Wikipedia, arXiv, and URL content fetching. All "find/retrieve information"
-tools live here. AskNews is served by a separate remote MCP server.
+`search` and `fetch` are the surface. Everything else here is a lane one of
+them reaches: web search through a Haiku sub-agent with API augmentation,
+Exa, Wikipedia, arXiv, and URL fetching — beside the lanes `search` reaches
+in the market, financial, government, news and social modules.
 
 Search snippets are always fetched from actual page content, not from the
 search engine. API-augmented results get snippets from api_data; others are
@@ -12,9 +13,9 @@ fetched live (or from the Wayback Machine in retrodict mode).
 import asyncio
 import json
 import logging
-from collections.abc import Iterator
+from collections.abc import Awaitable, Callable, Iterator
 from typing import Any, Literal, TypedDict
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 import httpx
 from lup.runtime.models import MessageCompletedEvent, turn_request
@@ -27,20 +28,35 @@ from pydantic import BaseModel, Field
 from aib.agent.client import AupRefusalError
 from aib.config import settings
 from aib.retrodict_context import retrodict_cutoff
-from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
+from aib.tools.arxiv_search import (
+    ArxivHtmlPaper,
+    ArxivPaper,
+    ArxivPdfPaper,
+    FetchArxivInput,
+    SearchArxivInput,
+    fetch_arxiv,
+    search_arxiv,
+)
+from aib.tools.financial import FredSearchHit, WBSearchHit
+from aib.tools.markets import MarketPrice, QuestionDict
 from aib.tools.metrics import costs
+from aib.tools.reddit import RedditPost
 from aib.tools.exa import ExaResult, exa_search
+from aib.tools.fanout import LaneFailure, run_lane
 from aib.tools.extract import extract_with_prompt
-from aib.tools.fetch_http import FetchResult, fetch_live
+from aib.tools.fetch_http import FetchResult, abridged, fetch_live
 from lup.mcp import ToolError, ToolResponse, lup_tool, response_text
 from lup.resilience.retry import with_retry
 from lup.tool_routes import routes
+from lup.telemetry.metrics import tracked
 from lup.types import JsonValue
 from aib.tools.throttle import exa_throttle, wikipedia_throttle
 from aib.tools.wayback import (
     WaybackRateLimitError,
+    WaybackSnapshotInput,
     check_wayback_availability,
     fetch_wayback_content,
+    wayback_snapshot,
 )
 from aib.tools.wikipedia import (
     WIKIPEDIA_API_URL,
@@ -960,6 +976,536 @@ async def _fetch_retrodict(url: str) -> FetchResult | str:
         )
 
     return content
+
+
+# --- Unified search ---
+
+
+# Each lane records itself under `search_lane_<name>`, because condensing
+# nine sources into one tool condenses nine metrics rows into one too. A
+# lane that has been failing for a week is invisible in `search`'s own row,
+# which counts the fan-out rather than the sources, and `failed` says so
+# only inside a payload nothing aggregates. It is also what keeps a metered
+# source countable: `lup-devtools usage` reads the news lane's row for the
+# AskNews quota, which no longer has a tool name of its own.
+SEARCH_LANES: tuple[str, ...] = (
+    "web",
+    "markets",
+    "news",
+    "metaculus",
+    "papers",
+    "series",
+    "reference",
+    "neural",
+    "social",
+)
+
+# AskNews serves one request per ten seconds and backs a 429 off for up to
+# 105 more, so a news lane waiting for its slot would hold the whole search
+# open. It reports itself cold at this deadline instead.
+NEWS_LANE_DEADLINE = 25.0
+
+# The pages a search finds are the pages the next call would have fetched,
+# so the fetch happens here. Bounded because a lane is one of nine, and
+# previewed rather than carried whole because nine lanes at once is a
+# payload before any one page is inlined.
+INLINE_TEXT_HITS = 5
+
+
+class SearchInput(BaseModel):
+    """Input for the unified search tool."""
+
+    query: str = Field(
+        min_length=1,
+        description="What you are looking for, in natural language.",
+    )
+    lanes: list[str] | None = Field(
+        default=None,
+        description=(
+            "Which sources to ask. Omit to ask every source that can answer. "
+            f"One or more of: {', '.join(SEARCH_LANES)}."
+        ),
+    )
+    limit: int = Field(
+        default=settings.search_default_limit,
+        ge=1,
+        le=25,
+        description="Maximum hits per lane.",
+    )
+    allowed_domains: list[str] | None = Field(
+        default=None, description="Restrict the web lane to these domains"
+    )
+    blocked_domains: list[str] | None = Field(
+        default=None, description="Exclude these domains from the web lane"
+    )
+
+
+class SearchHit(AugmentedSearchResult):
+    """A web result, opening the page's own text where one was fetched.
+
+    `text` is the page abridged: enough of it to tell whether it answers,
+    ending in the path holding the rest where there was more.
+    """
+
+    text: str | None
+
+
+class NewsArticle(TypedDict):
+    """One article the news lane matched."""
+
+    title: str
+    snippet: str
+    url: str
+
+
+class SeriesHit(TypedDict):
+    """A statistical series a search matched, tagged with who serves it.
+
+    `record` is the vendor's own hit, kept whole: what identifies a FRED
+    series and what identifies a World Bank indicator do not line up, and
+    flattening them to their intersection would drop the frequency and
+    units that decide whether a series answers the question. The tag is
+    the namespace `series()` needs to ask for it.
+    """
+
+    source: Literal["fred", "worldbank"]
+    record: FredSearchHit | WBSearchHit
+
+
+class SearchOutput(BaseModel):
+    """Everything every source had for one query.
+
+    A lane that matched nothing answers with an empty list, so "asked and
+    found nothing" reads differently from "never asked" — which
+    `lanes_run` and `failed` between them say.
+    """
+
+    query: str
+    lanes_run: list[str]
+    web: list[SearchHit] = []
+    markets: list[MarketPrice] = []
+    news: list[NewsArticle] = []
+    metaculus: list[QuestionDict] = []
+    papers: list[ArxivPaper] = []
+    series: list[SeriesHit] = []
+    reference: list[dict[str, JsonValue]] = []
+    neural: list[ExaResult] = []
+    social: list[RedditPost] = []
+    failed: list[LaneFailure] = []
+
+
+def available_lanes() -> tuple[str, ...]:
+    """The lanes whose sources this deployment can actually reach.
+
+    A lane without its credential is left out rather than asked and
+    reported failed: the agent reads `failed` as "this source had
+    something to say and could not say it", which an absent key is not.
+
+    News and social carry no publication date this can filter on, so
+    neither can be held to a cutoff and neither is reachable under one.
+    The web lane is, through the Wayback validation it already runs, and
+    the rest of the lanes hold themselves to it.
+    """
+    unavailable: set[str] = set()  # lup: ignore[empty-collection]
+    if not settings.exa_api_key:
+        unavailable.add("neural")
+    if not settings.asknews_api_key:
+        unavailable.add("news")
+    if not (settings.reddit_client_id and settings.reddit_client_secret):
+        unavailable.add("social")
+    if not settings.metaculus_token:
+        unavailable.add("metaculus")
+    if retrodict_cutoff.get() is not None:
+        unavailable.update({"news", "social"})
+    return tuple(lane for lane in SEARCH_LANES if lane not in unavailable)
+
+
+def hit_from(result: AugmentedSearchResult, text: str | None) -> SearchHit:
+    """One augmented result, widened to carry a page body."""
+    return SearchHit(
+        title=result["title"],
+        url=result["url"],
+        snippet=result["snippet"],
+        api_data=result["api_data"],
+        hint=result["hint"],
+        text=text,
+    )
+
+
+async def inline_page_text(
+    results: list[AugmentedSearchResult],
+) -> list[SearchHit]:
+    """Fetch the page bodies worth opening, and snippet them from the same read.
+
+    A hit with `api_data` already has a better answer than its prose, so
+    it is snippeted from that and never fetched.
+
+    The snippet is written before the body, so a page that cannot be
+    abridged still improves the hit it came from.
+    """
+    hits = [hit_from(r, None) for r in results]
+
+    async def fetch_one(hit: SearchHit) -> None:
+        fetched = await fetch_live(hit["url"])
+        if isinstance(fetched, FetchResult):
+            hit["snippet"] = fetched.text[:500]
+            hit["text"] = abridged(hit["url"], fetched.text)
+
+    fetchable: list[SearchHit] = []
+    for hit in hits:
+        if hit["api_data"] is not None:
+            safe_snippet = _snippet_from_api_data(hit["api_data"])
+            if safe_snippet is not None:
+                hit["snippet"] = safe_snippet
+        elif len(fetchable) < INLINE_TEXT_HITS:
+            fetchable.append(hit)
+
+    await asyncio.gather(*[fetch_one(h) for h in fetchable], return_exceptions=True)
+    return hits
+
+
+def parse_asknews_items(text: str) -> list[NewsArticle]:
+    """The articles an AskNews payload carried, however it named the list."""
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    items: list[JsonValue] = []
+    if isinstance(data, list):
+        items = data
+    elif isinstance(data, dict):
+        for key in ("results", "articles", "data"):
+            candidate = data.get(key)  # lup: ignore[dict-get] — vendor payload
+            if isinstance(candidate, list):
+                items = candidate
+                break
+
+    articles: list[NewsArticle] = []
+    for item in items:
+        if not isinstance(item, dict) or "title" not in item:
+            continue
+        # lup: ignore[dict-get] — the vendor names the body three ways
+        body = item.get("snippet", item.get("summary", item.get("extract", "")))
+        articles.append(
+            NewsArticle(
+                title=str(item["title"]),
+                snippet=str(body),
+                url=str(item.get("url", "")),  # lup: ignore[dict-get] — same
+            )
+        )
+    return articles
+
+
+@tracked("search_lane_web")
+async def lane_web(params: SearchInput) -> list[SearchHit]:
+    """The open web, each hit augmented and the top few carrying their text."""
+    cutoff = retrodict_cutoff.get()
+    cutoff_date = cutoff.isoformat() if cutoff else None
+
+    results = await _raw_web_search(
+        params.query,
+        cutoff_date,
+        params.allowed_domains,
+        params.blocked_domains,
+    )
+    augmented = await _augment_with_api_data(results)
+
+    if cutoff_date:
+        validated = await _wayback_filter_non_api_results(augmented, cutoff_date)
+        return [hit_from(r, None) for r in validated[: params.limit]]
+
+    return await inline_page_text(augmented[: params.limit])
+
+
+@tracked("search_lane_markets")
+async def lane_markets(params: SearchInput) -> list[MarketPrice]:
+    """Every prediction-market venue, already relevance-filtered."""
+    from aib.tools.markets import SearchMarketsInput, search_markets
+
+    found = await search_markets(
+        SearchMarketsInput(query=params.query, limit=min(params.limit, 20))
+    )
+    return found.markets
+
+
+@tracked("search_lane_news")
+async def lane_news(params: SearchInput) -> list[NewsArticle]:
+    """Recent coverage, from AskNews."""
+    from aib.tools.asknews import _call_remote
+
+    api_key = settings.asknews_api_key
+    if not api_key:
+        return []
+    text = await _call_remote(api_key, "search_news", {"query": params.query})
+    return parse_asknews_items(text)[: params.limit]
+
+
+@tracked("search_lane_metaculus")
+async def lane_metaculus(params: SearchInput) -> list[QuestionDict]:
+    """Questions Metaculus already carries on the subject."""
+    from aib.tools.markets import SearchMetaculusInput, search_metaculus
+
+    found = await search_metaculus(
+        SearchMetaculusInput(query=params.query, num_results=params.limit)
+    )
+    return found.questions
+
+
+@tracked("search_lane_papers")
+async def lane_papers(params: SearchInput) -> list[ArxivPaper]:
+    """arXiv preprints matching the query."""
+    found = await search_arxiv(
+        SearchArxivInput(query=params.query, max_results=params.limit)
+    )
+    return found.results
+
+
+@tracked("search_lane_series")
+async def lane_series(params: SearchInput) -> list[SeriesHit]:
+    """Statistical series either FRED or the World Bank publishes."""
+    from aib.tools.financial import (
+        FredSearchInput,
+        WorldBankSearchInput,
+        fred_search,
+        world_bank_search,
+    )
+
+    fred, worldbank = await asyncio.gather(
+        fred_search(FredSearchInput(query=params.query, limit=params.limit)),
+        world_bank_search(WorldBankSearchInput(query=params.query, limit=params.limit)),
+        return_exceptions=True,
+    )
+
+    hits: list[SeriesHit] = []
+    if not isinstance(fred, BaseException):
+        hits.extend(SeriesHit(source="fred", record=hit) for hit in fred.results)
+    if not isinstance(worldbank, BaseException):
+        hits.extend(
+            SeriesHit(source="worldbank", record=hit) for hit in worldbank.results
+        )
+    return hits
+
+
+@tracked("search_lane_reference")
+async def lane_reference(params: SearchInput) -> list[dict[str, JsonValue]]:
+    """Wikipedia articles on the subject."""
+    found = await wikipedia(
+        WikipediaInput(query=params.query, mode="search", num_results=params.limit)
+    )
+    if isinstance(found, WikipediaSearchOutput):
+        return found.results
+    return []
+
+
+@tracked("search_lane_neural")
+async def lane_neural(params: SearchInput) -> list[ExaResult]:
+    """Exa's embedding search, which finds pages keywords miss."""
+    found = await search_exa(
+        SearchExaInput(query=params.query, num_results=params.limit)
+    )
+    return found.results
+
+
+@tracked("search_lane_social")
+async def lane_social(params: SearchInput) -> list[RedditPost]:
+    """What Reddit is saying, for sentiment and early reports."""
+    from aib.tools.reddit import RedditSearchInput, reddit_search
+
+    found = await reddit_search(RedditSearchInput(query=params.query))
+    return found.posts[: params.limit]
+
+
+@lup_tool(
+    (
+        "Search every source at once for one query. Asks the open web, "
+        "prediction markets (Polymarket/Manifold/Kalshi), news, Metaculus, "
+        "arXiv, FRED and World Bank series, Wikipedia, Exa, and Reddit in "
+        "parallel, and returns what each found under its own key. Web hits "
+        "open the page's own text, ending in `[... continued in <path>]` "
+        "where there was more — Read that path for the whole page rather "
+        "than fetching it again. Lanes that match nothing return empty; "
+        "lanes that fail say so under `failed` without holding up the "
+        "rest.\n\n"
+        "This is the tool to reach for first on any factual question. Pass "
+        "`lanes` only to narrow a follow-up — omitting it asks everything, "
+        "which is how a source you would not have thought to ask gets seen.\n\n"
+        "Examples:\n"
+        '  search(query="Argentine Senate Ley Hojarasca vote")\n'
+        '  search(query="US unemployment rate 2026", lanes=["series", "web"])\n'
+        '  search(query="Fed June 2026 rate decision", lanes=["markets"])'
+    ),
+    name="search",
+)
+async def search(params: SearchInput) -> SearchOutput:
+    """Fan one query across every source that can answer it."""
+    reachable = available_lanes()
+    requested = tuple(params.lanes) if params.lanes else reachable
+
+    unknown = [lane for lane in requested if lane not in SEARCH_LANES]
+    if unknown:
+        raise ToolError(
+            f"Unknown lane(s): {', '.join(unknown)}. "
+            f"Available: {', '.join(SEARCH_LANES)}."
+        )
+
+    lanes = [lane for lane in requested if lane in reachable]
+    failures: list[LaneFailure] = []  # lup: ignore[empty-collection]
+
+    async def lane_or_empty[T](
+        name: str,
+        make: Callable[[], Awaitable[T]],
+        empty: T,
+        deadline: float | None = None,
+    ) -> T:
+        if name not in lanes:
+            return empty
+        return await run_lane(name, make(), empty, failures, deadline)
+
+    logger.info("[search] query=%s lanes=%s", params.query, lanes)
+
+    async with asyncio.TaskGroup() as group:
+        web = group.create_task(lane_or_empty("web", lambda: lane_web(params), []))
+        markets = group.create_task(
+            lane_or_empty("markets", lambda: lane_markets(params), [])
+        )
+        news = group.create_task(
+            lane_or_empty("news", lambda: lane_news(params), [], NEWS_LANE_DEADLINE)
+        )
+        metaculus = group.create_task(
+            lane_or_empty("metaculus", lambda: lane_metaculus(params), [])
+        )
+        papers = group.create_task(
+            lane_or_empty("papers", lambda: lane_papers(params), [])
+        )
+        series = group.create_task(
+            lane_or_empty("series", lambda: lane_series(params), [])
+        )
+        reference = group.create_task(
+            lane_or_empty("reference", lambda: lane_reference(params), [])
+        )
+        neural = group.create_task(
+            lane_or_empty("neural", lambda: lane_neural(params), [])
+        )
+        social = group.create_task(
+            lane_or_empty("social", lambda: lane_social(params), [])
+        )
+
+    return SearchOutput(
+        query=params.query,
+        lanes_run=lanes,
+        web=web.result(),
+        markets=markets.result(),
+        news=news.result(),
+        metaculus=metaculus.result(),
+        papers=papers.result(),
+        series=series.result(),
+        reference=reference.result(),
+        neural=neural.result(),
+        social=social.result(),
+        failed=failures,
+    )
+
+
+# --- Unified fetch ---
+
+
+class FetchInput(BaseModel):
+    """Input for the unified fetch tool."""
+
+    ref: str = Field(
+        min_length=1,
+        description="A URL, or a bare arXiv paper id such as '2301.12345'.",
+    )
+    at: str | None = Field(
+        default=None,
+        description=(
+            "Return the archived copy as of this date (YYYYMMDD or "
+            "YYYY-MM-DD) instead of the live page. Answers with the closest "
+            "snapshot at or before it."
+        ),
+    )
+    prompt: str | None = Field(
+        default=None,
+        description="Extract specific information rather than the whole document.",
+    )
+
+
+class FetchOutput(BaseModel):
+    """One document, from whichever copy answers.
+
+    `routed` is the answer of the tool that owns this URL where one does,
+    and `paper` an arXiv paper's own shape. Each crosses whole rather than
+    flattened into `content`, because the shape belongs to that tool.
+    """
+
+    ref: str
+    url: str = ""
+    title: str = ""
+    content: str = ""
+    structured_data: list[str] = []
+    routed: JsonValue = None
+    paper: ArxivHtmlPaper | ArxivPdfPaper | None = None
+    archived_at: str | None = None
+
+
+@lup_tool(
+    (
+        "Retrieve one document, by URL or by arXiv id. Extracts readable "
+        "text, renders JavaScript pages, and hands a URL to the tool that "
+        "knows it better where one exists (Yahoo Finance, FRED, arXiv, "
+        "Wikipedia, prediction markets), whose own answer comes back under "
+        "`routed`.\n\n"
+        "Pass `at` for the page as it stood on a past date, from the "
+        "Internet Archive — what a status page said during an incident, "
+        "guidance since superseded, a tracker's earlier count, a claim "
+        "since edited. Pass `prompt` to extract rather than read whole.\n\n"
+        "search() already opens the text of what it found, and names a path "
+        "holding the rest, so reach for this when following a link onward "
+        "— not to finish reading a hit it already fetched.\n\n"
+        "Examples:\n"
+        '  fetch(ref="https://example.org/report")\n'
+        '  fetch(ref="2301.12345", prompt="Which datasets were used?")\n'
+        '  fetch(ref="https://status.example.com", at="2026-06-01")'
+    ),
+    name="fetch",
+)
+async def fetch(params: FetchInput) -> FetchOutput:
+    """Fetch a document live, archived, or from the tool that owns it."""
+    if params.at is not None:
+        snapshot = await wayback_snapshot(
+            WaybackSnapshotInput(url=params.ref, date=params.at, include_content=True)
+        )
+        return FetchOutput(
+            ref=params.ref,
+            url=snapshot.snapshot_url,
+            content=snapshot.content or "",
+            archived_at=snapshot.snapshot_date,
+        )
+
+    # A ref that is not a URL is an arXiv id. An arxiv.org URL needs no
+    # special case: `fetch_url` routes it to `fetch_arxiv` itself.
+    if urlparse(params.ref).scheme not in ("http", "https"):
+        paper = await fetch_arxiv(
+            FetchArxivInput(paper_id=params.ref, prompt=params.prompt)
+        )
+        return FetchOutput(
+            ref=params.ref,
+            url=paper.url,
+            title=paper.paper_id,
+            paper=paper,
+            content=paper.content if isinstance(paper, ArxivHtmlPaper) else "",
+        )
+
+    page = await fetch_url(FetchUrlInput(url=params.ref, prompt=params.prompt))
+    return FetchOutput(
+        ref=params.ref,
+        url=page.url,
+        title=page.title,
+        content=page.content,
+        structured_data=page.structured_data,
+        routed=page.routed,
+    )
 
 
 # --- Exported tool lists (for server construction) ---

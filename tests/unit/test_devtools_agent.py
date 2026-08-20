@@ -16,7 +16,7 @@ def test_list_prints_all_research_tools() -> None:
         tool.name for group in build_research_tool_groups().values() for tool in group
     ]
     assert listed == expected
-    assert "web_search" in listed
+    assert "search" in listed
 
 
 def test_list_single_group() -> None:

@@ -163,9 +163,9 @@ def summarize_forecasts(name: str, forecasts: list[DailyForecast]) -> LocationFo
         "Pass multiple locations for regional scans (e.g. cities across a region "
         "for weather-related Google Trends questions). Max 20 locations per call."
     ),
-    name="weather_forecast",
+    name="weather",
 )
-async def weather_forecast(
+async def weather(
     params: WeatherForecastInput,
 ) -> LocationForecast | MultiLocationForecast:
     """Get weather forecasts for one or more locations."""

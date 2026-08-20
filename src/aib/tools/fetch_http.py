@@ -211,6 +211,43 @@ def save_pdf(url: str, content: bytes) -> ToolResponse:
     return mcp_response(json.dumps(saved.model_dump(mode="json")))
 
 
+PAGE_PREVIEW_CHARS = 2000
+
+
+def save_page_text(url: str, text: str) -> Path:
+    """Write one page's whole text where the agent can Read it.
+
+    Beside the saved PDFs and named the same way, because it answers the
+    same need: a document worth having whole and too large to carry, so it
+    is addressed by a path rather than inlined.
+    """
+    target = downloads_dir.get() / "pages"
+    target.mkdir(parents=True, exist_ok=True)
+    slug = hashlib.sha256(url.encode()).hexdigest()[:12]
+    path = (target / f"{slug}.txt").resolve()
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def abridged(url: str, text: str, keep: int = PAGE_PREVIEW_CHARS) -> str:
+    """The opening of a page, and where to read the rest of it.
+
+    A fan-out that carries every page whole spends its saving on the first
+    call: the tool descriptions it replaced cost their tokens once, where a
+    body inlined per hit costs them again on every search. So the hit
+    carries enough to judge whether the page answers, and the path carries
+    the page.
+
+    This is not the second call the inlining was meant to avoid. That one
+    was a fetch — slow, and able to fail on a page that had already been
+    read once. This one is a local Read, and only for the hits that turned
+    out to matter rather than for all of them.
+    """
+    if len(text) <= keep:
+        return text
+    return f"{text[:keep]}\n\n[... continued in {save_page_text(url, text)}]"
+
+
 async def fetch_live(url: str) -> ToolResponse | FetchResult:
     """Fetch URL in live mode: httpx → trafilatura → Playwright fallback.
 

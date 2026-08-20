@@ -190,6 +190,27 @@ def fetch_exa_usage() -> ExaUsage | None:
     )
 
 
+def asknews_tool_names() -> tuple[str, ...]:
+    """Every metrics row an AskNews request has ever been counted under.
+
+    `search_lane_news` is where the meter reads under the condensed
+    surface: AskNews is a lane inside `search` rather than four tools of
+    its own, so nothing named `mcp__asknews__*` is called any more and a
+    tally of those alone reads zero however much is spent. The old names
+    stay because past sessions recorded under them, and the quota this
+    answers for is counted over the whole tournament.
+    """
+    return (
+        "search_lane_news",
+        "search_news",
+        "mcp__asknews__search_news",
+        "mcp__asknews__search_wikipedia",
+        "mcp__asknews__search_google",
+        "mcp__asknews__search_x_twitter",
+        "mcp__asknews__do_news_research",
+    )
+
+
 def fetch_asknews_usage() -> AskNewsUsage | None:
     """Count AskNews API calls (monthly and tournament) from forecast traces."""
     from lup.workspace.paths import parse_timestamp
@@ -213,16 +234,8 @@ def fetch_asknews_usage() -> AskNewsUsage | None:
         except (json.JSONDecodeError, OSError):
             continue
         by_tool = data.get("tool_metrics", {}).get("by_tool", {})
-        asknews_tool_names = (
-            "search_news",
-            "mcp__asknews__search_news",
-            "mcp__asknews__search_wikipedia",
-            "mcp__asknews__search_google",
-            "mcp__asknews__search_x_twitter",
-            "mcp__asknews__do_news_research",
-        )
         calls = sum(
-            by_tool.get(name, {}).get("call_count", 0) for name in asknews_tool_names
+            by_tool.get(name, {}).get("call_count", 0) for name in asknews_tool_names()
         )
         tournament_calls += calls
         if ts >= month_start:

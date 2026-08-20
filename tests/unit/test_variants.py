@@ -125,8 +125,8 @@ class TestVariantEnv:
 
     def test_a_topology_reaches_the_child_that_reads_it(self) -> None:
         """The arm runs in its own process, so the choice travels as env."""
-        assert variant_env(Variant(name="v", research="direct"))["AIB_RESEARCH"] == (
-            "direct"
+        assert variant_env(Variant(name="v", research="delegated"))["AIB_RESEARCH"] == (
+            "delegated"
         )
 
     def test_an_unstated_topology_leaves_the_child_on_the_default(self) -> None:
@@ -147,34 +147,31 @@ class TestVariantEnv:
         from aib.agent.tool_policy import ToolPolicy
         from aib.config import Settings
 
-        exported = variant_env(Variant(name="v", research="direct"))
+        exported = variant_env(Variant(name="v", research="delegated"))
         for name, value in exported.items():
             monkeypatch.setenv(name, value)
 
         settings = Settings(metaculus_token="unused-here")
 
-        assert settings.research == "direct"
-        assert ToolPolicy.from_settings(settings).research == "direct"
+        assert settings.research == "delegated"
+        assert ToolPolicy.from_settings(settings).research == "delegated"
 
 
 class TestRegisteredVariants:
     """The arms this repository actually has registered.
 
     Which arms exist is pinned in `test_runtime_selection.py`; what is asked
-    here is whether the topology arm is shaped to measure anything.
+    here is which arms deliberately do not.
     """
 
-    def test_the_topology_arm_differs_from_baseline_in_one_field(self) -> None:
-        """An arm differing in two things measures neither of them."""
-        registry = load_registry(VARIANTS_PATH)
-        baseline = registry.by_name("baseline")
-        arm = registry.by_name("direct-research")
+    def test_no_arm_pins_a_topology(self) -> None:
+        """The topology is a switch, not an experiment that is running.
 
-        assert arm.research == "direct"
-        assert baseline.research is None
-        assert (arm.model, arm.effort, arm.profile, arm.runtime) == (
-            baseline.model,
-            baseline.effort,
-            baseline.profile,
-            baseline.runtime,
-        )
+        `AIB_RESEARCH` turns it for anyone who wants to measure it, and a
+        registered arm would mean a second full forecast per question every
+        time the registry is run — which is a cost to choose deliberately,
+        not one to inherit from a setting having more than one value.
+        """
+        registry = load_registry(VARIANTS_PATH)
+
+        assert [v.name for v in registry.variants if v.research is not None] == []

@@ -64,7 +64,7 @@ class TestShippedRegistry:
         """
         registered = {v.name for v in load_registry().variants}
 
-        assert registered >= {"baseline", "gpt-5.6-sol", "direct-research"}
+        assert registered >= {"baseline", "gpt-5.6-sol"}
 
     def test_the_arms_differ_in_runtime(self) -> None:
         registry = load_registry()

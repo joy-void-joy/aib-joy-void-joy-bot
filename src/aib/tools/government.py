@@ -380,9 +380,9 @@ def census_rows(
         "ACS 5-year estimates (2009-2023) have the most geographic detail. "
         "ACS 1-year estimates are more recent but limited to areas with 65k+ population."
     ),
-    name="census_data",
+    name="census",
 )
-async def census_data(params: CensusDataInput) -> CensusDataOutput:
+async def census(params: CensusDataInput) -> CensusDataOutput:
     """Get Census/ACS data."""
     api_key = settings.census_api_key
     if not api_key:

@@ -68,7 +68,7 @@ from aib.agent.numeric import (
     percentiles_to_cdf,
 )
 from aib.agent.prompts import get_forecasting_system_prompt, get_type_specific_guidance
-from aib.config import settings
+from aib.config import ResearchTopology, settings
 from aib.agent.session import ForecastSession, reset_session, set_session
 from lup.workspace.paths import runtime_logs_path, traces_path
 
@@ -100,6 +100,7 @@ def _build_system_prompt(
     sandbox_shared_dir: str,
     session_dir: str,
     question_type: str = "binary",
+    research: ResearchTopology = "condensed",
 ) -> str:
     """Build full system prompt from template + forecasting prompt.
 
@@ -118,6 +119,7 @@ def _build_system_prompt(
             sandbox_shared_dir=sandbox_shared_dir,
             session_dir=session_dir,
             question_type=question_type,
+            research=research,
         )
     )
 
@@ -425,13 +427,13 @@ def create_suggest_only_nudge_hooks() -> LupHooksConfig:
 
     def advise(event: LupHookInput) -> str | None:
         # lup: ignore[dict-get] — the agent's raw tool arguments off the wire
-        url = event.tool_input.get("url")
-        if not isinstance(url, str):
+        ref = event.tool_input.get("ref")
+        if not isinstance(ref, str):
             return None
-        advice = routes.advice(url)
+        advice = routes.advice(ref)
         return f"Tip: {advice}" if advice else None
 
-    return create_nudge_hook({"mcp__search__fetch_url": advise})
+    return create_nudge_hook({"mcp__search__fetch": advise})
 
 
 async def fetch_question(question_id: int) -> dict:
@@ -891,7 +893,7 @@ async def run_forecast(
         )
 
         # Build data-gathering MCP servers for the research sub-agent
-        session.research_mcp_servers = policy.research_servers(sandbox)
+        session.research_mcp_servers = policy.data_servers(sandbox)
 
         try:
             factory = agent_session(
@@ -905,6 +907,7 @@ async def run_forecast(
                         sandbox_shared_dir=str(sandbox_shared_dir),
                         session_dir=str(notes.session),
                         question_type=question_type,
+                        research=policy.research,
                     ),
                     autonomy="unattended",
                     max_thinking_tokens=128_000 - 1,

@@ -17,7 +17,6 @@ from lup.runtime.models import (
 from lup.mcp import (
     LupMcpTool,
     McpServerEntry,
-    RawHttpServerConfig,
     create_mcp_server,
 )
 from pydantic import BaseModel
@@ -26,10 +25,9 @@ from aib.agent.client import ClaudeExtras, agent_request, agent_session
 from aib.agent.display import make_agent_prefix, print_block
 from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
-    NOTES_TOOLS,
-    SANDBOX_TOOLS,
-    SUBFORECAST_TOOLS,
+    BUILTIN_TOOLS,
     ToolPolicy,
+    data_tool_groups,
 )
 from aib.config import settings as default_settings
 
@@ -83,119 +81,54 @@ Guidelines:
 - Include the URLs and sources you consulted in your response.
 """
 
-EXCLUDED_TOOL_SETS = SANDBOX_TOOLS | SUBFORECAST_TOOLS | NOTES_TOOLS
-
 
 def build_research_tool_groups() -> dict[str, list[LupMcpTool]]:
-    """Session-free research tools, grouped by MCP server name."""
-    from aib.tools.arxiv_search import fetch_arxiv, search_arxiv
-    from aib.tools.financial import (
-        company_financials,
-        fred_search,
-        fred_series,
-        options_iv,
-        stock_conditional_returns,
-        stock_history,
-        stock_price,
-        world_bank_indicator,
-        world_bank_search,
-    )
-    from aib.tools.government import bls_series, census_data
-    from aib.tools.markets import (
-        get_coherence_links,
-        get_cp_history,
-        get_metaculus_questions,
-        kalshi_event,
-        kalshi_history,
-        kalshi_price,
-        list_tournament_questions,
-        manifold_history,
-        manifold_price,
-        polymarket_history,
-        polymarket_price,
-        search_metaculus,
-    )
-    from aib.tools.reddit import reddit_hot, reddit_search
-    from aib.tools.search import fetch_url, search_exa, web_search, wikipedia
-    from aib.tools.trends import google_trends, google_trends_compare
-    from aib.tools.wayback import wayback_snapshot
+    """Session-free research tools, grouped by MCP server name.
 
-    s = default_settings
-    groups: dict[str, list[LupMcpTool]] = {
-        "search": [
-            web_search,
-            search_exa,
-            wikipedia,
-            fetch_url,
-            search_arxiv,
-            fetch_arxiv,
-        ],
-        "financial": [
-            fred_series,
-            fred_search,
-            company_financials,
-            stock_price,
-            stock_history,
-            stock_conditional_returns,
-            options_iv,
-            world_bank_indicator,
-            world_bank_search,
-        ],
-        "government": [
-            bls_series,
-            census_data,
-        ],
-        "markets": [
-            polymarket_price,
-            polymarket_history,
-            manifold_price,
-            manifold_history,
-            kalshi_price,
-            kalshi_event,
-            kalshi_history,
-            get_metaculus_questions,
-            list_tournament_questions,
-            search_metaculus,
-            get_coherence_links,
-            get_cp_history,
-        ],
-        "trends": [
-            google_trends,
-            google_trends_compare,
-        ],
-        "wayback": [
-            wayback_snapshot,
-        ],
-    }
-    if s.reddit_client_id and s.reddit_client_secret:
-        groups["reddit"] = [
-            reddit_search,
-            reddit_hot,
-        ]
-    return groups
+    The forecaster's own surface, because `build_resolver_tools` reads its
+    roster from `orchestrator_allowlist` — a resolver served one set of tools
+    and granted another would have every call refused at the moment it was
+    made.
+    """
+    return data_tool_groups()
 
 
 def build_resolver_servers() -> dict[str, McpServerEntry]:
-    """Build MCP servers for the resolver agent."""
-    s = default_settings
-    servers: dict[str, McpServerEntry] = {
+    """Build MCP servers for the resolver agent.
+
+    AskNews is no longer mounted beside these. It is a lane inside `search`,
+    so the resolver reaches it there — and mounting the remote server would
+    serve four tools the roster does not name, each refused at the moment it
+    was called.
+    """
+    return {
         name: create_mcp_server(name, tools=tools)
         for name, tools in build_research_tool_groups().items()
     }
-    if s.asknews_api_key:
-        servers["asknews"] = RawHttpServerConfig(
-            type="http",
-            url="https://mcp.asknews.app",
-            headers={"x-api-key": s.asknews_api_key},
-        )
-    return servers
 
 
-def build_resolver_tools() -> list[str]:
-    """Build allowed tool list using ToolPolicy (all tools except sandbox/subforecast/notes)."""
+def build_resolver_tools(
+    mounted: dict[str, McpServerEntry] | None = None,
+) -> list[str]:
+    """Every tool the resolver is served, and nothing besides.
+
+    Derived from its own servers rather than read off
+    `orchestrator_allowlist`, which branches on the research topology — a
+    setting that governs where the *forecaster's* tools sit and says
+    nothing about the resolver, whose servers are `data_tool_groups()`
+    whatever it is set to.
+
+    Reading it made the two disagree the moment the setting moved off its
+    default: under `direct` the resolver was granted the forty narrow names
+    while being served the condensed ten, so the only tools that worked
+    were the three whose names happen to appear in both. The failure is
+    quiet in the direction that hurts — a served tool that is not granted
+    is refused when called, which reads to the agent as the tool being
+    broken rather than as it being ungranted.
+    """
     policy = ToolPolicy.from_settings(default_settings)
-    all_tools = policy.orchestrator_allowlist(allow_spawn=False)
-    return [t for t in all_tools if t not in EXCLUDED_TOOL_SETS]
+    servers = mounted if mounted is not None else build_resolver_servers()
+    return policy.get_allowed_tools(servers, builtin_tools=BUILTIN_TOOLS)
 
 
 async def resolve_question(
@@ -206,7 +139,7 @@ async def resolve_question(
 ) -> NestedAgentReport[ResolutionVerdict]:
     """Run a resolver agent to check if a question has resolved."""
     servers = mcp_servers or build_resolver_servers()
-    tools = allowed_tools or build_resolver_tools()
+    tools = allowed_tools or build_resolver_tools(servers)
 
     prompt = (
         f"Check whether this forecasting question has resolved.\n\n"
@@ -271,7 +204,7 @@ async def resolve_batch(
 ) -> list[tuple[int, ResolutionVerdict]]:
     """Resolve multiple questions concurrently with a semaphore limit."""
     servers = build_resolver_servers()
-    tools = build_resolver_tools()
+    tools = build_resolver_tools(servers)
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
 
     async def resolve_one(
