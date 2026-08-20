@@ -577,3 +577,95 @@ async def google_trends_compare(
     except Exception as e:
         logger.exception("Google Trends comparison failed")
         raise ToolError(f"Google Trends comparison failed: {e}") from e
+
+
+# --- Unified trends ---
+
+
+class TrendsInput(BaseModel):
+    """Input for the unified Google Trends tool."""
+
+    terms: list[str] = Field(
+        min_length=1,
+        max_length=5,
+        description=(
+            "Search terms. One term answers with that term's own trace, its "
+            "change statistics and related queries; several answer with "
+            "their relative standing."
+        ),
+    )
+    timeframe: str = Field(
+        default="today 3-m",
+        description=(
+            "Time range. Presets: 'now 1-H', 'now 4-H', 'now 1-d', "
+            "'now 7-d', 'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', "
+            "'all'. Custom range: 'YYYY-MM-DD YYYY-MM-DD'."
+        ),
+    )
+    geo: str = Field(
+        default="",
+        description="Region (ISO 3166-1 alpha-2). Empty for worldwide.",
+    )
+    tz: int = Field(
+        default=360,
+        description="Timezone offset in minutes from UTC. Default 360 (UTC-6).",
+    )
+
+
+class TrendsOutput(BaseModel):
+    """Search interest over time, for one term or across several.
+
+    Google Trends normalises within a request, so a single term's series
+    and its standing among others are different measurements rather than
+    the same one summarised two ways. `single` carries the first, `compared`
+    the second, and which is present follows from how many terms were asked
+    about.
+    """
+
+    terms: list[str]
+    single: TrendsResult | TrendsEmpty | None = None
+    compared: TrendsCompareResult | TrendsCompareEmpty | None = None
+
+
+@lup_tool(
+    (
+        "Google Trends search interest over time. One term answers with its "
+        "own series, direction, change statistics, related queries and any "
+        "recent news; several answer with their relative standing.\n\n"
+        "Useful as a leading indicator where attention precedes the event — "
+        "a candidate's name before a primary, a product before a launch, a "
+        "symptom before case counts. Interest is normalised within each "
+        "request, so a term's series and its rank among others are separate "
+        "measurements: ask for one term to trace it, several to rank them.\n\n"
+        "Examples:\n"
+        '  trends(terms=["dengue Brazil"], timeframe="today 12-m")\n'
+        '  trends(terms=["Milei", "Massa"], geo="AR")'
+    ),
+    name="trends",
+)
+async def trends(params: TrendsInput) -> TrendsOutput:
+    """Trace one term's search interest, or rank several against each other."""
+    if len(params.terms) == 1:
+        return TrendsOutput(
+            terms=params.terms,
+            single=await google_trends(
+                TrendsQueryInput(
+                    keyword=params.terms[0],
+                    timeframe=params.timeframe,
+                    geo=params.geo,
+                    tz=params.tz,
+                )
+            ),
+        )
+
+    return TrendsOutput(
+        terms=params.terms,
+        compared=await google_trends_compare(
+            TrendsCompareInput(
+                keywords=params.terms,
+                timeframe=params.timeframe,
+                geo=params.geo,
+                tz=params.tz,
+            )
+        ),
+    )

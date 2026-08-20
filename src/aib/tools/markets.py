@@ -28,6 +28,7 @@ from aib.config import settings
 from aib.tools.redact import redact_future_info
 from aib.retrodict_context import retrodict_cutoff
 from aib.tools.cache import cached
+from aib.tools.fanout import LaneFailure, run_lane
 from lup.mcp import ToolError, lup_tool
 from lup.resilience.retry import with_retry
 from lup.tool_routes import routes
@@ -448,89 +449,107 @@ async def _polymarket_event_at_cutoff(
     }
 
 
+async def polymarket_trace(token_id: str, days: int) -> list[HistoryPoint]:
+    """One Polymarket token's daily closing probability over a window.
+
+    Points arrive in time order, so writing each day's price under its date
+    leaves the last one of that day standing.
+    """
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    history = await _fetch_polymarket_history(token_id, now_ts - (days * 86400), now_ts)
+    # lup: ignore[dict-str-payload] — a day's closing price, keyed by the day
+    by_day: dict[str, float] = {
+        datetime.fromtimestamp(p.t, tz=timezone.utc).strftime("%Y-%m-%d"): round(p.p, 3)
+        for p in history
+    }
+    return [HistoryPoint(date=d, probability=p) for d, p in sorted(by_day.items())]
+
+
 async def _augment_polymarket_history(results: list[MarketPrice], days: int) -> None:
     """Augment Polymarket results with recent price history in-place."""
-    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
-    start_ts = now_ts - (days * 86400)
 
     async def _add_one(result: MarketPrice) -> None:
         token_id = result.get("market_id")
         if not token_id:
             return
         try:
-            history = await _fetch_polymarket_history(token_id, start_ts, now_ts)
-            if not history:
-                return
-            by_day: dict[str, float] = {}
-            for p in history:
-                day = datetime.fromtimestamp(p.t, tz=timezone.utc).strftime("%Y-%m-%d")
-                by_day[day] = round(p.p, 3)
-            result["recent_history"] = [
-                {"date": d, "probability": p} for d, p in sorted(by_day.items())
-            ]
+            trace = await polymarket_trace(token_id, days)
         except Exception:
-            pass
+            return
+        if trace:
+            result["recent_history"] = trace
 
     await asyncio.gather(*[_add_one(r) for r in results])
 
 
+async def manifold_trace(contract_id: str, days: int) -> list[HistoryPoint]:
+    """One Manifold contract's daily probability over a window.
+
+    Bets arrive in time order, so writing each under its date leaves that
+    day's last bet standing as the day's price.
+    """
+    now_ms = int(datetime.now(tz=timezone.utc).timestamp()) * 1000
+    cutoff_ms = now_ms - (days * 86400 * 1000)
+    bets = await _fetch_manifold_bets(contract_id, now_ms, limit=500)
+    # lup: ignore[dict-str-payload] — a day's closing price, keyed by the day
+    by_day: dict[str, float] = {
+        datetime.fromtimestamp(b.created_time / 1000, tz=timezone.utc).strftime(
+            "%Y-%m-%d"
+        ): round(b.probability, 3)
+        for b in bets
+        if b.created_time >= cutoff_ms
+    }
+    return [HistoryPoint(date=d, probability=p) for d, p in sorted(by_day.items())]
+
+
 async def _augment_manifold_history(results: list[MarketPrice], days: int) -> None:
     """Augment Manifold results with recent price history in-place."""
-    now_ms = int(datetime.now(tz=timezone.utc).timestamp()) * 1000
 
     async def _add_one(result: MarketPrice) -> None:
         contract_id = result.get("market_id")
         if not contract_id:
             return
         try:
-            bets = await _fetch_manifold_bets(contract_id, now_ms, limit=500)
-            if not bets:
-                return
-            cutoff_ms = now_ms - (days * 86400 * 1000)
-            by_day: dict[str, float] = {}
-            for b in bets:
-                if b.created_time < cutoff_ms:
-                    continue
-                day = datetime.fromtimestamp(
-                    b.created_time / 1000, tz=timezone.utc
-                ).strftime("%Y-%m-%d")
-                by_day[day] = round(b.probability, 3)
-            if by_day:
-                result["recent_history"] = [
-                    {"date": d, "probability": p} for d, p in sorted(by_day.items())
-                ]
+            trace = await manifold_trace(contract_id, days)
         except Exception:
-            pass
+            return
+        if trace:
+            result["recent_history"] = trace
 
     await asyncio.gather(*[_add_one(r) for r in results])
 
 
+async def kalshi_trace(ticker: str, days: int) -> list[HistoryPoint]:
+    """One Kalshi market's daily closing probability over a window."""
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    candles = await _fetch_kalshi_candlestick(
+        _series_ticker_from_market(ticker), ticker, now_ts - (days * 86400), now_ts
+    )
+    return [
+        HistoryPoint(
+            date=datetime.fromtimestamp(c.end_period_ts, tz=timezone.utc).strftime(
+                "%Y-%m-%d"
+            ),
+            probability=round(c.close_price, 3),
+        )
+        for c in candles
+        if c.close_price is not None
+    ]
+
+
 async def _augment_kalshi_history(results: list[KalshiMarketPrice], days: int) -> None:
     """Augment Kalshi results with recent price history in-place."""
-    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
-    start_ts = now_ts - (days * 86400)
 
     async def _add_one(result: KalshiMarketPrice) -> None:
         ticker = result.get("market_ticker")
         if not ticker:
             return
-        series = _series_ticker_from_market(ticker)
         try:
-            candles = await _fetch_kalshi_candlestick(series, ticker, start_ts, now_ts)
-            if not candles:
-                return
-            result["recent_history"] = [
-                {
-                    "date": datetime.fromtimestamp(
-                        c.end_period_ts, tz=timezone.utc
-                    ).strftime("%Y-%m-%d"),
-                    "probability": round(c.close_price, 3),
-                }
-                for c in candles
-                if c.close_price is not None
-            ]
+            trace = await kalshi_trace(ticker, days)
         except Exception:
-            pass
+            return
+        if trace:
+            result["recent_history"] = trace
 
     await asyncio.gather(*[_add_one(r) for r in results])
 
@@ -2055,7 +2074,215 @@ async def search_markets(params: SearchMarketsInput) -> MarketSearchAcrossOutput
     )
 
 
-_PREDICTION_MARKET_TOOLS = [
+# --- Unified market drill-down ---
+
+
+class MarketInput(BaseModel):
+    """Input for the unified market tool."""
+
+    source: Literal["polymarket", "manifold", "kalshi"] = Field(
+        description="Which venue lists the market. search() tags every hit."
+    )
+    market_id: str = Field(
+        min_length=1,
+        description=(
+            "The `market_id` search()'s markets lane returned. A Polymarket "
+            "token id, a Manifold contract id, or a Kalshi market ticker."
+        ),
+    )
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=90,
+        description="How far back to trace the price, in days.",
+    )
+    event_ticker: str | None = Field(
+        default=None,
+        description=(
+            "Kalshi only: expand this event's whole bracket ladder alongside "
+            "the trace. search()'s Kalshi hits carry the ticker to pass here."
+        ),
+    )
+
+
+class MarketOutput(BaseModel):
+    """One market's trajectory, and its event's other brackets where asked.
+
+    The trace is the answer the per-instant history tools could only give a
+    point of: a threshold question needs the shape of the move, not the
+    price at one timestamp.
+    """
+
+    source: Literal["polymarket", "manifold", "kalshi"]
+    market_id: str
+    days: int
+    history: list[HistoryPoint] = []
+    event: KalshiEventOutput | None = None
+    failed: list[LaneFailure] = []
+
+
+@lup_tool(
+    (
+        "Trace one prediction market's price over time, and open its event's "
+        "full bracket ladder where it has one.\n\n"
+        "Use after search() has found the market: pass the `source` and "
+        "`market_id` it returned. The trace is daily closing probability "
+        "over `days`, which is what shows whether a move is a trend or a "
+        "spike. For a Kalshi event, pass `event_ticker` as well to get every "
+        "bracket — the ladder prices a whole distribution, not one "
+        "threshold.\n\n"
+        "Examples:\n"
+        '  market(source="polymarket", market_id="7194...", days=60)\n'
+        '  market(source="kalshi", market_id="KXFED-26APR-T425", event_ticker="KXFED-26APR")'
+    ),
+    name="market",
+)
+async def market(params: MarketInput) -> MarketOutput:
+    """Trace one market, and expand its event where one was named."""
+    failures: list[LaneFailure] = []  # lup: ignore[empty-collection]
+
+    traces = {
+        "polymarket": polymarket_trace,
+        "manifold": manifold_trace,
+        "kalshi": kalshi_trace,
+    }
+
+    async def event_ladder() -> KalshiEventOutput | None:
+        if params.event_ticker is None:
+            return None
+        return await run_lane(
+            "event",
+            kalshi_event(KalshiEventInput(event_ticker=params.event_ticker)),
+            None,
+            failures,
+        )
+
+    async with asyncio.TaskGroup() as group:
+        history = group.create_task(
+            run_lane(
+                "history",
+                traces[params.source](params.market_id, params.days),
+                [],
+                failures,
+            )
+        )
+        event = group.create_task(event_ladder())
+
+    return MarketOutput(
+        source=params.source,
+        market_id=params.market_id,
+        days=params.days,
+        history=history.result(),
+        event=event.result(),
+        failed=failures,
+    )
+
+
+# --- Unified Metaculus question ---
+
+
+class MetaculusInput(BaseModel):
+    """Input for the unified Metaculus question tool."""
+
+    post_id: int = Field(
+        description="Metaculus post id — the number in metaculus.com/questions/{post_id}."
+    )
+    include: list[Literal["question", "cp_history", "links"]] = Field(
+        default=["question", "cp_history", "links"],
+        description=(
+            "Which facets to fetch. All three by default: they are separate "
+            "calls made in parallel, and a question without a community "
+            "prediction or without coherence links reports that facet under "
+            "`failed`."
+        ),
+    )
+    cp_days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Days of community-prediction history to trace.",
+    )
+
+
+class MetaculusOutput(BaseModel):
+    """One Metaculus question, from every angle asked for."""
+
+    post_id: int
+    question: QuestionDict | None = None
+    cp_history: CPHistoryResponse | CPUnavailable | None = None
+    links: CoherenceLinksOutput | None = None
+    failed: list[LaneFailure] = []
+
+
+@lup_tool(
+    (
+        "Everything Metaculus holds on one question: the question record "
+        "itself with resolution criteria and fine print, the community "
+        "prediction's trace over time, and the coherence links to related "
+        "questions — fetched together.\n\n"
+        "The links matter for consistency: a forecast that contradicts one "
+        "on a linked question is wrong somewhere, and the link is the only "
+        "way to notice. Note that community predictions are not available "
+        "for tournament questions, where that facet reports itself failed.\n\n"
+        "Examples:\n"
+        "  metaculus(post_id=44798)\n"
+        '  metaculus(post_id=44798, include=["links"])'
+    ),
+    name="metaculus",
+)
+async def metaculus(params: MetaculusInput) -> MetaculusOutput:
+    """Fetch every facet of one Metaculus question that was asked for."""
+    failures: list[LaneFailure] = []  # lup: ignore[empty-collection]
+    wanted = set(params.include)
+
+    async def question_facet() -> QuestionDict | None:
+        if "question" not in wanted:
+            return None
+        answer = await run_lane(
+            "question",
+            get_metaculus_questions(
+                GetMetaculusQuestionsInput(post_id_list=[params.post_id])
+            ),
+            None,
+            failures,
+        )
+        return None if answer is None else answer.question
+
+    async def cp_facet() -> CPHistoryResponse | CPUnavailable | None:
+        if "cp_history" not in wanted:
+            return None
+        return await run_lane(
+            "cp_history",
+            get_cp_history(CPHistoryInput(post_id=params.post_id, days=params.cp_days)),
+            None,
+            failures,
+        )
+
+    async def links_facet() -> CoherenceLinksOutput | None:
+        if "links" not in wanted:
+            return None
+        return await run_lane(
+            "links",
+            get_coherence_links(CoherenceLinksInput(post_id=params.post_id)),
+            None,
+            failures,
+        )
+
+    async with asyncio.TaskGroup() as group:
+        question = group.create_task(question_facet())
+        cp_history = group.create_task(cp_facet())
+        links = group.create_task(links_facet())
+
+    return MetaculusOutput(
+        post_id=params.post_id,
+        question=question.result(),
+        cp_history=cp_history.result(),
+        links=links.result(),
+        failed=failures,
+    )
+
+
+PREDICTION_MARKET_TOOLS = [
     search_markets,
     polymarket_price,
     manifold_price,
@@ -2065,13 +2292,24 @@ _PREDICTION_MARKET_TOOLS = [
     kalshi_history,
     kalshi_event,
 ]
+"""What `market` and `search`'s markets lane stand in front of.
 
-_METACULUS_TOOLS = [
+Named because `direct` mounts them: they are the surface this project ran
+before the condensed tools, and a topology that can still run it needs them
+reachable rather than only callable.
+"""
+
+METACULUS_QUESTION_TOOLS = [
     get_metaculus_questions,
-    list_tournament_questions,
     search_metaculus,
     get_coherence_links,
+    get_cp_history,
 ]
+"""What `metaculus` and `search`'s metaculus lane stand in front of.
+
+`list_tournament_questions` is not among them: its only caller is the
+resolver, and it was never the forecaster's to reach.
+"""
 
 
 routes.route(
