@@ -14,7 +14,6 @@ from aib.agent.tool_policy import (
     BUILTIN_TOOLS,
     CORE_DATA_TOOLS,
     DATA_TOOLS,
-    ENGINE_BUILTINS,
     METACULUS_TOOLS,
     NOTES_TOOLS,
     RESEARCH_TOOLS,
@@ -43,17 +42,17 @@ class TestToolPolicyToolSets:
         assert "WebSearch" not in BUILTIN_TOOLS
         assert "WebFetch" not in BUILTIN_TOOLS
 
-    def test_the_engine_still_offers_what_the_forecaster_may_not_hold(self) -> None:
-        """A lane wrapping a built-in has to be able to name it.
+    def test_the_exclusion_is_the_whole_roster_and_not_the_forecaster_s_half(
+        self,
+    ) -> None:
+        """No second, wider set stands behind this one.
 
-        `search`'s web lane is a session whose whole job is to call
-        WebSearch inside the cutoff handling the built-in lacks. Deriving
-        every session's built-ins from the forecaster's roster left that
-        session naming a tool the intersection dropped, and a session
-        naming no built-in gets none — so the lane opened with nothing.
+        A lane that wrapped WebSearch in cutoff handling of its own was
+        what a wider engine set existed for. The lanes ask their sources
+        directly now, so the pair is absent from every roster this project
+        opens rather than from the forecaster's alone.
         """
-        assert "WebSearch" in ENGINE_BUILTINS
-        assert BUILTIN_TOOLS <= ENGINE_BUILTINS
+        assert BUILTIN_TOOLS.isdisjoint({"WebSearch", "WebFetch"})
 
     def test_metaculus_tool_is_served_by_the_markets_server(self) -> None:
         for tool in METACULUS_TOOLS:
@@ -548,22 +547,24 @@ class TestAllowlistsMatchTheServersRegistered:
 class TestSessionBuiltins:
     """What a session is handed when it names a built-in."""
 
-    def test_a_session_naming_websearch_is_given_it(self, tmp_path: Path) -> None:
-        """The web lane's session, which is the one that broke.
+    def test_a_session_naming_websearch_is_still_not_given_it(
+        self, tmp_path: Path
+    ) -> None:
+        """Asking is not enough, because no session here is meant to have it.
 
-        `allowed_tools` is auto-approval; `tools` is what exists. The lane
-        named WebSearch and got an empty `tools`, so it opened holding
-        nothing and reported the web as silent on every query.
+        `allowed_tools` is auto-approval; `tools` is what exists. Filtering
+        `tools` against the forecaster's own set is what keeps a lane from
+        opening a side door onto the live web — the cutoff would apply to
+        nothing that came back through it.
         """
         request = agent_request(
             model="haiku",
             system_prompt="search the web",
             autonomy="ask",
-            allowed_tools=["WebSearch"],
+            allowed_tools=["WebSearch", "Read"],
             cwd=tmp_path,
         )
-        assert request.tools is not None
-        assert "WebSearch" in request.tools
+        assert request.tools == ["Read"]
 
     def test_a_session_that_does_not_name_it_is_not_given_it(
         self, tmp_path: Path
