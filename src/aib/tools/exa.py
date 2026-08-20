@@ -35,6 +35,7 @@ async def exa_search(
     published_before: str | None = None,
     published_after: str | None = None,
     livecrawl: str = "always",
+    search_type: str = "auto",
     include_domains: list[str] | None = None,
     exclude_domains: list[str] | None = None,
 ) -> list[ExaResult]:
@@ -50,6 +51,7 @@ async def exa_search(
         published_before: Optional ISO date (YYYY-MM-DD) upper bound for results.
         published_after: Optional ISO date (YYYY-MM-DD) lower bound for results.
         livecrawl: Livecrawl mode ('always', 'fallback', 'never').
+        search_type: Retrieval mode ('auto', 'neural', 'keyword', 'fast').
         include_domains: Only include results from these domains.
         exclude_domains: Exclude results from these domains.
 
@@ -72,8 +74,8 @@ async def exa_search(
     }
     payload: dict[str, Any] = {
         "query": query,
-        "type": "auto",
-        "useAutoprompt": True,
+        "type": search_type,
+        "useAutoprompt": search_type != "keyword",
         "numResults": num_results,
         "livecrawl": livecrawl,
         "contents": {
