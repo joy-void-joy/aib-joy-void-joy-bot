@@ -1,338 +1,390 @@
 {
   "slug": "as-of-july-2026-financial-and-bankruptcy-status-of-6c2b2dbf",
   "query": "As of July 2026, financial and bankruptcy status of these companies: Chegg Inc, America's Car-Mart Inc, JetBlue Airways, Peloton Inc, Faraday Future Intelligent Electric, Petco Health and Wellness. Which are at highest risk of bankruptcy filing in mid-2026? Any going concern warnings, debt maturities, or restructuring news?",
-  "answer": "I've completed the research. Here's a summary of my findings on the bankruptcy risk of the six companies as of July 2026:\n\n## Bankruptcy Risk Ranking (Highest → Lowest) for mid-2026\n\n**1. America's Car-Mart (CRMT) — HIGHEST RISK.** The only company with a live going-concern warning, issued in its FY2026 10-K (mid-July 2026). FY2026 net loss ~$139M, total debt ~$722M, operating under temporary covenant waivers with a June 19, 2026 amendment granting a defined \"runway\" to pursue strategic/financing alternatives — a classic pre-restructuring setup.\n\n**2. Faraday Future (FFAI) — VERY HIGH.** Explicit going concern; the company itself says it would likely seek bankruptcy protection without new capital. Only ~$12.2M cash (~35 days of burn), near-zero revenue, and just did a 1-for-150 reverse split (July 24) to keep its Nasdaq listing. Survives on continuous dilutive raises.\n\n**3. JetBlue (JBLU) — HIGH but not imminent.** No going-concern warning, but downgraded to **CCC+**, ~$9.33B debt, ~$755M of 2026 maturities. Analysts (Raymond James) float Chapter 11 and cite >75% bankruptcy odds by 2027 — but ~$2.4B liquidity + $6B unencumbered assets push real risk to 2027+.\n\n**4. Chegg (CHGG) — DISTRESSED but liquid.** AI-driven revenue collapse (Q1 -48%), but cut 45% of staff, returned to breakeven, holds large cash (current ratio ~10.8) with minimal traditional debt. Ended its strategic review; risk is secular decline, not near-term insolvency.\n\n**5. Peloton (PTON) — LOW/IMPROVING.** Cleared its ~$1B 2026 maturity wall (repaid final $199M in cash), extended debt to 2029, and is now posting profitable quarters (+$26.4M).\n\n**6. Petco (WOOF) — LOWEST.** Completed early-2026 refinancing, extended maturities to 2031, improved net debt/EBITDA to 3.0x. No going-concern issues.\n\n**Bottom line:** America's Car-Mart is the clearest mid-2026 filing candidate (only live going-concern warning + covenant relief runway), with Faraday Future a close second on pure liquidity exhaustion.",
+  "answer": "I've completed the research across all six companies. Here's what the evidence shows:\n\n## The one clear answer: America's Car-Mart\n\nCRMT is the only company of the six in an active, creditor-controlled restructuring with a hard deadline. The distinguishing facts:\n\n- **Auditor's going-concern explanatory paragraph** in the FY2026 10-K — the only one of the six with an *auditor-level* (not just management-level) opinion qualification\n- **September 7, 2026 milestone deadline** under the June 19, 2026 Silver Point amendment, extendable only to Sept 21 or Nov 6 if conditions are met\n- **Houlihan Lokey / FTI Consulting / Mayer Brown** engaged — the standard restructuring advisor trio\n- **Bloomberg reported the company \"began laying the groundwork for a potential Chapter 11 filing\"** while seeking $500M of rescue financing\n- Required milestones include executing a **support agreement** with lenders and running a **marketing process** for recapitalization/restructuring/M&A\n- Market cap of **$27M against $722M of debt** — the equity is priced for a wipeout\n- Creditors control governance: three new independent directors on a special committee that green-lights most decisions; the CFO left July 31\n\nNo filing had occurred as of August 19, 2026.\n\n## Two things worth flagging\n\n**Faraday Future looks alarming but is a different animal.** It has explicit going-concern language and names the Bankruptcy Code in its own risk factors, with only $11.2M of unrestricted cash. But it has no maturity wall or creditor deadline forcing a filing, just *regained* Nasdaq compliance (Aug 7), and cut liabilities >$100M year over year. Chronic dilution rather than imminent filing.\n\n**Three of the six actually de-risked during 2026** — worth noting because their low share prices invite the opposite inference. Petco refinanced $1.5B out to 2031 (Feb 2), Chegg cut its converts from $1.0B to $33.9M and is now net-cash-positive, and Peloton posted its first profitable year with net debt down 80% to $93M. Chegg's July 24 NYSE notice is a *delisting* risk, not a solvency one.\n\n## One tooling problem\n\nThe `company_financials` tool is broken for all six tickers — a schema bug rejects `period_end` date strings as non-numeric (`'2026-06-30'` → `float_parsing` error). I worked around it by pulling from SEC filings and press releases directly, so the numbers are primary-sourced, but the tool needs fixing. Given the guidance about reporting friction against `joy-void-joy/lup`, want me to file an issue with the exact error?",
   "sources": [
     {
-      "url": "https://www.globenewswire.com/news-release/2026/07/14/3326738/0/en/America-s-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results.html",
-      "title": "America's Car-Mart Reports Fourth Quarter and Fiscal Year 2026 Results",
-      "domain": "globenewswire.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "FY2026 revenue $1.28B; net loss; going-concern warning."
-    },
-    {
-      "url": "https://www.stocktitan.net/sec-filings/CRMT/10-k-americas-carmart-inc-files-annual-report-be0355a631d9.html",
-      "title": "America's Car-Mart (NASDAQ: CRMT) warns on going concern and debt",
-      "domain": "stocktitan.net",
-      "accessed_at": "2026-07-27",
-      "snippet": "Substantial doubt about going concern; total indebtedness $722.4M; covenant relief via June 19, 2026 amendment."
-    },
-    {
-      "url": "https://talkbusiness.net/2026/07/car-mart-fiscal-2026-loss-exceeds-139-million-sees-29-million-q4-loss/",
-      "title": "Car-Mart fiscal 2026 loss exceeds $139 million, sees $29 million Q4 loss",
-      "domain": "talkbusiness.net",
-      "accessed_at": "2026-07-27",
-      "snippet": "FY2026 net loss over $139M; Q4 loss $29M."
-    },
-    {
-      "url": "https://seekingalpha.com/article/4802444-faraday-future-liquidity-in-reverse-even-as-stock-surges",
-      "title": "Faraday Future: Liquidity In Reverse Even As Stock Surges",
-      "domain": "seekingalpha.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "$12.2M cash equals ~35 days of operating cash use; would seek bankruptcy without capital."
-    },
-    {
-      "url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-8e18b1aefec9.html",
-      "title": "Faraday Future (NASDAQ: FFAI) consolidates shares in 1-for-150 reverse split",
-      "domain": "stocktitan.net",
-      "accessed_at": "2026-07-27",
-      "snippet": "1-for-150 reverse split effective July 24, 2026 to preserve Nasdaq listing."
-    },
-    {
-      "url": "https://valueinvesting.io/FFAI/probability-of-bankruptcy",
-      "title": "FFAI Probability of Bankruptcy | Faraday Future Intelligent Electric Inc",
-      "domain": "valueinvesting.io",
-      "accessed_at": "2026-07-27",
-      "snippet": "Total debt $102.1M (short-term $70.8M, long-term $31.3M)."
-    },
-    {
-      "url": "https://investors.ff.com/news-releases/news-release-details/faraday-future-announces-sec-has-ended-its-years-long/",
-      "title": "Faraday Future Announces SEC Has Ended its Years-Long Investigation",
-      "domain": "investors.ff.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "SEC closed investigation with no enforcement action."
-    },
-    {
-      "url": "https://www.foxbusiness.com/markets/jetblue-downgraded-sp-moodys-amid-3b-debt-raise",
-      "title": "JetBlue downgraded by S&P and Moody's amid $3B debt raise",
-      "domain": "foxbusiness.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "Downgrade amid $3B debt raise."
-    },
-    {
-      "url": "https://deeparrival.com/news/jetblue-bankruptcy-risk-ccc-rating/",
-      "title": "JetBlue Bankruptcy Risk: What CCC+ Means for Bookings",
-      "domain": "deeparrival.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "~$755M 2026 maturities, $411M 2027, $516M 2028; ~$2.4B liquidity; CCC+ rating."
-    },
-    {
-      "url": "https://www.gurufocus.com/term/deb2equity/NAS:JBLU/Debt-to-Equity/JetBlue-Airways",
-      "title": "JetBlue Airways Debt-to-Equity 5.16",
-      "domain": "gurufocus.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "$9.33B debt; debt/equity 5.16 (Mar 2026), 306% above 10Y median."
-    },
-    {
-      "url": "https://simpleflying.com/why-analysis-give-jetblue-75-percent-chance-bankruptcy-2027/",
-      "title": "Here's Why Analysts Give JetBlue A 75% Chance Of Bankruptcy By 2027",
-      "domain": "simpleflying.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "Analyst estimates of >75% bankruptcy risk by 2027."
-    },
-    {
-      "url": "https://www.inkl.com/news/why-chapter-11-might-be-the-best-move-for-jetblue-stock-in-2026",
-      "title": "Why Chapter 11 Might Be the Best Move for JetBlue Stock in 2026",
-      "domain": "inkl.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "Raymond James argues Chapter 11 the more prudent course."
-    },
-    {
-      "url": "https://www.stocktitan.net/sec-filings/CHGG/10-q-chegg-inc-quarterly-earnings-report-a76e084cb71a.html",
-      "title": "Chegg Q1 2026 revenue drops 48% amid AI headwinds",
-      "domain": "stocktitan.net",
-      "accessed_at": "2026-07-27",
-      "snippet": "Q1 2026 net revenues fell 48% to $63.3M; near-breakeven."
-    },
-    {
-      "url": "https://www.cnbc.com/2025/10/27/chegg-slashes-45percent-of-workforce-blames-new-realities-of-ai.html",
-      "title": "Chegg slashes 45% of workforce, blames 'new realities of AI'",
-      "domain": "cnbc.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "45% workforce cut; ended strategic review."
-    },
-    {
-      "url": "https://www.macroaxis.com/invest/ratio/CHGG/Probability-Of-Bankruptcy",
-      "title": "Chegg Probability Of Bankruptcy for 2026 (NYSE:CHGG)",
-      "domain": "macroaxis.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "Altman Z-Score -2.74 (distress zone); current ratio 10.81; debt/equity 2.07."
-    },
-    {
-      "url": "https://www.gurufocus.com/news/4070242/chegg-chgg-faces-nyse-noncompliance-notice-over-share-price",
-      "title": "Chegg (CHGG) Faces NYSE Non-Compliance Notice Over Share Price",
-      "domain": "gurufocus.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "NYSE non-compliance notice over share price."
-    },
-    {
-      "url": "https://www.sec.gov/Archives/edgar/data/0001639825/000163982526000022/pton-20260331.htm",
-      "title": "Peloton Interactive, Inc. Form 10-Q FY2026",
+      "url": "https://www.sec.gov/Archives/edgar/data/799850/000162828026048191/crmt-20260430.htm",
+      "title": "America's Car-Mart, Inc. Form 10-K for fiscal year ended April 30, 2026",
       "domain": "sec.gov",
-      "accessed_at": "2026-07-27",
-      "snippet": "Repaid remaining $199M of 2026 notes in cash during quarter ended March 31, 2026."
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Addressing Going Concern. As described under Management's Discussion and Analysis... conditions affecting the Company's liquidity and capital structure raise substantial doubt about the Company's ability to continue as a going concern."
     },
     {
-      "url": "https://investor.onepeloton.com/news-releases/news-release-details/peloton-announces-successful-completion-135-billion-holistic",
-      "title": "Peloton Announces Successful Completion of $1.35 Billion Holistic Refinancing",
-      "domain": "onepeloton.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "$1.35B refinancing extended maturities and reduced debt."
+      "url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/f8k_062226.htm",
+      "title": "America's Car-Mart Form 8-K reporting June 19, 2026 First Amendment and Limited Waiver",
+      "domain": "sec.gov",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The Scheduled Termination Date is September 7, 2026, subject to automatic extensions to either September 21, 2026 or November 6, 2026 in certain circumstances... Houlihan Lokey Capital, Inc., FTI Consulting, Inc., and Mayer Brown LLP are serving as the Company's advisors."
     },
     {
-      "url": "https://finance.yahoo.com/news/petco-woof-completes-debt-refinancing-161834759.html",
-      "title": "Petco (WOOF) Completes Debt Refinancing Amid Leadership Transition",
-      "domain": "finance.yahoo.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "Net debt/EBITDA improved to 3.0x from 4.2x; maturities extended to 2031."
+      "url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/exh_101.htm",
+      "title": "Exhibit 10.1 — First Amendment and Limited Waiver to Credit and Guaranty Agreement (Silver Point Finance)",
+      "domain": "sec.gov",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The Borrowers shall not permit Liquidity... to be less than (i) $7,000,000 on the Friday of each week or (ii) $5,000,000 at any other time."
     },
     {
-      "url": "https://corporate.petco.com/2026-01-12-Petco-Announces-Launch-of-Debt-Refinancing-Transaction-Reaffirms-Fourth-Quarter-and-Full-Fiscal-Year-2025-Outlook",
-      "title": "Petco Announces Launch of Debt Refinancing Transaction",
-      "domain": "corporate.petco.com",
-      "accessed_at": "2026-07-27",
-      "snippet": "$1.5B term loan refinancing; $600M senior secured notes at 8.25%."
+      "url": "https://ir.car-mart.com/news-events/press-releases/press-releases-details/2026/Americas-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx",
+      "title": "America's Car-Mart Reports Fourth Quarter and Fiscal Year 2026 Results",
+      "domain": "ir.car-mart.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "GOING CONCERN – In accordance with ASC 205-40... Management's plans to address these conditions have not been fully implemented and do not alleviate that doubt."
+    },
+    {
+      "url": "https://ir.car-mart.com/news-events/press-releases/press-releases-details/2026/Americas-Car-Mart-Inc--Announces-Agreement-with-Lenders-to-Support-Ongoing-Strategic-Review-Process/default.aspx",
+      "title": "America's Car-Mart, Inc. Announces Agreement with Lenders to Support Ongoing Strategic Review Process",
+      "domain": "ir.car-mart.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "the potential need to seek protection under applicable bankruptcy or insolvency laws; the possibility that holders of the Company's common stock could experience a significant or complete loss of their investment"
+    },
+    {
+      "url": "https://www.ttnews.com/articles/americas-car-mart-rescue",
+      "title": "Subprime Auto Dealer America's Car-Mart Seeks Rescue Funds (Bloomberg News via Transport Topics)",
+      "domain": "ttnews.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The company separately began laying the groundwork for a potential Chapter 11 filing... at least $500 million in rescue financing... Houlihan Lokey Inc. reaching out to investors."
+    },
+    {
+      "url": "https://www.bloomberg.com/news/articles/2026-07-21/subprime-auto-dealer-goes-from-covid-era-rockstar-to-near-demise",
+      "title": "America's Car-Mart Faces Default, Considers Asset Sales to Avoid Bankruptcy",
+      "domain": "bloomberg.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Headline only (paywalled): subprime auto dealer goes from Covid-era rockstar to near demise."
+    },
+    {
+      "url": "https://www.arkansasonline.com/news/2026/aug/17/americas-car-mart-repeats-concerns-about-the/",
+      "title": "America's Car-Mart repeats concerns about the company's future",
+      "domain": "arkansasonline.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "America's Car-Mart again warned shareholders in its annual report of the company's ability to continue as a going concern as it struggles to secure financing... The company also set its annual meeting for Sept. 23 in Rogers."
+    },
+    {
+      "url": "https://www.arkansasonline.com/news/2026/jun/26/sec-filing-details-car-marts-timeline-operating/",
+      "title": "SEC filing details Car-Mart's timeline, operating requirements",
+      "domain": "arkansasonline.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The demands included the resignation of a director, the addition of two independent directors and the exit of its chief financial officer... Car-Mart also agreed to pay Silver Point and the lenders fees of up to $18 million."
+    },
+    {
+      "url": "https://www.nwaonline.com/news/2026/jun/22/lenders-offer-rogers-based-americas-car-mart-a/",
+      "title": "Lenders offer Rogers-based America's Car-Mart a lifeline until September",
+      "domain": "nwaonline.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Silver Point isn't doing this out of generosity. A disorderly default destroys collateral value; an orderly process preserves it. — Tomas Jandik, University of Arkansas"
+    },
+    {
+      "url": "https://www.nwaonline.com/news/2026/jul/14/car-mart-notes-need-for-additional-financing/",
+      "title": "Car-Mart notes need for additional financing, posts quarterly loss",
+      "domain": "nwaonline.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "While we believe the market is pricing-in a high likelihood of a bankruptcy/wipe-out of equity, the amended credit agreement gives us confidence that Silver Point is working with (Car-Mart), and is not simply trying to take the keys."
+    },
+    {
+      "url": "https://talkbusiness.net/2026/06/car-mart-receives-extension-on-defaults-time-to-review-strategic-alternatives/",
+      "title": "Car-Mart receives extension on defaults, time to review 'strategic alternatives'",
+      "domain": "talkbusiness.net",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The company's lenders previously agreed to extend the period of lender forbearance through June 12. Car-Mart received an additional extension to June 19."
+    },
+    {
+      "url": "https://www.stocktitan.net/sec-filings/CRMT/8-k-americas-carmart-inc-reports-material-event-f8cd49b1d6cb.html",
+      "title": "America's Car-Mart 8-K filing summary — FY2026 results and going-concern warning",
+      "domain": "stocktitan.net",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Net loss of 139,151 (thousands) for FY 2026... Dealership footprint reduced 39%, with open locations falling from 154 to 94 over the year."
+    },
+    {
+      "url": "https://www.stocktitan.net/sec-filings/CRMT/ars-americas-carmart-inc-sec-filing-13d61811b0a3.html",
+      "title": "America's Car-Mart Form ARS filing summary",
+      "domain": "stocktitan.net",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Total debt was $722.4 million, with net debt of $590.7 million, and unrestricted cash increased to $47.0 million."
+    },
+    {
+      "url": "https://investors.ff.com/sites/g/files/FFAI-2Q26-Earnings-Presentation-08.13.2026.pdf",
+      "title": "Faraday Future Fiscal Second Quarter 2026 Earnings Presentation",
+      "domain": "investors.ff.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Total liabilities 278,390... Net loss $(38,963)... Regained Full Nasdaq Compliance: Executed 1-for-150 reverse stock split."
+    },
+    {
+      "url": "https://quartr.com/events/faraday-future-intelligent-electric-inc-ffie-q2-2026_FkQl3E6D",
+      "title": "Faraday Future Intelligent Electric (FFIE) Q2 2026 Summary",
+      "domain": "quartr.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The company faces substantial doubt about its ability to continue as a going concern due to recurring losses and liquidity constraints. Cash and cash equivalents at June 30, 2026 were $11.2 million, with $42.7 million in restricted cash."
+    },
+    {
+      "url": "https://www.tradingview.com/news/urn:summary_document_report:quartr.com:3675674:0-ffai-robotics-sales-drove-revenue-growth-but-liquidity-and-going-concern-risks-remain-acute/",
+      "title": "FFAI: Robotics sales drove revenue growth, but liquidity and going concern risks remain acute",
+      "domain": "tradingview.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Liquidity remains constrained, with substantial doubt about the ability to continue as a going concern, and future operations depend on securing additional funding."
+    },
+    {
+      "url": "https://www.businesswire.com/news/home/20260721185843/en/Faraday-Future-NASDAQFFAI-Announces-1-for-150-Reverse-Stock-Split-Effective-at-the-Open-of-Trading-on-July-24-2026",
+      "title": "Faraday Future Announces 1-for-150 Reverse Stock Split Effective July 24, 2026",
+      "domain": "businesswire.com",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "Reverse stock split implemented as a proactive risk management measure, intended to avoid the risk of Nasdaq delisting."
+    },
+    {
+      "url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-e76e9ae2aa42.html",
+      "title": "Faraday Future 8-K — regains Nasdaq bid-price compliance, sets $5.00 note conversion floor",
+      "domain": "stocktitan.net",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "On August 7, 2026, Faraday Future received written notice from Nasdaq that... from July 24, 2026, to August 6, 2026, the closing bid price was at $1.00 per share or greater. Risk disclosures emphasize... the possibility of seeking protection under the Bankruptcy Code if financing efforts are unsuccessful."
+    },
+    {
+      "url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-dca67a0bc999.html",
+      "title": "Faraday Future 8-K — Nasdaq minimum bid-price deficiency notice (March 20, 2026)",
+      "domain": "stocktitan.net",
+      "accessed_at": "2026-08-19T00:00:00Z",
+      "snippet": "The company has 180 calendar days, until September 16, 2026, to regain compliance... if the stock's closing bid is $0.10 or less for 10 straight trading days, staff will issue an immediate delisting determination."
     }
   ],
   "key_facts": [
-    "America's Car-Mart (CRMT) issued an EXPLICIT going-concern warning in its FY2026 10-K (filed mid-July 2026), citing substantial indebtedness, liquidity, and uncertainty over meeting credit-agreement milestones.",
-    "CRMT FY2026 (ended April 30, 2026): net loss ~$139.2M ($16.79 diluted loss/share); revenue $1.28B (-7.9%); total debt ~$722.4M ($300M term loan + $458.7M securitization notes); operating under temporary covenant waivers with a June 19, 2026 amendment granting covenant relief and a defined runway.",
-    "Faraday Future (FFAI) has an explicit going-concern disclosure and states it would likely seek bankruptcy protection if it cannot raise capital; cash ~$12.2M (~35 days of burn); total debt ~$102.1M; executed a 1-for-150 reverse split effective July 24, 2026 to preserve Nasdaq listing.",
-    "FFAI generates almost no revenue (~$0.5M in Q1 CY2026) and posts continuous losses; SEC closed its multi-year investigation with no enforcement action (a positive).",
-    "JetBlue (JBLU) has NO going-concern warning but was downgraded to CCC+ by S&P and Moody's amid a $3B debt raise; ~$9.33B total debt; debt/equity 5.16; ~$755M of maturities in 2026, $411M in 2027, $516M in 2028.",
-    "JetBlue Q1 2026 net loss $319M (fifth straight quarterly loss); retains ~$2.4B liquidity, a $600M revolver, and >$6B unencumbered assets; Raymond James suggested Chapter 11; some models cite >75% bankruptcy odds by 2027.",
-    "Chegg (CHGG) Q1 2026 revenue fell 48% YoY to $63.3M due to AI/Google AI Overviews; cut ~45% of workforce (~388 jobs); returned to near-breakeven net income of $0.2M; ended its strategic review and remains standalone; current ratio ~10.8, minimal traditional debt.",
-    "Peloton (PTON) repaid the remaining $199M of its 0% convertible notes due Feb 2026 in cash; earlier $1.35B holistic refinancing extended maturities to 2029; Q1 CY2026 net income +$26.4M with positive EBITDA.",
-    "Petco (WOOF) completed an early-2026 refinancing: issued $600M senior secured notes (8.25%), made ~$95M voluntary prepayments, extended maturities to 2031; net debt/EBITDA improved to 3.0x from 4.2x.",
-    "Overall mid-2026 bankruptcy-risk ranking (highest to lowest): America's Car-Mart > Faraday Future > JetBlue > Chegg > Peloton > Petco."
+    "America's Car-Mart (CRMT) is by far the highest bankruptcy risk of the six: it is the only company with an auditor's going-concern explanatory paragraph, a creditor-controlled restructuring process, restructuring advisors engaged (Houlihan Lokey, FTI Consulting, Mayer Brown), and a hard September 7, 2026 milestone deadline.",
+    "Bloomberg reported (June 10, 2026) that America's Car-Mart sought at least $500 million in rescue financing and 'separately began laying the groundwork for a potential Chapter 11 filing.' A July 21, 2026 follow-up was headlined 'Faces Default, Considers Asset Sales to Avoid Bankruptcy.'",
+    "CRMT's FY2026 (ended April 30, 2026) net loss was $139.2 million on revenue of $1,281.5 million (-7.9%); loss per share was $16.79. Dealership count fell 39% from 154 to 94 locations.",
+    "CRMT's June 19, 2026 First Amendment and Limited Waiver with Silver Point Finance waived existing/anticipated defaults on minimum liquidity, minimum collateral coverage ratio, and the expected failure to deliver an unqualified FY2026 audit opinion. Waivers become permanent only if all milestones are met by the Scheduled Termination Date.",
+    "CRMT's covenant relief period runs to September 7, 2026, with automatic extension only to September 21, 2026 or November 6, 2026 if specified conditions are satisfied. Required milestones include executing a support agreement with the agent and requisite lenders and progressing a marketing process for financing/recapitalization/restructuring/M&A.",
+    "CRMT agreed to pay lenders fees of up to $18.0 million in connection with the amendment, and must maintain minimum liquidity of $7.0 million each Friday and $5.0 million at all other times.",
+    "CRMT's creditors effectively control governance: three new independent directors were added to a special committee that must green-light most business decisions; the CFO departed July 31, 2026; a director resigned June 23, 2026.",
+    "CRMT was in compliance with all applicable covenants at the June 30, 2026 testing date and remained so as of the July 14, 2026 earnings release. No bankruptcy filing had occurred as of August 19, 2026; the annual meeting is set for September 23, 2026.",
+    "CRMT's market capitalization is approximately $27 million against $722.4 million of total debt, implying the market prices a near-total equity wipeout. The stock fell 68% in one session on June 10, 2026 to $1.67, its lowest since the 1992 IPO.",
+    "Faraday Future (FFAI) carries explicit substantial-doubt going-concern language in its Q2 2026 10-Q (filed August 13, 2026), and its own risk factors name 'seeking protection under the Bankruptcy Code' as a possible outcome of failed financing efforts.",
+    "FFAI held only $11.2 million of unrestricted cash at June 30, 2026 (plus $42.7 million restricted), with total liabilities of $278.4 million and stockholders' equity of just $1.4 million.",
+    "FFAI executed a 1-for-150 reverse stock split effective July 24, 2026 to avoid Nasdaq delisting, and regained minimum bid price compliance on August 7, 2026 after trading at or above $1.00 for 10 consecutive days (July 24-August 6).",
+    "JetBlue was downgraded by Fitch to CCC+ from B- on April 3, 2026, and guides to a full-year 2026 adjusted operating margin of -2.0% to -5.0%, but held $2.2 billion of cash and investments (~23% of TTM revenue, above its 17-20% target) plus a $600 million undrawn revolver at June 30, 2026.",
+    "JetBlue's Q2 2026 revenue grew 14.5% to $2.7 billion with RASM up 10.9%; the primary stressor was fuel at $4.23/gallon, up 76% year over year. It executed a $500 million aircraft-backed financing at 6.5% in Q2 with a $250 million accordion available.",
+    "Petco removed its near-term maturity risk on February 2, 2026 by refinancing a $1.5 billion term loan due March 2028 into a $900 million term loan and $600 million of 8.250% senior secured notes, both maturing in 2031.",
+    "Petco's leverage ratio fell from 4.2x (FY2024) to 3.0x (FY2025) and it is targeting 2.0x; Q1 FY2026 marked a return to positive comparable sales (+0.7%) with $654.4 million of total liquidity.",
+    "Chegg is net cash positive (+$38.5 million) with $72.3 million of cash and investments, generated positive free cash flow of $6.4 million in Q2 2026, and expects to fully repay its remaining $33.9 million of convertible notes (due September 1, 2026) in Q3 2026 — leaving it debt-free. It has no going-concern language.",
+    "Chegg's acute risk is delisting, not insolvency: on July 24, 2026 the NYSE notified it of non-compliance with Section 802.01C (average closing price below $1.00 over 30 trading days ended July 23, 2026). This is its second such notice; the first, from December 2025, was cured in late May 2026.",
+    "Chegg's revenue fell 51% year over year in Q2 2026 to $51.8 million, with Academic Services down 61%, which the company attributes to generative AI adoption and Google's AI Overview.",
+    "Peloton delivered its first-ever full year of positive net income ($63.2 million) and operating income ($161 million) in FY2026, with $468.2 million adjusted EBITDA and $377.6 million free cash flow."
   ],
   "data_points": [
     {
-      "metric": "CRMT FY2026 net loss (common shareholders)",
-      "value": -139151000.0,
-      "unit": "USD",
+      "metric": "America's Car-Mart FY2026 total revenue",
+      "value": 1281.5,
+      "unit": "USD millions",
       "as_of": "2026-04-30",
-      "source_url": "https://www.globenewswire.com/news-release/2026/07/14/3326738/0/en/America-s-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results.html"
+      "source_url": "https://ir.car-mart.com/news-events/press-releases/press-releases-details/2026/Americas-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx"
     },
     {
-      "metric": "CRMT FY2026 diluted loss per share",
+      "metric": "America's Car-Mart FY2026 net loss",
+      "value": -139.151,
+      "unit": "USD millions",
+      "as_of": "2026-04-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/8-k-americas-carmart-inc-reports-material-event-f8cd49b1d6cb.html"
+    },
+    {
+      "metric": "America's Car-Mart FY2026 loss per share",
       "value": -16.79,
-      "unit": "USD/share",
+      "unit": "USD per share",
       "as_of": "2026-04-30",
-      "source_url": "https://www.stocktitan.net/news/CRMT/america-s-car-mart-reports-fourth-quarter-and-fiscal-year-2026-eiwsornj0pt0.html"
+      "source_url": "https://ir.car-mart.com/news-events/press-releases/press-releases-details/2026/Americas-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx"
     },
     {
-      "metric": "CRMT total indebtedness",
-      "value": 722400000.0,
-      "unit": "USD",
+      "metric": "America's Car-Mart total debt",
+      "value": 722.4,
+      "unit": "USD millions",
       "as_of": "2026-04-30",
-      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/10-k-americas-carmart-inc-files-annual-report-be0355a631d9.html"
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/ars-americas-carmart-inc-sec-filing-13d61811b0a3.html"
     },
     {
-      "metric": "CRMT Q4 FY2026 revenue",
-      "value": 302826000.0,
-      "unit": "USD",
+      "metric": "America's Car-Mart net debt",
+      "value": 590.7,
+      "unit": "USD millions",
       "as_of": "2026-04-30",
-      "source_url": "https://www.globenewswire.com/news-release/2026/07/14/3326738/0/en/America-s-Car-Mart-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Results.html"
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/ars-americas-carmart-inc-sec-filing-13d61811b0a3.html"
     },
     {
-      "metric": "FFAI cash on hand",
-      "value": 12231000.0,
+      "metric": "America's Car-Mart unrestricted cash",
+      "value": 47.0,
+      "unit": "USD millions",
+      "as_of": "2026-04-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/ars-americas-carmart-inc-sec-filing-13d61811b0a3.html"
+    },
+    {
+      "metric": "America's Car-Mart Silver Point senior secured term loan principal",
+      "value": 300.0,
+      "unit": "USD millions",
+      "as_of": "2025-10-30",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/f8k_062226.htm"
+    },
+    {
+      "metric": "America's Car-Mart lender fees for June 19 2026 amendment",
+      "value": 18.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-19",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/f8k_062226.htm"
+    },
+    {
+      "metric": "America's Car-Mart minimum liquidity covenant (Fridays)",
+      "value": 7.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-19",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/exh_101.htm"
+    },
+    {
+      "metric": "America's Car-Mart minimum liquidity covenant (all other times)",
+      "value": 5.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-19",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/exh_101.htm"
+    },
+    {
+      "metric": "America's Car-Mart minimum collateral coverage ratio at June 30 2026",
+      "value": 1.25,
+      "unit": "ratio to 1.00",
+      "as_of": "2026-06-30",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/799850/000117184326004311/exh_101.htm"
+    },
+    {
+      "metric": "America's Car-Mart dealership locations open",
+      "value": 94.0,
+      "unit": "locations",
+      "as_of": "2026-04-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/8-k-americas-carmart-inc-reports-material-event-f8cd49b1d6cb.html"
+    },
+    {
+      "metric": "America's Car-Mart retail units sold FY2026",
+      "value": 48891.0,
+      "unit": "vehicles",
+      "as_of": "2026-04-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/8-k-americas-carmart-inc-reports-material-event-f8cd49b1d6cb.html"
+    },
+    {
+      "metric": "America's Car-Mart net charge-offs as percent of average finance receivables",
+      "value": 27.6,
+      "unit": "percent",
+      "as_of": "2026-04-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/CRMT/8-k-americas-carmart-inc-reports-material-event-f8cd49b1d6cb.html"
+    },
+    {
+      "metric": "America's Car-Mart rescue financing sought",
+      "value": 500.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-10",
+      "source_url": "https://www.ttnews.com/articles/americas-car-mart-rescue"
+    },
+    {
+      "metric": "America's Car-Mart share price",
+      "value": 3.15,
       "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://seekingalpha.com/article/4802444-faraday-future-liquidity-in-reverse-even-as-stock-surges"
+      "as_of": "2026-08-19",
+      "source_url": "https://finance.yahoo.com/quote/CRMT"
     },
     {
-      "metric": "FFAI total debt",
-      "value": 102100000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://valueinvesting.io/FFAI/probability-of-bankruptcy"
+      "metric": "America's Car-Mart market capitalization",
+      "value": 27.29,
+      "unit": "USD millions",
+      "as_of": "2026-08-19",
+      "source_url": "https://finance.yahoo.com/quote/CRMT"
     },
     {
-      "metric": "FFAI Q1 CY2026 total revenue",
-      "value": 512000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-8e18b1aefec9.html"
+      "metric": "America's Car-Mart drawdown from 52-week high",
+      "value": -93.43,
+      "unit": "percent",
+      "as_of": "2026-08-19",
+      "source_url": "https://finance.yahoo.com/quote/CRMT"
     },
     {
-      "metric": "FFAI Q1 CY2026 net loss attributable to common",
-      "value": -38856000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://valueinvesting.io/FFAI/probability-of-bankruptcy"
+      "metric": "Faraday Future cash and cash equivalents",
+      "value": 11.2,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://quartr.com/events/faraday-future-intelligent-electric-inc-ffie-q2-2026_FkQl3E6D"
     },
     {
-      "metric": "FFAI reverse stock split ratio",
+      "metric": "Faraday Future restricted cash",
+      "value": 42.7,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://quartr.com/events/faraday-future-intelligent-electric-inc-ffie-q2-2026_FkQl3E6D"
+    },
+    {
+      "metric": "Faraday Future total liabilities",
+      "value": 278.39,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://investors.ff.com/sites/g/files/FFAI-2Q26-Earnings-Presentation-08.13.2026.pdf"
+    },
+    {
+      "metric": "Faraday Future Q2 2026 net loss",
+      "value": -38.963,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://investors.ff.com/sites/g/files/FFAI-2Q26-Earnings-Presentation-08.13.2026.pdf"
+    },
+    {
+      "metric": "Faraday Future Q2 2026 revenue",
+      "value": 0.836,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://www.morningstar.com/news/business-wire/20260813743465/faraday-future-announces-q2-results-record-135-million-revenue-in-h1-2026-robotics-enters-new-phase-of-revenue-acceleration-with-positive-contribution-margin-liability-down-100-million-yoy-upgrades-to-four-core-full-stack-ai-strategy"
+    },
+    {
+      "metric": "Faraday Future H1 2026 operating cash outflow",
+      "value": -56.5,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-67b841401908.html"
+    },
+    {
+      "metric": "Faraday Future reverse stock split ratio",
       "value": 150.0,
-      "unit": "shares-to-1",
+      "unit": "shares consolidated into 1",
       "as_of": "2026-07-24",
-      "source_url": "https://www.stocktitan.net/sec-filings/FFAI/8-k-faraday-future-intelligent-electric-inc-reports-material-event-8e18b1aefec9.html"
+      "source_url": "https://www.businesswire.com/news/home/20260721185843/en/Faraday-Future-NASDAQFFAI-Announces-1-for-150-Reverse-Stock-Split-Effective-at-the-Open-of-Trading-on-July-24-2026"
     },
     {
-      "metric": "JBLU total debt",
-      "value": 9330000000.0,
+      "metric": "Faraday Future market capitalization",
+      "value": 12.49,
+      "unit": "USD millions",
+      "as_of": "2026-08-19",
+      "source_url": "https://finance.yahoo.com/quote/FFAI"
+    },
+    {
+      "metric": "Faraday Future share price",
+      "value": 3.24,
       "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.gurufocus.com/term/deb2equity/NAS:JBLU/Debt-to-Equity/JetBlue-Airways"
+      "as_of": "2026-08-19",
+      "source_url": "https://finance.yahoo.com/quote/FFAI"
     },
     {
-      "metric": "JBLU debt-to-equity",
-      "value": 5.16,
-      "unit": "ratio",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.gurufocus.com/term/deb2equity/NAS:JBLU/Debt-to-Equity/JetBlue-Airways"
+      "metric": "JetBlue Q2 2026 operating revenue",
+      "value": 2700.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://ir.jetblue.com/news/news-details/2026/JetBlue-Announces-Second-Quarter-2026-Results/default.aspx"
     },
     {
-      "metric": "JBLU 2026 debt maturities",
-      "value": 755000000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://deeparrival.com/news/jetblue-bankruptcy-risk-ccc-rating/"
+      "metric": "JetBlue cash and cash equivalents",
+      "value": 1656.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://ir.jetblue.com/news/news-details/2026/JetBlue-Announces-Second-Quarter-2026-Results/default.aspx"
     },
     {
-      "metric": "JBLU Q1 2026 net loss",
-      "value": -319000000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://dwuconsulting.com/dwu-ai/jetblue-airways-financial-profile"
-    },
-    {
-      "metric": "JBLU available liquidity",
-      "value": 2400000000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://deeparrival.com/news/jetblue-bankruptcy-risk-ccc-rating/"
-    },
-    {
-      "metric": "JBLU analyst-estimated bankruptcy probability by 2027",
-      "value": 75.0,
-      "unit": "percent",
-      "as_of": "2026-01-01",
-      "source_url": "https://simpleflying.com/why-analysis-give-jetblue-75-percent-chance-bankruptcy-2027/"
-    },
-    {
-      "metric": "CHGG Q1 2026 revenue",
-      "value": 63262000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.stocktitan.net/sec-filings/CHGG/10-q-chegg-inc-quarterly-earnings-report-a76e084cb71a.html"
-    },
-    {
-      "metric": "CHGG Q1 2026 revenue decline YoY",
-      "value": -48.0,
-      "unit": "percent",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.stocktitan.net/sec-filings/CHGG/10-q-chegg-inc-quarterly-earnings-report-a76e084cb71a.html"
-    },
-    {
-      "metric": "CHGG Q1 2026 net income",
-      "value": 228000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://stockstory.org/us/stocks/nyse/chgg/news/earnings/chegg-nysechgg-posts-better-than-expected-sales-in-q1-cy2026-but-stock-drops-116percent"
-    },
-    {
-      "metric": "CHGG workforce reduction",
-      "value": 45.0,
-      "unit": "percent",
-      "as_of": "2025-10-27",
-      "source_url": "https://www.cnbc.com/2025/10/27/chegg-slashes-45percent-of-workforce-blames-new-realities-of-ai.html"
-    },
-    {
-      "metric": "PTON remaining 2026 convertible notes repaid in cash",
-      "value": 199000000.0,
-      "unit": "USD",
-      "as_of": "2026-02-15",
-      "source_url": "https://www.sec.gov/Archives/edgar/data/0001639825/000163982526000022/pton-20260331.htm"
-    },
-    {
-      "metric": "PTON Q1 CY2026 net income",
-      "value": 26400000.0,
-      "unit": "USD",
-      "as_of": "2026-03-31",
-      "source_url": "https://www.sec.gov/Archives/edgar/data/0001639825/000163982526000022/pton-20260331.htm"
-    },
-    {
-      "metric": "WOOF senior secured notes issued in refinancing",
-      "value": 600000000.0,
-      "unit": "USD",
-      "as_of": "2026-02-02",
-      "source_url": "https://corporate.petco.com/2026-01-12-Petco-Announces-Launch-of-Debt-Refinancing-Transaction-Reaffirms-Fourth-Quarter-and-Full-Fiscal-Year-2025-Outlook"
-    },
-    {
-      "metric": "WOOF net debt to EBITDA after refinancing",
-      "value": 3.0,
-      "unit": "ratio",
-      "as_of": "2026-02-02",
-      "source_url": "https://finance.yahoo.com/news/petco-woof-completes-debt-refinancing-161834759.html"
-    },
-    {
-      "metric": "WOOF Q1 FY2026 total revenue",
-      "value": 1496732000.0,
-      "unit": "USD",
-      "as_of": "2026-04-30",
-      "source_url": "https://ir.petco.com/news-and-events/press-releases"
+      "metric": "JetBlue total investment securities",
+      "value": 512.0,
+      "unit": "USD millions",
+      "as_of": "2026-06-30",
+      "source_url": "https://ir.jetblue.com/news/news-details/2026/JetBlue-Announces-Second-Quarter-2026-Results/default.aspx"
     }
   ],
   "created_at": "2026-07-01T18:09:18.213006Z",
-  "updated_at": "2026-07-27T20:12:53.694585Z",
-  "stale_after": "2026-07-28T02:12:53.694585Z",
+  "updated_at": "2026-08-19T17:40:11.842400Z",
+  "stale_after": "2026-08-19T23:40:11.842400Z",
   "resolvable_after": null,
   "state": "fresh",
   "superseded_by": null,
   "revision_history": [],
-  "session_id": "85e3df32-ff02-42ff-bb33-f9c48522e21a",
+  "session_id": "72028253-aad2-4c63-b03d-6256dc0cf17f",
   "follow_up_count": 0
 }
