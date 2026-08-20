@@ -231,24 +231,19 @@ def get_research_allowed_tools(
     union is registered and then refused by the allowlist hook, which reads
     to the agent as the tool being broken rather than as it being ungranted.
 
-    Two things still have to be named, each because it is not on an
-    in-process server. The built-ins belong to the engine. AskNews is served
-    over HTTP, and an external MCP server cannot be enumerated without
-    connecting to it — ``server_tool_names`` answers ``[]`` for one — so its
-    four tools are named here. Naming them costs nothing when its server is
-    absent: the missing key that leaves the server unregistered also puts
-    those tools in the policy's exclusions, which the derivation subtracts.
+    Only the built-ins still have to be named, because they belong to the
+    engine rather than to a server. AskNews used to be named here too, being
+    served over HTTP where ``server_tool_names`` answers ``[]``; it is now a
+    lane inside ``search`` and reaches the sub-agent with it.
 
     Passing no servers answers with the built-ins alone, which is what a
     sub-agent given no data tools should see.
     """
-    from aib.agent.tool_policy import ASKNEWS_TOOLS, BUILTIN_TOOLS, ToolPolicy
+    from aib.agent.tool_policy import BUILTIN_TOOLS, ToolPolicy
     from aib.config import settings
 
     policy = ToolPolicy.from_settings(settings)
-    return policy.get_allowed_tools(
-        dict(servers or {}), builtin_tools=BUILTIN_TOOLS | ASKNEWS_TOOLS
-    )
+    return policy.get_allowed_tools(dict(servers or {}), builtin_tools=BUILTIN_TOOLS)
 
 
 async def run_research_agent(

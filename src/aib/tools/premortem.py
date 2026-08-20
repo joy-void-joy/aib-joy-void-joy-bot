@@ -118,7 +118,7 @@ adversarial self-examination.
 
 - **Missing resolution criteria** — If the question section shows \
   resolution criteria as MISSING, check whether the trace shows \
-  an attempt to recover them (e.g., a fetch_url call for the \
+  an attempt to recover them (e.g., a fetch() call for the \
   Metaculus question page). If the agent did not attempt recovery, \
   this is always at least a **warn** — the agent's prompt \
   explicitly requires fetching the page. Question titles can be \
@@ -423,8 +423,8 @@ def build_reviewer_hooks(allowed_dirs: list[Path]) -> LupHooksConfig:
         "Read",
         "Glob",
         "Grep",
-        "mcp__search__web_search",
-        "mcp__search__fetch_url",
+        "mcp__search__search",
+        "mcp__search__fetch",
         "StructuredOutput",
     ]
     hooks = create_tool_allowlist_hook(allowed)
@@ -494,10 +494,10 @@ async def run_reviewer(
     reviewer_hooks = build_reviewer_hooks(hook_dirs)
 
     from aib.config import settings
-    from aib.tools.search import fetch_url, web_search
+    from aib.tools.search import fetch, search
 
     search_servers = {
-        "search": create_mcp_server("search", tools=[web_search, fetch_url]),
+        "search": create_mcp_server("search", tools=[search, fetch]),
     }
 
     try:
@@ -517,8 +517,8 @@ async def run_reviewer(
                     "Read",
                     "Glob",
                     "Grep",
-                    "mcp__search__web_search",
-                    "mcp__search__fetch_url",
+                    "mcp__search__search",
+                    "mcp__search__fetch",
                 ],
                 extra_hooks=reviewer_hooks,
                 tool_servers=search_servers,

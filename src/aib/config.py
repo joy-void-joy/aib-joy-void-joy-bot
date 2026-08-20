@@ -9,20 +9,26 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-type ResearchTopology = Literal["delegated", "direct"]
+type ResearchTopology = Literal["condensed", "delegated", "direct"]
 """Where the data-gathering tools sit relative to the forecaster.
 
-``delegated`` is the shipped shape: the forecaster holds about ten
-orchestration tools and reaches the other thirty-five through ``research()``,
-which opens a sub-agent that gathers and returns a digest. ``direct`` mounts
-them on the forecaster itself and withdraws ``research()``, so the same tools
-are called from the one context that reasons about the answer.
+``condensed`` is the shipped shape: the forecaster holds all sixteen tools
+itself, because sixteen fit in one context where forty did not. ``delegated``
+puts the same sixteen behind ``research()``, which opens a sub-agent that
+gathers with them and returns a digest. ``direct`` mounts the forty narrow
+tools the sixteen were condensed out of, which is the surface this project
+ran before them.
 
-The trade is context against depth, and it is not obvious which way it falls:
-delegating keeps raw tool output out of the forecaster's window and lets it
-fan out across several research agents at once, while holding the tools puts
-every observation in front of the reasoning that uses it. Which is why this
-is a setting an experiment can turn rather than a decision taken here.
+Two axes, not one. Delegating trades context against depth: it keeps raw tool
+output out of the forecaster's window and lets it fan out across several
+research agents at once, where holding the tools puts every observation in
+front of the reasoning that uses it. Condensing trades breadth against
+control: a wide tool asks sources the agent would not have thought to ask,
+where a narrow one is asked only deliberately.
+
+``direct`` is kept because the tools it mounts were unregistered rather than
+deleted, so keeping the value costs a branch and losing it would cost the
+ability to run the old surface at all.
 """
 
 MODEL_ALIASES: dict[str, str] = {
@@ -154,7 +160,7 @@ class Settings(BaseSettings):
         description="Max thinking tokens (None = unlimited)",
     )
     research: ResearchTopology = Field(
-        default="delegated",
+        default="condensed",
         validation_alias="AIB_RESEARCH",
         description="Whether the forecaster delegates research or holds the tools",
     )

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import TypedDict, cast
 
+from aib.config import ResearchTopology
+
 
 class NumericBounds(TypedDict, total=False):
     """Bounds and scaling metadata for numeric/discrete questions."""
@@ -136,7 +138,7 @@ Before researching, identify the question type — this determines which analyti
 | **Measurement** | "What will value of X be?" | Current value + drift + volatility. Anchor on quantitative data. |\
 """
 
-_STEP3_RESEARCH = """\
+STEP3_RESEARCH_HEAD = """\
 ## STEP 3: Research
 
 Organize your research in phases. Don't jump to deep research before understanding the basics.
@@ -147,9 +149,33 @@ Organize your research in phases. Don't jump to deep research before understandi
 - Check for related questions to ensure consistency.
 - **Subquestion decomposition**: For compound questions, use `subforecast()` to break into independent sub-forecasts, each with its own full pipeline. See Phase 2b below.
 
+"""
+
+PHASE_2A_CONDENSED = """\
+### Phase 2a: Gather with search()
+
+`search()` asks every source at once — the open web, prediction markets, news, Metaculus, arXiv, FRED and World Bank series, Wikipedia, Exa and Reddit — and answers with what each found under its own key. Web hits open the page's own text, ending in `[... continued in <path>]` where there was more.
+
+**Guidelines:**
+- **Ask specific, answerable questions** — "current US measles case count and weekly trajectory" beats "measles".
+- **Omit `lanes` on the first search.** The lane you would not have thought to ask is the one that changes your answer: a Kalshi bracket ladder prices a whole distribution rather than one threshold, an options chain prices the market's own uncertainty, and neither announces itself in advance. Narrow only on follow-ups.
+- **Read `failed`.** A lane listed there had something to say and could not say it, which is a different fact from a lane that answered empty.
+- **Read the path, don't re-fetch the page.** A hit ending in `[... continued in <path>]` has already been fetched whole; `Read` on that path is the rest of it, and `fetch()` on the same URL is a second network call for what is already on disk.
+- **Search several framings.** The same fact reached through different phrasings is independent confirmation; the same source found twice is not.
+- **Then go deeper where it matters** — `market()` traces one market's price and opens its event's brackets, `series()` pulls a full window from FRED, the World Bank or BLS, `stock()` returns quote, history, options and filings together, and `metaculus()` opens a question with its CP trace and coherence links.
+- **Check existing research first** — browse `notes/worldview/research/` for prior findings before starting.
+
+**Example:**
+```
+search(query="US measles case count and trajectory 2026")
+search(query="CDC vaccination rate 2024-2026")
+```
+"""
+
+PHASE_2A_DELEGATED = """\
 ### Phase 2a: Delegate Research via research()
 
-Use `research()` to delegate data-gathering questions to an Opus sub-agent. The sub-agent has access to web search, financial APIs, government data, prediction markets, arXiv, news, and trends tools. Findings are persisted to the worldview store for reuse across forecasts.
+Use `research()` to delegate data-gathering questions to a sub-agent holding the same data tools you would otherwise call yourself. Findings are persisted to the worldview store for reuse across forecasts.
 
 **Guidelines:**
 - **Ask specific, answerable questions** — "What is the current US measles case count and weekly trajectory?" is better than "Research measles."
@@ -157,6 +183,7 @@ Use `research()` to delegate data-gathering questions to an Opus sub-agent. The 
 - **Set appropriate TTLs** — 6h for fast-moving topics, 3d default, 14d for slow-moving facts.
 - **Check existing research first** — Browse `notes/worldview/research/` for prior findings before spawning new research.
 - **Use follow-up for depth** — If initial research is insufficient, use `follow_up` to continue the same conversation cheaply.
+- **You still hold `search()` and `fetch()`** — use them to check a single fact rather than opening a sub-agent for it.
 
 **Example:**
 ```
@@ -165,10 +192,32 @@ research(questions=[
   {query: "CDC vaccination rate data 2024-2026", ttl: "7d"}
 ])
 ```
+"""
 
+PHASE_2A_DIRECT = """\
+### Phase 2a: Gather with the data tools
+
+You hold every data tool directly: web search and Exa, Wikipedia and arXiv, the three prediction-market venues, Metaculus, FRED and the World Bank, BLS and Census, stocks and options, Google Trends, Reddit, news, weather, and the Wayback Machine.
+
+**Guidelines:**
+- **Start with the specialized tool, not the general one.** `fred_series` answers a US macro question that `web_search` would only find an article about; `search_markets` prices a question three venues may already be trading.
+- **Ask each venue that could know.** A source you do not call cannot tell you it had the answer — a Kalshi bracket ladder prices a whole distribution, an options chain prices the market's own uncertainty about a threshold, and neither announces itself in your search results.
+- **Search several framings.** The same fact reached through different phrasings is independent confirmation; the same source found twice is not.
+- **Fetch what you find** — `fetch_url` on a promising result, `wayback_snapshot` for what a page said on a past date.
+- **Check existing research first** — browse `notes/worldview/research/` for prior findings before starting.
+
+**Example:**
+```
+web_search(query="US measles case count 2026")
+search_markets(query="US measles cases 2026")
+fred_series(series_id="UNRATE")
+```
+"""
+
+STEP3_RESEARCH_TAIL = """\
 ### Phase 2b: Delegate Sub-Forecasts via subforecast()
 
-Before committing to a final number, actively check whether this question decomposes — don't default to estimating the whole thing in one step. `subforecast()` is for **forward-looking predictions** ("What WILL happen?"); `research()` is for backward-looking data gathering ("What IS the state of X?"). Each sub-forecast gets its own full pipeline (research, computation, calibration) and is persisted to the worldview store.
+Before committing to a final number, actively check whether this question decomposes — don't default to estimating the whole thing in one step. `subforecast()` is for **forward-looking predictions** ("What WILL happen?"); Phase 2a is where backward-looking data gathering belongs ("What IS the state of X?"). Each sub-forecast gets its own full pipeline (research, computation, calibration) and is persisted to the worldview store.
 
 **Decomposition triggers — if any match, spawn sub-forecasts:**
 - **Binary threshold on a quantity** ("Will X exceed N?", "Will X reach N by date Y?"): this is the default path, not an option. Spawn a numeric subforecast for the quantity, then read P(>N) from its CDF via `extract_cdf_threshold`. Estimating the threshold probability directly is less reliable and creates binary/numeric inconsistency.
@@ -363,6 +412,24 @@ Call premortem() **once** per forecast, after your final reflection(). Don't cal
 # Section assembly
 # ---------------------------------------------------------------------------
 
+
+def step3_research(research: ResearchTopology) -> str:
+    """The research phase, told in terms of the tools this topology mounts.
+
+    A forecaster holding the data tools and one reaching them through
+    `research()` are given different instructions for the same step, because
+    naming a tool the session did not mount is worse than saying nothing:
+    the agent calls it, the allowlist hook refuses it, and the refusal reads
+    as the tool being broken.
+    """
+    phase_2a = {
+        "condensed": PHASE_2A_CONDENSED,
+        "delegated": PHASE_2A_DELEGATED,
+        "direct": PHASE_2A_DIRECT,
+    }[research]
+    return "\n".join([STEP3_RESEARCH_HEAD, phase_2a, STEP3_RESEARCH_TAIL])
+
+
 # lup: ignore[dict-str-payload] — an ordered table of prose, consumed by
 # iteration in assembly order; no reader names a key
 SECTIONS: dict[str, str] = {
@@ -370,7 +437,7 @@ SECTIONS: dict[str, str] = {
     "output_format": _OUTPUT_FORMAT,
     "step1_parse": _STEP1_PARSE,
     "step2_classify": _STEP2_CLASSIFY,
-    "step3_research": _STEP3_RESEARCH,
+    "step3_research": step3_research("condensed"),
     "step4_calibration": _STEP4_CALIBRATION,
     "definitional": _DEFINITIONAL_QUESTIONS,
     "meta_predictions": _META_PREDICTIONS,
@@ -388,11 +455,13 @@ def _format_system_prompt(
     sandbox_shared_dir: str,
     session_dir: str,
     question_type: str = "binary",
+    research: ResearchTopology = "condensed",
 ) -> str:
     """Assemble the forecasting system prompt from named sections.
 
     Numeric/discrete questions omit the Definitional Questions and
     Meta-Predictions sections (they never apply to measurement questions).
+    The research step is told in terms of the topology's own tools.
     """
     header = (
         "You are an expert forecaster participating in the "
@@ -418,8 +487,10 @@ def _format_system_prompt(
         _SKIP_FOR_NUMERIC if question_type in ("numeric", "discrete") else frozenset()
     )
 
+    sections = SECTIONS | {"step3_research": step3_research(research)}
+
     parts: list[str] = [header, workspace, ""]
-    for name, text in SECTIONS.items():
+    for name, text in sections.items():
         if name in skip:
             continue
         parts.append(text)
@@ -550,7 +621,7 @@ If the world has changed since your data window ends, your simulation \
 parameters are stale.
 
 **Regime-aware data windows.** When using historical data for Monte Carlo \
-simulation or drift estimation, check `regime_stats` in the `fred_series` \
+simulation or drift estimation, check `regime_stats` in the `series()` \
 response. If it shows a structural break, use the stable regime for \
 simulation parameters (drift and volatility) as your base case. But \
 regime transitions are themselves a source of uncertainty — if the \
@@ -566,7 +637,7 @@ that empirical evidence rather than a stable-regime estimate.
 **Short-horizon financial forecasts (<30 days).** For commodity, stock, or index price questions resolving within a month:
 - The **futures curve** is the market-implied expected value — use it as your distribution center when available. Annual-average analyst forecasts (EIA outlooks, bank year-end targets) are irrelevant to the next few weeks. Use them for tail-risk context only, not as distribution-shifting factors.
 - **After a single-day shock**, check shock recovery base rates before treating the post-shock price as the new equilibrium. Single-day commodity shocks within broader trends typically mean-revert.
-- For **interest rate** questions, `fred_series` includes `rate_futures` \
+- For **interest rate** questions, `series(source="fred")` includes `rate_futures` \
 (market-implied rate path from Fed Funds futures) for known rate series. \
 Use the nearest-month implied rate as your distribution center rather \
 than extrapolating from recent observations.
@@ -626,6 +697,7 @@ def get_forecasting_system_prompt(
     sandbox_shared_dir: str = "./tmp/sandbox-shared",
     session_dir: str = "",
     question_type: str = "binary",
+    research: ResearchTopology = "condensed",
 ) -> str:
     """Generate the forecasting system prompt.
 
@@ -634,6 +706,7 @@ def get_forecasting_system_prompt(
         sandbox_shared_dir: Host path for sandbox file exchange (mounted at /shared).
         session_dir: Session workspace directory path for the agent.
         question_type: Question type — numeric/discrete omit irrelevant sections.
+        research: Which topology's tools the research step should name.
 
     Returns:
         The assembled system prompt.
@@ -642,6 +715,7 @@ def get_forecasting_system_prompt(
         sandbox_shared_dir=sandbox_shared_dir,
         session_dir=session_dir,
         question_type=question_type,
+        research=research,
     )
 
     if tool_docs:
