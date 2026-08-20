@@ -2,6 +2,14 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v8.0.1 (2026-08-20)
+
+Give the web lane back the tool it searches with
+- agent: a session's built-in half is derived against what the engine offers rather than against the forecaster's roster. The two were one set, and withdrawing WebSearch from the forecaster withdrew it from `search`'s web lane as well — a Haiku session whose whole job is to call WebSearch inside the Wayback validation the built-in lacks. It named the tool, the intersection dropped it, and a session naming no built-in gets none: the lane opened holding nothing, reported the web silent on every query, and the forecast ran on the remaining lanes. Naming is still what grants, so the forecaster, whose roster never says WebSearch, is no closer to it
+- tools: a web lane that never reached its tool raises rather than returning no results. An empty list and an unreachable source read identically in the payload, and `failed` is what tells the agent whether asking again is worth anything — which is the distinction `run_lane` exists to draw
+- tools: the first AskNews refusal retires the news lane for the rest of the run. A lane without its credential is left out rather than asked, but a key the account may not use — a lapsed subscription, or a tier that excludes the endpoint — reads as configured, so the lane wired in and spent the same 403 again on every question
+- devtools: `health check` asks AskNews for one story instead of reading the setting. Presence is not permission, and a check that reads the key passes every time the lane is about to fail
+
 ## v8.0.0 (2026-08-20)
 
 Condense the tool surface: forty-seven tools become sixteen, and the forecaster holds them

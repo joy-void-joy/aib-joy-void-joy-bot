@@ -475,3 +475,51 @@ async def series_call(params: SeriesInput):
     from aib.tools.financial import series
 
     return await series(params)
+
+
+class TestRefusedCredential:
+    """A key that is present and rejected is not a working lane."""
+
+    def test_a_refusal_retires_the_news_lane(self, monkeypatch: object) -> None:
+        """The case the configuration gate cannot see.
+
+        An absent key is left out rather than asked. A key the account may
+        not use reads as configured, so the lane wires in and answers 403
+        to every question the run asks — the same refusal bought again per
+        search. The first one retires it.
+        """
+        from aib.tools import asknews
+        from aib.tools.search import available_lanes
+
+        asknews.refusals.clear()
+        try:
+            assert asknews.account_refused() is None
+            asknews.refusals.append("403000 - reserved for higher tiers")
+            assert asknews.account_refused() is not None
+            assert "news" not in available_lanes()
+        finally:
+            asknews.refusals.clear()
+
+
+class TestUnreachableWebLane:
+    """A lane that could not ask is not a lane that found nothing."""
+
+    async def test_an_unreachable_lane_is_recorded_as_failed(self) -> None:
+        """`failed` is what tells the agent whether to ask again.
+
+        The web lane returned an empty list when its session mounted no
+        WebSearch at all, which reads in the payload exactly like a query
+        the web had nothing for.
+        """
+        from aib.tools.search import WebLaneUnreachable
+
+        failures: list[LaneFailure] = []
+
+        async def unreachable() -> list[str]:
+            raise WebLaneUnreachable("the session mounted no WebSearch tool")
+
+        result = await run_lane("web", unreachable(), [], failures)
+
+        assert result == []
+        assert [f["lane"] for f in failures] == ["web"]
+        assert "WebSearch" in failures[0]["reason"]

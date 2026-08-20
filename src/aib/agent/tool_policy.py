@@ -44,6 +44,16 @@ BUILTIN_TOOLS: frozenset[str] = frozenset(
     }
 )
 
+# What the engine offers, which is the set a session's built-in half is
+# derived against. Wider than the forecaster's roster because a lane that
+# wraps a built-in in the cutoff handling it lacks — `search`'s web lane
+# around WebSearch — has to name one the forecaster may not hold. Naming is
+# what grants: a session gets the built-ins it asks for and no others, so a
+# roster that never says WebSearch is no more able to reach it for being
+# listed here.
+# lup: ignore[frozenset-shape]
+ENGINE_BUILTINS: frozenset[str] = BUILTIN_TOOLS | {"WebSearch", "WebFetch"}
+
 # The condensed data surface. Each of these fans out over the narrow tools
 # that used to be registered one by one: `search` over sixteen sources,
 # `series` over three statistical publishers, `stock` over four ticker

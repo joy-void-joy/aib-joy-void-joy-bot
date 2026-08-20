@@ -1,17 +1,20 @@
 """Tests for ToolPolicy class."""
 
 from datetime import date
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 from lup.mcp import McpServerEntry, server_tool_names
 
+from aib.agent.client import agent_request
 from aib.retrodict_context import retrodict_cutoff
 from aib.agent.tool_policy import (
     ASKNEWS_TOOLS,
     BUILTIN_TOOLS,
     CORE_DATA_TOOLS,
     DATA_TOOLS,
+    ENGINE_BUILTINS,
     METACULUS_TOOLS,
     NOTES_TOOLS,
     RESEARCH_TOOLS,
@@ -39,6 +42,18 @@ class TestToolPolicyToolSets:
         """
         assert "WebSearch" not in BUILTIN_TOOLS
         assert "WebFetch" not in BUILTIN_TOOLS
+
+    def test_the_engine_still_offers_what_the_forecaster_may_not_hold(self) -> None:
+        """A lane wrapping a built-in has to be able to name it.
+
+        `search`'s web lane is a session whose whole job is to call
+        WebSearch inside the cutoff handling the built-in lacks. Deriving
+        every session's built-ins from the forecaster's roster left that
+        session naming a tool the intersection dropped, and a session
+        naming no built-in gets none — so the lane opened with nothing.
+        """
+        assert "WebSearch" in ENGINE_BUILTINS
+        assert BUILTIN_TOOLS <= ENGINE_BUILTINS
 
     def test_metaculus_tool_is_served_by_the_markets_server(self) -> None:
         for tool in METACULUS_TOOLS:
@@ -528,3 +543,39 @@ class TestAllowlistsMatchTheServersRegistered:
         }
         assert served
         assert served == granted
+
+
+class TestSessionBuiltins:
+    """What a session is handed when it names a built-in."""
+
+    def test_a_session_naming_websearch_is_given_it(self, tmp_path: Path) -> None:
+        """The web lane's session, which is the one that broke.
+
+        `allowed_tools` is auto-approval; `tools` is what exists. The lane
+        named WebSearch and got an empty `tools`, so it opened holding
+        nothing and reported the web as silent on every query.
+        """
+        request = agent_request(
+            model="haiku",
+            system_prompt="search the web",
+            autonomy="ask",
+            allowed_tools=["WebSearch"],
+            cwd=tmp_path,
+        )
+        assert request.tools is not None
+        assert "WebSearch" in request.tools
+
+    def test_a_session_that_does_not_name_it_is_not_given_it(
+        self, tmp_path: Path
+    ) -> None:
+        """Naming is what grants, so the forecaster's withdrawal still holds."""
+        request = agent_request(
+            model="haiku",
+            system_prompt="read a file",
+            autonomy="ask",
+            allowed_tools=["Read"],
+            cwd=tmp_path,
+        )
+        assert request.tools is not None
+        assert "Read" in request.tools
+        assert "WebSearch" not in request.tools
