@@ -43,6 +43,29 @@ class AskNewsRemoteError(Exception):
     """Raised when the remote AskNews server returns a non-rate-limit error."""
 
 
+class AskNewsForbiddenError(AskNewsRemoteError):
+    """The key is present and this account may not use what it asked for.
+
+    A lapsed subscription or a tier that excludes the endpoint. Unlike a
+    rate limit it will not pass, so retrying it inside one run spends the
+    same refusal again on every question.
+    """
+
+
+refusals: list[str] = []
+
+
+def account_refused() -> str | None:
+    """Why AskNews refused this account, once it has refused once.
+
+    A key that is present but unusable is the case the lane gate cannot see
+    from configuration: it reads as configured and is asked, and answers
+    403 to every lane that asks. Latching the first refusal is what turns
+    it back into the absent-credential case the gate already handles.
+    """
+    return refusals[0] if refusals else None
+
+
 def _to_content(text: str) -> list[ContentBlock]:
     return [TextContent(type="text", text=text)]
 
@@ -70,6 +93,9 @@ async def _call_remote_once(
     if result.isError:
         if "rate limit" in text.lower() or "429" in text:
             raise AskNewsRateLimitError(text)
+        if "ForbiddenError" in text:
+            refusals.append(text)
+            raise AskNewsForbiddenError(text)
         raise AskNewsRemoteError(text)
 
     return text
