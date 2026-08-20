@@ -243,6 +243,15 @@ def websearch_links(event: LupHookInput) -> list[SearchLink]:
     return list(links())
 
 
+class WebLaneUnreachable(Exception):
+    """The web lane's session never reached the tool it searches with.
+
+    Distinct from a query that matched nothing, which is an answer. This is
+    the lane unable to ask at all, and the agent is told so rather than
+    reading an empty list as "the web holds nothing on this".
+    """
+
+
 async def _raw_web_search(
     search_query: str,
     cutoff_date: str | None = None,
@@ -284,7 +293,14 @@ async def _raw_web_search(
     from aib.agent.client import ClaudeExtras, agent_request, agent_session
     from aib.agent.display import make_agent_prefix, print_block
 
-    capture = create_capture_hook("WebSearch", websearch_links)
+    answered: list[bool] = []
+
+    def searched(event: LupHookInput) -> list[SearchLink]:
+        """Extract the links, and record that the tool answered at all."""
+        answered.append(True)
+        return websearch_links(event)
+
+    capture = create_capture_hook("WebSearch", searched)
     captured_links = capture["captured"]
     prefix = make_agent_prefix("websearch", search_query)
 
@@ -332,6 +348,11 @@ async def _raw_web_search(
                     snippet=None,
                 )
             )
+
+    if not answered:
+        raise WebLaneUnreachable(
+            "the session opened for this lane mounted no WebSearch tool"
+        )
 
     if not results:
         logger.warning("[WebSearch] no results for query=%s", search_query)
@@ -1100,16 +1121,20 @@ def available_lanes() -> tuple[str, ...]:
     A lane without its credential is left out rather than asked and
     reported failed: the agent reads `failed` as "this source had
     something to say and could not say it", which an absent key is not.
+    A key the account may not use is the same thing learned a request too
+    late, so the first refusal retires the lane for the rest of the run.
 
     News and social carry no publication date this can filter on, so
     neither can be held to a cutoff and neither is reachable under one.
     The web lane is, through the Wayback validation it already runs, and
     the rest of the lanes hold themselves to it.
     """
+    from aib.tools.asknews import account_refused
+
     unavailable: set[str] = set()  # lup: ignore[empty-collection]
     if not settings.exa_api_key:
         unavailable.add("neural")
-    if not settings.asknews_api_key:
+    if not settings.asknews_api_key or account_refused():
         unavailable.add("news")
     if not (settings.reddit_client_id and settings.reddit_client_secret):
         unavailable.add("social")
