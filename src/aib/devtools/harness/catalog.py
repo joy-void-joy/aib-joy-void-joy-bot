@@ -73,14 +73,18 @@ RESEARCH_TOOL_GROUPS = [
     "government",
     "markets",
     "trends",
-    "wayback",
+    "weather",
 ]
 """The research tool groups an interactive session is offered.
 
-Written down rather than read from ``build_research_tool_groups()``, which
-adds ``reddit`` only when its credentials are configured: a generated tree
-that changed shape with the environment would drift for whoever generated it
-last rather than for anyone's reason.
+Written down rather than read from ``data_tool_groups()`` so the generated
+tree has one shape: reading it would be honest for a group whose tools are
+fixed, and the point of writing it here is that a tree which changed shape
+with the environment would drift for whoever generated it last rather than
+for anyone's reason.
+
+``wayback`` is not among them because it is no longer a group: an archived
+copy is what ``fetch(at=...)`` answers with.
 """
 
 HARNESS_SESSION = "harness"
