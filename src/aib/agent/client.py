@@ -175,7 +175,7 @@ def agent_request(
     refusal against a real gap where there were three. Callers pass anything
     further as `extra_hooks`.
     """
-    from aib.agent.tool_policy import BUILTIN_TOOLS
+    from aib.agent.tool_policy import ENGINE_BUILTINS
 
     resolved = AGENT_CWD if cwd is None else cwd
     resolved.mkdir(parents=True, exist_ok=True)
@@ -186,7 +186,7 @@ def agent_request(
         cwd=resolved,
         autonomy=autonomy,
         effort=SESSION_EFFORT,
-        tools=[name for name in roster if name in BUILTIN_TOOLS],
+        tools=[name for name in roster if name in ENGINE_BUILTINS],
         allowed_tools=roster,
         hooks=extra_hooks,
         tool_servers=dict(tool_servers or {}),
