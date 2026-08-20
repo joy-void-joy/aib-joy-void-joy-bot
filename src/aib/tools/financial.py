@@ -4,10 +4,13 @@ These tools provide direct API access to financial data sources,
 avoiding the need for web scraping which often fails on JS-heavy sites.
 """
 
+import asyncio
 import logging
 from datetime import date, datetime, timedelta
 import math
-from typing import Any, TypedDict
+
+# lup: ignore[any-type] — vendor payloads this module passes through
+from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -16,6 +19,8 @@ import numpy as np
 from aib.retrodict_context import retrodict_cutoff
 from aib.config import settings
 from aib.tools.cache import cached
+from aib.tools.fanout import LaneFailure, run_lane
+from aib.tools.government import BLSSeriesInput, BLSSeriesOutput, bls_series
 from aib.tools.throttle import fred_throttle
 from lup.mcp import LupMcpServerConfig, ToolError, lup_tool
 from lup.tool_routes import routes
@@ -2077,19 +2082,318 @@ async def world_bank_search(params: WorldBankSearchInput) -> WorldBankSearchOutp
 
 # --- MCP Server ---
 
-_financial_tools = [
+# --- Unified series ---
+
+
+class SeriesInput(BaseModel):
+    """Input for the unified statistical series tool."""
+
+    source: Literal["fred", "worldbank", "bls"] = Field(
+        description=(
+            "Which body publishes the series. search()'s `series` lane tags "
+            "every hit with the source to pass back here."
+        )
+    )
+    series_ids: list[str] = Field(
+        min_length=1,
+        max_length=25,
+        description=(
+            "Identifiers in that publisher's namespace — FRED series ids "
+            "(UNRATE, CPIAUCSL), World Bank indicator codes "
+            "(NY.GDP.MKTP.KD.ZG), or BLS series ids (LNS14000000). FRED and "
+            "the World Bank read the first; BLS reads up to 25 at once."
+        ),
+    )
+    country: str | None = Field(
+        default=None,
+        description=(
+            "ISO 3166-1 alpha-3 code (DEU, BRA, IND). World Bank only, and "
+            "required there."
+        ),
+    )
+    start: str | None = Field(
+        default=None,
+        description=(
+            "Start of the window: a date (YYYY-MM-DD) for FRED, a year "
+            "(YYYY) for the World Bank and BLS. Omit for the source's own "
+            "default."
+        ),
+    )
+    end: str | None = Field(
+        default=None,
+        description="End of the window, spelled as `start` is.",
+    )
+    limit: int | None = Field(
+        default=30,
+        ge=1,
+        description="FRED only: most recent observations to return. Null for all.",
+    )
+
+
+class SeriesOutput(BaseModel):
+    """One publisher's answer, in that publisher's own shape.
+
+    A FRED series carries a frequency, units and any regime shift detected
+    in it; a World Bank indicator carries a country and a year range; a BLS
+    answer carries several series at once. Flattening the three to their
+    intersection would drop what makes each readable, so the tag says which
+    field to read and the shape under it is the publisher's own.
+    """
+
+    source: Literal["fred", "worldbank", "bls"]
+    fred: FredSeriesOutput | None = None
+    worldbank: WorldBankIndicatorOutput | None = None
+    bls: BLSSeriesOutput | None = None
+
+
+def year_bound(value: str | None, field: str) -> int | None:
+    """The year a window bound names, for the sources that count in years."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        raise ToolError(
+            f"{field}={value!r} must be a year (YYYY) for this source."
+        ) from None
+
+
+@lup_tool(
+    (
+        "Fetch an identified statistical series from the body that publishes "
+        "it: FRED for US macro, the World Bank for international indicators, "
+        "BLS for US labour detail. Answers with that publisher's own shape "
+        "under the matching field.\n\n"
+        "Use search() to find a series first — its `series` lane returns "
+        "candidates already tagged with the source to pass back here. Reach "
+        "for this when you know which series you want, or want a window "
+        "other than the default.\n\n"
+        "Examples:\n"
+        '  series(source="fred", series_ids=["UNRATE"], start="2020-01-01")\n'
+        '  series(source="worldbank", series_ids=["NY.GDP.MKTP.KD.ZG"], country="BRA")\n'
+        '  series(source="bls", series_ids=["LNS14000000"], start="2024")'
+    ),
+    name="series",
+)
+async def series(params: SeriesInput) -> SeriesOutput:
+    """Fetch a named statistical series from whichever body publishes it."""
+    if params.source == "fred":
+        return SeriesOutput(
+            source="fred",
+            fred=await fred_series(
+                FredSeriesInput(
+                    series_id=params.series_ids[0],
+                    observation_start=params.start,
+                    observation_end=params.end,
+                    limit=params.limit,
+                )
+            ),
+        )
+
+    if params.source == "worldbank":
+        if params.country is None:
+            raise ToolError(
+                "A World Bank indicator needs a country: pass an ISO 3166-1 "
+                "alpha-3 code such as DEU, BRA or IND."
+            )
+        return SeriesOutput(
+            source="worldbank",
+            worldbank=await world_bank_indicator(
+                WorldBankIndicatorInput(
+                    indicator=params.series_ids[0],
+                    country=params.country,
+                    start_year=year_bound(params.start, "start"),
+                    end_year=year_bound(params.end, "end"),
+                )
+            ),
+        )
+
+    return SeriesOutput(
+        source="bls",
+        bls=await bls_series(
+            BLSSeriesInput(
+                series_ids=params.series_ids,
+                start_year=year_bound(params.start, "start"),
+                end_year=year_bound(params.end, "end"),
+            )
+        ),
+    )
+
+
+# --- Unified stock ---
+
+
+class StockInput(BaseModel):
+    """Input for the unified ticker tool."""
+
+    symbol: str = Field(
+        min_length=1,
+        max_length=10,
+        description="Ticker symbol (MSFT, AAPL, SPY, ^VIX).",
+    )
+    include: list[Literal["quote", "history", "options", "financials"]] = Field(
+        default=["quote", "history", "options", "financials"],
+        description=(
+            "Which facets to fetch. Every one by default: they are separate "
+            "calls made in parallel, and a ticker with no options chain or "
+            "no filings simply reports that facet under `failed`."
+        ),
+    )
+    history_days: int | None = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Days of closes to attach to the quote. Null to skip.",
+    )
+    history_period: str = Field(
+        default="1mo",
+        description=(
+            "Window for the history facet: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, "
+            "5y, 10y, ytd, max."
+        ),
+    )
+    end_date: str | None = Field(
+        default=None,
+        description="History facet: end the window here rather than today.",
+    )
+    expiration_index: int = Field(
+        default=2,
+        ge=0,
+        le=10,
+        description="Options facet: which expiry (0 = nearest, 2 = third).",
+    )
+    statement_period: str = Field(
+        default="quarterly",
+        description="Financials facet: 'quarterly' or 'annual'.",
+    )
+
+
+class StockOutput(BaseModel):
+    """What a ticker looks like from every angle asked for."""
+
+    symbol: str
+    quote: StockPriceOutput | None = None
+    history: StockHistoryOutput | None = None
+    options: OptionsIVOutput | None = None
+    financials: CompanyFinancialsOutput | None = None
+    failed: list[LaneFailure] = []
+
+
+@lup_tool(
+    (
+        "Everything one ticker has: the current quote with recent closes and "
+        "summary statistics, a longer price history, options-implied "
+        "volatility around the money, and quarterly or annual income "
+        "statements — fetched together, in parallel.\n\n"
+        "All four facets by default, because which one answers a question is "
+        "rarely obvious before seeing them: implied volatility prices the "
+        "market's own uncertainty about a threshold, and the filings carry "
+        "the trend a price alone does not. Narrow with `include` on a "
+        "follow-up. A facet a ticker has no data for (an ETF has no income "
+        "statement) reports itself under `failed` and costs the rest "
+        "nothing.\n\n"
+        "Examples:\n"
+        '  stock(symbol="MSFT")\n'
+        '  stock(symbol="SPY", include=["options"], expiration_index=0)\n'
+        '  stock(symbol="LLY", include=["financials"], statement_period="annual")'
+    ),
+    name="stock",
+)
+async def stock(params: StockInput) -> StockOutput:
+    """Fetch every facet of one ticker that was asked for."""
+    failures: list[LaneFailure] = []  # lup: ignore[empty-collection]
+    wanted = set(params.include)
+
+    async def quote_facet() -> StockPriceOutput | None:
+        if "quote" not in wanted:
+            return None
+        return await run_lane(
+            "quote",
+            stock_price(
+                StockPriceInput(symbol=params.symbol, history_days=params.history_days)
+            ),
+            None,
+            failures,
+        )
+
+    async def history_facet() -> StockHistoryOutput | None:
+        if "history" not in wanted:
+            return None
+        return await run_lane(
+            "history",
+            stock_history(
+                StockQueryInput(
+                    symbol=params.symbol,
+                    period=params.history_period,
+                    end_date=params.end_date,
+                )
+            ),
+            None,
+            failures,
+        )
+
+    async def options_facet() -> OptionsIVOutput | None:
+        if "options" not in wanted:
+            return None
+        return await run_lane(
+            "options",
+            options_iv(
+                OptionsIVInput(
+                    symbol=params.symbol,
+                    expiration_index=params.expiration_index,
+                )
+            ),
+            None,
+            failures,
+        )
+
+    async def financials_facet() -> CompanyFinancialsOutput | None:
+        if "financials" not in wanted:
+            return None
+        return await run_lane(
+            "financials",
+            company_financials(
+                CompanyFinancialsInput(
+                    ticker=params.symbol, period=params.statement_period
+                )
+            ),
+            None,
+            failures,
+        )
+
+    async with asyncio.TaskGroup() as group:
+        quote = group.create_task(quote_facet())
+        history = group.create_task(history_facet())
+        options = group.create_task(options_facet())
+        financials = group.create_task(financials_facet())
+
+    return StockOutput(
+        symbol=params.symbol,
+        quote=quote.result(),
+        history=history.result(),
+        options=options.result(),
+        financials=financials.result(),
+        failed=failures,
+    )
+
+
+FINANCIAL_TOOLS = [
     company_financials,
     stock_price,
     stock_history,
     stock_conditional_returns,
 ]
+"""What `series` and `stock` stand in front of, for the topology that mounts
+them one at a time. FRED joins only where its key does, so a `direct` session
+without one is served what it can answer rather than granted what it cannot.
+"""
 
 if settings.fred_api_key:
-    _financial_tools.extend([fred_series, fred_search])
+    FINANCIAL_TOOLS.extend([fred_series, fred_search])
 else:
     logger.info("FRED tools disabled: FRED_API_KEY not configured")
 
-_financial_tools.extend([world_bank_indicator, world_bank_search])
+FINANCIAL_TOOLS.extend([world_bank_indicator, world_bank_search])
 
 
 def create_financial_server() -> LupMcpServerConfig:
@@ -2099,7 +2403,7 @@ def create_financial_server() -> LupMcpServerConfig:
     return create_mcp_server(
         name="financial",
         version="2.0.0",
-        tools=_financial_tools,
+        tools=FINANCIAL_TOOLS,
     )
 
 
