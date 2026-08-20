@@ -11,10 +11,12 @@ from lup.mcp import response_text
 from lup.tool_routes import routes
 
 from aib.retrodict_context import retrodict_cutoff
+from aib.tools.exa import ExaResult
 from aib.tools.search import (
     AugmentedSearchResult,
     SearchResult,
     _augment_with_api_data,
+    _raw_web_search,
     web_search as _web_search_tool,
 )
 
@@ -374,3 +376,69 @@ class TestWebSearchInputValidation:
     async def test_rejects_empty_query(self) -> None:
         result = await _handler({"query": ""})
         assert result.get("is_error") is True
+
+
+class TestWebLaneAsksItsSourceDirectly:
+    """What the web lane hands its source, and what it refuses to carry back."""
+
+    @pytest.mark.asyncio
+    async def test_domain_filters_are_arguments_rather_than_a_request(self) -> None:
+        """A filter the caller typed has to reach the source as a filter.
+
+        Rendered into English for a model to pass along, it held only as
+        often as the model complied, so a lane restricted to one domain
+        could answer with another and nothing would say it had.
+        """
+        with patch(
+            "aib.tools.search.exa_search",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as exa:
+            await _raw_web_search("test", None, ["example.com"], None)
+
+        assert exa.await_args is not None
+        assert exa.await_args.kwargs["include_domains"] == ["example.com"]
+        assert exa.await_args.kwargs["exclude_domains"] is None
+        assert exa.await_args.kwargs["search_type"] == "keyword"
+
+    @pytest.mark.asyncio
+    async def test_the_cutoff_reaches_the_source(self) -> None:
+        """Filtering by date at the source is what keeps the ranking honest."""
+        with patch(
+            "aib.tools.search.exa_search",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as exa:
+            await _raw_web_search("test", "2026-01-15")
+
+        assert exa.await_args is not None
+        assert exa.await_args.kwargs["published_before"] == "2026-01-15"
+
+    @pytest.mark.asyncio
+    async def test_the_engine_s_own_text_is_dropped(self) -> None:
+        """A search engine's summary is the one part of a hit no cutoff governs.
+
+        The text comes from the page itself afterwards — live, or from the
+        Wayback snapshot that predates the cutoff — so whatever the engine
+        said about it never reaches the agent.
+        """
+        found = [
+            ExaResult(
+                title="Test",
+                url="https://example.com",
+                snippet="whatever the engine said",
+                highlights=["and its highlights"],
+                published_date=None,
+                score=None,
+            )
+        ]
+        with patch(
+            "aib.tools.search.exa_search",
+            new_callable=AsyncMock,
+            return_value=found,
+        ):
+            results = await _raw_web_search("test")
+
+        assert results == [
+            SearchResult(title="Test", url="https://example.com", snippet=None)
+        ]

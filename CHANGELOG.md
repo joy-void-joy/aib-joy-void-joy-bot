@@ -2,6 +2,15 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v8.1.0 (2026-08-20)
+
+Ask the web lane's source directly, rather than through a model that might
+- tools: the web lane calls its search API instead of opening a Haiku session to call WebSearch on its behalf. WebSearch is server-side at the model API with no client-side function to invoke, so reaching it meant prompting a sub-agent in English and scraping the tool call back out through a PostToolUse hook — an LLM round-trip billed per search, with a failure mode of its own for a session that declined to call the tool at all
+- tools: `allowed_domains` and `blocked_domains` are the source's own filters. Rendered into that prompt they held only as often as the sub-agent complied, so a lane restricted to one domain could answer with another and nothing in the payload would say it had
+- tools: web and neural are one provider's two retrieval modes, keyword and embedding, each named rather than left to `auto` — which is what the neural lane's description had claimed for it since it was written. One credential now answers for both, so the key that retires either retires both, and a deployment without it reaches the open web only through the lanes that carry their own source
+- tools: the web lane crawls nothing live, because its hits are URLs. Snippets were already dropped — what a search engine says about a page is the one part of a hit no cutoff governs, and the text is taken from the page itself afterwards — so the crawl was paying for a body the lane discards
+- agent: the built-ins are one set again. A wider engine roster existed so a lane could name a tool the forecaster may not hold, which was WebSearch and the web lane; with no lane reaching past the forecaster's own set, the pair is absent from every session this project opens rather than from the forecaster's alone
+
 ## v8.0.1 (2026-08-20)
 
 Give the web lane back the tool it searches with

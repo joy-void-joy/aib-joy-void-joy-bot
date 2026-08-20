@@ -1,8 +1,8 @@
 """Search and content retrieval.
 
 `search` and `fetch` are the surface. Everything else here is a lane one of
-them reaches: web search through a Haiku sub-agent with API augmentation,
-Exa, Wikipedia, arXiv, and URL fetching — beside the lanes `search` reaches
+them reaches: keyword and embedding web search with API augmentation,
+Wikipedia, arXiv, and URL fetching — beside the lanes `search` reaches
 in the market, financial, government, news and social modules.
 
 Search snippets are always fetched from actual page content, not from the
@@ -13,16 +13,11 @@ fetched live (or from the Wayback Machine in retrodict mode).
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal, TypedDict
 from urllib.parse import unquote, urlparse
 
 import httpx
-from lup.runtime.models import MessageCompletedEvent, turn_request
-from lup.hooks import (
-    LupHookInput,
-    create_capture_hook,
-)
 from pydantic import BaseModel, Field
 
 from aib.agent.client import AupRefusalError
@@ -39,7 +34,6 @@ from aib.tools.arxiv_search import (
 )
 from aib.tools.financial import FredSearchHit, WBSearchHit
 from aib.tools.markets import MarketPrice, QuestionDict
-from aib.tools.metrics import costs
 from aib.tools.reddit import RedditPost
 from aib.tools.exa import ExaResult, exa_search
 from aib.tools.fanout import LaneFailure, run_lane
@@ -68,12 +62,6 @@ from aib.tools.wikipedia import (
 logger = logging.getLogger(__name__)
 
 
-# The PreToolUse tool filter this file used to build by hand is
-# `lup.hooks.create_tool_allowlist_hook` — same reason for existing
-# (bypassPermissions ignores allowed_tools), and its denial names the tools
-# that ARE available so the sub-agent can re-plan instead of retrying.
-
-
 class WebSearchInput(BaseModel):
     """Input for web search (matches WebSearch interface)."""
 
@@ -86,15 +74,8 @@ class WebSearchInput(BaseModel):
     )
 
 
-class SearchLink(TypedDict):
-    """One link a WebSearch result carried, captured for the sources list."""
-
-    title: str
-    url: str
-
-
 class SearchResult(TypedDict):
-    """A raw search result from the sub-agent."""
+    """A hit a lane found, before anything has filled in its text."""
 
     title: str
     url: str
@@ -214,145 +195,49 @@ async def _fetch_live_snippets(
     return list(await asyncio.gather(*[_fetch_one(r) for r in results]))
 
 
-def websearch_links(event: LupHookInput) -> list[SearchLink]:
-    """Every {title, url} link a WebSearch tool result carried.
-
-    The extract half of `lup.hooks.create_capture_hook`: lup owns the
-    accumulator and the PostToolUse wiring, and this says what is worth
-    keeping out of one response.
-    """
-
-    def links() -> Iterator[SearchLink]:
-        try:
-            payload = json.loads(event.tool_result)
-        except (json.JSONDecodeError, TypeError):
-            return
-        if not isinstance(payload, dict):
-            return
-        # lup: ignore[dict-get] — the provider's own WebSearch response
-        for item in payload.get("results", []):
-            if not isinstance(item, dict):
-                continue
-            for link in item.get("content", []):  # lup: ignore[dict-get] — same
-                if isinstance(link, dict) and link.get("url"):  # lup: ignore[dict-get]
-                    yield SearchLink(
-                        title=str(link.get("title", "")),  # lup: ignore[dict-get]
-                        url=str(link["url"]),
-                    )
-
-    return list(links())
-
-
-class WebLaneUnreachable(Exception):
-    """The web lane's session never reached the tool it searches with.
-
-    Distinct from a query that matched nothing, which is an answer. This is
-    the lane unable to ask at all, and the agent is told so rather than
-    reading an empty list as "the web holds nothing on this".
-    """
-
-
 async def _raw_web_search(
     search_query: str,
     cutoff_date: str | None = None,
     allowed_domains: list[str] | None = None,
     blocked_domains: list[str] | None = None,
 ) -> list[SearchResult]:
-    """One-shot web search via a minimal Haiku sub-agent with WebSearch.
+    """One-shot keyword web search, answering with the URLs it found.
 
-    Haiku invokes the WebSearch tool; a PostToolUse hook captures the raw
-    result URLs. Snippets are populated later by _fetch_live_snippets or
-    _wayback_filter_non_api_results.
+    Keyword retrieval is what separates this lane from `neural`, which asks
+    the same provider for embedding matches; the two return different pages
+    for the same query. `allowed_domains` and `blocked_domains` are the
+    provider's own filters rather than a request some model may honour.
+
+    Snippets are dropped rather than carried: what a search engine says
+    about a page is the one part of a hit no cutoff governs, so the text is
+    taken from the page itself later, by _fetch_live_snippets or
+    _wayback_filter_non_api_results. Nothing is live-crawled here for the
+    same reason — the body this call would pay for is discarded.
     """
-    constraints: list[str] = []
-    if cutoff_date:
-        constraints.append(
-            f"Focus on information published before {cutoff_date}. "
-            "Include date context in your search query."
+    async with exa_throttle.slot():
+        found = await exa_search(
+            search_query,
+            settings.search_default_limit,
+            published_before=cutoff_date,
+            livecrawl="never",
+            search_type="keyword",
+            include_domains=allowed_domains,
+            exclude_domains=blocked_domains,
         )
-    if allowed_domains:
-        constraints.append(
-            f"Pass allowed_domains={json.dumps(allowed_domains)} to WebSearch."
-        )
-    elif blocked_domains:
-        constraints.append(
-            f"Pass blocked_domains={json.dumps(blocked_domains)} to WebSearch."
-        )
-
-    constraint_text = ""
-    if constraints:
-        constraint_text = "\n\nConstraints:\n" + "\n".join(
-            f"- {c}" for c in constraints
-        )
-
-    prompt = (
-        f"Search the web for: {search_query}{constraint_text}\n\n"
-        "Return the search results."
-    )
-
-    from aib.agent.client import ClaudeExtras, agent_request, agent_session
-    from aib.agent.display import make_agent_prefix, print_block
-
-    answered: list[bool] = []
-
-    def searched(event: LupHookInput) -> list[SearchLink]:
-        """Extract the links, and record that the tool answered at all."""
-        answered.append(True)
-        return websearch_links(event)
-
-    capture = create_capture_hook("WebSearch", searched)
-    captured_links = capture["captured"]
-    prefix = make_agent_prefix("websearch", search_query)
-
-    factory = agent_session(
-        agent_request(
-            model="haiku",
-            system_prompt=(
-                "You are a web search assistant. Use WebSearch to find information."
-            ),
-            autonomy="ask",
-            allowed_tools=["WebSearch"],
-            extra_hooks=capture["hooks"],
-        ),
-        extras=ClaudeExtras(),
-    )
-    async with factory.open() as handle:
-        turn = await handle.session.start(turn_request(prompt))
-        if turn.events is not None:
-            async for event in turn.events.events():
-                if (
-                    isinstance(event, MessageCompletedEvent)
-                    and event.message.role == "assistant"
-                ):
-                    for block in event.message.blocks:
-                        print_block(block, prefix=prefix)
-        result = await turn.turn.result()
-        logger.debug(
-            "[WebSearch] sub-agent result: messages=%d duration=%s",
-            len(result.messages),
-            result.duration,
-        )
-        if result.usage.cost_usd is not None:
-            costs.record("web_search", result.usage.cost_usd)
 
     seen_urls: set[str] = set()
     results: list[SearchResult] = []
-    for link in captured_links:
-        url = link["url"]
-        if url not in seen_urls:
+    for hit in found:
+        url = hit["url"]
+        if url and url not in seen_urls:
             seen_urls.add(url)
             results.append(
                 SearchResult(
-                    title=link.get("title", ""),
+                    title=hit["title"] or "",
                     url=url,
                     snippet=None,
                 )
             )
-
-    if not answered:
-        raise WebLaneUnreachable(
-            "the session opened for this lane mounted no WebSearch tool"
-        )
 
     if not results:
         logger.warning("[WebSearch] no results for query=%s", search_query)
@@ -416,7 +301,7 @@ class WebSearchOutput(BaseModel):
     name="web_search",
 )
 async def web_search(params: WebSearchInput) -> WebSearchOutput:
-    """Perform web search via SDK sub-agent with API augmentation.
+    """Keyword web search with API augmentation.
 
     Augments all results first, then in retrodict mode applies Wayback
     validation only to results that lack API data (API-augmented results
@@ -481,6 +366,10 @@ class SearchExaInput(BaseModel):
         default="always",
         description="Livecrawl mode: 'always', 'fallback', or 'never'.",
     )
+    search_type: str = Field(
+        default="auto",
+        description="Retrieval mode: 'auto', 'neural', 'keyword', or 'fast'.",
+    )
 
 
 class SearchExaOutput(BaseModel):
@@ -522,6 +411,7 @@ async def search_exa(params: SearchExaInput) -> SearchExaOutput:
             params.num_results,
             published_before=published_before,
             livecrawl=livecrawl,
+            search_type=params.search_type,
         )
     return SearchExaOutput(query=params.query, results=formatted)
 
@@ -1128,12 +1018,16 @@ def available_lanes() -> tuple[str, ...]:
     neither can be held to a cutoff and neither is reachable under one.
     The web lane is, through the Wayback validation it already runs, and
     the rest of the lanes hold themselves to it.
+
+    Web and neural are one credential's two retrieval modes, so the key
+    that retires either retires both, and a deployment without it reaches
+    the open web only through the lanes that carry their own source.
     """
     from aib.tools.asknews import account_refused
 
     unavailable: set[str] = set()  # lup: ignore[empty-collection]
     if not settings.exa_api_key:
-        unavailable.add("neural")
+        unavailable.update({"neural", "web"})
     if not settings.asknews_api_key or account_refused():
         unavailable.add("news")
     if not (settings.reddit_client_id and settings.reddit_client_secret):
@@ -1327,7 +1221,9 @@ async def lane_reference(params: SearchInput) -> list[dict[str, JsonValue]]:
 async def lane_neural(params: SearchInput) -> list[ExaResult]:
     """Exa's embedding search, which finds pages keywords miss."""
     found = await search_exa(
-        SearchExaInput(query=params.query, num_results=params.limit)
+        SearchExaInput(
+            query=params.query, num_results=params.limit, search_type="neural"
+        )
     )
     return found.results
 

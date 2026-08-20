@@ -507,19 +507,17 @@ class TestUnreachableWebLane:
     async def test_an_unreachable_lane_is_recorded_as_failed(self) -> None:
         """`failed` is what tells the agent whether to ask again.
 
-        The web lane returned an empty list when its session mounted no
-        WebSearch at all, which reads in the payload exactly like a query
-        the web had nothing for.
+        A lane whose provider refused the request answers with an empty
+        list, which reads in the payload exactly like a query the web had
+        nothing for unless the refusal is carried alongside it.
         """
-        from aib.tools.search import WebLaneUnreachable
-
         failures: list[LaneFailure] = []
 
         async def unreachable() -> list[str]:
-            raise WebLaneUnreachable("the session mounted no WebSearch tool")
+            raise ValueError("Exa API client error 401: invalid key")
 
         result = await run_lane("web", unreachable(), [], failures)
 
         assert result == []
         assert [f["lane"] for f in failures] == ["web"]
-        assert "WebSearch" in failures[0]["reason"]
+        assert "401" in failures[0]["reason"]
