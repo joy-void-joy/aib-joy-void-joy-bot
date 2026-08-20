@@ -344,7 +344,8 @@ When a tool fails or isn't delivering value, don't just remove it — ask what t
 
 - **Design tools around what the agent needs**, not what the underlying technology exposes
 - **Automate data extraction** rather than giving the agent interactive tools to fish for it
-- **Follow the data augmentation pattern**: `web_search` doesn't just return raw search results — it automatically enriches them with structured API data from recognized domains. `fetch_url` doesn't just return page text — it extracts embedded data (Next.js state, JSON script tags, global state) from JS-rendered pages. New tools should follow this pattern: do the enrichment inside the tool, not in the agent's reasoning loop
+- **Follow the data augmentation pattern**: `search` doesn't just return web results — it asks nine sources at once and enriches each hit with structured API data from recognized domains, carrying the page's own text so a match needs no second call. `fetch` doesn't just return page text — it extracts embedded data (Next.js state, JSON script tags, global state) from JS-rendered pages, and hands a URL to the tool that knows it better. Do the enrichment inside the tool, not in the agent's reasoning loop
+- **A choice the tool can make is not the agent's to make.** Sixteen tools once took free text and answered with ranked hits; picking between them was mechanical, and a source the agent had no reason to ask went unasked — so a capability it could not know was relevant was unreachable in practice. When several tools share a signature, the thing that varies is a parameter, and the tool should fan out over it and report what each source said
 
 ### Code as Documentation
 
