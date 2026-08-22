@@ -465,14 +465,18 @@ async def run_reviewer(
     the sub-agent failed), the agent's final text block, and any error.
     """
     from lup.runtime.models import (
-        MessageCompletedEvent,
         TurnMessage,
         TurnTextBlock,
         TurnToolCallBlock,
         turn_request,
     )
 
-    from aib.agent.client import ClaudeExtras, agent_request, agent_session
+    from aib.agent.client import (
+        ClaudeExtras,
+        agent_request,
+        agent_session,
+        drive_turn,
+    )
     from aib.agent.display import make_agent_prefix, print_block
 
     prompt = build_reviewer_prompt(
@@ -525,25 +529,24 @@ async def run_reviewer(
             ),
             extras=ClaudeExtras(add_dirs=hook_dirs),
         )
+
+        def record(message: TurnMessage) -> None:
+            nested_messages.append(message)
+            if message.role != "assistant":
+                return
+            for block in message.blocks:
+                print_block(block, prefix=prefix)
+                if (
+                    isinstance(block, TurnToolCallBlock)
+                    and block.name == "StructuredOutput"
+                ):
+                    so_tool_blocks.append(block)
+                elif isinstance(block, TurnTextBlock):
+                    text_blocks.append(block.text)
+
         async with factory.open() as handle:
             turn = await handle.session.start(turn_request(prompt, ReviewResult))
-            if turn.events is not None:
-                async for event in turn.events.events():
-                    if not isinstance(event, MessageCompletedEvent):
-                        continue
-                    nested_messages.append(event.message)
-                    if event.message.role != "assistant":
-                        continue
-                    for block in event.message.blocks:
-                        print_block(block, prefix=prefix)
-                        if (
-                            isinstance(block, TurnToolCallBlock)
-                            and block.name == "StructuredOutput"
-                        ):
-                            so_tool_blocks.append(block)
-                        elif isinstance(block, TurnTextBlock):
-                            text_blocks.append(block.text)
-            turn_result = await turn.turn.result()
+            turn_result = await drive_turn(turn, record)
         if turn_result.usage.cost_usd is not None:
             costs.record("premortem", turn_result.usage.cost_usd)
 

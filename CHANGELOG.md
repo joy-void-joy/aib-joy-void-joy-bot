@@ -2,6 +2,13 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v8.1.1 (2026-08-20)
+
+Ask a turn again when it stops without submitting
+- agent: every session this project opens carries bounded provider retries and missing-submission corrections. lup's `ResilientTurn` has answered this since the resolver adopted it; this project's sessions were opened around it, so a model that wrote a preamble and stopped — 53 tokens, no tool call, `end_turn` — ended the whole forecast on the first miss, and the same held for its research and premortem sub-agents, the resolver, and the worldview pair
+- agent: the correction asks the agent to continue its analysis rather than to submit a value matching the schema. It reaches a session that still holds its own context, and the stock wording is an invitation to answer with a forecast it has not done the work for
+- agent: `drive_turn` is the one way this project watches a turn. Carrying the cycles makes a turn's event stream one logical stream spanning them, closing only when the result settles, so the shape all six callers shared — drain the events, then ask for the result — became a wait for a close that only the unasked result would cause
+
 ## v8.1.0 (2026-08-20)
 
 Ask the web lane's source directly, rather than through a model that might

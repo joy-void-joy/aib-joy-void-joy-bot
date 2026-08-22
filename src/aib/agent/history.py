@@ -252,7 +252,12 @@ def save_forecast(
     filepath = question_dir / filename
     filepath.write_text(forecast.model_dump_json(indent=2), encoding="utf-8")
 
-    logger.info("Saved forecast for question %d to %s", question_id, filepath)
+    logger.info(
+        "Saved forecast for question %d (post %d) to %s",
+        question_id,
+        post_id,
+        filepath,
+    )
     return filepath
 
 
