@@ -24,6 +24,7 @@ from pydantic import AnyHttpUrl
 from lup.adapters.claude.harness import ClaudeSpellings
 from lup.adapters.codex.harness import CodexSpellings
 from lup.codescan.boundaries import ApplicationRoots, generated_tree_paths
+from lup.codescan.common import RuleSelection
 from lup.devtools.project import DevProject
 from lup.harness.contracts import NativeSpellings
 from lup.harness.enforcement import declared_role_rows
@@ -212,6 +213,10 @@ def dev_project() -> DevProject:
         path_roles=declared_role_rows(list(hooks.path_roles)),
         subapps=RETIRED_SUBAPPS,
         content=RETIRED_CONTENT,
+        # This file: what this repository settled about itself is written
+        # here, so `dev seams` reads and edits it rather than looking
+        # somewhere a library guessed at.
+        catalog=Path(__file__).resolve().relative_to(project_root()),
     )
 
 
@@ -303,6 +308,12 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
         hooks=HookSet(
             id="hooks.lup-policy",
             policy_ids=["fetch", "shell", "edit", "unknown-tool"],
+            # Which of the library's scan rules this repository holds itself
+            # to: all of them. Spelled empty rather than left to the default,
+            # because a default nobody was shown is not a decision — and
+            # because `dev seams --retire <rule-id>` edits a declaration that
+            # is written down rather than one that is merely implied.
+            rules=RuleSelection(retired=[]),
             refused_tools=REFUSED_TOOLS,
             allowed_fetch=documentation_scopes(),
             protected_edit_roots=[
