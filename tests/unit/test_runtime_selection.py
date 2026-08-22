@@ -64,14 +64,14 @@ class TestShippedRegistry:
         """
         registered = {v.name for v in load_registry().variants}
 
-        assert registered >= {"baseline", "gpt-5.6-sol"}
+        assert registered >= {"opus", "chatgpt-sol"}
 
     def test_the_arms_differ_in_runtime(self) -> None:
         registry = load_registry()
         runtimes = {v.name: v.runtime for v in registry.variants}
 
-        assert runtimes["baseline"] == "claude"
-        assert runtimes["gpt-5.6-sol"] == "codex"
+        assert runtimes["opus"] == "claude"
+        assert runtimes["chatgpt-sol"] == "codex"
 
     def test_each_arm_traces_somewhere_of_its_own(self) -> None:
         """Two arms writing one directory would pool the comparison away."""
