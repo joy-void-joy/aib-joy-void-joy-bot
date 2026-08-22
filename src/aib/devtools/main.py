@@ -51,6 +51,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
 def command_reference(root: Path | None = None, *, check: bool = False) -> Path:
     """Write or verify the reference for every command this CLI serves.
 
