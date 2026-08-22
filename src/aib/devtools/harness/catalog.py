@@ -41,7 +41,9 @@ from lup.harness.models import (
     ResolveSpec,
     SkillInvocation,
 )
+from lup.policy.edit_rules import EditRule
 from lup.policy.refused_tools import RefusedTool
+from lup.selection import Selection
 from lup.workspace.paths import project_root, read_project_name
 
 from aib.devtools.harness.content.catalog import AGENTS, SKILLS
@@ -155,6 +157,28 @@ routes — and a refusal no hook is registered for is a refusal in name.
 
 Neither is walled off: a deliberate use escalates with the marker the shell
 lattice already uses, and gets an approval question carrying this reason.
+"""
+
+
+EDIT_RULES: Selection[EditRule] = Selection[EditRule]()
+"""Where this repository moves the edit gates the kernel decides on its own.
+
+Nowhere, and the empty table is the finding rather than a blank left unfilled.
+Every gate was read against what this repository is, and the kernel's answer
+was already the one it wanted: a whole-file write asks, in `src/`, in `notes/`
+and in a document alike, which is right for a checkout where a forecast under
+`notes/traces/` is the unreproducible record of a run that cost money. The
+loosening the library offers as its worked example — letting the size and
+whole-write gates stop at prose — would make exactly that record the cheapest
+thing here to overwrite.
+
+One gate is worth a second look and is deliberately not moved yet.
+`autonomous-full-write` lets a self-reviewing identity replace a whole file
+without asking, forecast records included. Narrowing it wants a path, and a
+rule's axes are gates, suffixes, roles and operations — so the nearest
+spelling is by suffix, which would also catch whatever a resolver worker
+writes to drive itself. A tightening that stalls the resolver is not the
+tightening this wants.
 """
 
 
@@ -314,6 +338,7 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
             # because `dev seams --retire <rule-id>` edits a declaration that
             # is written down rather than one that is merely implied.
             rules=RuleSelection(retired=[]),
+            edit_rules=EDIT_RULES,
             refused_tools=REFUSED_TOOLS,
             allowed_fetch=documentation_scopes(),
             protected_edit_roots=[
