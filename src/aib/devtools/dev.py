@@ -16,6 +16,7 @@ argument the library's tree takes, which is the drift composing removes.
 """
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -26,6 +27,7 @@ from lup.devtools.utils import git
 
 import aib.devtools.guards as guards
 import aib.devtools.harness.catalog as catalog
+import aib.devtools.library as library
 
 HOOKS_PATH = ".githooks"
 """Where this repository tracks the hooks git runs, named to `core.hooksPath`."""
@@ -38,6 +40,76 @@ BASE_COMMAND = "uv run lup-devtools dev pr-base"
 
 GATE_COMMAND = "uv run lup-devtools dev gate"
 """What the push hook runs to hold a branch to this repository's bar."""
+
+LIBRARY_HELP = "How this repository obtains lup, and how to change it"
+"""What the `library` group answers, as the command tree lists it."""
+
+DryRun = Annotated[
+    bool,
+    typer.Option("--dry-run", "-n", help="Show what would change, and change none"),
+]
+"""The flag every writing command here takes, spelled once.
+
+A plain alias rather than a `type` statement: typer resolves the annotation at
+decoration time and a PEP 695 alias reaches it as a name it cannot unwrap.
+"""
+
+
+def library_app() -> typer.Typer:
+    """The `dev library` group: read the acquisition mode, or declare another.
+
+    Built here rather than declared beside the module it drives, so the CLI
+    surface stays in the file that mounts it and `library.py` stays a reader
+    and writer of `pyproject.toml` that a test can call without a command line.
+    """
+    app = typer.Typer(help=LIBRARY_HELP, no_args_is_help=True)
+
+    @app.command("status")
+    def status_cmd() -> None:
+        """Report where lup is resolved from, and what upgrading it takes."""
+        library.library_status()
+
+    @app.command("release")
+    def release_cmd() -> None:
+        """Ask the package index whether a release of lup is published yet."""
+        library.library_release()
+
+    @app.command("use")
+    def use_cmd(
+        mode: Annotated[library.LibraryMode, typer.Argument()],
+        version: Annotated[str | None, typer.Option("--version")] = None,
+        dry_run: DryRun = False,
+    ) -> None:
+        """Resolve lup as `published`, and pin the lower bound it needs."""
+        library.use_library(mode, version, dry_run)
+
+    @app.command("git")
+    def git_cmd(
+        url: Annotated[str, typer.Option("--url")] = library.REPOSITORY_URL,
+        branch: Annotated[str | None, typer.Option("--branch")] = None,
+        tag: Annotated[str | None, typer.Option("--tag")] = None,
+        rev: Annotated[str | None, typer.Option("--rev")] = None,
+        dry_run: DryRun = False,
+    ) -> None:
+        """Resolve lup from its repository, at one branch, tag, or commit."""
+        library.git_library(
+            library.git_source(url, branch=branch, tag=tag, rev=rev), dry_run
+        )
+
+    @app.command("link")
+    def link_cmd(
+        checkout: Annotated[Path, typer.Argument()],
+        dry_run: DryRun = False,
+    ) -> None:
+        """Resolve lup from a checkout on this disk, editable.
+
+        Takes the repository root rather than the package inside it, because
+        that is the path somebody has in hand — `packages/lup` is lup's own
+        layout and this appends it.
+        """
+        library.link_library(checkout, dry_run)
+
+    return app
 
 
 def declared() -> DevDeclarations:
@@ -135,3 +207,5 @@ def extend(app: typer.Typer) -> None:
     def gate_cmd() -> None:
         """Run the checks this repository holds a branch to before it leaves."""
         guards.run_gate()
+
+    app.add_typer(library_app(), name="library", help=LIBRARY_HELP)

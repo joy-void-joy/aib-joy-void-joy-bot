@@ -119,6 +119,11 @@ Run any of them with `uv run lup-devtools <command>`, and add `--help` for its a
 | `dev model-config snapshot` | Record the configuration pydantic resolved onto every model. |
 | `dev model-config snapshot-at` | Record the configuration pydantic resolved at a git revision. |
 | `dev model-config compare` | Diff two snapshots; exit non-zero when any model&#x27;s config moved. |
+| `dev library status` | Report where lup is resolved from, and what upgrading it takes. |
+| `dev library release` | Ask the package index whether a release of lup is published yet. |
+| `dev library use` | Resolve lup as `published`, and pin the lower bound it needs. |
+| `dev library git` | Resolve lup from its repository, at one branch, tag, or commit. |
+| `dev library link` | Resolve lup from a checkout on this disk, editable. |
 
 ## `git`
 

@@ -220,6 +220,8 @@ Source: `src/aib/devtools/`. **Use it instead of ad-hoc commands.** If you run t
 
 `docs/commands.md` is every command the CLI serves with a line on each, walked from the wired app at generation time rather than listed by hand — so a command is there by existing, and reading it is how you find one you did not know to look for. `uv run lup-devtools <command> --help` gives its arguments. `docs/devtools.md` carries what a walk cannot reach: the tournament names, the commit types, and why three verbs are refused.
 
+`lup` itself is the one dependency `uv add` does not manage. How this project obtains it — from git at a ref, from the package index, or from a checkout on this disk — is a mode `dev library status` reads and `dev library git|use|link` rewrites, and the mode decides what upgrading means. Upgrading is never just the lock: a newer lup ships newer skill, agent and policy declarations, and the native trees compile from them, so `harness generate all` is part of the move rather than a follow-up to it.
+
 ## The gates you will meet
 
 You are not expected to hold these conventions in memory. The permission policy is a declaration compiled into the plugin that enforces it, and every refusal names what it caught and what to do instead. Shell commands, fetch scopes and edits are all classified; segments join deny > ask > defer > allow, and malformed input fails conservatively.
