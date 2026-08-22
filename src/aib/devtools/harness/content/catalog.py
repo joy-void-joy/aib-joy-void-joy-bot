@@ -15,8 +15,11 @@ the feedback-loop phases are the library's own — each was maintained twice
 under a second plugin until this declaration replaced it.
 """
 
+from pathlib import Path
+
 import lup.harness.models as models
-from lup.devtools.harness.content.catalog import LIBRARY_CONTENT
+from lup.devtools.harness.content.application import ApplicationLayout
+from lup.devtools.harness.content.catalog import library_content
 
 from aib.devtools.harness.content.skills.audit import SKILL as SKILL_AUDIT
 from aib.devtools.harness.content.skills.design import SKILL as SKILL_DESIGN
@@ -25,6 +28,14 @@ from aib.devtools.harness.content.skills.fb_retrodict import (
 )
 from aib.devtools.harness.content.skills.leak import SKILL as SKILL_LEAK
 from aib.devtools.subapps import RETIRED_CONTENT
+
+LAYOUT = ApplicationLayout(package=Path(__file__).resolve().parents[3].name)
+"""Where this application's own code sits, for the library prose that names it.
+
+Derived from where this file actually sits rather than written down, for the
+reason ``DevProject.package`` derives its own: a literal would go on naming a
+package after the directory holding it had been called something else.
+"""
 
 PROJECT_SKILLS: list[models.Skill] = [
     SKILL_AUDIT,
@@ -38,8 +49,10 @@ PROJECT_AGENTS: list[models.Agent] = []
 """The four agents this repository had were lup's, copied. They come back
 from the library rather than being declared again."""
 
-CONTENT = LIBRARY_CONTENT.selected(RETIRED_CONTENT).extended(
-    PROJECT_SKILLS, PROJECT_AGENTS
+CONTENT = (
+    library_content(LAYOUT)
+    .selected(RETIRED_CONTENT)
+    .extended(PROJECT_SKILLS, PROJECT_AGENTS)
 )
 """Everything this repository's generated plugin ships, in that order.
 

@@ -1,8 +1,13 @@
-"""This project's shell auto-allow vocabulary, composed from library groups.
+"""Where this project's shell vocabulary differs from the one lup offers.
 
 The rule models and the groups in :mod:`lup.policy.vocabulary` are library
-mechanism; what is *this project's* is the composition below — which groups
-it takes, what it passes them, and the two rules no other project has.
+mechanism; what is *this project's* is the selection below — the commands it
+judges differently, and the runner targets no other project has.
+
+Stated as differences rather than as a table, the way a project states which
+anti-patterns it retires: :func:`~lup.policy.vocabulary.default_vocabulary` is
+what a selection layers over, so adding one command costs one entry instead of
+a copy of every command the library already judged.
 
 Both of those rules exist because this repository spends money when it runs.
 A forecast opens agent sessions against paid APIs, runs for tens of minutes,
@@ -20,16 +25,8 @@ from lup.policy.shell_rules import (
     ShellOperationRule,
     ShellSubcommandRule,
 )
-from lup.policy.vocabulary import (
-    docker_rule,
-    gh_rule,
-    git_rule,
-    guarded_tool_rules,
-    judged_ask_rules,
-    read_only_rules,
-    redirected_rules,
-    runner_target_rules,
-)
+from lup.policy.vocabulary import runner_target_rules
+from lup.selection import Selection
 
 SPAWNS_A_FORECAST = (
     "this spawns a forecasting agent: it spends API credits, runs for tens of"
@@ -118,21 +115,22 @@ opens agent sessions cannot run confined.
 """
 
 
-SHELL_RULES: list[ShellCommandRule] = [
-    *read_only_rules(),
-    *judged_ask_rules(),
-    *redirected_rules(),
-    *guarded_tool_rules(),
-    git_rule(),
-    gh_rule(),
-    docker_rule(),
-]
-"""Which vocabulary groups this project takes, decided here.
+SHELL_RULES: Selection[ShellCommandRule] = Selection[ShellCommandRule]()
+"""Where this project's shell vocabulary differs from the one lup offers: nowhere.
 
-`git_rule()` is taken as the library offers it, force-push guard included:
-this repository publishes forecast commits to a branch other runs read back,
-so replacing what a remote ref points at is worth the question it costs.
+Empty, and that is the whole claim. Every group `default_vocabulary()` composes
+is one this repository wants at the arguments the library offers it — `git` with
+its force-push guard, because forecast commits publish to a branch other runs
+read back and replacing what a remote ref points at is worth the question it
+costs; `docker` because the sandbox tool runs code in a container; `gh` because
+the workflow opens and reads pull requests.
 
-`docker_rule()` because the sandbox tool runs code in a container, and
-`gh_rule()` because the workflow opens and reads pull requests.
+Stated as a selection rather than as a copy of that table, so a command the
+library judges next arrives here instead of being missed. The copy that stood
+here restated seven groups to disagree with none of them, and would have gone
+on reading as a decision the first time it fell behind.
+
+What this project *does* judge differently is which `uv run` targets open a
+forecasting agent, and that is `RUNNER_TARGETS` above — a table the library
+holds no opinion on, so it is declared rather than selected.
 """
