@@ -12,9 +12,14 @@ import tempfile
 from pathlib import Path
 from typing import Annotated
 
-import click
 import sh
 import typer
+
+# Typer vendors its own copy of Click, and `TyperGroup` is declared against
+# that copy rather than the installed `click` package's. An override of one of
+# its methods has to annotate the classes it actually receives, private prefix
+# and all; the public `click` package's namesakes are types these are not.
+import typer._click.core as click
 from typer.core import TyperGroup
 
 from lup.workspace.paths import project_root
