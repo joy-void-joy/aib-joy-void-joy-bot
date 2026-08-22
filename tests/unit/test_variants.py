@@ -185,3 +185,43 @@ class TestRegisteredVariants:
         registry = load_registry(VARIANTS_PATH)
 
         assert registry.by_name("direct-research").research == "direct"
+
+    def test_the_shipped_topology_is_pinned_by_an_arm_of_its_own(self) -> None:
+        """The control inherits the default; something has to hold it still.
+
+        `opus` says nothing about research, so it follows wherever the
+        default goes. That is right for the arm that tracks what ships, and
+        wrong for the arm a topology experiment is measured against — which
+        is why the two are separate arms rather than one.
+        """
+        registry = load_registry(VARIANTS_PATH)
+
+        assert registry.by_name("condensed").research == "condensed"
+        assert registry.by_name("opus").research is None
+
+    def test_the_registry_names_which_arm_is_the_control(self) -> None:
+        """Read off the registry rather than off a name meaning it by convention."""
+        registry = load_registry(VARIANTS_PATH)
+        baseline = registry.baseline_variant()
+
+        assert baseline is not None
+        assert baseline.name == "opus"
+
+    def test_a_topology_arm_varies_only_its_topology(self) -> None:
+        """An arm restating a default would go on stating it after it moved.
+
+        `direct-research` and `condensed` name a research topology and
+        nothing else, so a change to the default model or runtime reaches
+        them the way it reaches a plain run. Pinning the model here would
+        leave the arm measuring last month's model against this month's.
+        """
+        registry = load_registry(VARIANTS_PATH)
+
+        for name in ("direct-research", "condensed"):
+            arm = registry.by_name(name)
+            assert (arm.model, arm.effort, arm.profile, arm.runtime) == (
+                None,
+                None,
+                None,
+                None,
+            )
