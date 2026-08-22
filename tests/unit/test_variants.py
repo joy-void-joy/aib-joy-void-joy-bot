@@ -161,17 +161,19 @@ class TestRegisteredVariants:
     """The arms this repository actually has registered.
 
     Which arms exist is pinned in `test_runtime_selection.py`; what is asked
-    here is which arms deliberately do not.
+    here is what the arms deliberately hold.
     """
 
-    def test_no_arm_pins_a_topology(self) -> None:
-        """The topology is a switch, not an experiment that is running.
+    def test_the_topology_arm_pins_its_topology(self) -> None:
+        """An arm may pin the topology, because registering one does not run it.
 
-        `AIB_RESEARCH` turns it for anyone who wants to measure it, and a
-        registered arm would mean a second full forecast per question every
-        time the registry is run — which is a cost to choose deliberately,
-        not one to inherit from a setting having more than one value.
+        `ab` is the only reader of the registry and resolves only the names
+        passed with `-v`; the forecast loop takes no variant argument and
+        forecasts each pending question once under ambient settings. So an
+        arm costs a forecast when someone asks for one by name, and what
+        registering buys is that the ask is a name rather than an environment
+        variable spelled correctly.
         """
         registry = load_registry(VARIANTS_PATH)
 
-        assert [v.name for v in registry.variants if v.research is not None] == []
+        assert registry.by_name("direct-research").research == "direct"
