@@ -24,6 +24,7 @@ from pydantic import AnyHttpUrl
 from lup.adapters.claude.harness import ClaudeSpellings
 from lup.adapters.codex.harness import CodexSpellings
 from lup.codescan.boundaries import ApplicationRoots, generated_tree_paths
+from lup.codescan.common import RuleSelection
 from lup.devtools.project import DevProject
 from lup.harness.contracts import NativeSpellings
 from lup.harness.enforcement import declared_role_rows
@@ -40,7 +41,9 @@ from lup.harness.models import (
     ResolveSpec,
     SkillInvocation,
 )
+from lup.policy.edit_rules import EditRule
 from lup.policy.refused_tools import RefusedTool
+from lup.selection import Selection
 from lup.workspace.paths import project_root, read_project_name
 
 from aib.devtools.harness.content.catalog import AGENTS, SKILLS
@@ -157,6 +160,28 @@ lattice already uses, and gets an approval question carrying this reason.
 """
 
 
+EDIT_RULES: Selection[EditRule] = Selection[EditRule]()
+"""Where this repository moves the edit gates the kernel decides on its own.
+
+Nowhere, and the empty table is the finding rather than a blank left unfilled.
+Every gate was read against what this repository is, and the kernel's answer
+was already the one it wanted: a whole-file write asks, in `src/`, in `notes/`
+and in a document alike, which is right for a checkout where a forecast under
+`notes/traces/` is the unreproducible record of a run that cost money. The
+loosening the library offers as its worked example — letting the size and
+whole-write gates stop at prose — would make exactly that record the cheapest
+thing here to overwrite.
+
+One gate is worth a second look and is deliberately not moved yet.
+`autonomous-full-write` lets a self-reviewing identity replace a whole file
+without asking, forecast records included. Narrowing it wants a path, and a
+rule's axes are gates, suffixes, roles and operations — so the nearest
+spelling is by suffix, which would also catch whatever a resolver worker
+writes to drive itself. A tightening that stalls the resolver is not the
+tightening this wants.
+"""
+
+
 def declared_hook_set() -> HookSet:
     """The hook set this project declares, for a session composed in process."""
     return portable_harness().declared_hooks
@@ -212,6 +237,10 @@ def dev_project() -> DevProject:
         path_roles=declared_role_rows(list(hooks.path_roles)),
         subapps=RETIRED_SUBAPPS,
         content=RETIRED_CONTENT,
+        # This file: what this repository settled about itself is written
+        # here, so `dev seams` reads and edits it rather than looking
+        # somewhere a library guessed at.
+        catalog=Path(__file__).resolve().relative_to(project_root()),
     )
 
 
@@ -303,6 +332,13 @@ def portable_harness(version: str = "0.2.0", root: Path | None = None) -> Harnes
         hooks=HookSet(
             id="hooks.lup-policy",
             policy_ids=["fetch", "shell", "edit", "unknown-tool"],
+            # Which of the library's scan rules this repository holds itself
+            # to: all of them. Spelled empty rather than left to the default,
+            # because a default nobody was shown is not a decision — and
+            # because `dev seams --retire <rule-id>` edits a declaration that
+            # is written down rather than one that is merely implied.
+            rules=RuleSelection(retired=[]),
+            edit_rules=EDIT_RULES,
             refused_tools=REFUSED_TOOLS,
             allowed_fetch=documentation_scopes(),
             protected_edit_roots=[

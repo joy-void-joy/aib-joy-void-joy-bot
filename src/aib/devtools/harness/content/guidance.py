@@ -1,77 +1,49 @@
 """Canonical repository guidance, compiled into every tree's guidance file.
 
-This was a hand-written `.claude/CLAUDE.md` until the permission policy became
-a declaration. It is a document now for the same reason the policy is: the
-sections describing a gate can be rendered from the declaration that runs it,
-and a skill it names is issued rather than spelled, so the same prose reads
-correctly under whichever runtime is loading it.
+A document rather than a hand-written file because the sections describing a
+gate are rendered from the declaration that runs it, and a skill it names is
+issued rather than spelled — so the same prose reads correctly under whichever
+runtime is loading it.
 
-The port was faithful. Three sections were rewritten because the migration
-falsified them — the hooks section described a regex engine that no longer
-exists, the Python section described a `tmp/` rung the shell policy now
-denies, and the skills section listed one plugin where there are two — and
-nothing else was retuned, so a later surprise stays attributable.
+It has a hard byte budget: past 32 KiB a runtime truncates the file silently
+rather than reporting it. What an agent looks *up* therefore belongs in a
+published document under `docs/`, and what it needs *before it knows to look*
+belongs here.
 """
 
 import lup.harness.models as models
 
 
 def guidance_parts() -> list[models.PromptPart]:
-    """This repository's guidance, with its gates named as they now work."""
+    """This repository's guidance: forecasting first, then how to work on it."""
     return [
         models.TextPart(
             text=r"""# Repository guidance
 
-This file is what an agent working in this repository is given before it reads anything else.
+What an agent working in this repository is given before it reads anything else.
 
-**Note:** It is generated. The source is `src/aib/devtools/harness/content/guidance.py`; edit that and run `uv run lup-devtools harness generate all`.
+**It is generated.** The source is `src/aib/devtools/harness/content/guidance.py`; edit that and run `uv run lup-devtools harness generate all`.
 
-## Project Overview
+## What this is
 
-A forecasting bot for the [Metaculus AI Benchmarking Tournament](https://www.metaculus.com/aib/). Uses the Claude Agent SDK with extended capabilities (web search, Python execution, etc.) to generate accurate predictions on forecasting questions.
+A forecasting bot for the [Metaculus AI Benchmarking Tournament](https://www.metaculus.com/aib/). It opens a Claude Agent SDK session with research tools — web search, page fetch, markets, financial and government data, a Python sandbox — and produces a calibrated prediction. Python 3.14+, `uv` for packages, `lup` as the agent framework beneath it.
 
-Built with Python 3.14+ and the Claude Agent SDK. Uses `uv` as the package manager, and `lup` as the agent framework beneath it.
+Four facts about the tournament shape the code, and every one of them is a constraint rather than a preference:
 
-### Important Context
-
-- **Submission is handled separately** — This codebase generates forecasts; a separate system handles submission to Metaculus
-- **No CP during live forecasting** — The agent cannot see the community prediction for the question it is currently forecasting (tournament rule). CP data is available post-hoc via individual API fetches for calibration analysis.
-- **CDF required for numeric questions** — Numeric and discrete questions require a 201-point CDF (cumulative distribution function), not just point estimates
-- **Version scope** — When analyzing forecasts, traces, or calibration data, determine which versions are relevant from context (user's question, current version, task at hand). Don't default to scanning all versions — earlier versions had different architectures and their data is rarely comparable. When in doubt, ask.
-
----
-
-# Getting Started
-
-## Reference Files
-
-- **src/aib/cli.py**: CLI entry point (`uv run forecast test <question_id>`)
-- **src/aib/agent/core.py**: Main forecasting agent orchestration using Claude Agent SDK
-- **src/aib/agent/numeric.py**: CDF generation for numeric/discrete questions
-- **src/aib/submission.py**: Metaculus API submission functions
-- **src/aib/tools/**: MCP tool implementations (forecasting, sandbox, composition, markets)
+- **Submission is separate.** This codebase generates forecasts; another system submits them.
+- **No community prediction during a live forecast.** The agent cannot see the CP for the question it is forecasting — a tournament rule. CP is fetched post-hoc, per question, for calibration analysis only.
+- **Numeric and discrete questions need a 201-point CDF**, not a point estimate. `src/aib/agent/numeric.py` builds it.
+- **Version scope.** Traces, forecasts and calibration data are keyed by agent version, and earlier versions had different architectures. Work out which versions the question is about rather than scanning all of them; when in doubt, ask.
 
 ## Never run a forecast yourself
 
-**`uv run forecast ...` is the user's command to run, never yours.** This covers
-`test`, `submit`, `tournament`, `loop`, `retrodict`, and `backfill-comments` —
-whether or not the variant submits to Metaculus. The same applies to any
-`lup-devtools` command that spawns a forecasting agent (`worldview loop`,
-`resolution tentative`, `analysis review`).
+**`uv run forecast ...` is the user's command to run, never yours.** That covers `test`, `submit`, `tournament`, `loop`, `retrodict` and `backfill-comments`, whether or not the variant submits — and equally the `lup-devtools` verbs that open the same agent: `worldview loop`, `resolution tentative`, `analysis review`.
 
-A forecast burns real credits, takes tens of minutes, and writes to `notes/`.
-The user decides when to spend that, and watches it live.
+A forecast burns real credits, takes tens of minutes, and writes to `notes/`. The user decides when to spend that, and watches it live.
 
-This is a gate rather than a norm: every one of those spellings is declared
-refused in `harness/content/shell_vocabulary.py`, and the refusal carries the
-instruction below. What makes it a declaration rather than a warning is that
-the policy judges a parsed command, so putting the forecast behind something
-else on the same line does not get it through.
+This is a gate rather than a norm. Every spelling is declared refused in `harness/content/shell_vocabulary.py`, and because the policy judges a *parsed* command, hiding the forecast behind something else on the same line does not get it through.
 
-When a change needs a forecast to verify, finish everything you *can* verify —
-tests, `ruff`, `pyright`, `lup-devtools health check`, targeted probes of the
-changed code — then **print the exact command for the user to run** and say what
-to look for in the output:
+When a change needs a forecast to verify, finish everything you *can* verify — tests, `ruff`, `pyright`, `lup-devtools health check`, targeted probes of the changed code — then **print the exact command and say what to look for**:
 
 > Ready to verify. Run:
 > ```bash
@@ -83,17 +55,31 @@ to look for in the output:
 
 Do not launch it in the background, and do not offer to run it "just this once".
 
+## Where things are
+
+| Path | What it holds |
+|---|---|
+| `src/aib/cli.py` | The `forecast` entry point |
+| `src/aib/agent/core.py` | Forecasting agent orchestration |
+| `src/aib/agent/numeric.py` | CDF generation for numeric and discrete questions |
+| `src/aib/agent/prompts.py` | The forecasting system prompt, assembled from sections |
+| `src/aib/tools/` | MCP tools: research, sandbox, markets, composition |
+| `src/aib/submission.py` | Metaculus API submission |
+| `src/aib/devtools/` | The `lup-devtools` CLI |
+| `notes/traces/<version>/` | Forecasts and session notes, per agent version |
+| `logs/<question_id>/` | Raw run logs |
+
 ## Commands
 
 ```bash
 uv sync
-uv add <package-name>     # never edit pyproject.toml directly
-uv run ruff format .
-uv run ruff check .
+uv add <package>          # never edit pyproject.toml directly
+uv run ruff format . && uv run ruff check .
 uv run pyright
+uv run pytest             # -v, -k <pattern>, or a path
 ```
 
-The forecasting commands are the user's to run and yours to print:
+Yours to print, never to run — each takes `--profile <name>` to pick a registered Claude account:
 
 ```bash
 uv run forecast test <question_id>              # no submission
@@ -102,47 +88,19 @@ uv run forecast tournament <aib|minibench|cup>  # skips already forecast
 uv run forecast ab --list | -v <variant> -v <variant>
 ```
 
-Any of them takes `--profile <name>` to run on a registered Claude account.
-`docs/devtools.md` carries the tournament names and the rest.
+## A/B testing
 
-## A/B Testing
-
-Variants are named agent configurations registered in `notes/variants.json`,
-run side by side with `uv run forecast ab`. Each arm is a separate process
-and wants its own `profile`, and traces land under `<version>+<variant>` so
-an in-flight experiment stays out of the released version's calibration
-numbers. `docs/devtools.md` carries the registry format and the rest.
+Variants are named agent configurations in `notes/variants.json`, run side by side with `uv run forecast ab`. Each arm is its own process and wants its own `profile`. Traces land under `<version>+<variant>`, so an experiment in flight stays out of the released version's calibration numbers. `docs/devtools.md` carries the registry format.
 
 ## Testing
 
-```bash
-# Run all tests
-uv run pytest
+`tests/unit/` mocks external APIs; `tests/integration/` needs API keys and is marked `@pytest.mark.integration`.
 
-# Run with verbose output
-uv run pytest -v
-
-# Run specific test file
-uv run pytest tests/test_tools.py
-
-# Run tests matching a pattern
-uv run pytest -k "test_forecast"
-```
-
-**Test organization:**
-
-- `tests/unit/` - Unit tests (mock external APIs)
-- `tests/integration/` - Integration tests (require API keys, use `@pytest.mark.integration`)
-
-**A test is edited like any other file** — the ordinary lattice judges it, with
-no gate of its own. What the gate protected still holds as a norm: a test states
-the behaviour production owes, so changing one to match an implementation is
-backwards. Change the implementation, and edit the test only when it genuinely
-encodes the wrong behaviour — saying, in the commit, which it was.
+A test is edited like any other file — the ordinary lattice judges it, with no gate of its own. That makes the norm yours to keep: a test states the behaviour production owes, so editing one to match an implementation is backwards. Change the implementation, and touch the test only when it genuinely encodes the wrong behaviour — saying which, in the commit.
 
 ## Debugging
 
-**Do not hypothesize — trace.** When debugging errors, find the actual logs and read the exact exception. Do not list "likely causes" or suggest the user check things. Open the log files yourself, grep for the error, read the traceback, and report what actually happened. If the logs don't contain enough information, say exactly what logging to add and where, so the error is captured next time.
+**Do not hypothesize — trace.** Find the actual logs and read the exact exception. Do not list likely causes or ask the user to check things. Open the files, grep for the error, read the traceback, report what happened. If the logs do not say enough, say exactly what logging to add and where.
 
 Use """
         ),
@@ -150,293 +108,121 @@ Use """
         models.TextPart(
             text=r""" to trace an error through the logs automatically.
 
-**When a forecast fails:**
-
-1. Search `logs/<question_id>/` for the error text and grep for ERROR/exception — read the full traceback, don't stop at the catch-all error message
-2. Check `notes/traces/<version>/sessions/<session_id>/` for the agent's intermediate reasoning and meta-reflection
-3. Check API key configuration: missing keys log warnings at startup
-
-`docs/devtools.md` lists the common startup failures and what each missing
-key breaks.
+**When a forecast fails:** search `logs/<question_id>/` for the error text and for ERROR or exception, and read the *full* traceback rather than stopping at the catch-all. Then read `notes/traces/<version>/sessions/<session_id>/` for the agent's own reasoning and meta-reflection. Missing API keys log warnings at startup; `docs/devtools.md` says what each one breaks.
 
 ---
 
-# Development Workflow
+# Working on it
 
-## Git Workflow
+## Worktrees, not branches
 
-This project uses **git worktrees** (not regular branches) to develop multiple features in parallel.
+Code changes never land on `main` directly. Data does — forecast output needs no review.
 
-**IMPORTANT:** Never commit _code_ directly to `main`. Always work in a worktree for code changes.
+You are usually in a worktree already; `git worktree list` confirms it. If you are, work where you are. If not:
 
-**Exception:** Data commits (`data(forecasts):`) can go directly to main—forecast outputs don't need review.
+```bash
+uv run lup-devtools dev worktree create feat-name
+```
 
-### If already in a worktree
+That makes a sibling under `tree/`, syncs dependencies, and refreshes plugins. Never `git worktree add ./worktrees/...` — worktrees are siblings, not nested checkouts. The generated plugin travels with the worktree, so a harness change on a feature branch takes effect there immediately.
 
-**You are typically already in a worktree subbranch.** Check with `git worktree list` to confirm. If you're in a feature worktree, just work directly—no need to create another worktree or branch out.
-
-### When implementing a feature
-
-1. **Create a worktree** (if the user hasn't already created one):
-   ```bash
-   uv run lup-devtools dev worktree create feat-name
-   ```
-   This creates the worktree as a sibling under `tree/` (e.g., `tree/feat-name` alongside `tree/main`), syncs dependencies, and refreshes plugins. **Never** use `git worktree add ./worktrees/...` — worktrees must be siblings, not nested inside another checkout.
-2. **Commit regularly and atomically** — Each commit should represent a single logical change. Don't bundle unrelated changes together.
-3. Push the branch when the feature is complete (or periodically for backup)
-4. **Bump AGENT_VERSION** if the branch changes agent behavior (prompts, tools, subagents, scoring). `[tool.lup] agent_version` in `pyproject.toml` is where it lives. Data-only or infrastructure changes don't need a bump. **Every version bump must include a corresponding `CHANGELOG.md` entry** — use `uv run lup-devtools version bump` or manually add an entry following the existing format.
-5. **"""
+Then: commit atomically as you go, push when the feature is done, and """
         ),
         models.SkillInvocation(plugin="lup", skill="rebase"),
         models.TextPart(
-            text=r"""** — Pushes the branch, opens a PR, then cleans up the commit history with `git reset --soft main` and force-pushes.
-6. **Review the PR** — If changes are needed, fix them on the feature branch and re-run the rebase skill (it rebuilds the history and force-pushes, updating the PR).
-7. **"""
+            text=r""" to clean the history and open a PR. Fixes go on the branch and re-run it. """
         ),
         models.SkillInvocation(plugin="lup", skill="close"),
         models.TextPart(
-            text=r"""** — Once the PR is approved, merges it and cleans up the branch.
+            text=r""" merges once approved and clears the branch.
 
-The plugin needs no version bump of its own: it is generated, so its version is
-the harness generator's and moves when the declaration does.
+**Bump the agent version** if the branch changes what the forecasting agent *does* — prompts, tools, subagents, scoring. It lives at `[tool.lup] agent_version` in `pyproject.toml`, and every bump needs a `CHANGELOG.md` entry: `uv run lup-devtools version bump` writes both. Infrastructure and data changes need no bump.
 
-It is not installed through a marketplace. `harness claude` launches the
-generated tree of whichever checkout it is run from, naming it with
-`--plugin-dir`, so a worktree carries its plugin by existing and a change on a
-feature branch takes effect there immediately.
+## Commits
 
-### Commit Guidelines
+Commit before responding, early and often, and keep each one to a single thing — if the message needs "and", it is two commits. Messages are cleaned up before merge, so during development they only have to be true.
 
-- **Commit before responding** — Always commit your work before responding to the user. Don't accumulate multiple changes across responses.
-- **Commit early, commit often** — Frequent commits provide checkpoints and make rebasing easier.
-- **Keep commits atomic** — Each commit should do one thing. If you need "and" in your message, it should be two commits.
-- **History will be rebased** — Don't worry about perfect messages during development. The history will be cleaned up before merge.
-- **Meaningful final commits** — After rebasing, each commit should tell a story: what changed and why. The final history should be easy to read and bisect.
+Conventional commits, `type(scope): description`. Two types are this repository's own: `meta` for harness declarations and the trees they generate, and `data` for generated output. `docs/devtools.md` lists them all.
 
-### Commit Message Format
+**Forecast commits** use `data(forecasts):` and go straight to `main`: the forecast markdown under `notes/traces/<version>/forecasts/<question_id>/`, the session notes beside them, and resolution updates as questions resolve. Never code.
 
-Conventional commits, `type(scope): description`. Two types are this
-repository's own: `meta` for the harness declarations and the trees they
-generate, and `data` for generated output. `docs/devtools.md` lists every
-type with an example.
-
-### Forecast Commits
-
-Forecast outputs use `data(forecasts):` and can be committed directly to main (no worktree needed).
-
-**What goes in a forecast commit:**
-
-- Forecast markdown files (`notes/traces/<version>/forecasts/<question_id>/`)
-- Session notes (`notes/traces/<version>/sessions/`) — commit alongside the forecasts they relate to, not separately
-- Resolution updates when questions resolve
-
-**What does NOT go in a forecast commit:**
-
-- Code changes (use worktree + PR)
-
-**Note:** The `worktrees/` directory is gitignored.
-
-### Keep `main` published
-
-**Push `main` after committing data.** The forecast loop commits `notes/` to local
-`main`, so `main` drifts ahead of `origin/main` unless you push. A feature branch
-cut from that `main` inherits the unpushed commits, and the PR folds every one of
-their `notes/` files in as a fresh addition. `docs/devtools.md` carries how that
-happens and what it cost.
+**Push `main` after committing data.** The forecast loop commits `notes/` to local `main`, which then drifts ahead of `origin/main`. A branch cut from that `main` inherits the unpushed commits, and its PR folds every one of their `notes/` files in as a fresh addition.
 
 ```bash
-git log --oneline origin/main..main   # should be empty before you open a PR
+git log --oneline origin/main..main   # empty before you open a PR
 git push origin main
 ```
 
-### Git Hooks
+Two git hooks enforce both, declared in `src/aib/devtools/dev.py` and installed by `dev git-hooks install`. `pre-commit` refuses a generated artifact behind its source, then a commit mixing `notes/` data with code. `pre-push` refuses a branch whose PR would carry `notes/` files, then runs `dev gate` — ruff, pyright, the non-integration tests, and `harness check all`. `--no-verify` bypasses a moment when a branch deliberately reshapes `notes/`.
 
-Four guards over two moments, declared in `src/aib/devtools/dev.py` and written
-by `uv run lup-devtools dev git-hooks install`. Each moment runs its guards in
-declaration order and stops at the first refusal, so the nearly-free check goes
-first.
+## Editing style
 
-| Moment | Refuses |
+**Prefer small, atomic edits.** The edit gate counts real changed lines — imports, comments, whitespace, blank lines and docstrings do not count — and auto-allows three or fewer. Pure deletions, TypedDict and BaseModel definitions, and single-line `replace_all` renames are always allowed.
+
+Split a large change into several edits, and separate concerns: move imports in one, change logic in another.
+
+---
+
+# Code
+
+## Types
+
+- Every function annotates its inputs and its return.
+- **Never `Any`.** `TypedDict` for dict-shaped data, `BaseModel` for validated models, a concrete type otherwise.
+- **Never `# type: ignore`.** Ask how to fix the error properly.
+- No bare `except Exception` — catch what you mean, except at a boundary that logs or re-raises.
+- Python 3.12+ generics: `class A[T]`, not `Generic[T]`.
+- Never hand-parse agent output. Take a structured output through a Pydantic model.
+
+## No private names
+
+Nothing here is private, so no leading underscore on a function, class, constant or variable. A helper that genuinely should not pollute the namespace nests inside its only caller. Before writing a new helper, look for one that already exists — private names are how a reusable thing stays unreused. An unused parameter (`_context`) is exempt; that is a linting convention, not a privacy one.
+
+## No string manipulation on structured data
+
+Reaching for `re`, `.replace()`, `.split()` or slicing to extract, transform or filter structured data means a parser was missed. Operate on the structure:
+
+| Data | Reach for |
 |---|---|
-| `pre-commit` | A generated artifact behind its source. Then a commit mixing `notes/` data with code — data goes to `main`, code through a worktree and a PR. |
-| `pre-push` | A branch whose PR would carry `notes/` files, i.e. `main` is unpushed and the base is stale. Then `dev gate`: `ruff`, `pyright`, the non-integration tests, and `harness check all`. |
+| Web pages | `trafilatura` for text, `beautifulsoup4` for the DOM |
+| XML | `xml.etree.ElementTree` or `lxml` |
+| JSON | `json.loads()` |
+| SDK content | Filter `ContentBlock` lists by type and attribute — `sources.py` has the pattern |
+| Dates | `aib.paths.parse_timestamp()` |
+| URLs | `urllib.parse` |
+| Paths | `pathlib.Path` |
 
-Both push guards read git's ref list, which git delivers once, so the hook
-captures it and replays it to each.
+String operations are for formatting output. `import re` in particular is a smell: stop and find the structured API.
 
-The bodies are tracked, and `core.hooksPath` is what points git at them — one
-setting per clone, which every worktree cut from it inherits. `dev setup-hooks`
-writes that setting; `dev git-hooks install` writes the bodies. Bypass either
-moment with `--no-verify` when a branch deliberately reshapes `notes/`.
+**Timestamps especially.** Never compare timestamp strings lexicographically. `aib.paths.parse_timestamp()` handles both forecast filenames (`YYYYMMDD_HHMMSS.json`) and retrodict filenames (`YYYY-MM-DD_YYYYMMDD_HHMMSS.json`).
 
-## Editing Style
+## Use the library that exists
 
-**Prefer small, atomic edits.** The edit gate counts "real" changed lines (ignoring imports, comments, whitespace, blank lines, docstrings) and auto-allows edits with ≤3 real changes. Pure deletions, TypedDict/BaseModel definitions, and single-line `replace_all` renames are always auto-allowed.
+Check PyPI for an official or well-maintained client before writing raw HTTP — `arxiv`, `yfinance`, `fredapi` are all here for that reason.
 
-- **Split large changes into multiple small edits** — keep real (non-trivial) line changes to ≤3 per Edit call
-- **Separate concerns** — move imports in one edit, change logic in another (import changes are trivial and don't count)
-- **Use the codeintel rename tool** for identifier renames instead of `Edit` with `replace_all`
+`forecasting-tools` has three annotation gaps worth knowing: `MetaculusApi.get_question_by_post_id()` is typed as returning `MetaculusQuestion` but hands back subclasses, so use `isinstance()`; `community_prediction_at_access_time` exists only on `BinaryQuestion`; and coherence links come from `MetaculusClient.get_links_for_question()`. `uv run lup-devtools api inspect` settles a method name rather than guessing at it.
 
-This makes reviews faster and keeps the workflow smooth.
+## Tool design: data over interaction
 
-## Code Style & Dependencies
+When a tool fails or is not earning its place, ask what the agent actually needed. The right abstraction is almost always "get me the data", not "here is a browser, go fish".
 
-### Primary Libraries
+- **Automate the extraction** rather than handing the agent an interactive surface.
+- **Enrich inside the tool, not in the reasoning loop.** `search` asks nine sources at once and enriches each hit with structured API data from recognized domains, carrying the page's own text so a match needs no second call. `fetch` pulls embedded state out of JS-rendered pages and hands a URL to whichever tool knows it better.
+- **A choice the tool can make is not the agent's to make.** Sixteen tools once took free text and returned ranked hits; picking between them was mechanical, and a source the agent had no reason to ask went unasked — so a capability it could not know was relevant was unreachable in practice. When several tools share a signature, the thing that varies is a parameter: fan out over it and report what each source said.
 
-- **claude-agent-sdk**: Primary framework for building agents (use `query()` for one-shot LLM calls with structured output)
-- **lup**: The agent framework this project is built on — tools, tracing, paths, hooks, and the permission policy
-- **pydantic**: For data validation and settings
-- **pydantic-settings**: For configuration (not dotenv)
+## Error handling
 
-### forecasting-tools Library Notes
+An MCP tool takes a validated input model and returns one, raising `ToolError` to send a recoverable failure back as an MCP error with a message saying what to try. The `is_error` envelope and the input-validation reply belong to the `@lup_tool` decorator, not the handler. Log with `logger.exception()`.
 
-The `forecasting-tools` library has some type annotation limitations:
+Elsewhere: raise for unrecoverable errors, wrap transient ones in `with_retry`, validate inputs early. Never swallow an error silently.
 
-1. **Question type polymorphism**: `MetaculusApi.get_question_by_post_id()` returns `MetaculusQuestion`, but actual objects are subclasses (`BinaryQuestion`, `NumericQuestion`, etc.). Use `isinstance()` checks.
+**Retrodict transparency.** The forecasting agent must never learn it is in retrodict mode. Tool results, error messages, available tools and data ranges all have to be indistinguishable from a live run. Never mention retrodict, cutoff dates, time constraints or historical mode in anything the agent can see. Where `retrodict_cutoff` filters data or gates a tool, present the result as simply how the world is: "not found", "no data available", "currently unavailable".
 
-2. **`community_prediction_at_access_time`**: Only exists on `BinaryQuestion`. Always check `isinstance(q, BinaryQuestion)` first.
+## Code as documentation
 
-3. **API method names**: Use `MetaculusClient.get_links_for_question()` for coherence links. Check method names with `uv run lup-devtools api inspect`.
+The codebase should read as though it had always been written this way. Before adding a comment, ask whether it would exist if the code had always looked like this. If not, it belongs in the commit message.
 
-### Type Safety Requirements
-
-- **No bare `except Exception`** — always catch specific exceptions
-- **Every function must specify input and output types**
-- **Never use `Any`** — Use `TypedDict` for dict-like data, `BaseModel` for validated models, or specific types. `Any` hides type errors and defeats static analysis.
-- **Use Python 3.12+ generics syntax**: `class A[T]`, not `Generic[T]`
-- Use `TypedDict` and Pydantic models for structured data
-- Never manually parse Claude/agent output — use structured outputs via pydantic
-- **Never use `# type: ignore`** — Ask the user how to properly fix type errors
-
-### No Private Functions or Variables
-
-Don't use leading underscores on functions, constants, or variables. Everything should be public. If a utility might be reusable, it will be — and private names discourage reuse. Before writing a new helper, check if one already exists in the codebase that can be made public or is already public.
-
-### No String Manipulation on Structured Data
-
-If you're reaching for `re`, `.replace()`, `.split()`, string slicing, or any string operation to extract, transform, or filter structured data, something is wrong. Operate on the structure directly.
-
-- **Web pages**: Use `trafilatura` for text extraction, `beautifulsoup4` for DOM queries
-- **XML**: Use `xml.etree.ElementTree` or `lxml`
-- **JSON**: `json.loads()`, not regex
-- **SDK objects**: Filter `ContentBlock` lists by type and attribute (e.g. `ToolUseBlock.name`, `ToolResultBlock.tool_use_id`) — see `sources.py` for the pattern
-- **Dates/timestamps**: Parse to `datetime`, don't compare strings — see `aib.paths.parse_timestamp()`
-- **URLs**: Use `urllib.parse`, not string splitting
-- **File paths**: Use `pathlib.Path`, not string concatenation
-
-String operations are for formatting output. If you're using them to understand or transform data, you're working at the wrong abstraction level. `import re` in particular is a code smell — if you find yourself writing a regex, stop and look for the structured API.
-
-### Timestamp Comparisons
-
-Never compare timestamp strings lexicographically (`ts_a > ts_b`). Always parse to `datetime` first using `aib.paths.parse_timestamp()`. This function handles both forecast filenames (`YYYYMMDD_HHMMSS.json`) and retrodict filenames (`YYYY-MM-DD_YYYYMMDD_HHMMSS.json`).
-
-### Use Standard Libraries
-
-When integrating with external services (APIs, data sources, etc.):
-
-- **Use existing Python libraries first** — Check PyPI for official or well-maintained client libraries before writing raw HTTP requests
-- **Examples**: Use `arxiv` for arXiv search, `yfinance` for stock data, `fredapi` for FRED economic data
-- **Don't rebuild the wheel** — If a library exists with good documentation and maintenance, use it
-
-### Tool Design: Data Over Interaction
-
-When a tool fails or isn't delivering value, don't just remove it — ask what the agent actually needed. The right abstraction is usually "get the data", not "here's a browser/API/interface, figure it out."
-
-- **Design tools around what the agent needs**, not what the underlying technology exposes
-- **Automate data extraction** rather than giving the agent interactive tools to fish for it
-- **Follow the data augmentation pattern**: `search` doesn't just return web results — it asks nine sources at once and enriches each hit with structured API data from recognized domains, carrying the page's own text so a match needs no second call. `fetch` doesn't just return page text — it extracts embedded data (Next.js state, JSON script tags, global state) from JS-rendered pages, and hands a URL to the tool that knows it better. Do the enrichment inside the tool, not in the agent's reasoning loop
-- **A choice the tool can make is not the agent's to make.** Sixteen tools once took free text and answered with ranked hits; picking between them was mechanical, and a source the agent had no reason to ask went unasked — so a capability it could not know was relevant was unreachable in practice. When several tools share a signature, the thing that varies is a parameter, and the tool should fan out over it and report what each source said
-
-### Code as Documentation
-
-The codebase should read as a **monolithic source of truth**—understandable without any knowledge of its history.
-
-**The test:** Before adding a comment, ask: "Would this comment exist if the code had always been written this way?" If no—don't add it.
-
-**Do not:**
-
-- Add comments to explain modifications you made
-- Reference what code used to do (e.g., "Previously this returned None")
-- Add inline comments when changing a line (this is almost always explaining the change, not the code)
-- Use phrases like "now", "new", "updated", "fixed", or "changed" in comments
-
-**Do:**
-
-- Write comments that would make sense to someone who never saw previous versions
-- Use commit messages for change history, not code comments
-- Only add comments that document genuinely non-obvious behavior
-
-**Example — Bad:**
-
-```python
-env_file=(".env", ".env.local"),  # .env.local overrides .env
-```
-
-Why this is bad: The comment only exists because the line was *changed*. If the code had always supported multiple env files, no developer would comment that later files override earlier ones—that's how all config file systems work. The comment explains the modification, not the code.
-
-**Example — Good:**
-
-```python
-env_file=(".env", ".env.local"),
-```
-
-Why this is good: The behavior is self-evident to anyone familiar with configuration precedence. No comment needed. The git history explains *when* and *why* multiple env files were added.
-
-**The underlying principle:** Comments that explain *what you changed* create noise for future readers who don't care about the change—they just need to understand the current code. Those explanations belong in commit messages, where they're preserved but don't clutter the codebase.
-
-### Error Handling Philosophy
-
-**MCP tools should:**
-
-- Take a validated input model and return one; raise `ToolError` to send a recoverable failure back as an MCP error
-- Log exceptions with `logger.exception()` for debugging
-- Include actionable error messages (what failed, why, what to try)
-
-The `is_error` envelope and the input-validation reply belong to the `@lup_tool`
-decorator, not to the handler.
-
-**Agent code should:**
-
-- Raise exceptions for unrecoverable errors (missing config, invalid state)
-- Use the `with_retry` decorator for transient failures (HTTP timeouts, rate limits)
-- Validate inputs early with Pydantic models
-
-**Never silently swallow errors** — either handle them meaningfully or let them propagate.
-
-**Retrodict transparency:** The forecasting agent must never know it's in retrodict mode. Everything it sees — tool results, error messages, available tools, data ranges — should be indistinguishable from a live forecast. Never mention retrodict, cutoff dates, time constraints, or historical mode in any agent-visible surface (tool responses, error messages, tool descriptions). When data is filtered or a tool is gated by `retrodict_cutoff`, present the result as if that's simply how the world is: "not found", "no data available", "currently unavailable".
-
-### Tools
-
-- **uv**: Package manager. Use `uv add <package>` (never edit pyproject.toml directly)
-- **ruff**: Formatting and linting
-- **pyright**: Type checking
-
-### Code Intelligence
-
-Code intelligence tools answer questions about code by *resolving* it, through
-a language server. **Use these actively** — they are faster and more accurate
-than grep-based searches for code understanding and refactoring.
-
-**Navigation (use before editing unfamiliar code):**
-
-- **go-to-definition** — Jump to where a symbol is defined. Use this instead of grepping for `def foo` or `class Foo`.
-- **find-references** — Find all usages of a symbol. Use this instead of grepping for a symbol name.
-- **hover-documentation** — Get type info and docs for a symbol at a position.
-- **list-symbols** — List all symbols in a file. Use this instead of grepping for `def ` or `class `.
-- **find-implementations** — Find implementations of an interface or abstract method.
-- **trace-call-hierarchy** — Understand call chains. Use this instead of manually tracing function calls.
-
-**Refactoring:**
-
-- **rename-symbol** — Rename a symbol across the workspace. **Always prefer this over `Edit` with `replace_all`** for identifier renames — it understands scope and won't rename unrelated identifiers that happen to share the same name. Where the tool reports the edits rather than applying them, apply them yourself.
-
-**Diagnostics:**
-
-- After every file edit, the type checker analyzes the change and reports errors. Pay attention to these — they catch issues immediately.
-
-`grep` stays right for what is genuinely characters: a string literal, a
-comment, a non-Python file. Anything about a *name* — where it is defined,
-who calls it, what it is called now — goes through resolution.
+So: never explain a modification, never say what the code used to do, and never write "now", "new", "updated", "fixed" or "changed" in a comment. `env_file=(".env", ".env.local")` needs no note that the later file wins — that is how configuration precedence works everywhere. Comment only genuinely non-obvious behaviour.
 
 ---
 
@@ -444,46 +230,40 @@ who calls it, what it is called now — goes through resolution.
 
 ## Running Python
 
-Bare `python`/`python3` and `uv run python -c "..."` are denied by the shell
-policy. Match the rung to the question:
+Bare `python`, `python3` and `uv run python -c "..."` are denied. Match the rung to the question:
 
 1. **To read code** — `lup-devtools py info`, `py source`, `py search`, `py imports`, and the codeintel tools answer without running anything.
 2. **To compute something** — `uv run lup-devtools py eval '<expression>'` auto-imports and evaluates.
-3. **To do it again** — add a command under `src/aib/devtools/`, which is reviewable, testable, and reachable next time.
+3. **To do it again** — add a command under `src/aib/devtools/`, which is reviewable, testable, and there next time.
 
-`tmp/` is gitignored, so a script there reaches no diff, no reviewer, and no
-later session — which is why it is not a rung. The argument is reviewability
-rather than power: an agent may already edit `devtools/` and run it.
+`tmp/` is gitignored, so a script written there reaches no diff, no reviewer and no later session — which is why it is not a rung. The argument is reviewability, not power: you may already edit `devtools/` and run it.
 
-## lup-devtools CLI
+## Code intelligence
 
-Source: `src/aib/devtools/`. Two halves: what only this project has —
-forecasting analysis, calibration, scoring, the worldview store — and what
-the library ships for any project built on it.
+Resolve, do not grep. Navigate with **go-to-definition**, **find-references**, **hover-documentation**, **list-symbols**, **find-implementations** and **trace-call-hierarchy** before editing unfamiliar code, and rename with **rename-symbol** rather than `Edit` with `replace_all` — it understands scope and will not touch unrelated identifiers sharing a name.
 
-**Always use `lup-devtools` instead of ad-hoc commands.** If you find
-yourself running the same thing repeatedly, add a command: to
-`src/aib/devtools/` when only this project wants it, and upstream to `lup`
-when another project built on it would.
+`grep` stays right for what is genuinely characters: a string literal, a comment, a non-Python file. Anything about a *name* goes through resolution. `docs/devtools.md` has the task-by-task table where the line is not obvious.
 
-`docs/devtools.md` carries the whole command tree, the tournament names, and
-the three verbs that spawn a forecasting agent and are therefore refused.
+## lup-devtools
 
-## The Gates You Will Meet
+Source: `src/aib/devtools/`. **Use it instead of ad-hoc commands.** If you run the same thing twice, add a command — to `src/aib/devtools/` when only this project wants it, upstream to `lup` when any project built on it would.
 
-You are not expected to hold this repository's conventions in memory. The
-permission policy is a declaration compiled into the plugin that enforces it,
-and every refusal names what it caught and how to answer.
+`docs/commands.md` is every command the CLI serves with a line on each, walked from the wired app at generation time rather than listed by hand — so a command is there by existing, and reading it is how you find one you did not know to look for. `uv run lup-devtools <command> --help` gives its arguments. `docs/devtools.md` carries what a walk cannot reach: the tournament names, the commit types, and why three verbs are refused.
 
-Every shell command, URL scope, and edit is classified. Segments join
-deny > ask > defer > allow, and malformed input fails conservatively. Two
-refusals are worth knowing before you meet them:
+`lup` itself is the one dependency `uv add` does not manage. How this project obtains it — from git at a ref, from the package index, or from a checkout on this disk — is a mode `dev library status` reads and `dev library git|use|link` rewrites, and the mode decides what upgrading means. Upgrading is never just the lock: a newer lup ships newer skill, agent and policy declarations, and the native trees compile from them, so `harness generate all` is part of the move rather than a follow-up to it.
 
-- **A forecast, in any spelling.** Refused, with the instruction to print the command instead.
-- **A hand edit to a generated tree.** The harness tree is compiled from the declarations under `src/aib/devtools/harness/`; edit those and regenerate.
+## The gates you will meet
 
-`# lup: escalate: <why>` as the leading line of a shell command promotes a
-classified deny or ask into an approval question carrying that reason.
+You are not expected to hold these conventions in memory. The permission policy is a declaration compiled into the plugin that enforces it, and every refusal names what it caught and what to do instead. Shell commands, fetch scopes and edits are all classified; segments join deny > ask > defer > allow, and malformed input fails conservatively.
+
+Two refusals are worth knowing before you meet them:
+
+- **A forecast, in any spelling** — print the command instead.
+- **A hand edit to a generated tree** — the trees compile from declarations under `src/aib/devtools/harness/`. Edit those and regenerate.
+
+`# lup: escalate: <why>` as the leading line of a shell command turns a classified deny or ask into an approval question carrying that reason.
+
+A gate that feels wrong is usually a **seam** — an opinion the library holds that this repository is meant to overrule. `dev seams` prints each one, what it holds, and the line of `harness/catalog.py` it is written on; the same command settles one (`--own`/`--disown` a file, `--retire`/`--keep` a scan rule). Reach for it before working around a verdict: a decision written into the declaration is one the next session meets too.
 
 Change the policy with """
         ),
@@ -491,7 +271,7 @@ Change the policy with """
         models.TextPart(
             text=r""", which edits the canonical inputs and regenerates the plugin.
 
-## Settings & Configuration
+## Settings and environment
 
 Settings are project-level, in the tree the harness owns ("""
         ),
@@ -499,136 +279,55 @@ Settings are project-level, in the tree the harness owns ("""
         models.TextPart(
             text=r"""), never user-level — and generated, so the source to edit is `harness/content/settings.py`.
 
-### Merging Local Settings
+**Every time you respond**, check whether a local settings file sits beside the generated one, and review it for defaults worth keeping. Merge them into the declaration, not the artifact: a permission added to the generated file is reverted by the next generation.
 
-**Every time you respond to the user**, check whether a local settings file
-sits beside the generated one. If it does, review it for sensible defaults
-worth keeping. The merge target is the declaration in
-`harness/content/settings.py` rather than the generated file — a permission
-added to the artifact is reverted by the next generation, and one added to the
-declaration is what every later tree carries.
-
-### Environment
-
-`.env` holds defaults; `.env.local` holds secrets, is gitignored, and overrides them. Configuration is loaded through pydantic-settings in `src/aib/config.py`, which is the only module that reads the environment.
+`.env` holds defaults; `.env.local` holds secrets, is gitignored, and overrides them. `src/aib/config.py` is the only module that reads the environment.
 
 ---
 
-# Process & Communication
+# Process
 
-## Asking Questions
+## Ask as a question
 
-**Always surface a question as a question**, through the structured question
-facility, rather than as narration the user has to notice. This applies to:
+**Surface a question as a question**, through the structured facility, rather than as narration the user has to notice — when requirements are ambiguous, when several approaches are valid, before anything destructive, and whenever you would otherwise assume. Even open-ended questions get concrete options plus a free-form one, because structured answers are what downstream notification parsing reads.
 
-- Clarifying requirements or ambiguous instructions
-- Offering choices between implementation approaches
-- Confirming before destructive or irreversible actions
-- Proposing changes or improvements
-- Any situation where you need user input before proceeding
+Propose rather than assume: show the current state, say why the change would help, and offer the alternatives you considered.
 
-Even for open-ended questions, attach concrete options plus a free-form one — structured answers are what downstream notification parsing reads.
+## Deferred work
 
-**When proposing changes:**
+**Never create a tracking file.** A `TODO.md`, backlog or roadmap parks a decision where no workflow will surface it again — deferral by tracking file is delegation to nobody. Work not being done now lives in one of three places, chosen by what it is attached to:
 
-- **Propose, don't assume**: Ask before making changes
-- **Show context**: Show relevant current state before proposing
-- **Explain rationale**: Every suggestion should include why it would help
-- **Offer alternatives**: Present options when multiple valid approaches exist
-
-**When in doubt, ask.** Err on the side of asking questions rather than making assumptions.
-
-## Deferred Work
-
-**Never create tracking files.** A `TODO.md`, backlog, or roadmap file parks a
-decision where no workflow will surface it again — deferral by tracking file is
-delegation to nobody. Work that is not being done now lives in one of three
-places, chosen by what it is attached to:
-
-- **A `# lup: defer: <text>` note**, when the work belongs to a site in this code, where `lup-devtools report` keeps it visible until somebody wakes it.
+- **A `# lup: defer: <text>` note**, when the work belongs to a site in this code. Default to the bare `defer:`; a bracketed `defer[<gate>]:` states a real, externally-checkable gate, never that this code might change again. Two spellings are resolved rather than printed, and `dev check` fails the run either comes true: `defer[gone:<path>]` wakes once that path stops existing, and `defer[branch:<name>]` wakes for whoever is standing on that branch — read off `main`, so it reaches them without their having merged it. Write a branch note where you are and aim it at the branch that has to act. Any other gate stays prose, and prose stays advisory.
 - **A GitHub issue**, when the subject is the tooling misbehaving rather than the code.
-- **A question to the user**, when whether to defer at all is itself the open question.
+- **A question to the user**, when whether to defer at all is the open question.
 
-`uv run lup-devtools report` answers what is left across every surface: open
-notes, unverified claims, stale generated artifacts, and unlanded branches.
+`uv run lup-devtools report` answers what is left across every surface: open notes, unverified claims, stale generated artifacts, unlanded branches. The root `PLAN.md` holds real history but is not maintained; work still live in it belongs in a note at the site it concerns.
 
-This replaces the rule that `PLAN.md` is the source of truth for what has been
-built and what remains. The root `PLAN.md` is not deleted — it holds real
-history — but it is no longer maintained as a tracking file, and work still
-live in it belongs in a `# lup: defer:` note at the site it concerns, where
-`report` will keep surfacing it.
+## Report what you changed
 
-## Code Change Reports
+After code modifications, give an **extensive report**: a one-paragraph summary, the files modified, the detailed changes with surrounding context and a rationale for each, the architectural considerations, and what was tested. `docs/devtools.md` carries the format and a worked example.
 
-After completing code modifications, provide an **extensive report**: a
-one-paragraph summary, the files modified, the detailed changes with
-surrounding context and a rationale for each, the architectural
-considerations, and what was tested.
+## Skills
 
-`docs/devtools.md` carries the section-by-section format and a worked
-example.
+One generated plugin, under the `lup` prefix. Most of the roster is the library's — the git and review loop, the resolver, code work, harness authoring, the feedback loop. Four are this repository's own, and they are the forecasting ones: `audit`, `design`, `fb-retrodict`, and `leak`. Clearing branches is `land`, resolving a conflicted tree is `merge`, and the feedback-loop phases are the library's — so when a workflow here seems to want a new skill, look for the library's word for it first.
 
-## Slash Commands & Skills
+Every skill is generated, so none is edited in place. This repository's four are declared under `src/aib/devtools/harness/content/skills/`; a library skill's source is upstream, so improving one is a change to send there.
 
-This repository carries one plugin, generated, under the `lup` prefix. Most of
-its roster is the library's — the git and review loop, the resolver, code work,
-harness authoring, and the feedback loop. Four are this repository's own, and
-they are the forecasting ones: `audit`, `design`, `fb-retrodict`, and `leak`.
+**After invoking a command**, notice how it was actually used against how it is documented. When the user corrects your approach, redirects focus, or asks for something the command should have covered, that is the command asking to evolve — surface the improvement as a question.
 
-A skill that only looked like this repository's own is not among them.
-Clearing branches and worktrees is `land`, resolving a conflicted tree is
-`merge`, and the feedback-loop phases are the library's. Each was maintained
-twice under a second, hand-written plugin until the declaration replaced it —
-so when a workflow here seems to want a new skill, look for the library's word
-for it first.
+## Report friction
 
-**After every command invocation**, reflect on how it was actually used vs. documented:
+When the tooling fights you, **file it** rather than only working around it: a workaround that lives in one session's narration teaches nobody. `uv run lup-devtools dev report-friction` writes the issue with the fields that make it actionable — what you ran, the exact error, the state it left behind, what recovery cost, and which component owns the fix. File whenever a command half-completes and leaves inconsistent state, a classifier reports a failed probe as fact, or a permission boundary blocks something the documented workflow prescribes.
 
-1. **Compare intent vs usage**: Did the command serve its documented purpose, or was it adapted?
-2. **Notice patterns**: When the user corrects your approach or redirects focus, that's a signal the command should evolve.
-3. **Proactively propose updates**: Surface the suggested improvement as a question.
+Record what you observed, not what you concluded. Anything about the harness, the policy, or the devtools skeleton is `lup`'s rather than this repository's, and the command routes it there.
 
-**Evolution signals:**
+## External resources
 
-- User provides external docs → Add doc-fetching or reference to command
-- User corrects your approach → Update command to prevent future errors
-- User asks for something the command should cover → Expand scope
-- User ignores sections → Consider simplifying
-
-Every skill is generated, so none is edited in place — the markdown each
-harness tree carries is output. A library skill's source is a declaration under
-`packages/lup`, so improving one is a change to send upstream; this
-repository's four are declared under
-`src/aib/devtools/harness/content/skills/`, and change here.
-
-## Reporting Friction
-
-When the tooling fights you, **open a GitHub issue** rather than only working
-around it and moving on. A workaround that lives in one session's narration
-teaches nobody; the issue is what survives the session. File one whenever a
-command half-completes and leaves inconsistent state, a classifier reports a
-failed probe as though it were a fact, or a permission boundary blocks an
-operation the documented workflow prescribes.
-
-Record what you observed rather than what you concluded: the exact command,
-the exact error, the state it left behind, and what the recovery cost. Name
-the component that owns the fix — which for anything about the harness, the
-policy, or the devtools skeleton is `lup` rather than this repository, so the
-issue is filed against `joy-void-joy/lup` and not here.
-
-This repository's `dev` sub-app is its own four commands rather than the
-library's tree, so it has no `report-friction` yet. Write the issue by hand
-with those five fields.
-
-## External Resources
-
-When a question is about the harness you are running under, its agent SDK, or its model API, read
-that runtime's own documentation rather than answering from memory: delegate
-to the documentation subagent where one is available, or fetch """
+When the question is about the runtime you are running under, its agent SDK, or its model API, read that runtime's own documentation rather than answering from memory — delegate to a documentation subagent where there is one, or fetch """
         ),
         models.RuntimeDocs(),
         models.TextPart(
-            text=r""" directly. The fetch scopes the permission policy admits are declared in `harness/catalog.py`. When the user provides documentation links, incorporate that knowledge into the guidance source or the relevant skill declaration.
+            text=r""" directly. The fetch scopes the policy admits are declared in `harness/catalog.py`. When the user gives you a documentation link, fold what it taught into this guidance or the relevant skill declaration.
 """
         ),
     ]

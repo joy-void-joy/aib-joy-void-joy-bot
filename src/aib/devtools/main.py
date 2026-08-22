@@ -13,8 +13,11 @@ that tree for now lives in the library, and this project mounts only the one
 command that has to know where its own version used to be declared.
 """
 
+from pathlib import Path
+
 import typer
 from lup.devtools.dev.app import create_dev_app
+from lup.devtools.dev.commands import write_command_reference
 from lup.devtools.roster import DevtoolsDeclarations
 from lup.devtools.subapps import SubApp, compose, subapp
 from lup.devtools.version import SUBAPP as LIBRARY_VERSION
@@ -48,10 +51,23 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
+def command_reference(root: Path | None = None, *, check: bool = False) -> Path:
+    """Write or verify the reference for every command this CLI serves.
+
+    Reads ``app`` when it runs rather than taking it as an argument: the
+    declarations below are built before the sub-apps are mounted onto it, and
+    a repository writer runs long after both. Wired from the composition root
+    because that is the only module that has the whole CLI — a writer declared
+    beside the other two would have to import this one, which nothing does.
+    """
+    return write_command_reference(app, root, check=check)
+
+
 DECLARED = DevtoolsDeclarations(
     dev=dev.declared,
     targets=TARGETS,
-    repository_writers=REPOSITORY_WIDE,
+    repository_writers=[*REPOSITORY_WIDE, command_reference],
     guidance=guidance_document(),
     prompt=agent_prompt,
     profiles=profile_directory(),
