@@ -79,8 +79,12 @@ TARGETS = NativeTargets(builders={"claude": claude_target, "codex": codex_target
 
 
 REPOSITORY_WIDE: list[RepositoryWriter] = []
-"""No generated file here belongs outside the runtime tree.
+"""The writers declared beside the harness: none.
 
 The rule reference and the CI workflow the library can write are both
 declined: this repository's gate is its tracked `.githooks/`, and its rules
-are read in the library that enforces them."""
+are read in the library that enforces them.
+
+The command reference is the one repository-wide file this project does
+publish, and it is wired in `devtools/main.py` rather than here — it walks the
+composed CLI, which is a thing only the composition root has."""
