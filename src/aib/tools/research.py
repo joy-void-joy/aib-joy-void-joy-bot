@@ -20,7 +20,6 @@ from collections.abc import Mapping
 from datetime import date, datetime, timedelta, timezone
 
 from lup.runtime.models import (
-    MessageCompletedEvent,
     SessionId,
     TurnMessage,
     TurnTextBlock,
@@ -29,7 +28,12 @@ from lup.runtime.models import (
 )
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
-from aib.agent.client import ClaudeExtras, agent_request, agent_session
+from aib.agent.client import (
+    ClaudeExtras,
+    agent_request,
+    agent_session,
+    drive_turn,
+)
 from aib.agent.display import make_agent_prefix, print_block
 
 from aib.agent.nested import NestedAgentReport
@@ -304,24 +308,24 @@ async def run_research_agent(
     )
     resume = None if resume_session_id is None else SessionId(value=resume_session_id)
     async with factory.open(resume) as handle:
+
+        def record(message: TurnMessage) -> None:
+            nonlocal assistant_msg_count, tool_use_count
+            nested_messages.append(message)
+            if message.role != "assistant":
+                return
+            assistant_msg_count += 1
+            for block in message.blocks:
+                print_block(block, prefix=prefix)
+                if isinstance(block, TurnToolCallBlock):
+                    tool_use_count += 1
+                    if block.name == "StructuredOutput":
+                        so_tool_blocks.append(block)
+                elif isinstance(block, TurnTextBlock):
+                    text_blocks.append(block.text)
+
         turn = await handle.session.start(turn_request(prompt, ResearchFindings))
-        if turn.events is not None:
-            async for event in turn.events.events():
-                if not isinstance(event, MessageCompletedEvent):
-                    continue
-                nested_messages.append(event.message)
-                if event.message.role != "assistant":
-                    continue
-                assistant_msg_count += 1
-                for block in event.message.blocks:
-                    print_block(block, prefix=prefix)
-                    if isinstance(block, TurnToolCallBlock):
-                        tool_use_count += 1
-                        if block.name == "StructuredOutput":
-                            so_tool_blocks.append(block)
-                    elif isinstance(block, TurnTextBlock):
-                        text_blocks.append(block.text)
-        result = await turn.turn.result()
+        result = await drive_turn(turn, record)
 
     session_id = result.identifiers.session.value
     logger.info(

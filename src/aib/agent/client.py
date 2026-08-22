@@ -6,12 +6,14 @@ module is the only place either provider's own configuration is named.
 Exports:
 - agent_request(...) — a tool-using session, in words both runtimes share
 - agent_session(request, extras=...) — the factory the selection answers with
+- drive_turn(turn, on_message) — consume a turn's messages as its result settles
 - ClaudeExtras — the settings only Claude has a word for
 - one_shot(prompt, ...) — prompt→result convenience for tool-free LLM calls
 """
 
+import asyncio
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import overload
 
@@ -25,8 +27,18 @@ from lup.hooks import LupHooksConfig
 from lup.mcp import McpServerEntry
 from lup.runtime.config import ConfigTransform
 from lup.runtime.factory import SessionFactory
-from lup.runtime.models import TurnResult
+from lup.runtime.models import (
+    MessageCompletedEvent,
+    TurnHandle,
+    TurnMessage,
+    TurnResult,
+)
 from lup.runtime.selection import SessionAutonomy, SessionRequest
+from lup.runtime.wrappers import (
+    CorrectionConfig,
+    RecoveryConfig,
+    decorated_session_factory,
+)
 from lup.types import EnvVars, Usage
 from pydantic import BaseModel
 
@@ -195,6 +207,71 @@ def agent_request(
     )
 
 
+# Bounded resilience every session opened here carries. A turn ends when the
+# model stops, and a model that stops after a preamble has submitted nothing —
+# so without these a fifty-token miss ends a forecast that had not started.
+TURN_RECOVERY = RecoveryConfig(retries=1)
+
+# The instruction says continue rather than submit. A correction arrives at an
+# agent that still holds its own context, and one told to submit a value
+# matching the schema will answer with a forecast it has not done the work for.
+TURN_CORRECTION = CorrectionConfig(
+    cycles=2,
+    instruction=(
+        "The previous response ended without submitting. Continue the "
+        "analysis and call submit_output with your final answer once your "
+        "research supports it."
+    ),
+)
+
+
+async def drive_turn[T: BaseModel | None](
+    turn: TurnHandle[T], on_message: Callable[[TurnMessage], None]
+) -> TurnResult[T]:
+    """Consume a turn's messages while its result drives the cycles they span.
+
+    A resilient turn's stream is one logical stream over every retry and
+    correction, and it closes when the result settles. Draining it before
+    asking for the result therefore waits on a close that only the unasked
+    result would cause, so the two run together instead.
+
+    A callback that raises abandons the turn rather than correcting it: a
+    caller that rejects what it just saw is not asking for another attempt.
+    """
+
+    async def consume() -> None:
+        if turn.events is None:
+            return
+        async for event in turn.events.events():
+            if isinstance(event, MessageCompletedEvent):
+                on_message(event.message)
+
+    consumer = asyncio.create_task(consume())
+    settled = asyncio.create_task(turn.turn.result())
+    await asyncio.wait((consumer, settled), return_when=asyncio.FIRST_EXCEPTION)
+    if consumer.done() and consumer.exception() is not None:
+        settled.cancel()
+        abandoned = await asyncio.gather(settled, return_exceptions=True)
+        logger.debug("turn abandoned after its consumer raised: %s", abandoned[0])
+        await consumer
+    try:
+        return await settled
+    finally:
+        await consumer
+
+
+def resilient(factory: SessionFactory) -> SessionFactory:
+    """Give a factory's sessions bounded retries and submission corrections.
+
+    Both cycles resume the session rather than replacing it, so a corrected
+    turn reaches an agent that still holds its research rather than one
+    starting the question over.
+    """
+    return decorated_session_factory(
+        factory, recovery=TURN_RECOVERY, correction=TURN_CORRECTION
+    )
+
+
 def agent_session(
     request: SessionRequest,
     *,
@@ -214,8 +291,10 @@ def agent_session(
     selected = select_runtime(runtime)
     contained = selected.contained(request)
     if extras is None or selected is not CLAUDE_RUNTIME:
-        return selected.session_factory(contained)
-    return create_claude_session_factory(extras.apply(claude_config(contained)))
+        return resilient(selected.session_factory(contained))
+    return resilient(
+        create_claude_session_factory(extras.apply(claude_config(contained)))
+    )
 
 
 @overload

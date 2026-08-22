@@ -16,13 +16,18 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from lup.runtime.models import (
-    MessageCompletedEvent,
+    TurnMessage,
     TurnTextBlock,
     turn_request,
 )
 from pydantic import BaseModel, Field
 
-from aib.agent.client import ClaudeExtras, agent_request, agent_session
+from aib.agent.client import (
+    ClaudeExtras,
+    agent_request,
+    agent_session,
+    drive_turn,
+)
 from aib.tools.metrics import costs
 from aib.agent.display import make_agent_prefix, print_block
 from aib.agent.resolver import (
@@ -760,6 +765,13 @@ async def run_survey() -> list[Issue]:
         ),
         extras=ClaudeExtras(),
     )
+
+    def show(message: TurnMessage) -> None:
+        if message.role != "assistant":
+            return
+        for block in message.blocks:
+            print_block(block, prefix=prefix)
+
     try:
         async with factory.open() as handle:
             turn = await handle.session.start(
@@ -767,15 +779,7 @@ async def run_survey() -> list[Issue]:
                     "Survey the worldview store and register every issue you find."
                 )
             )
-            if turn.events is not None:
-                async for event in turn.events.events():
-                    if (
-                        isinstance(event, MessageCompletedEvent)
-                        and event.message.role == "assistant"
-                    ):
-                        for block in event.message.blocks:
-                            print_block(block, prefix=prefix)
-            usage = (await turn.turn.result()).usage
+            usage = (await drive_turn(turn, show)).usage
             if usage.cost_usd is not None:
                 costs.record("worldview_survey", usage.cost_usd)
     finally:
@@ -810,19 +814,18 @@ async def fix_issue(issue: Issue) -> str:
         ),
         extras=ClaudeExtras(),
     )
+
+    def report(message: TurnMessage) -> None:
+        if message.role != "assistant":
+            return
+        for block in message.blocks:
+            print_block(block, prefix=prefix)
+            if isinstance(block, TurnTextBlock):
+                text_blocks.append(block.text)
+
     async with factory.open() as handle:
         turn = await handle.session.start(turn_request(prompt))
-        if turn.events is not None:
-            async for event in turn.events.events():
-                if (
-                    isinstance(event, MessageCompletedEvent)
-                    and event.message.role == "assistant"
-                ):
-                    for block in event.message.blocks:
-                        print_block(block, prefix=prefix)
-                        if isinstance(block, TurnTextBlock):
-                            text_blocks.append(block.text)
-        usage = (await turn.turn.result()).usage
+        usage = (await drive_turn(turn, report)).usage
         if usage.cost_usd is not None:
             costs.record("worldview_fix", usage.cost_usd)
 

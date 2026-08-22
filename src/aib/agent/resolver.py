@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from lup.runtime.models import (
-    MessageCompletedEvent,
+    TurnMessage,
     TurnTextBlock,
     turn_request,
 )
@@ -21,7 +21,12 @@ from lup.mcp import (
 )
 from pydantic import BaseModel
 
-from aib.agent.client import ClaudeExtras, agent_request, agent_session
+from aib.agent.client import (
+    ClaudeExtras,
+    agent_request,
+    agent_session,
+    drive_turn,
+)
 from aib.agent.display import make_agent_prefix, print_block
 from aib.agent.nested import NestedAgentReport
 from aib.agent.tool_policy import (
@@ -165,19 +170,18 @@ async def resolve_question(
         ),
         extras=ClaudeExtras(),
     )
+
+    def record(message: TurnMessage) -> None:
+        if message.role != "assistant":
+            return
+        for block in message.blocks:
+            print_block(block, prefix=prefix)
+            if isinstance(block, TurnTextBlock):
+                text_blocks.append(block.text)
+
     async with factory.open() as handle:
         turn = await handle.session.start(turn_request(prompt, ResolutionVerdict))
-        if turn.events is not None:
-            async for event in turn.events.events():
-                if (
-                    isinstance(event, MessageCompletedEvent)
-                    and event.message.role == "assistant"
-                ):
-                    for block in event.message.blocks:
-                        print_block(block, prefix=prefix)
-                        if isinstance(block, TurnTextBlock):
-                            text_blocks.append(block.text)
-        verdict = (await turn.turn.result()).output
+        verdict = (await drive_turn(turn, record)).output
 
     final_text = text_blocks[-1] if text_blocks else ""
     if verdict is not None:

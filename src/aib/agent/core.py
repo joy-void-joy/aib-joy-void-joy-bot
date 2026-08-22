@@ -13,7 +13,6 @@ from typing import Any, TypedDict, cast
 
 from lup.adapters.claude.runtime import ClaudeSandboxConfig
 from lup.runtime.models import (
-    MessageCompletedEvent,
     TurnBlock,
     TurnMessage,
     TurnResult,
@@ -26,7 +25,12 @@ from lup.runtime.models import (
 
 from pydantic import BaseModel, ValidationError
 
-from aib.agent.client import ClaudeExtras, agent_request, agent_session
+from aib.agent.client import (
+    ClaudeExtras,
+    agent_request,
+    agent_session,
+    drive_turn,
+)
 from aib.agent.display import (
     normalize_content as _normalize_content,
     print_block,
@@ -928,26 +932,22 @@ async def run_forecast(
                     ],
                 ),
             )
+
+            def record(message: TurnMessage) -> None:
+                all_messages.append(message)
+                if message.role == "assistant":
+                    assistant_messages.append(message)
+                for block in message.blocks:
+                    print_block(block)
+                    if isinstance(block, TurnTextBlock):
+                        collected_text.append(block.text)
+                        credit_error = CreditExhaustedError.from_message(block.text)
+                        if credit_error:
+                            raise credit_error
+
             async with factory.open() as handle:
                 turn = await handle.session.start(turn_request(prompt, model_class))
-                if turn.events is not None:
-                    async for event in turn.events.events():
-                        if not isinstance(event, MessageCompletedEvent):
-                            continue
-                        message = event.message
-                        all_messages.append(message)
-                        if message.role == "assistant":
-                            assistant_messages.append(message)
-                        for block in message.blocks:
-                            print_block(block)
-                            if isinstance(block, TurnTextBlock):
-                                collected_text.append(block.text)
-                                credit_error = CreditExhaustedError.from_message(
-                                    block.text
-                                )
-                                if credit_error:
-                                    raise credit_error
-                result = await turn.turn.result()
+                result = await drive_turn(turn, record)
         except Exception as exc:
             save_partial(f"{type(exc).__name__}: {exc}")
             logging.getLogger("aib").removeHandler(_log_handler)
