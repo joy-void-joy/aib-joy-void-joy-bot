@@ -105,6 +105,14 @@ class TestRegistry:
         with pytest.raises(KeyError, match="registered: baseline"):
             select_variants(["nope"], path)
 
+    def test_a_baseline_naming_no_arm_is_rejected(self) -> None:
+        """Caught at load, where the name is, rather than at the comparison."""
+        with pytest.raises(ValueError, match="registered: a"):
+            VariantRegistry(variants=[Variant(name="a")], baseline="b")
+
+    def test_a_registry_may_leave_the_control_unstated(self) -> None:
+        assert VariantRegistry(variants=[Variant(name="a")]).baseline_variant() is None
+
 
 class TestVariantEnv:
     def test_bare_variant_only_sets_the_trace_label(self) -> None:
