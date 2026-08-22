@@ -1479,8 +1479,9 @@ def loop(
 
 
 EXAMPLE_REGISTRY = """{
+  "baseline": "shipped",
   "variants": [
-    {"name": "baseline", "note": "current defaults, unmodified"},
+    {"name": "shipped", "note": "current defaults, unmodified"},
     {
       "name": "sonnet-max",
       "model": "sonnet",
@@ -1491,7 +1492,9 @@ EXAMPLE_REGISTRY = """{
   ]
 }
 
-Give each arm its own `profile` so concurrent runs do not share a rate limit."""
+`baseline` names the arm the others are read against; leaving it out leaves
+the comparison unstated. Give each arm its own `profile` so concurrent runs
+do not share a rate limit."""
 
 
 class ArmResult(BaseModel):
@@ -1620,8 +1623,8 @@ def ab(
 
     Examples:
         uv run forecast ab --list
-        uv run forecast ab -v baseline -v sonnet-max
-        uv run forecast ab 41521 41454 -v baseline -v sonnet-max -j 4
+        uv run forecast ab -v opus -v chatgpt-sol
+        uv run forecast ab 41521 41454 -v condensed -v direct-research -j 4
     """
     registry = load_registry()
     if list_variants:
@@ -1632,10 +1635,11 @@ def ab(
         for v in registry.variants:
             spec = ", ".join(
                 f"{k}={getattr(v, k)}"
-                for k in ("model", "effort", "profile")
+                for k in ("model", "effort", "profile", "runtime", "research")
                 if getattr(v, k) is not None
             )
-            print(f"  {v.name:<20} {spec or '(inherits defaults)'}")
+            role = "  (baseline)" if v.name == registry.baseline else ""
+            print(f"  {v.name:<20} {spec or '(inherits defaults)'}{role}")
             if v.note:
                 print(f"  {'':<20} {v.note}")
         raise typer.Exit(0)
