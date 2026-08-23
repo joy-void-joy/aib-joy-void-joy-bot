@@ -110,14 +110,23 @@ Variants are named agent configurations registered in `notes/variants.json`:
 
 ```json
 {
+  "baseline": "shipped",
   "variants": [
-    {"name": "baseline", "note": "current defaults"},
+    {"name": "shipped", "note": "current defaults"},
     {"name": "sonnet-max", "model": "sonnet", "effort": "max", "profile": "alt"}
   ]
 }
 ```
 
-`uv run forecast ab -v baseline -v sonnet-max` runs every question (the
+`baseline` names the arm the others are read against, so which arm is the
+control is read off the registry rather than off a name taken to mean it. It
+is optional; leaving it out leaves the comparison unstated. Nothing runs an
+arm on its own — `ab` resolves only the names given with `-v`, and the
+forecast loop takes no variant at all.
+
+An arm states only what it varies; everything else inherits the default, so
+a topology arm is a `research` and a name. `uv run forecast ab -v shipped -v
+sonnet-max` runs every question (the
 regression suite by default) under each variant. Each arm is a separate
 process — `settings.model` is a process global read from many modules, so
 arms sharing an interpreter would fight over it. Give each arm its own

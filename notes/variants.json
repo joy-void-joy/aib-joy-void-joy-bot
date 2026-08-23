@@ -1,24 +1,28 @@
 {
+  "baseline": "opus",
   "variants": [
     {
-      "name": "baseline",
+      "name": "opus",
       "model": "opus",
       "runtime": "claude",
-      "note": "The live configuration, as the control arm: opus-5 on Claude Code."
+      "note": "The live configuration: opus-5 on Claude Code."
     },
     {
-      "name": "gpt-5.6-sol",
+      "name": "chatgpt-sol",
       "model": "gpt-5.6-sol",
       "effort": "xhigh",
       "runtime": "codex",
-      "note": "GPT-5.6 Sol through Codex. Named as the Codex CLI names it, not as OpenRouter does — the arm reaches the model through the Codex login, so no compatible-endpoint transform is involved. xhigh rather than max because max has no Codex spelling."
+      "note": "GPT-5.6 Sol through Codex. The model is spelled as the Codex CLI spells it, not as OpenRouter does — the arm reaches it through the Codex login, so no compatible-endpoint transform is involved. xhigh rather than max because max has no Codex spelling."
     },
     {
       "name": "direct-research",
-      "model": "opus",
-      "runtime": "claude",
       "research": "direct",
-      "note": "The same model and runtime as baseline, mounting the forty narrow tools rather than the sixteen condensed ones. Both arms hold their tools directly, so what varies is granularity: a wide tool asks sources the agent would not have thought to ask, where a narrow one is asked only deliberately. The forecaster's system prompt carries ~40 tool descriptions rather than ~16, so a loss here may be prompt bloat rather than granularity. Delegation is the other axis and this arm does not touch it."
+      "note": "The forty narrow tools the condensed sixteen were drawn out of, mounted on the forecaster. Everything else is inherited, so what varies against condensed is granularity: a wide tool asks sources the agent would not have thought to ask, where a narrow one is asked only deliberately. The system prompt carries ~40 tool descriptions rather than ~16, so a loss here may be prompt bloat rather than granularity. Delegation is the other axis and this arm does not touch it."
+    },
+    {
+      "name": "condensed",
+      "research": "condensed",
+      "note": "The shipped topology, pinned rather than inherited. It runs what the defaults run today, which is the point: an arm naming condensed goes on measuring the sixteen wide tools if the default moves, where an arm that says nothing follows it and stops being the thing the experiment was compared against."
     }
   ]
 }

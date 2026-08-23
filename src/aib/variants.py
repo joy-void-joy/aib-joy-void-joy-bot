@@ -12,8 +12,9 @@ context vars, and a crash in one arm of the experiment.
 """
 
 from pathlib import Path
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from lup.workspace.paths import notes_path
 
@@ -94,6 +95,10 @@ class VariantRegistry(BaseModel):
     """The registered experiment configurations, as stored on disk."""
 
     variants: list[Variant] = Field(default_factory=list)
+    baseline: str | None = Field(
+        default=None,
+        description="Name of the arm the others are read against. None leaves the control unstated.",
+    )
 
     def by_name(self, name: str) -> Variant:
         for variant in self.variants:
@@ -101,6 +106,22 @@ class VariantRegistry(BaseModel):
                 return variant
         known = ", ".join(v.name for v in self.variants) or "none"
         raise KeyError(f"unknown variant {name!r} (registered: {known})")
+
+    def baseline_variant(self) -> Variant | None:
+        """The arm the others are read against, where the registry names one."""
+        return None if self.baseline is None else self.by_name(self.baseline)
+
+    @model_validator(mode="after")
+    def check_baseline_is_registered(self) -> Self:
+        """A control naming no arm reads as a comparison that cannot be made."""
+        if self.baseline is None:
+            return self
+        if self.baseline not in {v.name for v in self.variants}:
+            known = ", ".join(v.name for v in self.variants) or "none"
+            raise ValueError(
+                f"baseline {self.baseline!r} is not registered (registered: {known})"
+            )
+        return self
 
 
 def load_registry(path: Path = VARIANTS_PATH) -> VariantRegistry:
