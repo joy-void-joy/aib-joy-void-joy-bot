@@ -1,5 +1,6 @@
 """Forecasting agent using Claude Agent SDK."""
 
+import asyncio
 import dataclasses
 import json
 import logging
@@ -93,6 +94,16 @@ from aib.worldview.lookup import register_main_forecast
 logger = logging.getLogger(__name__)
 
 ACTIVE_LOG_PATH: Path | None = None
+
+FORECAST_ABORTED = (Exception, KeyboardInterrupt, asyncio.CancelledError)
+"""Every way a run ends without a forecast, including the two that are not `Exception`.
+
+A forecast is tens of minutes of research, and Ctrl+C is how most of the long
+ones end — so the interrupt path is the one that most needs the partial trace
+written, and it is exactly the path a bare ``except Exception`` lets past.
+`CancelledError` is the same interrupt reaching a task inside a `gather`,
+which is how it arrives under `tournament`, `retrodict` and `ab`.
+"""
 
 _PRESET_TEMPLATE = (Path(__file__).parent / "claude_code_preset.txt").read_text()
 
@@ -948,7 +959,7 @@ async def run_forecast(
             async with factory.open() as handle:
                 turn = await handle.session.start(turn_request(prompt, model_class))
                 result = await drive_turn(turn, record)
-        except Exception as exc:
+        except FORECAST_ABORTED as exc:
             save_partial(f"{type(exc).__name__}: {exc}")
             logging.getLogger("aib").removeHandler(_log_handler)
             _log_handler.close()
@@ -975,7 +986,7 @@ async def run_forecast(
             ),
             is_retrodict=cutoff is not None,
         )
-    except Exception as exc:
+    except FORECAST_ABORTED as exc:
         save_partial(f"review_forecast_trace failed: {type(exc).__name__}: {exc}")
         raise
 
