@@ -14,6 +14,7 @@ Layout:
     notes/traces/<version>/retrodict/<post_id>/<retrodict_date>_<timestamp>.json
     notes/traces/<version>/sessions/<post_id>/<timestamp>/meta.md
     notes/traces/<version>/logs/<post_id>_<timestamp>.md
+    notes/traces/<version>/experiments/<timestamp>.json
 """
 
 import json
@@ -87,6 +88,16 @@ def sessions_dir(version: str | None = None) -> Path:
     variant directory or overwrite the baseline it is being compared against.
     """
     return lup_sessions_dir(version or trace_version())
+
+
+def experiments_dir(version: str | None = None) -> Path:
+    """Directory for A/B experiment traces: notes/traces/<version>/experiments/
+
+    Version-plain where its neighbours are variant-defaulted: an experiment is
+    the comparison *between* arms, and filing it under one arm's
+    ``<version>+<variant>`` would name the run after a single side of it.
+    """
+    return traces_path() / (version or agent_version()) / "experiments"
 
 
 def trace_logs_dir(version: str | None = None) -> Path:

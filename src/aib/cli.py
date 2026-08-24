@@ -13,13 +13,13 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 import time
 from datetime import datetime, timezone
-from typing import Annotated, TextIO, TypedDict, cast
+from typing import Annotated, Literal, TextIO, TypedDict, cast
 
 import httpx
 import typer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from aib.paths import REGRESSION_SUITE_PATH
+from aib.paths import REGRESSION_SUITE_PATH, experiments_dir
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.agent.display import make_arm_prefix
@@ -1498,13 +1498,69 @@ do not share a rate limit."""
 
 
 class ArmResult(BaseModel):
-    """Outcome of one (question, variant) forecast process."""
+    """One (question, variant) forecast process, from launch to exit.
+
+    Opened when the process starts rather than filled in when it ends, so an
+    experiment that never reaches its summary still says which arms were in
+    the air when it stopped.
+    """
 
     post_id: int
     variant: str
-    returncode: int
-    duration_seconds: float
-    tail: str
+    status: Literal["running", "ok", "failed"] = "running"
+    returncode: int | None = None
+    duration_seconds: float | None = None
+    tail: str = ""
+
+    def close(self, returncode: int, elapsed: float, lines: list[str]) -> None:
+        """Record how the process ended."""
+        self.status = "ok" if returncode == 0 else "failed"
+        self.returncode = returncode
+        self.duration_seconds = elapsed
+        self.tail = "\n".join(lines[-ARM_TAIL_LINES:])
+
+
+class Experiment(BaseModel):
+    """What one `ab` invocation set out to do, and how far it got.
+
+    Held on disk as the arms settle rather than written at exit. An experiment
+    is hours of forecasts against a hand-picked question set, and the summary
+    it printed at the end was the only record it kept — so interrupting one,
+    which is how most of them end, left nothing behind saying what had run.
+    """
+
+    path: Path = Field(exclude=True)
+    version: str
+    baseline: str | None
+    variants: list[str]
+    question_ids: list[int]
+    retrodict: bool
+    concurrency: int
+    started_at: datetime
+    finished_at: datetime | None = None
+    interrupted: bool = False
+    arms: list[ArmResult] = []
+
+    @classmethod
+    def read(cls, path: Path) -> "Experiment":
+        """Load a trace, taking its location from where it was found.
+
+        Where the file sits is not part of what the experiment did, so `path`
+        is excluded from the JSON and supplied by whoever opened it.
+        """
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        return cls.model_validate(stored | {"path": path})
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(self.model_dump_json(indent=2), encoding="utf-8")
+
+    def open_arm(self, post_id: int, variant: str) -> ArmResult:
+        """Record an arm on disk before its process starts."""
+        arm = ArmResult(post_id=post_id, variant=variant)
+        self.arms.append(arm)
+        self.save()
+        return arm
 
 
 ARM_LINE_LIMIT = 16 * 1024 * 1024
@@ -1549,9 +1605,16 @@ async def run_arm(
     variant: Variant,
     retrodict_mode: bool,
     semaphore: asyncio.Semaphore,
-) -> ArmResult:
-    """Forecast one question under one variant, in its own process."""
+    experiment: Experiment,
+) -> None:
+    """Forecast one question under one variant, in its own process.
+
+    Writes through `experiment` rather than returning, because a return value
+    only reaches the caller for an arm that finished — and the arms worth
+    recording most are the ones still running when the experiment is cut off.
+    """
     async with semaphore:
+        arm = experiment.open_arm(post_id, variant.name)
         command = "retrodict" if retrodict_mode else "test"
         started = time.monotonic()
         process = await asyncio.create_subprocess_exec(
@@ -1570,16 +1633,11 @@ async def run_arm(
         lines = await stream_arm(process.stdout, make_arm_prefix(post_id, variant.name))
         await process.wait()
         elapsed = time.monotonic() - started
+        arm.close(process.returncode or 0, elapsed, lines)
+        experiment.save()
         print(
             f"{'✅' if process.returncode == 0 else '❌'} {post_id} [{variant.name}] "
             f"in {elapsed / 60:.1f}m"
-        )
-        return ArmResult(
-            post_id=post_id,
-            variant=variant.name,
-            returncode=process.returncode or 0,
-            duration_seconds=elapsed,
-            tail="\n".join(lines[-ARM_TAIL_LINES:]),
         )
 
 
@@ -1665,38 +1723,59 @@ def ab(
         f"{concurrency} at a time\n"
     )
 
-    async def run_all() -> list[ArmResult]:
+    version = read_agent_version(project_root())
+    started_at = datetime.now(timezone.utc)
+    experiment = Experiment(
+        path=experiments_dir(version) / f"{started_at.strftime('%Y%m%d_%H%M%S')}.json",
+        version=version,
+        baseline=registry.baseline,
+        variants=[v.name for v in variants],
+        question_ids=question_ids,
+        retrodict=retrodict_mode,
+        concurrency=concurrency,
+        started_at=started_at,
+    )
+    experiment.save()
+
+    async def run_all() -> None:
         semaphore = asyncio.Semaphore(concurrency)
-        return await asyncio.gather(
-            *(run_arm(q, v, retrodict_mode, semaphore) for q, v in arms)
+        await asyncio.gather(
+            *(run_arm(q, v, retrodict_mode, semaphore, experiment) for q, v in arms)
         )
 
     try:
-        results = asyncio.run(run_all())
+        asyncio.run(run_all())
     except KeyboardInterrupt:
-        print("\n\n⏸  Interrupted — completed arms keep their traces.")
-        raise typer.Exit(130)
+        experiment.interrupted = True
+        print("\n\n⏸  Interrupted — every arm that started keeps its trace.")
+    finally:
+        experiment.finished_at = datetime.now(timezone.utc)
+        experiment.save()
 
     print("\n=== Summary ===")
     for v in variants:
-        arm_results = [r for r in results if r.variant == v.name]
-        failed = [r for r in arm_results if r.returncode != 0]
-        minutes = sum(r.duration_seconds for r in arm_results) / 60
-        print(
-            f"  {v.name:<20} {len(arm_results) - len(failed)}/{len(arm_results)} ok, "
-            f"{minutes:.0f}m total"
-        )
+        arm_results = [r for r in experiment.arms if r.variant == v.name]
+        failed = [r for r in arm_results if r.status == "failed"]
+        cut_off = [r for r in arm_results if r.status == "running"]
+        ok = len(arm_results) - len(failed) - len(cut_off)
+        minutes = sum(r.duration_seconds or 0.0 for r in arm_results) / 60
+        print(f"  {v.name:<20} {ok}/{len(question_ids)} ok, {minutes:.0f}m total")
         for r in failed:
             print(f"      ❌ {r.post_id} exited {r.returncode}")
             print(f"         {r.tail.splitlines()[-1] if r.tail else '(no output)'}")
+        for r in cut_off:
+            print(f"      ⏸  {r.post_id} was still running")
 
-    version = read_agent_version(project_root())
+    print(f"\nExperiment trace: {experiment.path}")
     print("\nCompare with:")
     for a, b in zip(variants, variants[1:]):
         print(
             f"  uv run lup-devtools scores compare "
             f"{version}+{a.name} {version}+{b.name}"
         )
+
+    if experiment.interrupted:
+        raise typer.Exit(130)
 
 
 @app.command()
