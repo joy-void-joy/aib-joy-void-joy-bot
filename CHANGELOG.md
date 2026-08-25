@@ -2,6 +2,13 @@
 
 Agent version history. Each version tracks a behavioral change in the forecasting agent.
 
+## v8.1.2 (2026-08-25)
+
+Restore the premortem adversarial review gate
+- The reviewer's tool allowlist named `StructuredOutput`, the submission tool as it was spelled before the portable-runtime migration. The hook denied the runtime's actual submission tool, so since 2026-08-18 no forecast received an adversarial review — the gate auto-approved every one of them.
+- The allowlist is gone rather than corrected: `agent_request` and the MCP servers already bound the reviewer's roster, so it could only subtract, and what it subtracted was mandatory.
+- A reviewer that cannot be reached is now recorded as `warn` with its own error, not as `approve`. The gate still opens; the outage is no longer indistinguishable from a clean pass.
+
 ## v8.1.1 (2026-08-20)
 
 Ask a turn again when it stops without submitting
