@@ -16,14 +16,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 
 from lup.hooks import (
     LupHooksConfig,
     create_permission_hooks,
-    create_tool_allowlist_hook,
-    merge_hooks,
 )
 
 from aib.agent.nested import NestedAgentReport
@@ -413,28 +411,24 @@ def build_reviewer_prompt(
 def build_reviewer_hooks(allowed_dirs: list[Path]) -> LupHooksConfig:
     """Build permission hooks restricting the reviewer to specific directories.
 
-    Both halves are lup's: the allowlist that says which tools exist for
-    this reviewer, and the directory rules that say where its read tools may
-    look. `tool_path` is resolved once at the adapter seam, so the hook no
-    longer has to know that Read spells its target `file_path` and Glob
-    spells it `path`.
-    """
-    allowed = [
-        "Read",
-        "Glob",
-        "Grep",
-        "mcp__search__search",
-        "mcp__search__fetch",
-        "StructuredOutput",
-    ]
-    hooks = create_tool_allowlist_hook(allowed)
+    Only the directory rules are stated here. Which tools exist for this
+    reviewer is settled by wiring: `agent_request` intersects the stated
+    roster with the built-ins, and every MCP server is built carrying
+    exactly the tools its session may call. A tool allowlist over that can
+    only subtract, and the one tool it has no way to name is the runtime's
+    own submission tool — injected by the adapter under a spelling that
+    differs per provider.
 
+    `tool_path` is resolved once at the adapter seam, so the hook no longer
+    has to know that Read spells its target `file_path` and Glob spells it
+    `path`.
+    """
     if not allowed_dirs:
-        return hooks
+        return LupHooksConfig()
 
     # The reviewer reads and never writes, so every directory it may reach
     # is read-only and the read-write list is empty.
-    return merge_hooks(hooks, create_permission_hooks(rw_dirs=[], ro_dirs=allowed_dirs))
+    return create_permission_hooks(rw_dirs=[], ro_dirs=allowed_dirs)
 
 
 # --- Trace File Writing ---
@@ -467,7 +461,6 @@ async def run_reviewer(
     from lup.runtime.models import (
         TurnMessage,
         TurnTextBlock,
-        TurnToolCallBlock,
         turn_request,
     )
 
@@ -505,9 +498,8 @@ async def run_reviewer(
     }
 
     try:
-        # One pass feeds three accumulators and prints as it goes, so the fold
+        # One pass feeds two accumulators and prints as it goes, so the fold
         # carries control flow no comprehension expresses.
-        so_tool_blocks: list[TurnToolCallBlock] = []  # lup: ignore[empty-collection]
         text_blocks: list[str] = []  # lup: ignore[empty-collection]
         nested_messages: list[TurnMessage] = []  # lup: ignore[empty-collection]
         review_label = question_context.get("title") if question_context else None
@@ -536,12 +528,7 @@ async def run_reviewer(
                 return
             for block in message.blocks:
                 print_block(block, prefix=prefix)
-                if (
-                    isinstance(block, TurnToolCallBlock)
-                    and block.name == "StructuredOutput"
-                ):
-                    so_tool_blocks.append(block)
-                elif isinstance(block, TurnTextBlock):
+                if isinstance(block, TurnTextBlock):
                     text_blocks.append(block.text)
 
         async with factory.open() as handle:
@@ -562,27 +549,6 @@ async def run_reviewer(
                 final_text=final_text,
                 trace=nested_trace,
             )
-
-        if so_tool_blocks:
-            last_block = so_tool_blocks[-1]
-            try:
-                json_output = last_block.arguments["json_output"]
-                result = ReviewResult.model_validate(json_output)
-                logger.warning(
-                    "Recovered premortem verdict from ToolUseBlock fallback: %s",
-                    result.verdict,
-                )
-                return NestedAgentReport[ReviewResult](
-                    payload=result,
-                    final_text=final_text,
-                    trace=nested_trace,
-                )
-            except (KeyError, ValidationError):
-                logger.warning(
-                    "Premortem reviewer produced %d StructuredOutput blocks but "
-                    "none could be parsed as ReviewResult",
-                    len(so_tool_blocks),
-                )
 
         return NestedAgentReport[ReviewResult](
             final_text=final_text,
@@ -683,6 +649,7 @@ def create_premortem_tool(
             )
 
         review_result: ReviewResult | None = None
+        failure = "the reviewer returned no verdict"
         try:
             review_report = await run_reviewer(
                 reflection_input,
@@ -692,22 +659,30 @@ def create_premortem_tool(
                 traces_dir,
             )
             review_result = review_report.payload
+            failure = review_report.error or failure
             register_premortem_trace(review_report.trace)
-        except Exception:
+        except Exception as e:
             logger.exception("Premortem reviewer crashed")
+            failure = f"{type(e).__name__}: {e}"
 
         if review_result is None:
-            logger.warning("Premortem reviewer returned None — auto-approving")
+            # Recorded as warn rather than approve. Both open the gate, so the
+            # forecast still completes — but a run whose adversarial review
+            # never happened must not read, here or in the forecast record, as
+            # a run that passed one.
+            logger.error("Premortem gate did not run: %s", failure)
+            unreviewed = (
+                f"GATE DID NOT RUN — this forecast received no adversarial "
+                f"review: {failure}. It is unreviewed, not approved."
+            )
             review_state.record(
-                ReviewResult(
-                    verdict=ReviewVerdict.approve,
-                    assessment="Reviewer unavailable; auto-approved.",
-                ),
+                ReviewResult(verdict=ReviewVerdict.warn, assessment=unreviewed),
                 reflection_input=reflection_input,
             )
             return PremortemVerdict(
-                verdict="approve",
-                assessment="Reviewer unavailable; auto-approved.",
+                verdict="warn",
+                assessment=unreviewed,
+                note="The reviewer was unreachable; the gate opened unreviewed.",
             )
 
         review_state.record(review_result, reflection_input=reflection_input)
