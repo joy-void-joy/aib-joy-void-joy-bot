@@ -126,6 +126,9 @@ class SavedForecast(BaseModel):
     # Programmatic tracking fields
     tool_metrics: dict[str, Any] | None = None  # Tool call counts, durations, errors
     token_usage: TokenUsage | None = None  # Token usage: input, output, cache
+    # What the orchestrator itself cost. The sub-agents' share is already in
+    # tool_metrics, so a reader that wants the run's whole cost adds the two.
+    cost_usd: float | None = None
     log_path: str | None = None  # Path to reasoning log file
     # Cadence tracking fields (when question published vs when we forecast)
     question_published_at: str | None = (
@@ -181,6 +184,7 @@ def save_forecast(
     numeric_bounds: dict[str, object] | None = None,
     tool_metrics: dict[str, Any] | None = None,
     token_usage: TokenUsage | None = None,
+    cost_usd: float | None = None,
     log_path: str | None = None,
     question_published_at: str | None = None,
     question_close_time: str | None = None,
@@ -229,6 +233,7 @@ def save_forecast(
         factors=[f if isinstance(f, dict) else f.model_dump() for f in factors],
         tool_metrics=tool_metrics,
         token_usage=token_usage,
+        cost_usd=cost_usd,
         log_path=log_path,
         question_published_at=question_published_at,
         question_close_time=question_close_time,

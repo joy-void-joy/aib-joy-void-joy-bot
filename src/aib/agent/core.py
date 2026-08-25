@@ -1194,6 +1194,7 @@ async def run_forecast(
                 "numeric_bounds": context.get("numeric_bounds"),
                 "tool_metrics": metrics,
                 "token_usage": output.token_usage,
+                "cost_usd": output.cost_usd,
                 "log_path": str(log_path) if log_path.exists() else None,
                 "question_published_at": context.get("published_at"),
                 "question_close_time": context.get("scheduled_close_time"),

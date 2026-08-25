@@ -17,9 +17,14 @@ from typing import Annotated, Literal, TextIO, TypedDict, cast
 
 import httpx
 import typer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
-from aib.paths import REGRESSION_SUITE_PATH, experiments_dir
+from aib.paths import (
+    REGRESSION_SUITE_PATH,
+    experiments_dir,
+    forecasts_dir,
+    parse_timestamp,
+)
 
 from aib.agent import ContextOverrides, ForecastOutput, run_forecast
 from aib.agent.display import make_arm_prefix
@@ -37,6 +42,7 @@ from lup.workspace.paths import agent_version, project_root, read_agent_version
 
 from aib.agent.history import (
     RetrodictComparison,
+    SavedForecast,
     commit_forecast,
     is_submitted,
     load_latest_for_submission,
@@ -1497,6 +1503,54 @@ the comparison unstated. Give each arm its own `profile` so concurrent runs
 do not share a rate limit."""
 
 
+def format_prediction(forecast: SavedForecast) -> str:
+    """One arm's answer, in the shape its question type answers in.
+
+    A comparison is read across arms rather than down, so every type
+    collapses to a single short field: the two numbers that decide a binary
+    or numeric question, and for multiple choice the option that won and by
+    how much — which is what an arm disagreeing with another disagrees about.
+    """
+    if forecast.probability is not None:
+        return f"{forecast.probability:.1%}"
+    if forecast.probabilities:
+        top, weight = max(forecast.probabilities.items(), key=lambda kv: kv[1])
+        return f"{top} {weight:.0%}"
+    if forecast.median is not None:
+        return f"median {forecast.median:,.4g}"
+    return "—"
+
+
+def arm_detail(arm: "ArmResult") -> str:
+    """One arm's line under a question: what it answered and what that cost.
+
+    An arm that did not finish says so instead. Its prediction is the field
+    the comparison is actually about, so it leads, and the spend and tool
+    counts that explain a difference follow it.
+    """
+    if arm.status == "running":
+        return "⏸  cut off while running"
+    if arm.status == "failed":
+        return f"❌ exited {arm.returncode}"
+    if arm.prediction is None:
+        return "⚠️  finished, but wrote no forecast"
+
+    # Fixed widths, because these lines are read down a column rather than
+    # across: an arm's cost means little until it sits under another's.
+    spend = f"${arm.cost_usd:,.2f}" if arm.cost_usd else "—"
+    tools = (
+        f"{arm.tool_calls} calls, {arm.tool_errors or 0} err"
+        if arm.tool_calls is not None
+        else "—"
+    )
+    fields = [f"{arm.prediction:<13}", f"{spend:>9}", f"{tools:<18}"]
+    if arm.premortem_verdict:
+        fields.append(f"premortem: {arm.premortem_verdict:<7}")
+    if arm.duration_seconds:
+        fields.append(f"{arm.duration_seconds / 60:>3.0f}m")
+    return "  ".join(fields)
+
+
 class ArmResult(BaseModel):
     """One (question, variant) forecast process, from launch to exit.
 
@@ -1511,6 +1565,13 @@ class ArmResult(BaseModel):
     returncode: int | None = None
     duration_seconds: float | None = None
     tail: str = ""
+    # What the arm actually produced, read back from the forecast it wrote.
+    # An experiment compares arms, and an exit code says only that they ran.
+    prediction: str | None = None
+    cost_usd: float | None = None
+    tool_calls: int | None = None
+    tool_errors: int | None = None
+    premortem_verdict: str | None = None
 
     def close(self, returncode: int, elapsed: float, lines: list[str]) -> None:
         """Record how the process ended."""
@@ -1518,6 +1579,27 @@ class ArmResult(BaseModel):
         self.returncode = returncode
         self.duration_seconds = elapsed
         self.tail = "\n".join(lines[-ARM_TAIL_LINES:])
+
+    def record_outcome(self, forecast: SavedForecast) -> None:
+        """Take what the arm produced from the forecast it left behind.
+
+        The arm is a separate process, so nothing it computed comes back
+        through the return code. Its forecast file is the one place it wrote
+        the prediction, the spend and the reviewer's verdict down.
+        """
+        metrics = forecast.tool_metrics or {}
+        subagent_cost = metrics.get("subagent_cost_usd")
+        self.prediction = format_prediction(forecast)
+        self.cost_usd = (forecast.cost_usd or 0.0) + (
+            subagent_cost if isinstance(subagent_cost, (int, float)) else 0.0
+        )
+        calls = metrics.get("total_tool_calls")
+        errors = metrics.get("total_errors")
+        self.tool_calls = calls if isinstance(calls, int) else None
+        self.tool_errors = errors if isinstance(errors, int) else None
+        if forecast.revision_history:
+            verdict = forecast.revision_history[-1].get("verdict")
+            self.premortem_verdict = verdict if isinstance(verdict, str) else None
 
 
 class Experiment(BaseModel):
@@ -1541,6 +1623,10 @@ class Experiment(BaseModel):
     interrupted: bool = False
     arms: list[ArmResult] = []
 
+    def arms_for(self, post_id: int, variant: str) -> list["ArmResult"]:
+        """Every arm that ran this question under this variant."""
+        return [a for a in self.arms if a.post_id == post_id and a.variant == variant]
+
     @classmethod
     def read(cls, path: Path) -> "Experiment":
         """Load a trace, taking its location from where it was found.
@@ -1561,6 +1647,53 @@ class Experiment(BaseModel):
         self.arms.append(arm)
         self.save()
         return arm
+
+
+def render_summary(experiment: Experiment) -> str:
+    """What the run found, question by question and then variant by variant.
+
+    Two passes over the same arms, because they answer different questions.
+    Reading down one question compares the arms against each other, which is
+    what the experiment was opened to do; reading the roll-up says what each
+    arm cost to learn that. Built as text rather than printed so the shape is
+    something a test can hold.
+    """
+    lines = ["\n=== Predictions ==="]
+    for post_id in experiment.question_ids:
+        lines.append(f"\n  {post_id}")
+        for variant in experiment.variants:
+            for arm in experiment.arms_for(post_id, variant):
+                lines.append(f"    {variant:<20} {arm_detail(arm)}")
+
+    lines.append("\n=== Summary ===")
+    for variant in experiment.variants:
+        arms = [a for a in experiment.arms if a.variant == variant]
+        failed = [a for a in arms if a.status == "failed"]
+        cut_off = [a for a in arms if a.status == "running"]
+        ok = len(arms) - len(failed) - len(cut_off)
+        minutes = sum(a.duration_seconds or 0.0 for a in arms) / 60
+        spend = sum(a.cost_usd or 0.0 for a in arms)
+        calls = sum(a.tool_calls or 0 for a in arms)
+        errors = sum(a.tool_errors or 0 for a in arms)
+        lines.append(
+            f"  {variant:<20} {ok}/{len(experiment.question_ids)} ok, "
+            f"{minutes:.0f}m total, ${spend:.2f}, {calls} tool calls ({errors} errors)"
+        )
+        # A verdict other than approve is the reason to open the trace, so the
+        # roll-up names the questions that carry one rather than only counting.
+        for arm in arms:
+            if arm.premortem_verdict and arm.premortem_verdict != "approve":
+                lines.append(
+                    f"      ⚠️  {arm.post_id} premortem: {arm.premortem_verdict}"
+                )
+        for arm in failed:
+            lines.append(f"      ❌ {arm.post_id} exited {arm.returncode}")
+            tail = arm.tail.splitlines()[-1] if arm.tail else "(no output)"
+            lines.append(f"         {tail}")
+        for arm in cut_off:
+            lines.append(f"      ⏸  {arm.post_id} was still running")
+
+    return "\n".join(lines)
 
 
 ARM_LINE_LIMIT = 16 * 1024 * 1024
@@ -1600,6 +1733,32 @@ async def stream_arm(stdout: asyncio.StreamReader, prefix: str) -> list[str]:
     return lines
 
 
+def read_arm_forecast(post_id: int, version: str, variant: str) -> SavedForecast | None:
+    """The newest forecast the arm wrote, from the directory only it writes to.
+
+    Traces are keyed by `<version>+<variant>`, so an arm's output is already
+    separated from every other arm's and from the released version's. The
+    newest record there is this arm's — ordered by the timestamp the forecast
+    carries rather than by the filename, which a partial run prefixes.
+    """
+    question_dir = forecasts_dir(f"{version}+{variant}") / str(post_id)
+    if not question_dir.is_dir():
+        return None
+    newest: SavedForecast | None = None
+    newest_at: datetime | None = None
+    for path in question_dir.glob("*.json"):
+        try:
+            forecast = SavedForecast.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
+            written_at = parse_timestamp(forecast.timestamp)
+        except (OSError, ValidationError, ValueError):
+            continue
+        if newest_at is None or written_at > newest_at:
+            newest, newest_at = forecast, written_at
+    return newest
+
+
 async def run_arm(
     post_id: int,
     variant: Variant,
@@ -1634,10 +1793,14 @@ async def run_arm(
         await process.wait()
         elapsed = time.monotonic() - started
         arm.close(process.returncode or 0, elapsed, lines)
+        forecast = read_arm_forecast(post_id, experiment.version, variant.name)
+        if forecast is not None:
+            arm.record_outcome(forecast)
         experiment.save()
         print(
             f"{'✅' if process.returncode == 0 else '❌'} {post_id} [{variant.name}] "
             f"in {elapsed / 60:.1f}m"
+            + (f" — {arm.prediction}" if arm.prediction else "")
         )
 
 
@@ -1752,19 +1915,7 @@ def ab(
         experiment.finished_at = datetime.now(timezone.utc)
         experiment.save()
 
-    print("\n=== Summary ===")
-    for v in variants:
-        arm_results = [r for r in experiment.arms if r.variant == v.name]
-        failed = [r for r in arm_results if r.status == "failed"]
-        cut_off = [r for r in arm_results if r.status == "running"]
-        ok = len(arm_results) - len(failed) - len(cut_off)
-        minutes = sum(r.duration_seconds or 0.0 for r in arm_results) / 60
-        print(f"  {v.name:<20} {ok}/{len(question_ids)} ok, {minutes:.0f}m total")
-        for r in failed:
-            print(f"      ❌ {r.post_id} exited {r.returncode}")
-            print(f"         {r.tail.splitlines()[-1] if r.tail else '(no output)'}")
-        for r in cut_off:
-            print(f"      ⏸  {r.post_id} was still running")
+    print(render_summary(experiment))
 
     print(f"\nExperiment trace: {experiment.path}")
     print("\nCompare with:")
