@@ -6,14 +6,18 @@ import pytest
 from lup.adapters.claude.runtime import SUBMISSION_TOOL as CLAUDE_SUBMISSION_TOOL
 from lup.adapters.codex.runtime import SUBMISSION_TOOL as CODEX_SUBMISSION_TOOL
 from lup.hooks import LupHookInput, LupHookOutput, LupHooksConfig
+from lup.mcp import LupMcpTool
 from lup.types import JsonObject
 
 from aib.agent.models import BinaryEstimate, Factor
+from aib.agent.nested import NestedAgentReport
 from aib.agent.session import ReviewResult, ReviewState, ReviewVerdict
 from aib.tools.premortem import (
     PremortemInput,
+    PremortemVerdict,
     build_reviewer_hooks,
     build_reviewer_prompt,
+    create_premortem_tool,
 )
 from aib.tools.reflection import ReflectionInput
 
@@ -253,3 +257,64 @@ class TestReviewerHooks:
             tool_path="/tmp/traces",
         )
         assert result.decision != "deny"
+
+
+class TestUnreachableReviewer:
+    """What the gate records when the review does not happen.
+
+    The gate opens either way — a forecast is not abandoned because its
+    reviewer died. What must not happen is the outage being written down as
+    a pass: that is how a broken reviewer stays broken, since every trace it
+    leaves behind reads exactly like a clean approval.
+    """
+
+    def build_gate(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> tuple[LupMcpTool[PremortemInput, PremortemVerdict], ReviewState]:
+        async def reviewer_that_never_returns_a_verdict(
+            *_args: object, **_kwargs: object
+        ) -> NestedAgentReport[ReviewResult]:
+            return NestedAgentReport[ReviewResult](
+                error="turn completed without a valid submit_output call",
+            )
+
+        monkeypatch.setattr(
+            "aib.tools.premortem.run_reviewer",
+            reviewer_that_never_returns_a_verdict,
+        )
+        state = ReviewState()
+        state.store_reflection(_make_binary_input())
+        tool = create_premortem_tool(session_dir=tmp_path, review_state=state)
+        return tool, state
+
+    @pytest.mark.asyncio
+    async def test_outage_is_recorded_as_warn_not_approve(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        tool, state = self.build_gate(monkeypatch, tmp_path)
+        verdict = await tool(_make_premortem_input())
+
+        assert verdict.verdict == "warn"
+        assert state.last_verdict == ReviewVerdict.warn
+
+    @pytest.mark.asyncio
+    async def test_outage_still_opens_the_gate(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        tool, state = self.build_gate(monkeypatch, tmp_path)
+        await tool(_make_premortem_input())
+
+        assert state.passed is True
+
+    @pytest.mark.asyncio
+    async def test_outage_names_itself_in_the_record(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The reviewer's own failure reaches the forecast's revision history."""
+        tool, state = self.build_gate(monkeypatch, tmp_path)
+        verdict = await tool(_make_premortem_input())
+
+        assert "GATE DID NOT RUN" in verdict.assessment
+        assert "submit_output" in verdict.assessment
+        assert verdict.note is not None
+        assert "GATE DID NOT RUN" in str(state.history[-1]["reviewer_assessment"])

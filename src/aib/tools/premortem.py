@@ -649,6 +649,7 @@ def create_premortem_tool(
             )
 
         review_result: ReviewResult | None = None
+        failure = "the reviewer returned no verdict"
         try:
             review_report = await run_reviewer(
                 reflection_input,
@@ -658,22 +659,30 @@ def create_premortem_tool(
                 traces_dir,
             )
             review_result = review_report.payload
+            failure = review_report.error or failure
             register_premortem_trace(review_report.trace)
-        except Exception:
+        except Exception as e:
             logger.exception("Premortem reviewer crashed")
+            failure = f"{type(e).__name__}: {e}"
 
         if review_result is None:
-            logger.warning("Premortem reviewer returned None — auto-approving")
+            # Recorded as warn rather than approve. Both open the gate, so the
+            # forecast still completes — but a run whose adversarial review
+            # never happened must not read, here or in the forecast record, as
+            # a run that passed one.
+            logger.error("Premortem gate did not run: %s", failure)
+            unreviewed = (
+                f"GATE DID NOT RUN — this forecast received no adversarial "
+                f"review: {failure}. It is unreviewed, not approved."
+            )
             review_state.record(
-                ReviewResult(
-                    verdict=ReviewVerdict.approve,
-                    assessment="Reviewer unavailable; auto-approved.",
-                ),
+                ReviewResult(verdict=ReviewVerdict.warn, assessment=unreviewed),
                 reflection_input=reflection_input,
             )
             return PremortemVerdict(
-                verdict="approve",
-                assessment="Reviewer unavailable; auto-approved.",
+                verdict="warn",
+                assessment=unreviewed,
+                note="The reviewer was unreachable; the gate opened unreviewed.",
             )
 
         review_state.record(review_result, reflection_input=reflection_input)
