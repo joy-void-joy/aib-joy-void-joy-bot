@@ -3,10 +3,18 @@
 from pathlib import Path
 
 import pytest
+from lup.adapters.claude.runtime import SUBMISSION_TOOL as CLAUDE_SUBMISSION_TOOL
+from lup.adapters.codex.runtime import SUBMISSION_TOOL as CODEX_SUBMISSION_TOOL
+from lup.hooks import LupHookInput, LupHookOutput, LupHooksConfig
+from lup.types import JsonObject
 
 from aib.agent.models import BinaryEstimate, Factor
 from aib.agent.session import ReviewResult, ReviewState, ReviewVerdict
-from aib.tools.premortem import PremortemInput, build_reviewer_prompt
+from aib.tools.premortem import (
+    PremortemInput,
+    build_reviewer_hooks,
+    build_reviewer_prompt,
+)
 from aib.tools.reflection import ReflectionInput
 
 
@@ -176,3 +184,72 @@ class TestBuildReviewerPrompt:
 
         assert "trace_at_premortem.md" in prompt
         assert "/tmp/session/trace_at_premortem.md" in prompt
+
+
+class TestReviewerHooks:
+    """What the reviewer's hooks may and may not stop.
+
+    The reviewer submits its verdict through whichever tool the selected
+    runtime binds the turn to, and the adapter injects that tool under a
+    spelling no caller states. A hook that judges the reviewer by a list of
+    tool names it was written with cannot know that name, so it denies the
+    one call the reviewer exists to make — silently, because the gate
+    answers an unreachable reviewer by opening.
+    """
+
+    async def invoke(
+        self,
+        hooks: LupHooksConfig,
+        tool_name: str,
+        tool_input: JsonObject,
+        tool_path: str = "",
+    ) -> LupHookOutput:
+        """Drive every PreToolUse hook, returning the first that decides.
+
+        `tool_path` is resolved by the adapter in production, so a path-bearing
+        tool is stated here the way the hook receives it rather than the way
+        the tool spells it.
+        """
+        decided = LupHookOutput()
+        for matcher in hooks.pre_tool_use:
+            result = await matcher.hook(
+                LupHookInput(
+                    event="PreToolUse",
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool_path=tool_path,
+                )
+            )
+            if result.decision is not None:
+                decided = result
+                break
+        return decided
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "submission_tool", [CLAUDE_SUBMISSION_TOOL, CODEX_SUBMISSION_TOOL]
+    )
+    async def test_submission_tool_is_never_denied(self, submission_tool: str) -> None:
+        hooks = build_reviewer_hooks([Path("/tmp/traces")])
+        result = await self.invoke(hooks, submission_tool, {"verdict": "approve"})
+        assert result.decision != "deny"
+
+    @pytest.mark.asyncio
+    async def test_reads_outside_the_allowed_directories_are_denied(self) -> None:
+        """Dropping the tool allowlist leaves the directory rules intact."""
+        hooks = build_reviewer_hooks([Path("/tmp/traces")])
+        result = await self.invoke(
+            hooks, "Read", {"file_path": "/etc/passwd"}, tool_path="/etc"
+        )
+        assert result.decision == "deny"
+
+    @pytest.mark.asyncio
+    async def test_reads_inside_the_allowed_directories_are_permitted(self) -> None:
+        hooks = build_reviewer_hooks([Path("/tmp/traces")])
+        result = await self.invoke(
+            hooks,
+            "Read",
+            {"file_path": "/tmp/traces/t.md"},
+            tool_path="/tmp/traces",
+        )
+        assert result.decision != "deny"
