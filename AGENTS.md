@@ -179,6 +179,7 @@ When a tool fails or is not earning its place, ask what the agent actually neede
 - **Automate the extraction** rather than handing the agent an interactive surface.
 - **Enrich inside the tool, not in the reasoning loop.** `search` asks nine sources at once and enriches each hit with structured API data from recognized domains, carrying the page's own text so a match needs no second call. `fetch` pulls embedded state out of JS-rendered pages and hands a URL to whichever tool knows it better.
 - **A choice the tool can make is not the agent's to make.** Sixteen tools once took free text and returned ranked hits; picking between them was mechanical, and a source the agent had no reason to ask went unasked — so a capability it could not know was relevant was unreachable in practice. When several tools share a signature, the thing that varies is a parameter: fan out over it and report what each source said.
+- **A session is bounded by its wiring, so do not bound it twice.** `agent_request` intersects the stated roster with the built-ins, and every MCP server is built carrying exactly the tools its session may call — between them the reachable set is already exact. A tool allowlist laid over that can only subtract from it, and it subtracts by a hand-written list of names that the thing it guards never has to agree with. The premortem reviewer's allowlist named the submission tool as it had been spelled a runtime ago, so it denied the runtime's actual one and the gate auto-approved every forecast for a week. When a guard restates what wiring already enforces, delete the guard rather than correcting it, and keep only the part that is not redundant — there, the directory rules.
 
 ## Error handling
 
@@ -257,11 +258,15 @@ Propose rather than assume: show the current state, say why the change would hel
 
 ## Deferred work
 
-**Never create a tracking file.** A `TODO.md`, backlog or roadmap parks a decision where no workflow will surface it again — deferral by tracking file is delegation to nobody. Work not being done now lives in one of three places, chosen by what it is attached to:
+**Never create a tracking file, and never write to a harness memory store.** A `TODO.md`, backlog or roadmap parks a decision where no workflow will surface it again — deferral by tracking file is delegation to nobody. A memory directory is the same failure under a nicer name: it is private to one runtime, absent from the repository, unreachable by a diff or a review, and unread by anyone who does not happen to boot the same harness. Anything worth a later session knowing belongs where every session already looks — which is this guidance, an issue, or a note at the site. Work not being done now lives in one of three places, chosen by what it is attached to:
 
 - **A `# lup: defer: <text>` note**, when the work belongs to a site in this code. Default to the bare `defer:`; a bracketed `defer[<gate>]:` states a real, externally-checkable gate, never that this code might change again. Two spellings are resolved rather than printed, and `dev check` fails the run either comes true: `defer[gone:<path>]` wakes once that path stops existing, and `defer[branch:<name>]` wakes for whoever is standing on that branch — read off `main`, so it reaches them without their having merged it. Write a branch note where you are and aim it at the branch that has to act. Any other gate stays prose, and prose stays advisory.
-- **A GitHub issue**, when the subject is the tooling misbehaving rather than the code.
+- **A GitHub issue, or a milestone when it is a body of work rather than one fix**, when the subject is the tooling misbehaving rather than the code — nothing in the tree owns that, so a note would have nowhere to sit.
 - **A question to the user**, when whether to defer at all is the open question.
+
+The one exception to all three is a **`tmp/` briefing**: a situation this session cannot finish, written whole for a fresh session to pick up, rewritten rather than appended to. It is a handoff, not a ledger — nothing that has to survive past the next session goes there.
+
+A lasting lesson is not deferred work at all, and none of the four holds it. **A convention worth keeping goes into `harness/content/guidance.py`** and reaches every future session as this file; anything narrower belongs in the skill declaration that governs it.
 
 `uv run lup-devtools report` answers what is left across every surface: open notes, unverified claims, stale generated artifacts, unlanded branches. The root `PLAN.md` holds real history but is not maintained; work still live in it belongs in a note at the site it concerns.
 
